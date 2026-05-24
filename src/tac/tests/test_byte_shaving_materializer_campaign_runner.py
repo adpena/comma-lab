@@ -87,6 +87,129 @@ def test_materializer_campaign_runner_can_auto_generate_contexts_from_artifact_m
     assert "--materializer-contexts" not in command
 
 
+def test_materializer_campaign_runner_can_generate_inverse_scorer_artifact_map(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    run_dir.mkdir()
+    action = tmp_path / "inverse_action.json"
+    template = tmp_path / "template.zip"
+    source_inflate = tmp_path / "source_inflate"
+    candidate_inflate = tmp_path / "candidate_inflate"
+    action.write_text("{}", encoding="utf-8")
+    template.write_bytes(b"zip fixture")
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--inverse-scorer-action-functional",
+            str(action),
+            "--inverse-scorer-candidate-archive-template",
+            str(template),
+            "--inverse-scorer-raw-contest-video-digest",
+            "f" * 64,
+            "--inverse-scorer-atom-id",
+            "inverse_surface_pair0007",
+            "--inverse-scorer-selected-limit",
+            "2",
+            "--inverse-scorer-chain-output-dir",
+            str(run_dir / "inverse_cell_chain"),
+            "--inverse-scorer-source-inflate-output-dir",
+            str(source_inflate),
+            "--inverse-scorer-candidate-inflate-output-dir",
+            str(candidate_inflate),
+            "--inverse-scorer-fail-if-inflate-parity-blocked",
+            "--run-dir",
+            str(run_dir),
+        ]
+    )
+
+    generated = runner._write_generated_materializer_artifact_map(
+        args,
+        run_dir=run_dir,
+        generated_action_functional_path=None,
+    )
+
+    assert generated == run_dir / "materializer_artifact_map.json"
+    payload = json.loads(generated.read_text(encoding="utf-8"))
+    context = payload["artifacts"][runner.INVERSE_SCORER_CELL_TARGET_KIND]
+    assert context["candidate_archive_template"] == str(template)
+    assert context["inverse_action_functional"] == str(action)
+    assert context["raw_contest_video_digest"] == "f" * 64
+    assert context["atom_ids"] == ["inverse_surface_pair0007"]
+    assert context["selected_limit"] == 2
+    assert context["chain_output_dir"] == str(run_dir / "inverse_cell_chain")
+    assert context["source_inflate_output_dir"] == str(source_inflate)
+    assert context["candidate_inflate_output_dir"] == str(candidate_inflate)
+    assert context["fail_if_inflate_parity_blocked"] is True
+    assert context["score_claim"] is False
+
+    command = runner._build_queue_command(
+        args,
+        run_dir=run_dir,
+        plan_path=tmp_path / "plan.json",
+        generated_materializer_artifact_map=generated,
+    )
+
+    assert "--materializer-artifact-map" in command
+    assert str(generated) in command
+    assert "--materializer-contexts-out" in command
+    assert str(run_dir / "materializer_contexts.json") in command
+
+
+def test_materializer_campaign_runner_generated_artifact_map_uses_generated_action(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    run_dir.mkdir()
+    template = tmp_path / "template.zip"
+    generated_action = run_dir / "inverse_steganalysis_action_functional.json"
+    template.write_bytes(b"zip fixture")
+    generated_action.write_text("{}", encoding="utf-8")
+    args = runner.parse_args(
+        [
+            "--scorer-response",
+            str(tmp_path / "scorer_response.json"),
+            "--inverse-scorer-candidate-archive-template",
+            str(template),
+            "--inverse-scorer-raw-contest-video-digest",
+            "a" * 64,
+            "--run-dir",
+            str(run_dir),
+        ]
+    )
+
+    generated = runner._write_generated_materializer_artifact_map(
+        args,
+        run_dir=run_dir,
+        generated_action_functional_path=generated_action,
+    )
+
+    payload = json.loads(generated.read_text(encoding="utf-8"))
+    context = payload["artifacts"][runner.INVERSE_SCORER_CELL_TARGET_KIND]
+    assert context["inverse_action_functional"] == str(generated_action)
+    assert context["candidate_archive_template"] == str(template)
+    assert context["raw_contest_video_digest"] == "a" * 64
+
+
+def test_materializer_campaign_runner_rejects_auto_artifact_map_with_contexts(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(SystemExit, match="auto artifact-map flags"):
+        runner.main(
+            [
+                "--plan",
+                str(tmp_path / "plan.json"),
+                "--materializer-contexts",
+                str(tmp_path / "contexts.json"),
+                "--inverse-scorer-candidate-archive-template",
+                str(tmp_path / "template.zip"),
+                "--inverse-scorer-raw-contest-video-digest",
+                "f" * 64,
+            ]
+        )
+
+
 def test_materializer_campaign_runner_uses_policy_cold_store_default_for_move_preflight(
     tmp_path: Path,
 ) -> None:

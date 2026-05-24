@@ -30,6 +30,9 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from comma_lab.scheduler.byte_shaving_materializer_registry import (  # noqa: E402
+    INVERSE_SCORER_CELL_TARGET_KIND,
+)
 from comma_lab.scheduler.experiment_queue import default_state_path, load_queue_definition  # noqa: E402
 from comma_lab.scheduler.staircase_dag import (  # noqa: E402
     build_staircase_dag_from_experiment_queue,
@@ -40,6 +43,7 @@ from comma_lab.scheduler.staircase_dag import (  # noqa: E402
 from comma_lab.scheduler.storage_preflight import (  # noqa: E402
     validate_scheduler_storage_preflight_config,
 )
+from tac.optimization.byte_shaving_campaign import FALSE_AUTHORITY  # noqa: E402
 from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 RUN_SCHEMA = "byte_shaving_materializer_campaign_run.v1"
@@ -327,6 +331,49 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument("--materializer-contexts-fail-if-blocked", action="store_true")
+    parser.add_argument(
+        "--inverse-scorer-action-functional",
+        type=Path,
+        default=None,
+        help=(
+            "inverse_steganalysis_discrete_action_functional.v1 used when "
+            "auto-generating an inverse-scorer materializer artifact map from "
+            "an existing --plan; defaults to the action functional generated "
+            "from high-level sources"
+        ),
+    )
+    parser.add_argument(
+        "--inverse-scorer-candidate-archive-template",
+        type=Path,
+        default=None,
+        help=(
+            "candidate archive template used to auto-generate an inverse-scorer "
+            "materializer artifact map"
+        ),
+    )
+    parser.add_argument(
+        "--inverse-scorer-raw-contest-video-digest",
+        default=None,
+        help=(
+            "raw contest video digest recorded in generated inverse-scorer "
+            "materializer contexts"
+        ),
+    )
+    parser.add_argument("--inverse-scorer-atom-id", action="append", default=[])
+    parser.add_argument("--inverse-scorer-selected-limit", type=int, default=None)
+    parser.add_argument("--inverse-scorer-chain-output-dir", type=Path, default=None)
+    parser.add_argument("--inverse-scorer-source-inflate-output-dir", type=Path, default=None)
+    parser.add_argument("--inverse-scorer-candidate-inflate-output-dir", type=Path, default=None)
+    parser.add_argument("--inverse-scorer-inflate-runtime-dir", type=Path, default=None)
+    parser.add_argument("--inverse-scorer-source-archive-for-parity", type=Path, default=None)
+    parser.add_argument("--inverse-scorer-inflate-work-dir", type=Path, default=None)
+    parser.add_argument("--inverse-scorer-runtime-consumption-proof", type=Path, default=None)
+    parser.add_argument("--inverse-scorer-min-free-bytes", type=int, default=None)
+    parser.add_argument("--inverse-scorer-inflate-timeout-seconds", type=int, default=None)
+    parser.add_argument("--inverse-scorer-descriptor-probe-only", action="store_true")
+    parser.add_argument("--inverse-scorer-fail-if-receiver-blocked", action="store_true")
+    parser.add_argument("--inverse-scorer-fail-if-inflate-parity-blocked", action="store_true")
+    parser.add_argument("--inverse-scorer-keep-inflate-work-dir", action="store_true")
     parser.add_argument(
         "--run-dir",
         type=Path,
@@ -639,6 +686,7 @@ def _build_queue_command(
     *,
     run_dir: Path,
     plan_path: Path | None = None,
+    generated_materializer_artifact_map: Path | None = None,
 ) -> list[str]:
     if args.include_storage_preflight:
         try:
@@ -694,12 +742,17 @@ def _build_queue_command(
         "--materializer-exact-eval-dispatch-max-total-cost",
         str(args.exact_eval_dispatch_max_total_cost),
     ]
+    artifact_map = (
+        _resolve(args.materializer_artifact_map)
+        if args.materializer_artifact_map is not None
+        else generated_materializer_artifact_map
+    )
     if args.materializer_contexts is not None:
         command.extend(["--materializer-contexts", _display_path(_resolve(args.materializer_contexts))])
-    if args.materializer_artifact_map is not None:
+    if artifact_map is not None:
         command.extend([
             "--materializer-artifact-map",
-            _display_path(_resolve(args.materializer_artifact_map)),
+            _display_path(artifact_map),
             "--materializer-contexts-out",
             _display_path(run_dir / "materializer_contexts.json"),
             "--materializer-context-default-output-root",
@@ -752,6 +805,162 @@ def _build_queue_command(
         for root in args.proactive_cleanup_cold_store_root:
             command.extend(["--materializer-scheduler-proactive-cleanup-cold-store-root", root])
     return command
+
+
+def _inverse_scorer_auto_artifact_map_requested(args: argparse.Namespace) -> bool:
+    return any(
+        (
+            args.inverse_scorer_action_functional is not None,
+            args.inverse_scorer_candidate_archive_template is not None,
+            bool(str(args.inverse_scorer_raw_contest_video_digest or "").strip()),
+            bool(args.inverse_scorer_atom_id),
+            args.inverse_scorer_selected_limit is not None,
+            args.inverse_scorer_chain_output_dir is not None,
+            args.inverse_scorer_source_inflate_output_dir is not None,
+            args.inverse_scorer_candidate_inflate_output_dir is not None,
+            args.inverse_scorer_inflate_runtime_dir is not None,
+            args.inverse_scorer_source_archive_for_parity is not None,
+            args.inverse_scorer_inflate_work_dir is not None,
+            args.inverse_scorer_runtime_consumption_proof is not None,
+            args.inverse_scorer_min_free_bytes is not None,
+            args.inverse_scorer_inflate_timeout_seconds is not None,
+            args.inverse_scorer_descriptor_probe_only,
+            args.inverse_scorer_fail_if_receiver_blocked,
+            args.inverse_scorer_fail_if_inflate_parity_blocked,
+            args.inverse_scorer_keep_inflate_work_dir,
+        )
+    )
+
+
+def _positive_optional_int(value: int | None, *, flag: str) -> int | None:
+    if value is None:
+        return None
+    if value < 1:
+        raise SystemExit(f"{flag} must be >= 1")
+    return int(value)
+
+
+def _path_value(path: Path | None) -> str | None:
+    if path is None:
+        return None
+    return _display_path(_resolve(path))
+
+
+def _build_generated_materializer_artifact_map_payload(
+    args: argparse.Namespace,
+    *,
+    action_functional_path: Path,
+) -> dict[str, Any]:
+    template = _path_value(args.inverse_scorer_candidate_archive_template)
+    raw_digest = str(args.inverse_scorer_raw_contest_video_digest or "").strip()
+    if template is None:
+        raise SystemExit(
+            "--inverse-scorer-candidate-archive-template is required to "
+            "auto-generate inverse-scorer materializer contexts"
+        )
+    if not raw_digest:
+        raise SystemExit(
+            "--inverse-scorer-raw-contest-video-digest is required to "
+            "auto-generate inverse-scorer materializer contexts"
+        )
+
+    context: dict[str, Any] = {
+        "candidate_archive_template": template,
+        "inverse_action_functional": _display_path(action_functional_path),
+        "raw_contest_video_digest": raw_digest,
+        **FALSE_AUTHORITY,
+    }
+    for key, value in (
+        ("output_dir", _path_value(args.inverse_scorer_chain_output_dir)),
+        ("chain_output_dir", _path_value(args.inverse_scorer_chain_output_dir)),
+        (
+            "source_inflate_output_dir",
+            _path_value(args.inverse_scorer_source_inflate_output_dir),
+        ),
+        (
+            "candidate_inflate_output_dir",
+            _path_value(args.inverse_scorer_candidate_inflate_output_dir),
+        ),
+        ("inflate_runtime_dir", _path_value(args.inverse_scorer_inflate_runtime_dir)),
+        (
+            "source_archive_for_parity",
+            _path_value(args.inverse_scorer_source_archive_for_parity),
+        ),
+        ("inflate_work_dir", _path_value(args.inverse_scorer_inflate_work_dir)),
+        (
+            "runtime_consumption_proof",
+            _path_value(args.inverse_scorer_runtime_consumption_proof),
+        ),
+    ):
+        if value is not None:
+            context[key] = value
+    if args.inverse_scorer_atom_id:
+        context["atom_ids"] = [
+            str(atom_id).strip()
+            for atom_id in args.inverse_scorer_atom_id
+            if str(atom_id).strip()
+        ]
+    for key, value, flag in (
+        ("selected_limit", args.inverse_scorer_selected_limit, "--inverse-scorer-selected-limit"),
+        ("min_free_bytes", args.inverse_scorer_min_free_bytes, "--inverse-scorer-min-free-bytes"),
+        (
+            "inflate_timeout_seconds",
+            args.inverse_scorer_inflate_timeout_seconds,
+            "--inverse-scorer-inflate-timeout-seconds",
+        ),
+    ):
+        parsed = _positive_optional_int(value, flag=flag)
+        if parsed is not None:
+            context[key] = parsed
+    for key, enabled in (
+        ("descriptor_probe_only", args.inverse_scorer_descriptor_probe_only),
+        ("fail_if_receiver_blocked", args.inverse_scorer_fail_if_receiver_blocked),
+        (
+            "fail_if_inflate_parity_blocked",
+            args.inverse_scorer_fail_if_inflate_parity_blocked,
+        ),
+        ("keep_inflate_work_dir", args.inverse_scorer_keep_inflate_work_dir),
+    ):
+        if enabled:
+            context[key] = True
+    return {
+        "schema": "final_byte_artifact_map.generated.v1",
+        "generated_by": "tools/run_byte_shaving_materializer_campaign.py",
+        "generated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "artifacts": {INVERSE_SCORER_CELL_TARGET_KIND: context},
+        **FALSE_AUTHORITY,
+    }
+
+
+def _write_generated_materializer_artifact_map(
+    args: argparse.Namespace,
+    *,
+    run_dir: Path,
+    generated_action_functional_path: Path | None,
+) -> Path | None:
+    if args.materializer_artifact_map is not None or args.materializer_contexts is not None:
+        return None
+    if not _inverse_scorer_auto_artifact_map_requested(args):
+        return None
+    action_functional_path = (
+        _resolve(args.inverse_scorer_action_functional)
+        if args.inverse_scorer_action_functional is not None
+        else generated_action_functional_path
+    )
+    if action_functional_path is None:
+        raise SystemExit(
+            "--inverse-scorer-action-functional is required with --plan when "
+            "auto-generating inverse-scorer materializer contexts"
+        )
+    output = run_dir / "materializer_artifact_map.json"
+    _write_json(
+        output,
+        _build_generated_materializer_artifact_map_payload(
+            args,
+            action_functional_path=action_functional_path,
+        ),
+    )
+    return output
 
 
 def _build_staircase_artifacts(
@@ -899,6 +1108,13 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(
             "--materializer-contexts and --materializer-artifact-map are mutually exclusive"
         )
+    if _inverse_scorer_auto_artifact_map_requested(args) and (
+        args.materializer_contexts is not None or args.materializer_artifact_map is not None
+    ):
+        raise SystemExit(
+            "inverse-scorer auto artifact-map flags cannot be combined with "
+            "--materializer-contexts or --materializer-artifact-map"
+        )
     if args.candidate_limit < 1:
         raise SystemExit("--candidate-limit must be >= 1")
     if args.mlx_acquisition_set_size < 1:
@@ -959,6 +1175,7 @@ def main(argv: list[str] | None = None) -> int:
     commands: list[CommandResult] = []
     generated_action_functional_path: Path | None = None
     generated_campaign_plan_path: Path | None = None
+    generated_materializer_artifact_map_path: Path | None = None
     generated_mlx_acquisition_batch_paths: list[Path] = []
     plan_path = _resolve(args.plan) if args.plan is not None else None
     if plan_path is None:
@@ -988,7 +1205,20 @@ def main(argv: list[str] | None = None) -> int:
         commands.append(plan_result)
         plan_path = generated_campaign_plan_path
 
-    build_result = _run(_build_queue_command(args, run_dir=run_dir, plan_path=plan_path))
+    generated_materializer_artifact_map_path = _write_generated_materializer_artifact_map(
+        args,
+        run_dir=run_dir,
+        generated_action_functional_path=generated_action_functional_path,
+    )
+
+    build_result = _run(
+        _build_queue_command(
+            args,
+            run_dir=run_dir,
+            plan_path=plan_path,
+            generated_materializer_artifact_map=generated_materializer_artifact_map_path,
+        )
+    )
     commands.append(build_result)
     queue = load_queue_definition(execution_queue)
     state_path = default_state_path(REPO_ROOT, queue["queue_id"])
@@ -1107,6 +1337,11 @@ def main(argv: list[str] | None = None) -> int:
         "generated_mlx_acquisition_batch_paths": [
             _display_path(path) for path in generated_mlx_acquisition_batch_paths
         ],
+        "generated_materializer_artifact_map_path": (
+            None
+            if generated_materializer_artifact_map_path is None
+            else _display_path(generated_materializer_artifact_map_path)
+        ),
         "high_level_action_source_count": action_source_count,
         "queue_path": _display_path(execution_queue),
         "state_path": _display_path(state_path),

@@ -183,6 +183,29 @@ def _write_artifact(path: Path, payload: bytes = b"artifact") -> dict[str, objec
     }
 
 
+def _write_constant_inflate_runtime(path: Path) -> None:
+    path.mkdir(parents=True)
+    inflate = path / "inflate.sh"
+    inflate.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "set -euo pipefail",
+                "data_dir=\"$1\"",
+                "out_dir=\"$2\"",
+                "file_list=\"$3\"",
+                "test -f \"$data_dir/x\"",
+                "test -s \"$file_list\"",
+                "mkdir -p \"$out_dir/frames\"",
+                "printf frame-bytes > \"$out_dir/frames/000000.raw\"",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    inflate.chmod(0o755)
+
+
 def _false_authority() -> dict[str, bool]:
     return {
         "score_claim": False,
@@ -3735,3 +3758,167 @@ def test_byte_shaving_campaign_queue_cli_generates_inverse_scorer_contexts_and_s
     assert manifest["receiver_contract_satisfied"] is False
     assert "runtime_consumption_proof_missing" in manifest["readiness_blockers"]
     assert Path(context["output_archive"]).is_file()
+
+
+def test_byte_shaving_campaign_queue_cli_generates_inverse_scorer_chain_context_and_executes_parity(
+    tmp_path: Path,
+) -> None:
+    plan_path = tmp_path / "plan.json"
+    artifact_map_path = tmp_path / "artifact_map.json"
+    contexts_path = tmp_path / "generated_contexts.json"
+    materialization = tmp_path / "materialization.json"
+    portfolio = tmp_path / "portfolio.json"
+    summary = tmp_path / "action_summary.json"
+    work_queue = tmp_path / "materializer_work_queue.json"
+    output_dir = tmp_path / "inverse_cell_chain"
+    inflate_runtime_dir = tmp_path / "inflate_runtime"
+    inflate_work_dir = tmp_path / "inflate_work"
+    template = tmp_path / "template.zip"
+    action = tmp_path / "inverse_action.json"
+    with zipfile.ZipFile(template, "w", compression=zipfile.ZIP_STORED) as archive:
+        archive.writestr("x", b"base-payload")
+    _write_constant_inflate_runtime(inflate_runtime_dir)
+    action.write_text(
+        json.dumps(
+            {
+                "schema": "inverse_steganalysis_discrete_action_functional.v1",
+                "water_bucket": {
+                    "schema": "inverse_steganalysis_water_bucket_plan.v1",
+                    "selected_count": 1,
+                    "selected_cells": [
+                        {
+                            "atom_id": "inverse_surface_pair0007",
+                            "candidate_id": "candidate_pair0007",
+                            "scope_axis": "pairs",
+                            "component": "posenet",
+                            "water_fill_cost_bytes": 32,
+                            "expected_score_gain": 0.0001,
+                            "euler_lagrange_residual": 0.00009,
+                        }
+                    ],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    plan_path.write_text(json.dumps(_inverse_cell_candidate_plan()), encoding="utf-8")
+    artifact_map_path.write_text(
+        json.dumps(
+            {
+                "schema": "final_byte_artifact_map.fixture.v1",
+                "artifacts": {
+                    INVERSE_SCORER_CELL_TARGET_KIND: {
+                        "candidate_archive_template": str(template),
+                        "inverse_action_functional": str(action),
+                        "raw_contest_video_digest": "f" * 64,
+                        "output_dir": str(output_dir),
+                        "inflate_runtime_dir": str(inflate_runtime_dir),
+                        "source_archive_for_parity": str(template),
+                        "inflate_timeout_seconds": 30,
+                        "inflate_work_dir": str(inflate_work_dir),
+                        "atom_ids": ["inverse_surface_pair0007"],
+                        "selected_limit": 1,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "rank_or_kill_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--plan",
+            str(plan_path),
+            "--materializer-artifact-map",
+            str(artifact_map_path),
+            "--materializer-contexts-out",
+            str(contexts_path),
+            "--materializer-context-default-output-root",
+            str(tmp_path / "unused_output_root"),
+            "--materializer-contexts-fail-if-blocked",
+            "--materialization-out",
+            str(materialization),
+            "--portfolio-out",
+            str(portfolio),
+            "--action-summary-out",
+            str(summary),
+            "--materializer-work-queue-out",
+            str(work_queue),
+            "--repo-root",
+            str(tmp_path),
+            "--candidate-limit",
+            "4",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    stdout = json.loads(result.stdout)
+    assert stdout["materializer_contexts_generated"] is True
+    assert stdout["materializer_contexts_blocked_count"] == 0
+    assert stdout["materializer_work_queue_executable_row_count"] == 1
+    contexts = json.loads(contexts_path.read_text(encoding="utf-8"))
+    context = contexts["rows"][0]["context"]
+    assert context["chain_output_dir"] == str(output_dir)
+    assert context["inflate_runtime_dir"] == str(inflate_runtime_dir)
+    assert context["source_archive_for_parity"] == str(template)
+    assert context["inflate_work_dir"] == str(inflate_work_dir)
+    work = json.loads(work_queue.read_text(encoding="utf-8"))
+    row = work["rows"][0]
+    assert row["tool"] == "tools/run_inverse_scorer_cell_candidate_chain.py"
+    assert row["executable"] is True
+    assert "--inflate-runtime-dir" in row["command"]
+    assert "--source-archive-for-parity" in row["command"]
+    assert "--inflate-work-dir" in row["command"]
+    assert "--fail-if-inflate-parity-blocked" in row["command"]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+    command = [sys.executable, str(REPO_ROOT / row["command"][1]), *row["command"][2:]]
+    smoke = subprocess.run(
+        command,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    chain = json.loads(smoke.stdout)
+    assert chain["schema"] == "inverse_scorer_cell_candidate_chain_v1"
+    assert chain["byte_closed_candidate_emitted"] is True
+    assert chain["receiver_contract_satisfied"] is True
+    assert chain["inflate_parity_satisfied"] is True
+    assert chain["score_claim"] is False
+    assert chain["ready_for_exact_eval_dispatch"] is False
+    assert "candidate_inflate_output_parity_missing" not in chain["readiness_blockers"]
+    assert "exact_auth_eval_required_before_score_claim" in chain["readiness_blockers"]
+    assert chain["artifacts"]["inflate_parity_probe"]["path"].endswith(
+        "inflate_parity_probe.json"
+    )
+    assert not inflate_work_dir.exists()
+    manifest = json.loads(
+        (output_dir / INVERSE_CELL_CHAIN_MANIFEST_NAME).read_text(encoding="utf-8")
+    )
+    assert manifest["schema"] == "inverse_scorer_cell_candidate_chain_v1"
+    assert manifest["inflate_parity_satisfied"] is True
+    assert (output_dir / "candidate_archive.zip").is_file()
