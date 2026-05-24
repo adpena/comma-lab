@@ -710,6 +710,14 @@ def test_inverse_action_compiler_hint_lowers_to_family_packet_ir() -> None:
         "tensor_factorize_v1",
         "packet_member_recompress_v1",
     }
+    assert {
+        operation["materializer_execution_status"]
+        for operation in packet_ir["operations"]
+    } == {"registered_executable_after_materializer_contexts"}
+    assert all(
+        operation["materializer_executable"] is True
+        for operation in packet_ir["operations"]
+    )
     archive_operation = next(
         operation
         for operation in packet_ir["operations"]
@@ -722,6 +730,176 @@ def test_inverse_action_compiler_hint_lowers_to_family_packet_ir() -> None:
     assert bridge["queue_consumable_packet_ir_operation_set_ids"] == [
         packet_ir["operation_set_id"]
     ]
+    assert bridge["score_claim"] is False
+    assert bridge["ready_for_exact_eval_dispatch"] is False
+
+
+def test_inverse_action_compiler_hint_lowers_registered_targets_and_aliases() -> None:
+    payload = _inverse_action_payload()
+    target_specs = [
+        (
+            "compiled_byte_range_alias",
+            "byte_range_entropy_coder_v1",
+            {
+                "archive_member_name": "x",
+                "archive_byte_range": {"start": 128, "end": 512},
+                "materializer": "byte_range_entropy_coder_adapter",
+            },
+            "byte_range_entropy_recode_v1",
+            "byte_range_entropy_recode_adapter",
+            "archive_charged_byte_range_entropy_recode",
+        ),
+        (
+            "compiled_archive_header_elide",
+            "archive_section_header_elide_v1",
+            {"archive_section": "decoder_header"},
+            "archive_section_header_elide_v1",
+            "archive_section_header_elide_adapter",
+            "family_agnostic_archive_section_header_elide",
+        ),
+        (
+            "compiled_archive_reorder",
+            "archive_section_reorder_v1",
+            {"archive_section": "latent_tables"},
+            "archive_section_reorder_v1",
+            "archive_section_reorder_adapter",
+            "family_agnostic_archive_section_reorder",
+        ),
+        (
+            "compiled_archive_proceduralize",
+            "archive_section_proceduralize_v1",
+            {"archive_section": "selector_payload"},
+            "archive_section_proceduralize_v1",
+            "archive_section_proceduralize_adapter",
+            "family_agnostic_archive_section_proceduralize",
+        ),
+        (
+            "compiled_packet_zip_header",
+            "packet_member_zip_header_elide_v1",
+            {"member_name": "0.bin"},
+            "packet_member_zip_header_elide_v1",
+            "packet_member_zip_header_elide_adapter",
+            "family_agnostic_packet_member_zip_header_elide",
+        ),
+        (
+            "compiled_packet_reorder",
+            "packet_member_reorder_v1",
+            {"member_name": "runtime.py"},
+            "packet_member_reorder_v1",
+            "packet_member_reorder_adapter",
+            "family_agnostic_packet_member_reorder",
+        ),
+        (
+            "compiled_packet_merge",
+            "packet_member_merge_v1",
+            {"member_name": "sidecar.bin"},
+            "packet_member_merge_v1",
+            "packet_member_merge_adapter",
+            "family_agnostic_packet_member_merge",
+        ),
+        (
+            "compiled_tensor_quantize",
+            "tensor_quantize_v1",
+            {"tensor_name": "decoder.blocks.0.weight"},
+            "tensor_quantize_v1",
+            "tensor_quantize_adapter",
+            "family_agnostic_tensor_quantize",
+        ),
+        (
+            "compiled_tensor_prune",
+            "tensor_prune_v1",
+            {"tensor_name": "decoder.blocks.1.weight"},
+            "tensor_prune_v1",
+            "tensor_prune_adapter",
+            "family_agnostic_tensor_prune",
+        ),
+        (
+            "compiled_tensor_codebook",
+            "tensor_shared_codebook_v1",
+            {"tensor_name": "boost.overlay"},
+            "tensor_shared_codebook_v1",
+            "tensor_shared_codebook_adapter",
+            "family_agnostic_tensor_shared_codebook",
+        ),
+    ]
+    payload["cells"] = [
+        {
+            "atom_id": "compiled_registry_opset",
+            "operation_set_compiler": {
+                "schema": "inverse_action_operation_set_compiler_hint.v1",
+                "operation_set_id": "compiled_registry_set",
+                "candidate_saved_bytes": 1000,
+                "operation_portability": "family_agnostic",
+                "selected_operations": [
+                    {
+                        "unit_id": unit_id,
+                        "target_kind": target_kind,
+                        "candidate_saved_bytes": 100,
+                        "representation_family_class": "family_agnostic_archive",
+                        **extra,
+                    }
+                    for unit_id, target_kind, extra, *_ in target_specs
+                ],
+            },
+        }
+    ]
+    payload["water_bucket"]["selected_cells"][0]["atom_id"] = "compiled_registry_opset"
+
+    surface = build_signal_surface_from_inverse_action_functional(payload)
+    plan = build_byte_shaving_campaign_plan(surface, max_k=len(target_specs))
+    packet_ir = plan["packet_ir_operation_sets"][0]
+
+    def operation_by_source_unit(source_unit_id: str) -> dict[str, object]:
+        return next(
+            operation
+            for operation in packet_ir["operations"]
+            if source_unit_id in str(operation["unit_id"])
+        )
+
+    bridge = plan["materialization_bridge"]
+
+    assert packet_ir["byte_closed_operation_count"] == len(target_specs)
+    assert "byte_range_entropy_coder_v1" not in {
+        operation["target_kind"] for operation in packet_ir["operations"]
+    }
+    for (
+        unit_id,
+        _input_target_kind,
+        _extra,
+        expected_target_kind,
+        expected_materializer,
+        expected_receiver_contract_kind,
+    ) in target_specs:
+        operation = operation_by_source_unit(unit_id)
+        assert operation["target_kind"] == expected_target_kind
+        assert operation["materializer"] == expected_materializer
+        assert (
+            operation["receiver_contract_kind"]
+            == expected_receiver_contract_kind
+        )
+    byte_range_operation = operation_by_source_unit("compiled_byte_range_alias")
+    assert byte_range_operation["params"][
+        "archive_member_name"
+    ] == "x"
+    assert byte_range_operation["params"][
+        "archive_byte_range"
+    ] == {"start": 128, "end": 512}
+    assert byte_range_operation["materializer_executable"] is False
+    assert byte_range_operation["materializer_execution_status"] == (
+        "registered_contract_not_executable"
+    )
+    assert byte_range_operation["required_context_fields"] == [
+        "archive_member_name",
+        "archive_byte_range",
+        "runtime_consumption_proof",
+    ]
+    assert all(
+        operation_by_source_unit(unit_id)["materializer_executable"] is False
+        for unit_id, *_ in target_specs
+    )
+    assert bridge["compiled_operation_set_count"] == 1
+    assert bridge["high_level_operation_compiler_required_count"] == 0
+    assert bridge["queue_consumable_packet_ir_operation_set_count"] == 1
     assert bridge["score_claim"] is False
     assert bridge["ready_for_exact_eval_dispatch"] is False
 

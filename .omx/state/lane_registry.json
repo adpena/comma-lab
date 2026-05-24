@@ -52947,6 +52947,47 @@
       "id": "codex_inverse_action_byte_range_compiler_20260524",
       "name": "Inverse action byte-range compiler lowering",
       "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/byte_shaving_campaign.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_inverse_action_compiler_registry_targets_20260524T203951Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "codex_pr95_mlx_source_video_preprocess_loss_20260524",
+      "name": "PR95 MLX source-video preprocess loss",
+      "phase": 2.0,
       "level": 0,
       "gates": {
         "impl_complete": {
@@ -52982,7 +53023,7 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "Wire optional RGB+YUV6 scorer-preprocess-coupled MLX loss for source-video timing smokes; local MLX research-signal only."
     }
   ],
   "level_rules": {
@@ -52992,5 +53033,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T20:35:49Z"
+  "updated_at": "2026-05-24T20:40:18Z"
 }

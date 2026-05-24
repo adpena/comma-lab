@@ -65,12 +65,44 @@ MLX_SCORER_RESPONSE_PLACEHOLDER_OPERATION_FAMILY = (
 MLX_SCORER_RESPONSE_PLACEHOLDER_TARGET_KIND = "mlx_scorer_response_candidate_v1"
 PACKET_IR_OPERATION_SCHEMA = "packet_ir_operation_v1"
 INVERSE_ACTION_COMPILED_OPERATION_SET_MODE = "compiled_operation_set"
-INVERSE_ACTION_COMPILER_TARGET_DEFAULTS: dict[str, dict[str, str]] = {
+INVERSE_ACTION_COMPILER_TARGET_DEFAULTS: dict[str, dict[str, Any]] = {
+    "byte_range_entropy_recode_v1": {
+        "unit_kind": "byte_range",
+        "operation_family": "entropy_recode",
+        "materializer": "byte_range_entropy_recode_adapter",
+        "receiver_contract_kind": "archive_charged_byte_range_entropy_recode",
+    },
+    "byte_range_entropy_coder_v1": {
+        "target_kind": "byte_range_entropy_recode_v1",
+        "unit_kind": "byte_range",
+        "operation_family": "entropy_recode",
+        "materializer": "byte_range_entropy_recode_adapter",
+        "materializer_alias": "byte_range_entropy_coder_adapter",
+        "receiver_contract_kind": "archive_charged_byte_range_entropy_recode",
+    },
     "archive_section_entropy_recode_v1": {
         "unit_kind": "archive_section",
         "operation_family": "section_entropy_recode",
         "materializer": "archive_section_entropy_recode_adapter",
         "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+    },
+    "archive_section_header_elide_v1": {
+        "unit_kind": "archive_section",
+        "operation_family": "section_header_elide",
+        "materializer": "archive_section_header_elide_adapter",
+        "receiver_contract_kind": "family_agnostic_archive_section_header_elide",
+    },
+    "archive_section_reorder_v1": {
+        "unit_kind": "archive_section",
+        "operation_family": "section_reorder",
+        "materializer": "archive_section_reorder_adapter",
+        "receiver_contract_kind": "family_agnostic_archive_section_reorder",
+    },
+    "archive_section_proceduralize_v1": {
+        "unit_kind": "archive_section",
+        "operation_family": "section_proceduralize",
+        "materializer": "archive_section_proceduralize_adapter",
+        "receiver_contract_kind": "family_agnostic_archive_section_proceduralize",
     },
     "packet_member_recompress_v1": {
         "unit_kind": "packet_member",
@@ -78,12 +110,134 @@ INVERSE_ACTION_COMPILER_TARGET_DEFAULTS: dict[str, dict[str, str]] = {
         "materializer": "packet_member_recompress_adapter",
         "receiver_contract_kind": "family_agnostic_packet_member_recompress",
     },
+    "packet_member_zip_header_elide_v1": {
+        "unit_kind": "packet_member",
+        "operation_family": "zip_header_elide",
+        "materializer": "packet_member_zip_header_elide_adapter",
+        "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+    },
+    "packet_member_reorder_v1": {
+        "unit_kind": "packet_member",
+        "operation_family": "member_reorder",
+        "materializer": "packet_member_reorder_adapter",
+        "receiver_contract_kind": "family_agnostic_packet_member_reorder",
+    },
+    "packet_member_merge_v1": {
+        "unit_kind": "packet_member",
+        "operation_family": "member_merge",
+        "materializer": "packet_member_merge_adapter",
+        "receiver_contract_kind": "family_agnostic_packet_member_merge",
+    },
+    "tensor_quantize_v1": {
+        "unit_kind": "tensor",
+        "operation_family": "quantize_tensor",
+        "materializer": "tensor_quantize_adapter",
+        "receiver_contract_kind": "family_agnostic_tensor_quantize",
+    },
+    "tensor_prune_v1": {
+        "unit_kind": "tensor",
+        "operation_family": "prune_tensor",
+        "materializer": "tensor_prune_adapter",
+        "receiver_contract_kind": "family_agnostic_tensor_prune",
+    },
     "tensor_factorize_v1": {
         "unit_kind": "tensor",
         "operation_family": "factorize_tensor",
         "materializer": "tensor_factorize_adapter",
         "receiver_contract_kind": "family_agnostic_tensor_factorize",
     },
+    "tensor_shared_codebook_v1": {
+        "unit_kind": "tensor",
+        "operation_family": "shared_codebook_tensor",
+        "materializer": "tensor_shared_codebook_adapter",
+        "receiver_contract_kind": "family_agnostic_tensor_shared_codebook",
+    },
+}
+INVERSE_ACTION_EXECUTABLE_COMPILER_TARGETS: frozenset[str] = frozenset(
+    {
+        "archive_section_entropy_recode_v1",
+        "packet_member_recompress_v1",
+        "tensor_factorize_v1",
+    }
+)
+INVERSE_ACTION_COMPILER_TARGET_REQUIRED_CONTEXT_FIELDS: dict[str, tuple[str, ...]] = {
+    "byte_range_entropy_recode_v1": (
+        "archive_member_name",
+        "archive_byte_range",
+        "runtime_consumption_proof",
+    ),
+    "archive_section_entropy_recode_v1": (
+        "archive_path",
+        "section_manifest",
+        "output_archive",
+        "output_manifest",
+    ),
+    "archive_section_header_elide_v1": (
+        "archive_path",
+        "section_manifest",
+        "header_elision_contract",
+        "runtime_consumption_proof",
+    ),
+    "archive_section_reorder_v1": (
+        "archive_path",
+        "section_manifest",
+        "section_order_contract",
+        "runtime_consumption_proof",
+    ),
+    "archive_section_proceduralize_v1": (
+        "archive_path",
+        "section_manifest",
+        "procedural_receiver_spec",
+        "runtime_consumption_proof",
+    ),
+    "packet_member_zip_header_elide_v1": (
+        "archive_path",
+        "packet_member_manifest",
+        "zip_header_contract",
+        "runtime_consumption_proof",
+    ),
+    "packet_member_recompress_v1": (
+        "archive_path",
+        "output_archive",
+        "output_manifest",
+    ),
+    "packet_member_reorder_v1": (
+        "archive_path",
+        "packet_member_manifest",
+        "member_order_contract",
+        "runtime_consumption_proof",
+    ),
+    "packet_member_merge_v1": (
+        "archive_path",
+        "packet_member_manifest",
+        "member_merge_contract",
+        "runtime_consumption_proof",
+    ),
+    "tensor_quantize_v1": (
+        "archive_path",
+        "tensor_manifest",
+        "quantization_contract",
+        "runtime_consumption_proof",
+    ),
+    "tensor_prune_v1": (
+        "archive_path",
+        "tensor_manifest",
+        "pruning_contract",
+        "runtime_consumption_proof",
+    ),
+    "tensor_factorize_v1": (
+        "archive_path",
+        "tensor_manifest",
+        "factorization_contract",
+        "output_archive",
+        "output_manifest",
+    ),
+    "tensor_shared_codebook_v1": (
+        "archive_path",
+        "tensor_manifest",
+        "codebook_contract",
+        "runtime_consumption_proof",
+    ),
 }
 RATE_MULTIPLIER = 25.0
 ENGINEERED_CORRECTION_TARGETING_SCHEMA = "master_gradient_consumer_engineered_correction_targeting_v1"
@@ -100,6 +254,9 @@ OPERATION_METADATA_KEYS: tuple[str, ...] = (
     "receiver_contract_kinds",
     "materializer_contract_kind",
     "materializer_contract_kinds",
+    "materializer_executable",
+    "materializer_execution_status",
+    "required_context_fields",
     "operation_portability",
 )
 
@@ -2744,8 +2901,18 @@ def _compiler_mapping(
     return {}
 
 
-def _compiler_target_defaults(target_kind: Any) -> Mapping[str, str]:
+def _compiler_target_defaults(target_kind: Any) -> Mapping[str, Any]:
     return INVERSE_ACTION_COMPILER_TARGET_DEFAULTS.get(str(target_kind or ""), {})
+
+
+def _compiler_target_materializer_executable(target_kind: str) -> bool:
+    return target_kind in INVERSE_ACTION_EXECUTABLE_COMPILER_TARGETS
+
+
+def _compiler_target_execution_status(target_kind: str) -> str:
+    if _compiler_target_materializer_executable(target_kind):
+        return "registered_executable_after_materializer_contexts"
+    return "registered_contract_not_executable"
 
 
 def _compiler_target_kind(
@@ -2803,6 +2970,7 @@ def _compile_inverse_action_operation_set_provenance(
         defaults = _compiler_target_defaults(target_kind)
         if not defaults:
             return {}
+        target_kind = str(defaults.get("target_kind") or target_kind)
         operation_family = str(
             raw_operation.get("operation_family")
             or compiler.get("operation_family")
@@ -2822,11 +2990,17 @@ def _compile_inverse_action_operation_set_provenance(
             "section_name",
             "target_section",
             "target_sections",
+            "section_manifest",
             "packet_member",
+            "packet_member_manifest",
             "member_name",
             "tensor_name",
             "tensor_path",
+            "tensor_manifest",
             "byte_range",
+            "archive_byte_range",
+            "archive_member_name",
+            "runtime_consumption_proof",
             "frame_range",
             "pair_indices",
             "region_bbox",
@@ -2834,6 +3008,13 @@ def _compile_inverse_action_operation_set_provenance(
             value = raw_operation.get(key, compiler.get(key))
             if value is not None and key not in params:
                 params[key] = value
+        materializer = str(
+            raw_operation.get("materializer")
+            or compiler.get("materializer")
+            or defaults["materializer"]
+        )
+        if materializer == defaults.get("materializer_alias"):
+            materializer = defaults["materializer"]
         operations.append(
             {
                 "unit_id": raw_operation.get("unit_id")
@@ -2844,9 +3025,19 @@ def _compile_inverse_action_operation_set_provenance(
                 or f"{operation_family}_{atom_id}_{op_index:04d}",
                 "operation_family": operation_family,
                 "target_kind": target_kind,
-                "materializer": raw_operation.get("materializer")
-                or compiler.get("materializer")
-                or defaults["materializer"],
+                "materializer": materializer,
+                "materializer_executable": _compiler_target_materializer_executable(
+                    target_kind
+                ),
+                "materializer_execution_status": _compiler_target_execution_status(
+                    target_kind
+                ),
+                "required_context_fields": list(
+                    INVERSE_ACTION_COMPILER_TARGET_REQUIRED_CONTEXT_FIELDS.get(
+                        target_kind,
+                        (),
+                    )
+                ),
                 "candidate_saved_bytes": raw_operation.get("candidate_saved_bytes")
                 or compiler.get("candidate_saved_bytes")
                 or selected.get("water_fill_cost_bytes")
