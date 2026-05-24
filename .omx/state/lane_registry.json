@@ -53074,7 +53074,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_queue_feedback_replan_local_policy_20260524T205717Z_codex.md"
+          "evidence": "tools/run_byte_shaving_materializer_campaign.py tools/operator_briefing.py src/comma_lab/scheduler/byte_shaving_campaign_queue.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -53090,22 +53090,22 @@
         },
         "strict_preflight": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_queue_feedback_replan_local_policy_20260524T205717Z_codex.md"
+          "evidence": "ruff materializer autopolicy/runtime proof files; pytest focused and family materializer suites green"
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "subagent materializer audit plus targeted alias guard and runtime-proof regression tests"
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_queue_feedback_replan_local_policy_20260524T205717Z_codex.md"
+          "evidence": ".omx/research/codex_findings_queue_feedback_autopolicy_runtime_proof_20260524T210550Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "Local queue-feedback replan autopolicy surfaced in runner/operator briefing; autopolicy false-authority aliases hardened; family-agnostic materializer rows now require runtime consumption proof before queue success."
     }
   ],
   "level_rules": {
@@ -53115,5 +53115,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T20:57:49Z"
+  "updated_at": "2026-05-24T21:06:18Z"
 }
