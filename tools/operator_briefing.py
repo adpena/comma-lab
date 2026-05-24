@@ -965,6 +965,13 @@ def _materializer_handoff_summary_row(path: Path) -> dict[str, object]:
             "experiment_queue_id": str(payload.get("experiment_queue_id") or ""),
             "candidate_ids": _row_values(consumer_rows, "candidate_id"),
             "archive_sha256s": _row_values(consumer_rows, "archive_sha256"),
+            "stable_identities": _row_values(consumer_rows, "stable_identity"),
+            "runtime_content_tree_sha256s": _row_values(
+                consumer_rows,
+                "runtime_content_tree_sha256",
+            ),
+            "runtime_tree_sha256s": _row_values(consumer_rows, "runtime_tree_sha256"),
+            "score_axes": _row_values(consumer_rows, "score_axis"),
             "authorized_stable_identities": _row_values_where(
                 consumer_rows,
                 "stable_identity",
@@ -1045,6 +1052,11 @@ def _materializer_row_recency(row: dict[str, object]) -> int:
 def _materializer_row_identity(row: dict[str, object]) -> str:
     kind = str(row.get("kind") or "")
     experiment_queue_id = str(row.get("experiment_queue_id") or "").strip()
+    stable_identities = row.get("stable_identities")
+    if isinstance(stable_identities, list) and stable_identities:
+        stable = ",".join(str(item) for item in stable_identities if str(item))
+        if stable:
+            return f"{kind}:queue={experiment_queue_id}:stable={stable}"
     candidate_ids = row.get("candidate_ids")
     archive_sha256s = row.get("archive_sha256s")
     if isinstance(candidate_ids, list) and candidate_ids:
@@ -1054,7 +1066,29 @@ def _materializer_row_identity(row: dict[str, object]) -> str:
             if isinstance(archive_sha256s, list)
             else ""
         )
-        return f"{kind}:queue={experiment_queue_id}:candidates={candidates}:archives={archives}"
+        runtime_contents = row.get("runtime_content_tree_sha256s")
+        runtime_content = (
+            ",".join(str(item) for item in runtime_contents if str(item))
+            if isinstance(runtime_contents, list)
+            else ""
+        )
+        runtime_trees = row.get("runtime_tree_sha256s")
+        runtime_tree = (
+            ",".join(str(item) for item in runtime_trees if str(item))
+            if isinstance(runtime_trees, list)
+            else ""
+        )
+        score_axes = row.get("score_axes")
+        score_axis = (
+            ",".join(str(item) for item in score_axes if str(item))
+            if isinstance(score_axes, list)
+            else ""
+        )
+        return (
+            f"{kind}:queue={experiment_queue_id}:candidates={candidates}"
+            f":archives={archives}:runtime_content={runtime_content}"
+            f":runtime_tree={runtime_tree}:score_axis={score_axis}"
+        )
     exact_ready_paths = row.get("exact_ready_queue_paths")
     if isinstance(exact_ready_paths, list):
         joined = ",".join(str(path) for path in exact_ready_paths if str(path))

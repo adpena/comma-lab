@@ -1192,6 +1192,76 @@ def test_materializer_exact_ready_handoff_summary_supersedes_old_candidate_repor
     assert summary["recent_exact_ready_queue_paths"] == ["experiments/results/new/input.json"]
 
 
+def test_materializer_exact_ready_handoff_summary_keeps_distinct_stable_identities(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    root = tmp_path / "experiments" / "results"
+    first_report = _write_json(
+        root / "run_a" / "consumer_report.json",
+        {
+            "schema": "materializer_exact_eval_consumer.v1",
+            "authorized_candidate_count": 1,
+            "blocked_candidate_count": 0,
+            "duplicate_candidate_count": 0,
+            "experiment_queue_id": "same_queue",
+            "rows": [
+                {
+                    "candidate_id": "same_candidate",
+                    "archive_sha256": "a" * 64,
+                    "runtime_content_tree_sha256": "1" * 64,
+                    "runtime_tree_sha256": "2" * 64,
+                    "score_axis": "contest_cuda",
+                    "stable_identity": (
+                        f"archive={'a' * 64}:runtime_content={'1' * 64}:"
+                        f"runtime_tree={'2' * 64}:score_axis=contest_cuda"
+                    ),
+                    "exact_ready_queue_path": "experiments/results/run_a/input.json",
+                }
+            ],
+        },
+    )
+    second_report = _write_json(
+        root / "run_b" / "consumer_report.json",
+        {
+            "schema": "materializer_exact_eval_consumer.v1",
+            "authorized_candidate_count": 1,
+            "blocked_candidate_count": 0,
+            "duplicate_candidate_count": 0,
+            "experiment_queue_id": "same_queue",
+            "rows": [
+                {
+                    "candidate_id": "same_candidate",
+                    "archive_sha256": "a" * 64,
+                    "runtime_content_tree_sha256": "3" * 64,
+                    "runtime_tree_sha256": "4" * 64,
+                    "score_axis": "contest_cuda",
+                    "stable_identity": (
+                        f"archive={'a' * 64}:runtime_content={'3' * 64}:"
+                        f"runtime_tree={'4' * 64}:score_axis=contest_cuda"
+                    ),
+                    "exact_ready_queue_path": "experiments/results/run_b/input.json",
+                }
+            ],
+        },
+    )
+    os.utime(first_report, ns=(1_000, 1_000))
+    os.utime(second_report, ns=(2_000, 2_000))
+    monkeypatch.setattr(mod, "MATERIALIZER_HANDOFF_SCAN_ROOTS", (root,))
+
+    summary = mod._materializer_exact_ready_handoff_summary()
+
+    assert summary["consumer_report_count"] == 2
+    assert summary["consumer_authorized_candidate_count"] == 2
+    assert summary["superseded_handoff_artifact_count"] == 0
+    assert set(summary["recent_exact_ready_queue_paths"]) == {
+        "experiments/results/run_a/input.json",
+        "experiments/results/run_b/input.json",
+    }
+
+
 def test_briefing_json_each_phase_has_n_total_or_n_configs():
     """Each sub-tool must emit a JSON dict with at least one count field."""
     proc = _run("--json", "--top", "3")
