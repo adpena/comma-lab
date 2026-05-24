@@ -1018,6 +1018,73 @@ def test_queue_performance_candidate_map_can_expand_bundle_steps() -> None:
     assert cells_by_candidate["candidate_b"]["priority"]["artifact_bytes"] == 8192
 
 
+def test_queue_performance_observation_matches_inverse_action_source_unit() -> None:
+    runtime_identity = {
+        "runtime_tree_sha256": "d" * 64,
+        "scorer_version": "local_scheduler.v1",
+    }
+    cache_identity = {
+        "cache_sha256": "e" * 64,
+    }
+    source_unit_id = "inverse_action_atom_direct_decoder_blob_0000"
+    performance = {
+        "schema": "experiment_queue_performance_summary.v1",
+        "queue_id": "materializer_queue",
+        "event_count": 1,
+        "candidate_id_by_experiment": {"packetir_opset": ["packetir_opset"]},
+        "by_resource_kind": {},
+        "by_step": {
+            "packetir_opset.materialize": {
+                "run_count": 1,
+                "success_count": 1,
+                "failure_count": 0,
+                "resource_kind_counts": {"local_cpu": 1},
+                "dominant_resource_kind": "local_cpu",
+                "elapsed_seconds_mean": 1.25,
+                "artifact_record_bytes_mean": 4096.0,
+                "source_unit_ids": [source_unit_id],
+                "source_selection_ids": ["compiled_direct_selection"],
+            }
+        },
+    }
+    atom = _atom(
+        "candidate_parent",
+        atom_id="atom_direct",
+        elapsed_seconds=99.0,
+        artifact_bytes=99_000_000,
+        operation_set_compiler={
+            "schema": "inverse_action_operation_set_compiler_hint.v1",
+            "operation_set_id": "compiled_direct_selection",
+            "selected_operations": [
+                {
+                    "unit_id": "decoder_blob",
+                    "target_kind": "archive_section_entropy_recode_v1",
+                    "archive_section": "decoder_blob",
+                    "candidate_saved_bytes": 256,
+                }
+            ],
+        },
+    )
+
+    observations = observations_from_queue_performance_summary(
+        performance,
+        runtime_identity=runtime_identity,
+        cache_identity=cache_identity,
+    )
+    action = build_discrete_scorer_action_functional([atom], observations=observations)
+    cell = action["cells"][0]
+
+    assert observations[0]["candidate_id"] == "packetir_opset"
+    assert observations[0]["source_unit_ids"] == [source_unit_id]
+    assert observations[0]["source_selection_ids"] == ["compiled_direct_selection"]
+    assert cell["candidate_id"] == "candidate_parent"
+    assert cell["best_observation_id"] == (
+        "queue_perf_materializer_queue_packetir_opset_materialize"
+    )
+    assert cell["priority"]["elapsed_seconds"] == pytest.approx(1.25)
+    assert cell["priority"]["artifact_bytes"] == 4096
+
+
 def test_queue_performance_summary_requires_candidate_identity() -> None:
     runtime_identity = {
         "runtime_tree_sha256": "d" * 64,

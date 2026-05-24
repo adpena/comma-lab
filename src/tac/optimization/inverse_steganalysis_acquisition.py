@@ -276,6 +276,11 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
         "step_id": _optional_text(row.get("step_id")),
         "performance_bucket_key": _optional_text(row.get("performance_bucket_key")),
         "performance_summary_schema": _optional_text(row.get("performance_summary_schema")),
+        "candidate_ids": _list_strings(row.get("candidate_ids")),
+        "work_ids": _list_strings(row.get("work_ids")),
+        "backlog_keys": _list_strings(row.get("backlog_keys")),
+        "source_unit_ids": _list_strings(row.get("source_unit_ids")),
+        "source_selection_ids": _list_strings(row.get("source_selection_ids")),
         "run_count": _optional_int(row.get("run_count"), "run_count", minimum=0),
         "success_count": _optional_int(row.get("success_count"), "success_count", minimum=0),
         "failure_count": _optional_int(row.get("failure_count"), "failure_count", minimum=0),
@@ -464,6 +469,11 @@ def observations_from_queue_performance_summary(
                         "step_id": step_id,
                         "performance_bucket_key": str(bucket_key),
                         "performance_summary_schema": QUEUE_PERFORMANCE_SUMMARY_SCHEMA,
+                        "candidate_ids": bucket.get("candidate_ids"),
+                        "work_ids": bucket.get("work_ids"),
+                        "backlog_keys": bucket.get("backlog_keys"),
+                        "source_unit_ids": bucket.get("source_unit_ids"),
+                        "source_selection_ids": bucket.get("source_selection_ids"),
                         "runtime_identity": runtime_identity,
                         "cache_identity": cache_identity,
                         "elapsed_seconds": elapsed_seconds,
@@ -707,7 +717,11 @@ def build_inverse_steganalysis_acquisition_plan(
     ranked: list[dict[str, Any]] = []
     for index, raw_atom in enumerate(atoms):
         atom = normalize_inverse_steganalysis_atom(raw_atom)
-        candidate_obs = by_candidate.get(str(atom["candidate_id"]), [])
+        candidate_obs = _matching_observations_for_atom(
+            atom,
+            obs_rows,
+            by_candidate,
+        )
         best_obs = _best_observation(atom, candidate_obs)
         ranked.append(
             _false_authority(
@@ -801,7 +815,10 @@ def build_discrete_scorer_action_functional(
                 f"inverse action functional cell count exceeds max_cells={max_cells}"
             )
         atom = normalize_inverse_steganalysis_atom(raw_atom)
-        best_obs = _best_observation(atom, by_candidate.get(str(atom["candidate_id"]), []))
+        best_obs = _best_observation(
+            atom,
+            _matching_observations_for_atom(atom, obs_rows, by_candidate),
+        )
         priority = compute_acquisition_priority(atom, best_obs)
         measure = _cell_measure(atom)
         first_order = _float(atom["first_order_marginal_effect"], "first_order_marginal_effect")
@@ -2372,6 +2389,103 @@ def _list_strings(value: Any) -> list[str]:
     if not isinstance(value, Sequence):
         return []
     return [str(item) for item in value if str(item)]
+
+
+def _matching_observations_for_atom(
+    atom: Mapping[str, Any],
+    observations: Sequence[Mapping[str, Any]],
+    by_candidate: Mapping[str, Sequence[Mapping[str, Any]]],
+) -> list[dict[str, Any]]:
+    matched: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    def add(row: Mapping[str, Any]) -> None:
+        key = str(row.get("observation_id") or id(row))
+        if key in seen:
+            return
+        seen.add(key)
+        matched.append(dict(row))
+
+    for row in by_candidate.get(str(atom["candidate_id"]), ()):
+        add(row)
+
+    atom_targets = _atom_feedback_target_ids(atom)
+    if atom_targets:
+        for row in observations:
+            if _observation_feedback_target_ids(row) & atom_targets:
+                add(row)
+    return matched
+
+
+def _atom_feedback_target_ids(atom: Mapping[str, Any]) -> set[str]:
+    ids = {
+        str(value)
+        for value in (
+            atom.get("atom_id"),
+            atom.get("candidate_id"),
+            atom.get("parent_unit_id"),
+        )
+        if str(value or "")
+    }
+    provenance = atom.get("source_provenance")
+    if isinstance(provenance, Mapping):
+        ids.update(
+            str(value)
+            for value in (
+                provenance.get("operation_set_id"),
+                provenance.get("combo_id"),
+                provenance.get("source_row_id"),
+                provenance.get("source_candidate_id"),
+                provenance.get("candidate_id"),
+            )
+            if str(value or "")
+        )
+        ids.update(_list_strings(provenance.get("selected_unit_ids")))
+        ids.update(_list_strings(provenance.get("source_unit_ids")))
+        ids.update(_list_strings(provenance.get("source_selection_ids")))
+        for operation in _sequence_of_mappings(provenance.get("selected_operations")):
+            unit_id = _optional_text(operation.get("unit_id"))
+            if unit_id:
+                ids.add(unit_id)
+    _add_compiler_feedback_target_ids(ids, atom)
+    return ids
+
+
+def _add_compiler_feedback_target_ids(ids: set[str], atom: Mapping[str, Any]) -> None:
+    atom_id = _optional_text(atom.get("atom_id"))
+    compiler = atom.get("operation_set_compiler")
+    if not isinstance(compiler, Mapping):
+        return
+    operation_set_id = _optional_text(compiler.get("operation_set_id"))
+    if operation_set_id:
+        ids.add(operation_set_id)
+    for op_index, operation in enumerate(_sequence_of_mappings(compiler.get("selected_operations"))):
+        unit_id = _optional_text(operation.get("unit_id")) or f"op{op_index:04d}"
+        ids.add(unit_id)
+        if atom_id:
+            ids.add(f"inverse_action_{atom_id}_{unit_id}_{op_index:04d}")
+
+
+def _observation_feedback_target_ids(observation: Mapping[str, Any]) -> set[str]:
+    ids = {
+        str(value)
+        for value in (
+            observation.get("candidate_id"),
+            observation.get("experiment_id"),
+            observation.get("step_id"),
+            observation.get("performance_bucket_key"),
+        )
+        if str(value or "")
+    }
+    for key in (
+        "candidate_ids",
+        "work_ids",
+        "backlog_keys",
+        "source_unit_ids",
+        "source_selection_ids",
+    ):
+        ids.update(_list_strings(observation.get(key)))
+    return ids
 
 
 def _best_observation(atom: Mapping[str, Any], observations: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None:
