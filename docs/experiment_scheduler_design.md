@@ -169,6 +169,26 @@ state requires `--orphaned-state-rationale`, and dirty remote git requires both
 false-authority artifacts and never grant score, promotion, rank/kill, or
 exact-dispatch authority.
 
+SSH execution that can create artifacts outside the local filesystem must use
+the artifact mobility contract. Pass `--require-artifact-mobility` with either
+one or more `--artifact-path-map LOCAL_PREFIX=REMOTE_PREFIX` mappings for rsync
+pullback or a specific `--artifact-shared-path-rationale` when the remote host
+and local machine are operating on the same mounted storage. The executor
+claims the queue step locally, runs the remote command, pulls back every mapped
+local-visible postcondition artifact, and only then evaluates terminal
+postconditions in the local authority state. A remote zero exit code without
+successful local artifact visibility is a failed queue step, not a succeeded
+remote result.
+
+The materializer campaign runner exposes the same contract through
+`--staircase-ssh-execute`, `--staircase-ssh-artifact-path-map`,
+`--staircase-ssh-artifact-shared-path-rationale`, and
+`--staircase-ssh-require-artifact-mobility`. `--staircase-ssh-execute` is
+mutually exclusive with top-level local `--execute`, takes its own
+`--staircase-ssh-max-steps` bound, and requires a mobility contract so bounded
+fleet work can be launched from the generated queue without turning a detached
+SSH filesystem into implicit source-of-truth state.
+
 ## Implementation plan
 
 1. Phase 1 (now): Shell script orchestrator (`run_endgame.sh`) — DONE

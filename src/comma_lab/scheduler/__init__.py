@@ -78,9 +78,11 @@ from .models import (
     TrackStatus,
 )
 from .ssh_experiment_queue_executor import (
+    SSH_ARTIFACT_MOBILITY_SCHEMA,
     SSH_EXECUTION_RESULT_SCHEMA,
     build_remote_git_preflight_command,
     build_remote_shell_command,
+    build_rsync_pull_command,
     run_staircase_ssh_executor,
     select_ssh_tasks,
 )
@@ -110,6 +112,7 @@ __all__ = [
     "MATERIALIZER_EXECUTION_STEP_ID",
     "MATERIALIZER_HARVEST_STEP_ID",
     "REGISTRY_SCHEMA",
+    "SSH_ARTIFACT_MOBILITY_SCHEMA",
     "SSH_EXECUTION_RESULT_SCHEMA",
     "BudgetReport",
     "BudgetSpec",
@@ -129,6 +132,7 @@ __all__ = [
     "build_materializer_execution_queue",
     "build_remote_git_preflight_command",
     "build_remote_shell_command",
+    "build_rsync_pull_command",
     "connect_state",
     "default_state_path",
     "finalize_claimed_step_execution",

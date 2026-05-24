@@ -224,6 +224,17 @@ def _normalize_step(raw: Mapping[str, Any], *, experiment_id: str, index: int) -
         f"{step_id}.telemetry.max_recursive_entries",
         default=256,
     )
+    artifact_mobility = _optional_mapping(
+        raw.get("artifact_mobility"),
+        f"{step_id}.artifact_mobility",
+    )
+    if artifact_mobility:
+        schema = artifact_mobility.get("schema", "experiment_queue_artifact_mobility.v1")
+        if schema != "experiment_queue_artifact_mobility.v1":
+            raise ExperimentQueueError(
+                f"{step_id}.artifact_mobility.schema unsupported: {schema!r}"
+            )
+        artifact_mobility = {**artifact_mobility, "schema": schema}
     return {
         "id": step_id,
         "kind": kind,
@@ -241,6 +252,7 @@ def _normalize_step(raw: Mapping[str, Any], *, experiment_id: str, index: int) -
                 telemetry.get("include_postcondition_paths", True)
             ),
         },
+        "artifact_mobility": artifact_mobility,
     }
 
 
@@ -540,6 +552,7 @@ def _step_hashes(
         "postconditions": postconditions,
         "timeout_seconds": int(step.get("timeout_seconds") or 0),
         "telemetry": dict(step.get("telemetry") or {}),
+        "artifact_mobility": dict(step.get("artifact_mobility") or {}),
     }
     if experiment_metadata:
         definition["experiment_metadata"] = dict(experiment_metadata)

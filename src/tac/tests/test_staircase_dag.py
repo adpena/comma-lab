@@ -152,6 +152,32 @@ def test_build_queue_dag_plans_executor_specs_without_authority(tmp_path: Path) 
     )
 
 
+def test_staircase_dag_carries_artifact_mobility_to_executor_specs() -> None:
+    queue = _queue()
+    mobility = {
+        "schema": "experiment_queue_artifact_mobility.v1",
+        "mode": "pullback",
+        "required": True,
+    }
+    queue["experiments"][0]["steps"][0]["artifact_mobility"] = mobility
+    dag = build_staircase_dag_from_experiment_queue(
+        queue,
+        dag_id="fixture_dag",
+        resource_pools=[
+            {"id": "m5", "slots": {"local_cpu": 2, "local_mlx": 1}, "memory_gb": 128, "disk_gb": 80}
+        ],
+    )
+
+    plan = plan_staircase_dispatch(dag, max_nodes=4)
+    task = next(
+        task
+        for task in plan["dask_task_specs"]
+        if task["experiment_id"] == "cand_a" and task["step_id"] == "plan"
+    )
+
+    assert task["artifact_mobility"] == mobility
+
+
 def test_plan_uses_queue_state_and_unblocks_successors(tmp_path: Path) -> None:
     queue = _queue()
     queue_path = tmp_path / "queue.json"

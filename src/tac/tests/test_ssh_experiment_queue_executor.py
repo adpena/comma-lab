@@ -8,7 +8,10 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from comma_lab.scheduler.experiment_queue import (
+    ExperimentQueueError,
     connect_state,
     initialize_queue_state,
     normalize_queue_definition,
@@ -17,6 +20,7 @@ from comma_lab.scheduler.experiment_queue import (
 from comma_lab.scheduler.ssh_experiment_queue_executor import (
     build_remote_git_preflight_command,
     build_remote_shell_command,
+    build_rsync_pull_command,
     run_staircase_ssh_executor,
     select_ssh_tasks,
 )
@@ -54,7 +58,7 @@ class FakeSshRunner:
         return subprocess.CompletedProcess(argv, 0, stdout="remote ok\n")
 
 
-def _queue(artifact: Path) -> dict[str, Any]:
+def _queue(artifact: Path, *, artifact_mobility: dict[str, Any] | None = None) -> dict[str, Any]:
     return normalize_queue_definition({
         "schema": "experiment_queue.v1",
         "queue_id": "ssh_executor_fixture",
@@ -85,6 +89,7 @@ def _queue(artifact: Path) -> dict[str, Any]:
                                 "path": str(artifact),
                             },
                         ],
+                        "artifact_mobility": artifact_mobility or {},
                     }
                 ],
             }
@@ -153,6 +158,39 @@ def test_remote_git_preflight_command_checks_head_and_cleanliness() -> None:
     assert "git diff --cached --quiet" in preflight
 
 
+def test_rsync_pull_command_uses_remote_source_and_local_destination() -> None:
+    command = build_rsync_pull_command(
+        rsync_binary="rsync",
+        ssh_target="user@host",
+        remote_path="/remote/pact/out/result.json",
+        local_path="/local/pact/out/result.json",
+    )
+
+    assert command == [
+        "rsync",
+        "-a",
+        "--",
+        "user@host:/remote/pact/out/result.json",
+        "/local/pact/out/result.json",
+    ]
+
+
+def test_rsync_pull_command_rejects_unsafe_remote_artifact_paths() -> None:
+    for remote_path in (
+        "relative/out.json",
+        "/remote/../out.json",
+        "/remote/out bad.json",
+        "/remote/out;touch.json",
+    ):
+        with pytest.raises(ExperimentQueueError):
+            build_rsync_pull_command(
+                rsync_binary="rsync",
+                ssh_target="user@host",
+                remote_path=remote_path,
+                local_path="/local/out.json",
+            )
+
+
 def test_select_ssh_tasks_requires_writeback_hashes_remote_root_and_postconditions(
     tmp_path: Path,
 ) -> None:
@@ -173,6 +211,59 @@ def test_select_ssh_tasks_requires_writeback_hashes_remote_root_and_postconditio
     assert "remote_repo_root_must_be_absolute" in selections[0].blockers
     assert "queue_state_writeback_step_hashes_mismatch" in selections[0].blockers
     assert "task_postconditions_missing_for_ssh" in selections[0].blockers
+
+
+def test_select_ssh_tasks_blocks_missing_required_artifact_mobility_contract(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "done.json"
+    queue = _queue(artifact)
+    plan = _plan(queue)
+    state = tmp_path / "queue.sqlite"
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        ready = ready_steps(conn, queue, repo_root=REPO_ROOT)
+
+    selections = select_ssh_tasks(
+        plan,
+        queue,
+        ready=ready,
+        repo_root=REPO_ROOT,
+        require_artifact_mobility=True,
+    )
+
+    assert "artifact_mobility_contract_missing" in selections[0].blockers
+
+
+def test_select_ssh_tasks_blocks_stripped_artifact_mobility_metadata(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "done.json"
+    queue = _queue(
+        artifact,
+        artifact_mobility={
+            "schema": "experiment_queue_artifact_mobility.v1",
+            "mode": "pullback",
+            "required": True,
+        },
+    )
+    plan = _plan(queue)
+    del plan["dask_task_specs"][0]["artifact_mobility"]
+    state = tmp_path / "queue.sqlite"
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        ready = ready_steps(conn, queue, repo_root=REPO_ROOT)
+
+    selections = select_ssh_tasks(
+        plan,
+        queue,
+        ready=ready,
+        repo_root=REPO_ROOT,
+        artifact_path_maps={tmp_path.as_posix(): "/remote/tmp"},
+        require_artifact_mobility=True,
+    )
+
+    assert "artifact_mobility_metadata_missing_from_task" in selections[0].blockers
 
 
 def test_ssh_executor_blocks_remote_step_without_local_visible_postcondition(
@@ -204,6 +295,122 @@ def test_ssh_executor_blocks_remote_step_without_local_visible_postcondition(
     row = _step_row(state)
     assert row["status"] == "queued"
     assert row["attempts"] == 0
+
+
+def test_ssh_executor_pulls_back_artifacts_before_local_postconditions(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "out" / "done.json"
+    queue = _queue(artifact)
+    plan = _plan(queue)
+    state = tmp_path / "queue.sqlite"
+    calls: list[list[str]] = []
+
+    def runner(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        calls.append(list(argv))
+        if str(argv[0]).endswith("rsync"):
+            Path(argv[-1]).write_text(
+                json.dumps(
+                    {
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "rank_or_kill_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ),
+                encoding="utf-8",
+            )
+        return subprocess.CompletedProcess(argv, 0, stdout="ok\n")
+
+    result = run_staircase_ssh_executor(
+        plan,
+        queue,
+        state_path=state,
+        repo_root=REPO_ROOT,
+        execute=True,
+        allow_noncanonical_state=True,
+        artifact_path_maps={tmp_path.as_posix(): "/remote/tmp"},
+        require_artifact_mobility=True,
+        runner=runner,
+    )
+
+    assert result["success_count"] == 1
+    assert any(call[0] == "rsync" for call in calls)
+    row = _step_row(state)
+    assert row["status"] == "succeeded"
+    last_event = json.loads(row["last_event_json"])
+    assert last_event["artifact_mobility"]["mode"] == "rsync_pull"
+    assert last_event["artifact_mobility"]["succeeded"] is True
+
+
+def test_ssh_executor_fails_remote_success_when_artifact_pullback_fails(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "out" / "missing.json"
+    queue = _queue(artifact)
+    state = tmp_path / "queue.sqlite"
+
+    def runner(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        if str(argv[0]).endswith("rsync"):
+            return subprocess.CompletedProcess(argv, 23, stdout="no such file\n")
+        return subprocess.CompletedProcess(argv, 0, stdout="ok\n")
+
+    result = run_staircase_ssh_executor(
+        _plan(queue),
+        queue,
+        state_path=state,
+        repo_root=REPO_ROOT,
+        execute=True,
+        allow_noncanonical_state=True,
+        artifact_path_maps={tmp_path.as_posix(): "/remote/tmp"},
+        require_artifact_mobility=True,
+        runner=runner,
+    )
+
+    assert result["failure_count"] == 1
+    row = _step_row(state)
+    assert row["status"] == "failed"
+    last_event = json.loads(row["last_event_json"])
+    assert last_event["returncode"] == 23
+    assert last_event["artifact_mobility"]["succeeded"] is False
+
+
+def test_ssh_executor_skips_pullback_when_remote_command_fails(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "out" / "missing.json"
+    queue = _queue(artifact)
+    state = tmp_path / "queue.sqlite"
+    calls: list[list[str]] = []
+
+    def runner(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        calls.append(list(argv))
+        if str(argv[0]).endswith("rsync"):
+            raise AssertionError("pullback must not run after remote command failure")
+        remote_script = str(argv[-1])
+        if "git rev-parse HEAD" in remote_script:
+            return subprocess.CompletedProcess(argv, 0, stdout="preflight ok\n")
+        return subprocess.CompletedProcess(argv, 9, stdout="remote failed\n")
+
+    result = run_staircase_ssh_executor(
+        _plan(queue),
+        queue,
+        state_path=state,
+        repo_root=REPO_ROOT,
+        execute=True,
+        allow_noncanonical_state=True,
+        artifact_path_maps={tmp_path.as_posix(): "/remote/tmp"},
+        require_artifact_mobility=True,
+        runner=runner,
+    )
+
+    assert result["failure_count"] == 1
+    assert not any(call[0] == "rsync" for call in calls)
+    row = _step_row(state)
+    assert row["status"] == "failed"
+    last_event = json.loads(row["last_event_json"])
+    assert last_event["returncode"] == 9
+    assert last_event["artifact_mobility"]["mode"] == "skipped_remote_execution_failed"
 
 
 def test_ssh_executor_preflight_failure_leaves_step_queued(tmp_path: Path) -> None:

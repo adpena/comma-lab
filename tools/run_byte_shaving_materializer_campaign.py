@@ -107,8 +107,13 @@ def _json_from_stdout(result: CommandResult) -> dict[str, Any] | None:
     return payload if isinstance(payload, dict) else None
 
 
-def _require_json_stdout(result: CommandResult, *, label: str) -> dict[str, Any]:
-    if result.returncode != 0:
+def _require_json_stdout(
+    result: CommandResult,
+    *,
+    label: str,
+    allow_nonzero: bool = False,
+) -> dict[str, Any]:
+    if result.returncode != 0 and not allow_nonzero:
         raise SystemExit(
             f"{label} failed ({result.returncode}): {result.stderr or result.stdout}"
         )
@@ -154,6 +159,16 @@ def _parse_remote_repo_roots(values: list[str]) -> list[str]:
         if not sep or not machine.strip() or not root.strip():
             raise SystemExit("--staircase-ssh-remote-repo-root entries must be MACHINE_ID=PATH")
         out.extend(["--remote-repo-root", f"{machine.strip()}={root.strip()}"])
+    return out
+
+
+def _parse_artifact_path_maps(values: list[str]) -> list[str]:
+    out: list[str] = []
+    for raw in values:
+        local, sep, remote = raw.partition("=")
+        if not sep or not local.strip() or not remote.strip():
+            raise SystemExit("--staircase-ssh-artifact-path-map entries must be LOCAL_PREFIX=REMOTE_PREFIX")
+        out.extend(["--artifact-path-map", f"{local.strip()}={remote.strip()}"])
     return out
 
 
@@ -225,6 +240,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="run tools/run_staircase_ssh_executor.py without --execute against the emitted plan",
     )
+    parser.add_argument(
+        "--staircase-ssh-execute",
+        action="store_true",
+        help="run tools/run_staircase_ssh_executor.py --execute against the emitted plan",
+    )
+    parser.add_argument("--staircase-ssh-max-steps", type=int, default=1)
     parser.add_argument("--staircase-ssh-machine-id", default=None)
     parser.add_argument(
         "--staircase-ssh-remote-repo-root",
@@ -232,6 +253,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=[],
         metavar="MACHINE=PATH",
     )
+    parser.add_argument(
+        "--staircase-ssh-require-artifact-mobility",
+        action="store_true",
+        help="require SSH artifact pullback/shared-storage visibility",
+    )
+    parser.add_argument(
+        "--staircase-ssh-artifact-path-map",
+        action="append",
+        default=[],
+        metavar="LOCAL_PREFIX=REMOTE_PREFIX",
+    )
+    parser.add_argument("--staircase-ssh-artifact-shared-path-rationale", default=None)
+    parser.add_argument("--staircase-ssh-allow-dirty-remote-git", action="store_true")
+    parser.add_argument("--staircase-ssh-dirty-remote-git-rationale", default=None)
+    parser.add_argument("--staircase-ssh-rsync-binary", default="rsync")
+    parser.add_argument("--staircase-ssh-artifact-pull-timeout-seconds", type=int, default=300)
     parser.add_argument("--staircase-ssh-allow-future-executor", action="store_true")
     return parser.parse_args(argv)
 
@@ -373,13 +410,14 @@ def _build_staircase_artifacts(
     }
 
 
-def _ssh_executor_dry_run_command(
+def _ssh_executor_command(
     args: argparse.Namespace,
     *,
     execution_queue: Path,
     state_path: Path,
     staircase_plan_path: Path,
     run_dir: Path,
+    execute: bool,
 ) -> list[str]:
     command = [
         sys.executable,
@@ -391,14 +429,62 @@ def _ssh_executor_dry_run_command(
         "--state",
         _display_path(state_path),
         "--output",
-        _display_path(run_dir / "staircase_ssh_executor_dry_run.json"),
+        _display_path(
+            run_dir
+            / (
+                "staircase_ssh_executor_execute.json"
+                if execute
+                else "staircase_ssh_executor_dry_run.json"
+            )
+        ),
     ]
+    if execute:
+        command.append("--execute")
+    command.extend(["--max-steps", str(args.staircase_ssh_max_steps)])
     if args.staircase_ssh_machine_id:
         command.extend(["--machine-id", str(args.staircase_ssh_machine_id)])
     if args.staircase_ssh_allow_future_executor:
         command.append("--allow-future-executor")
+    if args.staircase_ssh_allow_dirty_remote_git:
+        command.append("--allow-dirty-remote-git")
+    if args.staircase_ssh_dirty_remote_git_rationale:
+        command.extend([
+            "--dirty-remote-git-rationale",
+            str(args.staircase_ssh_dirty_remote_git_rationale),
+        ])
     command.extend(_parse_remote_repo_roots(args.staircase_ssh_remote_repo_root))
+    if execute or args.staircase_ssh_require_artifact_mobility:
+        command.append("--require-artifact-mobility")
+    command.extend(_parse_artifact_path_maps(args.staircase_ssh_artifact_path_map))
+    if args.staircase_ssh_artifact_shared_path_rationale:
+        command.extend([
+            "--artifact-shared-path-rationale",
+            str(args.staircase_ssh_artifact_shared_path_rationale),
+        ])
+    command.extend(["--rsync-binary", str(args.staircase_ssh_rsync_binary)])
+    command.extend([
+        "--artifact-pull-timeout-seconds",
+        str(args.staircase_ssh_artifact_pull_timeout_seconds),
+    ])
     return command
+
+
+def _ssh_executor_dry_run_command(
+    args: argparse.Namespace,
+    *,
+    execution_queue: Path,
+    state_path: Path,
+    staircase_plan_path: Path,
+    run_dir: Path,
+) -> list[str]:
+    return _ssh_executor_command(
+        args,
+        execution_queue=execution_queue,
+        state_path=state_path,
+        staircase_plan_path=staircase_plan_path,
+        run_dir=run_dir,
+        execute=False,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -407,6 +493,32 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--candidate-limit must be >= 1")
     if args.max_steps < 1:
         raise SystemExit("--max-steps must be >= 1")
+    if args.staircase_ssh_max_steps < 1:
+        raise SystemExit("--staircase-ssh-max-steps must be >= 1")
+    if args.staircase_ssh_execute and args.execute:
+        raise SystemExit(
+            "--staircase-ssh-execute and top-level --execute cannot target the same queue run"
+        )
+    if args.staircase_ssh_artifact_pull_timeout_seconds < 1:
+        raise SystemExit("--staircase-ssh-artifact-pull-timeout-seconds must be >= 1")
+    if args.staircase_ssh_dirty_remote_git_rationale and not args.staircase_ssh_allow_dirty_remote_git:
+        raise SystemExit(
+            "--staircase-ssh-dirty-remote-git-rationale requires "
+            "--staircase-ssh-allow-dirty-remote-git"
+        )
+    if args.staircase_ssh_execute and not (
+        args.staircase_ssh_artifact_path_map
+        or args.staircase_ssh_artifact_shared_path_rationale
+    ):
+        raise SystemExit(
+            "--staircase-ssh-execute requires --staircase-ssh-artifact-path-map "
+            "or --staircase-ssh-artifact-shared-path-rationale"
+        )
+    if args.staircase_ssh_artifact_path_map and args.staircase_ssh_artifact_shared_path_rationale:
+        raise SystemExit(
+            "--staircase-ssh-artifact-path-map and "
+            "--staircase-ssh-artifact-shared-path-rationale are mutually exclusive"
+        )
     run_dir = _resolve(args.run_dir) if args.run_dir is not None else (
         REPO_ROOT / ".omx" / "research" / f"byte_shaving_materializer_campaign_{_utc_stamp()}"
     )
@@ -427,7 +539,9 @@ def main(argv: list[str] | None = None) -> int:
 
     staircase_artifacts: dict[str, Any] | None = None
     ssh_executor_dry_run: dict[str, Any] | None = None
-    if args.emit_staircase_plan or args.staircase_ssh_dry_run:
+    ssh_executor_execute: dict[str, Any] | None = None
+    ssh_execute_result: CommandResult | None = None
+    if args.emit_staircase_plan or args.staircase_ssh_dry_run or args.staircase_ssh_execute:
         staircase_artifacts = _build_staircase_artifacts(
             args,
             run_dir=run_dir,
@@ -450,6 +564,24 @@ def main(argv: list[str] | None = None) -> int:
             ssh_executor_dry_run = _require_json_stdout(
                 ssh_result,
                 label="staircase SSH executor dry-run",
+            )
+        if args.staircase_ssh_execute:
+            ssh_execute_result = _run(
+                _ssh_executor_command(
+                    args,
+                    execution_queue=execution_queue,
+                    state_path=state_path,
+                    staircase_plan_path=run_dir / "staircase_dispatch_plan.json",
+                    run_dir=run_dir,
+                    execute=True,
+                ),
+                check=False,
+            )
+            commands.append(ssh_execute_result)
+            ssh_executor_execute = _require_json_stdout(
+                ssh_execute_result,
+                label="staircase SSH executor execute",
+                allow_nonzero=True,
             )
 
     worker_command = [
@@ -502,12 +634,14 @@ def main(argv: list[str] | None = None) -> int:
         "queue_path": _display_path(execution_queue),
         "state_path": _display_path(state_path),
         "execute": bool(args.execute),
+        "staircase_ssh_execute": bool(args.staircase_ssh_execute),
         "queue_id": queue["queue_id"],
         "experiment_count": len(queue["experiments"]),
         "build": _json_from_stdout(build_result),
         "worker": _json_from_stdout(worker_result),
         "staircase": staircase_artifacts,
         "ssh_executor_dry_run": ssh_executor_dry_run,
+        "ssh_executor_execute": ssh_executor_execute,
         "observation": _json_from_stdout(observe_result),
         "performance": _json_from_stdout(performance_result),
         "commands": [result.to_dict() for result in commands],
@@ -520,7 +654,8 @@ def main(argv: list[str] | None = None) -> int:
     _write_json(summary_path, payload)
     payload["summary_path"] = _display_path(summary_path)
     _json_print(payload)
-    return 2 if worker_result.returncode != 0 else 0
+    ssh_execute_returncode = ssh_execute_result.returncode if ssh_execute_result is not None else 0
+    return 2 if worker_result.returncode != 0 or ssh_execute_returncode != 0 else 0
 
 
 if __name__ == "__main__":

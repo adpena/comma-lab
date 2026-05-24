@@ -33,8 +33,10 @@ from .staircase_dag import STAIRCASE_DISPATCH_PLAN_SCHEMA
 
 SSH_EXECUTION_RESULT_SCHEMA = "staircase_ssh_execution_result.v1"
 SSH_EXECUTOR_EVENT_SCHEMA = "staircase_ssh_executor_event.v1"
+SSH_ARTIFACT_MOBILITY_SCHEMA = "staircase_ssh_artifact_mobility.v1"
 SSH_EXECUTOR_NAMES = {"ssh_experiment_queue"}
 FUTURE_SSH_EXECUTOR_NAMES = {"ssh_experiment_queue_future"}
+_UNSAFE_REMOTE_ARTIFACT_CHARS = frozenset(" \t\r\n'\"`$;&|<>\\")
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
@@ -224,6 +226,27 @@ def _remote_repo_root_blockers(value: object) -> list[str]:
     return []
 
 
+def _resolve_local_artifact_path(path_value: str, *, repo_root: Path) -> Path:
+    path = Path(path_value).expanduser()
+    return path if path.is_absolute() else repo_root / path
+
+
+def _postcondition_artifact_paths(step: Mapping[str, Any], *, repo_root: Path) -> list[Path]:
+    seen: set[str] = set()
+    paths: list[Path] = []
+    for condition in [dict(condition) for condition in step.get("postconditions", [])]:
+        path_value = condition.get("path")
+        if not isinstance(path_value, str) or not path_value.strip():
+            continue
+        path = _resolve_local_artifact_path(path_value, repo_root=repo_root)
+        key = path.resolve(strict=False).as_posix()
+        if key in seen:
+            continue
+        seen.add(key)
+        paths.append(path)
+    return paths
+
+
 def _local_visible_postcondition_blockers(
     task: Mapping[str, Any],
     step: Mapping[str, Any],
@@ -236,6 +259,217 @@ def _local_visible_postcondition_blockers(
     if not isinstance(step_postconditions, list) or not step_postconditions:
         blockers.append("ssh_executor_local_visible_postcondition_required")
     return blockers
+
+
+def _normalize_path_maps(
+    path_maps: Mapping[str, str] | None,
+    *,
+    repo_root: Path,
+) -> list[tuple[Path, str]]:
+    normalized: list[tuple[Path, str]] = []
+    for raw_local, raw_remote in dict(path_maps or {}).items():
+        local_prefix = _resolve_local_artifact_path(str(raw_local), repo_root=repo_root)
+        remote_prefix = str(raw_remote).strip()
+        normalized_remote = remote_prefix.rstrip("/") or "/"
+        _require_safe_remote_artifact_path(normalized_remote, label="artifact path map remote prefix")
+        normalized.append((local_prefix.resolve(strict=False), normalized_remote))
+    return sorted(normalized, key=lambda item: len(item[0].as_posix()), reverse=True)
+
+
+def _remote_artifact_path_for_local(
+    local_path: Path,
+    *,
+    path_maps: Sequence[tuple[Path, str]],
+) -> str | None:
+    resolved = local_path.resolve(strict=False)
+    for local_prefix, remote_prefix in path_maps:
+        try:
+            relative = resolved.relative_to(local_prefix)
+        except ValueError:
+            continue
+        if relative.parts:
+            if remote_prefix == "/":
+                return f"/{relative.as_posix()}"
+            return f"{remote_prefix}/{relative.as_posix()}"
+        return remote_prefix
+    return None
+
+
+def _require_safe_remote_artifact_path(remote_path: str, *, label: str = "remote artifact path") -> str:
+    text = _require_text(remote_path, label)
+    if not text.startswith("/"):
+        raise ExperimentQueueError(f"{label} must be absolute")
+    if any(char in _UNSAFE_REMOTE_ARTIFACT_CHARS for char in text):
+        raise ExperimentQueueError(f"{label} contains unsafe shell/rsync characters")
+    if any(part == ".." for part in text.split("/")):
+        raise ExperimentQueueError(f"{label} must not contain '..'")
+    return text
+
+
+def _artifact_mobility_blockers(
+    task: Mapping[str, Any],
+    step: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    path_maps: Sequence[tuple[Path, str]],
+    require_artifact_mobility: bool,
+    artifact_shared_path_rationale: str | None,
+) -> list[str]:
+    step_mobility = step.get("artifact_mobility") if isinstance(step.get("artifact_mobility"), Mapping) else {}
+    task_mobility = task.get("artifact_mobility") if isinstance(task.get("artifact_mobility"), Mapping) else {}
+    if step_mobility and not task_mobility:
+        return ["artifact_mobility_metadata_missing_from_task"]
+    if step_mobility and dict(task_mobility) != dict(step_mobility):
+        return ["artifact_mobility_metadata_mismatch"]
+    if not require_artifact_mobility:
+        return []
+    if not path_maps and artifact_shared_path_rationale is None:
+        return ["artifact_mobility_contract_missing"]
+    if artifact_shared_path_rationale is not None:
+        return []
+    blockers: list[str] = []
+    for path in _postcondition_artifact_paths(step, repo_root=repo_root):
+        if _remote_artifact_path_for_local(path, path_maps=path_maps) is None:
+            blockers.append(f"artifact_pullback_missing_for_postcondition:{path.as_posix()}")
+    return blockers
+
+
+def build_rsync_pull_command(
+    *,
+    rsync_binary: str,
+    ssh_target: str,
+    remote_path: str,
+    local_path: str | Path,
+) -> list[str]:
+    remote_path = _require_safe_remote_artifact_path(remote_path)
+    return [
+        rsync_binary,
+        "-a",
+        "--",
+        f"{ssh_target}:{remote_path}",
+        str(local_path),
+    ]
+
+
+def _artifact_pullbacks_for_step(
+    step: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    path_maps: Sequence[tuple[Path, str]],
+) -> list[dict[str, str]]:
+    pullbacks: list[dict[str, str]] = []
+    for local_path in _postcondition_artifact_paths(step, repo_root=repo_root):
+        remote_path = _remote_artifact_path_for_local(local_path, path_maps=path_maps)
+        if remote_path is None:
+            continue
+        pullbacks.append(
+            {
+                "local_path": local_path.as_posix(),
+                "remote_path": remote_path,
+            }
+        )
+    return pullbacks
+
+
+def _run_artifact_pullbacks(
+    *,
+    runner: Runner,
+    rsync_binary: str,
+    ssh_target: str,
+    pullbacks: Sequence[Mapping[str, str]],
+    timeout_seconds: int,
+) -> dict[str, Any]:
+    if not pullbacks:
+        return {
+            "schema": SSH_ARTIFACT_MOBILITY_SCHEMA,
+            "mode": "none",
+            "attempted": False,
+            "succeeded": True,
+            "pullbacks": [],
+            "returncode": 0,
+            "timed_out": False,
+            "execution_error": None,
+        }
+    results: list[dict[str, Any]] = []
+    overall_returncode = 0
+    timed_out = False
+    execution_error: str | None = None
+    for pullback in pullbacks:
+        local_path = _require_text(pullback.get("local_path"), "pullback.local_path")
+        remote_path = _require_text(pullback.get("remote_path"), "pullback.remote_path")
+        Path(local_path).parent.mkdir(parents=True, exist_ok=True)
+        argv = build_rsync_pull_command(
+            rsync_binary=rsync_binary,
+            ssh_target=ssh_target,
+            remote_path=remote_path,
+            local_path=local_path,
+        )
+        started = time.monotonic()
+        try:
+            proc = _run_remote_command(runner, argv, timeout_seconds=timeout_seconds)
+            row = {
+                "local_path": local_path,
+                "remote_path": remote_path,
+                "argv": argv,
+                "returncode": int(proc.returncode),
+                "timed_out": False,
+                "elapsed_seconds": time.monotonic() - started,
+                "stdout": proc.stdout,
+            }
+            if proc.returncode != 0 and overall_returncode == 0:
+                overall_returncode = int(proc.returncode)
+        except subprocess.TimeoutExpired as exc:
+            timed_out = True
+            overall_returncode = 124
+            execution_error = f"TimeoutExpired: {exc}"
+            row = {
+                "local_path": local_path,
+                "remote_path": remote_path,
+                "argv": argv,
+                "returncode": 124,
+                "timed_out": True,
+                "elapsed_seconds": time.monotonic() - started,
+                "stdout": str(exc),
+            }
+        except OSError as exc:
+            overall_returncode = 127
+            execution_error = f"{type(exc).__name__}: {exc}"
+            row = {
+                "local_path": local_path,
+                "remote_path": remote_path,
+                "argv": argv,
+                "returncode": 127,
+                "timed_out": False,
+                "elapsed_seconds": time.monotonic() - started,
+                "stdout": str(exc),
+            }
+        results.append(row)
+        if overall_returncode:
+            break
+    return {
+        "schema": SSH_ARTIFACT_MOBILITY_SCHEMA,
+        "mode": "rsync_pull",
+        "attempted": True,
+        "succeeded": overall_returncode == 0 and not timed_out and execution_error is None,
+        "pullbacks": results,
+        "returncode": overall_returncode,
+        "timed_out": timed_out,
+        "execution_error": execution_error,
+    }
+
+
+def _skipped_artifact_mobility(*, mode: str, reason: str) -> dict[str, Any]:
+    return {
+        "schema": SSH_ARTIFACT_MOBILITY_SCHEMA,
+        "mode": mode,
+        "attempted": False,
+        "succeeded": True,
+        "pullbacks": [],
+        "returncode": 0,
+        "timed_out": False,
+        "execution_error": None,
+        "skip_reason": reason,
+    }
 
 
 def _ready_step_hashes(ready: ReadyStep) -> dict[str, str]:
@@ -297,12 +531,18 @@ def select_ssh_tasks(
     machine_id: str | None = None,
     allow_future_executor: bool = False,
     remote_repo_roots: Mapping[str, str] | None = None,
+    repo_root: str | Path = ".",
+    artifact_path_maps: Mapping[str, str] | None = None,
+    require_artifact_mobility: bool = False,
+    artifact_shared_path_rationale: str | None = None,
 ) -> list[SshTaskSelection]:
     """Select SSH-executable staircase tasks without mutating queue state."""
 
     normalized_plan = _normalize_dispatch_plan(plan)
     _require_matching_queue_source_ref(normalized_plan, queue)
     queue_id = str(queue["queue_id"])
+    repo = Path(repo_root)
+    path_maps = _normalize_path_maps(artifact_path_maps, repo_root=repo)
     ready_by_key = {(step.experiment_id, step.step_id): step for step in ready}
     roots = dict(remote_repo_roots or {})
     selections: list[SshTaskSelection] = []
@@ -328,6 +568,16 @@ def select_ssh_tasks(
                     blockers.append(f"queue_step_lookup_failed:{exc}")
                 else:
                     blockers.extend(_local_visible_postcondition_blockers(task, step))
+                    blockers.extend(
+                        _artifact_mobility_blockers(
+                            task,
+                            step,
+                            repo_root=repo,
+                            path_maps=path_maps,
+                            require_artifact_mobility=require_artifact_mobility,
+                            artifact_shared_path_rationale=artifact_shared_path_rationale,
+                        )
+                    )
         machine = _machine_for_task(task)
         task_machine_id = str(machine.get("id") or task.get("machine_hint") or "")
         if machine_id is not None and task_machine_id != machine_id:
@@ -537,6 +787,11 @@ def run_staircase_ssh_executor(
     ssh_connect_timeout_seconds: int = 10,
     remote_preflight_timeout_seconds: int = 20,
     log_root: str | Path | None = None,
+    artifact_path_maps: Mapping[str, str] | None = None,
+    require_artifact_mobility: bool = False,
+    artifact_shared_path_rationale: str | None = None,
+    rsync_binary: str = "rsync",
+    artifact_pull_timeout_seconds: int = 300,
     runner: Runner = subprocess.run,
 ) -> dict[str, Any]:
     """Execute selected staircase tasks on SSH machines while local queue state stays authoritative."""
@@ -548,7 +803,13 @@ def run_staircase_ssh_executor(
             dirty_remote_git_rationale,
             "dirty_remote_git_rationale",
         )
+    if artifact_shared_path_rationale is not None:
+        artifact_shared_path_rationale = _require_text(
+            artifact_shared_path_rationale,
+            "artifact_shared_path_rationale",
+        )
     repo = Path(repo_root)
+    normalized_artifact_path_maps = _normalize_path_maps(artifact_path_maps, repo_root=repo)
     queue_id = str(queue["queue_id"])
     state = Path(state_path)
     task_results: list[dict[str, Any]] = []
@@ -580,6 +841,10 @@ def run_staircase_ssh_executor(
             machine_id=machine_id,
             allow_future_executor=allow_future_executor,
             remote_repo_roots=remote_repo_roots,
+            repo_root=repo,
+            artifact_path_maps=artifact_path_maps,
+            require_artifact_mobility=require_artifact_mobility,
+            artifact_shared_path_rationale=artifact_shared_path_rationale,
         )
         selected = [selection for selection in selections if not selection.blockers]
         blocked = [selection for selection in selections if selection.blockers]
@@ -594,6 +859,9 @@ def run_staircase_ssh_executor(
                     "allow_orphaned_state": allow_orphaned_state,
                     "require_clean_remote_git": require_clean_remote_git,
                     "dirty_remote_git_rationale": dirty_remote_git_rationale,
+                    "require_artifact_mobility": require_artifact_mobility,
+                    "artifact_shared_path_rationale": artifact_shared_path_rationale,
+                    "artifact_path_map_count": len(normalized_artifact_path_maps),
                     "selected_count": min(len(selected), max_steps) if max_steps else len(selected),
                     "blocked_count": len(blocked),
                     "selected_tasks": [selection.to_dict() for selection in selected[: max_steps or None]],
@@ -674,6 +942,8 @@ def run_staircase_ssh_executor(
                 "remote_repo_root": remote_repo_root,
                 "remote_preflight": preflight,
                 "dirty_remote_git_rationale": dirty_remote_git_rationale,
+                "require_artifact_mobility": require_artifact_mobility,
+                "artifact_shared_path_rationale": artifact_shared_path_rationale,
                 "timeout_seconds": int(step.get("timeout_seconds") or 0),
             }
             claim_refused_reason = claim_ready_step_for_execution(
@@ -707,19 +977,45 @@ def run_staircase_ssh_executor(
                 step=step,
                 log_path=log_path,
             )
+            terminal_returncode = int(remote_result["returncode"])
+            terminal_timed_out = bool(remote_result["timed_out"])
+            terminal_error = remote_result["execution_error"]
+            if terminal_returncode == 0 and not terminal_timed_out and terminal_error is None:
+                pullbacks = _artifact_pullbacks_for_step(
+                    step,
+                    repo_root=repo,
+                    path_maps=normalized_artifact_path_maps,
+                )
+                artifact_mobility = _run_artifact_pullbacks(
+                    runner=runner,
+                    rsync_binary=rsync_binary,
+                    ssh_target=ssh_target,
+                    pullbacks=pullbacks,
+                    timeout_seconds=artifact_pull_timeout_seconds,
+                )
+            else:
+                artifact_mobility = _skipped_artifact_mobility(
+                    mode="skipped_remote_execution_failed",
+                    reason="remote_command_failed_before_artifact_pullback",
+                )
+            if not artifact_mobility["succeeded"]:
+                terminal_returncode = int(artifact_mobility["returncode"])
+                terminal_timed_out = bool(artifact_mobility["timed_out"])
+                terminal_error = artifact_mobility["execution_error"] or "artifact_mobility_failed"
             terminal_result = finalize_claimed_step_execution(
                 conn,
                 queue,
                 ready_step,
                 repo_root=repo,
                 log_path=log_path,
-                returncode=int(remote_result["returncode"]),
-                timed_out=bool(remote_result["timed_out"]),
-                execution_error=remote_result["execution_error"],
+                returncode=terminal_returncode,
+                timed_out=terminal_timed_out,
+                execution_error=terminal_error,
                 elapsed_seconds=float(remote_result["elapsed_seconds"]),
                 event={
                     **running_event,
                     **remote_result,
+                    "artifact_mobility": artifact_mobility,
                 },
             )
             if terminal_result.get("succeeded"):
@@ -744,6 +1040,9 @@ def run_staircase_ssh_executor(
             "allow_orphaned_state": allow_orphaned_state,
             "require_clean_remote_git": require_clean_remote_git,
             "dirty_remote_git_rationale": dirty_remote_git_rationale,
+            "require_artifact_mobility": require_artifact_mobility,
+            "artifact_shared_path_rationale": artifact_shared_path_rationale,
+            "artifact_path_map_count": len(normalized_artifact_path_maps),
             "selected_count": len([result for result in task_results if not result.get("blockers")]),
             "blocked_count": len([result for result in task_results if result.get("blockers")]),
             "executed_count": executed_count,
@@ -762,12 +1061,14 @@ def run_staircase_ssh_executor(
 
 __all__ = [
     "FUTURE_SSH_EXECUTOR_NAMES",
+    "SSH_ARTIFACT_MOBILITY_SCHEMA",
     "SSH_EXECUTION_RESULT_SCHEMA",
     "SSH_EXECUTOR_EVENT_SCHEMA",
     "SSH_EXECUTOR_NAMES",
     "SshTaskSelection",
     "build_remote_git_preflight_command",
     "build_remote_shell_command",
+    "build_rsync_pull_command",
     "run_staircase_ssh_executor",
     "select_ssh_tasks",
 ]

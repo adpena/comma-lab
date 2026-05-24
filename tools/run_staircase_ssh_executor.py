@@ -51,6 +51,16 @@ def _remote_repo_roots(values: list[str]) -> dict[str, str]:
     return out
 
 
+def _artifact_path_maps(values: list[str]) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for value in values:
+        local, sep, remote = value.partition("=")
+        if not sep or not local.strip() or not remote.strip():
+            raise ExperimentQueueError("--artifact-path-map must be LOCAL_PREFIX=REMOTE_PREFIX")
+        out[local.strip()] = remote.strip()
+    return out
+
+
 def _rationale_text(value: str | None, *, label: str) -> str | None:
     if value is None:
         return None
@@ -91,6 +101,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--ssh-connect-timeout-seconds", type=int, default=10)
     parser.add_argument("--remote-preflight-timeout-seconds", type=int, default=20)
     parser.add_argument("--log-root", default=None)
+    parser.add_argument(
+        "--require-artifact-mobility",
+        action="store_true",
+        help="require pullback/shared-storage visibility for local postcondition artifacts",
+    )
+    parser.add_argument(
+        "--artifact-path-map",
+        action="append",
+        default=[],
+        metavar="LOCAL_PREFIX=REMOTE_PREFIX",
+        help="map a local artifact prefix to the corresponding remote prefix for rsync pullback",
+    )
+    parser.add_argument(
+        "--artifact-shared-path-rationale",
+        default=None,
+        help="specific rationale when remote artifacts are already visible locally via shared storage",
+    )
+    parser.add_argument("--rsync-binary", default="rsync")
+    parser.add_argument("--artifact-pull-timeout-seconds", type=int, default=300)
     parser.add_argument("--noncanonical-state-rationale", default=None)
     parser.add_argument("--orphaned-state-rationale", default=None)
     return parser.parse_args(argv)
@@ -114,6 +143,14 @@ def main(argv: list[str] | None = None) -> int:
             args.dirty_remote_git_rationale,
             label="--dirty-remote-git-rationale",
         )
+        artifact_shared_path_rationale = _rationale_text(
+            args.artifact_shared_path_rationale,
+            label="--artifact-shared-path-rationale",
+        )
+        if artifact_shared_path_rationale is not None and args.artifact_path_map:
+            raise ExperimentQueueError(
+                "--artifact-shared-path-rationale and --artifact-path-map are mutually exclusive"
+            )
         if args.allow_dirty_remote_git and dirty_remote_git_rationale is None:
             raise ExperimentQueueError(
                 "--allow-dirty-remote-git requires --dirty-remote-git-rationale"
@@ -122,6 +159,8 @@ def main(argv: list[str] | None = None) -> int:
             raise ExperimentQueueError(
                 "--dirty-remote-git-rationale requires --allow-dirty-remote-git"
             )
+        if args.artifact_pull_timeout_seconds < 1:
+            raise ExperimentQueueError("--artifact-pull-timeout-seconds must be >= 1")
         result = run_staircase_ssh_executor(
             plan,
             queue,
@@ -140,6 +179,11 @@ def main(argv: list[str] | None = None) -> int:
             ssh_connect_timeout_seconds=args.ssh_connect_timeout_seconds,
             remote_preflight_timeout_seconds=args.remote_preflight_timeout_seconds,
             log_root=args.log_root,
+            artifact_path_maps=_artifact_path_maps(args.artifact_path_map),
+            require_artifact_mobility=args.require_artifact_mobility,
+            artifact_shared_path_rationale=artifact_shared_path_rationale,
+            rsync_binary=args.rsync_binary,
+            artifact_pull_timeout_seconds=args.artifact_pull_timeout_seconds,
         )
         if args.output:
             try:
