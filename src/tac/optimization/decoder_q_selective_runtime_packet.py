@@ -18,6 +18,10 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.decoder_q_constants import (
+    CONTEST_RATE_DENOMINATOR_BYTES,
+    FEC6_PAIR_COUNT,
+)
 from tac.optimization.fec6_byte_targets import parse_fec6_sections
 from tac.optimization.fec6_decoder_mutations import (
     DECODER_BLOB_LEN,
@@ -40,8 +44,6 @@ BRIDGE_SCHEMA = "decoder_q_selective_window_bridge_plan.v1"
 PACKET_MAGIC = b"DQS1"
 SPEC_MAGIC = PACKET_MAGIC
 SPEC_HEADER = struct.Struct("<4sBBHbH")
-CONTEST_RATE_DENOMINATOR_BYTES = 37_545_489
-FEC6_PAIR_COUNT = 600
 
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,

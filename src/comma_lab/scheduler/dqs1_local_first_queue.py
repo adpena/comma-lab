@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from comma_lab.storage_tiers import DEFAULT_RESERVE_FREE_GB
-from tac.optimization.decoder_q_selective_runtime_packet import FEC6_PAIR_COUNT
+from tac.optimization.decoder_q_constants import FEC6_PAIR_COUNT
 from tac.optimization.local_cpu_contest_drift import (
     EUREKA_FALSE_AUTHORITY_FIELDS,
     EUREKA_SIGNAL_SCHEMA,

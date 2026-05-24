@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from tac.optimization.decoder_q_selective_runtime_packet import (
+from tac.optimization.decoder_q_constants import (
     CONTEST_RATE_DENOMINATOR_BYTES,
     FEC6_PAIR_COUNT,
 )

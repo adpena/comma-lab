@@ -22,7 +22,7 @@ from tac.optimization.byte_range_entropy_recode_chain import (
     CHAIN_SCHEMA,
 )
 from tac.optimization.byte_shaving_campaign import FALSE_AUTHORITY, PLAN_SCHEMA
-from tac.optimization.decoder_q_selective_runtime_packet import FEC6_PAIR_COUNT
+from tac.optimization.decoder_q_constants import FEC6_PAIR_COUNT
 from tac.optimization.inverse_scorer_cell_chain import (
     CHAIN_MANIFEST_NAME as INVERSE_SCORER_CELL_CHAIN_MANIFEST,
 )

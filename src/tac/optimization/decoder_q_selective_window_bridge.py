@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
-from tac.optimization.decoder_q_selective_runtime_packet import FEC6_PAIR_COUNT
+from tac.optimization.decoder_q_constants import FEC6_PAIR_COUNT
 from tac.optimization.normalized_objective import (
     RATE_SCORE_PER_BYTE,
     NormalizedObjectiveError,
