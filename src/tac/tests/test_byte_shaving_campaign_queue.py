@@ -1235,6 +1235,13 @@ def test_direct_mlx_compiler_hint_reaches_materializer_work_queue(
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     }
+    backlog_by_target = {row["target_kind"]: row for row in backlog["rows"]}
+    assert backlog_by_target[ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND][
+        "operation_params"
+    ]["archive_section"] == "decoder_blob"
+    assert backlog_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND][
+        "operation_params"
+    ]["member_name"] == "0.bin"
     assert any(
         packet_ir["operation_set_id"] in row["source_packet_ir_operation_set_ids"]
         for row in work_queue["rows"]

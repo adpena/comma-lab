@@ -122,6 +122,25 @@ OPERATION_SET_CLEARABLE_SOURCE_BLOCKERS = frozenset(
 OPERATION_SET_ENFORCED_SOURCE_BLOCKERS = OPERATION_SET_CLEARABLE_SOURCE_BLOCKERS | {
     "operation_set_sequence_not_permutation_of_selected_operations"
 }
+OPERATION_PARAM_HINT_KEYS = (
+    "archive_section",
+    "section_name",
+    "target_section",
+    "target_sections",
+    "packet_member",
+    "packet_member_manifest",
+    "member_name",
+    "tensor_name",
+    "tensor_path",
+    "tensor_manifest",
+    "rank",
+    "byte_range",
+    "archive_byte_range",
+    "archive_member_name",
+    "frame_range",
+    "pair_indices",
+    "region_bbox",
+)
 
 
 def _utc_now() -> str:
@@ -171,6 +190,27 @@ def _path_under_root(path: Path, root: Path) -> bool:
 
 def _as_list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
+
+
+def _as_mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _operation_params(
+    operation: Mapping[str, Any],
+    unit: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    params: dict[str, Any] = {}
+    for source in (unit, operation):
+        if not isinstance(source, Mapping):
+            continue
+        params.update(dict(_as_mapping(source.get("operation_params"))))
+        params.update(dict(_as_mapping(source.get("params"))))
+        for key in OPERATION_PARAM_HINT_KEYS:
+            value = source.get(key)
+            if value is not None and key not in params:
+                params[key] = value
+    return params
 
 
 def _operation_sequence_key(operation: Mapping[str, Any]) -> tuple[str, str]:
@@ -465,10 +505,12 @@ def _packet_ir_compiled_row(packet_ir: Mapping[str, Any]) -> dict[str, Any]:
     known_target_kinds = known_materializer_target_kinds()
     for operation in operations:
         unit_id = str(operation.get("unit_id") or "")
+        operation_params = _operation_params(operation)
         unit = {
             "unit_id": unit_id,
             "unit_kind": operation.get("unit_kind"),
             "candidate_saved_bytes": operation.get("candidate_saved_bytes"),
+            "operation_params": operation_params,
             "blockers": [],
         }
         resolution = resolve_materializer(operation=operation, unit=unit)
@@ -690,6 +732,29 @@ def _backlog_row_sort_key(row: Mapping[str, Any]) -> tuple[float, int, int, str]
     )
 
 
+def _merge_operation_params(
+    existing: Mapping[str, Any],
+    incoming: Mapping[str, Any],
+) -> dict[str, Any]:
+    merged = dict(existing)
+    for key, value in incoming.items():
+        if value in (None, ""):
+            continue
+        prior = merged.get(str(key))
+        if prior in (None, ""):
+            merged[str(key)] = value
+            continue
+        if prior == value:
+            continue
+        values = list(prior) if isinstance(prior, list) else [prior]
+        if isinstance(value, list):
+            values.extend(value)
+        else:
+            values.append(value)
+        merged[str(key)] = ordered_unique(str(item) for item in values)
+    return merged
+
+
 def build_materializer_backlog(compiled_rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     """Aggregate blocked materialization rows into ranked adapter work orders."""
 
@@ -762,6 +827,8 @@ def build_materializer_backlog(compiled_rows: Sequence[Mapping[str, Any]]) -> di
                     "source_unit_ids": [],
                     "source_selection_ids": [],
                     "source_selection_samples": [],
+                    "operation_params": {},
+                    "source_operation_params_by_unit": {},
                     **FALSE_AUTHORITY,
                 }
                 rows[key] = current
@@ -783,6 +850,14 @@ def build_materializer_backlog(compiled_rows: Sequence[Mapping[str, Any]]) -> di
                 seen_unit_by_key[key].add(unit_id)
                 current["source_unit_ids"].append(unit_id)
                 current["affected_unit_count"] = len(seen_unit_by_key[key])
+            source_unit = source_units_by_id.get(unit_id, {})
+            operation_params = _as_mapping(source_unit.get("operation_params"))
+            if operation_params:
+                current["source_operation_params_by_unit"][unit_id] = dict(operation_params)
+                current["operation_params"] = _merge_operation_params(
+                    _as_mapping(current.get("operation_params")),
+                    operation_params,
+                )
             if selection_id and selection_id not in seen_selection_by_key[key]:
                 seen_selection_by_key[key].add(selection_id)
                 current["source_selection_ids"].append(selection_id)
@@ -2721,6 +2796,7 @@ def _materialize_row(
             pass
         else:
             unit_kind = str(unit.get("unit_kind") or "")
+            operation_params = _operation_params(operation, unit)
             unit_blockers = ordered_unique(
                 [
                     *[str(item) for item in _as_list(unit.get("blockers"))],
@@ -2739,6 +2815,7 @@ def _materialize_row(
                     "source_candidate_id": unit.get("source_candidate_id"),
                     "candidate_archive_sha256": unit.get("candidate_archive_sha256"),
                     "candidate_archive_bytes": unit.get("candidate_archive_bytes"),
+                    "operation_params": operation_params,
                     "candidate_trust_region_blockers": unit.get("candidate_trust_region_blockers"),
                     "blockers": unit_blockers,
                 }

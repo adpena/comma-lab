@@ -378,6 +378,73 @@ def test_final_byte_context_compiler_covers_packet_member_and_tensor_families(
     assert work_queue["ready_for_exact_eval_dispatch"] is False
 
 
+def test_final_byte_context_compiler_uses_inline_operation_params(
+    tmp_path: Path,
+) -> None:
+    backlog = _mixed_backlog()
+    rows = backlog["rows"]
+    assert isinstance(rows, list)
+    rows[0]["operation_params"] = {"section_name": "decoder_packed_brotli"}
+    rows[1]["operation_params"] = {"member_name": "payload.bin"}
+    rows[2]["operation_params"] = {"rank": 1}
+
+    artifact_map = _mixed_artifact_map(tmp_path)
+    artifacts = artifact_map["artifacts"]
+    assert isinstance(artifacts, dict)
+    archive_hints = artifacts[ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND]
+    packet_hints = artifacts[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]
+    tensor_hints = artifacts[TENSOR_FACTORIZE_TARGET_KIND]
+    assert isinstance(archive_hints, dict)
+    assert isinstance(packet_hints, dict)
+    assert isinstance(tensor_hints, dict)
+    del archive_hints["target_sections"]
+    del packet_hints["member_name"]
+    del tensor_hints["factorization_contract"]
+    del tensor_hints["rank"]
+
+    payload = build_final_byte_operation_contexts(
+        backlog,
+        artifact_map=artifact_map,
+        repo_root=tmp_path,
+        default_output_root=tmp_path / "out",
+    )
+
+    assert payload["blocked_context_count"] == 0
+    resolved = materializer_contexts_from_payload(payload)
+    work_queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts=resolved,
+        source_plan_path="plan.json",
+    )
+
+    assert work_queue["executable_row_count"] == 3
+    rows_by_target = {row["target_kind"]: row for row in work_queue["rows"]}
+    assert [
+        "--section-name",
+        "decoder_packed_brotli",
+    ] in [
+        rows_by_target[ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND]["command"][index : index + 2]
+        for index in range(len(rows_by_target[ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND]["command"]) - 1)
+    ]
+    assert [
+        "--member-name",
+        "payload.bin",
+    ] in [
+        rows_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["command"][index : index + 2]
+        for index in range(len(rows_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["command"]) - 1)
+    ]
+    assert [
+        "--rank",
+        "1",
+    ] in [
+        rows_by_target[TENSOR_FACTORIZE_TARGET_KIND]["command"][index : index + 2]
+        for index in range(len(rows_by_target[TENSOR_FACTORIZE_TARGET_KIND]["command"]) - 1)
+    ]
+    assert work_queue["score_claim"] is False
+    assert work_queue["ready_for_exact_eval_dispatch"] is False
+
+
 def test_final_byte_context_compiler_covers_inverse_scorer_cell_candidate(
     tmp_path: Path,
 ) -> None:

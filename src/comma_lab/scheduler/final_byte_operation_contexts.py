@@ -147,12 +147,28 @@ def _merged_hints(
         str(row.get("backlog_key") or ""),
     ]
     keys.extend(str(item) for item in _as_list(row.get("source_unit_ids")))
-    merged: dict[str, Any] = {}
+    merged: dict[str, Any] = _inline_row_hints(row)
     for key in ordered_unique(keys):
         value = hints.get(key)
         if isinstance(value, Mapping):
             merged.update(dict(value))
     return merged
+
+
+def _inline_row_hints(row: Mapping[str, Any]) -> dict[str, Any]:
+    params = row.get("operation_params")
+    if not isinstance(params, Mapping):
+        return {}
+    hints = dict(params)
+    if "archive_section" in hints and "target_sections" not in hints:
+        hints["target_sections"] = _string_list(hints["archive_section"])
+    if "section_name" in hints and "target_sections" not in hints:
+        hints["target_sections"] = _string_list(hints["section_name"])
+    if "target_section" in hints and "target_sections" not in hints:
+        hints["target_sections"] = _string_list(hints["target_section"])
+    if "packet_member" in hints and "member_name" not in hints:
+        hints["member_name"] = hints["packet_member"]
+    return hints
 
 
 def _context_keys(row: Mapping[str, Any]) -> list[str]:
