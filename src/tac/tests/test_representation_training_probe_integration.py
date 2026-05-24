@@ -175,6 +175,67 @@ def test_generic_manifest_merges_optimizer_identity_into_explicit_params(
     assert validate_proxy_candidate(row) == []
 
 
+def test_generic_manifest_carries_source_video_preprocess_signal(
+    tmp_path: Path,
+) -> None:
+    payload = _manifest()
+    payload["source_video_preprocess_smoke"] = {
+        "schema": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+        "source_video_loader_ready": True,
+        "source_video_preprocess_ready": True,
+        "video_path": "upstream/videos/0.mkv",
+        "video_sha256": "f" * 64,
+        "upstream_dir": "upstream",
+        "pair_indices": [0, 1],
+        "frame_indices": [0, 1, 2, 3],
+        "source_frame_pair_shape": [2, 2, 874, 1164, 3],
+        "scorer_rgb_shape": [2, 2, 8, 10, 3],
+        "yuv6_output_shape": [2, 2, 4, 5, 6],
+        "frame_reader_kind": "upstream_pyav_cpu",
+        "elapsed_seconds": 1.25,
+        "gradient_probe": {
+            "schema": "pr95_hnerv_mlx_preprocess_gradient_probe_v1",
+            "gradient_reachable": True,
+            "max_abs_gradient": 0.5,
+            "nonzero_gradient_count": 48,
+        },
+        "exact_readiness_refusal": {
+            "ready": False,
+            "blockers": [
+                "pr95_training_loop_not_yet_source_faithful",
+                "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+            ],
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    row = adapt_representation_training_manifest_to_candidate(
+        payload,
+        source_path=tmp_path / "manifest.json",
+        repo_root=tmp_path,
+    )
+
+    source_video = row["consumer_payload"]["representation_training_probe"][
+        "source_video_preprocess"
+    ]
+    assert source_video["present"] is True
+    assert source_video["source_video_loader_ready"] is True
+    assert source_video["source_video_preprocess_ready"] is True
+    assert source_video["video_sha256"] == "f" * 64
+    assert source_video["pair_indices"] == [0, 1]
+    assert source_video["frame_indices"] == [0, 1, 2, 3]
+    assert source_video["gradient_reachable"] is True
+    assert source_video["exact_readiness_ready"] is False
+    assert "pr95_training_loop_not_yet_source_faithful" in row["dispatch_blockers"]
+    assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in row[
+        "dispatch_blockers"
+    ]
+    assert validate_proxy_candidate(row) == []
+
+
 def test_generic_representation_training_manifest_carries_runtime_profile(
     tmp_path: Path,
 ) -> None:

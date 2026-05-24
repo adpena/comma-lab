@@ -264,6 +264,51 @@ def _source_faithful_preprocess_signal(payload: Mapping[str, Any]) -> dict[str, 
     }
 
 
+def _source_video_preprocess_signal(payload: Mapping[str, Any]) -> dict[str, Any]:
+    smoke = _mapping(payload.get("source_video_preprocess_smoke"))
+    if not smoke:
+        return {
+            "present": False,
+            "source_video_loader_ready": False,
+            "source_video_preprocess_ready": False,
+            "gradient_reachable": False,
+            "exact_readiness_ready": False,
+            "exact_readiness_blockers": [],
+        }
+    gradient_probe = _mapping(smoke.get("gradient_probe"))
+    exact_readiness = _mapping(smoke.get("exact_readiness_refusal"))
+    return {
+        "present": True,
+        "schema": smoke.get("schema"),
+        "source_video_loader_ready": smoke.get("source_video_loader_ready") is True,
+        "source_video_preprocess_ready": (
+            smoke.get("source_video_preprocess_ready") is True
+        ),
+        "video_path": smoke.get("video_path"),
+        "video_sha256": smoke.get("video_sha256"),
+        "upstream_dir": smoke.get("upstream_dir"),
+        "pair_indices": _as_list(smoke.get("pair_indices")),
+        "frame_indices": _as_list(smoke.get("frame_indices")),
+        "source_frame_pair_shape": _as_list(smoke.get("source_frame_pair_shape")),
+        "scorer_rgb_shape": _as_list(smoke.get("scorer_rgb_shape")),
+        "yuv6_output_shape": _as_list(smoke.get("yuv6_output_shape")),
+        "frame_reader_kind": smoke.get("frame_reader_kind"),
+        "elapsed_seconds": _finite_float(smoke.get("elapsed_seconds")),
+        "gradient_reachable": gradient_probe.get("gradient_reachable") is True,
+        "gradient_probe_schema": gradient_probe.get("schema"),
+        "max_abs_gradient": _finite_float(gradient_probe.get("max_abs_gradient")),
+        "nonzero_gradient_count": _finite_int(
+            gradient_probe.get("nonzero_gradient_count")
+        ),
+        "exact_readiness_ready": exact_readiness.get("ready") is True,
+        "exact_readiness_blockers": _str_list(exact_readiness.get("blockers")),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _build_wire_in(
     payload: Mapping[str, Any],
     *,
@@ -335,8 +380,10 @@ def adapt_representation_training_manifest_to_candidate(
     has_archive = bool(archive_zip.get("sha256") and archive_zip.get("bytes"))
     has_auth_bridge = bool(bridge.get("ok") is True and bridge.get("auth_eval_json_sha256"))
     preprocess_signal = _source_faithful_preprocess_signal(payload)
+    source_video_signal = _source_video_preprocess_signal(payload)
     blockers = _extra_blockers(payload)
     blockers.extend(_str_list(preprocess_signal.get("exact_readiness_blockers")))
+    blockers.extend(_str_list(source_video_signal.get("exact_readiness_blockers")))
     blockers.extend(_str_list(runtime_profile_summary.get("blockers")))
     if not has_archive:
         blockers.append("representation_training_archive_export_missing")
@@ -424,6 +471,7 @@ def adapt_representation_training_manifest_to_candidate(
                 "score_comparable": bridge.get("score_comparable"),
             },
             "source_faithful_preprocess": dict(preprocess_signal),
+            "source_video_preprocess": dict(source_video_signal),
             "missing_blockers": blockers,
             "source_tree_sha256": payload.get("source_tree_sha256"),
             "runtime_tree_sha256": payload.get("runtime_tree_sha256"),

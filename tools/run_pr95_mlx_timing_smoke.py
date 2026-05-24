@@ -30,7 +30,9 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
 )
 from tac.local_acceleration.pr95_hnerv_mlx_training import (  # noqa: E402
     SOURCE_FAITHFUL_PREPROCESS_SCHEMA,
+    SOURCE_VIDEO_PREPROCESS_SCHEMA,
     run_pr95_mlx_source_faithful_smoke,
+    run_pr95_mlx_source_video_preprocess_smoke,
 )
 from tac.optimization.local_training_runtime_profile import (  # noqa: E402
     validate_runtime_profile_observation,
@@ -44,6 +46,9 @@ SOURCE_PREPROCESS_CONFLATED_BLOCKER = (
 )
 SOURCE_PREPROCESS_PORTED_LOSS_UNWIRED_BLOCKER = (
     "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx"
+)
+SOURCE_VIDEO_LOADER_UNWIRED_BLOCKER = (
+    "pr95_source_video_loader_ported_but_training_loop_not_source_video_backed"
 )
 
 
@@ -92,10 +97,25 @@ def _source_preprocess_gradient_ready(
     )
 
 
+def _source_video_preprocess_ready(
+    source_video_preprocess_smoke: dict[str, Any] | None,
+) -> bool:
+    if not isinstance(source_video_preprocess_smoke, dict):
+        return False
+    grad_probe = source_video_preprocess_smoke.get("gradient_probe")
+    return (
+        source_video_preprocess_smoke.get("source_video_loader_ready") is True
+        and source_video_preprocess_smoke.get("source_video_preprocess_ready") is True
+        and isinstance(grad_probe, dict)
+        and grad_probe.get("gradient_reachable") is True
+    )
+
+
 def _exact_readiness_blockers(
     *,
     runtime_consumption_proven: bool = False,
     source_faithful_preprocess_smoke: dict[str, Any] | None = None,
+    source_video_preprocess_smoke: dict[str, Any] | None = None,
 ) -> list[str]:
     blockers = [
         blocker
@@ -116,6 +136,21 @@ def _exact_readiness_blockers(
             if blocker != SOURCE_PREPROCESS_CONFLATED_BLOCKER
         ]
         blockers.append(SOURCE_PREPROCESS_PORTED_LOSS_UNWIRED_BLOCKER)
+    if _source_video_preprocess_ready(source_video_preprocess_smoke):
+        blockers = [
+            blocker
+            for blocker in blockers
+            if blocker != "pr95_source_video_loader_not_ported_to_mlx"
+        ]
+        blockers.append(SOURCE_VIDEO_LOADER_UNWIRED_BLOCKER)
+        source_video_refusal = source_video_preprocess_smoke.get(
+            "exact_readiness_refusal",
+            {},
+        )
+        if isinstance(source_video_refusal, dict):
+            blockers.extend(
+                str(item) for item in source_video_refusal.get("blockers", [])
+            )
     if runtime_consumption_proven:
         blockers.extend(
             [
@@ -162,9 +197,15 @@ def _recommended_execution_command(
     write_pr95_public_archive_export: bool,
     prove_pr95_runtime_consumption: bool,
     write_source_faithful_preprocess_smoke: bool,
+    write_source_video_preprocess_smoke: bool,
     source_preprocess_shape: str,
     source_preprocess_camera_hw: str,
     source_preprocess_gradient_shape: str,
+    source_video_path: Path,
+    source_video_upstream_dir: Path,
+    source_video_pair_indices: list[int],
+    source_video_output_hw: str,
+    source_video_gradient_shape: str,
     runtime_proof_timeout_seconds: float,
     runtime_proof_max_output_bytes: int,
     optimizer_descriptor_id: str,
@@ -218,6 +259,22 @@ def _recommended_execution_command(
                 source_preprocess_gradient_shape,
             ]
         )
+    if write_source_video_preprocess_smoke:
+        command.extend(
+            [
+                "--write-source-video-preprocess-smoke",
+                "--source-video-path",
+                _rel(source_video_path),
+                "--source-video-upstream-dir",
+                _rel(source_video_upstream_dir),
+                "--source-video-output-hw",
+                source_video_output_hw,
+                "--source-video-gradient-shape",
+                source_video_gradient_shape,
+            ]
+        )
+        for pair_index in source_video_pair_indices:
+            command.extend(["--source-video-pair-index", str(pair_index)])
     return command
 
 
@@ -239,6 +296,7 @@ def _extra_artifact_postconditions(
     write_pr95_public_archive_export: bool,
     prove_pr95_runtime_consumption: bool,
     write_source_faithful_preprocess_smoke: bool,
+    write_source_video_preprocess_smoke: bool,
 ) -> list[dict[str, Any]]:
     postconditions: list[dict[str, Any]] = []
     if write_source_faithful_preprocess_smoke:
@@ -254,6 +312,44 @@ def _extra_artifact_postconditions(
                 _json_equals_postcondition(
                     smoke_path,
                     "source_faithful_preprocess_ready",
+                    True,
+                ),
+                _json_equals_postcondition(
+                    smoke_path,
+                    "gradient_probe.gradient_reachable",
+                    True,
+                ),
+                _json_equals_postcondition(
+                    smoke_path,
+                    "exact_readiness_refusal.ready",
+                    False,
+                ),
+                _json_array_contains_postcondition(
+                    smoke_path,
+                    "exact_readiness_refusal.blockers",
+                    "pr95_training_loop_not_yet_source_faithful",
+                ),
+                _json_false_authority_postcondition(smoke_path),
+            ]
+        )
+    if write_source_video_preprocess_smoke:
+        smoke_path = _rel(output_dir / "source_video_preprocess_smoke.json")
+        postconditions.extend(
+            [
+                {"type": "path_exists", "path": smoke_path},
+                _json_equals_postcondition(
+                    smoke_path,
+                    "schema",
+                    SOURCE_VIDEO_PREPROCESS_SCHEMA,
+                ),
+                _json_equals_postcondition(
+                    smoke_path,
+                    "source_video_loader_ready",
+                    True,
+                ),
+                _json_equals_postcondition(
+                    smoke_path,
+                    "source_video_preprocess_ready",
                     True,
                 ),
                 _json_equals_postcondition(
@@ -329,9 +425,15 @@ def _build_representation_training_plan(
     write_pr95_public_archive_export: bool,
     prove_pr95_runtime_consumption: bool,
     write_source_faithful_preprocess_smoke: bool,
+    write_source_video_preprocess_smoke: bool,
     source_preprocess_shape: str,
     source_preprocess_camera_hw: str,
     source_preprocess_gradient_shape: str,
+    source_video_path: Path,
+    source_video_upstream_dir: Path,
+    source_video_pair_indices: list[int],
+    source_video_output_hw: str,
+    source_video_gradient_shape: str,
     recommended_execution: dict[str, Any],
     optimizer_descriptor: dict[str, Any],
 ) -> dict[str, Any]:
@@ -431,6 +533,14 @@ def _build_representation_training_plan(
             "source_preprocess_shape": source_preprocess_shape,
             "source_preprocess_camera_hw": source_preprocess_camera_hw,
             "source_preprocess_gradient_shape": source_preprocess_gradient_shape,
+            "source_video_preprocess_smoke_requested": (
+                write_source_video_preprocess_smoke
+            ),
+            "source_video_path": _rel(source_video_path),
+            "source_video_upstream_dir": _rel(source_video_upstream_dir),
+            "source_video_pair_indices": source_video_pair_indices,
+            "source_video_output_hw": source_video_output_hw,
+            "source_video_gradient_shape": source_video_gradient_shape,
             "quality_comparable": False,
             "score_claim": False,
         },
@@ -483,6 +593,7 @@ def _build_representation_training_plan(
 def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]:
     stage = int(args.stage)
     stage_module = _stage_module(stage)
+    source_video_pair_indices = list(args.source_video_pair_index or [0])
     optimizer_descriptor_id = (
         args.optimizer_descriptor_id or pr95_default_optimizer_descriptor_id(stage)
     )
@@ -532,6 +643,26 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         "source_preprocess_gradient_shape": args.source_preprocess_gradient_shape
         if args.write_source_faithful_preprocess_smoke
         else None,
+        "source_video_preprocess_smoke": _rel(
+            output_dir / "source_video_preprocess_smoke.json"
+        )
+        if args.write_source_video_preprocess_smoke
+        else None,
+        "source_video_path": _rel(args.source_video_path)
+        if args.write_source_video_preprocess_smoke
+        else None,
+        "source_video_upstream_dir": _rel(args.source_video_upstream_dir)
+        if args.write_source_video_preprocess_smoke
+        else None,
+        "source_video_pair_indices": source_video_pair_indices
+        if args.write_source_video_preprocess_smoke
+        else None,
+        "source_video_output_hw": args.source_video_output_hw
+        if args.write_source_video_preprocess_smoke
+        else None,
+        "source_video_gradient_shape": args.source_video_gradient_shape
+        if args.write_source_video_preprocess_smoke
+        else None,
         "extra_artifact_postconditions": _extra_artifact_postconditions(
             output_dir=output_dir,
             write_pr95_public_archive_export=(
@@ -541,6 +672,9 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             prove_pr95_runtime_consumption=args.prove_pr95_runtime_consumption,
             write_source_faithful_preprocess_smoke=(
                 args.write_source_faithful_preprocess_smoke
+            ),
+            write_source_video_preprocess_smoke=(
+                args.write_source_video_preprocess_smoke
             ),
         ),
         "optimizer_descriptor_id": optimizer_descriptor_id,
@@ -570,9 +704,17 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             write_source_faithful_preprocess_smoke=(
                 args.write_source_faithful_preprocess_smoke
             ),
+            write_source_video_preprocess_smoke=(
+                args.write_source_video_preprocess_smoke
+            ),
             source_preprocess_shape=args.source_preprocess_shape,
             source_preprocess_camera_hw=args.source_preprocess_camera_hw,
             source_preprocess_gradient_shape=args.source_preprocess_gradient_shape,
+            source_video_path=args.source_video_path,
+            source_video_upstream_dir=args.source_video_upstream_dir,
+            source_video_pair_indices=source_video_pair_indices,
+            source_video_output_hw=args.source_video_output_hw,
+            source_video_gradient_shape=args.source_video_gradient_shape,
             runtime_proof_timeout_seconds=args.runtime_proof_timeout_seconds,
             runtime_proof_max_output_bytes=args.runtime_proof_max_output_bytes,
             optimizer_descriptor_id=optimizer_descriptor_id,
@@ -601,9 +743,15 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         write_source_faithful_preprocess_smoke=(
             args.write_source_faithful_preprocess_smoke
         ),
+        write_source_video_preprocess_smoke=args.write_source_video_preprocess_smoke,
         source_preprocess_shape=args.source_preprocess_shape,
         source_preprocess_camera_hw=args.source_preprocess_camera_hw,
         source_preprocess_gradient_shape=args.source_preprocess_gradient_shape,
+        source_video_path=args.source_video_path,
+        source_video_upstream_dir=args.source_video_upstream_dir,
+        source_video_pair_indices=source_video_pair_indices,
+        source_video_output_hw=args.source_video_output_hw,
+        source_video_gradient_shape=args.source_video_gradient_shape,
         recommended_execution=recommended_execution,
         optimizer_descriptor=optimizer_descriptor,
     )
@@ -651,6 +799,14 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         "source_preprocess_shape": args.source_preprocess_shape,
         "source_preprocess_camera_hw": args.source_preprocess_camera_hw,
         "source_preprocess_gradient_shape": args.source_preprocess_gradient_shape,
+        "write_source_video_preprocess_smoke": bool(
+            args.write_source_video_preprocess_smoke
+        ),
+        "source_video_path": _rel(args.source_video_path),
+        "source_video_upstream_dir": _rel(args.source_video_upstream_dir),
+        "source_video_pair_indices": source_video_pair_indices,
+        "source_video_output_hw": args.source_video_output_hw,
+        "source_video_gradient_shape": args.source_video_gradient_shape,
         "recommended_execution": recommended_execution,
         "representation_training_plan": _rel(
             output_dir / "representation_training_plan.json"
@@ -673,6 +829,7 @@ def _representation_manifest(
     archive_summary: dict[str, Any] | None,
     runtime_consumption_proof: dict[str, Any] | None,
     source_faithful_preprocess_smoke: dict[str, Any] | None,
+    source_video_preprocess_smoke: dict[str, Any] | None,
 ) -> dict[str, Any]:
     stage_index = int(manifest["stage_index"])
     stage_module = str(manifest["stage_module"])
@@ -696,6 +853,7 @@ def _representation_manifest(
     exact_blockers = _exact_readiness_blockers(
         runtime_consumption_proven=runtime_consumption_proven,
         source_faithful_preprocess_smoke=source_faithful_preprocess_smoke,
+        source_video_preprocess_smoke=source_video_preprocess_smoke,
     )
     return write_representation_training_probe_manifest(
         sidecar_path,
@@ -777,6 +935,16 @@ def _representation_manifest(
             "source_preprocess_gradient_shape": manifest.get(
                 "source_preprocess_gradient_shape"
             ),
+            "source_video_preprocess_smoke_present": (
+                source_video_preprocess_smoke is not None
+            ),
+            "source_video_path": manifest.get("source_video_path"),
+            "source_video_upstream_dir": manifest.get("source_video_upstream_dir"),
+            "source_video_pair_indices": manifest.get("source_video_pair_indices"),
+            "source_video_output_hw": manifest.get("source_video_output_hw"),
+            "source_video_gradient_shape": manifest.get(
+                "source_video_gradient_shape"
+            ),
             "quality_comparable": False,
             "score_claim": False,
         },
@@ -816,6 +984,7 @@ def _representation_manifest(
             "source_faithful_preprocess_smoke": (
                 source_faithful_preprocess_smoke or {}
             ),
+            "source_video_preprocess_smoke": source_video_preprocess_smoke or {},
             "authority_contract": {
                 "score_claim": False,
                 "quality_authority": False,
@@ -905,6 +1074,42 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--source-preprocess-gradient-shape",
         default="1,2,16,20,3",
         help="Comma-separated RGB shape for preprocessing gradient probe.",
+    )
+    parser.add_argument(
+        "--write-source-video-preprocess-smoke",
+        action="store_true",
+        help=(
+            "Decode real PR95 source-video pairs through upstream CPU decode, "
+            "then emit native MLX scorer-resolution/YUV6 preprocess smoke."
+        ),
+    )
+    parser.add_argument(
+        "--source-video-path",
+        type=Path,
+        default=Path("upstream/videos/0.mkv"),
+        help="Path to PR95 source video 0.mkv.",
+    )
+    parser.add_argument(
+        "--source-video-upstream-dir",
+        type=Path,
+        default=Path("upstream"),
+        help="Path to upstream PR95 runtime directory containing frame_utils.py.",
+    )
+    parser.add_argument(
+        "--source-video-pair-index",
+        action="append",
+        type=int,
+        help="PR95 pair index to decode for source-video preprocess smoke.",
+    )
+    parser.add_argument(
+        "--source-video-output-hw",
+        default="384,512",
+        help="Comma-separated scorer output H,W for source-video preprocess smoke.",
+    )
+    parser.add_argument(
+        "--source-video-gradient-shape",
+        default="1,2,16,20,3",
+        help="Comma-separated RGB shape for source-video gradient probe.",
     )
     parser.add_argument(
         "--allow-existing-output-dir",
@@ -1067,12 +1272,45 @@ def main(argv: list[str] | None = None) -> int:
             args.source_preprocess_gradient_shape
         )
 
+    source_video_preprocess_smoke: dict[str, Any] | None = None
+    if args.write_source_video_preprocess_smoke:
+        output_hw = _parse_int_tuple(
+            args.source_video_output_hw,
+            field="source-video-output-hw",
+            expected_len=2,
+        )
+        source_video_pair_indices = list(args.source_video_pair_index or [0])
+        source_video_preprocess_smoke = run_pr95_mlx_source_video_preprocess_smoke(
+            video_path=args.source_video_path,
+            upstream_dir=args.source_video_upstream_dir,
+            pair_indices=source_video_pair_indices,
+            output_hw=(output_hw[0], output_hw[1]),
+            gradient_probe_shape=_parse_int_tuple(
+                args.source_video_gradient_shape,
+                field="source-video-gradient-shape",
+            ),
+        )
+        _write_json(
+            output_dir / "source_video_preprocess_smoke.json",
+            source_video_preprocess_smoke,
+        )
+        manifest["source_video_preprocess_smoke"] = source_video_preprocess_smoke
+        manifest["source_video_preprocess_smoke_path"] = _rel(
+            output_dir / "source_video_preprocess_smoke.json"
+        )
+        manifest["source_video_path"] = _rel(args.source_video_path)
+        manifest["source_video_upstream_dir"] = _rel(args.source_video_upstream_dir)
+        manifest["source_video_pair_indices"] = source_video_pair_indices
+        manifest["source_video_output_hw"] = args.source_video_output_hw
+        manifest["source_video_gradient_shape"] = args.source_video_gradient_shape
+
     manifest["exact_readiness_refusal"]["blockers"] = _exact_readiness_blockers(
         runtime_consumption_proven=(
             runtime_consumption_proof is not None
             and runtime_consumption_proof.get("runtime_consumption_proven") is True
         ),
         source_faithful_preprocess_smoke=source_faithful_preprocess_smoke,
+        source_video_preprocess_smoke=source_video_preprocess_smoke,
     )
 
     _write_json(output_dir / "runtime_profile.json", manifest["runtime_profile"])
@@ -1083,6 +1321,7 @@ def main(argv: list[str] | None = None) -> int:
         archive_summary=archive_summary,
         runtime_consumption_proof=runtime_consumption_proof,
         source_faithful_preprocess_smoke=source_faithful_preprocess_smoke,
+        source_video_preprocess_smoke=source_video_preprocess_smoke,
     )
     summary = {
         "schema": "pr95_hnerv_mlx_timing_smoke_run_summary_v1",
@@ -1096,6 +1335,7 @@ def main(argv: list[str] | None = None) -> int:
         "pr95_public_archive_export": public_archive_export,
         "runtime_consumption_proof": runtime_consumption_proof,
         "source_faithful_preprocess_smoke": source_faithful_preprocess_smoke,
+        "source_video_preprocess_smoke": source_video_preprocess_smoke,
         "candidate_id": manifest["candidate_id"],
         "seconds_per_step": manifest["timing"]["seconds_per_step"],
         "representation_manifest_schema": representation["schema"],

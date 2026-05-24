@@ -130,6 +130,12 @@ def _matrix_cell_id(
     synthetic_pairs: int,
     base_channels: int,
     latent_dim: int,
+    write_source_video_preprocess_smoke: bool,
+    source_video_path: Path,
+    source_video_upstream_dir: Path,
+    source_video_pair_indices: list[int],
+    source_video_output_hw: str,
+    source_video_gradient_shape: str,
 ) -> str:
     payload = {
         "stage": stage,
@@ -141,6 +147,17 @@ def _matrix_cell_id(
         "base_channels": base_channels,
         "latent_dim": latent_dim,
     }
+    if write_source_video_preprocess_smoke:
+        payload.update(
+            {
+                "write_source_video_preprocess_smoke": True,
+                "source_video_path": str(source_video_path),
+                "source_video_upstream_dir": str(source_video_upstream_dir),
+                "source_video_pair_indices": source_video_pair_indices,
+                "source_video_output_hw": source_video_output_hw,
+                "source_video_gradient_shape": source_video_gradient_shape,
+            }
+        )
     return hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
@@ -173,9 +190,15 @@ def _emit_plan(
     write_pr95_public_archive_export: bool,
     prove_pr95_runtime_consumption: bool,
     write_source_faithful_preprocess_smoke: bool,
+    write_source_video_preprocess_smoke: bool,
     source_preprocess_shape: str,
     source_preprocess_camera_hw: str,
     source_preprocess_gradient_shape: str,
+    source_video_path: Path,
+    source_video_upstream_dir: Path,
+    source_video_pair_indices: list[int],
+    source_video_output_hw: str,
+    source_video_gradient_shape: str,
     runtime_proof_timeout_seconds: float,
     runtime_proof_max_output_bytes: int,
     allow_existing_plan_dirs: bool,
@@ -217,6 +240,22 @@ def _emit_plan(
                 source_preprocess_gradient_shape,
             ]
         )
+    if write_source_video_preprocess_smoke:
+        command.extend(
+            [
+                "--write-source-video-preprocess-smoke",
+                "--source-video-path",
+                str(source_video_path),
+                "--source-video-upstream-dir",
+                str(source_video_upstream_dir),
+                "--source-video-output-hw",
+                source_video_output_hw,
+                "--source-video-gradient-shape",
+                source_video_gradient_shape,
+            ]
+        )
+        for pair_index in source_video_pair_indices:
+            command.extend(["--source-video-pair-index", str(pair_index)])
     if write_pr95_public_archive_export or prove_pr95_runtime_consumption:
         command.append("--write-pr95-public-archive-export")
     if prove_pr95_runtime_consumption:
@@ -268,9 +307,15 @@ def build_pr95_mlx_optimizer_matrix_queue(
     write_pr95_public_archive_export: bool,
     prove_pr95_runtime_consumption: bool,
     write_source_faithful_preprocess_smoke: bool,
+    write_source_video_preprocess_smoke: bool,
     source_preprocess_shape: str,
     source_preprocess_camera_hw: str,
     source_preprocess_gradient_shape: str,
+    source_video_path: Path,
+    source_video_upstream_dir: Path,
+    source_video_pair_indices: list[int],
+    source_video_output_hw: str,
+    source_video_gradient_shape: str,
     runtime_proof_timeout_seconds: float,
     runtime_proof_max_output_bytes: int,
     local_cpu_concurrency: int,
@@ -284,6 +329,13 @@ def build_pr95_mlx_optimizer_matrix_queue(
 
     selected_stages = _stage_indices(stages)
     selected_seeds = list(dict.fromkeys(int(seed) for seed in seeds))
+    selected_source_video_pair_indices = (
+        list(dict.fromkeys(int(index) for index in source_video_pair_indices))
+        if write_source_video_preprocess_smoke
+        else []
+    )
+    if write_source_video_preprocess_smoke and not selected_source_video_pair_indices:
+        selected_source_video_pair_indices = [0]
     if not selected_seeds:
         raise ExperimentQueueError("at least one seed is required")
     output_root.mkdir(parents=True, exist_ok=True)
@@ -321,6 +373,14 @@ def build_pr95_mlx_optimizer_matrix_queue(
                     synthetic_pairs=synthetic_pairs,
                     base_channels=base_channels,
                     latent_dim=latent_dim,
+                    write_source_video_preprocess_smoke=(
+                        write_source_video_preprocess_smoke
+                    ),
+                    source_video_path=source_video_path,
+                    source_video_upstream_dir=source_video_upstream_dir,
+                    source_video_pair_indices=selected_source_video_pair_indices,
+                    source_video_output_hw=source_video_output_hw,
+                    source_video_gradient_shape=source_video_gradient_shape,
                 )
                 if matrix_cell_id in seen_cell_ids:
                     raise ExperimentQueueError(
@@ -352,9 +412,17 @@ def build_pr95_mlx_optimizer_matrix_queue(
                     write_source_faithful_preprocess_smoke=(
                         write_source_faithful_preprocess_smoke
                     ),
+                    write_source_video_preprocess_smoke=(
+                        write_source_video_preprocess_smoke
+                    ),
                     source_preprocess_shape=source_preprocess_shape,
                     source_preprocess_camera_hw=source_preprocess_camera_hw,
                     source_preprocess_gradient_shape=source_preprocess_gradient_shape,
+                    source_video_path=source_video_path,
+                    source_video_upstream_dir=source_video_upstream_dir,
+                    source_video_pair_indices=selected_source_video_pair_indices,
+                    source_video_output_hw=source_video_output_hw,
+                    source_video_gradient_shape=source_video_gradient_shape,
                     runtime_proof_timeout_seconds=runtime_proof_timeout_seconds,
                     runtime_proof_max_output_bytes=runtime_proof_max_output_bytes,
                     allow_existing_plan_dirs=allow_existing_plan_dirs,
@@ -426,6 +494,14 @@ def build_pr95_mlx_optimizer_matrix_queue(
         "source_preprocess_shape": source_preprocess_shape,
         "source_preprocess_camera_hw": source_preprocess_camera_hw,
         "source_preprocess_gradient_shape": source_preprocess_gradient_shape,
+        "write_source_video_preprocess_smoke": (
+            write_source_video_preprocess_smoke
+        ),
+        "source_video_path": _rel(source_video_path, repo_root),
+        "source_video_upstream_dir": _rel(source_video_upstream_dir, repo_root),
+        "source_video_pair_indices": selected_source_video_pair_indices,
+        "source_video_output_hw": source_video_output_hw,
+        "source_video_gradient_shape": source_video_gradient_shape,
         "runtime_proof_timeout_seconds": runtime_proof_timeout_seconds,
         "runtime_proof_max_output_bytes": runtime_proof_max_output_bytes,
         "plan_count": len(plan_records),
@@ -511,6 +587,42 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="1,2,16,20,3",
         help="Small synthetic RGB NHWC shape for source preprocess gradient probe.",
     )
+    parser.add_argument(
+        "--write-source-video-preprocess-smoke",
+        action="store_true",
+        help=(
+            "Ask each timing-smoke plan to decode real PR95 source-video "
+            "pairs and emit native MLX scorer/YUV6 preprocess smoke."
+        ),
+    )
+    parser.add_argument(
+        "--source-video-path",
+        type=Path,
+        default=Path("upstream/videos/0.mkv"),
+        help="Path to PR95 source video 0.mkv.",
+    )
+    parser.add_argument(
+        "--source-video-upstream-dir",
+        type=Path,
+        default=Path("upstream"),
+        help="Path to upstream PR95 runtime directory containing frame_utils.py.",
+    )
+    parser.add_argument(
+        "--source-video-pair-index",
+        action="append",
+        type=int,
+        help="PR95 pair index to decode for source-video preprocess smoke.",
+    )
+    parser.add_argument(
+        "--source-video-output-hw",
+        default="384,512",
+        help="Comma-separated scorer output H,W for source-video preprocess smoke.",
+    )
+    parser.add_argument(
+        "--source-video-gradient-shape",
+        default="1,2,16,20,3",
+        help="Comma-separated RGB shape for source-video gradient probe.",
+    )
     parser.add_argument("--write-pr95-public-archive-export", action="store_true")
     parser.add_argument("--prove-pr95-runtime-consumption", action="store_true")
     parser.add_argument("--runtime-proof-timeout-seconds", type=float, default=900.0)
@@ -557,9 +669,17 @@ def main(argv: list[str] | None = None) -> int:
             write_source_faithful_preprocess_smoke=(
                 args.write_source_faithful_preprocess_smoke
             ),
+            write_source_video_preprocess_smoke=(
+                args.write_source_video_preprocess_smoke
+            ),
             source_preprocess_shape=args.source_preprocess_shape,
             source_preprocess_camera_hw=args.source_preprocess_camera_hw,
             source_preprocess_gradient_shape=args.source_preprocess_gradient_shape,
+            source_video_path=args.source_video_path,
+            source_video_upstream_dir=args.source_video_upstream_dir,
+            source_video_pair_indices=args.source_video_pair_index or [0],
+            source_video_output_hw=args.source_video_output_hw,
+            source_video_gradient_shape=args.source_video_gradient_shape,
             runtime_proof_timeout_seconds=args.runtime_proof_timeout_seconds,
             runtime_proof_max_output_bytes=args.runtime_proof_max_output_bytes,
             local_cpu_concurrency=args.local_cpu_concurrency,

@@ -13,8 +13,11 @@ promotion, rank/kill, dispatch, or exact-eval authority.
 
 from __future__ import annotations
 
+import hashlib
+import importlib.util
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -29,7 +32,17 @@ from tac.local_acceleration.pr95_hnerv_mlx import (
 CAMERA_HW: tuple[int, int] = (874, 1164)
 SCORER_HW: tuple[int, int] = (384, 512)
 SOURCE_FAITHFUL_PREPROCESS_SCHEMA = "pr95_hnerv_mlx_source_faithful_preprocess_smoke_v1"
+SOURCE_VIDEO_PREPROCESS_SCHEMA = "pr95_hnerv_mlx_source_video_preprocess_smoke_v1"
 GRAD_PROBE_SCHEMA = "pr95_hnerv_mlx_preprocess_gradient_probe_v1"
+FrameReader = Callable[[Sequence[int]], np.ndarray]
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def bicubic_resize_to_camera_nhwc(
@@ -127,6 +140,158 @@ def rgb_to_yuv6_mlx(rgb_nhwc: Any) -> Any:
         ],
         axis=-1,
     )
+
+
+def pr95_pair_frame_indices(pair_indices: Sequence[int]) -> list[int]:
+    """Return ordered frame indices for PR95 two-frame pair indices."""
+
+    pairs = [int(index) for index in pair_indices]
+    if not pairs:
+        raise Pr95HNeRVMlxError("at least one PR95 pair index is required")
+    if any(index < 0 for index in pairs):
+        raise Pr95HNeRVMlxError(f"PR95 pair indices must be non-negative: {pairs}")
+    frame_indices: list[int] = []
+    seen: set[int] = set()
+    for pair_index in pairs:
+        for frame_index in (2 * pair_index, 2 * pair_index + 1):
+            if frame_index not in seen:
+                frame_indices.append(frame_index)
+                seen.add(frame_index)
+    return frame_indices
+
+
+def load_upstream_video_frames_nhwc(
+    video_path: str | Path,
+    frame_indices: Sequence[int],
+    *,
+    upstream_dir: str | Path,
+) -> np.ndarray:
+    """Decode selected camera-resolution RGB frames via upstream CPU semantics."""
+
+    requested = [int(index) for index in frame_indices]
+    if not requested:
+        raise Pr95HNeRVMlxError("at least one frame index is required")
+    if any(index < 0 for index in requested):
+        raise Pr95HNeRVMlxError(f"frame indices must be non-negative: {requested}")
+    requested_set = set(requested)
+    video = Path(video_path)
+    if not video.is_file():
+        raise Pr95HNeRVMlxError(f"source video not found: {video}")
+    upstream = Path(upstream_dir)
+    if not upstream.is_dir():
+        raise Pr95HNeRVMlxError(f"upstream dir not found: {upstream}")
+
+    frame_utils_path = upstream / "frame_utils.py"
+    if not frame_utils_path.is_file():
+        raise Pr95HNeRVMlxError(
+            f"upstream frame_utils.py not found: {frame_utils_path}"
+        )
+    try:
+        import av
+    except Exception as exc:  # pragma: no cover - dependency guard.
+        raise Pr95HNeRVMlxError("PyAV is required to decode PR95 source video") from exc
+    module_name = (
+        "pr95_upstream_frame_utils_"
+        + hashlib.sha256(str(frame_utils_path.resolve()).encode("utf-8")).hexdigest()[
+            :12
+        ]
+    )
+    spec = importlib.util.spec_from_file_location(module_name, frame_utils_path)
+    if spec is None or spec.loader is None:
+        raise Pr95HNeRVMlxError(
+            f"unable to load upstream frame_utils.py: {frame_utils_path}"
+        )
+    frame_utils = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(frame_utils)
+    try:
+        width, height = (int(dim) for dim in frame_utils.camera_size)
+        decoded: dict[int, np.ndarray] = {}
+        container = av.open(str(video))
+        try:
+            stream = container.streams.video[0]
+            max_requested = max(requested_set)
+            for frame_number, frame in enumerate(container.decode(stream)):
+                if frame_number not in requested_set:
+                    if frame_number > max_requested and len(decoded) == len(
+                        requested_set
+                    ):
+                        break
+                    continue
+                rgb = frame_utils.yuv420_to_rgb(frame).numpy()
+                if rgb.shape != (height, width, 3):
+                    raise Pr95HNeRVMlxError(
+                        f"decoded frame {frame_number} shape {rgb.shape}; "
+                        f"expected {(height, width, 3)}"
+                    )
+                decoded[frame_number] = rgb.astype(np.float32, copy=False)
+                if len(decoded) == len(requested_set):
+                    break
+        finally:
+            container.close()
+    except Pr95HNeRVMlxError:
+        raise
+    except Exception as exc:
+        raise Pr95HNeRVMlxError(
+            f"failed to decode PR95 source video frames from {video}"
+        ) from exc
+    missing = [index for index in requested if index not in decoded]
+    if missing:
+        raise Pr95HNeRVMlxError(f"source video missing requested frame(s): {missing}")
+    return np.stack([decoded[index] for index in requested], axis=0)
+
+
+def load_pr95_source_pairs_nhwc(
+    video_path: str | Path,
+    *,
+    pair_indices: Sequence[int],
+    upstream_dir: str | Path,
+    frame_reader: FrameReader | None = None,
+) -> np.ndarray:
+    """Return source contest pairs as ``(pairs, 2, H, W, 3)`` float32 NHWC."""
+
+    pairs = [int(index) for index in pair_indices]
+    frame_indices = pr95_pair_frame_indices(pairs)
+    frames = (
+        np.asarray(frame_reader(frame_indices), dtype=np.float32)
+        if frame_reader is not None
+        else load_upstream_video_frames_nhwc(
+            video_path,
+            frame_indices,
+            upstream_dir=upstream_dir,
+        )
+    )
+    if frames.shape[0] != len(frame_indices) or frames.ndim != 4 or frames.shape[-1] != 3:
+        raise Pr95HNeRVMlxError(
+            "source frame reader must return (n_frames, H, W, 3); "
+            f"got {frames.shape}, expected n_frames={len(frame_indices)}"
+        )
+    by_index = {frame_index: frames[offset] for offset, frame_index in enumerate(frame_indices)}
+    return np.stack(
+        [
+            np.stack([by_index[2 * pair_index], by_index[2 * pair_index + 1]], axis=0)
+            for pair_index in pairs
+        ],
+        axis=0,
+    ).astype(np.float32, copy=False)
+
+
+def pr95_source_pairs_to_scorer_targets_mlx(
+    source_pairs_nhwc: Any,
+    *,
+    output_hw: tuple[int, int] = SCORER_HW,
+) -> tuple[Any, Any]:
+    """Downsample source camera pairs to scorer resolution and YUV6 targets."""
+
+    require_mlx()
+    _validate_rgb_nhwc(source_pairs_nhwc)
+    shape = tuple(int(dim) for dim in source_pairs_nhwc.shape)
+    flat = mx.reshape(source_pairs_nhwc, (-1, shape[-3], shape[-2], shape[-1]))  # type: ignore[union-attr]
+    scorer_rgb = bilinear_eval_roundtrip_downsample_nhwc(flat, output_hw=output_hw)
+    scorer_rgb = mx.reshape(  # type: ignore[union-attr]
+        scorer_rgb,
+        (*shape[:-3], int(output_hw[0]), int(output_hw[1]), 3),
+    )
+    return scorer_rgb, rgb_to_yuv6_mlx(scorer_rgb)
 
 
 def resize_nhwc_align_corners_false(
@@ -254,6 +419,86 @@ def run_pr95_mlx_source_faithful_smoke(
     }
 
 
+def run_pr95_mlx_source_video_preprocess_smoke(
+    *,
+    video_path: str | Path,
+    upstream_dir: str | Path,
+    pair_indices: Sequence[int] = (0,),
+    output_hw: tuple[int, int] = SCORER_HW,
+    include_gradient_probe: bool = True,
+    gradient_probe_shape: Sequence[int] = (1, 2, 16, 20, 3),
+    frame_reader: FrameReader | None = None,
+) -> dict[str, Any]:
+    """Decode real PR95 source pairs and build scorer-resolution MLX targets."""
+
+    require_mlx()
+    started = time.perf_counter()
+    pairs = [int(index) for index in pair_indices]
+    frame_indices = pr95_pair_frame_indices(pairs)
+    source_pairs = load_pr95_source_pairs_nhwc(
+        video_path,
+        pair_indices=pairs,
+        upstream_dir=upstream_dir,
+        frame_reader=frame_reader,
+    )
+    source_pairs_mlx = mx.array(source_pairs)  # type: ignore[union-attr]
+    scorer_rgb, yuv6 = pr95_source_pairs_to_scorer_targets_mlx(
+        source_pairs_mlx,
+        output_hw=output_hw,
+    )
+    mx.eval(scorer_rgb, yuv6)  # type: ignore[union-attr]
+    elapsed = time.perf_counter() - started
+    grad_probe = (
+        pr95_mlx_preprocess_grad_probe(
+            input_shape=gradient_probe_shape,
+            camera_hw=(
+                min(max(int(source_pairs.shape[-3]), 3), 37),
+                min(max(int(source_pairs.shape[-2]), 3), 43),
+            ),
+            seed=sum(pairs) if pairs else 0,
+        )
+        if include_gradient_probe
+        else None
+    )
+    gradient_reachable = (
+        grad_probe is not None and grad_probe.get("gradient_reachable") is True
+    )
+    video = Path(video_path)
+    source_hash = _sha256_file(video) if video.is_file() and frame_reader is None else None
+    blockers = [
+        "pr95_decoder_training_loop_not_wired_to_source_video_preprocess",
+        "pr95_scorer_loss_not_wired_to_mlx_source_video_preprocess",
+        "pr95_training_loop_not_yet_source_faithful",
+        "requires_pytorch_export_forward_parity_on_source_checkpoint",
+        "requires_byte_closed_contest_archive_export",
+        "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+    ]
+    if not gradient_reachable:
+        blockers.append("pr95_mlx_preprocess_gradient_not_reachable")
+    return {
+        "schema": SOURCE_VIDEO_PREPROCESS_SCHEMA,
+        "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+        "video_path": str(video),
+        "video_sha256": source_hash,
+        "upstream_dir": str(upstream_dir),
+        "pair_indices": pairs,
+        "frame_indices": frame_indices,
+        "source_frame_pair_shape": [int(dim) for dim in source_pairs.shape],
+        "scorer_rgb_shape": [int(dim) for dim in scorer_rgb.shape],
+        "yuv6_output_shape": [int(dim) for dim in yuv6.shape],
+        "source_video_loader_ready": True,
+        "source_video_preprocess_ready": gradient_reachable,
+        "frame_reader_kind": "injected" if frame_reader is not None else "upstream_pyav_cpu",
+        "elapsed_seconds": elapsed,
+        "gradient_probe": grad_probe,
+        "exact_readiness_refusal": {
+            "ready": False,
+            "blockers": blockers,
+        },
+        **FALSE_AUTHORITY,
+    }
+
+
 def _resize_axis_nhwc(x: Any, *, axis: int, out_size: int, mode: str) -> Any:
     in_size = int(x.shape[axis])
     if in_size == out_size:
@@ -346,11 +591,17 @@ __all__ = [
     "GRAD_PROBE_SCHEMA",
     "SCORER_HW",
     "SOURCE_FAITHFUL_PREPROCESS_SCHEMA",
+    "SOURCE_VIDEO_PREPROCESS_SCHEMA",
     "apply_eval_roundtrip_nhwc",
     "bicubic_resize_to_camera_nhwc",
     "bilinear_eval_roundtrip_downsample_nhwc",
+    "load_pr95_source_pairs_nhwc",
+    "load_upstream_video_frames_nhwc",
     "pr95_mlx_preprocess_grad_probe",
+    "pr95_pair_frame_indices",
+    "pr95_source_pairs_to_scorer_targets_mlx",
     "resize_nhwc_align_corners_false",
     "rgb_to_yuv6_mlx",
     "run_pr95_mlx_source_faithful_smoke",
+    "run_pr95_mlx_source_video_preprocess_smoke",
 ]

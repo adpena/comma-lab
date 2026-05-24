@@ -42,6 +42,17 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
             "--prove-pr95-runtime-consumption",
             "--runtime-proof-max-output-bytes",
             "7000000",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-pair-index",
+            "0",
+            "--source-video-output-hw",
+            "8,10",
+            "--source-video-gradient-shape",
+            "1,2,8,10,3",
             "--plan-only",
         ],
         cwd=REPO_ROOT,
@@ -86,11 +97,34 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
     assert execution["runtime_consumption_proof"].endswith(
         "runtime_consumption_proof.json"
     )
+    assert execution["source_video_preprocess_smoke"].endswith(
+        "source_video_preprocess_smoke.json"
+    )
+    assert execution["source_video_pair_indices"] == [0]
+    assert "--write-source-video-preprocess-smoke" in execution["python_command_args"]
+    assert "--source-video-path" in execution["python_command_args"]
+    assert "upstream/videos/0.mkv" in execution["python_command_args"]
+    assert "--source-video-output-hw" in execution["python_command_args"]
+    assert "8,10" in execution["python_command_args"]
     assert any(
         condition["type"] == "json_equals"
         and condition["path"].endswith("runtime_consumption_proof.json")
         and condition["key"] == "runtime_consumption_proven"
         and condition["equals"] is True
+        for condition in execution["extra_artifact_postconditions"]
+    )
+    assert any(
+        condition["type"] == "json_equals"
+        and condition["path"].endswith("source_video_preprocess_smoke.json")
+        and condition["key"] == "source_video_loader_ready"
+        and condition["equals"] is True
+        for condition in execution["extra_artifact_postconditions"]
+    )
+    assert any(
+        condition["type"] == "json_array_contains"
+        and condition["path"].endswith("source_video_preprocess_smoke.json")
+        and condition["key"] == "exact_readiness_refusal.blockers"
+        and condition["contains"] == "pr95_training_loop_not_yet_source_faithful"
         for condition in execution["extra_artifact_postconditions"]
     )
     assert representation_plan["schema"] == "representation_training_probe_plan_v1"
@@ -101,6 +135,11 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
     assert representation_plan["candidate_params"]["optimizer_descriptor_id"] == (
         "pr95_stage8_muon_adamw_mlx"
     )
+    assert representation_plan["candidate_params"][
+        "source_video_preprocess_smoke_requested"
+    ] is True
+    assert representation_plan["candidate_params"]["source_video_pair_indices"] == [0]
+    assert representation_plan["candidate_params"]["source_video_output_hw"] == "8,10"
     assert representation_plan["recommended_execution"] == execution
 
     queue = build_local_training_execution_queue(
@@ -132,6 +171,13 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
         and condition["equals"] is True
         for condition in step["postconditions"]
     )
+    assert any(
+        condition["type"] == "json_equals"
+        and condition["path"].endswith("source_video_preprocess_smoke.json")
+        and condition["key"] == "source_video_preprocess_ready"
+        and condition["equals"] is True
+        for condition in step["postconditions"]
+    )
 
     row = adapt_representation_training_manifest_to_candidate(
         representation_plan,
@@ -145,4 +191,5 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
     assert row["ready_for_exact_eval_dispatch"] is False
     assert "runtime_consumption_proof_missing" in row["dispatch_blockers"]
     assert "requires_lane_claim_before_dispatch" in row["dispatch_blockers"]
+    assert row["candidate_params"]["source_video_preprocess_smoke_requested"] is True
     assert validate_proxy_candidate(row) == []

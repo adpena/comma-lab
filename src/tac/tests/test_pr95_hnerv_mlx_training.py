@@ -18,8 +18,11 @@ from tac.local_acceleration.pr95_hnerv_mlx_training import (  # noqa: E402
     bicubic_resize_to_camera_nhwc,
     bilinear_eval_roundtrip_downsample_nhwc,
     pr95_mlx_preprocess_grad_probe,
+    pr95_pair_frame_indices,
+    pr95_source_pairs_to_scorer_targets_mlx,
     rgb_to_yuv6_mlx,
     run_pr95_mlx_source_faithful_smoke,
+    run_pr95_mlx_source_video_preprocess_smoke,
 )
 
 
@@ -138,6 +141,83 @@ def test_mlx_eval_roundtrip_actual_resolution_matches_torch_float_oracle() -> No
         torch_roundtrip.numpy(),
         atol=3e-3,
     )
+
+
+def test_pr95_source_pair_indices_are_ordered_and_deduped() -> None:
+    assert pr95_pair_frame_indices([2, 0, 2]) == [4, 5, 0, 1]
+
+    with pytest.raises(Exception, match="non-negative"):
+        pr95_pair_frame_indices([-1])
+
+
+def test_mlx_source_pairs_to_scorer_targets_matches_torch_oracle() -> None:
+    rng = np.random.default_rng(106)
+    pairs = rng.uniform(0.0, 255.0, size=(2, 2, 11, 13, 3)).astype(np.float32)
+
+    scorer_rgb, yuv6 = pr95_source_pairs_to_scorer_targets_mlx(
+        mx.array(pairs),
+        output_hw=(8, 10),
+    )
+    mx.eval(scorer_rgb, yuv6)
+    flat = torch.tensor(pairs).reshape(-1, 11, 13, 3).permute(0, 3, 1, 2)
+    torch_rgb = F.interpolate(
+        flat,
+        size=(8, 10),
+        mode="bilinear",
+        align_corners=False,
+    ).permute(0, 2, 3, 1).reshape(2, 2, 8, 10, 3)
+    torch_yuv6 = differentiable_rgb_to_yuv6(
+        torch_rgb.reshape(-1, 8, 10, 3).permute(0, 3, 1, 2)
+    ).permute(0, 2, 3, 1).reshape(2, 2, 4, 5, 6)
+
+    np.testing.assert_allclose(np.asarray(scorer_rgb), torch_rgb.numpy(), atol=4e-5)
+    np.testing.assert_allclose(np.asarray(yuv6), torch_yuv6.numpy(), atol=4e-5)
+
+
+def test_source_video_preprocess_smoke_uses_injected_pair_reader() -> None:
+    seen: list[list[int]] = []
+
+    def frame_reader(frame_indices: list[int]) -> np.ndarray:
+        seen.append(list(frame_indices))
+        yy, xx = np.mgrid[0:11, 0:13]
+        frames = []
+        for frame_index in frame_indices:
+            frames.append(
+                np.stack(
+                    [
+                        (xx * 3 + yy * 5 + frame_index) % 251,
+                        (xx * 7 + frame_index * 11) % 241,
+                        (yy * 13 + xx + frame_index * 17) % 239,
+                    ],
+                    axis=-1,
+                )
+            )
+        return np.stack(frames, axis=0).astype(np.float32)
+
+    manifest = run_pr95_mlx_source_video_preprocess_smoke(
+        video_path="fixture/0.mkv",
+        upstream_dir="fixture/upstream",
+        pair_indices=[2, 0],
+        output_hw=(8, 10),
+        gradient_probe_shape=(1, 2, 8, 10, 3),
+        frame_reader=frame_reader,
+    )
+
+    assert seen == [[4, 5, 0, 1]]
+    assert manifest["schema"] == "pr95_hnerv_mlx_source_video_preprocess_smoke_v1"
+    assert manifest["source_video_loader_ready"] is True
+    assert manifest["source_video_preprocess_ready"] is True
+    assert manifest["frame_reader_kind"] == "injected"
+    assert manifest["video_sha256"] is None
+    assert manifest["source_frame_pair_shape"] == [2, 2, 11, 13, 3]
+    assert manifest["scorer_rgb_shape"] == [2, 2, 8, 10, 3]
+    assert manifest["yuv6_output_shape"] == [2, 2, 4, 5, 6]
+    assert manifest["gradient_probe"]["gradient_reachable"] is True
+    assert manifest["exact_readiness_refusal"]["ready"] is False
+    assert "pr95_training_loop_not_yet_source_faithful" in (
+        manifest["exact_readiness_refusal"]["blockers"]
+    )
+    _assert_false_authority(manifest)
 
 
 def test_mlx_preprocess_gradient_reaches_rgb_input() -> None:

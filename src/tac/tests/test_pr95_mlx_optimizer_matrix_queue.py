@@ -53,6 +53,17 @@ def test_pr95_mlx_optimizer_matrix_cli_emits_queueable_plans(
             "11,13",
             "--source-preprocess-gradient-shape",
             "1,2,8,10,3",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-pair-index",
+            "0",
+            "--source-video-output-hw",
+            "8,10",
+            "--source-video-gradient-shape",
+            "1,2,8,10,3",
         ],
         cwd=REPO_ROOT,
         text=True,
@@ -80,6 +91,12 @@ def test_pr95_mlx_optimizer_matrix_cli_emits_queueable_plans(
     assert manifest["source_preprocess_shape"] == "1,2,8,10,3"
     assert manifest["source_preprocess_camera_hw"] == "11,13"
     assert manifest["source_preprocess_gradient_shape"] == "1,2,8,10,3"
+    assert manifest["write_source_video_preprocess_smoke"] is True
+    assert manifest["source_video_path"] == "upstream/videos/0.mkv"
+    assert manifest["source_video_upstream_dir"] == "upstream"
+    assert manifest["source_video_pair_indices"] == [0]
+    assert manifest["source_video_output_hw"] == "8,10"
+    assert manifest["source_video_gradient_shape"] == "1,2,8,10,3"
     assert manifest["queue_output_sha256"] == summary["queue_sha256"]
     assert {row["stage_index"] for row in manifest["plans"]} == {1, 8}
     assert all(len(row["matrix_cell_id"]) == 64 for row in manifest["plans"])
@@ -104,11 +121,18 @@ def test_pr95_mlx_optimizer_matrix_cli_emits_queueable_plans(
         assert "--write-source-faithful-preprocess-smoke" in plan[
             "recommended_execution"
         ]["python_command_args"]
+        assert "--write-source-video-preprocess-smoke" in plan[
+            "recommended_execution"
+        ]["python_command_args"]
         assert "--source-preprocess-shape" in plan["recommended_execution"][
+            "python_command_args"
+        ]
+        assert "--source-video-output-hw" in plan["recommended_execution"][
             "python_command_args"
         ]
         assert "1,2,8,10,3" in plan["recommended_execution"]["python_command_args"]
         assert "11,13" in plan["recommended_execution"]["python_command_args"]
+        assert "8,10" in plan["recommended_execution"]["python_command_args"]
 
     assert queue["schema"] == "experiment_queue.v1"
     assert queue["queue_id"] == "pr95_mlx_matrix_fixture"
@@ -152,6 +176,26 @@ def test_pr95_mlx_optimizer_matrix_cli_emits_queueable_plans(
         any(
             condition["type"] == "json_array_contains"
             and condition["path"].endswith("source_faithful_preprocess_smoke.json")
+            and condition["key"] == "exact_readiness_refusal.blockers"
+            and condition["contains"] == "pr95_training_loop_not_yet_source_faithful"
+            for condition in experiment["steps"][0]["postconditions"]
+        )
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        any(
+            condition["type"] == "json_equals"
+            and condition["path"].endswith("source_video_preprocess_smoke.json")
+            and condition["key"] == "source_video_loader_ready"
+            and condition["equals"] is True
+            for condition in experiment["steps"][0]["postconditions"]
+        )
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        any(
+            condition["type"] == "json_array_contains"
+            and condition["path"].endswith("source_video_preprocess_smoke.json")
             and condition["key"] == "exact_readiness_refusal.blockers"
             and condition["contains"] == "pr95_training_loop_not_yet_source_faithful"
             for condition in experiment["steps"][0]["postconditions"]
