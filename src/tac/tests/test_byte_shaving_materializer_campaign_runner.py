@@ -19,6 +19,9 @@ from tac.optimization.byte_shaving_campaign import (
 from tac.optimization.inverse_scorer_cell_chain import (
     CHAIN_MANIFEST_NAME as INVERSE_CELL_CHAIN_MANIFEST_NAME,
 )
+from tac.optimization.inverse_steganalysis_acquisition import (
+    observations_from_queue_performance_summary,
+)
 from tools import run_byte_shaving_materializer_campaign as runner
 
 
@@ -666,11 +669,53 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
         run_dir / "materializer_execution_queue.runtime_policy.json"
     )
     assert summary["queue_path"] == str(run_dir / "materializer_execution_queue.runtime_policy.json")
+    assert summary["queue_performance_summary_path"] == str(
+        run_dir / "queue_performance_summary.json"
+    )
+    assert summary["response_update_placeholder_path"] == str(
+        run_dir / "canonical_response_update_placeholder.json"
+    )
+    assert summary["response_update_applied"] is False
+    assert summary["replan_required"] is True
     assert summary["runtime_policy"]["schema"] == "scheduler_runtime_policy.v1"
     assert summary["runtime_policy"]["score_claim"] is False
+    assert summary["performance"]["schema"] == runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA
+    assert summary["performance"]["score_claim"] is False
     assert summary["worker"]["schema"] == "experiment_queue_worker_result.v1"
     assert summary["worker"]["success_count"] == 3
     assert summary["worker"]["failure_count"] == 0
+
+    performance = json.loads(
+        (run_dir / "queue_performance_summary.json").read_text(encoding="utf-8")
+    )
+    placeholder = json.loads(
+        (run_dir / "canonical_response_update_placeholder.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert performance == summary["performance"]
+    assert performance["schema"] == runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA
+    assert performance["queue_id"] == "inverse_scorer_runner_e2e_fixture"
+    assert performance["score_claim"] is False
+    assert placeholder["schema"] == runner.RESPONSE_UPDATE_PLACEHOLDER_SCHEMA
+    assert placeholder["queue_performance_summary_path"] == str(
+        run_dir / "queue_performance_summary.json"
+    )
+    assert placeholder["next_run_hint"] == [
+        "--queue-performance-summary",
+        str(run_dir / "queue_performance_summary.json"),
+    ]
+    assert placeholder["response_update_applied"] is False
+    assert placeholder["replan_required"] is True
+    assert placeholder["score_claim"] is False
+    observations = observations_from_queue_performance_summary(
+        performance,
+        runtime_identity={"runtime_tree_sha256": "d" * 64},
+        cache_identity={"cache_sha256": "e" * 64},
+        source_path=summary["queue_performance_summary_path"],
+    )
+    assert observations
+    assert all(observation["score_claim"] is False for observation in observations)
 
     contexts = json.loads((run_dir / "materializer_contexts.json").read_text(encoding="utf-8"))
     assert summary["build"]["materializer_contexts_blocked_count"] == 0
@@ -693,6 +738,12 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     harvest = json.loads((handoff_dir / "harvest_report.json").read_text(encoding="utf-8"))
     bridge = json.loads((handoff_dir / "exact_readiness_bridge_report.json").read_text(encoding="utf-8"))
     dispatch_plan = json.loads((handoff_dir / "dispatch_plan.json").read_text(encoding="utf-8"))
+    handoff_paths = placeholder["exact_readiness_handoff_paths"]
+    assert placeholder["exact_readiness_handoff_count"] == 1
+    assert handoff_paths[0]["handoff_dir"] == str(handoff_dir)
+    assert handoff_paths[0]["harvest_report_exists"] is True
+    assert handoff_paths[0]["exact_readiness_bridge_report_exists"] is True
+    assert handoff_paths[0]["dispatch_plan_exists"] is True
     assert harvest["accepted_manifest_count"] == 1
     assert harvest["source_queue_dispatch_ready_count"] == 0
     assert bridge["candidate_count"] == 1
@@ -755,6 +806,12 @@ def test_materializer_campaign_runner_executes_no_paid_packet_member_handoff(
     assert summary["execute"] is True
     assert summary["score_claim"] is False
     assert summary["ready_for_exact_eval_dispatch"] is False
+    assert (run_dir / "queue_performance_summary.json").exists()
+    assert (run_dir / "canonical_response_update_placeholder.json").exists()
+    assert summary["next_run_hint"] == [
+        "--queue-performance-summary",
+        str(run_dir / "queue_performance_summary.json"),
+    ]
     assert summary["build"]["materializer_work_queue_executable_row_count"] == 1
     assert summary["worker"]["success_count"] == 3
     assert summary["worker"]["failure_count"] == 0

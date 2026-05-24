@@ -51,6 +51,10 @@ from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 RUN_SCHEMA = "byte_shaving_materializer_campaign_run.v1"
 RUN_CONFIG_SCHEMA = "byte_shaving_materializer_campaign_run_config.v1"
+RESPONSE_UPDATE_PLACEHOLDER_SCHEMA = "byte_shaving_campaign_response_update_placeholder.v1"
+QUEUE_PERFORMANCE_SUMMARY_SCHEMA = "experiment_queue_performance_summary.v1"
+UNAVAILABLE_QUEUE_PERFORMANCE_SUMMARY_SCHEMA = "experiment_queue_performance_summary_unavailable.v1"
+QUEUE_FEEDBACK_REPLAN_REQUEST_SCHEMA = "byte_shaving_materializer_campaign_feedback_replan_request.v1"
 _RUN_CONFIG_METADATA_KEYS = frozenset({"schema", "notes", "description", "owner"})
 
 
@@ -204,6 +208,307 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
         write_json_artifact(path, payload)
     except ArtifactWriteError as exc:
         raise SystemExit(str(exc)) from exc
+
+
+def _false_authority_payload(row: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        **dict(row),
+        **FALSE_AUTHORITY,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _text_excerpt(text: str, *, limit: int = 4096) -> str:
+    return text[-limit:] if len(text) > limit else text
+
+
+def _queue_performance_summary_payload(
+    performance_result: CommandResult,
+    *,
+    queue: Mapping[str, Any],
+) -> dict[str, Any]:
+    payload = _json_from_stdout(performance_result)
+    if payload is None or payload.get("schema") != QUEUE_PERFORMANCE_SUMMARY_SCHEMA:
+        payload = {
+            "schema": UNAVAILABLE_QUEUE_PERFORMANCE_SUMMARY_SCHEMA,
+            "queue_id": str(queue.get("queue_id") or "unknown_queue"),
+            "telemetry_only": True,
+            "event_count": 0,
+            "performance_command_failed": performance_result.returncode != 0,
+            "performance_command_stdout_excerpt": _text_excerpt(performance_result.stdout),
+            "performance_command_stderr_excerpt": _text_excerpt(performance_result.stderr),
+            "blockers": [
+                "queue_performance_command_failed"
+                if performance_result.returncode != 0
+                else "queue_performance_stdout_not_json_object"
+            ],
+        }
+    else:
+        payload = dict(payload)
+        payload.setdefault("blockers", [])
+    payload["performance_command_returncode"] = performance_result.returncode
+    payload["performance_command_elapsed_seconds"] = performance_result.elapsed_seconds
+    payload["source_kind"] = "byte_shaving_materializer_campaign_runner"
+    payload["allowed_use"] = "inverse_action_acquisition_runtime_denominator_update"
+    payload["forbidden_use"] = "score_claim_or_promotion_or_rank_kill_authority"
+    return _false_authority_payload(payload)
+
+
+def _queue_performance_replan_blockers(
+    args: argparse.Namespace,
+    *,
+    queue_performance_summary: Mapping[str, Any],
+) -> list[str]:
+    blockers: list[str] = []
+    if queue_performance_summary.get("schema") != QUEUE_PERFORMANCE_SUMMARY_SCHEMA:
+        blockers.append("queue_performance_summary_not_consumable")
+    if int(queue_performance_summary.get("event_count") or 0) < 1:
+        blockers.append("queue_performance_summary_has_no_completed_step_events")
+    if args.queue_performance_runtime_identity is None:
+        blockers.append("queue_performance_runtime_identity_missing")
+    if args.queue_performance_cache_identity is None:
+        blockers.append("queue_performance_cache_identity_missing")
+    return blockers
+
+
+def _feedback_action_functional_command_hint(
+    args: argparse.Namespace,
+    *,
+    plan_path: Path,
+    run_dir: Path,
+    queue_performance_summary_path: Path,
+) -> list[str]:
+    command = [
+        sys.executable,
+        "tools/build_inverse_steganalysis_action_functional.py",
+        "--output",
+        _display_path(run_dir / "inverse_steganalysis_action_functional.feedback.json"),
+        "--md-out",
+        _display_path(run_dir / "inverse_steganalysis_action_functional.feedback.md"),
+        "--repo-root",
+        REPO_ROOT.as_posix(),
+        "--resource-kind",
+        str(args.resource_kind),
+        "--byte-shaving-campaign-plan",
+        _display_path(plan_path),
+        "--queue-performance-summary",
+        _display_path(queue_performance_summary_path),
+        "--queue-performance-axis",
+        str(args.queue_performance_axis),
+    ]
+    if args.queue_performance_runtime_identity is not None:
+        command.extend(
+            [
+                "--queue-performance-runtime-identity",
+                _display_path(_resolve(args.queue_performance_runtime_identity)),
+            ]
+        )
+    if args.queue_performance_cache_identity is not None:
+        command.extend(
+            [
+                "--queue-performance-cache-identity",
+                _display_path(_resolve(args.queue_performance_cache_identity)),
+            ]
+        )
+    if args.queue_performance_candidate_map is not None:
+        command.extend(
+            [
+                "--queue-performance-candidate-map",
+                _display_path(_resolve(args.queue_performance_candidate_map)),
+            ]
+        )
+    if args.total_byte_budget is not None:
+        command.extend(["--total-byte-budget", str(args.total_byte_budget)])
+    if args.lambda_rate is not None:
+        command.extend(["--lambda-rate", str(args.lambda_rate)])
+    return command
+
+
+def _queue_feedback_replan_request_payload(
+    args: argparse.Namespace,
+    *,
+    summary_path: Path,
+    plan_path: Path,
+    queue_performance_summary_path: Path,
+    queue_performance_summary: Mapping[str, Any],
+    run_dir: Path,
+    execution_queue: Path,
+    state_path: Path,
+) -> dict[str, Any]:
+    blockers = _queue_performance_replan_blockers(
+        args,
+        queue_performance_summary=queue_performance_summary,
+    )
+    command_hint = _feedback_action_functional_command_hint(
+        args,
+        plan_path=plan_path,
+        run_dir=run_dir,
+        queue_performance_summary_path=queue_performance_summary_path,
+    )
+    return _false_authority_payload(
+        {
+            "schema": QUEUE_FEEDBACK_REPLAN_REQUEST_SCHEMA,
+            "source_run_path": _display_path(summary_path),
+            "run_dir": _display_path(run_dir),
+            "plan_path": _display_path(plan_path),
+            "queue_path": _display_path(execution_queue),
+            "queue_state_path": _display_path(state_path),
+            "queue_performance_summary_path": _display_path(queue_performance_summary_path),
+            "performance_schema": queue_performance_summary.get("schema"),
+            "performance_event_count": queue_performance_summary.get("event_count"),
+            "ready_for_action_functional_feedback": not blockers,
+            "blockers": blockers,
+            "consumer_contract": {
+                "tool": "tools/build_inverse_steganalysis_action_functional.py",
+                "flag": "--queue-performance-summary",
+                "role": "telemetry_denominator_calibration_only",
+                "requires_non_performance_action_source": True,
+                "non_performance_action_source": "--byte-shaving-campaign-plan",
+            },
+            "suggested_action_functional_command": command_hint if not blockers else None,
+            "command_template": command_hint,
+            "allowed_use": "next_inverse_action_replan_input_only",
+            "forbidden_use": "score_claim_or_promotion_or_paid_dispatch_authority",
+        }
+    )
+
+
+def _handoff_dir_from_path(path: Path) -> Path | None:
+    parts = path.parts
+    if "exact_eval_handoff" not in parts:
+        return None
+    index = parts.index("exact_eval_handoff")
+    return Path(*parts[: index + 1])
+
+
+def _queue_exact_readiness_handoff_dirs(queue: Mapping[str, Any]) -> list[Path]:
+    out: list[Path] = []
+    for experiment in queue.get("experiments", []):
+        if not isinstance(experiment, Mapping):
+            continue
+        for step in experiment.get("steps", []):
+            if not isinstance(step, Mapping):
+                continue
+            telemetry = step.get("telemetry")
+            if not isinstance(telemetry, Mapping):
+                continue
+            for key in ("artifact_paths", "pullback_artifact_paths"):
+                raw_paths = telemetry.get(key)
+                if not isinstance(raw_paths, Sequence) or isinstance(raw_paths, str | bytes):
+                    continue
+                for raw_path in raw_paths:
+                    handoff_dir = _handoff_dir_from_path(_resolve(str(raw_path)))
+                    if handoff_dir is not None:
+                        out.append(handoff_dir)
+    return out
+
+
+def _exact_readiness_handoff_paths(
+    *,
+    run_dir: Path,
+    queue: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    handoff_dirs = [
+        *[path for path in run_dir.rglob("exact_eval_handoff") if path.is_dir()],
+        *_queue_exact_readiness_handoff_dirs(queue),
+    ]
+    records: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for handoff_dir in sorted(handoff_dirs, key=lambda item: item.as_posix()):
+        key = handoff_dir.resolve(strict=False).as_posix()
+        if key in seen:
+            continue
+        seen.add(key)
+        source_queue = handoff_dir / "source_queue.json"
+        harvest_report = handoff_dir / "harvest_report.json"
+        readiness_dir = handoff_dir / "readiness"
+        bridge_report = handoff_dir / "exact_readiness_bridge_report.json"
+        dispatch_plan = handoff_dir / "dispatch_plan.json"
+        dispatch_queue = handoff_dir / "dispatch_queue.json"
+        records.append(
+            {
+                "handoff_dir": _display_path(handoff_dir),
+                "source_queue_path": _display_path(source_queue),
+                "harvest_report_path": _display_path(harvest_report),
+                "readiness_dir_path": _display_path(readiness_dir),
+                "exact_readiness_bridge_report_path": _display_path(bridge_report),
+                "dispatch_plan_path": _display_path(dispatch_plan),
+                "dispatch_queue_path": _display_path(dispatch_queue),
+                "source_queue_exists": source_queue.exists(),
+                "harvest_report_exists": harvest_report.exists(),
+                "exact_readiness_bridge_report_exists": bridge_report.exists(),
+                "dispatch_plan_exists": dispatch_plan.exists(),
+                "dispatch_queue_exists": dispatch_queue.exists(),
+            }
+        )
+    return records
+
+
+def _response_update_placeholder_payload(
+    *,
+    summary_path: Path,
+    queue_performance_summary_path: Path,
+    queue_feedback_replan_request_path: Path,
+    run_dir: Path,
+    execution_queue: Path,
+    state_path: Path,
+    runtime_policy_output_path: Path | None,
+    runtime_policy_applied_queue_path: Path | None,
+    exact_readiness_handoffs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    performance_arg = _display_path(queue_performance_summary_path)
+    return _false_authority_payload(
+        {
+            "schema": RESPONSE_UPDATE_PLACEHOLDER_SCHEMA,
+            "source_run_path": _display_path(summary_path),
+            "run_dir": _display_path(run_dir),
+            "queue_path": _display_path(execution_queue),
+            "queue_state_path": _display_path(state_path),
+            "runtime_policy_path": (
+                None
+                if runtime_policy_output_path is None
+                else _display_path(runtime_policy_output_path)
+            ),
+            "runtime_policy_applied_queue_path": (
+                None
+                if runtime_policy_applied_queue_path is None
+                else _display_path(runtime_policy_applied_queue_path)
+            ),
+            "queue_performance_summary_path": performance_arg,
+            "queue_feedback_replan_request_path": _display_path(queue_feedback_replan_request_path),
+            "exact_readiness_handoff_count": len(exact_readiness_handoffs),
+            "exact_readiness_handoff_paths": [dict(item) for item in exact_readiness_handoffs],
+            "response_update_applied": False,
+            "replan_required": True,
+            "next_run_hint": [
+                "--queue-performance-summary",
+                performance_arg,
+            ],
+            "next_action_functional_command_hint": [
+                sys.executable,
+                "tools/build_inverse_steganalysis_action_functional.py",
+                "--queue-performance-summary",
+                performance_arg,
+            ],
+            "not_scorer_response_dataset": True,
+            "consumer_contract": {
+                "next_real_artifact_schema": "scorer_response_dataset.v1",
+                "next_real_artifact_flag": "--scorer-response",
+                "placeholder_must_not_be_used_as_scorer_response": True,
+            },
+            "allowed_use": "next_inverse_action_replan_input_only",
+            "forbidden_use": "score_claim_or_promotion_or_paid_dispatch_authority",
+            "blockers": [
+                "response_update_not_applied",
+                "placeholder_not_scorer_response_dataset",
+                "requires_next_action_functional_replan",
+                "requires_exact_auth_eval_before_score_claim",
+            ],
+        }
+    )
 
 
 def _parse_resource_concurrency(values: list[str]) -> list[str]:
@@ -1786,6 +2091,30 @@ def main(argv: list[str] | None = None) -> int:
     )
     commands.append(performance_result)
 
+    summary_path = run_dir / "materializer_campaign_run.json"
+    queue_performance_summary_path = run_dir / "queue_performance_summary.json"
+    response_update_placeholder_path = run_dir / "canonical_response_update_placeholder.json"
+    queue_performance_summary = _queue_performance_summary_payload(
+        performance_result,
+        queue=queue,
+    )
+    _write_json(queue_performance_summary_path, queue_performance_summary)
+    exact_readiness_handoffs = _exact_readiness_handoff_paths(
+        run_dir=run_dir,
+        queue=queue,
+    )
+    response_update_placeholder = _response_update_placeholder_payload(
+        summary_path=summary_path,
+        queue_performance_summary_path=queue_performance_summary_path,
+        run_dir=run_dir,
+        execution_queue=execution_queue,
+        state_path=state_path,
+        runtime_policy_output_path=runtime_policy_output_path,
+        runtime_policy_applied_queue_path=runtime_policy_applied_queue_path,
+        exact_readiness_handoffs=exact_readiness_handoffs,
+    )
+    _write_json(response_update_placeholder_path, response_update_placeholder)
+
     payload = {
         "schema": RUN_SCHEMA,
         "run_dir": _display_path(run_dir),
@@ -1814,6 +2143,13 @@ def main(argv: list[str] | None = None) -> int:
         "runtime_policy_applied_queue_path": (
             None if runtime_policy_applied_queue_path is None else _display_path(runtime_policy_applied_queue_path)
         ),
+        "queue_performance_summary_path": _display_path(queue_performance_summary_path),
+        "response_update_placeholder_path": _display_path(response_update_placeholder_path),
+        "response_update_applied": False,
+        "replan_required": True,
+        "next_run_hint": response_update_placeholder["next_run_hint"],
+        "exact_readiness_handoff_count": len(exact_readiness_handoffs),
+        "exact_readiness_handoff_paths": exact_readiness_handoffs,
         "execute": bool(args.execute),
         "staircase_ssh_execute": bool(args.staircase_ssh_execute),
         "queue_id": queue["queue_id"],
@@ -1825,14 +2161,14 @@ def main(argv: list[str] | None = None) -> int:
         "ssh_executor_dry_run": ssh_executor_dry_run,
         "ssh_executor_execute": ssh_executor_execute,
         "observation": _json_from_stdout(observe_result),
-        "performance": _json_from_stdout(performance_result),
+        "performance": queue_performance_summary,
+        "response_update_placeholder": response_update_placeholder,
         "commands": [result.to_dict() for result in commands],
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
-    summary_path = run_dir / "materializer_campaign_run.json"
     _write_json(summary_path, payload)
     payload["summary_path"] = _display_path(summary_path)
     _json_print(payload)
