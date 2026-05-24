@@ -37,6 +37,7 @@ from tac.optimization.proxy_candidate_contract import (
 
 from .byte_shaving_materializer_registry import (
     DQS1_PAIRSET_TARGET_KIND,
+    INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER,
     INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
     INVERSE_SCORER_CELL_TARGET_KIND,
     REGISTRY_SCHEMA,
@@ -1382,6 +1383,17 @@ def _materializer_chain_manifest_path(
     )
 
 
+def _planning_only_exact_readiness_skip_reason(row: Mapping[str, Any]) -> str | None:
+    target_kind = str(row.get("target_kind") or "")
+    materializer_id = str(row.get("materializer_id") or "")
+    if (
+        target_kind == INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND
+        or materializer_id == INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER
+    ):
+        return "planning_only_inverse_action_functional_not_candidate_archive"
+    return None
+
+
 def _materializer_exact_readiness_followup_steps(
     *,
     queue_id: str,
@@ -1643,6 +1655,8 @@ def build_materializer_execution_queue(
                     )
     if include_exact_readiness_followup and expected_output_root is not None:
         for index, row in enumerate(executable_rows, start=1):
+            if _planning_only_exact_readiness_skip_reason(row) is not None:
+                continue
             postconditions = _normalize_materializer_queue_postconditions(
                 row.get("postconditions")
             )
@@ -1686,7 +1700,15 @@ def build_materializer_execution_queue(
                 f"materializer work row {rank} uses non-local resource {resource_kind!r}"
             )
         used_resource_kinds.add(resource_kind)
-        if include_exact_readiness_followup:
+        exact_readiness_skip_reason = (
+            _planning_only_exact_readiness_skip_reason(row)
+            if include_exact_readiness_followup
+            else None
+        )
+        exact_readiness_followup_enabled = (
+            include_exact_readiness_followup and exact_readiness_skip_reason is None
+        )
+        if exact_readiness_followup_enabled:
             used_resource_kinds.add("local_cpu")
         experiment_id = _materializer_execution_experiment_id(
             row,
@@ -1708,7 +1730,7 @@ def build_materializer_execution_queue(
                 "timeout_seconds": step_timeout_seconds,
             }
         ]
-        if include_exact_readiness_followup:
+        if exact_readiness_followup_enabled:
             chain_manifest_path = _resolve_repo_path(
                 _materializer_chain_manifest_path(
                     postconditions,
@@ -1752,9 +1774,13 @@ def build_materializer_execution_queue(
                 "receiver_contract_kind": row.get("receiver_contract_kind"),
                 "source_unit_ids": _as_list(row.get("source_unit_ids")),
                 "source_selection_ids": _as_list(row.get("source_selection_ids")),
-                "exact_readiness_followup_enabled": bool(
+                "exact_readiness_followup_requested": bool(
                     include_exact_readiness_followup
                 ),
+                "exact_readiness_followup_enabled": bool(
+                    exact_readiness_followup_enabled
+                ),
+                "exact_readiness_followup_skipped_reason": exact_readiness_skip_reason,
                 "candidate_saved_bytes_sum": row.get("candidate_saved_bytes_sum"),
                 "expected_score_gain_sum": row.get("expected_score_gain_sum"),
                 "allowed_use": "local_materializer_proof_chain_only",

@@ -1845,7 +1845,7 @@ def test_materializer_execution_queue_can_append_exact_readiness_followups(
     ]["dependencies"] == [f"{experiment['id']}.{MATERIALIZER_HARVEST_STEP_ID}"]
 
 
-def test_materializer_execution_queue_followup_requires_chain_postcondition(
+def test_materializer_execution_queue_skips_exact_followup_for_planning_only_rows(
     tmp_path: Path,
 ) -> None:
     compiled = compile_dqs1_byte_shaving_campaign(
@@ -1866,10 +1866,53 @@ def test_materializer_execution_queue_followup_requires_chain_postcondition(
         source_plan_path="plan.json",
     )
 
+    execution_queue = build_materializer_execution_queue(
+        work_queue,
+        queue_id="inverse_action_exec_fixture",
+        repo_root=tmp_path,
+        include_exact_readiness_followup=True,
+    )
+
+    experiment = execution_queue["experiments"][0]
+    assert [step["id"] for step in experiment["steps"]] == [
+        MATERIALIZER_EXECUTION_STEP_ID
+    ]
+    assert experiment["metadata"]["exact_readiness_followup_requested"] is True
+    assert experiment["metadata"]["exact_readiness_followup_enabled"] is False
+    assert experiment["metadata"]["exact_readiness_followup_skipped_reason"] == (
+        "planning_only_inverse_action_functional_not_candidate_archive"
+    )
+
+
+def test_materializer_execution_queue_followup_requires_chain_postcondition_for_candidates(
+    tmp_path: Path,
+) -> None:
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _byte_range_entropy_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+    backlog_row = compiled["materializer_backlog"]["rows"][0]
+    work_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            backlog_row["backlog_key"]: {
+                "schema_manifest": "schema.json",
+                "beam_probe_reports": ["beam_a.json"],
+                "source_runtime_dir": "runtime",
+                "output_dir": str(tmp_path / "chain_out"),
+            }
+        },
+        source_plan_path="plan.json",
+    )
+    work_queue["rows"][0]["postconditions"] = []
+
     with pytest.raises(ExperimentQueueError, match="materializer_chain_complete"):
         build_materializer_execution_queue(
             work_queue,
-            queue_id="inverse_action_exec_fixture",
+            queue_id="candidate_exec_fixture",
             repo_root=tmp_path,
             include_exact_readiness_followup=True,
         )
