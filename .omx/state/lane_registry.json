@@ -53484,11 +53484,11 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "tools/run_family_agnostic_materializer_sweep.py"
+          "evidence": "tools/run_family_agnostic_materializer_sweep.py + src/tac/optimization/inverse_steganalysis_acquisition.py materializer target feedback bridge"
         },
         "real_archive_empirical": {
           "status": true,
-          "evidence": "experiments/results/packet_header_elide_sweep_20260524T2312Z/sweep.json"
+          "evidence": "experiments/results/packet_header_elide_sweep_20260524T2324Z/sweep.json"
         },
         "contest_cuda": {
           "status": false,
@@ -53500,7 +53500,7 @@
         },
         "strict_preflight": {
           "status": true,
-          "evidence": "src/tac/tests/test_family_agnostic_materializer_sweep.py"
+          "evidence": "ruff targeted sweep/acquisition/materializer surfaces; pytest 53 materializer+sweep+inverse-acquisition tests; refreshed robust_current sweep"
         },
         "three_clean_review": {
           "status": false,
@@ -53516,6 +53516,47 @@
         }
       },
       "notes": "Run real archive header-elide proof-chain observations and wire zero/positive savings into planner feedback instead of leaving the new materializer uncalibrated."
+    },
+    {
+      "id": "codex_packet_header_elide_all_members_feedback_20260524",
+      "name": "Packet header elide all-member feedback",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -53525,5 +53566,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T23:04:24Z"
+  "updated_at": "2026-05-24T23:09:43Z"
 }

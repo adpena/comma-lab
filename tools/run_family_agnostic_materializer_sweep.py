@@ -36,6 +36,10 @@ from tac.repo_io import (  # noqa: E402
     write_json_artifact,
     write_text_artifact,
 )
+from tac.score_composition import (  # noqa: E402
+    CANONICAL_RATE_DENOM_BYTES,
+    CANONICAL_RATE_MULTIPLIER,
+)
 
 SWEEP_SCHEMA = "family_agnostic_materializer_empirical_sweep.v1"
 OBSERVATION_SCHEMA = "family_agnostic_materializer_empirical_observation.v1"
@@ -49,6 +53,8 @@ FALSE_AUTHORITY = {
     "dispatch_attempted": False,
     "gpu_launched": False,
 }
+LOCAL_MATERIALIZER_AXIS = "[local-materializer-proof]"
+LOCAL_RATE_SCORE_PER_BYTE = CANONICAL_RATE_MULTIPLIER / float(CANONICAL_RATE_DENOM_BYTES)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -206,26 +212,47 @@ def _observation_from_manifest(
     candidate_archive = (
         result.get("candidate_archive") if isinstance(result.get("candidate_archive"), Mapping) else {}
     )
+    proof_write = (
+        result.get("runtime_consumption_proof_write")
+        if isinstance(result.get("runtime_consumption_proof_write"), Mapping)
+        else {}
+    )
     receiver_verification = (
         result.get("receiver_verification")
         if isinstance(result.get("receiver_verification"), Mapping)
         else {}
     )
     rate_positive = saved_bytes > 0 and "candidate_not_rate_positive" not in readiness_blockers
+    observed_rate_gain = LOCAL_RATE_SCORE_PER_BYTE * float(saved_bytes) if rate_positive else 0.0
     return {
         "schema": OBSERVATION_SCHEMA,
         "observation_kind": "family_agnostic_materializer_empirical_observation",
         "observation_id": row_slug,
         "candidate_id": row_slug,
+        "axis": LOCAL_MATERIALIZER_AXIS,
+        "resource_kind": "local_cpu",
+        "runtime_identity": {
+            "runtime_contract_sha256": proof_write.get("sha256"),
+            "scorer_version": SWEEP_SCHEMA,
+        },
+        "cache_identity": {
+            "cache_sha256": candidate_archive.get("sha256")
+            or source_archive.get("sha256"),
+            "source_archive_sha256": source_archive.get("sha256"),
+        },
         "archive_label": label,
         "target_kind": result.get("target_kind"),
         "materializer_id": result.get("materializer_id"),
         "receiver_contract_kind": result.get("receiver_contract_kind"),
+        "source_archive_path": source_archive.get("path"),
         "source_archive_sha256": source_archive.get("sha256"),
         "source_archive_bytes": source_archive.get("bytes"),
         "candidate_archive_sha256": candidate_archive.get("sha256"),
         "candidate_archive_bytes": candidate_archive.get("bytes"),
+        "artifact_bytes": candidate_archive.get("bytes") or source_archive.get("bytes") or 0,
         "saved_bytes": saved_bytes,
+        "observed_rate_gain": observed_rate_gain,
+        "observed_score_gain": observed_rate_gain,
         "rate_positive": rate_positive,
         "receiver_contract_satisfied": result.get("receiver_contract_satisfied") is True,
         "receiver_verification_blockers": receiver_verification.get("blockers") or [],

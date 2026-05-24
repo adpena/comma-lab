@@ -275,11 +275,17 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
         )
     out = {
         "schema": OBSERVATION_SCHEMA,
+        "source_observation_schema": _optional_text(row.get("schema")),
         "observation_id": _optional_text(row.get("observation_id")) or f"obs_{_slug(candidate_id)}_{_slug(axis)}",
         "observation_kind": _optional_text(row.get("observation_kind")),
         "candidate_id": candidate_id,
         "axis": axis,
         "axis_normalized": axis_normalized,
+        "target_kind": _optional_text(row.get("target_kind")),
+        "materializer_id": _optional_text(
+            _first(row.get("materializer_id"), row.get("materializer"))
+        ),
+        "receiver_contract_kind": _optional_text(row.get("receiver_contract_kind")),
         "source_path": _optional_text(row.get("source_path")),
         "queue_id": _optional_text(row.get("queue_id")),
         "experiment_id": _optional_text(row.get("experiment_id")),
@@ -294,6 +300,14 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
         "run_count": _optional_int(row.get("run_count"), "run_count", minimum=0),
         "success_count": _optional_int(row.get("success_count"), "success_count", minimum=0),
         "failure_count": _optional_int(row.get("failure_count"), "failure_count", minimum=0),
+        "saved_bytes": _optional_int(row.get("saved_bytes"), "saved_bytes"),
+        "observed_rate_gain": _float_or_none(
+            row.get("observed_rate_gain"),
+            "observed_rate_gain",
+            minimum=0.0,
+        ),
+        "rate_positive": row.get("rate_positive") is True,
+        "receiver_contract_satisfied": row.get("receiver_contract_satisfied") is True,
         "artifact_record_count": _optional_int(
             row.get("artifact_record_count"),
             "artifact_record_count",
@@ -2474,9 +2488,31 @@ def _add_compiler_feedback_target_ids(ids: set[str], atom: Mapping[str, Any]) ->
     operation_set_id = _optional_text(compiler.get("operation_set_id"))
     if operation_set_id:
         ids.add(operation_set_id)
+    target_kind = _optional_text(compiler.get("target_kind"))
+    if target_kind:
+        ids.add(target_kind)
+    materializer = _optional_text(
+        _first(compiler.get("materializer_id"), compiler.get("materializer"))
+    )
+    if materializer:
+        ids.add(materializer)
+    receiver_contract_kind = _optional_text(compiler.get("receiver_contract_kind"))
+    if receiver_contract_kind:
+        ids.add(receiver_contract_kind)
     for op_index, operation in enumerate(_sequence_of_mappings(compiler.get("selected_operations"))):
         unit_id = _optional_text(operation.get("unit_id")) or f"op{op_index:04d}"
         ids.add(unit_id)
+        target_kind = _optional_text(operation.get("target_kind"))
+        if target_kind:
+            ids.add(target_kind)
+        materializer = _optional_text(
+            _first(operation.get("materializer_id"), operation.get("materializer"))
+        )
+        if materializer:
+            ids.add(materializer)
+        receiver_contract_kind = _optional_text(operation.get("receiver_contract_kind"))
+        if receiver_contract_kind:
+            ids.add(receiver_contract_kind)
         if atom_id:
             ids.add(f"inverse_action_{atom_id}_{unit_id}_{op_index:04d}")
 
@@ -2489,6 +2525,10 @@ def _observation_feedback_target_ids(observation: Mapping[str, Any]) -> set[str]
             observation.get("experiment_id"),
             observation.get("step_id"),
             observation.get("performance_bucket_key"),
+            observation.get("target_kind"),
+            observation.get("materializer_id"),
+            observation.get("materializer"),
+            observation.get("receiver_contract_kind"),
         )
         if str(value or "")
     }

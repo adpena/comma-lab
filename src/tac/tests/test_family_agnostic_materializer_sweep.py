@@ -51,13 +51,17 @@ def test_materializer_empirical_sweep_summarizes_rate_positive_and_zero(
     assert payload["ready_for_exact_eval_dispatch"] is False
     rows = {row["archive_label"]: row for row in payload["observations"]}
     assert rows["positive"]["schema"] == OBSERVATION_SCHEMA
+    assert rows["positive"]["axis"] == "[local-materializer-proof]"
     assert rows["positive"]["saved_bytes"] > 0
+    assert rows["positive"]["observed_score_gain"] > 0
+    assert rows["positive"]["observed_rate_gain"] == rows["positive"]["observed_score_gain"]
     assert rows["positive"]["rate_positive"] is True
     assert rows["positive"]["receiver_contract_satisfied"] is True
     assert rows["positive"]["recommended_planner_action"] == (
         "keep_rate_positive_candidate_for_inflate_parity_gate"
     )
     assert rows["zero"]["saved_bytes"] <= 0
+    assert rows["zero"]["observed_score_gain"] == 0.0
     assert rows["zero"]["rate_positive"] is False
     assert "candidate_not_rate_positive" in rows["zero"]["readiness_blockers"]
     assert rows["zero"]["recommended_planner_action"] == (
@@ -104,6 +108,7 @@ def test_materializer_empirical_sweep_cli_writes_json_and_jsonl(
     assert stdout_payload["schema"] == SWEEP_SCHEMA
     assert persisted["schema"] == SWEEP_SCHEMA
     assert rows[0]["schema"] == OBSERVATION_SCHEMA
+    assert rows[0]["source_archive_path"] == str(archive.resolve())
     assert rows[0]["rate_positive"] is True
     assert Path(rows[0]["manifest_path"]).is_file()
     assert Path(rows[0]["candidate_archive_path"]).is_file()

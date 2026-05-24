@@ -562,6 +562,78 @@ def test_mlx_direct_spend_triage_compiler_hint_survives_to_action_cell() -> None
     assert action["score_claim"] is False
 
 
+def test_materializer_observation_matches_compiler_target_and_materializer() -> None:
+    saved_bytes = 52
+    observed_rate_gain = CONTEST_RATE_SCORE_PER_BYTE * float(saved_bytes)
+    atom = _atom(
+        "candidate_parent",
+        atom_id="atom_materializer_bridge",
+        fragility_penalty=0.0,
+        uncertainty=0.0,
+        operation_set_compiler={
+            "schema": "inverse_action_operation_set_compiler_hint.v1",
+            "operation_set_id": "header_elide_group",
+            "selected_operations": [
+                {
+                    "unit_id": "renderer_bin_header_elide",
+                    "target_kind": "packet_member_zip_header_elide_v1",
+                    "materializer": "packet_member_zip_header_elide_adapter",
+                    "receiver_contract_kind": (
+                        "packet_member_zip_header_elide_receiver_proof.v1"
+                    ),
+                    "candidate_saved_bytes": saved_bytes,
+                }
+            ],
+        },
+    )
+    observation = {
+        "schema": "family_agnostic_materializer_empirical_observation.v1",
+        "observation_kind": "family_agnostic_materializer_empirical_observation",
+        "observation_id": "obs_header_elide_renderer_bin",
+        "candidate_id": "sweep_row_not_candidate_parent",
+        "axis": "[local-materializer-proof]",
+        "runtime_identity": {
+            "runtime_contract_sha256": "a" * 64,
+            "scorer_version": "family_agnostic_materializer_empirical_sweep.v1",
+        },
+        "cache_identity": {
+            "cache_sha256": "b" * 64,
+            "source_archive_sha256": "c" * 64,
+        },
+        "target_kind": "packet_member_zip_header_elide_v1",
+        "materializer_id": "packet_member_zip_header_elide_adapter",
+        "receiver_contract_kind": "packet_member_zip_header_elide_receiver_proof.v1",
+        "saved_bytes": saved_bytes,
+        "observed_rate_gain": observed_rate_gain,
+        "observed_score_gain": observed_rate_gain,
+        "artifact_bytes": 345_750,
+        "resource_kind": "local_cpu",
+        "rate_positive": True,
+        "receiver_contract_satisfied": True,
+        **_planning_false_authority(),
+    }
+
+    normalized = normalize_inverse_steganalysis_observation(observation)
+    action = build_discrete_scorer_action_functional([atom], observations=[observation])
+    cell = action["cells"][0]
+
+    assert normalized["source_observation_schema"] == (
+        "family_agnostic_materializer_empirical_observation.v1"
+    )
+    assert normalized["target_kind"] == "packet_member_zip_header_elide_v1"
+    assert normalized["materializer_id"] == "packet_member_zip_header_elide_adapter"
+    assert normalized["saved_bytes"] == saved_bytes
+    assert normalized["observed_rate_gain"] == pytest.approx(observed_rate_gain)
+    assert normalized["rate_positive"] is True
+    assert cell["best_observation_id"] == "obs_header_elide_renderer_bin"
+    assert cell["best_observation_kind"] == (
+        "family_agnostic_materializer_empirical_observation"
+    )
+    assert cell["priority"]["expected_score_gain"] == pytest.approx(observed_rate_gain)
+    assert cell["score_claim"] is False
+    assert action["score_claim"] is False
+
+
 def test_mlx_direct_spend_triage_rejects_truthy_nested_compiler_authority() -> None:
     selection = _mlx_selection()
     selection["selected_rows"][0]["operation_set_compiler"] = {
