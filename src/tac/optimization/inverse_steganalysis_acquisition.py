@@ -1853,6 +1853,10 @@ def _action_atom_from_mlx_acquisition_operation_set(
         "artifact_bytes": row_artifact_bytes,
         "resource_kind": resource_kind
         or str(operation_set.get("resource_kind") or "local_mlx"),
+        "operation_set_compiler": _optional_mapping(
+            operation_set.get("operation_set_compiler"),
+            "mlx_operation_set.operation_set_compiler",
+        ),
         "source_provenance": _mlx_acquisition_operation_set_provenance(
             operation_set,
             batch=batch,
@@ -2051,6 +2055,10 @@ def _mlx_acquisition_operation_set_provenance(
                 operation_set.get("materializer_contract_kinds")
             ),
             "operation_portability": operation_set.get("operation_portability"),
+            "operation_set_compiler": _optional_mapping(
+                operation_set.get("operation_set_compiler"),
+                "mlx_operation_set.operation_set_compiler",
+            ),
             "selected_operations": _sequence_of_mappings(
                 operation_set.get("selected_operations")
             ),

@@ -15,6 +15,7 @@ from tac.optimization.normalized_objective import (
     compute_normalized_full_video_gain,
     normalized_full_video_objective_metrics,
 )
+from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
 from tac.optimization.scorer_response_dataset import (
     ScorerResponseDatasetError,
     render_authority_markdown_block,
@@ -38,6 +39,26 @@ _PLANNING_TARGET_FIELDS = frozenset(
         "byte_budget_margin_vs_break_even",
         "normalized_full_video_byte_budget_margin_vs_break_even",
     }
+)
+_COMPILER_HINT_PASSTHROUGH_FIELDS = (
+    "operation_set_compiler",
+    "operation_set_compiler_hint",
+    "compiler_hint",
+    "selected_operations",
+    "operation_families",
+    "target_kind",
+    "archive_section",
+    "section_name",
+    "target_section",
+    "target_sections",
+    "packet_member",
+    "member_name",
+    "tensor_name",
+    "tensor_path",
+    "byte_range",
+    "frame_range",
+    "region_bbox",
+    "params",
 )
 
 _FALSE_AUTHORITY_FIELDS = (
@@ -507,10 +528,28 @@ def _selection_row(
         "prediction_agrees_with_observed_gain": (
             None if predicted_delta is None else predicted_delta < 0.0
         ),
+        **_compiler_hint_passthrough(row),
         "next_required_step": (
             "materialize_byte_closed_archive_before_claim_or_exact_eval_dispatch"
         ),
     }
+
+
+def _compiler_hint_passthrough(row: dict[str, Any]) -> dict[str, Any]:
+    passthrough = {
+        key: row[key]
+        for key in _COMPILER_HINT_PASSTHROUGH_FIELDS
+        if key in row and row[key] is not None
+    }
+    if passthrough:
+        try:
+            require_no_truthy_authority_fields(
+                passthrough,
+                context="mlx_effective_spend_triage_selection.compiler_hint_passthrough",
+            )
+        except ValueError as exc:
+            raise MLXEffectiveSpendTriageSelectionError(str(exc)) from exc
+    return passthrough
 
 
 def build_mlx_effective_spend_triage_selection(

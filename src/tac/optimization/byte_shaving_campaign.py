@@ -59,6 +59,10 @@ INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND = (
 INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER = (
     "inverse_steganalysis_operation_set_compiler_required"
 )
+MLX_SCORER_RESPONSE_PLACEHOLDER_OPERATION_FAMILY = (
+    "materialize_scorer_response_candidate"
+)
+MLX_SCORER_RESPONSE_PLACEHOLDER_TARGET_KIND = "mlx_scorer_response_candidate_v1"
 PACKET_IR_OPERATION_SCHEMA = "packet_ir_operation_v1"
 INVERSE_ACTION_COMPILED_OPERATION_SET_MODE = "compiled_operation_set"
 INVERSE_ACTION_COMPILER_TARGET_DEFAULTS: dict[str, dict[str, str]] = {
@@ -2667,6 +2671,11 @@ def _units_from_inverse_action_provenance(
         for item in _as_list(provenance.get("selected_operations"))
         if isinstance(item, Mapping)
     ]
+    operations = [
+        operation
+        for operation in operations
+        if not _is_non_materializable_mlx_response_placeholder(operation)
+    ]
     if not operations:
         return []
     total_saved = _finite_int(provenance.get("candidate_saved_bytes"))
@@ -2689,6 +2698,17 @@ def _units_from_inverse_action_provenance(
             )
         )
     return units
+
+
+def _is_non_materializable_mlx_response_placeholder(
+    operation: Mapping[str, Any],
+) -> bool:
+    operation_family = str(operation.get("operation_family") or "")
+    target_kind = str(operation.get("target_kind") or "")
+    return (
+        operation_family == MLX_SCORER_RESPONSE_PLACEHOLDER_OPERATION_FAMILY
+        or target_kind == MLX_SCORER_RESPONSE_PLACEHOLDER_TARGET_KIND
+    )
 
 
 def _compiler_mapping(

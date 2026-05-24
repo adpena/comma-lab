@@ -31,6 +31,44 @@ MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_ROW_SCHEMA = (
 )
 TOOL_NAME = "tac.local_acceleration.mlx_acquisition_batch"
 REPRESENTATION_CONTRACT_SCHEMA = MLX_ACQUISITION_REPRESENTATION_CONTRACT_SCHEMA
+OPERATION_SET_COMPILER_HINT_SCHEMA = "inverse_action_operation_set_compiler_hint.v1"
+COMPILER_HINT_KEYS = (
+    "operation_set_compiler",
+    "operation_set_compiler_hint",
+    "compiler_hint",
+)
+COMPILER_TARGET_KEYS = (
+    "target_kind",
+    "archive_section",
+    "section_name",
+    "target_section",
+    "target_sections",
+    "packet_member",
+    "member_name",
+    "tensor_name",
+    "tensor_path",
+    "byte_range",
+    "frame_range",
+    "pair_indices",
+    "region_bbox",
+)
+COMPILER_OPERATION_METADATA_KEYS = (
+    "unit_id",
+    "unit_kind",
+    "operation_id",
+    "operation_family",
+    "target_kind",
+    "materializer",
+    "candidate_saved_bytes",
+    "predicted_quality_score_delta",
+    "receiver_contract_kind",
+    "representation_family",
+    "representation_family_class",
+    "representation_contract",
+    "bolt_on_families",
+    "params",
+    "blockers",
+)
 REPRESENTATION_FAMILY_CLASSES = frozenset(
     {
         "hnerv_variant",
@@ -124,6 +162,12 @@ def _as_mapping(value: Any, *, label: str) -> dict[str, Any]:
     return dict(value)
 
 
+def _optional_mapping(value: Any, *, label: str) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    return _as_mapping(value, label=label)
+
+
 def _list_rows(value: Any, *, label: str) -> list[dict[str, Any]]:
     if not isinstance(value, Sequence) or isinstance(value, str | bytes) or not value:
         raise MLXAcquisitionBatchError(f"{label} must be a non-empty list")
@@ -196,6 +240,157 @@ def _string_list(value: Any, *, label: str) -> list[str]:
             raise MLXAcquisitionBatchError(f"{label}[{index}] must be non-empty")
         out.append(text)
     return out
+
+
+def _operation_mappings(value: Any, *, label: str) -> list[dict[str, Any]]:
+    if value is None:
+        return []
+    return _list_rows(value, label=label)
+
+
+def _row_compiler_hint(row: Mapping[str, Any], *, label: str) -> dict[str, Any] | None:
+    for key in COMPILER_HINT_KEYS:
+        hint = _optional_mapping(row.get(key), label=f"{label}.{key}")
+        if hint is not None:
+            return hint
+    row_operations = _operation_mappings(
+        row.get("selected_operations"),
+        label=f"{label}.selected_operations",
+    )
+    if row_operations:
+        return {
+            "schema": OPERATION_SET_COMPILER_HINT_SCHEMA,
+            "selected_operations": row_operations,
+        }
+    if row.get("target_kind") is not None:
+        return {
+            "schema": OPERATION_SET_COMPILER_HINT_SCHEMA,
+            **{
+                key: row.get(key)
+                for key in (*COMPILER_OPERATION_METADATA_KEYS, *COMPILER_TARGET_KEYS)
+                if row.get(key) is not None
+            },
+        }
+    return None
+
+
+def _compiler_raw_operations(
+    row: Mapping[str, Any],
+    *,
+    label: str,
+) -> list[dict[str, Any]]:
+    hint = _row_compiler_hint(row, label=label)
+    if hint is None:
+        return []
+    operations = _operation_mappings(
+        hint.get("selected_operations"),
+        label=f"{label}.operation_set_compiler.selected_operations",
+    )
+    if operations:
+        return operations
+    return [hint]
+
+
+def _compiler_operations_from_selection_row(
+    row: Mapping[str, Any],
+    *,
+    row_index: int,
+    row_id: str,
+    candidate_id: str,
+    family: str,
+    representation_contract: Mapping[str, Any],
+    added_bytes: int,
+    row_gain_value: float,
+) -> list[dict[str, Any]]:
+    operations: list[dict[str, Any]] = []
+    raw_operations = _compiler_raw_operations(
+        row,
+        label=f"selected_rows[{row_index}]",
+    )
+    operation_count = len(raw_operations)
+    saved_bytes = max(0, -added_bytes)
+    for op_index, raw_operation in enumerate(raw_operations):
+        operation_label = (
+            f"selected_rows[{row_index}].operation_set_compiler."
+            f"selected_operations[{op_index}]"
+        )
+        require_no_truthy_authority_fields(
+            raw_operation,
+            context=operation_label,
+        )
+        target_kind = _optional_string(raw_operation.get("target_kind"))
+        if target_kind is None:
+            raise MLXAcquisitionBatchError(f"{operation_label}.target_kind is required")
+        params = dict(
+            _optional_mapping(raw_operation.get("params"), label=f"{operation_label}.params")
+            or {}
+        )
+        for key in COMPILER_TARGET_KEYS:
+            value = raw_operation.get(key, row.get(key))
+            if value is not None and key not in params:
+                params[key] = value
+        operation_saved = raw_operation.get("candidate_saved_bytes")
+        if operation_saved is None:
+            operation_saved = saved_bytes
+        operation = {
+            "unit_id": raw_operation.get("unit_id")
+            or f"mlx_compiler_{_slug(row_id)}_{op_index:04d}",
+            "operation_id": raw_operation.get("operation_id")
+            or f"mlx_compile_{_slug(row_id)}_{op_index:04d}",
+            "target_kind": target_kind,
+            "candidate_id": candidate_id,
+            "source_row_id": row_id,
+            "source_family": family,
+            "representation_family": representation_contract["representation_family"],
+            "representation_family_class": representation_contract[
+                "representation_family_class"
+            ],
+            "representation_contract": dict(representation_contract),
+            "bolt_on_families": list(representation_contract["bolt_on_families"]),
+            "receiver_contract_kind": raw_operation.get("receiver_contract_kind")
+            or representation_contract["receiver_contract_kind"],
+            "materializer_contract_kind": representation_contract[
+                "materializer_contract_kind"
+            ],
+            "operation_portability": "family_agnostic",
+            "candidate_saved_bytes": operation_saved,
+            "predicted_quality_score_delta": raw_operation.get(
+                "predicted_quality_score_delta",
+                -row_gain_value / float(max(1, operation_count)),
+            ),
+            "params": {
+                **params,
+                "source_row_id": row_id,
+                "candidate_id": candidate_id,
+                "source_path": row.get("source_path"),
+                "archive_sha256": row.get("archive_sha256"),
+                "raw_sha256": row.get("raw_sha256"),
+            },
+            "blockers": ordered_unique(
+                [
+                    *[
+                        str(item)
+                        for item in _string_list(
+                            raw_operation.get("blockers"),
+                            label=f"{operation_label}.blockers",
+                        )
+                    ],
+                    "compiled_from_mlx_acquisition_operation_set_compiler",
+                    "requires_materializer_contexts",
+                    "requires_runtime_consumption_proof_before_exact_eval",
+                    "requires_exact_auth_eval_before_score_claim",
+                ]
+            ),
+        }
+        for key in (
+            "unit_kind",
+            "operation_family",
+            "materializer",
+        ):
+            if raw_operation.get(key) is not None:
+                operation[key] = raw_operation[key]
+        operations.append(operation)
+    return operations
 
 
 def _family_tokens(row: Mapping[str, Any]) -> list[str]:
@@ -362,6 +557,7 @@ def _operation_set_from_selection_rows(
     materializer_contract_kinds: list[str] = []
     representation_contracts: list[dict[str, Any]] = []
     row_refs: list[dict[str, Any]] = []
+    compiler_operations: list[dict[str, Any]] = []
     for offset, row in enumerate(rows):
         row_index = set_index + offset
         row_id = _text(row.get("row_id") or row.get("candidate_id"), "selection row_id")
@@ -382,10 +578,23 @@ def _operation_set_from_selection_rows(
             label=f"selected_rows[{row_index}].pair_indices",
         )
         pair_indices.extend(row_pairs)
-        expected_score_gain += _row_gain(row, index=row_index)
+        row_gain_value = _row_gain(row, index=row_index)
+        expected_score_gain += row_gain_value
         added_bytes = int(row.get("added_archive_bytes") or 0)
         if added_bytes < 0:
             candidate_saved_bytes += abs(added_bytes)
+        compiler_operations.extend(
+            _compiler_operations_from_selection_row(
+                row,
+                row_index=row_index,
+                row_id=row_id,
+                candidate_id=candidate_id,
+                family=family,
+                representation_contract=representation_contract,
+                added_bytes=added_bytes,
+                row_gain_value=row_gain_value,
+            )
+        )
         selected_operations.append(
             {
                 "operation_id": f"materialize_mlx_response_{_slug(row_id)}",
@@ -410,7 +619,7 @@ def _operation_set_from_selection_rows(
                     "materializer_contract_kind"
                 ],
                 "candidate_saved_bytes": max(0, -added_bytes),
-                "predicted_quality_score_delta": -_row_gain(row, index=row_index),
+                "predicted_quality_score_delta": -row_gain_value,
                 "pair_indices": row_pairs,
                 "params": {
                     "source_row_id": row_id,
@@ -445,6 +654,25 @@ def _operation_set_from_selection_rows(
     first = rows[0]
     source_candidate_id = _text(first.get("candidate_id"), "selection candidate_id")
     operation_set_id = f"mlx_opset_{set_index:04d}_{_slug(source_candidate_id)}"
+    operation_set_compiler = None
+    if compiler_operations:
+        operation_set_compiler = {
+            "schema": OPERATION_SET_COMPILER_HINT_SCHEMA,
+            "operation_set_id": f"{operation_set_id}_compiled",
+            "candidate_id": source_candidate_id,
+            "candidate_saved_bytes": sum(
+                max(0, int(operation.get("candidate_saved_bytes") or 0))
+                for operation in compiler_operations
+            ),
+            "operation_portability": "family_agnostic",
+            "source_kind": "mlx_acquisition_batch_selection_row_compiler_hints",
+            "selected_operations": compiler_operations,
+            **PROXY_FALSE_AUTHORITY_FIELDS,
+        }
+        require_no_truthy_authority_fields(
+            operation_set_compiler,
+            context=f"mlx_acquisition_batch.operation_sets[{set_index}].operation_set_compiler",
+        )
     return _false_authority(
         {
             "schema": OPERATION_SET_SCHEMA,
@@ -462,6 +690,11 @@ def _operation_set_from_selection_rows(
             "receiver_contract_kinds": sorted(set(receiver_contract_kinds)),
             "materializer_contract_kinds": sorted(set(materializer_contract_kinds)),
             "operation_portability": "family_agnostic",
+            **(
+                {"operation_set_compiler": operation_set_compiler}
+                if operation_set_compiler is not None
+                else {}
+            ),
             "selected_unit_ids": selected_unit_ids,
             "selected_operations": selected_operations,
             "chosen_operation_sequence": [dict(item) for item in selected_operations],
@@ -582,6 +815,12 @@ def validate_mlx_acquisition_batch(batch: Mapping[str, Any]) -> dict[str, Any]:
         ):
             raise MLXAcquisitionBatchError(
                 f"operation_sets[{index}].selected_operations must not be empty"
+            )
+        compiler = operation_set.get("operation_set_compiler")
+        if compiler is not None:
+            _as_mapping(
+                compiler,
+                label=f"operation_sets[{index}].operation_set_compiler",
             )
         normalized_sets.append(dict(operation_set))
     return {**dict(batch), "operation_sets": normalized_sets}

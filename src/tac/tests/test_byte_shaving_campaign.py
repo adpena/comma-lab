@@ -635,6 +635,77 @@ def test_inverse_action_compiler_hint_lowers_to_family_packet_ir() -> None:
     assert bridge["ready_for_exact_eval_dispatch"] is False
 
 
+def test_mlx_placeholder_provenance_defers_to_compiler_hint() -> None:
+    payload = _inverse_action_payload()
+    payload["cells"] = [
+        {
+            "atom_id": "mlx_compiler_handoff",
+            "source_provenance": {
+                "schema": (
+                    "inverse_steganalysis_mlx_acquisition_batch_operation_set_provenance.v1"
+                ),
+                "operation_set_id": "mlx_placeholder_set",
+                "candidate_id": "mlx_candidate",
+                "candidate_saved_bytes": 0,
+                "selected_operations": [
+                    {
+                        "unit_id": "mlx_response_row",
+                        "unit_kind": "scorer_response_row",
+                        "operation_family": "materialize_scorer_response_candidate",
+                        "target_kind": "mlx_scorer_response_candidate_v1",
+                        "candidate_saved_bytes": 0,
+                    }
+                ],
+            },
+            "operation_set_compiler": {
+                "schema": "inverse_action_operation_set_compiler_hint.v1",
+                "operation_set_id": "compiled_from_mlx_hint",
+                "candidate_saved_bytes": 384,
+                "operation_portability": "family_agnostic",
+                "selected_operations": [
+                    {
+                        "unit_id": "compiled_decoder_blob",
+                        "target_kind": "archive_section_entropy_recode_v1",
+                        "archive_section": "decoder_blob",
+                        "candidate_saved_bytes": 256,
+                        "representation_family_class": "hnerv_variant",
+                    },
+                    {
+                        "unit_id": "compiled_packet_member",
+                        "target_kind": "packet_member_recompress_v1",
+                        "member_name": "0.bin",
+                        "candidate_saved_bytes": 128,
+                        "representation_family_class": "non_nerv",
+                    },
+                ],
+            },
+        }
+    ]
+    payload["water_bucket"]["selected_cells"][0]["atom_id"] = "mlx_compiler_handoff"
+
+    surface = build_signal_surface_from_inverse_action_functional(payload)
+    plan = build_byte_shaving_campaign_plan(surface, max_k=2)
+    bridge = build_inverse_action_materialization_bridge(plan)
+
+    assert surface["water_bucket_materialization_portfolio"]["actuation_modes"] == [
+        "compiled_operation_set"
+    ]
+    assert [unit["unit_kind"] for unit in surface["units"]] == [
+        "archive_section",
+        "packet_member",
+    ]
+    assert bridge["source_provenance_operation_set_count"] == 0
+    assert bridge["compiled_operation_set_count"] == 1
+    assert bridge["high_level_operation_compiler_required_count"] == 0
+    assert bridge["queue_consumable_packet_ir_operation_set_count"] == 1
+    assert {
+        operation["target_kind"]
+        for operation in plan["packet_ir_operation_sets"][0]["operations"]
+    } == {"archive_section_entropy_recode_v1", "packet_member_recompress_v1"}
+    assert bridge["score_claim"] is False
+    assert bridge["ready_for_exact_eval_dispatch"] is False
+
+
 def test_inverse_action_compiler_hint_unsupported_target_fails_closed() -> None:
     payload = _inverse_action_payload()
     payload["cells"] = [

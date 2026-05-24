@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import pytest
 
+from tac.local_acceleration.mlx_acquisition_batch import (
+    build_mlx_acquisition_batch_from_selection,
+)
 from tac.optimization.byte_shaving_campaign import (
     SIGNAL_SURFACE_SCHEMA,
     build_byte_shaving_campaign_plan,
@@ -18,6 +21,7 @@ from tac.optimization.inverse_steganalysis_acquisition import (
     InverseSteganalysisAcquisitionError,
     action_atoms_from_byte_shaving_campaign_plan,
     action_atoms_from_byte_shaving_signal_surface,
+    action_atoms_from_mlx_acquisition_batch,
     action_surface_terms,
     build_discrete_scorer_action_functional,
     build_inverse_steganalysis_acquisition_plan,
@@ -429,6 +433,76 @@ def test_action_functional_preserves_operation_set_compiler_hint() -> None:
     assert "operation_set_compiler" not in action["water_bucket"]["selected_cells"][0]
     assert cell["score_claim"] is False
     assert action["score_claim"] is False
+
+
+def test_mlx_acquisition_batch_compiler_hint_survives_to_action_cell() -> None:
+    selection = _mlx_selection()
+    row = selection["selected_rows"][0]
+    row["operation_set_compiler"] = {
+        "schema": "inverse_action_operation_set_compiler_hint.v1",
+        "operation_set_id": "mlx_row_compiler",
+        "operation_portability": "family_agnostic",
+        "selected_operations": [
+            {
+                "unit_id": "compiled_decoder_blob",
+                "target_kind": "archive_section_entropy_recode_v1",
+                "archive_section": "decoder_blob",
+                "candidate_saved_bytes": 256,
+            },
+            {
+                "unit_id": "compiled_tensor_overlay",
+                "target_kind": "tensor_factorize_v1",
+                "tensor_name": "decoder.overlay",
+                "candidate_saved_bytes": 128,
+            },
+        ],
+    }
+
+    batch = build_mlx_acquisition_batch_from_selection(selection, set_size=1)
+    operation_set = batch["operation_sets"][0]
+    atoms = action_atoms_from_mlx_acquisition_batch(batch)
+    action = build_discrete_scorer_action_functional(atoms)
+    cell = action["cells"][0]
+    provenance = cell["source_provenance"]
+
+    assert operation_set["operation_set_compiler"]["operation_set_id"].endswith(
+        "_compiled"
+    )
+    assert {
+        operation["target_kind"]
+        for operation in operation_set["operation_set_compiler"][
+            "selected_operations"
+        ]
+    } == {"archive_section_entropy_recode_v1", "tensor_factorize_v1"}
+    assert atoms[0]["operation_set_compiler"] == operation_set[
+        "operation_set_compiler"
+    ]
+    assert cell["operation_set_compiler"] == operation_set[
+        "operation_set_compiler"
+    ]
+    assert provenance["operation_set_compiler"] == operation_set[
+        "operation_set_compiler"
+    ]
+    assert cell["score_claim"] is False
+    assert provenance["score_claim"] is False
+    assert action["score_claim"] is False
+
+
+def test_mlx_acquisition_batch_rejects_truthy_nested_compiler_authority() -> None:
+    selection = _mlx_selection()
+    selection["selected_rows"][0]["operation_set_compiler"] = {
+        "schema": "inverse_action_operation_set_compiler_hint.v1",
+        "selected_operations": [
+            {
+                "target_kind": "archive_section_entropy_recode_v1",
+                "archive_section": "decoder_blob",
+                "score_claim": True,
+            }
+        ],
+    }
+
+    with pytest.raises(ValueError, match="forbidden truthy authority fields"):
+        build_mlx_acquisition_batch_from_selection(selection, set_size=1)
 
 
 def test_action_surface_terms_model_scope_interactions_and_fragility() -> None:

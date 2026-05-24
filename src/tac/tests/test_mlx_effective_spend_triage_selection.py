@@ -184,6 +184,60 @@ def test_selection_uses_observed_strict_gated_rows_not_positive_predictions() ->
     )
 
 
+def test_selection_preserves_operation_set_compiler_hints_for_acquisition() -> None:
+    dataset = _dataset()
+    dataset["rows"][0]["operation_set_compiler"] = {
+        "schema": "inverse_action_operation_set_compiler_hint.v1",
+        "selected_operations": [
+            {
+                "target_kind": "archive_section_entropy_recode_v1",
+                "archive_section": "decoder_blob",
+            }
+        ],
+    }
+    dataset["rows"][0]["tensor_name"] = "decoder.overlay"
+
+    selection = build_mlx_effective_spend_triage_selection(
+        dataset,
+        _plan(),
+        top_k=1,
+        families=["mlx_decoder_q"],
+    )
+
+    row = selection["selected_rows"][0]
+    assert row["operation_set_compiler"]["selected_operations"][0][
+        "target_kind"
+    ] == "archive_section_entropy_recode_v1"
+    assert row["tensor_name"] == "decoder.overlay"
+    assert row["score_claim"] is False
+    assert selection["score_claim"] is False
+
+
+def test_selection_rejects_truthy_authority_in_compiler_hint_passthrough() -> None:
+    dataset = _dataset()
+    dataset["rows"][0]["operation_set_compiler"] = {
+        "schema": "inverse_action_operation_set_compiler_hint.v1",
+        "selected_operations": [
+            {
+                "target_kind": "archive_section_entropy_recode_v1",
+                "archive_section": "decoder_blob",
+                "score_claim": True,
+            }
+        ],
+    }
+
+    with pytest.raises(
+        MLXEffectiveSpendTriageSelectionError,
+        match="forbidden truthy authority fields",
+    ):
+        build_mlx_effective_spend_triage_selection(
+            dataset,
+            _plan(),
+            top_k=1,
+            families=["mlx_decoder_q"],
+        )
+
+
 def test_selection_normalizes_legacy_window_rows_from_strict_gate_inputs() -> None:
     dataset = _dataset()
     for key in (
