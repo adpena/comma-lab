@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import io
 import math
+import struct
 import zipfile
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
@@ -1278,28 +1279,194 @@ def _zip_archive_bytes_with_header_elision(
     strip_member_comment: bool,
     strip_archive_comment: bool,
 ) -> bytes:
-    output = io.BytesIO()
-    with zipfile.ZipFile(archive, "r") as source, zipfile.ZipFile(output, "w") as target:
-        target.comment = b"" if strip_archive_comment else source.comment
-        for info in source.infolist():
-            if info.is_dir():
-                copied = _copy_zip_info(info)
-                if info.filename == member_name:
-                    if strip_member_extra:
-                        copied.extra = b""
-                    if strip_member_comment:
-                        copied.comment = b""
-                target.mkdir(copied)
-                continue
-            payload = source.read(info.filename)
-            out_info = _copy_zip_info(info)
-            if info.filename == member_name:
-                if strip_member_extra:
-                    out_info.extra = b""
-                if strip_member_comment:
-                    out_info.comment = b""
-            target.writestr(out_info, payload)
-    return output.getvalue()
+    raw = archive.read_bytes()
+    with zipfile.ZipFile(archive, "r") as source:
+        infos = source.infolist()
+        if sum(1 for info in infos if info.filename == member_name) != 1:
+            raise FamilyAgnosticMaterializerError(
+                f"zip header elision requires exactly one selected member: {member_name}"
+            )
+        archive_comment = b"" if strip_archive_comment else (source.comment or b"")
+
+    if len(infos) > 0xFFFF:
+        raise FamilyAgnosticMaterializerError("zip header elision does not support ZIP64 entry counts")
+
+    local_chunks: list[bytes] = []
+    central_chunks: list[bytes] = []
+    cursor = 0
+    for info in infos:
+        selected = info.filename == member_name
+        parts = _raw_zip_member_parts(raw, info)
+        local_extra = (
+            b""
+            if selected and strip_member_extra
+            else parts["local_extra"]
+        )
+        member_offset = cursor
+        local_header = struct.pack(
+            "<IHHHHHIIIHH",
+            0x0403_4B50,
+            int(parts["version_needed"]),
+            int(parts["flag_bits"]),
+            int(parts["compress_type"]),
+            int(parts["mod_time"]),
+            int(parts["mod_date"]),
+            int(parts["crc32"]),
+            int(parts["compressed_bytes"]),
+            int(parts["uncompressed_bytes"]),
+            len(parts["name_bytes"]),
+            len(local_extra),
+        )
+        local_chunk = local_header + parts["name_bytes"] + local_extra + parts["compressed_payload"]
+        local_chunks.append(local_chunk)
+        cursor += len(local_chunk)
+
+        central_extra = b"" if selected and strip_member_extra else (info.extra or b"")
+        central_comment = (
+            b""
+            if selected and strip_member_comment
+            else (getattr(info, "comment", b"") or b"")
+        )
+        central_chunks.append(
+            _zip_central_directory_header(
+                info,
+                name_bytes=parts["name_bytes"],
+                extra=central_extra,
+                comment=central_comment,
+                local_header_offset=member_offset,
+            )
+        )
+
+    central_directory_offset = cursor
+    central_directory = b"".join(central_chunks)
+    end_record = struct.pack(
+        "<IHHHHIIH",
+        0x0605_4B50,
+        0,
+        0,
+        len(infos),
+        len(infos),
+        len(central_directory),
+        central_directory_offset,
+        len(archive_comment),
+    )
+    return b"".join(local_chunks) + central_directory + end_record + archive_comment
+
+
+def _raw_zip_member_parts(raw: bytes, info: zipfile.ZipInfo) -> dict[str, Any]:
+    if info.flag_bits & 0x08:
+        raise FamilyAgnosticMaterializerError(
+            f"zip header elision does not support data descriptors: {info.filename}"
+        )
+    if (
+        info.file_size >= 0xFFFF_FFFF
+        or info.compress_size >= 0xFFFF_FFFF
+        or info.header_offset >= 0xFFFF_FFFF
+    ):
+        raise FamilyAgnosticMaterializerError(
+            f"zip header elision does not support ZIP64 members: {info.filename}"
+        )
+    offset = int(info.header_offset)
+    if offset < 0 or offset + 30 > len(raw):
+        raise FamilyAgnosticMaterializerError(
+            f"local header offset out of range for {info.filename}: {offset}"
+        )
+    (
+        signature,
+        version_needed,
+        flag_bits,
+        compress_type,
+        mod_time,
+        mod_date,
+        crc32,
+        compressed_bytes,
+        uncompressed_bytes,
+        name_len,
+        extra_len,
+    ) = struct.unpack_from("<IHHHHHIIIHH", raw, offset)
+    if signature != 0x0403_4B50:
+        raise FamilyAgnosticMaterializerError(
+            f"bad local ZIP header signature for {info.filename}: offset={offset}"
+        )
+    if int(flag_bits) & 0x08:
+        raise FamilyAgnosticMaterializerError(
+            f"zip header elision does not support data descriptors: {info.filename}"
+        )
+    if int(compressed_bytes) != int(info.compress_size):
+        raise FamilyAgnosticMaterializerError(
+            f"local/central compressed size mismatch for {info.filename}"
+        )
+    if int(uncompressed_bytes) != int(info.file_size):
+        raise FamilyAgnosticMaterializerError(
+            f"local/central uncompressed size mismatch for {info.filename}"
+        )
+    name_start = offset + 30
+    name_end = name_start + int(name_len)
+    extra_end = name_end + int(extra_len)
+    payload_end = extra_end + int(compressed_bytes)
+    if name_end > len(raw) or extra_end > len(raw) or payload_end > len(raw):
+        raise FamilyAgnosticMaterializerError(
+            f"local ZIP member bounds out of range for {info.filename}"
+        )
+    return {
+        "version_needed": int(version_needed),
+        "flag_bits": int(flag_bits),
+        "compress_type": int(compress_type),
+        "mod_time": int(mod_time),
+        "mod_date": int(mod_date),
+        "crc32": int(crc32),
+        "compressed_bytes": int(compressed_bytes),
+        "uncompressed_bytes": int(uncompressed_bytes),
+        "name_bytes": raw[name_start:name_end],
+        "local_extra": raw[name_end:extra_end],
+        "compressed_payload": raw[extra_end:payload_end],
+    }
+
+
+def _zip_central_directory_header(
+    info: zipfile.ZipInfo,
+    *,
+    name_bytes: bytes,
+    extra: bytes,
+    comment: bytes,
+    local_header_offset: int,
+) -> bytes:
+    if local_header_offset >= 0xFFFF_FFFF:
+        raise FamilyAgnosticMaterializerError(
+            f"zip header elision does not support ZIP64 offsets: {info.filename}"
+        )
+    version_made_by = (int(info.create_system) << 8) | int(info.create_version)
+    central = struct.pack(
+        "<IHHHHHHIIIHHHHHII",
+        0x0201_4B50,
+        version_made_by,
+        int(info.extract_version),
+        int(info.flag_bits),
+        int(info.compress_type),
+        _dos_time(info),
+        _dos_date(info),
+        int(info.CRC),
+        int(info.compress_size),
+        int(info.file_size),
+        len(name_bytes),
+        len(extra),
+        len(comment),
+        0,
+        int(info.internal_attr),
+        int(info.external_attr),
+        int(local_header_offset),
+    )
+    return central + name_bytes + extra + comment
+
+
+def _dos_time(info: zipfile.ZipInfo) -> int:
+    _year, _month, _day, hour, minute, second = info.date_time
+    return (int(hour) << 11) | (int(minute) << 5) | (int(second) // 2)
+
+
+def _dos_date(info: zipfile.ZipInfo) -> int:
+    year, month, day, _hour, _minute, _second = info.date_time
+    return ((int(year) - 1980) << 9) | (int(month) << 5) | int(day)
 
 
 def _copy_zip_info(info: zipfile.ZipInfo) -> zipfile.ZipInfo:

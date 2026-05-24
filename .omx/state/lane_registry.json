@@ -53475,6 +53475,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "codex_packet_header_elide_real_archive_feedback_20260524",
+      "name": "Packet header elide real-archive feedback",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/run_family_agnostic_materializer_sweep.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/packet_header_elide_sweep_20260524T2312Z/sweep.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_family_agnostic_materializer_sweep.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_packet_header_elide_real_archive_feedback_20260524T2312Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Run real archive header-elide proof-chain observations and wire zero/positive savings into planner feedback instead of leaving the new materializer uncalibrated."
     }
   ],
   "level_rules": {
@@ -53484,5 +53525,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T22:57:14Z"
+  "updated_at": "2026-05-24T23:04:24Z"
 }

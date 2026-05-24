@@ -36,9 +36,10 @@ def _write_zip_with_member_header_overhead(
     *,
     payload: bytes,
     member_name: str = "payload.bin",
+    compression: int = zipfile.ZIP_STORED,
 ) -> None:
     info = zipfile.ZipInfo(member_name)
-    info.compress_type = zipfile.ZIP_STORED
+    info.compress_type = compression
     info.extra = b"\x7f\x7f\x04\x00abcd"
     info.comment = b"deterministic member comment"
     with zipfile.ZipFile(path, "w") as zf:
@@ -236,7 +237,11 @@ def test_packet_member_zip_header_elide_materializer_preserves_payload(
     archive = tmp_path / "source.zip"
     output = tmp_path / "candidate.zip"
     payload = b"header-elide-payload" * 64
-    _write_zip_with_member_header_overhead(archive, payload=payload)
+    _write_zip_with_member_header_overhead(
+        archive,
+        payload=payload,
+        compression=zipfile.ZIP_DEFLATED,
+    )
 
     result = materialize_packet_member_zip_header_elide_candidate(
         archive_path=archive,
@@ -249,6 +254,9 @@ def test_packet_member_zip_header_elide_materializer_preserves_payload(
     assert result["byte_closed_candidate_emitted"] is True
     assert result["source_member"]["sha256"] == sha256_bytes(payload)
     assert result["candidate_member"]["sha256"] == sha256_bytes(payload)
+    assert result["candidate_member"]["zip_compressed_bytes"] == (
+        result["source_member"]["zip_compressed_bytes"]
+    )
     assert result["candidate_archive"]["bytes"] < result["source_archive"]["bytes"]
     assert result["selected_elision"]["saved_bytes"] > 0
     assert result["selected_elision"]["elided_header_bytes"] > 0
