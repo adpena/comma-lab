@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import io
 import zipfile
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -84,8 +84,8 @@ def materialize_packet_member_recompress_candidate(
 
     candidates: list[dict[str, Any]] = []
     for method in _normalized_compression_methods(compression_methods):
-        levels = (None,) if method == zipfile.ZIP_STORED else tuple(
-            ordered_unique([int(level) for level in compresslevels])
+        levels = (None,) if method == zipfile.ZIP_STORED else _ordered_unique_ints(
+            int(level) for level in compresslevels
         )
         for level in levels:
             payload = _zip_archive_bytes_with_replacement(
@@ -106,7 +106,10 @@ def materialize_packet_member_recompress_candidate(
             )
     if not candidates:
         raise FamilyAgnosticMaterializerError("no compression candidates were produced")
-    best = min(candidates, key=lambda item: (int(item["archive_bytes"]), str(item["compression_method"])))
+    best = min(
+        candidates,
+        key=lambda item: (int(item["archive_bytes"]), str(item["compression_method"])),
+    )
     saved_bytes = int(source_record["bytes"]) - int(best["archive_bytes"])
     blockers = []
     if saved_bytes <= 0 and not allow_size_regression:
@@ -669,7 +672,18 @@ def _normalized_compression_methods(values: Sequence[str]) -> tuple[int, ...]:
             methods.append(zipfile.ZIP_DEFLATED)
         else:
             raise FamilyAgnosticMaterializerError(f"unsupported zip compression method: {value}")
-    return tuple(ordered_unique(methods))
+    return _ordered_unique_ints(methods)
+
+
+def _ordered_unique_ints(values: Iterable[int]) -> tuple[int, ...]:
+    out: list[int] = []
+    seen: set[int] = set()
+    for value in values:
+        parsed = int(value)
+        if parsed not in seen:
+            out.append(parsed)
+            seen.add(parsed)
+    return tuple(out)
 
 
 def _section_records(manifest: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -709,7 +723,7 @@ def _best_brotli_recode(payload: bytes, *, qualities: Sequence[int]) -> dict[str
     except brotli.error:
         return None
     trials = []
-    for quality in ordered_unique([int(item) for item in qualities]):
+    for quality in _ordered_unique_ints(int(item) for item in qualities):
         candidate = brotli.compress(raw, quality=quality)
         trials.append((len(candidate), quality, candidate))
     if not trials:

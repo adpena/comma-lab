@@ -55,6 +55,30 @@ def test_packet_member_recompress_materializer_preserves_member_payload(
     assert "runtime_consumption_proof_missing" in result["readiness_blockers"]
 
 
+def test_packet_member_recompress_materializer_preserves_stored_method_zero(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    payload = b"payload-bytes" * 8
+    _write_zip(archive, {"payload.bin": payload})
+
+    result = materialize_packet_member_recompress_candidate(
+        archive_path=archive,
+        output_archive=output,
+        member_name="payload.bin",
+        compression_methods=("stored",),
+        allow_size_regression=True,
+        repo_root=tmp_path,
+    )
+
+    assert result["schema"] == PACKET_MEMBER_RECOMPRESS_SCHEMA
+    assert result["selected_compression"]["compression_method"] == "stored"
+    assert result["candidate_trials"][0]["compression_method"] == "stored"
+    assert result["candidate_member"]["sha256"] == sha256_bytes(payload)
+    assert result["byte_closed_candidate_emitted"] is True
+
+
 def test_archive_section_entropy_recode_materializer_uses_section_manifest(
     tmp_path: Path,
 ) -> None:
@@ -105,6 +129,44 @@ def test_archive_section_entropy_recode_materializer_uses_section_manifest(
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
     assert "runtime_consumption_proof_missing" in result["readiness_blockers"]
+
+
+def test_archive_section_entropy_recode_materializer_preserves_brotli_quality_zero(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    raw = b"quality-zero-still-valid" * 256
+    section = brotli.compress(raw, quality=11)
+    _write_zip(archive, {"0.raw": section})
+    manifest = {
+        "schema": "fixture_section_manifest.v1",
+        "member": {"name": "0.raw"},
+        "sections": [
+            {
+                "name": "section_a",
+                "index": 0,
+                "offset": 0,
+                "length": len(section),
+                "sha256": sha256_bytes(section),
+            }
+        ],
+    }
+
+    result = materialize_archive_section_entropy_recode_candidate(
+        archive_path=archive,
+        section_manifest=manifest,
+        output_archive=output,
+        section_names=("section_a",),
+        brotli_qualities=(0,),
+        allow_size_regression=True,
+        repo_root=tmp_path,
+    )
+
+    assert result["schema"] == ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA
+    assert result["sections"][0]["candidate_quality"] == 0
+    assert result["sections"][0]["raw_payload_sha256"] == sha256_bytes(raw)
+    assert result["byte_closed_candidate_emitted"] is True
 
 
 def test_tensor_factorize_materializer_emits_cooperative_receiver_packet(

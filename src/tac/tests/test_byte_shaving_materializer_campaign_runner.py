@@ -69,6 +69,35 @@ def _inverse_cell_candidate_plan() -> dict[str, object]:
     return build_byte_shaving_campaign_plan(surface, max_k=1)
 
 
+def _packet_member_recompress_plan() -> dict[str, object]:
+    surface = {
+        "schema": SIGNAL_SURFACE_SCHEMA,
+        "campaign_id": "packet_member_recompress_runner_fixture",
+        "candidate_id": "packet_fixture_seed",
+        "lane_id": "lane_packet_member_recompress_runner_fixture",
+        "combo_beam_width": 4,
+        "max_combo_count": 4,
+        "units": [
+            {
+                "unit_id": "packet_payload_member",
+                "unit_kind": "packet_member",
+                "candidate_saved_bytes": 1,
+                "predicted_quality_score_cost": 0.0,
+                "confidence": 0.8,
+                "operations": [
+                    {
+                        "operation_id": "recompress_payload_member",
+                        "operation_family": "member_recompress",
+                        "target_kind": runner.PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                    }
+                ],
+            }
+        ],
+        **_false_authority(),
+    }
+    return build_byte_shaving_campaign_plan(surface, max_k=1)
+
+
 def _write_constant_inflate_runtime(path: Path) -> None:
     path.mkdir(parents=True)
     inflate = path / "inflate.sh"
@@ -95,6 +124,11 @@ def _write_constant_inflate_runtime(path: Path) -> None:
 def _write_template_archive(path: Path) -> None:
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as archive:
         archive.writestr("x", b"base-payload")
+
+
+def _write_packet_archive(path: Path) -> None:
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as archive:
+        archive.writestr("payload.bin", b"payload-bytes" * 16)
 
 
 def _write_inverse_action_functional(path: Path) -> None:
@@ -667,6 +701,100 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert dispatch_plan["authorized_candidate_count"] == 0
     assert dispatch_plan["score_claim"] is False
     assert not inflate_work_dir.exists()
+
+
+def test_materializer_campaign_runner_executes_no_paid_packet_member_handoff(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    state_path = tmp_path / "materializer_execution_queue.sqlite"
+    plan = tmp_path / "plan.json"
+    source_archive = tmp_path / "packet_source.zip"
+
+    plan.write_text(json.dumps(_packet_member_recompress_plan()), encoding="utf-8")
+    _write_packet_archive(source_archive)
+
+    result = runner.main(
+        [
+            "--plan",
+            str(plan),
+            "--packet-member-archive-path",
+            str(source_archive),
+            "--packet-member-name",
+            "payload.bin",
+            "--packet-member-zip-compression-method",
+            "stored",
+            "--packet-member-allow-size-regression",
+            "--materializer-contexts-fail-if-blocked",
+            "--run-dir",
+            str(run_dir),
+            "--queue-state",
+            str(state_path),
+            "--queue-state-rationale",
+            "isolated no-paid runner e2e state for packet member materializer smoke",
+            "--queue-id",
+            "packet_member_runner_e2e_fixture",
+            "--apply-runtime-policy",
+            "--runtime-policy-cpu-count",
+            "8",
+            "--max-steps",
+            "6",
+            "--max-parallel",
+            "2",
+            "--idle-sleep-seconds",
+            "0",
+            "--max-idle-cycles",
+            "1",
+            "--execute",
+        ]
+    )
+
+    assert result == 0
+    summary = json.loads((run_dir / "materializer_campaign_run.json").read_text(encoding="utf-8"))
+    assert summary["schema"] == runner.RUN_SCHEMA
+    assert summary["execute"] is True
+    assert summary["score_claim"] is False
+    assert summary["ready_for_exact_eval_dispatch"] is False
+    assert summary["build"]["materializer_work_queue_executable_row_count"] == 1
+    assert summary["worker"]["success_count"] == 3
+    assert summary["worker"]["failure_count"] == 0
+
+    execution_queue = json.loads(
+        (run_dir / "materializer_execution_queue.runtime_policy.json").read_text(encoding="utf-8")
+    )
+    materializer_experiment = next(
+        experiment for experiment in execution_queue["experiments"] if experiment["id"].startswith("materializer_work_")
+    )
+    assert [step["id"] for step in materializer_experiment["steps"]] == [
+        "materialize_local_proof_chain",
+        "harvest_materializer_chains",
+        "build_exact_eval_dispatch_plan",
+    ]
+    assert materializer_experiment["metadata"]["target_kind"] == (runner.PACKET_MEMBER_RECOMPRESS_TARGET_KIND)
+    assert materializer_experiment["metadata"]["exact_readiness_followup_enabled"] is True
+
+    materializer_step = materializer_experiment["steps"][0]
+    manifest_path = Path(materializer_step["telemetry"]["artifact_paths"][1])
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["schema"] == "packet_member_recompress_candidate.v1"
+    assert manifest["byte_closed_candidate_emitted"] is True
+    assert manifest["receiver_contract_satisfied"] is False
+    assert manifest["candidate_member"]["sha256"] == manifest["source_member"]["sha256"]
+    assert "runtime_consumption_proof_missing" in manifest["readiness_blockers"]
+    assert manifest["score_claim"] is False
+
+    handoff_dir = manifest_path.parent / "exact_eval_handoff"
+    harvest = json.loads((handoff_dir / "harvest_report.json").read_text(encoding="utf-8"))
+    bridge = json.loads((handoff_dir / "exact_readiness_bridge_report.json").read_text(encoding="utf-8"))
+    dispatch_plan = json.loads((handoff_dir / "dispatch_plan.json").read_text(encoding="utf-8"))
+    assert harvest["accepted_manifest_count"] == 1
+    assert harvest["source_queue_candidate_count"] == 1
+    assert harvest["source_queue_dispatch_ready_count"] == 0
+    assert bridge["candidate_count"] == 1
+    assert bridge["ready_candidate_count"] == 0
+    assert bridge["score_claim"] is False
+    assert dispatch_plan["authorized_candidate_count"] == 0
+    assert dispatch_plan["score_claim"] is False
 
 
 def test_materializer_campaign_runner_uses_policy_cold_store_default_for_move_preflight(
