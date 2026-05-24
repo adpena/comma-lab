@@ -12,10 +12,12 @@ observation/performance artifacts. It never performs paid dispatch.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
 import time
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -41,6 +43,8 @@ from comma_lab.scheduler.storage_preflight import (  # noqa: E402
 from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 RUN_SCHEMA = "byte_shaving_materializer_campaign_run.v1"
+RUN_CONFIG_SCHEMA = "byte_shaving_materializer_campaign_run_config.v1"
+_RUN_CONFIG_METADATA_KEYS = frozenset({"schema", "notes", "description", "owner"})
 
 
 @dataclass(frozen=True)
@@ -74,6 +78,68 @@ def _display_path(path: str | Path) -> str:
 
 def _json_print(payload: object) -> None:
     print(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False))
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _load_run_config(path: Path) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"{path}: run config must be JSON: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise SystemExit(f"{path}: run config must be a JSON object")
+    schema = payload.get("schema")
+    if schema is not None and schema != RUN_CONFIG_SCHEMA:
+        raise SystemExit(f"{path}: schema must be {RUN_CONFIG_SCHEMA}")
+    args = payload.get("args", payload)
+    if not isinstance(args, dict):
+        raise SystemExit(f"{path}: run config args must be a JSON object")
+    return dict(args)
+
+
+def _normalize_config_defaults(
+    parser: argparse.ArgumentParser,
+    config: Mapping[str, Any],
+    *,
+    config_path: Path,
+) -> dict[str, Any]:
+    actions = {
+        action.dest: action
+        for action in parser._actions
+        if action.dest and action.dest != "help"
+    }
+    defaults: dict[str, Any] = {}
+    for raw_key, raw_value in config.items():
+        key = str(raw_key).strip().replace("-", "_")
+        if key in _RUN_CONFIG_METADATA_KEYS:
+            continue
+        action = actions.get(key)
+        if action is None:
+            raise SystemExit(f"{config_path}: unknown run config key {raw_key!r}")
+        if isinstance(action, argparse._AppendAction):
+            if raw_value is None:
+                value: list[Any] = []
+            elif isinstance(raw_value, list):
+                value = raw_value
+            else:
+                value = [raw_value]
+            defaults[key] = [str(item) for item in value]
+        elif isinstance(action, argparse._StoreTrueAction):
+            if not isinstance(raw_value, bool):
+                raise SystemExit(f"{config_path}: {raw_key} must be boolean")
+            defaults[key] = raw_value
+        elif isinstance(action, argparse._StoreAction):
+            defaults[key] = raw_value
+        else:
+            raise SystemExit(f"{config_path}: unsupported config action for {raw_key}")
+    return defaults
 
 
 def _run(command: list[str], *, check: bool = True) -> CommandResult:
@@ -177,6 +243,16 @@ def _parse_artifact_path_maps(values: list[str]) -> list[str]:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--run-config",
+        type=Path,
+        default=None,
+        help=(
+            "JSON run config with schema "
+            f"{RUN_CONFIG_SCHEMA}; CLI scalar flags override config fields and "
+            "repeatable source flags append to configured lists"
+        ),
+    )
     parser.add_argument(
         "--plan",
         type=Path,
@@ -326,6 +402,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--staircase-ssh-rsync-binary", default="rsync")
     parser.add_argument("--staircase-ssh-artifact-pull-timeout-seconds", type=int, default=300)
     parser.add_argument("--staircase-ssh-allow-future-executor", action="store_true")
+    pre_args, _unknown = parser.parse_known_args(argv)
+    if pre_args.run_config is not None:
+        run_config_path = _resolve(pre_args.run_config)
+        defaults = _normalize_config_defaults(
+            parser,
+            _load_run_config(run_config_path),
+            config_path=run_config_path,
+        )
+        defaults["run_config"] = pre_args.run_config
+        parser.set_defaults(**defaults)
     return parser.parse_args(argv)
 
 
@@ -816,6 +902,21 @@ def main(argv: list[str] | None = None) -> int:
     )
     run_dir.mkdir(parents=True, exist_ok=True)
     execution_queue = run_dir / "materializer_execution_queue.json"
+    run_config_record = None
+    if args.run_config is not None:
+        run_config_path = _resolve(args.run_config)
+        run_config_record = {
+            "schema": RUN_CONFIG_SCHEMA,
+            "path": _display_path(run_config_path),
+            "sha256": _sha256_file(run_config_path),
+            "bytes": run_config_path.stat().st_size,
+            "cli_overrides_allowed": True,
+            "authority": "configuration_only_not_queue_or_score_authority",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
 
     commands: list[CommandResult] = []
     generated_action_functional_path: Path | None = None
@@ -953,6 +1054,7 @@ def main(argv: list[str] | None = None) -> int:
     payload = {
         "schema": RUN_SCHEMA,
         "run_dir": _display_path(run_dir),
+        "run_config": run_config_record,
         "plan": _display_path(plan_path),
         "generated_action_functional_path": (
             None

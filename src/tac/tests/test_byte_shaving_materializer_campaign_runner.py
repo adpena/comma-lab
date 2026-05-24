@@ -428,6 +428,116 @@ def test_materializer_campaign_runner_can_preserve_direct_mlx_selection_mode(
     assert str(selection) in command
 
 
+def test_materializer_campaign_runner_loads_file_driven_run_config(
+    tmp_path: Path,
+) -> None:
+    scorer = tmp_path / "scorer_response.json"
+    selection = tmp_path / "mlx_selection.json"
+    config_path = tmp_path / "rate_attack_config.json"
+    scorer.write_text("{}", encoding="utf-8")
+    selection.write_text("{}", encoding="utf-8")
+    config_path.write_text(
+        json.dumps(
+            {
+                "schema": runner.RUN_CONFIG_SCHEMA,
+                "args": {
+                    "scorer_response": [str(scorer)],
+                    "mlx_effective_spend_triage_selection": [str(selection)],
+                    "run_dir": str(tmp_path / "campaign"),
+                    "campaign_id": "configured_final_rate_attack",
+                    "candidate_id": "candidate_from_config",
+                    "total_byte_budget": 96,
+                    "campaign_plan_max_k": 4,
+                    "queue_id": "configured_materializer_queue",
+                    "mlx_acquisition_set_size": 3,
+                    "materializer_resource_concurrency": ["local_cpu=2"],
+                    "emit_staircase_plan": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    args = runner.parse_args(["--run-config", str(config_path)])
+
+    assert args.run_config == config_path
+    assert args.scorer_response == [str(scorer)]
+    assert args.mlx_effective_spend_triage_selection == [str(selection)]
+    assert args.run_dir == tmp_path / "campaign"
+    assert args.campaign_id == "configured_final_rate_attack"
+    assert args.candidate_id == "candidate_from_config"
+    assert args.total_byte_budget == 96
+    assert args.campaign_plan_max_k == 4
+    assert args.queue_id == "configured_materializer_queue"
+    assert args.mlx_acquisition_set_size == 3
+    assert args.materializer_resource_concurrency == ["local_cpu=2"]
+    assert args.emit_staircase_plan is True
+
+    command = runner._build_action_functional_command(
+        args,
+        run_dir=tmp_path / "campaign",
+    )
+    assert "--scorer-response" in command
+    assert str(scorer) in command
+    assert "--candidate-id" in command
+    assert "candidate_from_config" in command
+
+
+def test_materializer_campaign_runner_cli_scalar_overrides_run_config(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "rate_attack_config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "schema": runner.RUN_CONFIG_SCHEMA,
+                "args": {
+                    "atom": [str(tmp_path / "atom.json")],
+                    "run_dir": str(tmp_path / "campaign_from_config"),
+                    "campaign_id": "configured_campaign",
+                    "candidate_id": "configured_candidate",
+                    "total_byte_budget": 96,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    args = runner.parse_args(
+        [
+            "--run-config",
+            str(config_path),
+            "--candidate-id",
+            "cli_candidate",
+            "--total-byte-budget",
+            "32",
+        ]
+    )
+
+    assert args.atom == [str(tmp_path / "atom.json")]
+    assert args.campaign_id == "configured_campaign"
+    assert args.candidate_id == "cli_candidate"
+    assert args.total_byte_budget == 32
+
+
+def test_materializer_campaign_runner_rejects_unknown_run_config_key(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "rate_attack_config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "schema": runner.RUN_CONFIG_SCHEMA,
+                "args": {"definitely_not_a_runner_field": True},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SystemExit, match="unknown run config key"):
+        runner.parse_args(["--run-config", str(config_path)])
+
+
 def test_materializer_campaign_runner_rejects_missing_plan_and_sources(
     tmp_path: Path,
 ) -> None:
