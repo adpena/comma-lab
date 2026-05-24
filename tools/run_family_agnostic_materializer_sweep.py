@@ -251,6 +251,7 @@ def _observation_from_manifest(
         "archive_label": label,
         "target_kind": result.get("target_kind"),
         "materializer_id": result.get("materializer_id"),
+        "portability_contract": result.get("portability_contract"),
         "receiver_contract_kind": result.get("receiver_contract_kind"),
         "source_archive_path": source_archive.get("path"),
         "source_archive_sha256": source_archive.get("sha256"),

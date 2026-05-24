@@ -66,6 +66,7 @@ def test_materializer_empirical_sweep_summarizes_rate_positive_and_zero(
     rows = {row["archive_label"]: row for row in payload["observations"]}
     assert rows["positive"]["schema"] == OBSERVATION_SCHEMA
     assert rows["positive"]["axis"] == "[local-materializer-proof]"
+    assert rows["positive"]["portability_contract"]["requires_gpu"] is False
     assert rows["positive"]["saved_bytes"] > 0
     assert rows["positive"]["observed_score_gain"] > 0
     assert rows["positive"]["observed_rate_gain"] == rows["positive"]["observed_score_gain"]
@@ -99,6 +100,10 @@ def test_materializer_empirical_sweep_can_record_all_member_header_elide(
 
     row = payload["observations"][0]
     assert row["rate_positive"] is True
+    assert row["portability_contract"]["requires_gpu"] is False
+    assert row["portability_contract"]["deterministic_surface"] == (
+        "python_stdlib_raw_zip32_wire_rewrite"
+    )
     assert row["selected_member_names"] == ["renderer.bin", "weights.bin"]
     assert row["selection_scope"] == "all_members"
     assert row["selected_elision"]["elided_header_bytes"] > 0

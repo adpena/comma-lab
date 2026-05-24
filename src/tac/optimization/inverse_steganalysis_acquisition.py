@@ -285,6 +285,11 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
         "materializer_id": _optional_text(
             _first(row.get("materializer_id"), row.get("materializer"))
         ),
+        "portability_contract": (
+            dict(row["portability_contract"])
+            if isinstance(row.get("portability_contract"), Mapping)
+            else None
+        ),
         "receiver_contract_kind": _optional_text(row.get("receiver_contract_kind")),
         "source_path": _optional_text(row.get("source_path")),
         "queue_id": _optional_text(row.get("queue_id")),

@@ -602,6 +602,13 @@ def test_materializer_observation_matches_compiler_target_and_materializer() -> 
         },
         "target_kind": "packet_member_zip_header_elide_v1",
         "materializer_id": "packet_member_zip_header_elide_adapter",
+        "portability_contract": {
+            "schema": "family_agnostic_materializer_portability_contract.v1",
+            "materializer_id": "packet_member_zip_header_elide_adapter",
+            "target_kind": "packet_member_zip_header_elide_v1",
+            "requires_gpu": False,
+            "implementation_language": "python",
+        },
         "receiver_contract_kind": "packet_member_zip_header_elide_receiver_proof.v1",
         "saved_bytes": saved_bytes,
         "observed_rate_gain": observed_rate_gain,
@@ -622,6 +629,7 @@ def test_materializer_observation_matches_compiler_target_and_materializer() -> 
     )
     assert normalized["target_kind"] == "packet_member_zip_header_elide_v1"
     assert normalized["materializer_id"] == "packet_member_zip_header_elide_adapter"
+    assert normalized["portability_contract"]["requires_gpu"] is False
     assert normalized["saved_bytes"] == saved_bytes
     assert normalized["observed_rate_gain"] == pytest.approx(observed_rate_gain)
     assert normalized["rate_positive"] is True

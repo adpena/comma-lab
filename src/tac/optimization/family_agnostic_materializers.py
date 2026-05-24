@@ -47,10 +47,41 @@ FALSE_AUTHORITY = {
     "dispatch_attempted": False,
     "gpu_launched": False,
 }
+PORTABILITY_CONTRACT_SCHEMA = "family_agnostic_materializer_portability_contract.v1"
 
 
 class FamilyAgnosticMaterializerError(ValueError):
     """Raised when a family-agnostic materializer cannot build a candidate."""
+
+
+def _materializer_portability_contract(
+    *,
+    materializer_id: str,
+    target_kind: str,
+    required_python_modules: Sequence[str],
+    deterministic_surface: str,
+    unsupported_features: Sequence[str] = (),
+    notes: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "schema": PORTABILITY_CONTRACT_SCHEMA,
+        "materializer_id": materializer_id,
+        "target_kind": target_kind,
+        "portability_class": "portable_python_reference",
+        "implementation_language": "python",
+        "requires_cuda": False,
+        "requires_mlx": False,
+        "requires_metal": False,
+        "requires_mps": False,
+        "requires_gpu": False,
+        "required_python_modules": list(required_python_modules),
+        "deterministic_surface": deterministic_surface,
+        "unsupported_features": list(unsupported_features),
+        "score_authority": False,
+        "promotion_authority": False,
+        "rank_or_kill_authority": False,
+        "notes": notes,
+    }
 
 
 def materialize_packet_member_recompress_candidate(
@@ -179,6 +210,12 @@ def materialize_packet_member_recompress_candidate(
         "schema": PACKET_MEMBER_RECOMPRESS_SCHEMA,
         "materializer_id": PACKET_MEMBER_RECOMPRESS_MATERIALIZER_ID,
         "target_kind": PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        "portability_contract": _materializer_portability_contract(
+            materializer_id=PACKET_MEMBER_RECOMPRESS_MATERIALIZER_ID,
+            target_kind=PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+            required_python_modules=("zipfile",),
+            deterministic_surface="python_stdlib_zipfile_member_rewrite",
+        ),
         "receiver_contract_id": f"{PACKET_MEMBER_RECOMPRESS_TARGET_KIND}.receiver.v1",
         "receiver_contract_kind": "family_agnostic_packet_member_recompress",
         "byte_closed_candidate_emitted": True,
@@ -417,6 +454,13 @@ def materialize_packet_member_zip_header_elide_candidate(
         "schema": PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
         "materializer_id": PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID,
         "target_kind": PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+        "portability_contract": _materializer_portability_contract(
+            materializer_id=PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID,
+            target_kind=PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+            required_python_modules=("struct", "zipfile"),
+            deterministic_surface="python_stdlib_raw_zip32_wire_rewrite",
+            unsupported_features=("zip64", "data_descriptors", "duplicate_member_names"),
+        ),
         "receiver_contract_id": f"{PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND}.receiver.v1",
         "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
         "byte_closed_candidate_emitted": True,
@@ -552,6 +596,13 @@ def _packet_member_zip_header_elide_runtime_consumption_proof(
         "proof_scope": "zip_header_metadata_elision_with_member_payload_identity",
         "target_kind": PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
         "materializer_id": PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID,
+        "portability_contract": _materializer_portability_contract(
+            materializer_id=PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID,
+            target_kind=PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+            required_python_modules=("struct", "zipfile"),
+            deterministic_surface="python_stdlib_raw_zip32_wire_rewrite",
+            unsupported_features=("zip64", "data_descriptors", "duplicate_member_names"),
+        ),
         "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
         "receiver_contract_id": f"{PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND}.receiver.v1",
         "selected_member_name": selected_member_name,
@@ -776,6 +827,12 @@ def materialize_archive_section_entropy_recode_candidate(
         "schema": ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
         "materializer_id": ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID,
         "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        "portability_contract": _materializer_portability_contract(
+            materializer_id=ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID,
+            target_kind=ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+            required_python_modules=("brotli", "zipfile"),
+            deterministic_surface="python_zipfile_brotli_section_recode",
+        ),
         "receiver_contract_id": f"{ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND}.receiver.v1",
         "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
         "byte_closed_candidate_emitted": True,
@@ -1037,6 +1094,16 @@ def materialize_tensor_factorize_candidate(
         "schema": TENSOR_FACTORIZE_SCHEMA,
         "materializer_id": TENSOR_FACTORIZE_MATERIALIZER_ID,
         "target_kind": TENSOR_FACTORIZE_TARGET_KIND,
+        "portability_contract": _materializer_portability_contract(
+            materializer_id=TENSOR_FACTORIZE_MATERIALIZER_ID,
+            target_kind=TENSOR_FACTORIZE_TARGET_KIND,
+            required_python_modules=("numpy", "zipfile"),
+            deterministic_surface="numpy_svd_npz_tensor_factorization",
+            notes=(
+                "Portable CPU reference path; numerical output may vary by BLAS/SVD "
+                "backend and remains false-authority until receiver tolerance proof passes."
+            ),
+        ),
         "receiver_contract_id": f"{TENSOR_FACTORIZE_TARGET_KIND}.receiver.v1",
         "receiver_contract_kind": "family_agnostic_tensor_factorize",
         "byte_closed_candidate_emitted": True,

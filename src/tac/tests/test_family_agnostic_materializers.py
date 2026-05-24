@@ -251,6 +251,13 @@ def test_packet_member_zip_header_elide_materializer_preserves_payload(
     )
 
     assert result["schema"] == PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA
+    assert result["portability_contract"]["schema"] == (
+        "family_agnostic_materializer_portability_contract.v1"
+    )
+    assert result["portability_contract"]["requires_gpu"] is False
+    assert result["portability_contract"]["deterministic_surface"] == (
+        "python_stdlib_raw_zip32_wire_rewrite"
+    )
     assert result["byte_closed_candidate_emitted"] is True
     assert result["source_member"]["sha256"] == sha256_bytes(payload)
     assert result["candidate_member"]["sha256"] == sha256_bytes(payload)
@@ -296,6 +303,11 @@ def test_packet_member_zip_header_elide_materializer_can_elide_all_members(
     )
 
     assert result["schema"] == PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA
+    assert result["portability_contract"]["requires_cuda"] is False
+    assert result["portability_contract"]["requires_mlx"] is False
+    assert result["portability_contract"]["deterministic_surface"] == (
+        "python_stdlib_raw_zip32_wire_rewrite"
+    )
     assert result["selection_scope"] == "all_members"
     assert result["selected_member_names"] == ["renderer.bin", "weights.bin"]
     assert result["source_zip_header_summary"]["member_count"] == 2
@@ -322,6 +334,7 @@ def test_packet_member_zip_header_elide_materializer_can_elide_all_members(
     proof_payload = json.loads(
         Path(result["runtime_consumption_proof_path"]).read_text(encoding="utf-8")
     )
+    assert proof_payload["portability_contract"] == result["portability_contract"]
     assert proof_payload["all_member_compressed_streams_identical_to_source"] is True
     assert result["receiver_verification"]["candidate_member_sha256s"] == {
         name: sha256_bytes(payload)
