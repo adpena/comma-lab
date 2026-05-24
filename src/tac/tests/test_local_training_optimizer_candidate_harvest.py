@@ -27,6 +27,7 @@ def _plan(
     *,
     candidate_id: str,
     representation_manifest_name: str = "representation_training_manifest.json",
+    optimizer_descriptor_id: str | None = None,
 ) -> dict:
     output_dir = repo / candidate_id
     representation_manifest = output_dir / representation_manifest_name
@@ -48,6 +49,20 @@ def _plan(
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "candidate_params": {
+            "stage_index": 8,
+            "seed": 23,
+            "optimizer_descriptor_id": optimizer_descriptor_id,
+            "optimizer_config_sha256": "a" * 64 if optimizer_descriptor_id else None,
+            "parameter_group_lr_policy_id": (
+                "embedding_theta1_hidden_muon_adamw"
+                if optimizer_descriptor_id
+                else None
+            ),
+            "parameter_group_lr_policy_sha256": (
+                "b" * 64 if optimizer_descriptor_id else None
+            ),
+        },
         "recommended_execution": {
             "schema": "local_training_recommended_execution.v1",
             "tool": "tools/run_local_training_plan.py",
@@ -80,6 +95,16 @@ def _write_completed_manifest(path: Path, *, candidate_id: str, seconds: float =
         device_requested="mlx",
         device_selected="mlx",
         output_dir=str(path.parent),
+        seed=23,
+        stages=[{"index": 8, "module": "stage8_muon_finetune"}],
+        stage_count=1,
+        candidate_params={
+            "stage_index": 8,
+            "optimizer_descriptor_id": "pr95_stage8_muon_adamw_mlx",
+            "optimizer_config_sha256": "a" * 64,
+            "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+            "parameter_group_lr_policy_sha256": "b" * 64,
+        },
         dispatch_blockers=[
             "representation_training_probe_is_proxy_signal",
             "requires_exact_cpu_cuda_auth_eval_before_score_claim",
@@ -210,6 +235,28 @@ def test_harvest_refuses_false_authority_leakage(tmp_path: Path) -> None:
     state_path = _state(tmp_path, queue, {queue["experiments"][0]["id"]: "succeeded"})
 
     with pytest.raises(LocalTrainingHarvestError, match="promotion_eligible"):
+        harvest_local_training_optimizer_candidates(
+            queue,
+            state_path=state_path,
+            repo_root=tmp_path,
+        )
+
+
+def test_harvest_refuses_queue_manifest_identity_mismatch(tmp_path: Path) -> None:
+    plan = _plan(
+        tmp_path,
+        candidate_id="candidate_a",
+        optimizer_descriptor_id="pr95_stage8_muon_adamw_mlx",
+    )
+    queue = _queue(tmp_path, plan)
+    manifest_path = tmp_path / "candidate_a" / "representation_training_manifest.json"
+    _write_completed_manifest(manifest_path, candidate_id="candidate_a")
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["candidate_params"]["optimizer_descriptor_id"] = "other_optimizer"
+    manifest_path.write_text(json.dumps(payload), encoding="utf-8")
+    state_path = _state(tmp_path, queue, {queue["experiments"][0]["id"]: "succeeded"})
+
+    with pytest.raises(LocalTrainingHarvestError, match="identity mismatch"):
         harvest_local_training_optimizer_candidates(
             queue,
             state_path=state_path,

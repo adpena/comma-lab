@@ -51466,6 +51466,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "codex_pr95_mlx_optimizer_matrix_queue_20260524",
+      "name": "PR95 MLX optimizer matrix queue fan-out",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/build_pr95_mlx_optimizer_matrix_queue.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_pr95_mlx_optimizer_matrix_queue.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_pr95_mlx_optimizer_matrix_queue_20260524T090323Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "docs/experiment_scheduler_design.md"
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -51475,5 +51516,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T08:40:24Z"
+  "updated_at": "2026-05-24T09:04:07Z"
 }

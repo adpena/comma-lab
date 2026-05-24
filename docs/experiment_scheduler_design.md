@@ -231,6 +231,18 @@ the queue-owned path for broad MLX acquisition batches: MLX remains local
 research signal, the follow-up artifacts stay false-authority, and exact
 contest CPU/CUDA remains the only score/promotion authority.
 
+For PR95/HNeRV reproduction, `tools/build_pr95_mlx_optimizer_matrix_queue.py`
+is the queue-owned fan-out entry point. It emits one plan-only
+`tools/run_pr95_mlx_timing_smoke.py` packet per selected stage, optimizer
+descriptor, and seed, then compiles those packets into `experiment_queue.v1`
+with local-MLX concurrency preserved in `controls.max_concurrency.local_mlx`.
+Descriptor-only or unsupported optimizer rows are recorded as false-authority
+refusals instead of being queued. The generated worker commands are local
+training probes only: they can measure MLX throughput and produce runtime
+manifests, but they cannot claim score, rank/kill candidates, promote archives,
+or dispatch exact eval until byte-closed export, receiver proof, runtime
+consumption proof, PyTorch parity, and contest CPU/CUDA auth anchors exist.
+
 ## Exact-ready consumer
 
 `tools/build_materializer_exact_eval_consumer.py` bridges materializer exact

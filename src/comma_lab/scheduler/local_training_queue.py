@@ -58,6 +58,10 @@ def _false_authority_postcondition(path: str) -> dict[str, Any]:
     return {"type": "json_false_authority", "path": path}
 
 
+def _json_equals_postcondition(path: str, key: str, value: Any) -> dict[str, Any]:
+    return {"type": "json_equals", "path": path, "key": key, "equals": value}
+
+
 def _execution_from_plan(plan: Mapping[str, Any]) -> Mapping[str, Any]:
     execution = plan.get("recommended_execution")
     if not isinstance(execution, Mapping):
@@ -140,6 +144,8 @@ def _identity_from_plan(
         candidate_params = {}
     out: dict[str, Any] = {}
     for key in (
+        "stage_index",
+        "seed",
         "optimizer_descriptor_id",
         "optimizer_config_sha256",
         "optimizer_backend_status",
@@ -147,12 +153,11 @@ def _identity_from_plan(
         "parameter_group_lr_policy_sha256",
         "parameter_group_fingerprint_sha256",
     ):
-        value = (
-            candidate_params.get(key)
-            or optimizer_recipe.get(key)
-            or execution.get(key)
-            or plan.get(key)
-        )
+        value = None
+        for source in (candidate_params, optimizer_recipe, execution, plan):
+            if key in source and source.get(key) is not None:
+                value = source[key]
+                break
         if value is not None:
             out[key] = value
     return out
@@ -291,10 +296,18 @@ def build_local_training_execution_queue(
     selected = list(plans[:limit] if limit is not None else plans)
     generated_at = _utc_now()
     experiments: list[dict[str, Any]] = []
+    seen_output_paths: set[str] = set()
     for index, plan in enumerate(selected):
         execution = _validate_plan(plan, index=index, repo_root=repo)
         output_path = _resolve_output_path(execution.get("output_manifest"), repo_root=repo)
+        output_key = output_path.expanduser().resolve(strict=False).as_posix()
+        if output_key in seen_output_paths:
+            raise ExperimentQueueError(
+                f"local_training_plan[{index}]: duplicate output_manifest {output_key!r}"
+            )
+        seen_output_paths.add(output_key)
         output_rel = _repo_rel(output_path, repo)
+        optimizer_identity = _identity_from_plan(plan, execution)
         representation_manifest = execution.get("representation_manifest")
         experiment_id = f"local_training_{index:04d}_{_safe_id(str(plan.get('candidate_id') or index))}"
         postconditions: list[dict[str, Any]] = [
@@ -304,6 +317,13 @@ def build_local_training_execution_queue(
         artifact_paths = [output_rel]
         if isinstance(representation_manifest, str) and representation_manifest:
             representation_path = _resolve_output_path(representation_manifest, repo_root=repo)
+            representation_key = representation_path.expanduser().resolve(strict=False).as_posix()
+            if representation_key in seen_output_paths:
+                raise ExperimentQueueError(
+                    f"local_training_plan[{index}]: duplicate representation_manifest "
+                    f"{representation_key!r}"
+                )
+            seen_output_paths.add(representation_key)
             representation_rel = _repo_rel(representation_path, repo)
             artifact_paths.append(representation_rel)
             postconditions.extend(
@@ -318,8 +338,38 @@ def build_local_training_execution_queue(
                     _false_authority_postcondition(representation_rel),
                 ]
             )
+            candidate_id = str(plan.get("candidate_id") or "")
+            if candidate_id:
+                postconditions.append(
+                    _json_equals_postcondition(
+                        representation_rel,
+                        "candidate_id",
+                        candidate_id,
+                    )
+                )
+            for identity_key, json_key in (
+                ("stage_index", "candidate_params.stage_index"),
+                ("seed", "seed"),
+                ("optimizer_descriptor_id", "candidate_params.optimizer_descriptor_id"),
+                ("optimizer_config_sha256", "candidate_params.optimizer_config_sha256"),
+                (
+                    "parameter_group_lr_policy_id",
+                    "candidate_params.parameter_group_lr_policy_id",
+                ),
+                (
+                    "parameter_group_lr_policy_sha256",
+                    "candidate_params.parameter_group_lr_policy_sha256",
+                ),
+            ):
+                if identity_key in optimizer_identity:
+                    postconditions.append(
+                        _json_equals_postcondition(
+                            representation_rel,
+                            json_key,
+                            optimizer_identity[identity_key],
+                        )
+                    )
         resource_kind = _resource_kind(execution)
-        optimizer_identity = _identity_from_plan(plan, execution)
         input_artifact_paths = [
             str(value)
             for value in (plan.get("source_dir"), plan.get("source_tree_sha256"))

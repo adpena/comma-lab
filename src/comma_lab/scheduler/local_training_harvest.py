@@ -123,6 +123,44 @@ def _load_completed_manifest(path: Path) -> dict[str, Any]:
     return payload
 
 
+def _manifest_value(payload: Mapping[str, Any], dotted_key: str) -> Any:
+    current: Any = payload
+    for part in dotted_key.split("."):
+        if not isinstance(current, Mapping) or part not in current:
+            return None
+        current = current[part]
+    return current
+
+
+def _assert_manifest_matches_queue_identity(
+    payload: Mapping[str, Any],
+    *,
+    metadata: Mapping[str, Any],
+    path: Path,
+) -> None:
+    expected_keys = {
+        "candidate_id": "candidate_id",
+        "stage_index": "candidate_params.stage_index",
+        "seed": "seed",
+        "optimizer_descriptor_id": "candidate_params.optimizer_descriptor_id",
+        "optimizer_config_sha256": "candidate_params.optimizer_config_sha256",
+        "parameter_group_lr_policy_id": "candidate_params.parameter_group_lr_policy_id",
+        "parameter_group_lr_policy_sha256": "candidate_params.parameter_group_lr_policy_sha256",
+    }
+    for metadata_key, manifest_key in expected_keys.items():
+        if metadata_key not in metadata:
+            continue
+        expected = metadata[metadata_key]
+        if expected is None:
+            continue
+        actual = _manifest_value(payload, manifest_key)
+        if actual != expected:
+            raise LocalTrainingHarvestError(
+                f"{path}: manifest identity mismatch for {manifest_key} "
+                f"expected={expected!r} actual={actual!r}"
+            )
+
+
 def harvest_local_training_optimizer_candidates(
     queue: Mapping[str, Any],
     *,
@@ -177,7 +215,12 @@ def harvest_local_training_optimizer_candidates(
                     "postcondition"
                 )
             resolved = _repo_path(manifest_path, repo_root=repo)
-            _load_completed_manifest(resolved)
+            payload = _load_completed_manifest(resolved)
+            _assert_manifest_matches_queue_identity(
+                payload,
+                metadata=metadata,
+                path=resolved,
+            )
             manifest_paths.append(resolved)
     if not manifest_paths:
         raise LocalTrainingHarvestError(

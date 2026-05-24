@@ -101,6 +101,20 @@ def test_local_training_queue_compiles_mlx_plan(tmp_path: Path) -> None:
         and condition["key"] == "schema"
         for condition in step["postconditions"]
     )
+    assert any(
+        condition["type"] == "json_equals"
+        and condition["path"] == "representation_manifest.json"
+        and condition["key"] == "candidate_id"
+        and condition["equals"] == "boostnerv_mlx_gpu"
+        for condition in step["postconditions"]
+    )
+    assert any(
+        condition["type"] == "json_equals"
+        and condition["path"] == "representation_manifest.json"
+        and condition["key"] == "candidate_params.optimizer_descriptor_id"
+        and condition["equals"] == "pr95_stage8_muon_adamw_mlx"
+        for condition in step["postconditions"]
+    )
 
 
 def test_local_training_queue_maps_mlx_cpu_to_local_cpu(tmp_path: Path) -> None:
@@ -161,6 +175,21 @@ def test_local_training_queue_rejects_command_output_manifest_mismatch(
     with pytest.raises(ExperimentQueueError, match=r"output.*does not match"):
         build_local_training_execution_queue(
             [plan],
+            queue_id="local_training_fixture",
+            repo_root=tmp_path,
+        )
+
+
+def test_local_training_queue_rejects_duplicate_output_manifests(
+    tmp_path: Path,
+) -> None:
+    plan_a = _plan(tmp_path)
+    plan_b = _plan(tmp_path)
+    plan_b["candidate_id"] = "other_candidate_same_output"
+
+    with pytest.raises(ExperimentQueueError, match="duplicate output_manifest"):
+        build_local_training_execution_queue(
+            [plan_a, plan_b],
             queue_id="local_training_fixture",
             repo_root=tmp_path,
         )
