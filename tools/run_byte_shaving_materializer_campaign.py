@@ -17,7 +17,7 @@ import json
 import subprocess
 import sys
 import time
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -379,6 +379,59 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         default=None,
         help="artifact directory; defaults to .omx/research/byte_shaving_materializer_campaign_<UTC>",
+    )
+    parser.add_argument(
+        "--queue-state",
+        type=Path,
+        default=None,
+        help=(
+            "SQLite state path for the generated materializer execution queue; "
+            "defaults to the scheduler's canonical queue-id state path"
+        ),
+    )
+    parser.add_argument(
+        "--queue-state-rationale",
+        default=None,
+        help=(
+            "Specific rationale passed to experiment_queue run-worker when "
+            "--queue-state points at a noncanonical execution-state path"
+        ),
+    )
+    parser.add_argument(
+        "--derive-runtime-policy",
+        action="store_true",
+        help="derive scheduler_runtime_policy.v1 from the queue state before local execution",
+    )
+    parser.add_argument(
+        "--apply-runtime-policy",
+        action="store_true",
+        help=(
+            "derive scheduler_runtime_policy.v1 and run the local worker against "
+            "a policy-applied queue definition"
+        ),
+    )
+    parser.add_argument("--runtime-policy-output", type=Path, default=None)
+    parser.add_argument("--runtime-policy-applied-queue-output", type=Path, default=None)
+    parser.add_argument("--runtime-policy-cpu-count", type=int, default=None)
+    parser.add_argument("--runtime-policy-timeout-multiplier", type=float, default=3.0)
+    parser.add_argument("--runtime-policy-min-timeout-seconds", type=int, default=30)
+    parser.add_argument(
+        "--runtime-policy-max-timeout-seconds",
+        type=int,
+        default=24 * 60 * 60,
+    )
+    parser.add_argument(
+        "--runtime-policy-no-apply-concurrency",
+        action="store_true",
+        help="when applying a runtime policy, leave queue max_concurrency unchanged",
+    )
+    parser.add_argument(
+        "--runtime-policy-apply-timeouts",
+        action="store_true",
+        help=(
+            "also apply timeout recommendations; off by default to avoid "
+            "definition-hash churn in existing queue state"
+        ),
     )
     parser.add_argument("--queue-id", default="byte_shaving_materializer_local_proof_chain")
     parser.add_argument("--lane-id", default=None)
@@ -807,6 +860,66 @@ def _build_queue_command(
     return command
 
 
+def _experiment_queue_command(
+    *,
+    execution_queue: Path,
+    state_path: Path,
+    subcommand: Sequence[str],
+) -> list[str]:
+    return [
+        sys.executable,
+        "tools/experiment_queue.py",
+        "--queue",
+        _display_path(execution_queue),
+        "--state",
+        _display_path(state_path),
+        *subcommand,
+    ]
+
+
+def _runtime_policy_command(
+    args: argparse.Namespace,
+    *,
+    execution_queue: Path,
+    state_path: Path,
+    run_dir: Path,
+) -> tuple[Path, Path | None, list[str]]:
+    policy_output = _resolve(args.runtime_policy_output) if args.runtime_policy_output else (
+        run_dir / "scheduler_runtime_policy.json"
+    )
+    applied_queue_output = (
+        _resolve(args.runtime_policy_applied_queue_output)
+        if args.runtime_policy_applied_queue_output
+        else (run_dir / "materializer_execution_queue.runtime_policy.json")
+        if args.apply_runtime_policy
+        else None
+    )
+    command = _experiment_queue_command(
+        execution_queue=execution_queue,
+        state_path=state_path,
+        subcommand=[
+            "runtime-policy",
+            "--timeout-multiplier",
+            str(args.runtime_policy_timeout_multiplier),
+            "--min-timeout-seconds",
+            str(args.runtime_policy_min_timeout_seconds),
+            "--max-timeout-seconds",
+            str(args.runtime_policy_max_timeout_seconds),
+            "--policy-output",
+            _display_path(policy_output),
+        ],
+    )
+    if args.runtime_policy_cpu_count is not None:
+        command.extend(["--cpu-count", str(args.runtime_policy_cpu_count)])
+    if applied_queue_output is not None:
+        command.extend(["--applied-queue-output", _display_path(applied_queue_output)])
+        if args.runtime_policy_no_apply_concurrency:
+            command.append("--no-apply-concurrency")
+        if not args.runtime_policy_apply_timeouts:
+            command.append("--no-apply-timeouts")
+    return policy_output, applied_queue_output, command
+
+
 def _inverse_scorer_auto_artifact_map_requested(args: argparse.Namespace) -> bool:
     return any(
         (
@@ -1133,6 +1246,25 @@ def main(argv: list[str] | None = None) -> int:
         )
     if args.staircase_ssh_artifact_pull_timeout_seconds < 1:
         raise SystemExit("--staircase-ssh-artifact-pull-timeout-seconds must be >= 1")
+    if args.runtime_policy_timeout_multiplier <= 0:
+        raise SystemExit("--runtime-policy-timeout-multiplier must be positive")
+    if args.runtime_policy_min_timeout_seconds < 0:
+        raise SystemExit("--runtime-policy-min-timeout-seconds must be non-negative")
+    if args.runtime_policy_max_timeout_seconds < 1:
+        raise SystemExit("--runtime-policy-max-timeout-seconds must be positive")
+    if args.runtime_policy_min_timeout_seconds > args.runtime_policy_max_timeout_seconds:
+        raise SystemExit(
+            "--runtime-policy-min-timeout-seconds must be <= "
+            "--runtime-policy-max-timeout-seconds"
+        )
+    if args.runtime_policy_cpu_count is not None and args.runtime_policy_cpu_count < 1:
+        raise SystemExit("--runtime-policy-cpu-count must be >= 1")
+    if args.apply_runtime_policy and args.runtime_policy_no_apply_concurrency and not (
+        args.runtime_policy_apply_timeouts
+    ):
+        raise SystemExit(
+            "--apply-runtime-policy would apply neither concurrency nor timeouts"
+        )
     if args.staircase_ssh_dirty_remote_git_rationale and not args.staircase_ssh_allow_dirty_remote_git:
         raise SystemExit(
             "--staircase-ssh-dirty-remote-git-rationale requires "
@@ -1150,6 +1282,11 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(
             "--staircase-ssh-artifact-path-map and "
             "--staircase-ssh-artifact-shared-path-rationale are mutually exclusive"
+        )
+    if args.execute and args.queue_state is not None and not args.queue_state_rationale:
+        raise SystemExit(
+            "--queue-state requires --queue-state-rationale when executing "
+            "the generated queue"
         )
     run_dir = _resolve(args.run_dir) if args.run_dir is not None else (
         REPO_ROOT / ".omx" / "research" / f"byte_shaving_materializer_campaign_{_utc_stamp()}"
@@ -1221,13 +1358,60 @@ def main(argv: list[str] | None = None) -> int:
     )
     commands.append(build_result)
     queue = load_queue_definition(execution_queue)
-    state_path = default_state_path(REPO_ROOT, queue["queue_id"])
+    state_path = (
+        _resolve(args.queue_state)
+        if args.queue_state is not None
+        else default_state_path(REPO_ROOT, queue["queue_id"])
+    )
 
     for command in (
-        [sys.executable, "tools/experiment_queue.py", "--queue", _display_path(execution_queue), "validate"],
-        [sys.executable, "tools/experiment_queue.py", "--queue", _display_path(execution_queue), "init"],
+        _experiment_queue_command(
+            execution_queue=execution_queue,
+            state_path=state_path,
+            subcommand=["validate"],
+        ),
+        _experiment_queue_command(
+            execution_queue=execution_queue,
+            state_path=state_path,
+            subcommand=["init"],
+        ),
     ):
         commands.append(_run(command))
+
+    runtime_policy_result: CommandResult | None = None
+    runtime_policy_payload: dict[str, Any] | None = None
+    runtime_policy_output_path: Path | None = None
+    runtime_policy_applied_queue_path: Path | None = None
+    if args.derive_runtime_policy or args.apply_runtime_policy:
+        (
+            runtime_policy_output_path,
+            runtime_policy_applied_queue_path,
+            runtime_policy_command,
+        ) = _runtime_policy_command(
+            args,
+            execution_queue=execution_queue,
+            state_path=state_path,
+            run_dir=run_dir,
+        )
+        runtime_policy_result = _run(runtime_policy_command)
+        commands.append(runtime_policy_result)
+        runtime_policy_payload = _json_from_stdout(runtime_policy_result)
+        if runtime_policy_applied_queue_path is not None:
+            execution_queue = runtime_policy_applied_queue_path
+            queue = load_queue_definition(execution_queue)
+            for command in (
+                _experiment_queue_command(
+                    execution_queue=execution_queue,
+                    state_path=state_path,
+                    subcommand=["validate"],
+                ),
+                _experiment_queue_command(
+                    execution_queue=execution_queue,
+                    state_path=state_path,
+                    subcommand=["init"],
+                ),
+            ):
+                commands.append(_run(command))
 
     staircase_artifacts: dict[str, Any] | None = None
     ssh_executor_dry_run: dict[str, Any] | None = None
@@ -1276,47 +1460,57 @@ def main(argv: list[str] | None = None) -> int:
                 allow_nonzero=True,
             )
 
-    worker_command = [
-        sys.executable,
-        "tools/experiment_queue.py",
-        "--queue",
-        _display_path(execution_queue),
-        "run-worker",
-        "--max-steps",
-        str(args.max_steps),
-        "--max-parallel",
-        str(args.max_parallel),
-        "--idle-sleep-seconds",
-        str(args.idle_sleep_seconds),
-        "--max-idle-cycles",
-        str(args.max_idle_cycles),
-    ]
+    worker_command = _experiment_queue_command(
+        execution_queue=execution_queue,
+        state_path=state_path,
+        subcommand=[
+            "run-worker",
+            "--max-steps",
+            str(args.max_steps),
+            "--max-parallel",
+            str(args.max_parallel),
+            "--idle-sleep-seconds",
+            str(args.idle_sleep_seconds),
+            "--max-idle-cycles",
+            str(args.max_idle_cycles),
+        ],
+    )
     if args.max_experiments is not None:
         worker_command.extend(["--max-experiments", str(args.max_experiments)])
+    if args.queue_state_rationale:
+        worker_command.extend(
+            [
+                "--noncanonical-state-rationale",
+                str(args.queue_state_rationale),
+            ]
+        )
     if args.execute:
         worker_command.append("--execute")
     worker_result = _run(worker_command)
     commands.append(worker_result)
 
-    observe_result = _run([
-        sys.executable,
-        "tools/experiment_queue.py",
-        "--queue",
-        _display_path(execution_queue),
-        "observe",
-        "--tail-lines",
-        str(args.tail_lines),
-        "--format",
-        "json",
-    ])
+    observe_result = _run(
+        _experiment_queue_command(
+            execution_queue=execution_queue,
+            state_path=state_path,
+            subcommand=[
+                "observe",
+                "--tail-lines",
+                str(args.tail_lines),
+                "--format",
+                "json",
+            ],
+        )
+    )
     commands.append(observe_result)
-    performance_result = _run([
-        sys.executable,
-        "tools/experiment_queue.py",
-        "--queue",
-        _display_path(execution_queue),
-        "performance",
-    ], check=False)
+    performance_result = _run(
+        _experiment_queue_command(
+            execution_queue=execution_queue,
+            state_path=state_path,
+            subcommand=["performance"],
+        ),
+        check=False,
+    )
     commands.append(performance_result)
 
     payload = {
@@ -1345,11 +1539,22 @@ def main(argv: list[str] | None = None) -> int:
         "high_level_action_source_count": action_source_count,
         "queue_path": _display_path(execution_queue),
         "state_path": _display_path(state_path),
+        "runtime_policy_path": (
+            None
+            if runtime_policy_output_path is None
+            else _display_path(runtime_policy_output_path)
+        ),
+        "runtime_policy_applied_queue_path": (
+            None
+            if runtime_policy_applied_queue_path is None
+            else _display_path(runtime_policy_applied_queue_path)
+        ),
         "execute": bool(args.execute),
         "staircase_ssh_execute": bool(args.staircase_ssh_execute),
         "queue_id": queue["queue_id"],
         "experiment_count": len(queue["experiments"]),
         "build": _json_from_stdout(build_result),
+        "runtime_policy": runtime_policy_payload,
         "worker": _json_from_stdout(worker_result),
         "staircase": staircase_artifacts,
         "ssh_executor_dry_run": ssh_executor_dry_run,

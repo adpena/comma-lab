@@ -435,6 +435,43 @@ def test_scheduler_runtime_policy_derives_advisory_limits_and_timeouts(
     assert updated["experiments"][2]["steps"][0]["timeout_seconds"] == 62
 
 
+def test_scheduler_runtime_policy_apply_rejects_nested_false_authority(
+    tmp_path: Path,
+) -> None:
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "runtime_policy_false_authority_queue",
+            "controls": {
+                "mode": "running",
+                "max_concurrency": {"local_cpu": 1},
+            },
+            "experiments": [
+                {
+                    "id": "cpu_exp",
+                    "steps": [
+                        {
+                            "id": "cpu_step",
+                            "command": [sys.executable, "-c", "print('cpu')"],
+                            "resources": {"kind": "local_cpu"},
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        policy = derive_scheduler_runtime_policy(conn, queue, cpu_count=4)
+
+    poisoned = json.loads(json.dumps(policy))
+    poisoned["score_claim_valid"] = True
+    poisoned["resource_policies"]["local_cpu"]["gpu_launched"] = True
+
+    with pytest.raises(ExperimentQueueError, match="truthy authority fields"):
+        apply_scheduler_runtime_policy(queue, poisoned)
+
+
 def test_experiment_queue_reconciles_queued_steps_with_satisfied_postconditions(
     tmp_path: Path,
 ) -> None:

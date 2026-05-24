@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -11,7 +12,124 @@ from comma_lab.scheduler.experiment_queue import (
     initialize_queue_state,
     normalize_queue_definition,
 )
+from tac.optimization.byte_shaving_campaign import (
+    SIGNAL_SURFACE_SCHEMA,
+    build_byte_shaving_campaign_plan,
+)
+from tac.optimization.inverse_scorer_cell_chain import (
+    CHAIN_MANIFEST_NAME as INVERSE_CELL_CHAIN_MANIFEST_NAME,
+)
 from tools import run_byte_shaving_materializer_campaign as runner
+
+
+def _false_authority() -> dict[str, bool]:
+    return {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "promotable": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+
+
+def _inverse_cell_candidate_plan() -> dict[str, object]:
+    surface = {
+        "schema": SIGNAL_SURFACE_SCHEMA,
+        "campaign_id": "inverse_cell_candidate_runner_fixture",
+        "candidate_id": "fixture_seed",
+        "lane_id": "lane_inverse_cell_candidate_runner_fixture",
+        "combo_beam_width": 4,
+        "max_combo_count": 4,
+        "units": [
+            {
+                "unit_id": "inverse_action_pair_0007",
+                "unit_kind": "scorer_inverse_surface_cell",
+                "candidate_saved_bytes": 0,
+                "predicted_quality_score_delta": -0.0001,
+                "confidence": 0.6,
+                "operations": [
+                    {
+                        "operation_id": "materialize_inverse_surface_pair_0007",
+                        "operation_family": "materialize_inverse_scorer_cell_candidate",
+                        "target_kind": runner.INVERSE_SCORER_CELL_TARGET_KIND,
+                    }
+                ],
+                "blockers": [
+                    "inverse_action_unit_is_planning_only",
+                    "requires_inverse_scorer_cell_materializer",
+                    "requires_exact_auth_eval_before_score_claim",
+                ],
+            }
+        ],
+        **_false_authority(),
+    }
+    return build_byte_shaving_campaign_plan(surface, max_k=1)
+
+
+def _write_constant_inflate_runtime(path: Path) -> None:
+    path.mkdir(parents=True)
+    inflate = path / "inflate.sh"
+    inflate.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "set -euo pipefail",
+                "data_dir=\"$1\"",
+                "out_dir=\"$2\"",
+                "file_list=\"$3\"",
+                "test -f \"$data_dir/x\"",
+                "test -s \"$file_list\"",
+                "mkdir -p \"$out_dir/frames\"",
+                "printf frame-bytes > \"$out_dir/frames/000000.raw\"",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    inflate.chmod(0o755)
+
+
+def _write_template_archive(path: Path) -> None:
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as archive:
+        archive.writestr("x", b"base-payload")
+
+
+def _write_inverse_action_functional(path: Path) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "inverse_steganalysis_discrete_action_functional.v1",
+                "water_bucket": {
+                    "schema": "inverse_steganalysis_water_bucket_plan.v1",
+                    "selected_count": 1,
+                    "selected_cells": [
+                        {
+                            "atom_id": "inverse_surface_pair0007",
+                            "candidate_id": "candidate_pair0007",
+                            "scope_axis": "pairs",
+                            "component": "posenet",
+                            "water_fill_cost_bytes": 32,
+                            "expected_score_gain": 0.0001,
+                            "euler_lagrange_residual": 0.00009,
+                        }
+                    ],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
 
 
 def test_materializer_campaign_runner_builds_queue_owned_followup_command(
@@ -85,6 +203,77 @@ def test_materializer_campaign_runner_can_auto_generate_contexts_from_artifact_m
     assert str(tmp_path / "campaign" / "materializer_outputs") in command
     assert "--materializer-contexts-fail-if-blocked" in command
     assert "--materializer-contexts" not in command
+
+
+def test_materializer_campaign_runner_builds_stateful_experiment_queue_command(
+    tmp_path: Path,
+) -> None:
+    command = runner._experiment_queue_command(
+        execution_queue=tmp_path / "queue.json",
+        state_path=tmp_path / "queue.sqlite",
+        subcommand=["validate"],
+    )
+
+    assert command == [
+        runner.sys.executable,
+        "tools/experiment_queue.py",
+        "--queue",
+        str(tmp_path / "queue.json"),
+        "--state",
+        str(tmp_path / "queue.sqlite"),
+        "validate",
+    ]
+
+
+def test_materializer_campaign_runner_builds_runtime_policy_command(
+    tmp_path: Path,
+) -> None:
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--run-dir",
+            str(tmp_path / "campaign"),
+            "--apply-runtime-policy",
+            "--runtime-policy-cpu-count",
+            "8",
+            "--runtime-policy-timeout-multiplier",
+            "2",
+            "--runtime-policy-min-timeout-seconds",
+            "10",
+            "--runtime-policy-max-timeout-seconds",
+            "120",
+        ]
+    )
+    run_dir = tmp_path / "campaign"
+
+    policy_output, applied_output, command = runner._runtime_policy_command(
+        args,
+        execution_queue=run_dir / "materializer_execution_queue.json",
+        state_path=run_dir / "queue.sqlite",
+        run_dir=run_dir,
+    )
+
+    assert policy_output == run_dir / "scheduler_runtime_policy.json"
+    assert applied_output == run_dir / "materializer_execution_queue.runtime_policy.json"
+    assert command[:7] == [
+        runner.sys.executable,
+        "tools/experiment_queue.py",
+        "--queue",
+        str(run_dir / "materializer_execution_queue.json"),
+        "--state",
+        str(run_dir / "queue.sqlite"),
+        "runtime-policy",
+    ]
+    assert "--cpu-count" in command
+    assert "8" in command
+    assert "--timeout-multiplier" in command
+    assert "2.0" in command
+    assert "--policy-output" in command
+    assert str(policy_output) in command
+    assert "--applied-queue-output" in command
+    assert str(applied_output) in command
+    assert "--no-apply-timeouts" in command
 
 
 def test_materializer_campaign_runner_can_generate_inverse_scorer_artifact_map(
@@ -208,6 +397,136 @@ def test_materializer_campaign_runner_rejects_auto_artifact_map_with_contexts(
                 "f" * 64,
             ]
         )
+
+
+def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_handoff(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    state_path = tmp_path / "materializer_execution_queue.sqlite"
+    plan = tmp_path / "plan.json"
+    action = tmp_path / "inverse_action.json"
+    template = tmp_path / "template.zip"
+    inflate_runtime = tmp_path / "inflate_runtime"
+    chain_output_dir = run_dir / "inverse_cell_chain"
+    inflate_work_dir = tmp_path / "inflate_work"
+
+    plan.write_text(json.dumps(_inverse_cell_candidate_plan()), encoding="utf-8")
+    _write_inverse_action_functional(action)
+    _write_template_archive(template)
+    _write_constant_inflate_runtime(inflate_runtime)
+
+    result = runner.main(
+        [
+            "--plan",
+            str(plan),
+            "--inverse-scorer-action-functional",
+            str(action),
+            "--inverse-scorer-candidate-archive-template",
+            str(template),
+            "--inverse-scorer-raw-contest-video-digest",
+            "f" * 64,
+            "--inverse-scorer-atom-id",
+            "inverse_surface_pair0007",
+            "--inverse-scorer-selected-limit",
+            "1",
+            "--inverse-scorer-chain-output-dir",
+            str(chain_output_dir),
+            "--inverse-scorer-inflate-runtime-dir",
+            str(inflate_runtime),
+            "--inverse-scorer-source-archive-for-parity",
+            str(template),
+            "--inverse-scorer-inflate-timeout-seconds",
+            "30",
+            "--inverse-scorer-inflate-work-dir",
+            str(inflate_work_dir),
+            "--materializer-contexts-fail-if-blocked",
+            "--run-dir",
+            str(run_dir),
+            "--queue-state",
+            str(state_path),
+            "--queue-state-rationale",
+            "isolated no-paid runner e2e state for inverse scorer campaign smoke",
+            "--queue-id",
+            "inverse_scorer_runner_e2e_fixture",
+            "--apply-runtime-policy",
+            "--runtime-policy-cpu-count",
+            "8",
+            "--max-steps",
+            "6",
+            "--max-parallel",
+            "2",
+            "--idle-sleep-seconds",
+            "0",
+            "--max-idle-cycles",
+            "1",
+            "--execute",
+        ]
+    )
+
+    assert result == 0
+    summary = json.loads(
+        (run_dir / "materializer_campaign_run.json").read_text(encoding="utf-8")
+    )
+    assert summary["schema"] == runner.RUN_SCHEMA
+    assert summary["execute"] is True
+    assert summary["score_claim"] is False
+    assert summary["ready_for_exact_eval_dispatch"] is False
+    assert summary["state_path"] == str(state_path)
+    assert summary["runtime_policy_path"] == str(run_dir / "scheduler_runtime_policy.json")
+    assert summary["runtime_policy_applied_queue_path"] == str(
+        run_dir / "materializer_execution_queue.runtime_policy.json"
+    )
+    assert summary["queue_path"] == str(
+        run_dir / "materializer_execution_queue.runtime_policy.json"
+    )
+    assert summary["runtime_policy"]["schema"] == "scheduler_runtime_policy.v1"
+    assert summary["runtime_policy"]["score_claim"] is False
+    assert summary["worker"]["schema"] == "experiment_queue_worker_result.v1"
+    assert summary["worker"]["success_count"] == 3
+    assert summary["worker"]["failure_count"] == 0
+
+    contexts = json.loads(
+        (run_dir / "materializer_contexts.json").read_text(encoding="utf-8")
+    )
+    assert summary["build"]["materializer_contexts_blocked_count"] == 0
+    assert contexts["blocked_context_count"] == 0
+    context = contexts["rows"][0]["context"]
+    assert context["chain_output_dir"] == str(chain_output_dir)
+    assert context["inflate_runtime_dir"] == str(inflate_runtime)
+    assert context["source_archive_for_parity"] == str(template)
+
+    chain = json.loads(
+        (chain_output_dir / INVERSE_CELL_CHAIN_MANIFEST_NAME).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert chain["schema"] == "inverse_scorer_cell_candidate_chain_v1"
+    assert chain["byte_closed_candidate_emitted"] is True
+    assert chain["receiver_contract_satisfied"] is True
+    assert chain["inflate_parity_satisfied"] is True
+    assert chain["score_claim"] is False
+    assert chain["ready_for_exact_eval_dispatch"] is False
+    assert "exact_auth_eval_required_before_score_claim" in chain["readiness_blockers"]
+
+    handoff_dir = chain_output_dir / "exact_eval_handoff"
+    harvest = json.loads((handoff_dir / "harvest_report.json").read_text(encoding="utf-8"))
+    bridge = json.loads(
+        (handoff_dir / "exact_readiness_bridge_report.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    dispatch_plan = json.loads(
+        (handoff_dir / "dispatch_plan.json").read_text(encoding="utf-8")
+    )
+    assert harvest["accepted_manifest_count"] == 1
+    assert harvest["source_queue_dispatch_ready_count"] == 0
+    assert bridge["candidate_count"] == 1
+    assert bridge["ready_candidate_count"] == 0
+    assert bridge["score_claim"] is False
+    assert dispatch_plan["authorized_candidate_count"] == 0
+    assert dispatch_plan["score_claim"] is False
+    assert not inflate_work_dir.exists()
 
 
 def test_materializer_campaign_runner_uses_policy_cold_store_default_for_move_preflight(

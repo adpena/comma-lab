@@ -52,6 +52,15 @@ DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS = (
     "score_affecting_payload_changed",
     "charged_bits_changed",
 )
+SCHEDULER_RUNTIME_POLICY_FORBIDDEN_AUTHORITY_FIELDS = tuple(
+    dict.fromkeys(
+        (
+            *DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
+            *DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
+            "dispatch_packet_ready",
+        )
+    )
+)
 
 
 class ExperimentQueueError(ValueError):
@@ -3963,14 +3972,16 @@ def apply_scheduler_runtime_policy(
         raise ExperimentQueueError(
             f"runtime policy schema must be {SCHEDULER_RUNTIME_POLICY_SCHEMA}"
         )
-    for field in (
-        "score_claim",
-        "promotion_eligible",
-        "rank_or_kill_eligible",
-        "ready_for_exact_eval_dispatch",
-    ):
-        if policy.get(field) is not False:
-            raise ExperimentQueueError(f"runtime policy must not set {field}=true")
+    violations = _truthy_authority_field_paths(
+        policy,
+        fields=frozenset(SCHEDULER_RUNTIME_POLICY_FORBIDDEN_AUTHORITY_FIELDS),
+        path="runtime_policy",
+    )
+    if violations:
+        raise ExperimentQueueError(
+            "runtime policy must not carry truthy authority fields: "
+            + ", ".join(violations)
+        )
     updated = json.loads(json.dumps(queue))
     controls = updated.setdefault("controls", {})
     if apply_concurrency:
@@ -4002,6 +4013,38 @@ def apply_scheduler_runtime_policy(
                 if current is None or current == 0 or current < recommended:
                     step["timeout_seconds"] = recommended
     return normalize_queue_definition(updated)
+
+
+def _truthy_authority_field_paths(
+    value: Any,
+    *,
+    fields: frozenset[str],
+    path: str,
+) -> list[str]:
+    violations: list[str] = []
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            key_text = str(key)
+            child_path = f"{path}.{key_text}"
+            if key_text in fields and bool(child):
+                violations.append(child_path)
+            violations.extend(
+                _truthy_authority_field_paths(
+                    child,
+                    fields=fields,
+                    path=child_path,
+                )
+            )
+    elif isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        for index, child in enumerate(value):
+            violations.extend(
+                _truthy_authority_field_paths(
+                    child,
+                    fields=fields,
+                    path=f"{path}[{index}]",
+                )
+            )
+    return violations
 
 
 def _runtime_policy_event_samples(
