@@ -2762,6 +2762,194 @@ def test_experiment_queue_cli_performance_is_read_only_on_definition_drift(
     assert drift["changed_step_count"] == 1
 
 
+def test_experiment_queue_cli_runtime_policy_writes_guarded_artifacts(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "cli_runtime_policy",
+            "controls": {
+                "mode": "running",
+                "max_concurrency": {
+                    "local_cpu": 1,
+                    "local_io_heavy": 8,
+                    "local_mlx": 1,
+                    "cloud_cpu": 3,
+                },
+            },
+            "experiments": [
+                {
+                    "id": "cpu_exp",
+                    "steps": [
+                        {
+                            "id": "cpu_step",
+                            "resources": {"kind": "local_cpu"},
+                            "command": [sys.executable, "-c", "print('cpu')"],
+                            "timeout_seconds": 12,
+                        }
+                    ],
+                },
+                {
+                    "id": "io_exp",
+                    "steps": [
+                        {
+                            "id": "io_step",
+                            "resources": {"kind": "local_io_heavy"},
+                            "command": [sys.executable, "-c", "print('io')"],
+                            "timeout_seconds": 50,
+                        }
+                    ],
+                },
+                {
+                    "id": "mlx_exp",
+                    "steps": [
+                        {
+                            "id": "mlx_step",
+                            "resources": {"kind": "local_mlx"},
+                            "command": [sys.executable, "-c", "print('mlx')"],
+                            "timeout_seconds": 30,
+                        }
+                    ],
+                },
+                {
+                    "id": "cloud_exp",
+                    "steps": [
+                        {
+                            "id": "cloud_step",
+                            "resources": {"kind": "cloud_cpu"},
+                            "command": [sys.executable, "-c", "print('cloud')"],
+                            "timeout_seconds": 99,
+                        }
+                    ],
+                },
+            ],
+        }
+    )
+    queue_path = tmp_path / "queue.json"
+    state = tmp_path / "queue.sqlite"
+    policy_output = tmp_path / "runtime_policy.json"
+    applied_output = tmp_path / "queue.runtime_policy_applied.json"
+    queue_path.write_text(json.dumps(queue), encoding="utf-8")
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        for event_type, experiment_id, step_id, payload in (
+            (
+                "step_succeeded",
+                "cpu_exp",
+                "cpu_step",
+                {"resource_kind": "local_cpu", "elapsed_seconds": 4.0},
+            ),
+            (
+                "step_succeeded",
+                "cpu_exp",
+                "cpu_step",
+                {"resource_kind": "local_cpu", "elapsed_seconds": 8.0},
+            ),
+            (
+                "step_succeeded",
+                "io_exp",
+                "io_step",
+                {"resource_kind": "local_io_heavy", "elapsed_seconds": 7.0},
+            ),
+            (
+                "step_failed",
+                "mlx_exp",
+                "mlx_step",
+                {
+                    "resource_kind": "local_mlx",
+                    "elapsed_seconds": 31.0,
+                    "timed_out": True,
+                },
+            ),
+        ):
+            conn.execute(
+                """
+                INSERT INTO queue_events(
+                    ts_utc, queue_id, experiment_id, step_id, event_type, payload_json
+                )
+                VALUES ('2026-05-24T00:00:00Z', ?, ?, ?, ?, ?)
+                """,
+                (
+                    "cli_runtime_policy",
+                    experiment_id,
+                    step_id,
+                    event_type,
+                    json.dumps(payload),
+                ),
+            )
+        before_event_count = conn.execute(
+            "SELECT COUNT(*) AS count FROM queue_events"
+        ).fetchone()["count"]
+        conn.commit()
+
+    command = [
+        sys.executable,
+        str(repo_root / "tools" / "experiment_queue.py"),
+        "--queue",
+        str(queue_path),
+        "--state",
+        str(state),
+        "runtime-policy",
+        "--cpu-count",
+        "8",
+        "--timeout-multiplier",
+        "2",
+        "--min-timeout-seconds",
+        "10",
+        "--max-timeout-seconds",
+        "120",
+        "--policy-output",
+        str(policy_output),
+        "--applied-queue-output",
+        str(applied_output),
+    ]
+    completed = subprocess.run(
+        command,
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    stdout = json.loads(completed.stdout)
+    policy = json.loads(policy_output.read_text(encoding="utf-8"))
+    applied = json.loads(applied_output.read_text(encoding="utf-8"))
+    assert stdout["schema"] == SCHEDULER_RUNTIME_POLICY_SCHEMA
+    assert stdout["score_claim"] is False
+    assert stdout["ready_for_exact_eval_dispatch"] is False
+    assert stdout["policy_artifact"]["path"] == str(policy_output)
+    assert stdout["applied_queue_artifact"]["path"] == str(applied_output)
+    assert policy["recommended_max_concurrency"]["local_cpu"] == 8
+    assert policy["recommended_max_concurrency"]["local_io_heavy"] == 2
+    assert policy["recommended_max_concurrency"]["local_mlx"] == 1
+    assert policy["recommended_max_concurrency"]["cloud_cpu"] == 3
+    assert policy["recommended_timeout_seconds_by_resource"]["local_cpu"] == 16
+    assert policy["recommended_timeout_seconds_by_resource"]["local_io_heavy"] == 50
+    assert policy["recommended_timeout_seconds_by_resource"]["local_mlx"] == 62
+    assert applied["controls"]["max_concurrency"]["local_cpu"] == 8
+    assert applied["controls"]["max_concurrency"]["local_io_heavy"] == 2
+    assert applied["controls"]["max_concurrency"]["cloud_cpu"] == 3
+    assert applied["experiments"][0]["steps"][0]["timeout_seconds"] == 16
+    assert applied["experiments"][2]["steps"][0]["timeout_seconds"] == 62
+    with connect_state(state) as conn:
+        after_event_count = conn.execute(
+            "SELECT COUNT(*) AS count FROM queue_events"
+        ).fetchone()["count"]
+    assert after_event_count == before_event_count
+    refused = subprocess.run(
+        command,
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert refused.returncode == 2
+    assert "refusing to overwrite existing artifact" in refused.stderr
+
+
 def test_experiment_queue_cli_validate_reports_auto_parallelism(tmp_path: Path) -> None:
     repo_root = Path(__file__).resolve().parents[3]
     queue_path = tmp_path / "queue.json"

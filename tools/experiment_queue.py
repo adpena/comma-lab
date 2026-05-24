@@ -27,11 +27,13 @@ ensure_repo_imports(REPO_ROOT)
 from comma_lab.scheduler.experiment_queue import (  # noqa: E402
     BLOCKING_ORPHAN_STATUSES,
     ExperimentQueueError,
+    apply_scheduler_runtime_policy,
     assert_canonical_state_for_execution,
     assert_no_orphaned_steps_for_execution,
     connect_state,
     connect_state_readonly,
     default_state_path,
+    derive_scheduler_runtime_policy,
     initialize_queue_state,
     load_queue_definition,
     orphaned_step_rows,
@@ -132,6 +134,58 @@ def cmd_performance(args: argparse.Namespace) -> int:
     with connect_state_readonly(state) as conn:
         payload = queue_performance_summary(conn, queue)
     _json_print({"state": str(state), **payload})
+    return 0
+
+
+def cmd_runtime_policy(args: argparse.Namespace) -> int:
+    queue, state = _load(args)
+    with connect_state_readonly(state) as conn:
+        policy = derive_scheduler_runtime_policy(
+            conn,
+            queue,
+            cpu_count=args.cpu_count,
+            timeout_multiplier=args.timeout_multiplier,
+            min_timeout_seconds=args.min_timeout_seconds,
+            max_timeout_seconds=args.max_timeout_seconds,
+        )
+    payload: dict[str, object] = {"state": str(state), **policy}
+    if args.policy_output is not None:
+        try:
+            artifact = write_json_artifact(
+                args.policy_output,
+                policy,
+                allow_overwrite=args.expected_policy_output_sha256 is not None,
+                expected_existing_sha256=args.expected_policy_output_sha256,
+            )
+        except ArtifactWriteError as exc:
+            raise ExperimentQueueError(str(exc)) from exc
+        payload["policy_artifact"] = {
+            "path": artifact.path,
+            "bytes": artifact.bytes_written,
+            "sha256": artifact.sha256,
+        }
+    if args.applied_queue_output is not None:
+        applied = apply_scheduler_runtime_policy(
+            queue,
+            policy,
+            apply_concurrency=not args.no_apply_concurrency,
+            apply_timeouts=not args.no_apply_timeouts,
+        )
+        try:
+            artifact = write_json_artifact(
+                args.applied_queue_output,
+                applied,
+                allow_overwrite=args.expected_applied_queue_output_sha256 is not None,
+                expected_existing_sha256=args.expected_applied_queue_output_sha256,
+            )
+        except ArtifactWriteError as exc:
+            raise ExperimentQueueError(str(exc)) from exc
+        payload["applied_queue_artifact"] = {
+            "path": artifact.path,
+            "bytes": artifact.bytes_written,
+            "sha256": artifact.sha256,
+        }
+    _json_print(payload)
     return 0
 
 
@@ -413,6 +467,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     sp = sub.add_parser("performance", help="aggregate completed-step telemetry")
     sp.set_defaults(func=cmd_performance)
+
+    sp = sub.add_parser(
+        "runtime-policy",
+        help="derive advisory scheduler runtime policy from queue telemetry",
+    )
+    sp.add_argument("--cpu-count", type=int, default=None)
+    sp.add_argument("--timeout-multiplier", type=float, default=3.0)
+    sp.add_argument("--min-timeout-seconds", type=int, default=30)
+    sp.add_argument("--max-timeout-seconds", type=int, default=24 * 60 * 60)
+    sp.add_argument("--policy-output", type=Path, default=None)
+    sp.add_argument("--expected-policy-output-sha256", default=None)
+    sp.add_argument("--applied-queue-output", type=Path, default=None)
+    sp.add_argument("--expected-applied-queue-output-sha256", default=None)
+    sp.add_argument("--no-apply-concurrency", action="store_true")
+    sp.add_argument("--no-apply-timeouts", action="store_true")
+    sp.set_defaults(func=cmd_runtime_policy)
 
     sp = sub.add_parser("observe", help="compact live queue telemetry and artifact view")
     sp.add_argument("--tail-lines", type=int, default=20)
