@@ -27,6 +27,7 @@ from .byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
     INVERSE_SCORER_CELL_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+    PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
 )
 from .experiment_queue import ExperimentQueueError
@@ -344,6 +345,16 @@ def _packet_member_context_row(
         context["packet_member_manifest"] = packet_member_manifest
     if member_name is not None:
         context["member_name"] = member_name
+    header_elision_contract = _first_text(
+        hints,
+        (
+            "header_elision_contract",
+            "zip_header_contract",
+            "zip_header_elision_contract",
+        ),
+    )
+    if header_elision_contract is not None:
+        context["header_elision_contract"] = header_elision_contract
     if output_archive is not None:
         context["output_archive"] = output_archive
     if json_out is not None:
@@ -670,8 +681,17 @@ def build_final_byte_operation_contexts(
             )
         elif (
             row.get("unit_kind") == "packet_member"
-            and row.get("operation_family") == "member_recompress"
-            and row.get("target_kind") == PACKET_MEMBER_RECOMPRESS_TARGET_KIND
+            and (
+                (
+                    row.get("operation_family") == "member_recompress"
+                    and row.get("target_kind") == PACKET_MEMBER_RECOMPRESS_TARGET_KIND
+                )
+                or (
+                    row.get("operation_family") == "zip_header_elide"
+                    and row.get("target_kind")
+                    == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND
+                )
+            )
         ):
             rows.append(
                 _packet_member_context_row(

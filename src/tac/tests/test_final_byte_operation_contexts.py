@@ -24,6 +24,8 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     INVERSE_SCORER_CELL_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+    PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER,
+    PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     TENSOR_FACTORIZE_MATERIALIZER,
     TENSOR_FACTORIZE_TARGET_KIND,
 )
@@ -155,6 +157,33 @@ def _inverse_scorer_cell_backlog() -> dict[str, object]:
                 "packet_ir_blocker_counts": {
                     "packetir_operation_set_requires_materializer_contexts": 1,
                 },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _packet_header_elide_backlog() -> dict[str, object]:
+    return {
+        "schema": "byte_shaving_materializer_backlog.v1",
+        "rows": [
+            {
+                "schema": "byte_shaving_materializer_backlog_row.v1",
+                "backlog_key": "packet_member_zip_header_elide_fixture",
+                "backlog_rank": 1,
+                "unit_kind": "packet_member",
+                "operation_family": "zip_header_elide",
+                "target_kind": PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+                "materializer_id": PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER,
+                "source_unit_ids": ["payload_member"],
+                "operation_params": {"packet_member": "payload.bin"},
                 "score_claim": False,
                 "promotion_eligible": False,
                 "rank_or_kill_eligible": False,
@@ -376,6 +405,63 @@ def test_final_byte_context_compiler_covers_packet_member_and_tensor_families(
     assert "--allow-size-regression" in rows_by_target[TENSOR_FACTORIZE_TARGET_KIND]["command"]
     assert work_queue["score_claim"] is False
     assert work_queue["ready_for_exact_eval_dispatch"] is False
+
+
+def test_final_byte_context_compiler_covers_packet_member_zip_header_elide(
+    tmp_path: Path,
+) -> None:
+    artifact_map = {
+        "schema": "final_byte_artifact_map.fixture.v1",
+        "artifacts": {
+            PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND: {
+                "archive_path": str(tmp_path / "packet_source.zip"),
+                "packet_member_manifest": str(tmp_path / "members.json"),
+                "zip_header_contract": str(tmp_path / "zip_header_contract.json"),
+                "min_free_bytes": 128,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    payload = build_final_byte_operation_contexts(
+        _packet_header_elide_backlog(),
+        artifact_map=artifact_map,
+        repo_root=tmp_path,
+        default_output_root=tmp_path / "out",
+    )
+
+    assert payload["row_count"] == 1
+    assert payload["blocked_context_count"] == 0
+    context = payload["rows"][0]["context"]
+    assert context["member_name"] == "payload.bin"
+    assert context["header_elision_contract"].endswith("zip_header_contract.json")
+    resolved = materializer_contexts_from_payload(payload)
+    work_queue = build_materializer_work_queue(
+        _packet_header_elide_backlog(),
+        repo_root=tmp_path,
+        contexts=resolved,
+        source_plan_path="plan.json",
+    )
+    row = work_queue["rows"][0]
+    assert work_queue["executable_row_count"] == 1
+    assert row["tool"] == "tools/run_family_agnostic_materializer.py"
+    assert [
+        "--target-kind",
+        PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+    ] in [row["command"][index : index + 2] for index in range(len(row["command"]) - 1)]
+    assert [
+        "--header-elision-contract",
+        str(tmp_path / "zip_header_contract.json"),
+    ] in [row["command"][index : index + 2] for index in range(len(row["command"]) - 1)]
+    assert "--runtime-consumption-proof-out" in row["command"]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
 
 
 def test_final_byte_context_compiler_uses_inline_operation_params(

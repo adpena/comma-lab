@@ -13,9 +13,11 @@ import numpy as np
 from tac.optimization.family_agnostic_materializers import (
     ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
+    PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
     TENSOR_FACTORIZE_SCHEMA,
     materialize_archive_section_entropy_recode_candidate,
     materialize_packet_member_recompress_candidate,
+    materialize_packet_member_zip_header_elide_candidate,
     materialize_tensor_factorize_candidate,
 )
 from tac.repo_io import sha256_bytes
@@ -27,6 +29,21 @@ def _write_zip(path: Path, members: dict[str, bytes], *, compression: int = zipf
     with zipfile.ZipFile(path, "w", compression=compression) as zf:
         for name, payload in members.items():
             zf.writestr(name, payload)
+
+
+def _write_zip_with_member_header_overhead(
+    path: Path,
+    *,
+    payload: bytes,
+    member_name: str = "payload.bin",
+) -> None:
+    info = zipfile.ZipInfo(member_name)
+    info.compress_type = zipfile.ZIP_STORED
+    info.extra = b"\x7f\x7f\x04\x00abcd"
+    info.comment = b"deterministic member comment"
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.comment = b"deterministic archive comment"
+        zf.writestr(info, payload)
 
 
 def test_packet_member_recompress_materializer_preserves_member_payload(
@@ -211,6 +228,73 @@ def test_packet_member_recompress_materializer_preserves_stored_method_zero(
     assert result["candidate_trials"][0]["compression_method"] == "stored"
     assert result["candidate_member"]["sha256"] == sha256_bytes(payload)
     assert result["byte_closed_candidate_emitted"] is True
+
+
+def test_packet_member_zip_header_elide_materializer_preserves_payload(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    payload = b"header-elide-payload" * 64
+    _write_zip_with_member_header_overhead(archive, payload=payload)
+
+    result = materialize_packet_member_zip_header_elide_candidate(
+        archive_path=archive,
+        output_archive=output,
+        member_name="payload.bin",
+        repo_root=tmp_path,
+    )
+
+    assert result["schema"] == PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA
+    assert result["byte_closed_candidate_emitted"] is True
+    assert result["source_member"]["sha256"] == sha256_bytes(payload)
+    assert result["candidate_member"]["sha256"] == sha256_bytes(payload)
+    assert result["candidate_archive"]["bytes"] < result["source_archive"]["bytes"]
+    assert result["selected_elision"]["saved_bytes"] > 0
+    assert result["selected_elision"]["elided_header_bytes"] > 0
+    assert result["candidate_zip_header"]["total_elidable_header_bytes"] == 0
+    assert "runtime_consumption_proof_missing" in result["readiness_blockers"]
+    assert result["score_claim"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
+
+
+def test_packet_member_zip_header_elide_materializer_emits_runtime_proof(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    proof = tmp_path / "runtime_consumption_proof.json"
+    payload = b"header-elide-payload" * 64
+    _write_zip_with_member_header_overhead(archive, payload=payload)
+
+    result = materialize_packet_member_zip_header_elide_candidate(
+        archive_path=archive,
+        output_archive=output,
+        member_name="payload.bin",
+        runtime_consumption_proof_out=proof,
+        repo_root=tmp_path,
+    )
+
+    proof_payload = json.loads(proof.read_text(encoding="utf-8"))
+    assert proof_payload["schema"] == "family_agnostic_runtime_consumption_proof_v1"
+    assert proof_payload["proof_kind"] == (
+        "packet_member_zip_header_elide_payload_identity_receiver_proof.v1"
+    )
+    assert proof_payload["candidate_archive"]["sha256"] == result["candidate_archive"]["sha256"]
+    assert proof_payload["candidate_member"]["sha256"] == result["candidate_member"]["sha256"]
+    assert proof_payload["candidate_member_payload_identical_to_source"] is True
+    assert proof_payload["receiver_contract_satisfied"] is True
+    assert result["receiver_contract_satisfied"] is True
+    assert result["receiver_verification"]["proof_present"] is True
+    assert result["receiver_verification"]["candidate_member_sha256"] == (
+        result["candidate_member"]["sha256"]
+    )
+    assert "runtime_consumption_proof_missing" not in result["readiness_blockers"]
+    assert "packet_member_zip_header_elide_receiver_contract_not_satisfied" not in (
+        result["readiness_blockers"]
+    )
+    assert result["score_claim"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
 
 
 def test_archive_section_entropy_recode_materializer_uses_section_manifest(
@@ -559,6 +643,50 @@ def test_family_agnostic_materializer_cli_writes_false_authority_manifest(
     assert payload["receiver_contract_satisfied"] is True
     assert payload["receiver_verification"]["proof_present"] is True
     assert payload["runtime_consumption_proof_path"] == str(proof)
+    assert payload["tool_run_manifest"]["tool"] == "tools/run_family_agnostic_materializer.py"
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_packet_member_zip_header_elide_materializer_cli_auto_writes_runtime_proof(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    manifest = tmp_path / "candidate.json"
+    proof = tmp_path / "candidate.runtime_consumption_proof.json"
+    _write_zip_with_member_header_overhead(archive, payload=b"A" * 4096)
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_family_agnostic_materializer.py"),
+            "--target-kind",
+            "packet_member_zip_header_elide_v1",
+            "--archive-path",
+            str(archive),
+            "--output-archive",
+            str(output),
+            "--output-manifest",
+            str(manifest),
+            "--member-name",
+            "payload.bin",
+        ],
+        check=True,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    stdout_payload = json.loads(completed.stdout)
+    assert payload["schema"] == PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA
+    assert stdout_payload["schema"] == PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA
+    assert proof.is_file()
+    assert payload["receiver_contract_satisfied"] is True
+    assert payload["receiver_verification"]["proof_present"] is True
+    assert payload["runtime_consumption_proof_path"] == str(proof)
+    assert payload["selected_elision"]["saved_bytes"] > 0
     assert payload["tool_run_manifest"]["tool"] == "tools/run_family_agnostic_materializer.py"
     assert payload["score_claim"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False

@@ -19,10 +19,12 @@ ensure_repo_imports(REPO_ROOT)
 from tac.optimization.family_agnostic_materializers import (  # noqa: E402
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+    PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
     FamilyAgnosticMaterializerError,
     materialize_archive_section_entropy_recode_candidate,
     materialize_packet_member_recompress_candidate,
+    materialize_packet_member_zip_header_elide_candidate,
     materialize_tensor_factorize_candidate,
 )
 from tac.repo_io import (  # noqa: E402
@@ -42,6 +44,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         choices=(
             ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
             PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+            PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
             TENSOR_FACTORIZE_TARGET_KIND,
         ),
     )
@@ -55,6 +58,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--brotli-quality", action="append", type=int, default=[])
     parser.add_argument("--packet-member-manifest", type=Path)
     parser.add_argument("--member-name")
+    parser.add_argument("--header-elision-contract", type=Path)
     parser.add_argument("--zip-compression-method", action="append", default=[])
     parser.add_argument("--zip-compresslevel", action="append", type=int, default=[])
     parser.add_argument("--tensor-manifest", type=Path)
@@ -128,6 +132,7 @@ def _run_materializer(
     proof_out_target_kinds = {
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
         TENSOR_FACTORIZE_TARGET_KIND,
     }
     if (
@@ -137,7 +142,7 @@ def _run_materializer(
         raise FamilyAgnosticMaterializerError(
             "--runtime-consumption-proof-out is currently supported only for "
             "archive_section_entropy_recode_v1, packet_member_recompress_v1, "
-            "and tensor_factorize_v1"
+            "packet_member_zip_header_elide_v1, and tensor_factorize_v1"
         )
     common = {
         "archive_path": args.archive_path,
@@ -182,6 +187,26 @@ def _run_materializer(
             member_name=args.member_name,
             compression_methods=tuple(args.zip_compression_method or ["stored", "deflated"]),
             compresslevels=tuple(args.zip_compresslevel or [9]),
+            runtime_consumption_proof_out=runtime_proof_out,
+            expected_existing_runtime_consumption_proof_sha256=(
+                args.expected_existing_runtime_consumption_proof_sha256
+            ),
+        )
+    if args.target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
+        if args.packet_member_manifest is not None:
+            input_paths.append(args.packet_member_manifest)
+        if args.header_elision_contract is not None:
+            input_paths.append(args.header_elision_contract)
+        runtime_proof_out = args.runtime_consumption_proof_out
+        if args.runtime_consumption_proof is None and runtime_proof_out is None:
+            runtime_proof_out = args.output_manifest.with_name(
+                f"{args.output_manifest.stem}.runtime_consumption_proof.json"
+            )
+        return materialize_packet_member_zip_header_elide_candidate(
+            **common,
+            packet_member_manifest=args.packet_member_manifest,
+            member_name=args.member_name,
+            header_elision_contract=args.header_elision_contract,
             runtime_consumption_proof_out=runtime_proof_out,
             expected_existing_runtime_consumption_proof_sha256=(
                 args.expected_existing_runtime_consumption_proof_sha256

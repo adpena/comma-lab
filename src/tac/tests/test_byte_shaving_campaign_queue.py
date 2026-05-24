@@ -62,6 +62,7 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_REORDER_TARGET_KIND,
+    PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     TENSOR_FACTORIZE_MATERIALIZER,
     TENSOR_FACTORIZE_TARGET_KIND,
@@ -97,6 +98,7 @@ from tac.optimization.byte_shaving_campaign import (
 from tac.optimization.family_agnostic_materializers import (
     ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
+    PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
     TENSOR_FACTORIZE_SCHEMA,
 )
 from tac.optimization.inverse_scorer_cell_chain import (
@@ -908,6 +910,20 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
                 "unit_kind": "packet_member",
             },
             PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
+            "local_cpu",
+        ),
+        (
+            {
+                "unit_id": "non_nerv_payload_header",
+                "operation_id": "elide_payload_zip_header",
+                "operation_family": "zip_header_elide",
+                "target_kind": PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+            },
+            {
+                "unit_id": "non_nerv_payload_header",
+                "unit_kind": "packet_member",
+            },
+            PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER,
             "local_cpu",
         ),
     ]
@@ -1920,6 +1936,80 @@ def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
     assert "tensor_factorize_requires_cooperative_receiver" in tensor_row["dispatch_blockers"]
     assert tensor_row["score_claim"] is False
     assert tensor_row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_work_queue_wraps_packet_member_zip_header_elide(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    packet_manifest = tmp_path / "packet_members.json"
+    header_contract = tmp_path / "zip_header_contract.json"
+    output = tmp_path / "header_candidate.zip"
+    out_manifest = tmp_path / "header_candidate.json"
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "backlog_key": "packet_member_zip_header_elide_fixture",
+                "unit_kind": "packet_member",
+                "operation_family": "zip_header_elide",
+                "target_kind": PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+                "materializer_id": PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER,
+            },
+        ],
+    }
+
+    queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts={
+            "packet_member_zip_header_elide_fixture": {
+                "archive_path": str(archive),
+                "packet_member_manifest": str(packet_manifest),
+                "member_name": "payload.bin",
+                "header_elision_contract": str(header_contract),
+                "output_archive": str(output),
+                "output_manifest": str(out_manifest),
+            },
+        },
+        source_plan_path="plan.json",
+    )
+
+    runtime_proof = out_manifest.with_name(
+        f"{out_manifest.stem}.runtime_consumption_proof.json"
+    )
+    row = queue["rows"][0]
+    assert queue["executable_row_count"] == 1
+    assert row["tool"] == "tools/run_family_agnostic_materializer.py"
+    assert [
+        "--target-kind",
+        PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+    ] in [row["command"][index : index + 2] for index in range(len(row["command"]) - 1)]
+    assert ["--member-name", "payload.bin"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--header-elision-contract", str(header_contract)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--runtime-consumption-proof-out", str(runtime_proof)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    _assert_typed_postconditions(
+        row["postconditions"],
+        path=out_manifest,
+        schema=PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
+    )
+    assert row["telemetry"]["input_artifact_paths"] == [
+        str(archive),
+        str(packet_manifest),
+        str(header_contract),
+    ]
+    assert str(runtime_proof) in row["telemetry"]["artifact_paths"]
+    assert "packet_member_zip_header_elide_requires_runtime_consumption_proof" in (
+        row["dispatch_blockers"]
+    )
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
 
 
 def test_family_agnostic_candidate_postconditions_reject_weak_receiver_manifest(

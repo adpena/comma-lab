@@ -35,6 +35,7 @@ from tac.optimization.decoder_q_constants import FEC6_PAIR_COUNT
 from tac.optimization.family_agnostic_materializers import (
     ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
+    PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
     TENSOR_FACTORIZE_SCHEMA,
 )
 from tac.optimization.inverse_scorer_cell_chain import (
@@ -60,6 +61,7 @@ from .byte_shaving_materializer_registry import (
     INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
     INVERSE_SCORER_CELL_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+    PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     REGISTRY_SCHEMA,
     TENSOR_FACTORIZE_TARGET_KIND,
     known_materializer_target_kinds,
@@ -110,6 +112,7 @@ HARVESTABLE_MATERIALIZER_MANIFEST_SCHEMAS = frozenset(
         INVERSE_SCORER_CELL_CHAIN_SCHEMA,
         ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
         PACKET_MEMBER_RECOMPRESS_SCHEMA,
+        PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
         TENSOR_FACTORIZE_SCHEMA,
     }
 )
@@ -1516,6 +1519,13 @@ def _family_agnostic_materializer_command(
         packet_member_manifest = _path_context_value(context, "packet_member_manifest")
         if packet_member_manifest is not None:
             input_paths.append(packet_member_manifest)
+    elif target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
+        packet_member_manifest = _path_context_value(context, "packet_member_manifest")
+        if packet_member_manifest is not None:
+            input_paths.append(packet_member_manifest)
+        header_elision_contract = _path_context_value(context, "header_elision_contract")
+        if header_elision_contract is not None:
+            input_paths.append(header_elision_contract)
     elif target_kind == TENSOR_FACTORIZE_TARGET_KIND:
         tensor_manifest = _path_context_value(context, "tensor_manifest")
         if tensor_manifest is None:
@@ -1555,6 +1565,7 @@ def _family_agnostic_materializer_command(
     if runtime_proof is None and target_kind in {
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
         TENSOR_FACTORIZE_TARGET_KIND,
     }:
         runtime_proof_out = _path_context_value(context, "runtime_consumption_proof_out")
@@ -1638,6 +1649,19 @@ def _family_agnostic_materializer_command(
         levels.extend(_string_list_context_value(context, "compresslevel"))
         for level in ordered_unique(levels):
             command.extend(["--zip-compresslevel", level])
+    elif target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
+        packet_member_manifest = _path_context_value(context, "packet_member_manifest")
+        if packet_member_manifest is not None:
+            command.extend(["--packet-member-manifest", packet_member_manifest])
+        header_elision_contract = _path_context_value(context, "header_elision_contract")
+        if header_elision_contract is not None:
+            command.extend(["--header-elision-contract", header_elision_contract])
+        member_name = _context_string_any(
+            context,
+            ("member_name", "archive_member_name", "packet_member_name"),
+        )
+        if member_name is not None:
+            command.extend(["--member-name", member_name])
     elif target_kind == TENSOR_FACTORIZE_TARGET_KIND:
         tensor_manifest = _path_context_value(context, "tensor_manifest")
         assert tensor_manifest is not None
@@ -1687,6 +1711,13 @@ def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
             [
                 "packet_member_recompress_requires_archive_preflight",
                 "packet_member_recompress_requires_runtime_consumption_proof",
+            ]
+        )
+    if target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
+        blockers.extend(
+            [
+                "packet_member_zip_header_elide_requires_archive_preflight",
+                "packet_member_zip_header_elide_requires_runtime_consumption_proof",
             ]
         )
     if target_kind == TENSOR_FACTORIZE_TARGET_KIND:
@@ -1792,6 +1823,7 @@ def _materializer_candidate_postconditions(
     if target_kind in {
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
         TENSOR_FACTORIZE_TARGET_KIND,
     }:
         required_equals["receiver_verification.schema"] = "family_agnostic_runtime_consumption_proof_verification.v1"
@@ -1823,6 +1855,7 @@ def _materializer_candidate_postconditions(
                     in {
                         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
                         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                        PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
                         TENSOR_FACTORIZE_TARGET_KIND,
                     }
                     else []
@@ -2008,6 +2041,28 @@ def build_materializer_work_queue(
                     manifest_path=manifest_out,
                     schema=PACKET_MEMBER_RECOMPRESS_SCHEMA,
                     target_kind=PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                )
+        elif (
+            unit_kind == "packet_member"
+            and operation_family == "zip_header_elide"
+            and target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND
+        ):
+            command, command_blockers, telemetry = _family_agnostic_materializer_command(
+                context,
+                target_kind=PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+            )
+            blockers.extend(command_blockers)
+            manifest_out = _path_context_value(context, "output_manifest")
+            if manifest_out is None:
+                manifest_out = _path_context_value(context, "manifest_out")
+            output_archive = _path_context_value(context, "output_archive")
+            if manifest_out is None and output_archive is not None:
+                manifest_out = Path(output_archive).with_suffix(".json").as_posix()
+            if command and manifest_out is not None:
+                postconditions = _materializer_candidate_postconditions(
+                    manifest_path=manifest_out,
+                    schema=PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
+                    target_kind=PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
                 )
         elif (
             unit_kind == "tensor"

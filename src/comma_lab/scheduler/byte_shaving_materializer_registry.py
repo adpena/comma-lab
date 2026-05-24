@@ -424,22 +424,29 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
             "runtime_consumption_proof",
         ),
     ),
-    _non_executable_family_adapter(
+    MaterializerAdapter(
         materializer_id=PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER,
         unit_kind="packet_member",
         operation_family="zip_header_elide",
         target_kind=PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+        executable=True,
         description=(
-            "Fail-closed contract for ZIP/member header elision when the "
-            "contest runtime can reconstruct deterministic header state."
+            "Family-agnostic ZIP/member header elision materializer for "
+            "deterministic metadata that the runtime can reconstruct or ignore. "
+            "Member payload bytes stay identical; exact-readiness still requires "
+            "runtime-consumption proof and auth eval."
         ),
+        receiver_contract_id=f"{PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND}.receiver.v1",
         receiver_contract_kind="family_agnostic_packet_member_zip_header_elide",
+        cooperative_receiver_required=True,
+        materialization_resource_kind="local_cpu",
         required_context_fields=(
             "archive_path",
-            "packet_member_manifest",
-            "zip_header_contract",
-            "runtime_consumption_proof",
+            "output_archive",
+            "output_manifest",
         ),
+        implementation_module="tac.optimization.family_agnostic_materializers",
+        materialize_function="materialize_packet_member_zip_header_elide_candidate",
     ),
     MaterializerAdapter(
         materializer_id=PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
