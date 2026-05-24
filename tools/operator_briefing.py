@@ -1700,6 +1700,26 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
             if isinstance(payload.get("queue_feedback_replan_followup_queue_blockers"), list)
             else []
         ),
+        "queue_feedback_replan_followup_policy": str(
+            payload.get("queue_feedback_replan_followup_policy") or ""
+        ),
+        "queue_feedback_replan_followup_policy_enabled": (
+            payload.get("queue_feedback_replan_followup_policy_enabled") is True
+        ),
+        "queue_feedback_replan_followup_policy_blocker_count": len(
+            payload.get("queue_feedback_replan_followup_policy_blockers")
+            if isinstance(payload.get("queue_feedback_replan_followup_policy_blockers"), list)
+            else []
+        ),
+        "queue_feedback_replan_followup_execution_requested": (
+            payload.get("queue_feedback_replan_followup_execution_requested") is True
+        ),
+        "queue_feedback_replan_followup_executed": (
+            payload.get("queue_feedback_replan_followup_executed") is True
+        ),
+        "queue_feedback_replan_followup_execution_success": (
+            payload.get("queue_feedback_replan_followup_execution_success") is True
+        ),
         "local_cpu_concurrency": _safe_int(build.get("local_cpu_concurrency")),
         "worker_max_parallel": _safe_int(worker.get("max_parallel")),
         "worker_execute": worker.get("execute") is True,
@@ -1796,6 +1816,21 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
             for row in rows
             if row.get("queue_feedback_replan_followup_queue_emitted") is True
         ),
+        "queue_feedback_followup_policy_enabled_count": sum(
+            1
+            for row in rows
+            if row.get("queue_feedback_replan_followup_policy_enabled") is True
+        ),
+        "queue_feedback_followup_executed_count": sum(
+            1
+            for row in rows
+            if row.get("queue_feedback_replan_followup_executed") is True
+        ),
+        "queue_feedback_followup_execution_success_count": sum(
+            1
+            for row in rows
+            if row.get("queue_feedback_replan_followup_execution_success") is True
+        ),
         "overall_executable_conversion_rate": total_executable / total_work
         if total_work
         else 0.0,
@@ -1834,6 +1869,10 @@ def _format_byte_shaving_acquisition_summary() -> str:
             f"exact_handoffs={payload['total_exact_readiness_handoff_count']} "
             f"feedback_ready={payload['queue_feedback_ready_count']} "
             f"feedback_queued={payload['queue_feedback_followup_queue_count']} "
+            f"feedback_policy={payload['queue_feedback_followup_policy_enabled_count']} "
+            f"feedback_executed={payload['queue_feedback_followup_executed_count']} "
+            "feedback_success="
+            f"{payload['queue_feedback_followup_execution_success_count']} "
             f"local_mlx_ready_steps={payload['local_mlx_ready_step_count']}"
         ),
         f"score_claim: {payload['score_claim']}",
@@ -1868,6 +1907,12 @@ def _format_byte_shaving_acquisition_summary() -> str:
                 f"feedback_ready={row.get('queue_feedback_replan_ready') is True} "
                 "feedback_queued="
                 f"{row.get('queue_feedback_replan_followup_queue_emitted') is True} "
+                "feedback_policy="
+                f"{row.get('queue_feedback_replan_followup_policy') or '<none>'} "
+                "feedback_executed="
+                f"{row.get('queue_feedback_replan_followup_executed') is True} "
+                "feedback_success="
+                f"{row.get('queue_feedback_replan_followup_execution_success') is True} "
                 f"ready_steps={row.get('ready_step_count', 0)} "
                 f"local_mlx_ready={row.get('local_mlx_ready_step_count', 0)}"
             )

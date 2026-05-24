@@ -1728,7 +1728,11 @@ def test_materializer_work_queue_wraps_archive_section_entropy_recode_adapter(
         schema=ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
     )
     completion_contract = row["postconditions"][1]
-    assert completion_contract["required_true"] == ["byte_closed_candidate_emitted"]
+    assert completion_contract["required_true"] == [
+        "byte_closed_candidate_emitted",
+        "receiver_contract_satisfied",
+        "receiver_verification.receiver_contract_satisfied",
+    ]
     assert completion_contract["required_positive_int"] == [
         "candidate_archive.bytes",
         "candidate_member.bytes",
@@ -1737,11 +1741,8 @@ def test_materializer_work_queue_wraps_archive_section_entropy_recode_adapter(
         "candidate_archive.sha256",
         "candidate_member.sha256",
     ]
-    assert completion_contract["required_nonempty_unless_true"] == [
-        {
-            "key": "readiness_blockers",
-            "unless_true": "receiver_contract_satisfied",
-        }
+    assert completion_contract["required_nonempty"] == [
+        "runtime_consumption_proof_path"
     ]
     assert row["telemetry"]["artifact_paths"] == [
         str(output_archive),
@@ -1979,6 +1980,34 @@ def test_family_agnostic_candidate_postconditions_reject_weak_receiver_manifest(
 
     weak_manifest["readiness_blockers"] = ["runtime_consumption_proof_missing"]
     out_manifest.write_text(json.dumps(weak_manifest), encoding="utf-8")
+    assert not _condition_passes(completion_contract, repo_root=tmp_path)
+
+    proof_path = tmp_path / "runtime_consumption_proof.json"
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_runtime_consumption_proof.v1",
+                "receiver_contract_satisfied": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    strong_manifest = {
+        **weak_manifest,
+        "receiver_contract_satisfied": True,
+        "receiver_verification": {
+            "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+            "receiver_contract_satisfied": True,
+            "proof_path": str(proof_path),
+        },
+        "runtime_consumption_proof_path": str(proof_path),
+        "readiness_blockers": [],
+    }
+    out_manifest.write_text(json.dumps(strong_manifest), encoding="utf-8")
     assert _condition_passes(completion_contract, repo_root=tmp_path)
 
 

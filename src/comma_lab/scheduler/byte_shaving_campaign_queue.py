@@ -1722,12 +1722,7 @@ def _materializer_candidate_postconditions(
         required_equals["receiver_verification.schema"] = "family_agnostic_runtime_consumption_proof_verification.v1"
         required_sha256.append("candidate_member.sha256")
         required_positive_int.append("candidate_member.bytes")
-        required_nonempty_unless_true.append(
-            {
-                "key": "readiness_blockers",
-                "unless_true": "receiver_contract_satisfied",
-            }
-        )
+        required_nonempty.append("runtime_consumption_proof_path")
     if target_kind == TENSOR_FACTORIZE_TARGET_KIND:
         required_equals["receiver_contract_kind"] = "family_agnostic_tensor_factorize"
         required_positive_int.append("factorization.factor_payload_bytes")
@@ -1742,7 +1737,22 @@ def _materializer_candidate_postconditions(
             "type": "json_completion_contract",
             "path": manifest_path,
             "required_equals": required_equals,
-            "required_true": ["byte_closed_candidate_emitted"],
+            "required_true": [
+                "byte_closed_candidate_emitted",
+                *(
+                    [
+                        "receiver_contract_satisfied",
+                        "receiver_verification.receiver_contract_satisfied",
+                    ]
+                    if target_kind
+                    in {
+                        ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+                        PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                        TENSOR_FACTORIZE_TARGET_KIND,
+                    }
+                    else []
+                ),
+            ],
             "required_false": [
                 "score_claim",
                 "promotion_eligible",

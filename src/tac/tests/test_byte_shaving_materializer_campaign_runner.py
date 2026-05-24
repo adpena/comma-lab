@@ -679,7 +679,7 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
             "--max-idle-cycles",
             "1",
             "--execute",
-            "--execute-queue-feedback-replan-followup",
+            "--queue-feedback-replan-followup-policy-local-autopilot",
             "--queue-feedback-replan-followup-state",
             str(feedback_followup_state),
             "--queue-feedback-replan-followup-state-rationale",
@@ -714,6 +714,12 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     )
     assert summary["queue_feedback_replan_followup_queue_emitted"] is True
     assert summary["queue_feedback_replan_followup_queue_blockers"] == []
+    assert summary["queue_feedback_replan_followup_execution_policy"] == (
+        "local_autopilot_policy"
+    )
+    assert summary["queue_feedback_replan_followup_policy_enabled"] is True
+    assert summary["queue_feedback_replan_followup_policy_blockers"] == []
+    assert summary["queue_feedback_replan_followup_execution_requested"] is True
     assert summary["queue_feedback_replan_followup_executed"] is True
     assert summary["queue_feedback_replan_followup_execution_success"] is True
     assert summary["queue_feedback_replan_followup_state_path"] == str(
@@ -728,6 +734,7 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     )
     assert feedback_execution["success"] is True
     assert feedback_execution["blockers"] == []
+    assert feedback_execution["activation_policy"] == "local_autopilot_policy"
     assert feedback_execution["score_claim"] is False
     assert feedback_execution["ready_for_exact_eval_dispatch"] is False
     assert feedback_execution["worker"]["schema"] == "experiment_queue_worker_result.v1"
@@ -1219,11 +1226,12 @@ def test_materializer_campaign_feedback_followup_queue_fails_truthy_dispatch_ali
     assert result["failed_postconditions"][0]["type"] == "json_completion_contract"
 
 
-def test_materializer_campaign_feedback_followup_execution_requires_explicit_flag(
+def test_materializer_campaign_feedback_followup_execution_requires_execution_intent(
     tmp_path: Path,
 ) -> None:
     args = runner.parse_args(["--plan", str(tmp_path / "plan.json")])
     assert args.execute_queue_feedback_replan_followup is False
+    assert args.queue_feedback_replan_followup_policy_local_autopilot is False
 
     with pytest.raises(SystemExit, match="queue-feedback-replan-followup-state"):
         runner.main(
@@ -1231,6 +1239,17 @@ def test_materializer_campaign_feedback_followup_execution_requires_explicit_fla
                 "--plan",
                 str(tmp_path / "plan.json"),
                 "--execute-queue-feedback-replan-followup",
+                "--queue-feedback-replan-followup-state",
+                str(tmp_path / "feedback.sqlite"),
+            ]
+        )
+
+    with pytest.raises(SystemExit, match="queue-feedback-replan-followup-state"):
+        runner.main(
+            [
+                "--plan",
+                str(tmp_path / "plan.json"),
+                "--queue-feedback-replan-followup-policy-local-autopilot",
                 "--queue-feedback-replan-followup-state",
                 str(tmp_path / "feedback.sqlite"),
             ]
@@ -1272,6 +1291,93 @@ def test_materializer_campaign_feedback_followup_queue_blocks_non_action_command
     assert queue is None
     assert "queue_feedback_replan_command_not_action_functional_tool" in blockers
     assert "queue_feedback_replan_command_forbidden_flag:--dispatch-mode" in blockers
+
+
+def test_materializer_campaign_feedback_followup_local_autopolicy_guard(
+    tmp_path: Path,
+) -> None:
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--materializer-contexts",
+            str(tmp_path / "contexts.json"),
+        ]
+    )
+    queue, blockers = runner._queue_feedback_replan_followup_queue_payload(
+        args,
+        queue_feedback_replan_request={
+            "ready_for_action_functional_feedback": True,
+            "blockers": [],
+            "plan_path": str(tmp_path / "plan.json"),
+            "queue_performance_summary_path": str(tmp_path / "performance.json"),
+            "queue_performance_runtime_identity_path": str(tmp_path / "runtime.json"),
+            "queue_performance_cache_identity_path": str(tmp_path / "cache.json"),
+            "command_template": [
+                runner.sys.executable,
+                "tools/build_inverse_steganalysis_action_functional.py",
+                "--output",
+                str(tmp_path / "feedback.json"),
+            ],
+        },
+        queue_feedback_replan_request_path=tmp_path / "request.json",
+        run_dir=tmp_path,
+        execution_queue=tmp_path / "source_queue.json",
+        state_path=tmp_path / "source_queue.sqlite",
+        source_queue={"queue_id": "unit_queue"},
+    )
+
+    assert blockers == []
+    assert queue is not None
+    assert runner._queue_feedback_replan_followup_local_autopolicy_blockers(queue) == []
+
+    unsafe_queue = json.loads(json.dumps(queue))
+    unsafe_queue["controls"]["mode"] = "running"
+    unsafe_queue["controls"]["max_concurrency"]["cuda"] = 1
+    unsafe_queue["experiments"][0]["metadata"]["score_claim"] = True
+    unsafe_queue["experiments"][0]["metadata"]["dispatch_ready"] = True
+    unsafe_queue["experiments"][0]["metadata"]["exact_eval_dispatch_ready"] = True
+    unsafe_queue["experiments"][0]["metadata"]["score_affecting_payload_changed"] = True
+    unsafe_queue["experiments"][0]["metadata"]["charged_bits_changed"] = True
+    unsafe_queue["experiments"][0]["metadata"]["dispatch_packet_ready"] = True
+    unsafe_step = unsafe_queue["experiments"][0]["steps"][0]
+    unsafe_step["resources"]["kind"] = "cuda"
+    unsafe_step["command"].extend(["--provider", "modal"])
+
+    policy_blockers = runner._queue_feedback_replan_followup_local_autopolicy_blockers(
+        unsafe_queue
+    )
+
+    assert "queue_feedback_replan_followup_control_mode_not_paused" in policy_blockers
+    assert "queue_feedback_replan_followup_non_local_concurrency:cuda" in policy_blockers
+    assert (
+        "queue_feedback_replan_followup_truthy_authority_field:"
+        "experiments[0].metadata.score_claim=truthy"
+    ) in policy_blockers
+    assert (
+        "queue_feedback_replan_followup_truthy_authority_field:"
+        "experiments[0].metadata.dispatch_ready=truthy"
+    ) in policy_blockers
+    assert (
+        "queue_feedback_replan_followup_truthy_authority_field:"
+        "experiments[0].metadata.exact_eval_dispatch_ready=truthy"
+    ) in policy_blockers
+    assert (
+        "queue_feedback_replan_followup_truthy_authority_field:"
+        "experiments[0].metadata.score_affecting_payload_changed=truthy"
+    ) in policy_blockers
+    assert (
+        "queue_feedback_replan_followup_truthy_authority_field:"
+        "experiments[0].metadata.charged_bits_changed=truthy"
+    ) in policy_blockers
+    assert (
+        "queue_feedback_replan_followup_truthy_authority_field:"
+        "experiments[0].metadata.dispatch_packet_ready=truthy"
+    ) in policy_blockers
+    assert "queue_feedback_replan_followup_step_not_local_cpu:0:0" in policy_blockers
+    assert (
+        "queue_feedback_replan_followup_step_command_forbidden_flag:0:0:--provider"
+    ) in policy_blockers
 
 
 def test_materializer_campaign_runner_preserves_feedback_artifacts_when_worker_fails(

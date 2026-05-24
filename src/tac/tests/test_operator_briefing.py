@@ -1143,6 +1143,12 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
                 ".omx/research/high_level/campaign3/queue_feedback_replan_followup_queue.json"
             ),
             "queue_feedback_replan_followup_queue_blockers": [],
+            "queue_feedback_replan_followup_policy": "local_autopilot_policy",
+            "queue_feedback_replan_followup_policy_enabled": True,
+            "queue_feedback_replan_followup_policy_blockers": [],
+            "queue_feedback_replan_followup_execution_requested": True,
+            "queue_feedback_replan_followup_executed": True,
+            "queue_feedback_replan_followup_execution_success": True,
             "exact_readiness_handoff_count": 1,
             "state_path": ".omx/state/experiment_queue_high_level_fixture_campaign3.sqlite",
             "experiment_count": 3,
@@ -1200,6 +1206,9 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
     assert summary["total_exact_readiness_handoff_count"] == 1
     assert summary["queue_feedback_ready_count"] == 1
     assert summary["queue_feedback_followup_queue_count"] == 1
+    assert summary["queue_feedback_followup_policy_enabled_count"] == 1
+    assert summary["queue_feedback_followup_executed_count"] == 1
+    assert summary["queue_feedback_followup_execution_success_count"] == 1
     assert summary["overall_executable_conversion_rate"] == 0.5
     assert summary["score_claim"] is False
     assert summary["ready_for_exact_eval_dispatch"] is False
@@ -1212,6 +1221,16 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
     assert summary["latest_rows"][0]["exact_readiness_handoff_count"] == 1
     assert summary["latest_rows"][0]["queue_feedback_replan_ready"] is True
     assert summary["latest_rows"][0]["queue_feedback_replan_followup_queue_emitted"] is True
+    assert summary["latest_rows"][0]["queue_feedback_replan_followup_policy"] == (
+        "local_autopilot_policy"
+    )
+    assert summary["latest_rows"][0]["queue_feedback_replan_followup_policy_enabled"] is True
+    assert summary["latest_rows"][0]["queue_feedback_replan_followup_policy_blocker_count"] == 0
+    assert summary["latest_rows"][0]["queue_feedback_replan_followup_executed"] is True
+    assert (
+        summary["latest_rows"][0]["queue_feedback_replan_followup_execution_success"]
+        is True
+    )
     assert "High-level inverse-steganalysis/action-surface campaign intake" in text
     assert "status=READY_LOCAL_QUEUE" in text
     assert "conversion=50.00%" in text
@@ -1221,6 +1240,9 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
     assert "exact_handoffs=1" in text
     assert "feedback_ready=True" in text
     assert "feedback_queued=True" in text
+    assert "feedback_policy=local_autopilot_policy" in text
+    assert "feedback_executed=True" in text
+    assert "feedback_success=True" in text
     assert "local_mlx_ready=1" in text
     assert "materialize_inverse_scorer_cell_candidate" in text
     assert "not score authority" in text

@@ -93,6 +93,15 @@ QUEUE_FEEDBACK_REPLAN_FORBIDDEN_COMMAND_FLAGS = frozenset(
         "--submit",
     }
 )
+QUEUE_FEEDBACK_REPLAN_AUTOPOLICY_FORBIDDEN_TRUE_FIELDS = tuple(
+    dict.fromkeys(
+        (
+            *DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
+            *DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
+            "dispatch_packet_ready",
+        )
+    )
+)
 _RUN_CONFIG_METADATA_KEYS = frozenset({"schema", "notes", "description", "owner"})
 QUEUE_RUNTIME_IDENTITY_FILE_PATHS = (
     "tools/run_byte_shaving_materializer_campaign.py",
@@ -636,6 +645,102 @@ def _queue_feedback_replan_followup_queue_payload(
     return queue, []
 
 
+def _queue_feedback_replan_followup_local_autopolicy_blockers(
+    child_queue: Mapping[str, Any],
+) -> list[str]:
+    blockers: list[str] = []
+    if child_queue.get("schema") != QUEUE_SCHEMA:
+        blockers.append("queue_feedback_replan_followup_schema_not_experiment_queue")
+
+    controls = child_queue.get("controls")
+    if not isinstance(controls, Mapping):
+        blockers.append("queue_feedback_replan_followup_controls_missing")
+    else:
+        if controls.get("mode") != "paused":
+            blockers.append("queue_feedback_replan_followup_control_mode_not_paused")
+        if controls.get("local_first") is not True:
+            blockers.append("queue_feedback_replan_followup_not_local_first")
+        max_concurrency = controls.get("max_concurrency")
+        if isinstance(max_concurrency, Mapping):
+            non_local_limits = sorted(str(key) for key in max_concurrency if str(key) != "local_cpu")
+            blockers.extend(
+                f"queue_feedback_replan_followup_non_local_concurrency:{key}"
+                for key in non_local_limits
+            )
+        elif max_concurrency not in ({}, None):
+            blockers.append("queue_feedback_replan_followup_max_concurrency_not_mapping")
+
+    for violation in truthy_authority_field_violations(
+        child_queue,
+        fields=QUEUE_FEEDBACK_REPLAN_AUTOPOLICY_FORBIDDEN_TRUE_FIELDS,
+    ):
+        blockers.append(f"queue_feedback_replan_followup_truthy_authority_field:{violation}")
+
+    experiments = child_queue.get("experiments")
+    if not isinstance(experiments, list) or not experiments:
+        blockers.append("queue_feedback_replan_followup_experiments_missing")
+        return list(dict.fromkeys(blockers))
+
+    for experiment_index, experiment in enumerate(experiments):
+        if not isinstance(experiment, Mapping):
+            blockers.append(
+                f"queue_feedback_replan_followup_experiment_not_object:{experiment_index}"
+            )
+            continue
+        steps = experiment.get("steps")
+        if not isinstance(steps, list) or not steps:
+            blockers.append(
+                f"queue_feedback_replan_followup_steps_missing:{experiment_index}"
+            )
+            continue
+        for step_index, step in enumerate(steps):
+            if not isinstance(step, Mapping):
+                blockers.append(
+                    "queue_feedback_replan_followup_step_not_object:"
+                    f"{experiment_index}:{step_index}"
+                )
+                continue
+            resources = step.get("resources")
+            if not isinstance(resources, Mapping) or resources.get("kind") != "local_cpu":
+                blockers.append(
+                    "queue_feedback_replan_followup_step_not_local_cpu:"
+                    f"{experiment_index}:{step_index}"
+                )
+            command = step.get("command")
+            if not isinstance(command, list) or not command:
+                blockers.append(
+                    "queue_feedback_replan_followup_step_command_missing:"
+                    f"{experiment_index}:{step_index}"
+                )
+                continue
+            command_items = [str(item) for item in command]
+            if len(command_items) < 2 or command_items[1] != (
+                "tools/build_inverse_steganalysis_action_functional.py"
+            ):
+                blockers.append(
+                    "queue_feedback_replan_followup_step_command_not_action_functional_tool:"
+                    f"{experiment_index}:{step_index}"
+                )
+            forbidden_flags = sorted(
+                flag for flag in command_items if flag in QUEUE_FEEDBACK_REPLAN_FORBIDDEN_COMMAND_FLAGS
+            )
+            blockers.extend(
+                "queue_feedback_replan_followup_step_command_forbidden_flag:"
+                f"{experiment_index}:{step_index}:{flag}"
+                for flag in forbidden_flags
+            )
+
+    return list(dict.fromkeys(blockers))
+
+
+def _queue_feedback_replan_followup_activation_policy(args: argparse.Namespace) -> str:
+    if args.execute_queue_feedback_replan_followup:
+        return "explicit_cli"
+    if args.queue_feedback_replan_followup_policy_local_autopilot:
+        return "local_autopilot_policy"
+    return "paused_only"
+
+
 def _execution_stdout_json(
     result: CommandResult,
     *,
@@ -654,6 +759,7 @@ def _queue_feedback_replan_followup_execution_payload(
     child_queue: Mapping[str, Any],
     child_queue_path: Path,
     run_dir: Path,
+    activation_policy: str,
 ) -> tuple[dict[str, Any], list[CommandResult], int]:
     state_path = (
         _resolve(args.queue_feedback_replan_followup_state)
@@ -686,9 +792,14 @@ def _queue_feedback_replan_followup_execution_payload(
     validate_result = run_step("validate", ["validate"])
     init_result = run_step("init", ["init"]) if validate_result.returncode == 0 else None
     if init_result is not None and init_result.returncode == 0:
+        default_control_reason = (
+            "queue-owned local feedback replan policy"
+            if activation_policy == "local_autopilot_policy"
+            else "materializer campaign explicit local-only feedback replan autorun"
+        )
         control_reason = (
             args.queue_feedback_replan_followup_activation_reason
-            or "materializer campaign explicit local-only feedback replan autorun"
+            or default_control_reason
         )
         control_result = run_step(
             "control",
@@ -766,7 +877,7 @@ def _queue_feedback_replan_followup_execution_payload(
             "action_functional_md_path": None if md_path is None else _display_path(md_path),
             "max_steps": args.queue_feedback_replan_followup_max_steps,
             "max_parallel": args.queue_feedback_replan_followup_max_parallel,
-            "activation_policy": "explicit_local_only_runner_flag",
+            "activation_policy": activation_policy,
             "allowed_use": "local_queue_feedback_replan_execution_only",
             "forbidden_use": "score_claim_or_promotion_or_paid_dispatch_authority",
             "validate": parsed.get("validate"),
@@ -785,6 +896,7 @@ def _queue_feedback_replan_followup_execution_refusal_payload(
     *,
     blockers: Sequence[str],
     child_queue_path: Path,
+    activation_policy: str,
 ) -> dict[str, Any]:
     return _false_authority_payload(
         {
@@ -797,7 +909,7 @@ def _queue_feedback_replan_followup_execution_refusal_payload(
             "state_path": None,
             "action_functional_output_path": None,
             "action_functional_md_path": None,
-            "activation_policy": "explicit_local_only_runner_flag",
+            "activation_policy": activation_policy,
             "allowed_use": "local_queue_feedback_replan_execution_only",
             "forbidden_use": "score_claim_or_promotion_or_paid_dispatch_authority",
             "commands": [],
@@ -1306,6 +1418,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             "after emitting the paused feedback child queue, explicitly resume "
             "and run bounded local-only steps to build the next action functional"
+        ),
+    )
+    parser.add_argument(
+        "--queue-feedback-replan-followup-policy-local-autopilot",
+        action="store_true",
+        help=(
+            "allow the queue-owned local autopolicy to resume the paused feedback child "
+            "queue when strict local-only and false-authority checks pass"
         ),
     )
     parser.add_argument("--queue-feedback-replan-followup-state", type=Path, default=None)
@@ -2546,7 +2666,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.execute and args.queue_state is not None and not args.queue_state_rationale:
         raise SystemExit("--queue-state requires --queue-state-rationale when executing the generated queue")
     if (
-        args.execute_queue_feedback_replan_followup
+        (
+            args.execute_queue_feedback_replan_followup
+            or args.queue_feedback_replan_followup_policy_local_autopilot
+        )
         and args.queue_feedback_replan_followup_state is not None
         and not args.queue_feedback_replan_followup_state_rationale
     ):
@@ -2790,6 +2913,9 @@ def main(argv: list[str] | None = None) -> int:
     queue_feedback_replan_staircase_artifacts: dict[str, Any] | None = None
     queue_feedback_replan_followup_execution: dict[str, Any] | None = None
     queue_feedback_replan_followup_execution_returncode = 0
+    queue_feedback_replan_followup_policy = _queue_feedback_replan_followup_activation_policy(args)
+    queue_feedback_replan_followup_policy_blockers: list[str] = []
+    queue_feedback_replan_followup_execution_attempted = False
     queue_performance_summary = _queue_performance_summary_payload(
         performance_result,
         queue=queue,
@@ -2906,7 +3032,21 @@ def main(argv: list[str] | None = None) -> int:
                 ],
                 suffix=".with_feedback_child",
             )
-        if args.execute_queue_feedback_replan_followup:
+        if args.queue_feedback_replan_followup_policy_local_autopilot:
+            queue_feedback_replan_followup_policy_blockers = (
+                _queue_feedback_replan_followup_local_autopolicy_blockers(
+                    queue_feedback_replan_followup_queue
+                )
+            )
+        should_execute_feedback_followup = (
+            args.execute_queue_feedback_replan_followup
+            or (
+                args.queue_feedback_replan_followup_policy_local_autopilot
+                and not queue_feedback_replan_followup_policy_blockers
+            )
+        )
+        if should_execute_feedback_followup:
+            queue_feedback_replan_followup_execution_attempted = True
             (
                 queue_feedback_replan_followup_execution,
                 followup_execution_commands,
@@ -2916,8 +3056,20 @@ def main(argv: list[str] | None = None) -> int:
                 child_queue=queue_feedback_replan_followup_queue,
                 child_queue_path=queue_feedback_replan_followup_queue_path,
                 run_dir=run_dir,
+                activation_policy=queue_feedback_replan_followup_policy,
             )
             commands.extend(followup_execution_commands)
+        elif args.queue_feedback_replan_followup_policy_local_autopilot:
+            queue_feedback_replan_followup_execution = (
+                _queue_feedback_replan_followup_execution_refusal_payload(
+                    blockers=(
+                        queue_feedback_replan_followup_policy_blockers
+                        or ["queue_feedback_replan_followup_policy_not_enabled"]
+                    ),
+                    child_queue_path=queue_feedback_replan_followup_queue_path,
+                    activation_policy=queue_feedback_replan_followup_policy,
+                )
+            )
     elif args.execute_queue_feedback_replan_followup:
         queue_feedback_replan_followup_execution_returncode = 2
         queue_feedback_replan_followup_execution = (
@@ -2927,6 +3079,18 @@ def main(argv: list[str] | None = None) -> int:
                     or ["queue_feedback_replan_followup_queue_not_emitted"]
                 ),
                 child_queue_path=queue_feedback_replan_followup_queue_path,
+                activation_policy=queue_feedback_replan_followup_policy,
+            )
+        )
+    elif args.queue_feedback_replan_followup_policy_local_autopilot:
+        queue_feedback_replan_followup_execution = (
+            _queue_feedback_replan_followup_execution_refusal_payload(
+                blockers=(
+                    queue_feedback_replan_followup_blockers
+                    or ["queue_feedback_replan_followup_queue_not_emitted"]
+                ),
+                child_queue_path=queue_feedback_replan_followup_queue_path,
+                activation_policy=queue_feedback_replan_followup_policy,
             )
         )
     exact_readiness_handoffs = _exact_readiness_handoff_paths(
@@ -2991,7 +3155,19 @@ def main(argv: list[str] | None = None) -> int:
         ),
         "queue_feedback_replan_followup_queue_emitted": queue_feedback_replan_followup_queue is not None,
         "queue_feedback_replan_followup_queue_blockers": queue_feedback_replan_followup_blockers,
-        "queue_feedback_replan_followup_executed": bool(args.execute_queue_feedback_replan_followup),
+        "queue_feedback_replan_followup_policy": queue_feedback_replan_followup_policy,
+        "queue_feedback_replan_followup_execution_policy": queue_feedback_replan_followup_policy,
+        "queue_feedback_replan_followup_policy_enabled": bool(
+            args.queue_feedback_replan_followup_policy_local_autopilot
+        ),
+        "queue_feedback_replan_followup_policy_blockers": (
+            queue_feedback_replan_followup_policy_blockers
+        ),
+        "queue_feedback_replan_followup_execution_requested": bool(
+            args.execute_queue_feedback_replan_followup
+            or args.queue_feedback_replan_followup_policy_local_autopilot
+        ),
+        "queue_feedback_replan_followup_executed": queue_feedback_replan_followup_execution_attempted,
         "queue_feedback_replan_followup_execution_success": (
             None
             if queue_feedback_replan_followup_execution is None
