@@ -909,12 +909,14 @@ def _inverse_scorer_cell_candidate_command(
         source_inflate_output_dir = _path_context_value(context, "source_inflate_output_dir")
         if source_inflate_output_dir is not None:
             command.extend(["--source-inflate-output-dir", source_inflate_output_dir])
+            input_paths.append(source_inflate_output_dir)
         candidate_inflate_output_dir = _path_context_value(
             context,
             "candidate_inflate_output_dir",
         )
         if candidate_inflate_output_dir is not None:
             command.extend(["--candidate-inflate-output-dir", candidate_inflate_output_dir])
+            input_paths.append(candidate_inflate_output_dir)
         inflate_runtime_dir = _path_context_value(context, "inflate_runtime_dir")
         if inflate_runtime_dir is not None:
             command.extend(["--inflate-runtime-dir", inflate_runtime_dir])

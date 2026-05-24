@@ -339,6 +339,10 @@ def test_rsync_pull_command_rejects_unsafe_remote_artifact_paths() -> None:
         "/remote/../out.json",
         "/remote/out bad.json",
         "/remote/out;touch.json",
+        "/remote/out*.json",
+        "/remote/[out].json",
+        "/remote/out(1).json",
+        "/",
     ):
         with pytest.raises(ExperimentQueueError):
             build_rsync_pull_command(
@@ -354,6 +358,59 @@ def test_rsync_pull_command_rejects_unsafe_remote_artifact_paths() -> None:
                 local_path="/local/in.json",
                 remote_path=remote_path,
             )
+
+
+def test_rsync_push_command_rejects_directory_push_to_remote_root(
+    tmp_path: Path,
+) -> None:
+    local_dir = tmp_path / "runtime"
+    local_dir.mkdir()
+
+    with pytest.raises(ExperimentQueueError, match="filesystem root"):
+        build_rsync_push_command(
+            rsync_binary="rsync",
+            ssh_target="user@host",
+            local_path=local_dir,
+            remote_path="/",
+        )
+
+
+def test_select_ssh_tasks_rejects_filesystem_root_path_map(tmp_path: Path) -> None:
+    artifact = tmp_path / "done.json"
+    queue = _queue(artifact)
+    plan = _plan(queue)
+    state = tmp_path / "queue.sqlite"
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        ready = ready_steps(conn, queue, repo_root=REPO_ROOT)
+
+    with pytest.raises(ExperimentQueueError, match="filesystem root"):
+        select_ssh_tasks(
+            plan,
+            queue,
+            ready=ready,
+            repo_root=REPO_ROOT,
+            artifact_path_maps={"/": "/remote"},
+        )
+
+
+def test_select_ssh_tasks_rejects_remote_root_path_map(tmp_path: Path) -> None:
+    artifact = tmp_path / "done.json"
+    queue = _queue(artifact)
+    plan = _plan(queue)
+    state = tmp_path / "queue.sqlite"
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        ready = ready_steps(conn, queue, repo_root=REPO_ROOT)
+
+    with pytest.raises(ExperimentQueueError, match="filesystem root"):
+        select_ssh_tasks(
+            plan,
+            queue,
+            ready=ready,
+            repo_root=REPO_ROOT,
+            artifact_path_maps={tmp_path.as_posix(): "/"},
+        )
 
 
 def test_select_ssh_tasks_requires_writeback_hashes_remote_root_and_postconditions(
@@ -484,6 +541,37 @@ def test_select_ssh_tasks_requires_input_mobility_for_declared_inputs(
 
     assert "input_artifact_mobility_contract_missing" in selections[0].blockers
     assert f"artifact_push_missing_for_input:{input_artifact.as_posix()}" in selections[0].blockers
+
+
+def test_select_ssh_tasks_rejects_symlink_input_artifacts(tmp_path: Path) -> None:
+    artifact = tmp_path / "done.json"
+    real_input = tmp_path / "inputs" / "real.json"
+    real_input.parent.mkdir(parents=True)
+    real_input.write_text(json.dumps({"schema": "input_fixture.v1"}), encoding="utf-8")
+    symlink_input = tmp_path / "inputs" / "linked.json"
+    symlink_input.symlink_to(real_input)
+    queue = _queue(artifact)
+    step = queue["experiments"][0]["steps"][0]
+    step.setdefault("telemetry", {})["input_artifact_paths"] = [str(symlink_input)]
+    plan = _plan(queue)
+    state = tmp_path / "queue.sqlite"
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        ready = ready_steps(conn, queue, repo_root=REPO_ROOT)
+
+    selections = select_ssh_tasks(
+        plan,
+        queue,
+        ready=ready,
+        repo_root=REPO_ROOT,
+        artifact_path_maps={tmp_path.as_posix(): "/remote/tmp"},
+        require_artifact_mobility=True,
+    )
+
+    assert (
+        f"input_artifact_symlink_forbidden:{symlink_input.as_posix()}"
+        in selections[0].blockers
+    )
 
 
 @pytest.mark.parametrize(
@@ -665,8 +753,83 @@ def test_ssh_executor_pushes_input_artifacts_before_remote_command(
     row = _step_row(state)
     last_event = json.loads(row["last_event_json"])
     assert last_event["input_mobility"]["mode"] == "rsync_push"
-    assert last_event["input_mobility"]["pushes"][0]["local_path"] == input_artifact.as_posix()
+    push = last_event["input_mobility"]["pushes"][0]
+    assert push["local_path"] == input_artifact.as_posix()
+    assert push["local_manifest"]["path"] == input_artifact.as_posix()
+    assert push["local_manifest"]["bytes"] == input_artifact.stat().st_size
+    assert push["local_manifest"]["sha256"] == hashlib.sha256(
+        input_artifact.read_bytes()
+    ).hexdigest()
+    assert push["local_manifest_sha256"] == _sha256_json(push["local_manifest"])
     assert last_event["artifact_mobility"]["mode"] == "rsync_pull"
+
+
+def test_ssh_executor_records_directory_input_manifest_and_delete_push(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "out" / "done.json"
+    input_dir = tmp_path / "inputs" / "runtime"
+    input_dir.mkdir(parents=True)
+    (input_dir / "a.txt").write_text("alpha", encoding="utf-8")
+    (input_dir / "b.bin").write_bytes(b"beta")
+    queue = _queue(artifact)
+    step = queue["experiments"][0]["steps"][0]
+    step.setdefault("telemetry", {})["input_artifact_paths"] = [str(input_dir)]
+    plan = _plan(queue)
+    state = tmp_path / "queue.sqlite"
+    calls: list[list[str]] = []
+
+    def runner(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        calls.append(list(argv))
+        remote_script = str(argv[-1])
+        if _is_preflight_only(remote_script):
+            return subprocess.CompletedProcess(argv, 0, stdout="preflight ok\n")
+        if remote_script.startswith("mkdir -p "):
+            return subprocess.CompletedProcess(argv, 0, stdout="mkdir ok\n")
+        if str(argv[0]).endswith("rsync") and str(argv[-1]).startswith("user@sshbox:"):
+            return subprocess.CompletedProcess(argv, 0, stdout="push ok\n")
+        if str(argv[0]).endswith("rsync"):
+            artifact.parent.mkdir(parents=True, exist_ok=True)
+            artifact.write_text(
+                json.dumps(
+                    {
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "rank_or_kill_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            return subprocess.CompletedProcess(argv, 0, stdout="pull ok\n")
+        return subprocess.CompletedProcess(argv, 0, stdout="remote ok\n")
+
+    result = run_staircase_ssh_executor(
+        plan,
+        queue,
+        state_path=state,
+        repo_root=REPO_ROOT,
+        execute=True,
+        allow_noncanonical_state=True,
+        artifact_path_maps={tmp_path.as_posix(): "/remote/tmp"},
+        require_artifact_mobility=True,
+        runner=runner,
+    )
+
+    assert result["success_count"] == 1
+    push_call = next(
+        call
+        for call in calls
+        if call[0] == "rsync" and str(call[-1]).startswith("user@sshbox:")
+    )
+    assert "--delete" in push_call
+    row = _step_row(state)
+    last_event = json.loads(row["last_event_json"])
+    push = last_event["input_mobility"]["pushes"][0]
+    assert push["local_manifest"]["is_dir"] is True
+    assert push["local_manifest"]["recursive_entry_count"] == 2
+    assert push["local_manifest"]["recursive_bytes"] == 9
+    assert len(push["local_manifest"]["recursive_sha256"]) == 64
 
 
 def test_ssh_executor_does_not_run_remote_command_when_input_push_fails(

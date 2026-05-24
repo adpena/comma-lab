@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+import comma_lab.scheduler.materializer_exact_eval_dispatch_plan as dispatch_plan_module
 from comma_lab.scheduler.byte_shaving_campaign_queue import (
     MATERIALIZER_EXECUTION_STEP_ID,
     MATERIALIZER_WORK_QUEUE_SCHEMA,
@@ -672,6 +673,169 @@ def test_materializer_dispatch_plan_does_not_dedupe_different_runtime_tree(
     identities = [row["stable_identity"] for row in plan["rows"]]
     assert len(set(identities)) == 2
     assert all(":runtime_tree=" in identity for identity in identities)
+
+
+def test_materializer_dispatch_plan_serializes_same_lane_distinct_stable_identities(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+    first_queue = repo / str(bridge["rows"][0]["exact_ready_queue_path"])
+    alternate_payload = json.loads(first_queue.read_text(encoding="utf-8"))
+    for key in ("dispatch_ready", "top_k"):
+        rows = alternate_payload.get(key) or []
+        for row in rows:
+            row["runtime_content_tree_sha256"] = "c" * 64
+            row["runtime_tree_sha256"] = "d" * 64
+            runtime_manifest = row.get("runtime_manifest")
+            if isinstance(runtime_manifest, dict):
+                runtime_manifest["runtime_content_tree_sha256"] = "c" * 64
+                runtime_manifest["runtime_tree_sha256"] = "d" * 64
+    alternate_queue = _write_json(
+        repo / "same_lane_alternate_runtime_tree.exact_ready_queue.json",
+        alternate_payload,
+    )
+    monkeypatch.setattr(
+        dispatch_plan_module,
+        "_exact_ready_queue_blockers",
+        lambda **_: ([], {"audit_stale_ready_row_count": 0, "authority_source": "fixture"}),
+    )
+
+    result = build_materializer_exact_eval_dispatch_plan(
+        repo_root=repo,
+        exact_ready_queue_paths=[first_queue, alternate_queue],
+        active_floor_archive_bytes=None,
+    )
+
+    plan = result["plan"]
+    assert plan["authorized_candidate_count"] == 1
+    assert plan["blocked_candidate_count"] == 1
+    assert plan["duplicate_candidate_count"] == 0
+    assert plan["serial_lane_blocked_candidate_count"] == 1
+    blocked = next(row for row in plan["rows"] if row["blockers"])
+    assert blocked["blockers"][0].startswith(
+        "same_lane_dispatch_claim_serialization_required:"
+    )
+    assert blocked["dispatch_group_key"] == plan["rows"][0]["dispatch_group_key"]
+    assert blocked["stable_identity"] != plan["rows"][0]["stable_identity"]
+
+
+def test_materializer_dispatch_plan_blocked_rows_do_not_reserve_lane_group(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+    first_queue = repo / str(bridge["rows"][0]["exact_ready_queue_path"])
+    alternate_payload = json.loads(first_queue.read_text(encoding="utf-8"))
+    for key in ("dispatch_ready", "top_k"):
+        rows = alternate_payload.get(key) or []
+        for row in rows:
+            row["runtime_content_tree_sha256"] = "c" * 64
+            row["runtime_tree_sha256"] = "d" * 64
+            runtime_manifest = row.get("runtime_manifest")
+            if isinstance(runtime_manifest, dict):
+                runtime_manifest["runtime_content_tree_sha256"] = "c" * 64
+                runtime_manifest["runtime_tree_sha256"] = "d" * 64
+    alternate_queue = _write_json(
+        repo / "same_lane_alternate_runtime_tree.exact_ready_queue.json",
+        alternate_payload,
+    )
+
+    def fake_blockers(*, queue_path: Path, **_: object) -> tuple[list[str], dict[str, object]]:
+        if Path(queue_path) == first_queue:
+            return ["fixture_first_queue_blocked"], {}
+        return [], {"audit_stale_ready_row_count": 0, "authority_source": "fixture"}
+
+    monkeypatch.setattr(
+        dispatch_plan_module,
+        "_exact_ready_queue_blockers",
+        fake_blockers,
+    )
+
+    result = build_materializer_exact_eval_dispatch_plan(
+        repo_root=repo,
+        exact_ready_queue_paths=[first_queue, alternate_queue],
+        active_floor_archive_bytes=None,
+    )
+
+    plan = result["plan"]
+    assert plan["authorized_candidate_count"] == 1
+    assert plan["blocked_candidate_count"] == 1
+    assert plan["serial_lane_blocked_candidate_count"] == 0
+    assert any(row["blockers"] == ["fixture_first_queue_blocked"] for row in plan["rows"])
+    authorized = next(row for row in plan["rows"] if row["authorized_for_dispatch_plan"])
+    assert authorized["stable_identity"].endswith(f"runtime_tree={'d' * 64}:score_axis=contest_cuda")
+
+
+def test_materializer_dispatch_plan_tightens_score_floor_from_frontier_scan(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+    bridge_path = _write_json(repo / "bridge_report.json", bridge)
+    monkeypatch.setattr(
+        dispatch_plan_module,
+        "_frontier_scan_active_floor_score",
+        lambda _repo_root: (0.20533002902019143, "test_frontier_scan"),
+    )
+
+    result = build_materializer_exact_eval_dispatch_plan(
+        repo_root=repo,
+        bridge_report_path=bridge_path,
+        active_floor_archive_bytes=None,
+        active_floor_score=0.2063163866158099,
+    )
+
+    plan = result["plan"]
+    assert plan["active_floor_score"] == 0.20533002902019143
+    assert plan["active_floor_score_source"] == "test_frontier_scan"
+    dispatch_command = result["experiment_queue"]["experiments"][0]["steps"][1][
+        "command"
+    ]
+    score_index = dispatch_command.index("--active-floor-score") + 1
+    assert dispatch_command[score_index] == "0.20533002902"
 
 
 def test_materializer_dispatch_plan_blocks_archive_sha_alias_disagreement(

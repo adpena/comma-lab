@@ -693,6 +693,56 @@ def test_experiment_queue_rejects_shell_string_commands() -> None:
         raise AssertionError("queue accepted a shell string command")
 
 
+def test_experiment_queue_normalizes_input_artifact_paths() -> None:
+    payload = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "input_paths",
+        "experiments": [
+            {
+                "id": "candidate",
+                "steps": [
+                    {
+                        "id": "materialize",
+                        "command": [sys.executable, "-c", "print('ok')"],
+                        "telemetry": {
+                            "input_artifact_paths": ["input/a.json"],
+                        },
+                    }
+                ],
+            }
+        ],
+    }
+
+    queue = normalize_queue_definition(payload)
+
+    telemetry = queue["experiments"][0]["steps"][0]["telemetry"]
+    assert telemetry["input_artifact_paths"] == ["input/a.json"]
+
+
+def test_experiment_queue_rejects_malformed_input_artifact_paths() -> None:
+    payload = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "bad_input_paths",
+        "experiments": [
+            {
+                "id": "candidate",
+                "steps": [
+                    {
+                        "id": "materialize",
+                        "command": [sys.executable, "-c", "print('ok')"],
+                        "telemetry": {
+                            "input_artifact_paths": "input/a.json",
+                        },
+                    }
+                ],
+            }
+        ],
+    }
+
+    with pytest.raises(ExperimentQueueError, match="input_artifact_paths must be a list"):
+        normalize_queue_definition(payload)
+
+
 def test_experiment_queue_rejects_duplicate_step_ids() -> None:
     payload = {
         "schema": "experiment_queue.v1",

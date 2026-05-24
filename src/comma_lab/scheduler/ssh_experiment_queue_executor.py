@@ -41,7 +41,7 @@ SSH_ARTIFACT_MOBILITY_SCHEMA = "staircase_ssh_artifact_mobility.v1"
 SSH_INPUT_MOBILITY_SCHEMA = "staircase_ssh_input_mobility.v1"
 SSH_EXECUTOR_NAMES = {"ssh_experiment_queue"}
 FUTURE_SSH_EXECUTOR_NAMES = {"ssh_experiment_queue_future"}
-_UNSAFE_REMOTE_ARTIFACT_CHARS = frozenset(" \t\r\n'\"`$;&|<>\\")
+_UNSAFE_REMOTE_ARTIFACT_CHARS = frozenset(" \t\r\n'\"`$;&|<>\\*?[]{}()")
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
@@ -264,6 +264,87 @@ def _resolve_local_artifact_path(path_value: str, *, repo_root: Path) -> Path:
     return path if path.is_absolute() else repo_root / path
 
 
+def _repo_rel_or_abs(path: Path, *, repo_root: Path) -> str:
+    resolved = path.resolve(strict=False)
+    try:
+        return resolved.relative_to(repo_root.resolve(strict=False)).as_posix()
+    except ValueError:
+        return resolved.as_posix()
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _path_has_symlink(path: Path) -> bool:
+    if path.is_symlink():
+        return True
+    if not path.is_dir():
+        return False
+    return any(child.is_symlink() for child in path.rglob("*"))
+
+
+def _input_artifact_manifest(path: Path, *, repo_root: Path) -> dict[str, Any]:
+    record: dict[str, Any] = {
+        "schema": "staircase_ssh_input_artifact_manifest.v1",
+        "path": _repo_rel_or_abs(path, repo_root=repo_root),
+        "exists": path.exists(),
+        "is_symlink": path.is_symlink(),
+    }
+    if not path.exists() or path.is_symlink():
+        return record
+    stat = path.stat()
+    record.update(
+        {
+            "bytes": stat.st_size,
+            "is_file": path.is_file(),
+            "is_dir": path.is_dir(),
+            "mtime_ns": stat.st_mtime_ns,
+        }
+    )
+    if path.is_file():
+        record["sha256"] = _sha256_file(path)
+        return record
+    if not path.is_dir():
+        return record
+
+    entries: list[dict[str, Any]] = []
+    total_bytes = 0
+    aggregate = hashlib.sha256()
+    for child in sorted(path.rglob("*"), key=lambda item: item.relative_to(path).as_posix()):
+        relative = child.relative_to(path).as_posix()
+        child_record: dict[str, Any] = {
+            "path": relative,
+            "is_symlink": child.is_symlink(),
+            "is_dir": child.is_dir() and not child.is_symlink(),
+            "is_file": child.is_file() and not child.is_symlink(),
+        }
+        if child.is_symlink():
+            entries.append(child_record)
+            aggregate.update(_json_text(child_record).encode("utf-8"))
+            continue
+        if child.is_file():
+            size = child.stat().st_size
+            sha256 = _sha256_file(child)
+            total_bytes += size
+            child_record.update({"bytes": size, "sha256": sha256})
+        entries.append(child_record)
+        aggregate.update(_json_text(child_record).encode("utf-8"))
+    record.update(
+        {
+            "recursive_entry_count": len(entries),
+            "recursive_bytes": total_bytes,
+            "recursive_sha256": aggregate.hexdigest(),
+            "entries": entries,
+        }
+    )
+    return record
+
+
 def _postcondition_artifact_paths(step: Mapping[str, Any], *, repo_root: Path) -> list[Path]:
     seen: set[str] = set()
     paths: list[Path] = []
@@ -408,8 +489,11 @@ def _normalize_path_maps(
         local_prefix = _resolve_local_artifact_path(str(raw_local), repo_root=repo_root)
         remote_prefix = str(raw_remote).strip()
         normalized_remote = remote_prefix.rstrip("/") or "/"
+        resolved_local = local_prefix.resolve(strict=False)
+        if resolved_local.parent == resolved_local:
+            raise ExperimentQueueError("artifact path map local prefix must not be filesystem root")
         _require_safe_remote_artifact_path(normalized_remote, label="artifact path map remote prefix")
-        normalized.append((local_prefix.resolve(strict=False), normalized_remote))
+        normalized.append((resolved_local, normalized_remote))
     return sorted(normalized, key=lambda item: len(item[0].as_posix()), reverse=True)
 
 
@@ -436,6 +520,8 @@ def _require_safe_remote_artifact_path(remote_path: str, *, label: str = "remote
     text = _require_text(remote_path, label)
     if not text.startswith("/"):
         raise ExperimentQueueError(f"{label} must be absolute")
+    if text.rstrip("/") == "":
+        raise ExperimentQueueError(f"{label} must not be filesystem root")
     if any(char in _UNSAFE_REMOTE_ARTIFACT_CHARS for char in text):
         raise ExperimentQueueError(f"{label} contains unsafe shell/rsync characters")
     if any(part == ".." for part in text.split("/")):
@@ -465,11 +551,17 @@ def _artifact_mobility_blockers(
         for path in input_paths
         if not path.exists()
     ]
+    symlink_inputs = [
+        f"input_artifact_symlink_forbidden:{path.as_posix()}"
+        for path in input_paths
+        if path.exists() and _path_has_symlink(path)
+    ]
     if artifact_shared_path_rationale is not None:
-        return [*blockers, *missing_inputs] if blockers or input_paths or require_artifact_mobility else []
+        return [*blockers, *missing_inputs, *symlink_inputs] if blockers or input_paths or require_artifact_mobility else []
     if input_paths and not path_maps:
         blockers.append("input_artifact_mobility_contract_missing")
     blockers.extend(missing_inputs)
+    blockers.extend(symlink_inputs)
     for path in input_paths:
         if _remote_artifact_path_for_local(path, path_maps=path_maps) is None:
             blockers.append(f"artifact_push_missing_for_input:{path.as_posix()}")
@@ -595,10 +687,13 @@ def _input_pushes_for_step(
         remote_path = _remote_artifact_path_for_local(local_path, path_maps=path_maps)
         if remote_path is None:
             continue
+        manifest = _input_artifact_manifest(local_path, repo_root=repo_root)
         pushes.append(
             {
                 "local_path": local_path.as_posix(),
                 "remote_path": remote_path,
+                "local_manifest": manifest,
+                "local_manifest_sha256": _sha256_json(manifest),
             }
         )
     return pushes
@@ -783,6 +878,8 @@ def _run_input_pushes(
     for push in pushes:
         local_path = _require_text(push.get("local_path"), "push.local_path")
         remote_path = _require_text(push.get("remote_path"), "push.remote_path")
+        local_manifest = push.get("local_manifest")
+        local_manifest_sha256 = push.get("local_manifest_sha256")
         local = Path(local_path)
         if not local.exists():
             overall_returncode = 66
@@ -791,6 +888,24 @@ def _run_input_pushes(
                 {
                     "local_path": local_path,
                     "remote_path": remote_path,
+                    "local_manifest": local_manifest,
+                    "local_manifest_sha256": local_manifest_sha256,
+                    "returncode": overall_returncode,
+                    "timed_out": False,
+                    "elapsed_seconds": 0.0,
+                    "stdout": execution_error,
+                }
+            )
+            break
+        if _path_has_symlink(local):
+            overall_returncode = 65
+            execution_error = f"input_artifact_symlink_forbidden:{local_path}"
+            results.append(
+                {
+                    "local_path": local_path,
+                    "remote_path": remote_path,
+                    "local_manifest": local_manifest,
+                    "local_manifest_sha256": local_manifest_sha256,
                     "returncode": overall_returncode,
                     "timed_out": False,
                     "elapsed_seconds": 0.0,
@@ -825,6 +940,8 @@ def _run_input_pushes(
                 row = {
                     "local_path": local_path,
                     "remote_path": remote_path,
+                    "local_manifest": local_manifest,
+                    "local_manifest_sha256": local_manifest_sha256,
                     "mkdir_argv": mkdir_argv,
                     "returncode": int(mkdir_proc.returncode),
                     "timed_out": False,
@@ -844,6 +961,8 @@ def _run_input_pushes(
             row = {
                 "local_path": local_path,
                 "remote_path": remote_path,
+                "local_manifest": local_manifest,
+                "local_manifest_sha256": local_manifest_sha256,
                 "mkdir_argv": mkdir_argv,
                 "argv": rsync_argv,
                 "returncode": int(rsync_proc.returncode),
@@ -860,6 +979,8 @@ def _run_input_pushes(
             row = {
                 "local_path": local_path,
                 "remote_path": remote_path,
+                "local_manifest": local_manifest,
+                "local_manifest_sha256": local_manifest_sha256,
                 "mkdir_argv": mkdir_argv,
                 "argv": rsync_argv,
                 "returncode": 124,
@@ -873,6 +994,8 @@ def _run_input_pushes(
             row = {
                 "local_path": local_path,
                 "remote_path": remote_path,
+                "local_manifest": local_manifest,
+                "local_manifest_sha256": local_manifest_sha256,
                 "mkdir_argv": mkdir_argv,
                 "argv": rsync_argv,
                 "returncode": 127,

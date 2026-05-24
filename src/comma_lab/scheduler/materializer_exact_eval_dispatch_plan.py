@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import re
 import sys
@@ -96,6 +97,15 @@ def build_materializer_exact_eval_dispatch_plan(
         raise ExperimentQueueError(
             "allow_above_active_floor_dispatch requires operator_override_reason"
         )
+    active_floor_score, active_floor_score_source = _resolve_active_floor_score(
+        repo,
+        active_floor_score,
+    )
+    active_floor_archive_bytes_source = (
+        "disabled"
+        if active_floor_archive_bytes is None
+        else "tac.optimizer.exact_readiness.ACTIVE_FLOOR_ARCHIVE_BYTES"
+    )
 
     claims_path = (
         _resolve_path(dispatch_claims_path, repo_root=repo)
@@ -110,11 +120,12 @@ def build_materializer_exact_eval_dispatch_plan(
 
     rows: list[dict[str, Any]] = []
     experiments: list[dict[str, Any]] = []
-    seen_candidate_ids: set[str] = set()
     seen_stable_identity: set[str] = set()
+    seen_lane_ids: dict[str, str] = {}
     authorized_count = 0
     blocked_count = 0
     duplicate_count = 0
+    serial_lane_blocked_count = 0
     for queue_path in ready_queue_paths:
         try:
             queue_row = _load_single_dispatch_ready_row(queue_path)
@@ -131,6 +142,7 @@ def build_materializer_exact_eval_dispatch_plan(
             blocked_count += 1
             continue
         candidate_id = str(queue_row.get("candidate_id") or "")
+        lane_id = _row_lane_id(queue_row)
         stable_identity, identity_blockers = _stable_candidate_identity(queue_row)
         if identity_blockers:
             rows.append(
@@ -140,44 +152,12 @@ def build_materializer_exact_eval_dispatch_plan(
                     candidate_id=candidate_id,
                     stable_identity=stable_identity,
                     blockers=identity_blockers,
-                    lane_id=_row_lane_id(queue_row),
+                    lane_id=lane_id,
                     archive_sha256=_row_archive_sha(queue_row),
                 )
             )
             blocked_count += 1
             continue
-        if candidate_id in seen_candidate_ids:
-            rows.append(
-                _blocked_plan_row(
-                    queue_path,
-                    repo,
-                    candidate_id=candidate_id,
-                    stable_identity=stable_identity,
-                    blockers=[f"duplicate_candidate_id:{candidate_id}"],
-                    lane_id=_row_lane_id(queue_row),
-                    archive_sha256=_row_archive_sha(queue_row),
-                )
-            )
-            blocked_count += 1
-            duplicate_count += 1
-            continue
-        if stable_identity in seen_stable_identity:
-            rows.append(
-                _blocked_plan_row(
-                    queue_path,
-                    repo,
-                    candidate_id=candidate_id,
-                    stable_identity=stable_identity,
-                    blockers=[f"duplicate_stable_identity:{stable_identity}"],
-                    lane_id=_row_lane_id(queue_row),
-                    archive_sha256=_row_archive_sha(queue_row),
-                )
-            )
-            blocked_count += 1
-            duplicate_count += 1
-            continue
-        seen_candidate_ids.add(candidate_id)
-        seen_stable_identity.add(stable_identity)
         blockers, facts = _exact_ready_queue_blockers(
             queue_path=queue_path,
             row=queue_row,
@@ -196,13 +176,51 @@ def build_materializer_exact_eval_dispatch_plan(
                     candidate_id=candidate_id,
                     stable_identity=stable_identity,
                     blockers=blockers,
-                    lane_id=_row_lane_id(queue_row),
+                    lane_id=lane_id,
                     archive_sha256=_row_archive_sha(queue_row),
+                    dispatch_group_key=lane_id,
                 )
             )
             blocked_count += 1
             continue
-        lane_id = _row_lane_id(queue_row)
+        if stable_identity in seen_stable_identity:
+            rows.append(
+                _blocked_plan_row(
+                    queue_path,
+                    repo,
+                    candidate_id=candidate_id,
+                    stable_identity=stable_identity,
+                    blockers=[f"duplicate_stable_identity:{stable_identity}"],
+                    lane_id=lane_id,
+                    archive_sha256=_row_archive_sha(queue_row),
+                )
+            )
+            blocked_count += 1
+            duplicate_count += 1
+            continue
+        if lane_id in seen_lane_ids:
+            first_stable_identity = seen_lane_ids[lane_id]
+            rows.append(
+                _blocked_plan_row(
+                    queue_path,
+                    repo,
+                    candidate_id=candidate_id,
+                    stable_identity=stable_identity,
+                    blockers=[
+                        "same_lane_dispatch_claim_serialization_required:"
+                        f"{lane_id}:first_stable_identity_sha256="
+                        f"{_stable_identity_digest(first_stable_identity)}"
+                    ],
+                    lane_id=lane_id,
+                    archive_sha256=_row_archive_sha(queue_row),
+                    dispatch_group_key=lane_id,
+                )
+            )
+            blocked_count += 1
+            serial_lane_blocked_count += 1
+            continue
+        seen_stable_identity.add(stable_identity)
+        seen_lane_ids[lane_id] = stable_identity
         archive_sha = _row_archive_sha(queue_row)
         job_id = _dispatch_job_id(
             label_prefix=label_prefix,
@@ -258,6 +276,8 @@ def build_materializer_exact_eval_dispatch_plan(
                 "dispatch_job_id": job_id,
                 "dispatch_mode": mode,
                 "provider": provider,
+                "dispatch_priority_rank": authorized_count + 1,
+                "dispatch_group_key": lane_id,
                 "authorized_for_dispatch_plan": True,
                 "claim_required_before_dispatch": True,
                 "claim_command": claim_command,
@@ -336,11 +356,21 @@ def build_materializer_exact_eval_dispatch_plan(
             "authorized_candidate_count": authorized_count,
             "blocked_candidate_count": blocked_count,
             "duplicate_candidate_count": duplicate_count,
+            "serial_lane_blocked_candidate_count": serial_lane_blocked_count,
             "dispatch_mode": mode,
             "provider": provider,
             "estimated_cost_per_dispatch": estimated_cost_per_dispatch,
             "estimated_total_cost": estimated_total_cost,
             "max_total_cost": max_total_cost,
+            "active_floor_archive_bytes": active_floor_archive_bytes,
+            "active_floor_archive_bytes_source": active_floor_archive_bytes_source,
+            "active_floor_score": active_floor_score,
+            "active_floor_score_source": active_floor_score_source,
+            "selection_policy": (
+                "one_stable_identity_per_lane_claim_until_terminal_claim;"
+                "dedupe_by_archive_runtime_content_runtime_tree_score_axis;"
+                "deterministic_queue_order;no_score_authority"
+            ),
             "dispatch_claims_path": _repo_rel(claims_path, repo),
             "experiment_queue_schema": dispatch_queue["schema"],
             "experiment_queue_id": dispatch_queue["queue_id"],
@@ -362,6 +392,46 @@ def build_materializer_exact_eval_dispatch_plan(
         context="materializer_exact_eval_dispatch_plan",
     )
     return {"plan": plan, "experiment_queue": dispatch_queue}
+
+
+def _resolve_active_floor_score(
+    repo_root: Path,
+    active_floor_score: float | None,
+) -> tuple[float | None, str]:
+    if active_floor_score is None:
+        return None, "disabled"
+    source = "tac.optimizer.exact_readiness.ACTIVE_FLOOR_SCORE"
+    scanned_score, scanned_source = _frontier_scan_active_floor_score(repo_root)
+    if scanned_score is not None and scanned_score < active_floor_score:
+        return scanned_score, scanned_source
+    return active_floor_score, source
+
+
+def _frontier_scan_active_floor_score(repo_root: Path) -> tuple[float | None, str]:
+    try:
+        from tac.frontier_scan import build_frontier_scan_payload
+    except Exception as exc:  # pragma: no cover - import failure is fail-closed fallback.
+        return None, f"frontier_scan_unavailable:{type(exc).__name__}"
+    try:
+        payload = build_frontier_scan_payload(repo_root)
+    except Exception as exc:  # pragma: no cover - malformed state falls back to static floor.
+        return None, f"frontier_scan_error:{type(exc).__name__}"
+    best_per_axis = payload.get("best_per_axis")
+    if not isinstance(best_per_axis, Mapping):
+        return None, "frontier_scan_missing_best_per_axis"
+    cuda = best_per_axis.get("contest_cuda")
+    if not isinstance(cuda, Mapping):
+        return None, "frontier_scan_missing_contest_cuda"
+    raw_score = cuda.get("score")
+    if isinstance(raw_score, bool):
+        return None, "frontier_scan_invalid_contest_cuda_score"
+    try:
+        score = float(raw_score)
+    except (TypeError, ValueError):
+        return None, "frontier_scan_invalid_contest_cuda_score"
+    if not math.isfinite(score):
+        return None, "frontier_scan_invalid_contest_cuda_score"
+    return score, "tac.frontier_scan.best_per_axis.contest_cuda"
 
 
 def _collect_ready_queue_paths(
@@ -549,6 +619,7 @@ def _blocked_plan_row(
     blockers: Sequence[str],
     lane_id: str | None = None,
     archive_sha256: str | None = None,
+    dispatch_group_key: str | None = None,
 ) -> dict[str, Any]:
     return {
         "candidate_id": candidate_id,
@@ -556,6 +627,8 @@ def _blocked_plan_row(
         "lane_id": lane_id,
         "archive_sha256": archive_sha256,
         "exact_ready_queue_path": _repo_rel(queue_path, repo_root),
+        "dispatch_priority_rank": None,
+        "dispatch_group_key": dispatch_group_key or lane_id,
         "authorized_for_dispatch_plan": False,
         "claim_required_before_dispatch": True,
         "blockers": list(blockers),
@@ -789,8 +862,12 @@ def _dispatch_job_id(
     candidate_id: str,
     stable_identity: str,
 ) -> str:
-    identity_suffix = hashlib.sha256(stable_identity.encode("utf-8")).hexdigest()[:12]
+    identity_suffix = _stable_identity_digest(stable_identity)[:12]
     return _safe_slug(f"{label_prefix}_{candidate_id}_{identity_suffix}")[:120]
+
+
+def _stable_identity_digest(stable_identity: str) -> str:
+    return hashlib.sha256(stable_identity.encode("utf-8")).hexdigest()
 
 
 def _resolve_path(path: str | Path | None, *, repo_root: Path) -> Path:

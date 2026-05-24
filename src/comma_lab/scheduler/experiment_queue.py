@@ -239,6 +239,10 @@ def _normalize_step(raw: Mapping[str, Any], *, experiment_id: str, index: int) -
         telemetry.get("artifact_paths"),
         f"{step_id}.telemetry.artifact_paths",
     )
+    telemetry_input_artifact_paths = _string_list(
+        telemetry.get("input_artifact_paths"),
+        f"{step_id}.telemetry.input_artifact_paths",
+    )
     telemetry_recursive = bool(telemetry.get("recursive", False))
     telemetry_max_entries = _non_negative_int(
         telemetry.get("max_recursive_entries"),
@@ -267,6 +271,7 @@ def _normalize_step(raw: Mapping[str, Any], *, experiment_id: str, index: int) -
         "telemetry": {
             **telemetry,
             "artifact_paths": telemetry_artifact_paths,
+            "input_artifact_paths": telemetry_input_artifact_paths,
             "recursive": telemetry_recursive,
             "max_recursive_entries": telemetry_max_entries,
             "include_postcondition_paths": bool(

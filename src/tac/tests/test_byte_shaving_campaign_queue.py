@@ -1367,6 +1367,12 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
     assert "--min-free-bytes" in row["command"]
     assert "--source-inflate-output-dir" in row["command"]
     assert "--candidate-inflate-output-dir" in row["command"]
+    assert row["telemetry"]["input_artifact_paths"] == [
+        str(template),
+        str(action),
+        str(source_inflate_output_dir),
+        str(candidate_inflate_output_dir),
+    ]
     _assert_typed_postconditions(
         row["postconditions"],
         path=output_dir / INVERSE_CELL_CHAIN_MANIFEST_NAME,
@@ -1406,12 +1412,16 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
     )
     plan = plan_staircase_dispatch(dag, max_nodes=1)
     task = plan["dask_task_specs"][0]
+    step = execution_queue["experiments"][0]["steps"][0]
 
     assert task["command"][:2] == [
         ".venv/bin/python",
         "tools/run_inverse_scorer_cell_candidate_chain.py",
     ]
     assert task["target_kind"] == INVERSE_SCORER_CELL_TARGET_KIND
+    assert step["telemetry"]["input_artifact_paths"] == row["telemetry"][
+        "input_artifact_paths"
+    ]
     assert execution_queue["controls"]["max_concurrency"]["local_mlx"] == 3
     assert task["materializer_id"] == INVERSE_SCORER_CELL_MATERIALIZER
     assert task["receiver_contract_id"] == INVERSE_SCORER_CELL_RECEIVER_CONTRACT_ID

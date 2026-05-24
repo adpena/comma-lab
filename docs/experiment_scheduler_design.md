@@ -183,6 +183,13 @@ remote zero exit code without successful local artifact visibility is a failed
 queue step, not a succeeded remote result; a missing or unmapped declared input
 artifact is blocked before launch.
 
+Declared SSH input artifacts are custody-bearing inputs, not advisory path
+strings. `experiment_queue.v1` normalizes `telemetry.input_artifact_paths`, the
+SSH selector rejects missing, unmapped, or symlinked inputs, directory pushes
+use `rsync --delete`, remote artifact paths reject shell/glob metacharacters,
+and terminal input-mobility events record per-file or recursive content
+manifests before the remote command can run.
+
 The materializer campaign runner exposes the same contract through
 `--staircase-ssh-execute`, `--staircase-ssh-artifact-path-map`,
 `--staircase-ssh-artifact-shared-path-rationale`, and
@@ -209,6 +216,16 @@ through the planning/proxy false-authority boundary. A row can be selected for
 the paused dry-run queue only after the exact-dispatch authority path says it
 is ready; score, promotion, rank/kill, and contest authority still require the
 later contest CPU/CUDA auth result artifact.
+
+Materializer exact-eval dispatch plans dedupe by the score-affecting stable
+identity: archive SHA, runtime-content SHA, runtime-tree SHA, and score axis.
+Repeated `candidate_id` values are not dispatch authority and are not enough to
+collapse rows. When multiple stable identities share a lane id, the plan keeps
+the later rows visible but blocks them with
+`same_lane_dispatch_claim_serialization_required:*` until the first dispatch has
+a terminal claim. The plan also tightens its CUDA score floor from
+`tac.frontier_scan.best_per_axis.contest_cuda` when canonical state has a
+stricter frontier than the static fallback.
 
 ## Exact-ready score-axis repair
 
