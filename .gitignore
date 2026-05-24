@@ -236,6 +236,8 @@ src/tac.egg-info/
 .omx/research/*_storage_plan_*.json
 .omx/research/*_proactive_cleanup_*.json
 .omx/research/*_proactive_cleanup_*.json.journal.jsonl
+.omx/research/*_artifact_retention_*.json
+.omx/research/*_artifact_retention_*.json.journal.jsonl
 # Generated materializer harvest/exact-readiness/dispatch handoff JSON is
 # queue-owned local custody. Promote durable conclusions into dated memos
 # instead of accidentally tracking per-run handoff packets.

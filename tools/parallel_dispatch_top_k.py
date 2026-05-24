@@ -733,6 +733,7 @@ def _candidate_blockers(
         claim_policy=claim_policy,
         required_claim_platform=required_claim_platform,
         required_claim_instance_job_ids=required_claim_instance_job_ids,
+        required_score_axis="contest_cuda",
     )
     blockers.extend(
         f"exact_dispatch_authority:{blocker}"

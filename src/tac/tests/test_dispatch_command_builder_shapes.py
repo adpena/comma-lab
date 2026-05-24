@@ -36,6 +36,7 @@ def _ready_lightning_candidate() -> dict:
         "ready_for_exact_eval_dispatch": True,
         "target_modes": ["contest_exact_eval"],
         "evidence_semantics": "contest_cuda_exact_eval_positive",
+        "score_axis": "contest_cuda",
         "score_claim": False,
     }
 

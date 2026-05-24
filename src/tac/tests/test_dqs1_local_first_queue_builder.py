@@ -269,6 +269,11 @@ def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: P
         == "3"
     )
     assert "--reuse-existing-inflates" in locality_command
+    advisory = steps_by_id["local_cpu_advisory"]
+    advisory_command = advisory["command"]
+    assert advisory["timeout_seconds"] == 3600
+    assert advisory_command[advisory_command.index("--inflate-timeout") + 1] == "1800"
+    assert advisory_command[advisory_command.index("--evaluate-timeout") + 1] == "1800"
     selected_pairs_arg = steps_by_id["plan_packet"]["command"][-1]
     assert selected_pairs_arg == "1,2,112"
     eureka_step = steps_by_id["local_cpu_contest_drift_eureka"]
@@ -388,6 +393,24 @@ def test_dqs1_queue_builder_can_emit_multiple_local_first_candidates(
         "pairset_drop_one_rank023_pair0440",
         "pairset_drop_one_rank024_pair0112",
     ]
+
+
+def test_dqs1_queue_builder_accepts_local_io_concurrency(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="results",
+        candidate_limit=2,
+        local_cpu_concurrency=4,
+        local_io_concurrency=2,
+    )
+
+    assert result.queue["controls"]["max_concurrency"]["local_cpu"] == 4
+    assert result.queue["controls"]["max_concurrency"]["local_io_heavy"] == 2
     bridge_outputs = {
         experiment["id"]: {
             step["id"]: step["command"]
@@ -545,6 +568,71 @@ def test_dqs1_queue_builder_can_emit_scheduler_preflight_gate(tmp_path: Path) ->
     assert candidate_steps["build_bridge_plan"]["requires"] == [
         "dqs1_scheduler_preflight.proactive_cleanup"
     ]
+
+
+def test_dqs1_queue_builder_preflight_hashes_existing_storage_plan(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+    storage_plan = (
+        tmp_path / ".omx" / "research" / "dqs1_local_first_storage_plan_20260522.json"
+    )
+    storage_plan.parent.mkdir(parents=True)
+    storage_plan.write_text('{"prior":true}\n', encoding="utf-8")
+    expected_sha = sha256(storage_plan.read_bytes()).hexdigest()
+
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first",
+        include_scheduler_preflight=True,
+        scheduler_storage_workload_subdir="experiments/results/dqs1_local_first",
+        scheduler_storage_expected_workload_root=(
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first"
+        ),
+        scheduler_storage_tiers=("vertigo=/Volumes/VertigoDataTier/pact",),
+        scheduler_proactive_cleanup_roots=("experiments/results", ".omx/tmp"),
+        scheduler_proactive_cleanup_execute=True,
+        scheduler_proactive_cleanup_cold_store_roots=(
+            "/Volumes/VertigoDataTier/pact/cold_store",
+        ),
+    )
+
+    command = result.queue["experiments"][0]["steps"][0]["command"]
+    assert "--expected-output-sha256" in command
+    assert command[command.index("--expected-output-sha256") + 1] == expected_sha
+
+
+def test_dqs1_queue_builder_preflight_uses_run_id_not_stale_summary_date(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first",
+        include_scheduler_preflight=True,
+        scheduler_storage_expected_workload_root=(
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first"
+        ),
+        scheduler_storage_tiers=("vertigo=/Volumes/VertigoDataTier/pact",),
+        scheduler_proactive_cleanup_roots=("experiments/results", ".omx/tmp"),
+        scheduler_proactive_cleanup_execute=True,
+        scheduler_proactive_cleanup_cold_store_roots=(
+            "/Volumes/VertigoDataTier/pact/cold_store",
+        ),
+        eureka_run_id="20260524T010203Z",
+    )
+
+    preflight = result.queue["experiments"][0]
+    storage_command = preflight["steps"][0]["command"]
+    cleanup_command = preflight["steps"][1]["command"]
+    assert ".omx/research/dqs1_local_first_storage_plan_20260524T010203Z.json" in storage_command
+    assert (
+        ".omx/research/dqs1_local_first_proactive_cleanup_20260524T010203Z.json"
+        in cleanup_command
+    )
 
 
 def test_dqs1_queue_builder_rejects_dry_run_scheduler_preflight_cleanup(

@@ -148,6 +148,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="local_cpu resource concurrency to write into the generated queue",
     )
     parser.add_argument(
+        "--local-io-concurrency",
+        type=int,
+        default=1,
+        help="local_io_heavy resource concurrency to write into the generated queue",
+    )
+    parser.add_argument(
         "--include-mlx-local-advisory-debug",
         action="store_true",
         help=(
@@ -235,6 +241,7 @@ def main(argv: list[str] | None = None) -> int:
         skip_completed_local_advisory=not args.include_completed_local_advisory,
         candidate_limit=args.candidate_limit,
         local_cpu_concurrency=args.local_cpu_concurrency,
+        local_io_concurrency=args.local_io_concurrency,
         include_mlx_local_advisory_debug=args.include_mlx_local_advisory_debug,
         allow_large_mlx_cache=args.allow_large_mlx_cache,
         mlx_reference_cache_dir=args.mlx_reference_cache_dir,

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from hashlib import sha256
 from pathlib import Path
 
 from comma_lab.operator_storage_waterfall import POLICY_ID, POLICY_SCHEMA
@@ -131,3 +132,33 @@ def test_storage_and_cleanup_tools_emit_artifact_catalog_metadata(
     assert cleanup_payload["artifact_catalog_metadata"]["storage_plan_path"] == storage_plan
     assert cleanup_payload["artifact_catalog_metadata"]["cleanup_plan_path"] == cleanup_plan
     assert cleanup_payload["artifact_catalog_metadata"]["score_claim"] is False
+
+
+def test_storage_tool_allows_expected_sha_overwrite(tmp_path: Path) -> None:
+    tier_root = tmp_path / "tier"
+    tier_root.mkdir()
+    output = tmp_path / "storage.json"
+    output.write_text('{"prior":true}\n', encoding="utf-8")
+    expected_sha = sha256(output.read_bytes()).hexdigest()
+
+    assert (
+        plan_experiment_storage.main(
+            [
+                "--output",
+                str(output),
+                "--storage-tier",
+                f"fixture={tier_root}",
+                "--workload-subdir",
+                "work",
+                "--reserve-free-gb",
+                "0",
+                "--create",
+                "--allow-local-storage-tier",
+                "--expected-output-sha256",
+                expected_sha,
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["score_claim"] is False

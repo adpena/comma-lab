@@ -599,6 +599,7 @@ def _exact_ready_queue_blockers(
         operator_override_reason=operator_override_reason,
         dispatch_claims_path=dispatch_claims_path,
         claim_policy="preclaim_conflict_check",
+        required_score_axis="contest_cuda",
     )
     facts["authority_source"] = authority.source
     blockers.extend(f"exact_dispatch_authority:{blocker}" for blocker in authority.blockers)

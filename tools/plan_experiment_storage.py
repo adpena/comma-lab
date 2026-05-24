@@ -113,6 +113,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--cleanup-plan-path", default=None)
     parser.add_argument("--journal-path", default=None)
     parser.add_argument("--lifecycle-kind", default="HISTORICAL_PROVENANCE")
+    parser.add_argument(
+        "--expected-output-sha256",
+        default=None,
+        help="required SHA-256 of existing --output when replacing a prior plan",
+    )
     parser.add_argument("--create", action="store_true", help="create selected workload directories if possible")
     parser.add_argument(
         "--allow-local-storage-tier",
@@ -131,7 +136,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if args.output:
         try:
-            write_json_artifact(args.output, payload, allow_overwrite=True)
+            write_json_artifact(
+                args.output,
+                payload,
+                allow_overwrite=True,
+                expected_existing_sha256=args.expected_output_sha256,
+            )
         except ArtifactWriteError as exc:
             print(f"FATAL: {exc}", file=sys.stderr)
             return 2

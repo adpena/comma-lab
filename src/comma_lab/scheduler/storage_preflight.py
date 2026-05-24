@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -83,6 +84,19 @@ def _expected_results_root(results_root: str) -> str:
     return str(path.resolve(strict=False))
 
 
+def _existing_sha256(path: str, *, base: Path | None = None) -> str | None:
+    target = Path(path).expanduser()
+    if not target.is_absolute():
+        target = (base or Path.cwd()) / target
+    if not target.is_file():
+        return None
+    digest = hashlib.sha256()
+    with target.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def build_scheduler_storage_preflight_experiment(
     *,
     experiment_id: str,
@@ -91,6 +105,7 @@ def build_scheduler_storage_preflight_experiment(
     artifact_prefix: str,
     date: str,
     results_root: str,
+    repo_root: str | Path | None = None,
     storage_tiers: tuple[str, ...] = (),
     storage_workload_subdir: str | None = None,
     storage_expected_workload_root: str | None = None,
@@ -180,6 +195,12 @@ def build_scheduler_storage_preflight_experiment(
     ]
     if expected_root is not None:
         storage_command.extend(["--expected-workload-root", expected_root])
+    expected_storage_sha = _existing_sha256(
+        storage_plan,
+        base=Path(repo_root) if repo_root is not None else None,
+    )
+    if expected_storage_sha is not None:
+        storage_command.extend(["--expected-output-sha256", expected_storage_sha])
     for spec in effective_storage_tiers:
         storage_command.extend(["--storage-tier", spec])
 

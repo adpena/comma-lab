@@ -14,6 +14,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+from tac.optimization.proxy_candidate_contract import (
+    CONSUMER_PAYLOAD_FORBIDDEN_TRUE_AUTHORITY_FIELDS,
+    truthy_authority_field_violations,
+)
 from tac.optimizer.exact_readiness import (
     claim_status_terminal,
     is_sha256,
@@ -25,6 +29,15 @@ from tac.optimizer.exact_readiness import (
 
 CONTEST_EXACT_EVAL_TARGET_MODE = "contest_exact_eval"
 ClaimPolicy = Literal["preclaim_conflict_check", "require_active_claim"]
+PRE_DISPATCH_ALLOWED_TRUTHY_AUTHORITY_FIELDS = frozenset(
+    {"dispatch_packet_ready", "ready_for_exact_eval_dispatch"}
+)
+SCORE_AXIS_FIELDS = (
+    "score_axis",
+    "target_score_axis",
+    "exact_eval_axis",
+    "auth_eval_axis",
+)
 
 
 @dataclass(frozen=True)
@@ -86,8 +99,51 @@ def _target_modes(row: Mapping[str, Any]) -> set[str]:
             if token:
                 modes.add(token)
     if row.get("contest_mode") is True:
-        modes.add("contest_exact_eval")
+        modes.add("contest")
     return modes
+
+
+def _normalize_score_axis(value: Any) -> str:
+    return str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+
+
+def _score_axis_blockers(
+    row: Mapping[str, Any],
+    *,
+    required_score_axis: str | None,
+) -> tuple[list[str], dict[str, str]]:
+    declared: dict[str, str] = {}
+    for key in SCORE_AXIS_FIELDS:
+        axis = _normalize_score_axis(row.get(key))
+        if axis:
+            declared[key] = axis
+    if required_score_axis is None:
+        return [], declared
+    required = _normalize_score_axis(required_score_axis)
+    blockers: list[str] = []
+    if not declared:
+        blockers.append(f"score_axis_missing:required={required}")
+        return blockers, declared
+    values = set(declared.values())
+    if len(values) > 1:
+        details = ",".join(f"{key}={value}" for key, value in sorted(declared.items()))
+        blockers.append(f"score_axis_field_mismatch:{details}")
+    if required not in values:
+        details = ",".join(f"{key}={value}" for key, value in sorted(declared.items()))
+        blockers.append(f"score_axis_required:{required}:declared={details}")
+    return blockers, declared
+
+
+def _truthy_authority_blockers(row: Mapping[str, Any]) -> list[str]:
+    fields = [
+        field
+        for field in CONSUMER_PAYLOAD_FORBIDDEN_TRUE_AUTHORITY_FIELDS
+        if field not in PRE_DISPATCH_ALLOWED_TRUTHY_AUTHORITY_FIELDS
+    ]
+    return [
+        f"truthy_authority_field:{violation}"
+        for violation in truthy_authority_field_violations(row, fields=fields)
+    ]
 
 
 def _optional_resolved_path(
@@ -173,6 +229,7 @@ def exact_dispatch_authority(
     required_claim_platform: str | None = None,
     required_claim_instance_job_ids: Iterable[str] = (),
     claim_ttl_hours: float = 24.0,
+    required_score_axis: str | None = None,
 ) -> ExactDispatchAuthorityVerdict:
     """Return fail-closed authority for a paid exact-eval dispatch row."""
 
@@ -200,10 +257,16 @@ def exact_dispatch_authority(
         blockers.append("score_claim_true_requires_result_review")
     if row.get("promotion_eligible") is True:
         blockers.append("promotion_eligible_true_requires_result_review")
+    blockers.extend(_truthy_authority_blockers(row))
     if require_ready_flag and not ready_flag:
         blockers.append("ready_for_exact_eval_dispatch_not_true")
     if require_contest_target and not contest_target:
         blockers.append("contest_exact_eval_target_mode_missing")
+    score_axis_blockers, declared_score_axes = _score_axis_blockers(
+        row,
+        required_score_axis=required_score_axis,
+    )
+    blockers.extend(score_axis_blockers)
 
     submission_dir = _optional_resolved_path(
         row,
@@ -240,6 +303,12 @@ def exact_dispatch_authority(
     )
     blockers.extend(readiness)
     facts["claim_policy"] = claim_policy
+    facts["required_score_axis"] = (
+        _normalize_score_axis(required_score_axis)
+        if required_score_axis is not None
+        else None
+    )
+    facts["declared_score_axes"] = dict(declared_score_axes)
 
     lane_id = facts.get("lane_id")
     if claim_policy == "require_active_claim":

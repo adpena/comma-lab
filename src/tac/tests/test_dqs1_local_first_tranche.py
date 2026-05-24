@@ -35,6 +35,7 @@ def test_tranche_parse_args_accepts_post_training_candidate_inputs() -> None:
     assert args.proactive_cleanup_action == "move"
     assert args.retention_action == "move"
     assert args.local_cpu_concurrency == 2
+    assert args.local_io_concurrency == 2
 
 
 def test_tranche_portfolio_directory_names_include_harvest_count() -> None:

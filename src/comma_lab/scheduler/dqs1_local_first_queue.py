@@ -155,6 +155,7 @@ def _candidate_priority(candidate_id: str, operator_action_rank: int | None) -> 
 
 def _scheduler_preflight_experiment(
     *,
+    repo_root: str | Path,
     date: str,
     results_root: str,
     storage_tiers: tuple[str, ...] = (),
@@ -176,6 +177,7 @@ def _scheduler_preflight_experiment(
         artifact_prefix="dqs1_local_first",
         date=date,
         results_root=results_root,
+        repo_root=repo_root,
         storage_tiers=storage_tiers,
         storage_workload_subdir=storage_workload_subdir,
         storage_expected_workload_root=storage_expected_workload_root,
@@ -733,6 +735,7 @@ def build_dqs1_local_first_queue(
     eureka_output_dir: str = DEFAULT_EUREKA_OUTPUT_DIR,
     eureka_run_id: str | None = None,
     local_cpu_concurrency: int = 1,
+    local_io_concurrency: int = 1,
     include_mlx_local_advisory_debug: bool = False,
     allow_large_mlx_cache: bool = False,
     mlx_reference_cache_dir: str = DEFAULT_MLX_REFERENCE_CACHE_DIR,
@@ -749,6 +752,12 @@ def build_dqs1_local_first_queue(
         or local_cpu_concurrency <= 0
     ):
         raise ExperimentQueueError("local_cpu_concurrency must be a positive integer")
+    if (
+        isinstance(local_io_concurrency, bool)
+        or not isinstance(local_io_concurrency, int)
+        or local_io_concurrency <= 0
+    ):
+        raise ExperimentQueueError("local_io_concurrency must be a positive integer")
     if mlx_device not in {"cpu", "gpu"}:
         raise ExperimentQueueError("mlx_device must be 'cpu' or 'gpu'")
     if isinstance(mlx_batch_pairs, bool) or not isinstance(mlx_batch_pairs, int) or mlx_batch_pairs <= 0:
@@ -910,7 +919,7 @@ def build_dqs1_local_first_queue(
         {
             "id": "local_cpu_advisory",
             "requires": ["locality_controls"],
-            "timeout_seconds": 1200,
+            "timeout_seconds": 3600,
             "command": [
                 ".venv/bin/python",
                 "experiments/contest_auth_eval.py",
@@ -929,9 +938,9 @@ def build_dqs1_local_first_queue(
                 "--json-out",
                 f"{materialized_root}/local_cpu_advisory.json",
                 "--inflate-timeout",
-                "600",
+                "1800",
                 "--evaluate-timeout",
-                "900",
+                "1800",
                 "--keep-work-dir",
             ],
             "resources": {"kind": "local_cpu"},
@@ -1136,7 +1145,7 @@ def build_dqs1_local_first_queue(
             "local_first": True,
             "max_concurrency": {
                 "local_cpu": local_cpu_concurrency,
-                "local_io_heavy": 1,
+                "local_io_heavy": local_io_concurrency,
                 "local_mlx": 1,
                 "modal_cpu": 0,
                 "modal_gpu": 0,
@@ -1187,6 +1196,7 @@ def build_dqs1_local_first_queue_from_selections(
     eureka_output_dir: str = DEFAULT_EUREKA_OUTPUT_DIR,
     eureka_run_id: str | None = None,
     local_cpu_concurrency: int = 1,
+    local_io_concurrency: int = 1,
     include_mlx_local_advisory_debug: bool = False,
     allow_large_mlx_cache: bool = False,
     mlx_reference_cache_dir: str = DEFAULT_MLX_REFERENCE_CACHE_DIR,
@@ -1230,6 +1240,7 @@ def build_dqs1_local_first_queue_from_selections(
             expected_workload_root=scheduler_storage_expected_workload_root,
         )
     date = lane_date or _lane_date_from_summary_path(selections[0].action_summary_path)
+    preflight_artifact_id = eureka_run_id or date
     preflight_dependency = (
         f"{DEFAULT_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup"
         if include_scheduler_preflight
@@ -1252,6 +1263,7 @@ def build_dqs1_local_first_queue_from_selections(
             eureka_output_dir=eureka_output_dir,
             eureka_run_id=eureka_run_id,
             local_cpu_concurrency=local_cpu_concurrency,
+            local_io_concurrency=local_io_concurrency,
             include_mlx_local_advisory_debug=include_mlx_local_advisory_debug,
             allow_large_mlx_cache=allow_large_mlx_cache,
             mlx_reference_cache_dir=mlx_reference_cache_dir,
@@ -1267,7 +1279,8 @@ def build_dqs1_local_first_queue_from_selections(
     queue = dict(queues[0])
     preflight_experiments = [
         _scheduler_preflight_experiment(
-            date=date,
+            repo_root=repo_root,
+            date=preflight_artifact_id,
             results_root=results_root,
             storage_tiers=scheduler_storage_tiers,
             storage_workload_subdir=scheduler_storage_workload_subdir,
@@ -1312,6 +1325,7 @@ def build_queue_from_action_summary(
     skip_completed_local_advisory: bool = True,
     candidate_limit: int = 1,
     local_cpu_concurrency: int = 1,
+    local_io_concurrency: int = 1,
     include_mlx_local_advisory_debug: bool = False,
     allow_large_mlx_cache: bool = False,
     mlx_reference_cache_dir: str = DEFAULT_MLX_REFERENCE_CACHE_DIR,
@@ -1359,6 +1373,7 @@ def build_queue_from_action_summary(
             eureka_output_dir=eureka_output_dir,
             eureka_run_id=eureka_run_id,
             local_cpu_concurrency=local_cpu_concurrency,
+            local_io_concurrency=local_io_concurrency,
             include_mlx_local_advisory_debug=include_mlx_local_advisory_debug,
             allow_large_mlx_cache=allow_large_mlx_cache,
             mlx_reference_cache_dir=mlx_reference_cache_dir,

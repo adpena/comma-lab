@@ -296,6 +296,8 @@ def _queue_build_common_args(args: argparse.Namespace, *, results_root: Path) ->
         str(args.queue_candidate_limit),
         "--local-cpu-concurrency",
         str(args.local_cpu_concurrency),
+        "--local-io-concurrency",
+        str(args.local_io_concurrency),
     ]
     if not args.storage_waterfall:
         return base_args
@@ -657,6 +659,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--top-actions", type=int, default=64)
     parser.add_argument("--queue-candidate-limit", type=int, default=2)
     parser.add_argument("--local-cpu-concurrency", type=int, default=2)
+    parser.add_argument("--local-io-concurrency", type=int, default=2)
     parser.add_argument("--json-out", default=None)
     parser.add_argument(
         "--stop-on-eureka",
@@ -675,6 +678,8 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--queue-candidate-limit must be >= 1")
     if args.local_cpu_concurrency < 1:
         raise SystemExit("--local-cpu-concurrency must be >= 1")
+    if args.local_io_concurrency < 1:
+        raise SystemExit("--local-io-concurrency must be >= 1")
     queue_path = _resolve(args.queue)
     frontier_scores, frontier_payload = _frontier_scores()
     incumbent_score = args.incumbent_score or str(frontier_scores["contest_cuda"])

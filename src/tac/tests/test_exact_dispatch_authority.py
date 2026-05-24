@@ -389,3 +389,89 @@ def test_exact_dispatch_authority_requires_contest_target_metadata(tmp_path: Pat
 
     assert verdict.authorized is False
     assert "contest_exact_eval_target_mode_missing" in verdict.blockers
+
+
+def test_exact_dispatch_authority_does_not_treat_contest_mode_as_exact_eval(
+    tmp_path: Path,
+) -> None:
+    row = _ready_row(tmp_path)
+    row.pop("target_modes", None)
+    row["contest_mode"] = True
+
+    verdict = exact_dispatch_authority(
+        row,
+        repo_root=tmp_path,
+        source="test",
+        active_floor_archive_bytes=None,
+    )
+
+    assert verdict.authorized is False
+    assert "contest_exact_eval_target_mode_missing" in verdict.blockers
+
+
+def test_exact_dispatch_authority_blocks_truthy_pre_dispatch_authority_fields(
+    tmp_path: Path,
+) -> None:
+    base = _ready_row(tmp_path)
+    truthy_fields = (
+        "rank_or_kill_eligible",
+        "score_claim_valid",
+        "exact_cuda_auth_eval",
+        "contest_cuda_auth_eval",
+        "dispatch_attempted",
+        "promotable",
+    )
+
+    for field in truthy_fields:
+        row = dict(base)
+        row[field] = True
+        verdict = exact_dispatch_authority(
+            row,
+            repo_root=tmp_path,
+            source="test",
+            active_floor_archive_bytes=None,
+        )
+
+        assert verdict.authorized is False
+        assert f"truthy_authority_field:{field}=truthy" in verdict.blockers
+
+
+def test_exact_dispatch_authority_requires_declared_score_axis_when_requested(
+    tmp_path: Path,
+) -> None:
+    row = _ready_row(tmp_path)
+    row.pop("score_axis", None)
+    row.pop("target_score_axis", None)
+
+    verdict = exact_dispatch_authority(
+        row,
+        repo_root=tmp_path,
+        source="test",
+        active_floor_archive_bytes=None,
+        required_score_axis="contest_cuda",
+    )
+
+    assert verdict.authorized is False
+    assert "score_axis_missing:required=contest_cuda" in verdict.blockers
+
+
+def test_exact_dispatch_authority_blocks_wrong_score_axis_when_requested(
+    tmp_path: Path,
+) -> None:
+    row = _ready_row(tmp_path)
+    row["score_axis"] = "contest_cpu"
+    row["target_score_axis"] = "contest_cpu"
+
+    verdict = exact_dispatch_authority(
+        row,
+        repo_root=tmp_path,
+        source="test",
+        active_floor_archive_bytes=None,
+        required_score_axis="contest_cuda",
+    )
+
+    assert verdict.authorized is False
+    assert (
+        "score_axis_required:contest_cuda:declared=score_axis=contest_cpu,"
+        "target_score_axis=contest_cpu"
+    ) in verdict.blockers
