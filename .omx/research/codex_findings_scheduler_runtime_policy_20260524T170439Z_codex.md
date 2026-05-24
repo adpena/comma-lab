@@ -24,8 +24,8 @@ resolvable.
   passed.
 - `.venv/bin/python -m pytest src/tac/tests/test_experiment_queue.py src/tac/tests/test_experiment_queue_observer.py -q`
   passed: 65 tests.
-- `.venv/bin/python -m pytest src/tac/tests/test_experiment_queue.py src/tac/tests/test_experiment_queue_observer.py src/tac/tests/test_staircase_dag.py src/tac/tests/test_scheduler_cli.py src/tac/tests/test_ssh_experiment_queue_executor.py src/tac/tests/test_byte_shaving_campaign.py src/tac/tests/test_byte_shaving_campaign_queue.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_materializer_chain_harvest_scheduler.py -q`
-  passed: 259 tests.
+- `.venv/bin/python -m pytest src/tac/tests/test_experiment_queue.py src/tac/tests/test_experiment_queue_observer.py src/tac/tests/test_staircase_dag.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_byte_shaving_campaign_queue.py -q`
+  passed: 167 tests.
 - `git diff --check` passed.
 
 ## Remaining Work
