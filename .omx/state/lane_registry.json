@@ -53529,7 +53529,7 @@
         },
         "real_archive_empirical": {
           "status": true,
-          "evidence": "experiments/results/packet_header_elide_all_members_20260524T232046Z/sweep.json"
+          "evidence": "experiments/results/packet_header_elide_all_members_sweep_20260524T232249Z/sweep.json"
         },
         "contest_cuda": {
           "status": false,
@@ -53570,7 +53570,7 @@
         },
         "real_archive_empirical": {
           "status": true,
-          "evidence": "experiments/results/packet_header_elide_all_members_sweep_20260524T2344Z/sweep.json"
+          "evidence": "experiments/results/packet_header_elide_all_members_sweep_20260524T232249Z/sweep.json"
         },
         "contest_cuda": {
           "status": false,
@@ -53597,7 +53597,7 @@
           "evidence": ""
         }
       },
-      "notes": "Generalize packet_member_zip_header_elide_v1 from singleton to selected/all-member ZIP header elision, preserve compressed streams, and feed all-member materializer observations into queue feedback."
+      "notes": "Duplicate sidecar of codex_packet_header_elide_all_members_feedback_20260524; preserved for no-signal-loss custody, not a separate active execution lane."
     }
   ],
   "level_rules": {
@@ -53607,5 +53607,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T23:21:02Z"
+  "updated_at": "2026-05-24T23:24:17Z"
 }
