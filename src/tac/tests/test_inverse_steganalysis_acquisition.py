@@ -505,6 +505,65 @@ def test_mlx_acquisition_batch_rejects_truthy_nested_compiler_authority() -> Non
         build_mlx_acquisition_batch_from_selection(selection, set_size=1)
 
 
+def test_mlx_direct_spend_triage_compiler_hint_survives_to_action_cell() -> None:
+    selection = _mlx_selection()
+    compiler_hint = {
+        "schema": "inverse_action_operation_set_compiler_hint.v1",
+        "operation_set_id": "direct_mlx_compiler",
+        "operation_portability": "family_agnostic",
+        "selected_operations": [
+            {
+                "unit_id": "direct_decoder_blob",
+                "target_kind": "archive_section_entropy_recode_v1",
+                "archive_section": "decoder_blob",
+                "candidate_saved_bytes": 256,
+            },
+            {
+                "unit_id": "direct_packet_member",
+                "target_kind": "packet_member_recompress_v1",
+                "member_name": "0.bin",
+                "candidate_saved_bytes": 128,
+            },
+        ],
+    }
+    selection["selected_rows"][0]["operation_set_compiler"] = compiler_hint
+
+    atoms = inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection(
+        selection,
+        source_path="selection.json",
+    )
+    action = build_discrete_scorer_action_functional(atoms)
+    cell = action["cells"][0]
+    provenance = cell["source_provenance"]
+
+    assert atoms[0]["operation_set_compiler"] == compiler_hint
+    assert cell["operation_set_compiler"] == compiler_hint
+    assert provenance["operation_set_compiler"] == compiler_hint
+    assert cell["score_claim"] is False
+    assert provenance["score_claim"] is False
+    assert action["score_claim"] is False
+
+
+def test_mlx_direct_spend_triage_rejects_truthy_nested_compiler_authority() -> None:
+    selection = _mlx_selection()
+    selection["selected_rows"][0]["operation_set_compiler"] = {
+        "schema": "inverse_action_operation_set_compiler_hint.v1",
+        "selected_operations": [
+            {
+                "target_kind": "archive_section_entropy_recode_v1",
+                "archive_section": "decoder_blob",
+                "score_claim": True,
+            }
+        ],
+    }
+
+    with pytest.raises(
+        InverseSteganalysisAcquisitionError,
+        match=r"operation_set_compiler.*score_claim=truthy",
+    ):
+        inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection(selection)
+
+
 def test_action_surface_terms_model_scope_interactions_and_fragility() -> None:
     atom = normalize_inverse_steganalysis_atom(
         _atom(

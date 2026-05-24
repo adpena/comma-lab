@@ -26,6 +26,11 @@ from tac.optimization.byte_shaving_campaign import (
     build_signal_surface_from_master_gradient_anchor,
     validate_signal_surface,
 )
+from tac.optimization.inverse_steganalysis_acquisition import (
+    CONTEST_RATE_SCORE_PER_BYTE,
+    build_discrete_scorer_action_functional,
+    inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection,
+)
 from tac.packet_compiler.deterministic_compiler import PACKET_IR_OPERATION_SET_SCHEMA
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -138,6 +143,92 @@ def _inverse_action_payload() -> dict[str, object]:
         },
         "cells": [],
         **_false_authority(),
+    }
+
+
+def _mlx_direct_selection_with_compiler_hint() -> dict[str, object]:
+    false_authority = _false_authority()
+    normalized_gain = 0.00002
+    return {
+        "schema": "mlx_effective_spend_triage_candidate_selection.v1",
+        **false_authority,
+        "candidate_generation_only": True,
+        "archive_materialization_required": True,
+        "requires_exact_auth_eval_before_score_claim": True,
+        "allowed_use": "candidate_generation_filter_after_strict_effective_mlx_spend_triage_gate",
+        "evidence_grade": "macOS-MLX-research-signal",
+        "evidence_tag": "[macOS-MLX research-signal]",
+        "score_axis": "[macOS-MLX research-signal]",
+        "source_artifacts": {},
+        "gates": {
+            "effective_mlx_spend_triage_gate": {
+                "schema": "ll_effective_mlx_spend_triage_gate.v1",
+                "status": "strict_pass",
+                "mlx_exact_eval_spend_triage_allowed": True,
+            },
+            "torch_parity_status": "strict_pass",
+            "score_calibration_status": "strict_pass",
+            "production_contract_status": "strict_pass",
+        },
+        "selection_policy": {
+            "top_k": 1,
+            "families": ["mlx_decoder_q"],
+            "gate_spend_triage_allowed_families": ["mlx_decoder_q"],
+            "require_singleton_windows": True,
+            "planning_value_accessor": "scorer_response_planning_value_for_target",
+            "planning_value_scope": "normalized_full_video",
+        },
+        "selected_rows": [
+            {
+                "schema": "mlx_effective_spend_triage_candidate_row.v1",
+                **false_authority,
+                "rank": 1,
+                "candidate_generation_only": True,
+                "archive_materialization_required": True,
+                "requires_exact_auth_eval_before_score_claim": True,
+                "selection_basis": "normalized_full_video_mlx_singleton_response_gain",
+                "selection_planning_value_accessor": "scorer_response_planning_value_for_target",
+                "selection_planning_value_scope": "normalized_full_video",
+                "row_id": "direct_best",
+                "family": "mlx_decoder_q",
+                "candidate_id": "mlx_direct_compiler_candidate",
+                "pair_indices": [10, 11],
+                "source_pair_window": [10, 11],
+                "full_video_denominator": 600,
+                "normalized_full_video_scorer_gain_vs_baseline": normalized_gain,
+                "projected_full_video_delta_vs_baseline_score": -normalized_gain,
+                "break_even_added_bytes_from_normalized_full_video_gain": (
+                    normalized_gain / CONTEST_RATE_SCORE_PER_BYTE
+                ),
+                "normalized_full_video_byte_budget_margin_vs_break_even": (
+                    normalized_gain / CONTEST_RATE_SCORE_PER_BYTE
+                ),
+                "added_archive_bytes": 0,
+                "calibrated_min_mlx_gap_for_spend_triage": 0.00001,
+                "operation_set_compiler": {
+                    "schema": "inverse_action_operation_set_compiler_hint.v1",
+                    "operation_set_id": "direct_mlx_compiled_set",
+                    "candidate_saved_bytes": 384,
+                    "operation_portability": "family_agnostic",
+                    "selected_operations": [
+                        {
+                            "unit_id": "direct_decoder_blob",
+                            "target_kind": "archive_section_entropy_recode_v1",
+                            "archive_section": "decoder_blob",
+                            "candidate_saved_bytes": 256,
+                            "representation_family_class": "hnerv_variant",
+                        },
+                        {
+                            "unit_id": "direct_packet_member",
+                            "target_kind": "packet_member_recompress_v1",
+                            "member_name": "0.bin",
+                            "candidate_saved_bytes": 128,
+                            "representation_family_class": "non_nerv",
+                        },
+                    ],
+                },
+            }
+        ],
     }
 
 
@@ -702,6 +793,43 @@ def test_mlx_placeholder_provenance_defers_to_compiler_hint() -> None:
         operation["target_kind"]
         for operation in plan["packet_ir_operation_sets"][0]["operations"]
     } == {"archive_section_entropy_recode_v1", "packet_member_recompress_v1"}
+    assert bridge["score_claim"] is False
+    assert bridge["ready_for_exact_eval_dispatch"] is False
+
+
+def test_direct_mlx_spend_triage_compiler_hint_lowers_to_packet_ir() -> None:
+    selection = _mlx_direct_selection_with_compiler_hint()
+    atoms = inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection(
+        selection,
+        source_path="selection.json",
+    )
+    action = build_discrete_scorer_action_functional(atoms, total_byte_budget=512)
+
+    surface = build_signal_surface_from_inverse_action_functional(action)
+    plan = build_byte_shaving_campaign_plan(surface, max_k=2)
+    packet_ir = plan["packet_ir_operation_sets"][0]
+    bridge = plan["materialization_bridge"]
+
+    assert action["cells"][0]["operation_set_compiler"]["operation_set_id"] == (
+        "direct_mlx_compiled_set"
+    )
+    assert surface["water_bucket_materialization_portfolio"]["actuation_modes"] == [
+        "compiled_operation_set"
+    ]
+    assert surface["source_signal_refs"][0]["compiled_operation_set_count"] == 1
+    assert {unit["unit_kind"] for unit in surface["units"]} == {
+        "archive_section",
+        "packet_member",
+    }
+    assert {
+        operation["target_kind"] for operation in packet_ir["operations"]
+    } == {"archive_section_entropy_recode_v1", "packet_member_recompress_v1"}
+    assert bridge["compiled_operation_set_count"] == 1
+    assert bridge["high_level_operation_compiler_required_count"] == 0
+    assert bridge["queue_consumable_packet_ir_operation_set_count"] == 1
+    assert bridge["queue_consumable_packet_ir_operation_set_ids"] == [
+        packet_ir["operation_set_id"]
+    ]
     assert bridge["score_claim"] is False
     assert bridge["ready_for_exact_eval_dispatch"] is False
 

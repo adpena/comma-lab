@@ -1418,6 +1418,10 @@ def _action_atom_from_mlx_effective_spend_triage_row(
             "calibrated_min_mlx_gap_for_spend_triage": calibrated_gap,
             "prediction_field": row.get("prediction_field"),
             "predicted_delta_vs_baseline_score": predicted_delta,
+            "operation_set_compiler": _optional_mapping(
+                row.get("operation_set_compiler"),
+                f"{label}.operation_set_compiler",
+            ),
         },
         "mlx_effective_spend_triage_row_provenance_is_not_score_authority",
     )
@@ -1446,6 +1450,10 @@ def _action_atom_from_mlx_effective_spend_triage_row(
         "elapsed_seconds": elapsed_seconds,
         "artifact_bytes": row_artifact_bytes,
         "resource_kind": resource_kind,
+        "operation_set_compiler": _optional_mapping(
+            row.get("operation_set_compiler"),
+            f"{label}.operation_set_compiler",
+        ),
         "source_provenance": provenance,
     }
 
