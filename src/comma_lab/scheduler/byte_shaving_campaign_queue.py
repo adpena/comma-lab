@@ -627,6 +627,18 @@ def _path_list_context_value(context: Mapping[str, Any], key: str) -> list[str]:
     return []
 
 
+def _command_flag_values(command: Sequence[str], flags: set[str]) -> list[str]:
+    values: list[str] = []
+    index = 0
+    while index < len(command) - 1:
+        if command[index] in flags:
+            values.append(command[index + 1])
+            index += 2
+        else:
+            index += 1
+    return ordered_unique(values)
+
+
 def _context_keys_from_row(row: Mapping[str, Any]) -> list[str]:
     keys: list[str] = []
     raw_keys = row.get("context_keys")
@@ -786,6 +798,7 @@ def _inverse_scorer_action_functional_command(
     for path in inverse_surfaces:
         command.extend(["--inverse-scorer-surface", path])
 
+    input_paths = [*scorer_responses, *inverse_surfaces]
     optional_path_flags = (
         ("md_out", "--md-out"),
         ("queue_performance_runtime_identity", "--queue-performance-runtime-identity"),
@@ -796,8 +809,11 @@ def _inverse_scorer_action_functional_command(
         value = _path_context_value(context, key)
         if value is not None:
             command.extend([flag, value])
+            if key != "md_out":
+                input_paths.append(value)
     for path in _path_list_context_value(context, "queue_performance_summary"):
         command.extend(["--queue-performance-summary", path])
+        input_paths.append(path)
 
     optional_text_flags = (
         ("candidate_id", "--candidate-id"),
@@ -839,6 +855,7 @@ def _inverse_scorer_action_functional_command(
         telemetry_paths.append(md_out)
     return command, [], {
         "artifact_paths": telemetry_paths,
+        "input_artifact_paths": input_paths,
         "pullback_artifact_paths": telemetry_paths,
         "include_postcondition_paths": True,
     }
@@ -872,6 +889,7 @@ def _inverse_scorer_cell_candidate_command(
     assert template is not None
     assert action_functional is not None
     assert isinstance(raw_digest, str)
+    input_paths = [template, action_functional]
     if output_dir is not None:
         command = [
             ".venv/bin/python",
@@ -900,9 +918,11 @@ def _inverse_scorer_cell_candidate_command(
         inflate_runtime_dir = _path_context_value(context, "inflate_runtime_dir")
         if inflate_runtime_dir is not None:
             command.extend(["--inflate-runtime-dir", inflate_runtime_dir])
+            input_paths.append(inflate_runtime_dir)
         source_archive_for_parity = _path_context_value(context, "source_archive_for_parity")
         if source_archive_for_parity is not None:
             command.extend(["--source-archive-for-parity", source_archive_for_parity])
+            input_paths.append(source_archive_for_parity)
         inflate_timeout_seconds = _finite_int(context.get("inflate_timeout_seconds"))
         if inflate_timeout_seconds is not None:
             command.extend(["--inflate-timeout-seconds", str(inflate_timeout_seconds)])
@@ -935,6 +955,7 @@ def _inverse_scorer_cell_candidate_command(
         runtime_proof = _path_context_value(context, "runtime_consumption_proof")
         if runtime_proof is not None:
             command.extend(["--runtime-consumption-proof", runtime_proof])
+            input_paths.append(runtime_proof)
     for atom_id in _path_list_context_value(context, "atom_id"):
         command.extend(["--atom-id", atom_id])
     for atom_id in _path_list_context_value(context, "atom_ids"):
@@ -962,6 +983,7 @@ def _inverse_scorer_cell_candidate_command(
                 artifact_paths.append(optional_path)
         return command, [], {
             "artifact_paths": artifact_paths,
+            "input_artifact_paths": input_paths,
             "pullback_artifact_paths": [output_dir],
             "pullback_recursive": True,
             "pullback_max_recursive_entries": 512,
@@ -976,6 +998,7 @@ def _inverse_scorer_cell_candidate_command(
         }
     return command, [], {
         "artifact_paths": [output_archive, manifest_out],
+        "input_artifact_paths": input_paths,
         "pullback_artifact_paths": [output_archive, manifest_out],
         "include_postcondition_paths": True,
     }
@@ -1188,6 +1211,16 @@ def build_materializer_work_queue(
             command, command_blockers = _byte_range_chain_command(context)
             blockers.extend(command_blockers)
             if command:
+                input_paths = _command_flag_values(
+                    command,
+                    {
+                        "--beam-probe-report",
+                        "--global-combo-report",
+                        "--schema-manifest",
+                        "--source-archive",
+                        "--source-runtime-dir",
+                    },
+                )
                 postconditions = _materializer_chain_postconditions(
                     manifest_path=str(
                         Path(context["output_dir"]) / BYTE_RANGE_CHAIN_MANIFEST
@@ -1197,6 +1230,7 @@ def build_materializer_work_queue(
                 )
                 telemetry = {
                     "artifact_paths": [str(context["output_dir"])],
+                    "input_artifact_paths": input_paths,
                     "pullback_artifact_paths": [str(context["output_dir"])],
                     "pullback_recursive": True,
                     "pullback_max_recursive_entries": 512,

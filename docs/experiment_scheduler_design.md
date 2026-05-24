@@ -171,14 +171,17 @@ exact-dispatch authority.
 
 SSH execution that can create artifacts outside the local filesystem must use
 the artifact mobility contract. Pass `--require-artifact-mobility` with either
-one or more `--artifact-path-map LOCAL_PREFIX=REMOTE_PREFIX` mappings for rsync
-pullback or a specific `--artifact-shared-path-rationale` when the remote host
-and local machine are operating on the same mounted storage. The executor
-claims the queue step locally, runs the remote command, pulls back every mapped
-local-visible postcondition artifact, and only then evaluates terminal
-postconditions in the local authority state. A remote zero exit code without
-successful local artifact visibility is a failed queue step, not a succeeded
-remote result.
+one or more `--artifact-path-map LOCAL_PREFIX=REMOTE_PREFIX` mappings for input
+rsync push plus output rsync pullback, or a specific
+`--artifact-shared-path-rationale` when the remote host and local machine are
+operating on the same mounted storage. The executor
+claims the queue step locally, pushes every declared
+`telemetry.input_artifact_paths` entry through the same path map, runs the
+remote command, pulls back every mapped local-visible postcondition artifact,
+and only then evaluates terminal postconditions in the local authority state. A
+remote zero exit code without successful local artifact visibility is a failed
+queue step, not a succeeded remote result; a missing or unmapped declared input
+artifact is blocked before launch.
 
 The materializer campaign runner exposes the same contract through
 `--staircase-ssh-execute`, `--staircase-ssh-artifact-path-map`,

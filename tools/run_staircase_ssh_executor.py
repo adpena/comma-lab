@@ -104,14 +104,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--require-artifact-mobility",
         action="store_true",
-        help="require pullback/shared-storage visibility for local postcondition artifacts",
+        help=(
+            "require mapped input-artifact push plus pullback/shared-storage visibility "
+            "for local postcondition artifacts"
+        ),
     )
     parser.add_argument(
         "--artifact-path-map",
         action="append",
         default=[],
         metavar="LOCAL_PREFIX=REMOTE_PREFIX",
-        help="map a local artifact prefix to the corresponding remote prefix for rsync pullback",
+        help=(
+            "map a local artifact prefix to the corresponding remote prefix for "
+            "input rsync push and output rsync pullback"
+        ),
     )
     parser.add_argument(
         "--artifact-shared-path-rationale",

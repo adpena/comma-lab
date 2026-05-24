@@ -2009,6 +2009,62 @@ def test_experiment_queue_false_authority_postcondition_blocks_leaks(tmp_path: P
     assert result["failed_postconditions"][0]["type"] == "json_false_authority"
 
 
+@pytest.mark.parametrize(
+    "alias_field",
+    [
+        "score_claim_valid",
+        "promotable",
+        "exact_cuda_auth_eval",
+        "charged_bits_changed",
+        "dispatch_ready",
+        "exact_eval_ready",
+    ],
+)
+def test_json_false_authority_defaults_block_truthy_alias_fields(
+    tmp_path: Path,
+    alias_field: str,
+) -> None:
+    advisory = tmp_path / "advisory.json"
+    payload = {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        alias_field: True,
+    }
+    advisory.write_text(json.dumps(payload), encoding="utf-8")
+
+    condition = {
+        "type": "json_false_authority",
+        "path": advisory.name,
+    }
+
+    assert _condition_passes(condition, repo_root=tmp_path) is False
+
+
+def test_json_false_authority_explicit_false_or_missing_override_is_exact(
+    tmp_path: Path,
+) -> None:
+    advisory = tmp_path / "advisory.json"
+    advisory.write_text(
+        json.dumps(
+            {
+                "score_claim": False,
+                "score_claim_valid": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    condition = {
+        "type": "json_false_authority",
+        "path": advisory.name,
+        "required_false": ["score_claim"],
+        "false_or_missing": [],
+    }
+
+    assert _condition_passes(condition, repo_root=tmp_path) is True
+
+
 def _postcondition_artifact(path: Path, payload: bytes = b"artifact") -> dict[str, object]:
     path.write_bytes(payload)
     return {
@@ -2087,6 +2143,86 @@ def test_materializer_chain_complete_allows_downstream_readiness_blockers(
     strict_condition = dict(condition)
     strict_condition["forbid_readiness_blockers"] = True
     assert _condition_passes(strict_condition, repo_root=tmp_path) is False
+
+
+def test_materializer_chain_complete_defaults_block_truthy_alias_fields(
+    tmp_path: Path,
+) -> None:
+    manifest = tmp_path / "chain.json"
+    archive = _postcondition_artifact(tmp_path / "candidate.zip", b"candidate")
+    proof = _postcondition_artifact(tmp_path / "receiver_proof.json", b"proof")
+    base_payload = {
+        "schema": "chain.v1",
+        "candidate_archive": archive,
+        "candidate_archive_sha256": archive["sha256"],
+        "candidate_archive_bytes": archive["bytes"],
+        "byte_closed_candidate_emitted": True,
+        "runtime_adapter_ready": True,
+        "receiver_contract_satisfied": True,
+        "candidate_runtime_adapter_blocker_cleared": True,
+        "readiness_blockers": ["exact_auth_eval_required_before_score_claim"],
+        "artifacts": {"receiver_proof": proof},
+        "chain_steps": [{"status": "succeeded", "artifact": proof}],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+    }
+    condition = {
+        "type": "materializer_chain_complete",
+        "path": manifest.name,
+        "schema": "chain.v1",
+    }
+
+    for alias_field in (
+        "score_claim_valid",
+        "promotable",
+        "exact_cuda_auth_eval",
+        "charged_bits_changed",
+        "dispatch_ready",
+        "exact_eval_ready",
+    ):
+        manifest.write_text(
+            json.dumps({**base_payload, alias_field: True}),
+            encoding="utf-8",
+        )
+        assert _condition_passes(condition, repo_root=tmp_path) is False, alias_field
+
+    manifest.write_text(json.dumps(base_payload), encoding="utf-8")
+    assert _condition_passes(condition, repo_root=tmp_path) is True
+
+
+def test_materializer_chain_complete_explicit_false_or_missing_override_is_exact(
+    tmp_path: Path,
+) -> None:
+    manifest = tmp_path / "chain.json"
+    archive = _postcondition_artifact(tmp_path / "candidate.zip", b"candidate")
+    proof = _postcondition_artifact(tmp_path / "receiver_proof.json", b"proof")
+    payload = {
+        "schema": "chain.v1",
+        "candidate_archive": archive,
+        "candidate_archive_sha256": archive["sha256"],
+        "candidate_archive_bytes": archive["bytes"],
+        "byte_closed_candidate_emitted": True,
+        "runtime_adapter_ready": True,
+        "receiver_contract_satisfied": True,
+        "candidate_runtime_adapter_blocker_cleared": True,
+        "readiness_blockers": [],
+        "artifacts": {"receiver_proof": proof},
+        "chain_steps": [{"status": "succeeded", "artifact": proof}],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "charged_bits_changed": True,
+    }
+    condition = {
+        "type": "materializer_chain_complete",
+        "path": manifest.name,
+        "schema": "chain.v1",
+        "false_or_missing": [],
+    }
+
+    manifest.write_text(json.dumps(payload), encoding="utf-8")
+    assert _condition_passes(condition, repo_root=tmp_path) is True
 
 
 def test_materializer_chain_complete_requires_serialized_archive_saving_status(

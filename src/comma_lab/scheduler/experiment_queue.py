@@ -30,6 +30,27 @@ LOCAL_RESOURCE_KINDS = {
 CLOUD_RESOURCE_KINDS = {"cloud_cpu", "cloud_gpu", "modal_cpu", "modal_gpu", "cuda_auth"}
 KNOWN_RESOURCE_KINDS = LOCAL_RESOURCE_KINDS | CLOUD_RESOURCE_KINDS
 SHA256_HEX = frozenset("0123456789abcdef")
+DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS = (
+    "score_claim",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+)
+DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS = (
+    "score_claim_valid",
+    "score_claim_eligible",
+    "promotable",
+    "ready_for_exact_eval_dispatch",
+    "field_selection_ready_for_exact_eval_dispatch",
+    "dispatch_ready",
+    "exact_eval_ready",
+    "exact_eval_dispatch_ready",
+    "exact_cuda_auth_eval",
+    "contest_cuda_auth_eval",
+    "dispatch_attempted",
+    "gpu_launched",
+    "score_affecting_payload_changed",
+    "charged_bits_changed",
+)
 
 
 class ExperimentQueueError(ValueError):
@@ -1318,14 +1339,14 @@ def _materializer_chain_complete(
     required_false = _string_list(
         condition.get(
             "required_false",
-            ["score_claim", "promotion_eligible", "rank_or_kill_eligible"],
+            list(DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS),
         ),
         "postcondition.required_false",
     )
     false_or_missing = _string_list(
         condition.get(
             "false_or_missing",
-            ["ready_for_exact_eval_dispatch", "dispatch_attempted", "gpu_launched"],
+            list(DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS),
         ),
         "postcondition.false_or_missing",
     )
@@ -1361,26 +1382,22 @@ def _condition_passes(condition: Mapping[str, Any], *, repo_root: Path) -> bool:
         if not isinstance(payload, Mapping):
             return False
         required_false = _string_list(
-            condition.get("required_false", ["score_claim", "promotion_eligible", "rank_or_kill_eligible"]),
+            condition.get("required_false", list(DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS)),
             "postcondition.required_false",
         )
-        for key in required_false:
-            if _json_pointer(payload, key) is not False:
-                return False
         false_or_missing = _string_list(
             condition.get(
                 "false_or_missing",
-                ["ready_for_exact_eval_dispatch", "dispatch_attempted", "gpu_launched"],
+                list(DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS),
             ),
             "postcondition.false_or_missing",
         )
-        for key in false_or_missing:
-            try:
-                value = _json_pointer(payload, key)
-            except ExperimentQueueError:
-                continue
-            if value is not False:
-                return False
+        if not _false_authority_payload_valid(
+            payload,
+            required_false=required_false,
+            false_or_missing=false_or_missing,
+        ):
+            return False
         axis_key = condition.get("axis_key")
         if axis_key is not None:
             actual_axis = _json_pointer(payload, _require_text(axis_key, "postcondition.axis_key"))

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import posixpath
 import shlex
 import subprocess
 import tempfile
@@ -37,6 +38,7 @@ from .staircase_dag import STAIRCASE_DISPATCH_PLAN_SCHEMA
 SSH_EXECUTION_RESULT_SCHEMA = "staircase_ssh_execution_result.v1"
 SSH_EXECUTOR_EVENT_SCHEMA = "staircase_ssh_executor_event.v1"
 SSH_ARTIFACT_MOBILITY_SCHEMA = "staircase_ssh_artifact_mobility.v1"
+SSH_INPUT_MOBILITY_SCHEMA = "staircase_ssh_input_mobility.v1"
 SSH_EXECUTOR_NAMES = {"ssh_experiment_queue"}
 FUTURE_SSH_EXECUTOR_NAMES = {"ssh_experiment_queue_future"}
 _UNSAFE_REMOTE_ARTIFACT_CHARS = frozenset(" \t\r\n'\"`$;&|<>\\")
@@ -324,6 +326,49 @@ def _telemetry_pullback_artifact_paths(
     return paths
 
 
+def _telemetry_input_artifact_paths(
+    step: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> list[Path]:
+    telemetry = step.get("telemetry")
+    raw_paths = (
+        telemetry.get("input_artifact_paths")
+        if isinstance(telemetry, Mapping)
+        else None
+    )
+    if not isinstance(raw_paths, list):
+        return []
+    seen: set[str] = set()
+    paths: list[Path] = []
+    for path_value in raw_paths:
+        if not isinstance(path_value, str) or not path_value.strip():
+            continue
+        path = _resolve_local_artifact_path(path_value, repo_root=repo_root)
+        key = path.resolve(strict=False).as_posix()
+        if key in seen:
+            continue
+        seen.add(key)
+        paths.append(path)
+    return paths
+
+
+def _telemetry_input_artifact_path_shape_blockers(
+    step: Mapping[str, Any],
+) -> list[str]:
+    telemetry = step.get("telemetry")
+    if not isinstance(telemetry, Mapping) or "input_artifact_paths" not in telemetry:
+        return []
+    raw_paths = telemetry.get("input_artifact_paths")
+    if not isinstance(raw_paths, list):
+        return ["input_artifact_paths_must_be_list"]
+    blockers: list[str] = []
+    for index, path_value in enumerate(raw_paths):
+        if not isinstance(path_value, str) or not path_value.strip():
+            blockers.append(f"input_artifact_paths[{index}]_must_be_nonempty_string")
+    return blockers
+
+
 def _artifact_paths_for_pullback(step: Mapping[str, Any], *, repo_root: Path) -> list[Path]:
     seen: set[str] = set()
     paths: list[Path] = []
@@ -413,13 +458,25 @@ def _artifact_mobility_blockers(
         return ["artifact_mobility_metadata_missing_from_task"]
     if step_mobility and dict(task_mobility) != dict(step_mobility):
         return ["artifact_mobility_metadata_mismatch"]
-    if not require_artifact_mobility:
-        return []
-    if not path_maps and artifact_shared_path_rationale is None:
-        return ["artifact_mobility_contract_missing"]
+    blockers: list[str] = _telemetry_input_artifact_path_shape_blockers(step)
+    input_paths = _telemetry_input_artifact_paths(step, repo_root=repo_root)
+    missing_inputs = [
+        f"input_artifact_missing:{path.as_posix()}"
+        for path in input_paths
+        if not path.exists()
+    ]
     if artifact_shared_path_rationale is not None:
-        return []
-    blockers: list[str] = []
+        return [*blockers, *missing_inputs] if blockers or input_paths or require_artifact_mobility else []
+    if input_paths and not path_maps:
+        blockers.append("input_artifact_mobility_contract_missing")
+    blockers.extend(missing_inputs)
+    for path in input_paths:
+        if _remote_artifact_path_for_local(path, path_maps=path_maps) is None:
+            blockers.append(f"artifact_push_missing_for_input:{path.as_posix()}")
+    if not require_artifact_mobility:
+        return blockers
+    if not path_maps:
+        blockers.append("artifact_mobility_contract_missing")
     for path in _postcondition_artifact_paths(step, repo_root=repo_root):
         if _remote_artifact_path_for_local(path, path_maps=path_maps) is None:
             blockers.append(f"artifact_pullback_missing_for_postcondition:{path.as_posix()}")
@@ -475,6 +532,38 @@ def build_rsync_pull_command(
     ]
 
 
+def build_rsync_push_command(
+    *,
+    rsync_binary: str,
+    ssh_binary: str = "ssh",
+    ssh_target: str,
+    local_path: str | Path,
+    remote_path: str,
+    connect_timeout_seconds: int = 10,
+) -> list[str]:
+    remote_path = _require_safe_remote_artifact_path(remote_path)
+    local = Path(local_path)
+    command = [rsync_binary, "-a"]
+    if local.is_dir():
+        command.append("--delete")
+        local_source = f"{local.as_posix().rstrip('/')}/"
+        remote_destination = f"{ssh_target}:{remote_path.rstrip('/')}/"
+    else:
+        local_source = local.as_posix()
+        remote_destination = f"{ssh_target}:{remote_path}"
+    command.extend([
+        "-e",
+        _ssh_transport_arg(
+            ssh_binary=ssh_binary,
+            connect_timeout_seconds=connect_timeout_seconds,
+        ),
+        "--",
+        local_source,
+        remote_destination,
+    ])
+    return command
+
+
 def _artifact_pullbacks_for_step(
     step: Mapping[str, Any],
     *,
@@ -493,6 +582,26 @@ def _artifact_pullbacks_for_step(
             }
         )
     return pullbacks
+
+
+def _input_pushes_for_step(
+    step: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    path_maps: Sequence[tuple[Path, str]],
+) -> list[dict[str, str]]:
+    pushes: list[dict[str, str]] = []
+    for local_path in _telemetry_input_artifact_paths(step, repo_root=repo_root):
+        remote_path = _remote_artifact_path_for_local(local_path, path_maps=path_maps)
+        if remote_path is None:
+            continue
+        pushes.append(
+            {
+                "local_path": local_path.as_posix(),
+                "remote_path": remote_path,
+            }
+        )
+    return pushes
 
 
 def _paths_overlap(left: str, right: str) -> bool:
@@ -634,6 +743,159 @@ def _run_artifact_pullbacks(
     }
 
 
+def _remote_parent_for_push(*, local_path: str | Path, remote_path: str) -> str:
+    local = Path(local_path)
+    if local.is_dir():
+        return remote_path.rstrip("/") or "/"
+    return posixpath.dirname(remote_path.rstrip("/")) or "/"
+
+
+def _run_input_pushes(
+    *,
+    runner: Runner,
+    rsync_binary: str,
+    ssh_binary: str,
+    ssh_target: str,
+    pushes: Sequence[Mapping[str, str]],
+    timeout_seconds: int,
+    connect_timeout_seconds: int,
+    log_path: Path,
+) -> dict[str, Any]:
+    started_all = time.monotonic()
+    if not pushes:
+        return {
+            "schema": SSH_INPUT_MOBILITY_SCHEMA,
+            "mode": "none",
+            "attempted": False,
+            "succeeded": True,
+            "pushes": [],
+            "returncode": 0,
+            "timed_out": False,
+            "execution_error": None,
+            "elapsed_seconds": 0.0,
+        }
+    results: list[dict[str, Any]] = []
+    overall_returncode = 0
+    timed_out = False
+    execution_error: str | None = None
+    with log_path.open("w", encoding="utf-8") as handle:
+        handle.write("[ssh-experiment-queue] input artifact mobility\n")
+    for push in pushes:
+        local_path = _require_text(push.get("local_path"), "push.local_path")
+        remote_path = _require_text(push.get("remote_path"), "push.remote_path")
+        local = Path(local_path)
+        if not local.exists():
+            overall_returncode = 66
+            execution_error = f"input_artifact_missing:{local_path}"
+            results.append(
+                {
+                    "local_path": local_path,
+                    "remote_path": remote_path,
+                    "returncode": overall_returncode,
+                    "timed_out": False,
+                    "elapsed_seconds": 0.0,
+                    "stdout": execution_error,
+                }
+            )
+            break
+        remote_parent = _remote_parent_for_push(local_path=local, remote_path=remote_path)
+        mkdir_argv = _ssh_argv(
+            ssh_binary=ssh_binary,
+            ssh_target=ssh_target,
+            connect_timeout_seconds=connect_timeout_seconds,
+            remote_script=f"mkdir -p {shlex.quote(remote_parent)}",
+        )
+        rsync_argv = build_rsync_push_command(
+            rsync_binary=rsync_binary,
+            ssh_binary=ssh_binary,
+            ssh_target=ssh_target,
+            local_path=local,
+            remote_path=remote_path,
+            connect_timeout_seconds=connect_timeout_seconds,
+        )
+        started = time.monotonic()
+        try:
+            mkdir_proc = _run_remote_command(
+                runner,
+                mkdir_argv,
+                timeout_seconds=timeout_seconds,
+                log_path=log_path,
+            )
+            if mkdir_proc.returncode != 0:
+                row = {
+                    "local_path": local_path,
+                    "remote_path": remote_path,
+                    "mkdir_argv": mkdir_argv,
+                    "returncode": int(mkdir_proc.returncode),
+                    "timed_out": False,
+                    "elapsed_seconds": time.monotonic() - started,
+                    "stdout": mkdir_proc.stdout,
+                }
+                if overall_returncode == 0:
+                    overall_returncode = int(mkdir_proc.returncode)
+                results.append(row)
+                break
+            rsync_proc = _run_remote_command(
+                runner,
+                rsync_argv,
+                timeout_seconds=timeout_seconds,
+                log_path=log_path,
+            )
+            row = {
+                "local_path": local_path,
+                "remote_path": remote_path,
+                "mkdir_argv": mkdir_argv,
+                "argv": rsync_argv,
+                "returncode": int(rsync_proc.returncode),
+                "timed_out": False,
+                "elapsed_seconds": time.monotonic() - started,
+                "stdout": rsync_proc.stdout,
+            }
+            if rsync_proc.returncode != 0 and overall_returncode == 0:
+                overall_returncode = int(rsync_proc.returncode)
+        except subprocess.TimeoutExpired as exc:
+            timed_out = True
+            overall_returncode = 124
+            execution_error = f"TimeoutExpired: {exc}"
+            row = {
+                "local_path": local_path,
+                "remote_path": remote_path,
+                "mkdir_argv": mkdir_argv,
+                "argv": rsync_argv,
+                "returncode": 124,
+                "timed_out": True,
+                "elapsed_seconds": time.monotonic() - started,
+                "stdout": str(exc),
+            }
+        except OSError as exc:
+            overall_returncode = 127
+            execution_error = f"{type(exc).__name__}: {exc}"
+            row = {
+                "local_path": local_path,
+                "remote_path": remote_path,
+                "mkdir_argv": mkdir_argv,
+                "argv": rsync_argv,
+                "returncode": 127,
+                "timed_out": False,
+                "elapsed_seconds": time.monotonic() - started,
+                "stdout": str(exc),
+            }
+        results.append(row)
+        if overall_returncode:
+            break
+    return {
+        "schema": SSH_INPUT_MOBILITY_SCHEMA,
+        "mode": "rsync_push",
+        "attempted": True,
+        "succeeded": overall_returncode == 0 and not timed_out and execution_error is None,
+        "pushes": results,
+        "returncode": overall_returncode,
+        "timed_out": timed_out,
+        "execution_error": execution_error,
+        "elapsed_seconds": time.monotonic() - started_all,
+    }
+
+
 def _skipped_artifact_mobility(*, mode: str, reason: str) -> dict[str, Any]:
     return {
         "schema": SSH_ARTIFACT_MOBILITY_SCHEMA,
@@ -641,6 +903,21 @@ def _skipped_artifact_mobility(*, mode: str, reason: str) -> dict[str, Any]:
         "attempted": False,
         "succeeded": True,
         "pullbacks": [],
+        "returncode": 0,
+        "timed_out": False,
+        "execution_error": None,
+        "skip_reason": reason,
+        "elapsed_seconds": 0.0,
+    }
+
+
+def _skipped_input_mobility(*, mode: str, reason: str) -> dict[str, Any]:
+    return {
+        "schema": SSH_INPUT_MOBILITY_SCHEMA,
+        "mode": mode,
+        "attempted": False,
+        "succeeded": True,
+        "pushes": [],
         "returncode": 0,
         "timed_out": False,
         "execution_error": None,
@@ -900,7 +1177,9 @@ def _execute_remote_step(
     )
     timeout_seconds = int(step.get("timeout_seconds") or 0) or None
     start = time.monotonic()
-    with log_path.open("w", encoding="utf-8") as handle:
+    with log_path.open("a", encoding="utf-8") as handle:
+        if log_path.stat().st_size:
+            handle.write("\n")
         handle.write("[ssh-experiment-queue] remote command\n")
         handle.write(shlex.join(argv))
         handle.write("\n\n")
@@ -1060,18 +1339,49 @@ def _execute_selected_task(
         }
 
     remote_plus_pullback_started = time.monotonic()
-    remote_result = _execute_remote_step(
-        runner=runner,
-        ssh_binary=ssh_binary,
-        ssh_target=ssh_target,
-        connect_timeout_seconds=ssh_connect_timeout_seconds,
-        remote_repo_root=remote_repo_root,
-        expected_head=local_head,
-        require_clean_remote_git=require_clean_remote_git,
-        ready=ready_step,
-        step=step,
-        log_path=log_path,
-    )
+    if artifact_shared_path_rationale is None:
+        input_mobility = _run_input_pushes(
+            runner=runner,
+            rsync_binary=rsync_binary,
+            ssh_binary=ssh_binary,
+            ssh_target=ssh_target,
+            pushes=_input_pushes_for_step(
+                step,
+                repo_root=repo,
+                path_maps=normalized_artifact_path_maps,
+            ),
+            timeout_seconds=artifact_pull_timeout_seconds,
+            connect_timeout_seconds=ssh_connect_timeout_seconds,
+            log_path=log_path,
+        )
+    else:
+        input_mobility = _skipped_input_mobility(
+            mode="shared_path_rationale",
+            reason="operator_asserted_remote_input_artifacts_are_shared",
+        )
+    if input_mobility["succeeded"]:
+        remote_result = _execute_remote_step(
+            runner=runner,
+            ssh_binary=ssh_binary,
+            ssh_target=ssh_target,
+            connect_timeout_seconds=ssh_connect_timeout_seconds,
+            remote_repo_root=remote_repo_root,
+            expected_head=local_head,
+            require_clean_remote_git=require_clean_remote_git,
+            ready=ready_step,
+            step=step,
+            log_path=log_path,
+        )
+    else:
+        remote_result = {
+            "returncode": int(input_mobility["returncode"]),
+            "timed_out": bool(input_mobility["timed_out"]),
+            "execution_error": input_mobility["execution_error"] or "input_mobility_failed",
+            "elapsed_seconds": 0.0,
+            "ssh_argv": [],
+            "remote_command": None,
+            "remote_skipped_reason": "input_mobility_failed",
+        }
     terminal_returncode = int(remote_result["returncode"])
     terminal_timed_out = bool(remote_result["timed_out"])
     terminal_error = remote_result["execution_error"]
@@ -1113,6 +1423,7 @@ def _execute_selected_task(
             event={
                 **running_event,
                 **remote_result,
+                "input_mobility": input_mobility,
                 "remote_elapsed_seconds": float(remote_result["elapsed_seconds"]),
                 "artifact_mobility": artifact_mobility,
             },
@@ -1362,10 +1673,12 @@ __all__ = [
     "SSH_EXECUTION_RESULT_SCHEMA",
     "SSH_EXECUTOR_EVENT_SCHEMA",
     "SSH_EXECUTOR_NAMES",
+    "SSH_INPUT_MOBILITY_SCHEMA",
     "SshTaskSelection",
     "build_remote_git_preflight_command",
     "build_remote_shell_command",
     "build_rsync_pull_command",
+    "build_rsync_push_command",
     "run_staircase_ssh_executor",
     "select_ssh_tasks",
 ]

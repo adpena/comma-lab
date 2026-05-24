@@ -80,9 +80,11 @@ from .models import (
 from .ssh_experiment_queue_executor import (
     SSH_ARTIFACT_MOBILITY_SCHEMA,
     SSH_EXECUTION_RESULT_SCHEMA,
+    SSH_INPUT_MOBILITY_SCHEMA,
     build_remote_git_preflight_command,
     build_remote_shell_command,
     build_rsync_pull_command,
+    build_rsync_push_command,
     run_staircase_ssh_executor,
     select_ssh_tasks,
 )
@@ -114,6 +116,7 @@ __all__ = [
     "REGISTRY_SCHEMA",
     "SSH_ARTIFACT_MOBILITY_SCHEMA",
     "SSH_EXECUTION_RESULT_SCHEMA",
+    "SSH_INPUT_MOBILITY_SCHEMA",
     "BudgetReport",
     "BudgetSpec",
     "BudgetUsage",
@@ -133,6 +136,7 @@ __all__ = [
     "build_remote_git_preflight_command",
     "build_remote_shell_command",
     "build_rsync_pull_command",
+    "build_rsync_push_command",
     "connect_state",
     "default_state_path",
     "finalize_claimed_step_execution",

@@ -259,7 +259,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--staircase-ssh-require-artifact-mobility",
         action="store_true",
-        help="require SSH artifact pullback/shared-storage visibility",
+        help="require SSH input push plus artifact pullback/shared-storage visibility",
     )
     parser.add_argument(
         "--staircase-ssh-artifact-path-map",

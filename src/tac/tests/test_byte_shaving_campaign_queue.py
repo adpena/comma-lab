@@ -1153,6 +1153,7 @@ def test_inverse_surface_cells_compile_to_action_functional_work_queue(
         schema="inverse_steganalysis_discrete_action_functional.v1",
     )
     assert row["telemetry"]["artifact_paths"] == [str(action_output), str(action_md)]
+    assert row["telemetry"]["input_artifact_paths"] == [str(scorer_response)]
     assert "inverse_action_functional_is_not_candidate_archive" in row["dispatch_blockers"]
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
@@ -1288,6 +1289,7 @@ def test_inverse_action_cells_compile_to_candidate_materializer_work_queue(
         schema="inverse_scorer_cell_candidate_v1",
     )
     assert row["telemetry"]["artifact_paths"] == [str(candidate), str(manifest)]
+    assert row["telemetry"]["input_artifact_paths"] == [str(template), str(action)]
     assert "inverse_scorer_cell_candidate_requires_receiver_proof" in row["dispatch_blockers"]
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
@@ -1799,6 +1801,12 @@ def test_materializer_execution_queue_runs_executable_work_rows(
     assert step["resources"]["kind"] == "local_cpu"
     assert step["timeout_seconds"] == 900
     assert step["telemetry"]["artifact_paths"] == [str(output_dir)]
+    assert step["telemetry"]["input_artifact_paths"] == [
+        "schema.json",
+        "runtime",
+        "beam_a.json",
+        "archive.zip",
+    ]
     assert step["telemetry"]["recursive"] is True
     assert step["command"][:2] == [
         ".venv/bin/python",
@@ -2387,6 +2395,7 @@ def test_byte_shaving_campaign_queue_cli_writes_dqs1_queue(tmp_path: Path) -> No
 
     stdout = json.loads(result.stdout)
     assert stdout["executable_row_count"] >= 1
+    assert stdout["dqs1_executable_row_count"] == stdout["executable_row_count"]
     assert stdout["materializer_backlog_out"] == str(backlog)
     assert stdout["materializer_backlog_row_count"] >= 1
     assert stdout["queue"]["experiment_count"] == 3
@@ -2509,6 +2518,8 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
     assert stdout["materializer_execution_queue"]["exact_readiness_followup"] is True
     assert stdout["materializer_execution_queue"]["experiment_count"] == 2
     assert stdout["materializer_work_queue_row_count"] == 1
+    assert stdout["materializer_work_queue_executable_row_count"] == 1
+    assert stdout["materializer_work_queue_blocked_row_count"] == 0
     payload = json.loads(work_queue.read_text(encoding="utf-8"))
     assert payload["schema"] == MATERIALIZER_WORK_QUEUE_SCHEMA
     assert payload["executable_row_count"] == 1
@@ -2537,6 +2548,13 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
     ]
     assert step["timeout_seconds"] == 600
     assert step["telemetry"]["artifact_paths"] == [str(output_dir)]
+    assert step["telemetry"]["input_artifact_paths"] == [
+        "schema.json",
+        "runtime",
+        "beam_a.json",
+        "beam_b.json",
+        "archive.zip",
+    ]
     assert step["postconditions"][0]["type"] == "json_equals"
     assert [step["id"] for step in experiment["steps"]] == [
         MATERIALIZER_EXECUTION_STEP_ID,

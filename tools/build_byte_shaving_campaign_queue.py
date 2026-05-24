@@ -565,12 +565,20 @@ def main(argv: list[str] | None = None) -> int:
                 "local_cpu_concurrency_requested": str(args.local_cpu_concurrency),
                 "executable_row_count": compiled["executable_row_count"],
                 "blocked_row_count": compiled["blocked_row_count"],
+                "dqs1_executable_row_count": compiled["executable_row_count"],
+                "dqs1_blocked_row_count": compiled["blocked_row_count"],
                 "materializer_backlog_row_count": compiled["materializer_backlog"][
                     "backlog_row_count"
                 ],
                 "materializer_work_queue_row_count": compiled[
                     "materializer_work_queue"
                 ]["row_count"],
+                "materializer_work_queue_executable_row_count": compiled[
+                    "materializer_work_queue"
+                ]["executable_row_count"],
+                "materializer_work_queue_blocked_row_count": compiled[
+                    "materializer_work_queue"
+                ]["blocked_row_count"],
                 "queue": queue_payload,
                 "score_claim": False,
                 "promotion_eligible": False,
