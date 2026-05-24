@@ -10,6 +10,7 @@ executes commands and never promotes scores.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -25,8 +26,9 @@ ensure_repo_imports(REPO_ROOT)
 from comma_lab.scheduler.experiment_queue import ExperimentQueueError, load_queue_definition  # noqa: E402
 from comma_lab.scheduler.staircase_dag import (  # noqa: E402
     DEFAULT_MACHINE_PRESETS,
-    build_storage_plan_payload,
+    STAIRCASE_DEPENDENT_QUEUE_REF_SCHEMA,
     build_staircase_dag_from_experiment_queue,
+    build_storage_plan_payload,
     experiment_queue_status_map,
     load_staircase_dag,
     local_lab_resource_pools,
@@ -46,6 +48,14 @@ def _write_json(path: str | Path, payload: object) -> None:
         write_json_artifact(path, payload)
     except ArtifactWriteError as exc:
         raise ExperimentQueueError(str(exc)) from exc
+
+
+def _sha256_file(path: str | Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _resource_pools(args: argparse.Namespace) -> list[dict]:
@@ -72,6 +82,39 @@ def _storage_plan(args: argparse.Namespace) -> dict | None:
     )
 
 
+def _dependent_queue_refs(
+    args: argparse.Namespace,
+    *,
+    parent_queue: dict,
+    parent_queue_path: str | Path,
+) -> list[dict]:
+    refs: list[dict] = []
+    for child_queue_path in args.dependent_child_queue:
+        child_queue = load_queue_definition(child_queue_path)
+        child_controls = dict(child_queue.get("controls") or {})
+        refs.append(
+            {
+                "schema": STAIRCASE_DEPENDENT_QUEUE_REF_SCHEMA,
+                "kind": "experiment_queue",
+                "relationship": args.dependent_child_relationship,
+                "parent_queue_id": parent_queue.get("queue_id"),
+                "parent_queue_path": str(parent_queue_path),
+                "child_queue_id": child_queue.get("queue_id"),
+                "child_queue_path": str(child_queue_path),
+                "child_queue_sha256": _sha256_file(child_queue_path),
+                "control_mode": child_controls.get("mode"),
+                "child_controls": {
+                    "mode": child_controls.get("mode"),
+                    "max_concurrency": dict(child_controls.get("max_concurrency") or {}),
+                },
+                "activation_policy": "manual_or_autopilot_resume_required",
+                "allowed_use": "staircase_dependent_queue_cli_planning_only",
+                "forbidden_use": "score_claim_or_promotion_or_paid_dispatch_authority",
+            }
+        )
+    return refs
+
+
 def cmd_machine_presets(_args: argparse.Namespace) -> int:
     _json_print(
         {
@@ -94,6 +137,11 @@ def cmd_from_queue(args: argparse.Namespace) -> int:
         source_path=args.queue,
         resource_pools=_resource_pools(args) or None,
         storage_plan=_storage_plan(args),
+        dependent_queue_refs=_dependent_queue_refs(
+            args,
+            parent_queue=queue,
+            parent_queue_path=args.queue,
+        ),
     )
     if args.output:
         write_staircase_dag(args.output, dag)
@@ -103,6 +151,10 @@ def cmd_from_queue(args: argparse.Namespace) -> int:
 
 def cmd_plan(args: argparse.Namespace) -> int:
     if args.dag:
+        if args.dependent_child_queue:
+            raise ExperimentQueueError(
+                "--dependent-child-queue requires --queue so parent queue identity is explicit"
+            )
         dag = load_staircase_dag(args.dag)
     elif args.queue:
         queue = load_queue_definition(args.queue)
@@ -112,6 +164,11 @@ def cmd_plan(args: argparse.Namespace) -> int:
             source_path=args.queue,
             resource_pools=_resource_pools(args) or None,
             storage_plan=_storage_plan(args),
+            dependent_queue_refs=_dependent_queue_refs(
+                args,
+                parent_queue=queue,
+                parent_queue_path=args.queue,
+            ),
         )
     else:
         raise ExperimentQueueError("plan requires --dag or --queue")
@@ -161,6 +218,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=[],
         help="id:local_cpu=4,local_mlx=1,memory_gb=128,disk_gb=80,tags=darwin+mlx",
     )
+    _add_dependent_child_queue_args(from_queue)
     _add_storage_args(from_queue)
     from_queue.set_defaults(func=cmd_from_queue)
 
@@ -182,9 +240,24 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=[],
         help="id:local_cpu=4,local_mlx=1,memory_gb=128,disk_gb=80,tags=darwin+mlx",
     )
+    _add_dependent_child_queue_args(plan)
     _add_storage_args(plan)
     plan.set_defaults(func=cmd_plan)
     return parser.parse_args(argv)
+
+
+def _add_dependent_child_queue_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--dependent-child-queue",
+        action="append",
+        default=[],
+        help="attach a generated child experiment_queue.v1 as a planning-only dependent ref",
+    )
+    parser.add_argument(
+        "--dependent-child-relationship",
+        default="dependent_child_queue",
+        help="relationship label for --dependent-child-queue refs",
+    )
 
 
 def _add_storage_args(parser: argparse.ArgumentParser) -> None:

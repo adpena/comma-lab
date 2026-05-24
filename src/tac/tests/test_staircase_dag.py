@@ -22,6 +22,7 @@ from comma_lab.scheduler.mlx_learned_sweep_autopilot_queue import (
 )
 from comma_lab.scheduler.staircase_dag import (
     DEFAULT_MACHINE_PRESETS,
+    STAIRCASE_DEPENDENT_QUEUE_REF_SCHEMA,
     build_staircase_dag_from_experiment_queue,
     build_storage_plan_payload,
     experiment_queue_status_map,
@@ -555,6 +556,74 @@ def test_staircase_dag_respects_queue_control_pause() -> None:
     assert {row["mode"] for row in plan["blocked_nodes"]} == {"paused"}
 
 
+def test_staircase_dag_carries_dependent_queue_refs_without_authority() -> None:
+    dependent_ref = {
+        "schema": STAIRCASE_DEPENDENT_QUEUE_REF_SCHEMA,
+        "kind": "experiment_queue",
+        "relationship": "feedback_replan_child",
+        "parent_queue_id": "materializer_queue",
+        "parent_queue_path": "experiments/results/run/materializer_execution_queue.json",
+        "parent_state_path": "experiments/results/run/materializer_execution_queue.sqlite",
+        "child_queue_id": "feedback_replan_queue",
+        "child_queue_path": "experiments/results/run/queue_feedback_replan_followup_queue.json",
+        "control_mode": "paused",
+        "child_controls": {"mode": "paused", "max_concurrency": {"local_cpu": 1}},
+        "required_parent_artifacts": [
+            "queue_feedback_replan_request.json",
+            "queue_performance_summary.json",
+            "queue_performance_runtime_identity.json",
+            "queue_performance_cache_identity.json",
+        ],
+        "selected_count": 0,
+        "blocked_count": 1,
+        "child_queue_sha256": "f" * 64,
+    }
+    dag = build_staircase_dag_from_experiment_queue(
+        _queue(),
+        dag_id="fixture_dependent_queue_dag",
+        dependent_queue_refs=[dependent_ref],
+    )
+    plan = plan_staircase_dispatch(dag, max_nodes=1)
+
+    assert dag["dependent_queue_refs"][0]["schema"] == STAIRCASE_DEPENDENT_QUEUE_REF_SCHEMA
+    assert dag["dependent_queue_refs"][0]["relationship"] == "feedback_replan_child"
+    assert dag["dependent_queue_refs"][0]["control_mode"] == "paused"
+    assert dag["dependent_queue_refs"][0]["child_controls"]["mode"] == "paused"
+    assert dag["dependent_queue_refs"][0]["child_controls"]["max_concurrency"] == {
+        "local_cpu": 1
+    }
+    assert dag["dependent_queue_refs"][0]["required_parent_artifacts"] == [
+        "queue_feedback_replan_request.json",
+        "queue_performance_summary.json",
+        "queue_performance_runtime_identity.json",
+        "queue_performance_cache_identity.json",
+    ]
+    assert dag["dependent_queue_refs"][0]["score_claim"] is False
+    assert dag["dependent_queue_refs"][0]["ready_for_exact_eval_dispatch"] is False
+    assert plan["dependent_queue_refs"] == dag["dependent_queue_refs"]
+    assert plan["dependent_queue_refs"][0]["dispatch_ready"] is False
+    assert all(
+        "feedback_replan_queue" not in task["key"] for task in plan["dask_task_specs"]
+    )
+    assert dag["dag_hash"]
+
+
+def test_staircase_dag_rejects_dependent_queue_ref_authority_leak() -> None:
+    with pytest.raises(ExperimentQueueError, match="score_claim"):
+        build_staircase_dag_from_experiment_queue(
+            _queue(),
+            dag_id="fixture_bad_dependent_queue_dag",
+            dependent_queue_refs=[
+                {
+                    "schema": STAIRCASE_DEPENDENT_QUEUE_REF_SCHEMA,
+                    "child_queue_id": "feedback_replan_queue",
+                    "child_queue_path": "queue_feedback_replan_followup_queue.json",
+                    "score_claim": True,
+                }
+            ],
+        )
+
+
 def _storage_preflight_queue(tmp_path: Path) -> tuple[dict[str, object], dict[str, str], Path, Path]:
     storage_plan = tmp_path / "storage_plan.json"
     cleanup_plan = tmp_path / "cleanup_plan.json"
@@ -839,3 +908,48 @@ def test_cli_from_queue_and_plan(tmp_path: Path) -> None:
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
     assert plan["selected_count"] == 2
     assert plan["ready_for_exact_eval_dispatch"] is False
+
+
+def test_cli_from_queue_attaches_dependent_child_queue_ref(tmp_path: Path) -> None:
+    parent_queue_path = tmp_path / "parent_queue.json"
+    child_queue_path = tmp_path / "child_queue.json"
+    dag_path = tmp_path / "dag.json"
+    parent_queue_path.write_text(json.dumps(_queue()), encoding="utf-8")
+    child_queue = _queue()
+    child_queue["queue_id"] = "feedback_replan_queue"
+    child_queue["controls"] = {
+        "mode": "paused",
+        "max_concurrency": {"local_cpu": 1},
+    }
+    child_queue_path.write_text(json.dumps(child_queue), encoding="utf-8")
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "from-queue",
+            "--queue",
+            str(parent_queue_path),
+            "--dependent-child-queue",
+            str(child_queue_path),
+            "--dependent-child-relationship",
+            "feedback_replan_child",
+            "--output",
+            str(dag_path),
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    dag = json.loads(dag_path.read_text(encoding="utf-8"))
+    ref = dag["dependent_queue_refs"][0]
+    assert ref["schema"] == STAIRCASE_DEPENDENT_QUEUE_REF_SCHEMA
+    assert ref["relationship"] == "feedback_replan_child"
+    assert ref["parent_queue_id"] == "staircase_fixture"
+    assert ref["child_queue_id"] == "feedback_replan_queue"
+    assert ref["child_queue_path"] == str(child_queue_path)
+    assert ref["child_controls"]["mode"] == "paused"
+    assert ref["ready_for_exact_eval_dispatch"] is False
+    assert ref["score_claim"] is False

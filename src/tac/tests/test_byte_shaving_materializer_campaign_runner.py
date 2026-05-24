@@ -704,6 +704,13 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     )
     assert summary["queue_feedback_replan_followup_queue_emitted"] is True
     assert summary["queue_feedback_replan_followup_queue_blockers"] == []
+    feedback_staircase = summary["queue_feedback_replan_staircase_artifacts"]
+    assert feedback_staircase["dependent_queue_ref_count"] == 1
+    assert feedback_staircase["child_control_mode"] == "paused"
+    assert feedback_staircase["child_selected_count"] == 0
+    assert feedback_staircase["child_blocked_count"] == 1
+    assert feedback_staircase["score_claim"] is False
+    assert feedback_staircase["ready_for_exact_eval_dispatch"] is False
     assert summary["queue_performance_runtime_identity_path"] == str(
         run_dir / "queue_performance_runtime_identity.json"
     )
@@ -786,6 +793,35 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert feedback_queue["schema"] == "experiment_queue.v1"
     assert feedback_queue["controls"]["mode"] == "paused"
     assert feedback_queue["controls"]["max_concurrency"] == {"local_cpu": 1}
+    feedback_child_dag = json.loads(
+        (run_dir / "queue_feedback_replan_staircase_dag.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    feedback_child_plan = json.loads(
+        (run_dir / "queue_feedback_replan_staircase_dispatch_plan.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    feedback_dependent_refs = json.loads(
+        (run_dir / "queue_feedback_replan_dependent_queue_refs.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert feedback_child_dag["controls"]["mode"] == "paused"
+    assert feedback_child_plan["selected_count"] == 0
+    assert feedback_child_plan["blocked_nodes"][0]["reason"] == "queue_control_not_running"
+    dependent_ref = feedback_dependent_refs["refs"][0]
+    assert dependent_ref["schema"] == "staircase_dependent_queue_ref.v1"
+    assert dependent_ref["relationship"] == "feedback_replan_child"
+    assert dependent_ref["child_queue_id"] == feedback_queue["queue_id"]
+    assert dependent_ref["child_queue_path"] == str(
+        run_dir / "queue_feedback_replan_followup_queue.json"
+    )
+    assert dependent_ref["child_controls"]["mode"] == "paused"
+    assert dependent_ref["child_controls"]["max_concurrency"] == {"local_cpu": 1}
+    assert dependent_ref["score_claim"] is False
+    assert dependent_ref["ready_for_exact_eval_dispatch"] is False
     feedback_experiment = feedback_queue["experiments"][0]
     assert feedback_experiment["metadata"]["schema"] == (
         runner.QUEUE_FEEDBACK_REPLAN_EXPERIMENT_METADATA_SCHEMA
@@ -1052,11 +1088,16 @@ def test_materializer_campaign_runner_executes_no_paid_packet_member_handoff(
     materializer_step = materializer_experiment["steps"][0]
     manifest_path = Path(materializer_step["telemetry"]["artifact_paths"][1])
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    proof_path = Path(materializer_step["telemetry"]["artifact_paths"][2])
     assert manifest["schema"] == "packet_member_recompress_candidate.v1"
     assert manifest["byte_closed_candidate_emitted"] is True
-    assert manifest["receiver_contract_satisfied"] is False
+    assert manifest["receiver_contract_satisfied"] is True
     assert manifest["candidate_member"]["sha256"] == manifest["source_member"]["sha256"]
-    assert "runtime_consumption_proof_missing" in manifest["readiness_blockers"]
+    assert manifest["runtime_consumption_proof_path"] == str(proof_path)
+    proof_payload = json.loads(proof_path.read_text(encoding="utf-8"))
+    assert proof_payload["candidate_archive"]["sha256"] == manifest["candidate_archive"]["sha256"]
+    assert proof_payload["candidate_member_payload_identical_to_source"] is True
+    assert "runtime_consumption_proof_missing" not in manifest["readiness_blockers"]
     assert manifest["score_claim"] is False
 
     handoff_dir = manifest_path.parent / "exact_eval_handoff"

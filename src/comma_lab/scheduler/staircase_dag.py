@@ -43,6 +43,7 @@ from tac.repo_io import ArtifactWriteError, write_json_artifact
 
 STAIRCASE_DAG_SCHEMA = "staircase_dag.v1"
 STAIRCASE_DISPATCH_PLAN_SCHEMA = "staircase_dispatch_plan.v1"
+STAIRCASE_DEPENDENT_QUEUE_REF_SCHEMA = "staircase_dependent_queue_ref.v1"
 STORAGE_PREFLIGHT_DEPENDENCY_SCHEMA = "staircase_storage_preflight_dependency.v1"
 MLX_RUNTIME_TELEMETRY_STATE_DISCOVERY_POLICY_SCHEMA = (
     "mlx_runtime_telemetry_state_discovery_policy.v1"
@@ -294,6 +295,114 @@ def _normalize_node(raw: Mapping[str, Any], *, index: int) -> dict[str, Any]:
         dispatch_blockers=["staircase_dag_is_planning_only"],
     )
     return row
+
+
+def _normalize_dependent_queue_ref(raw: Mapping[str, Any], *, index: int) -> dict[str, Any]:
+    schema = _require_text(
+        raw.get("schema", STAIRCASE_DEPENDENT_QUEUE_REF_SCHEMA),
+        f"dependent_queue_refs[{index}].schema",
+    )
+    if schema != STAIRCASE_DEPENDENT_QUEUE_REF_SCHEMA:
+        raise ExperimentQueueError(
+            f"dependent_queue_refs[{index}].schema unsupported: {schema!r}"
+        )
+    try:
+        require_no_truthy_authority_fields(
+            raw,
+            context=f"staircase_dag.dependent_queue_refs[{index}]",
+        )
+    except ValueError as exc:
+        raise ExperimentQueueError(str(exc)) from exc
+    control_mode = raw.get("control_mode")
+    child_queue_id = raw.get("child_queue_id", raw.get("queue_id"))
+    child_queue_path = raw.get("child_queue_path", raw.get("queue_path"))
+    child_controls = _mapping(
+        raw.get("child_controls"),
+        f"dependent_queue_refs[{index}].child_controls",
+        default={},
+    )
+    if "mode" in child_controls:
+        child_controls["mode"] = _queue_control_mode(child_controls.get("mode"))
+    if "max_concurrency" in child_controls:
+        child_controls["max_concurrency"] = _normalize_max_concurrency(
+            child_controls.get("max_concurrency"),
+            f"dependent_queue_refs[{index}].child_controls.max_concurrency",
+        )
+    payload: dict[str, Any] = {
+        "schema": schema,
+        "kind": _require_text(
+            raw.get("kind", "experiment_queue"),
+            f"dependent_queue_refs[{index}].kind",
+        ),
+        "relationship": _require_text(
+            raw.get("relationship", "dependent_queue"),
+            f"dependent_queue_refs[{index}].relationship",
+        ),
+        "child_queue_id": _require_text(
+            child_queue_id,
+            f"dependent_queue_refs[{index}].child_queue_id",
+        ),
+        "child_queue_path": _require_text(
+            child_queue_path,
+            f"dependent_queue_refs[{index}].child_queue_path",
+        ),
+        "queue_id": _require_text(
+            child_queue_id,
+            f"dependent_queue_refs[{index}].queue_id",
+        ),
+        "queue_path": _require_text(
+            child_queue_path,
+            f"dependent_queue_refs[{index}].queue_path",
+        ),
+        "control_mode": None if control_mode is None else _queue_control_mode(control_mode),
+        "child_controls": child_controls,
+        "required_parent_artifacts": _string_list(
+            raw.get("required_parent_artifacts"),
+            f"dependent_queue_refs[{index}].required_parent_artifacts",
+        ),
+        "parent_queue_id": raw.get("parent_queue_id"),
+        "parent_queue_path": raw.get("parent_queue_path"),
+        "parent_state_path": raw.get("parent_state_path"),
+        "parent_dag_id": raw.get("parent_dag_id"),
+        "parent_dag_path": raw.get("parent_dag_path"),
+        "dag_id": raw.get("dag_id"),
+        "dag_path": raw.get("dag_path"),
+        "dispatch_plan_path": raw.get("dispatch_plan_path"),
+        "selected_count": _non_negative_int(
+            raw.get("selected_count"),
+            f"dependent_queue_refs[{index}].selected_count",
+            default=0,
+        ),
+        "blocked_count": _non_negative_int(
+            raw.get("blocked_count"),
+            f"dependent_queue_refs[{index}].blocked_count",
+            default=0,
+        ),
+        "allowed_use": raw.get("allowed_use", "staircase_dependent_queue_planning_only"),
+        "forbidden_use": raw.get(
+            "forbidden_use",
+            "score_claim_or_promotion_or_paid_dispatch_authority",
+        ),
+        "dispatch_ready": False,
+    }
+    for optional_key in (
+        "queue_hash",
+        "child_queue_sha256",
+        "dag_hash",
+        "dispatch_plan_hash",
+        "notes",
+        "activation_policy",
+    ):
+        if optional_key in raw:
+            payload[optional_key] = raw.get(optional_key)
+    return apply_proxy_evidence_boundary(
+        payload,
+        dispatch_blockers=[
+            "staircase_dependent_queue_ref_is_planning_only",
+            "dependent_queue_requires_explicit_queue_control_resume",
+            "score_authority_requires_exact_auth_eval_axis",
+        ],
+    )
 
 
 def _queue_dependency_node_id(ref: str, *, default_experiment_id: str) -> str:
@@ -575,6 +684,16 @@ def normalize_staircase_dag(payload: Mapping[str, Any]) -> dict[str, Any]:
         if unknown:
             raise ExperimentQueueError(f"{node['node_id']} depends on unknown node(s): {unknown}")
     controls = _mapping(payload.get("controls"), "controls")
+    child_refs_raw = payload.get("dependent_queue_refs", [])
+    if not isinstance(child_refs_raw, list):
+        raise ExperimentQueueError("dependent_queue_refs must be a list when present")
+    dependent_queue_refs = [
+        _normalize_dependent_queue_ref(ref, index=index)
+        for index, ref in enumerate(child_refs_raw)
+        if isinstance(ref, Mapping)
+    ]
+    if len(dependent_queue_refs) != len(child_refs_raw):
+        raise ExperimentQueueError("dependent_queue_refs must contain only objects")
     storage = _normalize_storage_plan_payload(payload.get("storage"))
     normalized = apply_proxy_evidence_boundary(
         {
@@ -603,6 +722,7 @@ def normalize_staircase_dag(payload: Mapping[str, Any]) -> dict[str, Any]:
             ),
             "storage": storage,
             "nodes": nodes,
+            "dependent_queue_refs": dependent_queue_refs,
             "source_refs": list(payload.get("source_refs") or []),
         },
         dispatch_blockers=["staircase_dag_is_planning_only"],
@@ -614,6 +734,7 @@ def normalize_staircase_dag(payload: Mapping[str, Any]) -> dict[str, Any]:
             "resource_pools": normalized["resource_pools"],
             "storage": normalized["storage"],
             "nodes": normalized["nodes"],
+            "dependent_queue_refs": normalized["dependent_queue_refs"],
             "source_refs": normalized["source_refs"],
         }
     )
@@ -654,6 +775,7 @@ def build_staircase_dag_from_experiment_queue(
     source_path: str | Path | None = None,
     resource_pools: Sequence[Mapping[str, Any]] | None = None,
     storage_plan: Mapping[str, Any] | None = None,
+    dependent_queue_refs: Sequence[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     nodes: list[dict[str, Any]] = []
     storage_preflights = _storage_preflight_dependencies_from_queue(queue)
@@ -762,6 +884,7 @@ def build_staircase_dag_from_experiment_queue(
             "resource_pools": list(resource_pools or default_local_resource_pools()),
             "storage": dict(storage_plan) if storage_plan is not None else None,
             "nodes": nodes,
+            "dependent_queue_refs": [dict(ref) for ref in dependent_queue_refs or []],
             "source_refs": refs,
         }
     )
@@ -1215,6 +1338,7 @@ def plan_staircase_dispatch(
             "storage": storage,
             "dask_task_specs": dask_tasks,
             "executor_boundary": "planning_only_dask_or_local_executor_must_write_back_to_queue_state",
+            "dependent_queue_refs": normalized["dependent_queue_refs"],
             "source_refs": normalized["source_refs"],
         },
         dispatch_blockers=[
@@ -1231,6 +1355,7 @@ def plan_staircase_dispatch(
             "blocked_nodes": plan["blocked_nodes"],
             "resource_pools": plan["resource_pools"],
             "storage": plan["storage"],
+            "dependent_queue_refs": plan["dependent_queue_refs"],
         }
     )
     return plan
@@ -1336,6 +1461,7 @@ def write_staircase_dag(
 __all__ = [
     "DEFAULT_MACHINE_PRESETS",
     "STAIRCASE_DAG_SCHEMA",
+    "STAIRCASE_DEPENDENT_QUEUE_REF_SCHEMA",
     "STAIRCASE_DISPATCH_PLAN_SCHEMA",
     "STORAGE_PREFLIGHT_DEPENDENCY_SCHEMA",
     "StaircaseReadyNode",

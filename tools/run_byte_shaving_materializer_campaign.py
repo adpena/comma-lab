@@ -45,6 +45,7 @@ from comma_lab.scheduler.experiment_queue import (  # noqa: E402
     normalize_queue_definition,
 )
 from comma_lab.scheduler.staircase_dag import (  # noqa: E402
+    STAIRCASE_DEPENDENT_QUEUE_REF_SCHEMA,
     build_staircase_dag_from_experiment_queue,
     experiment_queue_status_map,
     parse_resource_pool_spec,
@@ -2035,6 +2036,8 @@ def _build_staircase_artifacts(
     execution_queue: Path,
     state_path: Path,
     queue: dict[str, Any],
+    dependent_queue_refs: Sequence[Mapping[str, Any]] | None = None,
+    suffix: str = "",
 ) -> dict[str, Any]:
     resource_pools = [parse_resource_pool_spec(spec) for spec in args.staircase_resource_pool] or None
     status_map = experiment_queue_status_map(
@@ -2047,6 +2050,7 @@ def _build_staircase_artifacts(
         dag_id=f"{queue['queue_id']}_staircase",
         source_path=_display_path(execution_queue),
         resource_pools=resource_pools,
+        dependent_queue_refs=dependent_queue_refs,
     )
     plan = plan_staircase_dispatch(
         dag,
@@ -2055,8 +2059,8 @@ def _build_staircase_artifacts(
         allow_cloud=args.staircase_allow_cloud,
         diversity_bucket_limit=args.staircase_diversity_bucket_limit,
     )
-    dag_path = run_dir / "staircase_dag.json"
-    plan_path = run_dir / "staircase_dispatch_plan.json"
+    dag_path = run_dir / f"staircase_dag{suffix}.json"
+    plan_path = run_dir / f"staircase_dispatch_plan{suffix}.json"
     _write_json(dag_path, dag)
     _write_json(plan_path, plan)
     return {
@@ -2066,6 +2070,123 @@ def _build_staircase_artifacts(
         "plan_hash": plan.get("plan_hash"),
         "selected_count": plan.get("selected_count"),
         "blocked_count": plan.get("blocked_count"),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _queue_feedback_dependent_queue_ref_payload(
+    *,
+    parent_queue: Mapping[str, Any],
+    parent_queue_path: Path,
+    parent_state_path: Path,
+    child_queue: Mapping[str, Any],
+    child_queue_path: Path,
+    child_dag_path: Path,
+    child_plan_path: Path,
+    child_dag: Mapping[str, Any],
+    child_plan: Mapping[str, Any],
+) -> dict[str, Any]:
+    controls = dict(child_queue.get("controls") or {})
+    return _false_authority_payload(
+        {
+            "schema": STAIRCASE_DEPENDENT_QUEUE_REF_SCHEMA,
+            "kind": "experiment_queue",
+            "relationship": "feedback_replan_child",
+            "parent_queue_id": parent_queue.get("queue_id"),
+            "parent_queue_path": _display_path(parent_queue_path),
+            "parent_state_path": _display_path(parent_state_path),
+            "child_queue_id": child_queue.get("queue_id"),
+            "child_queue_path": _display_path(child_queue_path),
+            "child_queue_sha256": _sha256_file(child_queue_path),
+            "child_controls": {
+                "mode": controls.get("mode"),
+                "max_concurrency": dict(controls.get("max_concurrency") or {}),
+            },
+            "control_mode": controls.get("mode"),
+            "required_parent_artifacts": [
+                "queue_feedback_replan_request.json",
+                "queue_performance_summary.json",
+                "queue_performance_runtime_identity.json",
+                "queue_performance_cache_identity.json",
+            ],
+            "dag_id": child_dag.get("dag_id"),
+            "dag_path": _display_path(child_dag_path),
+            "dag_hash": child_dag.get("dag_hash"),
+            "dispatch_plan_path": _display_path(child_plan_path),
+            "dispatch_plan_hash": child_plan.get("plan_hash"),
+            "selected_count": child_plan.get("selected_count"),
+            "blocked_count": child_plan.get("blocked_count"),
+            "activation_policy": "manual_or_autopilot_resume_required",
+            "allowed_use": "staircase_dependent_feedback_replan_planning_only",
+            "forbidden_use": "score_claim_or_promotion_or_paid_dispatch_authority",
+        }
+    )
+
+
+def _build_queue_feedback_staircase_artifacts(
+    args: argparse.Namespace,
+    *,
+    run_dir: Path,
+    parent_queue: Mapping[str, Any],
+    parent_queue_path: Path,
+    parent_state_path: Path,
+    child_queue: Mapping[str, Any],
+    child_queue_path: Path,
+) -> dict[str, Any]:
+    resource_pools = [parse_resource_pool_spec(spec) for spec in args.staircase_resource_pool] or None
+    child_dag = build_staircase_dag_from_experiment_queue(
+        child_queue,
+        dag_id=f"{child_queue['queue_id']}_staircase",
+        source_path=_display_path(child_queue_path),
+        resource_pools=resource_pools,
+    )
+    child_plan = plan_staircase_dispatch(
+        child_dag,
+        max_nodes=args.staircase_max_nodes,
+        allow_cloud=args.staircase_allow_cloud,
+        diversity_bucket_limit=args.staircase_diversity_bucket_limit,
+    )
+    child_dag_path = run_dir / "queue_feedback_replan_staircase_dag.json"
+    child_plan_path = run_dir / "queue_feedback_replan_staircase_dispatch_plan.json"
+    _write_json(child_dag_path, child_dag)
+    _write_json(child_plan_path, child_plan)
+    dependent_ref = _queue_feedback_dependent_queue_ref_payload(
+        parent_queue=parent_queue,
+        parent_queue_path=parent_queue_path,
+        parent_state_path=parent_state_path,
+        child_queue=child_queue,
+        child_queue_path=child_queue_path,
+        child_dag_path=child_dag_path,
+        child_plan_path=child_plan_path,
+        child_dag=child_dag,
+        child_plan=child_plan,
+    )
+    dependent_refs_path = run_dir / "queue_feedback_replan_dependent_queue_refs.json"
+    _write_json(
+        dependent_refs_path,
+        _false_authority_payload(
+            {
+                "schema": "staircase_dependent_queue_refs.v1",
+                "refs": [dependent_ref],
+                "allowed_use": "staircase_dag_child_queue_composition_only",
+                "forbidden_use": "score_claim_or_promotion_or_paid_dispatch_authority",
+            }
+        ),
+    )
+    return {
+        "dependent_queue_refs_path": _display_path(dependent_refs_path),
+        "dependent_queue_ref_count": 1,
+        "dependent_queue_refs": [dependent_ref],
+        "child_dag_path": _display_path(child_dag_path),
+        "child_dispatch_plan_path": _display_path(child_plan_path),
+        "child_dag_hash": child_dag.get("dag_hash"),
+        "child_dispatch_plan_hash": child_plan.get("plan_hash"),
+        "child_selected_count": child_plan.get("selected_count"),
+        "child_blocked_count": child_plan.get("blocked_count"),
+        "child_control_mode": dict(child_queue.get("controls") or {}).get("mode"),
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
@@ -2455,6 +2576,7 @@ def main(argv: list[str] | None = None) -> int:
     generated_runtime_identity_path = run_dir / "queue_performance_runtime_identity.json"
     generated_cache_identity_path = run_dir / "queue_performance_cache_identity.json"
     response_update_placeholder_path = run_dir / "canonical_response_update_placeholder.json"
+    queue_feedback_replan_staircase_artifacts: dict[str, Any] | None = None
     queue_performance_summary = _queue_performance_summary_payload(
         performance_result,
         queue=queue,
@@ -2547,6 +2669,30 @@ def main(argv: list[str] | None = None) -> int:
             queue_feedback_replan_followup_queue_path,
             queue_feedback_replan_followup_queue,
         )
+        queue_feedback_replan_staircase_artifacts = _build_queue_feedback_staircase_artifacts(
+            args,
+            run_dir=run_dir,
+            parent_queue=queue,
+            parent_queue_path=execution_queue,
+            parent_state_path=state_path,
+            child_queue=queue_feedback_replan_followup_queue,
+            child_queue_path=queue_feedback_replan_followup_queue_path,
+        )
+        if staircase_artifacts is not None:
+            staircase_artifacts["feedback_child_queue"] = (
+                queue_feedback_replan_staircase_artifacts
+            )
+            staircase_artifacts["with_feedback_child"] = _build_staircase_artifacts(
+                args,
+                run_dir=run_dir,
+                execution_queue=execution_queue,
+                state_path=state_path,
+                queue=queue,
+                dependent_queue_refs=queue_feedback_replan_staircase_artifacts[
+                    "dependent_queue_refs"
+                ],
+                suffix=".with_feedback_child",
+            )
     exact_readiness_handoffs = _exact_readiness_handoff_paths(
         run_dir=run_dir,
         queue=queue,
@@ -2609,6 +2755,7 @@ def main(argv: list[str] | None = None) -> int:
         ),
         "queue_feedback_replan_followup_queue_emitted": queue_feedback_replan_followup_queue is not None,
         "queue_feedback_replan_followup_queue_blockers": queue_feedback_replan_followup_blockers,
+        "queue_feedback_replan_staircase_artifacts": queue_feedback_replan_staircase_artifacts,
         "queue_performance_runtime_identity_path": _display_path(runtime_identity_path),
         "queue_performance_cache_identity_path": _display_path(cache_identity_path),
         "response_update_placeholder_path": _display_path(response_update_placeholder_path),
