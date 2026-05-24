@@ -60,6 +60,11 @@ MATERIALIZER_HANDOFF_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
     REPO_ROOT / ".omx" / "research",
 )
+BYTE_SHAVING_ACQUISITION_SCAN_ROOTS = (
+    REPO_ROOT / "experiments" / "results",
+    REPO_ROOT / ".omx" / "research",
+)
+BYTE_SHAVING_MATERIALIZER_CAMPAIGN_RUN_NAME = "materializer_campaign_run.json"
 MATERIALIZER_EXACT_EVAL_CONSUMER_TOOL = "tools/build_materializer_exact_eval_consumer.py"
 EXACT_READY_SCORE_AXIS_REPAIR_TOOL = "tools/repair_exact_ready_score_axis.py"
 EXACT_READY_SUPPRESSION_MANIFEST = (
@@ -800,6 +805,15 @@ def _safe_int(value: object) -> int:
         return 0
 
 
+def _safe_float(value: object, default: float = 0.0) -> float:
+    if isinstance(value, bool):
+        return float(value)
+    try:
+        return float(value if value is not None else default)
+    except (TypeError, ValueError):
+        return default
+
+
 def _materializer_handoff_paths(
     scan_roots: tuple[Path, ...] | None = None,
 ) -> list[Path]:
@@ -1374,6 +1388,402 @@ def _format_materializer_exact_ready_handoffs() -> str:
         for path in exact_ready_inputs[:5]:
             lines.append(f"  - {path}")
     lines.append("next command:")
+    lines.append(f"  {payload['next_command']}")
+    return "\n".join(lines)
+
+
+def _byte_shaving_acquisition_run_paths(
+    scan_roots: tuple[Path, ...] | None = None,
+) -> list[Path]:
+    if scan_roots is None:
+        scan_roots = BYTE_SHAVING_ACQUISITION_SCAN_ROOTS
+    patterns = tuple(
+        f"{'*/' * depth}{BYTE_SHAVING_MATERIALIZER_CAMPAIGN_RUN_NAME}"
+        for depth in range(4)
+    )
+    seen: set[Path] = set()
+    paths: list[Path] = []
+    for root in scan_roots:
+        if not root.exists():
+            continue
+        for pattern in patterns:
+            for path in root.glob(pattern):
+                resolved = path.resolve(strict=False)
+                if resolved in seen or not path.is_file():
+                    continue
+                seen.add(resolved)
+                paths.append(path)
+    return sorted(
+        paths,
+        key=lambda item: item.stat().st_mtime if item.exists() else 0.0,
+        reverse=True,
+    )
+
+
+def _repo_path_from_ref(value: object) -> Path | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    path = Path(value)
+    return path if path.is_absolute() else REPO_ROOT / path
+
+
+def _first_list(payload: dict[str, object], key: str) -> list[object]:
+    value = payload.get(key)
+    return value if isinstance(value, list) else []
+
+
+def _byte_shaving_campaign_plan_digest(path_ref: object) -> dict[str, object]:
+    path = _repo_path_from_ref(path_ref)
+    if path is None:
+        return {
+            "plan_path": "",
+            "plan_exists": False,
+            "plan_error": "campaign run did not reference a plan path",
+            "combination_count": 0,
+            "operation_families": [],
+            "top_combo": {},
+            "dispatch_blockers": [],
+        }
+    rel = _repo_rel(path)
+    if not path.is_file():
+        return {
+            "plan_path": rel,
+            "plan_exists": False,
+            "plan_error": "referenced campaign plan is missing",
+            "combination_count": 0,
+            "operation_families": [],
+            "top_combo": {},
+            "dispatch_blockers": [],
+        }
+    plan = _load_json_file(path)
+    if "_error" in plan:
+        return {
+            "plan_path": rel,
+            "plan_exists": False,
+            "plan_error": str(plan["_error"]),
+            "combination_count": 0,
+            "operation_families": [],
+            "top_combo": {},
+            "dispatch_blockers": [],
+        }
+    combos = _first_list(plan, "combination_ladder")
+    top_combo = combos[0] if combos and isinstance(combos[0], dict) else {}
+    families = _unique_strings(
+        [
+            family
+            for combo in combos
+            if isinstance(combo, dict)
+            for family in (
+                combo.get("operation_families")
+                if isinstance(combo.get("operation_families"), list)
+                else []
+            )
+        ]
+    )
+    blockers = _unique_strings(
+        [
+            *_first_list(plan, "dispatch_blockers"),
+            *(
+                top_combo.get("dispatch_blockers")
+                if isinstance(top_combo.get("dispatch_blockers"), list)
+                else []
+            ),
+        ]
+    )
+    return {
+        "plan_path": rel,
+        "plan_exists": True,
+        "plan_error": "",
+        "campaign_id": plan.get("campaign_id"),
+        "candidate_id": plan.get("candidate_id"),
+        "combination_count": len(combos),
+        "operation_families": families,
+        "top_combo": {
+            "combo_id": top_combo.get("combo_id"),
+            "expected_score_gain": _safe_float(top_combo.get("expected_score_gain")),
+            "unit_count": _safe_int(top_combo.get("unit_count")),
+            "operation_families": top_combo.get("operation_families")
+            if isinstance(top_combo.get("operation_families"), list)
+            else [],
+            "dispatch_blockers": top_combo.get("dispatch_blockers")
+            if isinstance(top_combo.get("dispatch_blockers"), list)
+            else [],
+        },
+        "dispatch_blockers": blockers,
+        **_false_authority_fields(),
+    }
+
+
+def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
+    payload = _load_json_file(path)
+    base: dict[str, object] = {
+        "path": _repo_rel(path),
+        "sha256": _sha256_file(path) if path.is_file() else "",
+        "mtime_ns": path.stat().st_mtime_ns if path.is_file() else 0,
+        **_false_authority_fields(),
+    }
+    if "_error" in payload:
+        return {
+            **base,
+            "kind": "unreadable",
+            "schema": None,
+            "status": "BLOCKED",
+            "blockers": [str(payload["_error"])],
+        }
+
+    build = payload.get("build") if isinstance(payload.get("build"), dict) else {}
+    worker = payload.get("worker") if isinstance(payload.get("worker"), dict) else {}
+    observation = (
+        payload.get("observation")
+        if isinstance(payload.get("observation"), dict)
+        else {}
+    )
+    drift = (
+        observation.get("definition_drift")
+        if isinstance(observation.get("definition_drift"), dict)
+        else {}
+    )
+    status_counts = (
+        observation.get("status_counts")
+        if isinstance(observation.get("status_counts"), dict)
+        else {}
+    )
+    commands = payload.get("commands") if isinstance(payload.get("commands"), list) else []
+    failed_commands = [
+        item
+        for item in commands
+        if isinstance(item, dict) and _safe_int(item.get("returncode")) != 0
+    ]
+    failed_steps = (
+        observation.get("failed_steps")
+        if isinstance(observation.get("failed_steps"), list)
+        else []
+    )
+    authority_leaks = [
+        field
+        for field in _false_authority_fields()
+        if payload.get(field) is True
+        or (isinstance(build, dict) and build.get(field) is True)
+    ]
+    blockers = [
+        f"campaign_run_authority_field_true:{field}" for field in authority_leaks
+    ]
+    if failed_commands:
+        blockers.append(f"{len(failed_commands)} campaign command(s) failed")
+    if _safe_int(worker.get("failure_count")):
+        blockers.append(f"{worker.get('failure_count')} worker step(s) failed")
+    if failed_steps:
+        blockers.append(f"{len(failed_steps)} observed queue step(s) failed")
+    drift_count = (
+        _safe_int(drift.get("changed_step_count"))
+        + _safe_int(drift.get("missing_step_count"))
+        + _safe_int(drift.get("missing_hash_step_count"))
+    )
+    if drift_count:
+        blockers.append(f"{drift_count} queue definition drift issue(s)")
+
+    queue_path = str(payload.get("queue_path") or "")
+    experiment_count = _safe_int(payload.get("experiment_count"))
+    if blockers:
+        status = "BLOCKED"
+    elif queue_path and experiment_count:
+        status = "READY_LOCAL_QUEUE"
+    elif path.is_file():
+        status = "PENDING"
+    else:
+        status = "PENDING"
+
+    plan_digest = _byte_shaving_campaign_plan_digest(
+        payload.get("plan") or payload.get("generated_campaign_plan_path")
+    )
+    if plan_digest.get("plan_error"):
+        blockers.append(str(plan_digest["plan_error"]))
+        if status == "READY_LOCAL_QUEUE":
+            status = "BLOCKED"
+
+    ready_steps = (
+        observation.get("ready_steps")
+        if isinstance(observation.get("ready_steps"), list)
+        else []
+    )
+    local_mlx_ready_steps = [
+        step
+        for step in ready_steps
+        if isinstance(step, dict) and step.get("resource_kind") == "local_mlx"
+    ]
+    local_cpu_ready_steps = [
+        step
+        for step in ready_steps
+        if isinstance(step, dict) and step.get("resource_kind") == "local_cpu"
+    ]
+    row = {
+        **base,
+        "kind": "byte_shaving_materializer_campaign_run",
+        "schema": payload.get("schema"),
+        "status": status,
+        "queue_id": str(payload.get("queue_id") or ""),
+        "queue_path": queue_path,
+        "state_path": str(payload.get("state_path") or ""),
+        "run_dir": str(payload.get("run_dir") or ""),
+        "execute": payload.get("execute") is True,
+        "high_level_action_source_count": _safe_int(
+            payload.get("high_level_action_source_count")
+        ),
+        "experiment_count": experiment_count,
+        "executable_work_count": _safe_int(
+            build.get("materializer_work_queue_executable_row_count")
+        ),
+        "blocked_work_count": _safe_int(
+            build.get("materializer_work_queue_blocked_row_count")
+        )
+        + _safe_int(build.get("blocked_row_count")),
+        "materializer_backlog_row_count": _safe_int(
+            build.get("materializer_backlog_row_count")
+        ),
+        "local_cpu_concurrency": _safe_int(build.get("local_cpu_concurrency")),
+        "worker_max_parallel": _safe_int(worker.get("max_parallel")),
+        "worker_execute": worker.get("execute") is True,
+        "worker_stop_reason": str(worker.get("stop_reason") or ""),
+        "worker_success_count": _safe_int(worker.get("success_count")),
+        "worker_failure_count": _safe_int(worker.get("failure_count")),
+        "queued_step_count": _safe_int(status_counts.get("queued")),
+        "running_step_count": _safe_int(status_counts.get("running")),
+        "succeeded_step_count": _safe_int(status_counts.get("succeeded")),
+        "failed_step_count": _safe_int(status_counts.get("failed")),
+        "ready_step_count": len(ready_steps),
+        "local_mlx_ready_step_count": len(local_mlx_ready_steps),
+        "local_cpu_ready_step_count": len(local_cpu_ready_steps),
+        "plan": plan_digest,
+        "blockers": _unique_strings(blockers),
+    }
+    return apply_false_authority_contract(
+        row,
+        preserve_dispatch_ready=False,
+        reason="operator_briefing_high_level_byte_shaving_acquisition_no_score_authority",
+    )
+
+
+def _byte_shaving_acquisition_next_command(latest: dict[str, object] | None) -> str:
+    if latest and latest.get("queue_path"):
+        queue_path = latest["queue_path"]
+        return (
+            f".venv/bin/python tools/experiment_queue.py --queue {queue_path} "
+            "run-worker --execute --max-parallel 0"
+        )
+    return ".venv/bin/python tools/run_byte_shaving_materializer_campaign.py --help"
+
+
+def _byte_shaving_acquisition_summary() -> dict[str, object]:
+    rows = [
+        _byte_shaving_acquisition_row(path)
+        for path in _byte_shaving_acquisition_run_paths()
+    ]
+    latest = rows[0] if rows else None
+    if latest is None:
+        status = "PENDING"
+        reason = "no high-level byte-shaving materializer campaign runs found"
+    elif latest.get("status") == "BLOCKED":
+        blockers = latest.get("blockers") if isinstance(latest.get("blockers"), list) else []
+        status = "BLOCKED"
+        reason = (
+            f"latest campaign run is blocked by {len(blockers)} issue(s)"
+            if blockers
+            else "latest campaign run is blocked"
+        )
+    elif latest.get("status") == "READY_LOCAL_QUEUE":
+        status = "READY_LOCAL_QUEUE"
+        reason = (
+            f"{latest.get('experiment_count', 0)} experiment(s) queued from "
+            f"{latest.get('high_level_action_source_count', 0)} high-level source(s)"
+        )
+    else:
+        status = "PENDING"
+        reason = "latest campaign run has not produced an executable queue yet"
+
+    return {
+        "schema": "pact.byte_shaving_acquisition_summary.v1",
+        "scan_roots": [_repo_rel(root) for root in BYTE_SHAVING_ACQUISITION_SCAN_ROOTS],
+        "status": status,
+        "reason": reason,
+        "campaign_run_count": len(rows),
+        "total_experiment_count": sum(_safe_int(row.get("experiment_count")) for row in rows),
+        "total_executable_work_count": sum(
+            _safe_int(row.get("executable_work_count")) for row in rows
+        ),
+        "total_blocked_work_count": sum(
+            _safe_int(row.get("blocked_work_count")) for row in rows
+        ),
+        "local_mlx_ready_step_count": sum(
+            _safe_int(row.get("local_mlx_ready_step_count")) for row in rows
+        ),
+        "latest_rows": rows[:5],
+        "next_command": _byte_shaving_acquisition_next_command(latest),
+        "observe_command": (
+            f".venv/bin/python tools/experiment_queue.py --queue {latest['queue_path']} "
+            "observe --tail-lines 20"
+            if latest and latest.get("queue_path")
+            else ""
+        ),
+        **_false_authority_fields(),
+    }
+
+
+def _format_byte_shaving_acquisition_summary() -> str:
+    payload = _byte_shaving_acquisition_summary()
+    lines = [
+        "High-level inverse-steganalysis/action-surface campaign intake. "
+        "This is local research queue authority, not score authority.",
+        f"status: {payload['status']} — {payload['reason']}",
+        (
+            "runs: "
+            f"{payload['campaign_run_count']} "
+            f"experiments={payload['total_experiment_count']} "
+            f"executable_work={payload['total_executable_work_count']} "
+            f"blocked_work={payload['total_blocked_work_count']} "
+            f"local_mlx_ready_steps={payload['local_mlx_ready_step_count']}"
+        ),
+        f"score_claim: {payload['score_claim']}",
+        f"ready_for_exact_eval_dispatch: {payload['ready_for_exact_eval_dispatch']}",
+    ]
+    latest_rows = payload.get("latest_rows")
+    if isinstance(latest_rows, list) and latest_rows:
+        lines.append("latest campaign runs:")
+        for row in latest_rows[:3]:
+            if not isinstance(row, dict):
+                continue
+            plan = row.get("plan") if isinstance(row.get("plan"), dict) else {}
+            top_combo = (
+                plan.get("top_combo")
+                if isinstance(plan.get("top_combo"), dict)
+                else {}
+            )
+            families = ", ".join(
+                str(item) for item in plan.get("operation_families", [])[:4]
+            ) if isinstance(plan.get("operation_families"), list) else ""
+            lines.append(
+                "  - "
+                f"{row.get('path')} status={row.get('status')} "
+                f"queue={row.get('queue_id') or '<none>'} "
+                f"experiments={row.get('experiment_count', 0)} "
+                f"ready_steps={row.get('ready_step_count', 0)} "
+                f"local_mlx_ready={row.get('local_mlx_ready_step_count', 0)}"
+            )
+            if top_combo.get("combo_id"):
+                lines.append(
+                    "    top_combo: "
+                    f"{top_combo.get('combo_id')} "
+                    f"gain={top_combo.get('expected_score_gain', 0.0):.6g} "
+                    f"units={top_combo.get('unit_count', 0)} "
+                    f"ops={families or '-'}"
+                )
+            blockers = row.get("blockers")
+            if isinstance(blockers, list) and blockers:
+                lines.append("    blockers: " + "; ".join(str(v) for v in blockers[:4]))
+    observe = payload.get("observe_command")
+    if observe:
+        lines.append("observe:")
+        lines.append(f"  {observe}")
+    lines.append("next local worker command:")
     lines.append(f"  {payload['next_command']}")
     return "\n".join(lines)
 
@@ -3137,6 +3547,7 @@ def _dispatch_readiness() -> dict[str, object]:
     except NameError:
         n_comp = 0
     phase7 = _constrained_coord_search_readiness()
+    byte_shaving_acquisition = _byte_shaving_acquisition_summary()
     return {
         "schema": "pact.operator_dispatch_readiness.v1",
         "phase_1_exact_eval_packets": phase1,
@@ -3172,6 +3583,19 @@ def _dispatch_readiness() -> dict[str, object]:
         },
         "phase_7_constrained_coord_search": {
             **phase7,
+        },
+        "phase_6c_high_level_byte_shaving_acquisition": {
+            "status": byte_shaving_acquisition["status"],
+            "reason": byte_shaving_acquisition["reason"],
+            "campaign_run_count": byte_shaving_acquisition["campaign_run_count"],
+            "total_experiment_count": byte_shaving_acquisition[
+                "total_experiment_count"
+            ],
+            "local_mlx_ready_step_count": byte_shaving_acquisition[
+                "local_mlx_ready_step_count"
+            ],
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
         },
         "recommendation": (
             "prefer M5 Max parallel coarse-rank ($0) before paid GHA promotion; "
@@ -3213,6 +3637,11 @@ def _format_dispatch_readiness() -> str:
     lines.append(
         "  Phase 5 (meta-composition):                 "
         f"{phase5['n_stacks']} compose-stack(s) tracked"
+    )
+    phase6c = readiness["phase_6c_high_level_byte_shaving_acquisition"]
+    lines.append(
+        "  Phase 6c (high-level byte shaving queue):   "
+        f"{phase6c['status']} — {phase6c['reason']}"
     )
     phase7 = readiness["phase_7_constrained_coord_search"]
     lines.append(
@@ -3287,6 +3716,7 @@ def main(argv: list[str] | None = None) -> int:
             "cooperative_receiver_solver_integration": (
                 _cooperative_receiver_solver_integration()
             ),
+            "byte_shaving_acquisition": _byte_shaving_acquisition_summary(),
             "l5_v2_frontier_readiness": _l5_v2_frontier_readiness(
                 dispatch_claim_summary=dispatch_claim_summary
             ),
@@ -3423,6 +3853,10 @@ def main(argv: list[str] | None = None) -> int:
     parts.append(_section(
         "Phase 6b — Cooperative-receiver solver integration hooks",
         _format_cooperative_receiver_solver_integration(),
+    ))
+    parts.append(_section(
+        "Phase 6c — High-level byte-shaving acquisition queue",
+        _format_byte_shaving_acquisition_summary(),
     ))
     parts.append(_section(
         "Phase 7 — Constrained-coord-search status (sister subagent a8522fca)",

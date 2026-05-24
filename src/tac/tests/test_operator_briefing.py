@@ -74,6 +74,7 @@ def test_briefing_runs_all_three_phases():
     assert "Phase 1 exact-ready queues" in proc.stdout
     assert "Phase 1 materializer exact-ready handoffs" in proc.stdout
     assert "Phase 1 blocked readiness artifacts" in proc.stdout
+    assert "Phase 6c — High-level byte-shaving acquisition queue" in proc.stdout
     assert "pr91_hpm1_readiness_bundle" in proc.stdout
     assert "wr01_apply_pr106x_half" in proc.stdout
     assert "pr106_q10_151byte_brotli" in proc.stdout
@@ -1080,6 +1081,155 @@ def test_materializer_exact_ready_handoff_summary_supersedes_old_queue_reports(
         "experiments/results/run/materializer_exact_eval_consumer_report_20260101T010000Z.json"
     ]
     assert summary["recent_exact_ready_queue_paths"] == ["experiments/results/run/same.json"]
+
+
+def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    root = tmp_path / ".omx" / "research"
+    campaign_dir = root / "high_level" / "campaign3"
+    plan_path = campaign_dir / "byte_shaving_campaign_plan.json"
+    queue_path = ".omx/research/high_level/campaign3/materializer_execution_queue.json"
+    _write_json(
+        plan_path,
+        {
+            "campaign_id": "high_level_fixture",
+            "candidate_id": "inverse_steganalysis_water_bucket_plan.v1",
+            "dispatch_blockers": ["requires_exact_auth_eval_before_score_claim"],
+            "combination_ladder": [
+                {
+                    "combo_id": "combo_0001",
+                    "expected_score_gain": 0.000134,
+                    "unit_count": 2,
+                    "operation_families": [
+                        "materialize_inverse_scorer_cell_candidate"
+                    ],
+                    "dispatch_blockers": [
+                        "requires_byte_closed_materialization_before_dispatch"
+                    ],
+                }
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    _write_json(
+        campaign_dir / "materializer_campaign_run.json",
+        {
+            "schema": "byte_shaving_materializer_campaign_run.v1",
+            "execute": False,
+            "high_level_action_source_count": 2,
+            "plan": ".omx/research/high_level/campaign3/byte_shaving_campaign_plan.json",
+            "queue_id": "high_level_fixture_campaign3",
+            "queue_path": queue_path,
+            "state_path": ".omx/state/experiment_queue_high_level_fixture_campaign3.sqlite",
+            "experiment_count": 3,
+            "build": {
+                "materializer_work_queue_executable_row_count": 2,
+                "materializer_work_queue_blocked_row_count": 1,
+                "blocked_row_count": 1,
+                "materializer_backlog_row_count": 2,
+                "local_cpu_concurrency": 18,
+            },
+            "worker": {
+                "schema": "experiment_queue_worker_result.v1",
+                "execute": False,
+                "failure_count": 0,
+                "success_count": 0,
+                "max_parallel": 19,
+                "stop_reason": "dry_run",
+            },
+            "observation": {
+                "status_counts": {"queued": 3},
+                "ready_steps": [
+                    {
+                        "step_id": "materialize_local_proof_chain",
+                        "resource_kind": "local_mlx",
+                    }
+                ],
+                "failed_steps": [],
+                "definition_drift": {
+                    "changed_step_count": 0,
+                    "missing_step_count": 0,
+                    "missing_hash_step_count": 0,
+                },
+            },
+            "commands": [{"returncode": 0}],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    monkeypatch.setattr(mod, "BYTE_SHAVING_ACQUISITION_SCAN_ROOTS", (root,))
+
+    summary = mod._byte_shaving_acquisition_summary()
+    text = mod._format_byte_shaving_acquisition_summary()
+
+    assert summary["status"] == "READY_LOCAL_QUEUE"
+    assert summary["campaign_run_count"] == 1
+    assert summary["total_experiment_count"] == 3
+    assert summary["total_executable_work_count"] == 2
+    assert summary["local_mlx_ready_step_count"] == 1
+    assert summary["score_claim"] is False
+    assert summary["ready_for_exact_eval_dispatch"] is False
+    assert queue_path in summary["next_command"]
+    assert "--execute --max-parallel 0" in summary["next_command"]
+    assert summary["latest_rows"][0]["plan"]["top_combo"]["expected_score_gain"] == 0.000134
+    assert "High-level inverse-steganalysis/action-surface campaign intake" in text
+    assert "status=READY_LOCAL_QUEUE" in text
+    assert "local_mlx_ready=1" in text
+    assert "materialize_inverse_scorer_cell_candidate" in text
+    assert "not score authority" in text
+
+
+def test_byte_shaving_acquisition_summary_blocks_authority_leaks(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    root = tmp_path / ".omx" / "research"
+    campaign_dir = root / "leaky" / "campaign"
+    _write_json(
+        campaign_dir / "byte_shaving_campaign_plan.json",
+        {
+            "combination_ladder": [],
+            "dispatch_blockers": ["requires_exact_auth_eval_before_score_claim"],
+        },
+    )
+    _write_json(
+        campaign_dir / "materializer_campaign_run.json",
+        {
+            "schema": "byte_shaving_materializer_campaign_run.v1",
+            "plan": ".omx/research/leaky/campaign/byte_shaving_campaign_plan.json",
+            "queue_id": "leaky_queue",
+            "queue_path": ".omx/research/leaky/campaign/materializer_execution_queue.json",
+            "experiment_count": 1,
+            "score_claim": True,
+            "ready_for_exact_eval_dispatch": True,
+            "build": {"promotion_eligible": True},
+            "worker": {"failure_count": 0},
+            "observation": {"definition_drift": {}, "status_counts": {}},
+        },
+    )
+    monkeypatch.setattr(mod, "BYTE_SHAVING_ACQUISITION_SCAN_ROOTS", (root,))
+
+    summary = mod._byte_shaving_acquisition_summary()
+    latest = summary["latest_rows"][0]
+
+    assert summary["status"] == "BLOCKED"
+    assert summary["score_claim"] is False
+    assert latest["score_claim"] is False
+    assert latest["ready_for_exact_eval_dispatch"] is False
+    assert "campaign_run_authority_field_true:score_claim" in latest["blockers"]
+    assert "campaign_run_authority_field_true:ready_for_exact_eval_dispatch" in latest["blockers"]
+    assert "campaign_run_authority_field_true:promotion_eligible" in latest["blockers"]
 
 
 def test_materializer_exact_ready_handoff_summary_keeps_reused_queue_id_inputs_distinct(
