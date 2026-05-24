@@ -288,9 +288,15 @@ def _path_has_symlink(path: Path) -> bool:
     return any(child.is_symlink() for child in path.rglob("*"))
 
 
-def _input_artifact_manifest(path: Path, *, repo_root: Path) -> dict[str, Any]:
+def _artifact_manifest(
+    path: Path,
+    *,
+    repo_root: Path,
+    schema: str,
+    max_recursive_entries: int | None = None,
+) -> dict[str, Any]:
     record: dict[str, Any] = {
-        "schema": "staircase_ssh_input_artifact_manifest.v1",
+        "schema": schema,
         "path": _repo_rel_or_abs(path, repo_root=repo_root),
         "exists": path.exists(),
         "is_symlink": path.is_symlink(),
@@ -313,10 +319,12 @@ def _input_artifact_manifest(path: Path, *, repo_root: Path) -> dict[str, Any]:
         return record
 
     entries: list[dict[str, Any]] = []
+    recursive_entry_count = 0
     total_bytes = 0
     aggregate = hashlib.sha256()
     for child in sorted(path.rglob("*"), key=lambda item: item.relative_to(path).as_posix()):
         relative = child.relative_to(path).as_posix()
+        recursive_entry_count += 1
         child_record: dict[str, Any] = {
             "path": relative,
             "is_symlink": child.is_symlink(),
@@ -324,7 +332,8 @@ def _input_artifact_manifest(path: Path, *, repo_root: Path) -> dict[str, Any]:
             "is_file": child.is_file() and not child.is_symlink(),
         }
         if child.is_symlink():
-            entries.append(child_record)
+            if max_recursive_entries is None or len(entries) < max_recursive_entries:
+                entries.append(child_record)
             aggregate.update(_json_text(child_record).encode("utf-8"))
             continue
         if child.is_file():
@@ -332,17 +341,47 @@ def _input_artifact_manifest(path: Path, *, repo_root: Path) -> dict[str, Any]:
             sha256 = _sha256_file(child)
             total_bytes += size
             child_record.update({"bytes": size, "sha256": sha256})
-        entries.append(child_record)
+        if max_recursive_entries is None or len(entries) < max_recursive_entries:
+            entries.append(child_record)
         aggregate.update(_json_text(child_record).encode("utf-8"))
+    recursive_truncated = (
+        max_recursive_entries is not None
+        and recursive_entry_count > max_recursive_entries
+    )
     record.update(
         {
-            "recursive_entry_count": len(entries),
+            "recursive_entry_count": recursive_entry_count,
             "recursive_bytes": total_bytes,
             "recursive_sha256": aggregate.hexdigest(),
+            "recursive_truncated": recursive_truncated,
             "entries": entries,
         }
     )
+    if max_recursive_entries is not None:
+        record["recursive_entry_limit"] = max_recursive_entries
     return record
+
+
+def _input_artifact_manifest(path: Path, *, repo_root: Path) -> dict[str, Any]:
+    return _artifact_manifest(
+        path,
+        repo_root=repo_root,
+        schema="staircase_ssh_input_artifact_manifest.v1",
+    )
+
+
+def _pullback_artifact_manifest(
+    path: Path,
+    *,
+    repo_root: Path,
+    max_recursive_entries: int | None,
+) -> dict[str, Any]:
+    return _artifact_manifest(
+        path,
+        repo_root=repo_root,
+        schema="staircase_ssh_pullback_artifact_manifest.v1",
+        max_recursive_entries=max_recursive_entries,
+    )
 
 
 def _postcondition_artifact_paths(step: Mapping[str, Any], *, repo_root: Path) -> list[Path]:
@@ -608,20 +647,28 @@ def build_rsync_pull_command(
     remote_path: str,
     local_path: str | Path,
     connect_timeout_seconds: int = 10,
+    recursive: bool = False,
 ) -> list[str]:
     remote_path = _require_safe_remote_artifact_path(remote_path)
-    return [
-        rsync_binary,
-        "-a",
+    command = [rsync_binary, "-a"]
+    if recursive:
+        command.append("--delete")
+        remote_source = f"{ssh_target}:{remote_path.rstrip('/')}/"
+        local_destination = f"{Path(local_path).as_posix().rstrip('/')}/"
+    else:
+        remote_source = f"{ssh_target}:{remote_path}"
+        local_destination = str(local_path)
+    command.extend([
         "-e",
         _ssh_transport_arg(
             ssh_binary=ssh_binary,
             connect_timeout_seconds=connect_timeout_seconds,
         ),
         "--",
-        f"{ssh_target}:{remote_path}",
-        str(local_path),
-    ]
+        remote_source,
+        local_destination,
+    ])
+    return command
 
 
 def build_rsync_push_command(
@@ -656,24 +703,61 @@ def build_rsync_push_command(
     return command
 
 
+def _pullback_recursive_flag(step: Mapping[str, Any]) -> bool:
+    telemetry = step.get("telemetry")
+    return bool(
+        isinstance(telemetry, Mapping)
+        and (
+            telemetry.get("pullback_recursive") is True
+            or telemetry.get("recursive") is True
+        )
+    )
+
+
+def _pullback_recursive_cap(step: Mapping[str, Any]) -> int | None:
+    telemetry = step.get("telemetry")
+    if not isinstance(telemetry, Mapping):
+        return None
+    value = telemetry.get("pullback_max_recursive_entries")
+    if value is None:
+        value = telemetry.get("max_recursive_entries")
+    return _positive_int(value)
+
+
 def _artifact_pullbacks_for_step(
     step: Mapping[str, Any],
     *,
     repo_root: Path,
     path_maps: Sequence[tuple[Path, str]],
-) -> list[dict[str, str]]:
-    pullbacks: list[dict[str, str]] = []
-    for local_path in _artifact_paths_for_pullback(step, repo_root=repo_root):
+) -> list[dict[str, Any]]:
+    pullbacks_by_key: dict[str, dict[str, Any]] = {}
+    recursive = _pullback_recursive_flag(step)
+    recursive_cap = _pullback_recursive_cap(step)
+
+    def add_path(local_path: Path, *, recursive_pullback: bool) -> None:
         remote_path = _remote_artifact_path_for_local(local_path, path_maps=path_maps)
         if remote_path is None:
-            continue
-        pullbacks.append(
-            {
-                "local_path": local_path.as_posix(),
-                "remote_path": remote_path,
-            }
-        )
-    return pullbacks
+            return
+        key = local_path.resolve(strict=False).as_posix()
+        existing = pullbacks_by_key.get(key)
+        row = {
+            "local_path": local_path.as_posix(),
+            "remote_path": remote_path,
+            "recursive": bool(recursive_pullback),
+        }
+        if recursive_pullback and recursive_cap is not None:
+            row["max_recursive_entries"] = recursive_cap
+        if existing is None:
+            pullbacks_by_key[key] = row
+            return
+        if recursive_pullback and not existing.get("recursive"):
+            existing.update(row)
+
+    for local_path in _postcondition_artifact_paths(step, repo_root=repo_root):
+        add_path(local_path, recursive_pullback=False)
+    for local_path in _telemetry_pullback_artifact_paths(step, repo_root=repo_root):
+        add_path(local_path, recursive_pullback=recursive)
+    return list(pullbacks_by_key.values())
 
 
 def _input_pushes_for_step(
@@ -750,7 +834,8 @@ def _run_artifact_pullbacks(
     rsync_binary: str,
     ssh_binary: str,
     ssh_target: str,
-    pullbacks: Sequence[Mapping[str, str]],
+    pullbacks: Sequence[Mapping[str, Any]],
+    repo_root: Path,
     timeout_seconds: int,
     connect_timeout_seconds: int,
 ) -> dict[str, Any]:
@@ -774,7 +859,22 @@ def _run_artifact_pullbacks(
     for pullback in pullbacks:
         local_path = _require_text(pullback.get("local_path"), "pullback.local_path")
         remote_path = _require_text(pullback.get("remote_path"), "pullback.remote_path")
-        Path(local_path).parent.mkdir(parents=True, exist_ok=True)
+        recursive = pullback.get("recursive") is True
+        recursive_cap = (
+            _positive_int(pullback.get("max_recursive_entries"))
+            if recursive
+            else None
+        )
+        local = Path(local_path)
+        if recursive:
+            local.mkdir(parents=True, exist_ok=True)
+        else:
+            local.parent.mkdir(parents=True, exist_ok=True)
+        pre_manifest = _pullback_artifact_manifest(
+            local,
+            repo_root=repo_root,
+            max_recursive_entries=recursive_cap,
+        )
         argv = build_rsync_pull_command(
             rsync_binary=rsync_binary,
             ssh_binary=ssh_binary,
@@ -782,13 +882,24 @@ def _run_artifact_pullbacks(
             remote_path=remote_path,
             local_path=local_path,
             connect_timeout_seconds=connect_timeout_seconds,
+            recursive=recursive,
         )
         started = time.monotonic()
         try:
             proc = _run_remote_command(runner, argv, timeout_seconds=timeout_seconds)
+            local_manifest = _pullback_artifact_manifest(
+                local,
+                repo_root=repo_root,
+                max_recursive_entries=recursive_cap,
+            )
             row = {
                 "local_path": local_path,
                 "remote_path": remote_path,
+                "recursive": recursive,
+                "pre_local_manifest": pre_manifest,
+                "pre_local_manifest_sha256": _sha256_json(pre_manifest),
+                "local_manifest": local_manifest,
+                "local_manifest_sha256": _sha256_json(local_manifest),
                 "argv": argv,
                 "returncode": int(proc.returncode),
                 "timed_out": False,
@@ -797,6 +908,20 @@ def _run_artifact_pullbacks(
             }
             if proc.returncode != 0 and overall_returncode == 0:
                 overall_returncode = int(proc.returncode)
+            if (
+                proc.returncode == 0
+                and recursive
+                and local_manifest.get("recursive_truncated") is True
+            ):
+                row["rsync_returncode"] = 0
+                row["returncode"] = 75
+                row["execution_error"] = (
+                    f"recursive_pullback_manifest_truncated:{local_path}"
+                )
+                if overall_returncode == 0:
+                    overall_returncode = 75
+                if execution_error is None:
+                    execution_error = row["execution_error"]
         except subprocess.TimeoutExpired as exc:
             timed_out = True
             overall_returncode = 124
@@ -804,6 +929,9 @@ def _run_artifact_pullbacks(
             row = {
                 "local_path": local_path,
                 "remote_path": remote_path,
+                "recursive": recursive,
+                "pre_local_manifest": pre_manifest,
+                "pre_local_manifest_sha256": _sha256_json(pre_manifest),
                 "argv": argv,
                 "returncode": 124,
                 "timed_out": True,
@@ -816,6 +944,9 @@ def _run_artifact_pullbacks(
             row = {
                 "local_path": local_path,
                 "remote_path": remote_path,
+                "recursive": recursive,
+                "pre_local_manifest": pre_manifest,
+                "pre_local_manifest_sha256": _sha256_json(pre_manifest),
                 "argv": argv,
                 "returncode": 127,
                 "timed_out": False,
@@ -1520,6 +1651,7 @@ def _execute_selected_task(
             ssh_binary=ssh_binary,
             ssh_target=ssh_target,
             pullbacks=pullbacks,
+            repo_root=repo,
             timeout_seconds=artifact_pull_timeout_seconds,
             connect_timeout_seconds=ssh_connect_timeout_seconds,
         )

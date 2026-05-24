@@ -1,0 +1,300 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 18,
+      "local_mlx": 1
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter",
+      "lane_id": null,
+      "metadata": {
+        "allowed_use": "local_materializer_proof_chain_only",
+        "backlog_key": "adapter_not_executable:inverse_scorer_cell_candidate_v1:scorer_inverse_surface_cell:materialize_inverse_scorer_cell_candidate:inverse_scorer_cell_candidate_adapter",
+        "backlog_rank": 1,
+        "candidate_saved_bytes_sum": 0,
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "materializer_execution_queue_local_proof_chain_only",
+          "exact_auth_eval_required_before_score_claim"
+        ],
+        "exact_cuda_auth_eval": false,
+        "exact_readiness_followup_enabled": true,
+        "exact_readiness_followup_requested": true,
+        "exact_readiness_followup_skipped_reason": null,
+        "expected_score_gain_sum": 0.000364,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "materializer_id": "inverse_scorer_cell_candidate_adapter",
+        "operation_family": "materialize_inverse_scorer_cell_candidate",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_contract_id": "inverse_scorer_cell_receiver.v1",
+        "receiver_contract_kind": "inverse_scorer_coordinate_candidate",
+        "schema": "byte_shaving_materializer_execution_experiment_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_plan_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/byte_shaving_campaign_plan.json",
+        "source_selection_ids": [
+          "combo_0001",
+          "top_0001",
+          "top_0002"
+        ],
+        "source_unit_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001"
+        ],
+        "source_work_queue_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_work_queue.json",
+        "source_work_queue_schema": "byte_shaving_materializer_work_queue.v1",
+        "target_kind": "inverse_scorer_cell_candidate_v1",
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ],
+        "unit_kind": "scorer_inverse_surface_cell",
+        "work_id": "materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter",
+        "work_rank": 1
+      },
+      "priority": 1,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_inverse_scorer_cell_candidate_chain.py",
+            "--candidate-archive-template",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/template.zip",
+            "--inverse-action-functional",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_steganalysis_action_functional.json",
+            "--raw-contest-video-digest",
+            "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "--output-dir",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain",
+            "--fail-if-receiver-blocked",
+            "--fail-if-inflate-parity-blocked",
+            "--selected-limit",
+            "1"
+          ],
+          "id": "materialize_local_proof_chain",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "inverse_scorer_cell_candidate_chain_v1",
+              "key": "schema",
+              "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/inverse_scorer_cell_candidate_chain_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "forbidden_statuses": [
+                "failed"
+              ],
+              "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/inverse_scorer_cell_candidate_chain_manifest.json",
+              "required_artifact_records": [
+                "candidate_archive"
+              ],
+              "required_equals": {
+                "schema": "inverse_scorer_cell_candidate_chain_v1"
+              },
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "required_less_than": [],
+              "required_positive_int": [
+                "candidate_archive_bytes"
+              ],
+              "required_sha256": [
+                "candidate_archive_sha256"
+              ],
+              "required_true": [
+                "byte_closed_candidate_emitted",
+                "runtime_adapter_ready",
+                "receiver_proof_ready",
+                "receiver_contract_satisfied",
+                "candidate_runtime_adapter_blocker_cleared",
+                "inflate_parity_satisfied"
+              ],
+              "type": "json_completion_contract"
+            },
+            {
+              "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/inverse_scorer_cell_candidate_chain_manifest.json",
+              "required_inflate_parity": true,
+              "schema": "inverse_scorer_cell_candidate_chain_v1",
+              "type": "materializer_chain_complete"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/template.zip",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_steganalysis_action_functional.json"
+            ],
+            "max_recursive_entries": 512,
+            "parity_probe_required": false,
+            "pullback_artifact_paths": [
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain"
+            ],
+            "pullback_max_recursive_entries": 512,
+            "pullback_recursive": true,
+            "recursive": true
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/harvest_materializer_chain_candidates.py",
+            "--repo-root",
+            "/Users/adpena/Projects/pact",
+            "--chain-manifest",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/inverse_scorer_cell_candidate_chain_manifest.json",
+            "--source-queue-out",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/source_queue.json",
+            "--report-out",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/harvest_report.json",
+            "--exact-readiness-out-dir",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/exact_readiness",
+            "--exact-readiness-bridge-report-out",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/exact_readiness_bridge_report.json",
+            "--require-accepted"
+          ],
+          "id": "harvest_materializer_chains",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "optimizer_candidate_queue_v1",
+              "key": "schema",
+              "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/source_queue.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "materializer_chain_harvest_report.v1",
+              "key": "schema",
+              "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/harvest_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "materializer_chain_exact_readiness_bridge_report.v1",
+              "key": "schema",
+              "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "materialize_local_proof_chain"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/source_queue.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/harvest_report.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/exact_readiness",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/exact_readiness_bridge_report.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_materializer_exact_eval_dispatch_plan.py",
+            "--repo-root",
+            "/Users/adpena/Projects/pact",
+            "--bridge-report",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/exact_readiness_bridge_report.json",
+            "--dispatch-plan-out",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/dispatch_plan.json",
+            "--experiment-queue-out",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/dispatch_queue.json",
+            "--experiment-queue-id",
+            "high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3_materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter_exact_eval_dispatch",
+            "--provider",
+            "lightning",
+            "--label-prefix",
+            "materializer_exact_eval",
+            "--estimated-cost-per-dispatch",
+            "0.3",
+            "--max-total-cost",
+            "5"
+          ],
+          "id": "build_exact_eval_dispatch_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "materializer_exact_eval_dispatch_plan.v1",
+              "key": "schema",
+              "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/dispatch_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "experiment_queue.v1",
+              "key": "schema",
+              "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/dispatch_queue.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "harvest_materializer_chains"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/dispatch_plan.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/dispatch_queue.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": [
+        "byte-shaving",
+        "materializer",
+        "local-proof-chain",
+        "no-score-authority"
+      ]
+    }
+  ],
+  "queue_id": "high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3",
+  "schema": "experiment_queue.v1"
+}

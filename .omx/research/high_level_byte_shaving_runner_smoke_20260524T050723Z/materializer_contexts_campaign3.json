@@ -1,0 +1,14 @@
+{
+  "schema": "byte_shaving_materializer_contexts.v1",
+  "contexts": {
+    "inverse_scorer_cell_candidate_v1": {
+      "candidate_archive_template": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/template.zip",
+      "inverse_action_functional": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_steganalysis_action_functional.json",
+      "raw_contest_video_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "output_dir": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain",
+      "selected_limit": 1,
+      "fail_if_receiver_blocked": true,
+      "fail_if_inflate_parity_blocked": true
+    }
+  }
+}

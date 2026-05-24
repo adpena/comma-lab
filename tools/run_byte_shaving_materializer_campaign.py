@@ -177,7 +177,45 @@ def _parse_artifact_path_maps(values: list[str]) -> list[str]:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--plan", type=Path, required=True)
+    parser.add_argument(
+        "--plan",
+        type=Path,
+        default=None,
+        help=(
+            "existing byte_shaving_campaign_plan.v1. If omitted, the runner "
+            "builds one from high-level scorer-response/action sources first."
+        ),
+    )
+    parser.add_argument("--campaign-id", default="byte_shaving_acquisition_campaign")
+    parser.add_argument("--candidate-id", default=None)
+    parser.add_argument("--scorer-response", action="append", default=[])
+    parser.add_argument("--inverse-scorer-surface", action="append", default=[])
+    parser.add_argument("--mlx-effective-spend-triage-selection", action="append", default=[])
+    parser.add_argument("--atom", action="append", default=[])
+    parser.add_argument("--observation", action="append", default=[])
+    parser.add_argument("--exact-auth-calibration-packet", action="append", default=[])
+    parser.add_argument("--exact-auth-calibration-candidate-id", default=None)
+    parser.add_argument("--queue-performance-summary", action="append", default=[])
+    parser.add_argument("--queue-performance-runtime-identity", type=Path, default=None)
+    parser.add_argument("--queue-performance-cache-identity", type=Path, default=None)
+    parser.add_argument("--queue-performance-candidate-map", type=Path, default=None)
+    parser.add_argument(
+        "--queue-performance-axis",
+        default="[local-queue-performance advisory]",
+    )
+    parser.add_argument("--resource-kind", default="local_mlx")
+    parser.add_argument("--elapsed-seconds", type=float, default=None)
+    parser.add_argument("--artifact-bytes", type=int, default=None)
+    parser.add_argument("--total-byte-budget", type=int, default=None)
+    parser.add_argument("--lambda-rate", type=float, default=None)
+    parser.add_argument("--inverse-scorer-max-units", type=int, default=32)
+    parser.add_argument("--inverse-scorer-null-delta-epsilon", type=float, default=1e-6)
+    parser.add_argument("--inverse-scorer-fragile-delta-threshold", type=float, default=0.0)
+    parser.add_argument(
+        "--inverse-scorer-allow-native-mlx-window-objective",
+        action="store_true",
+    )
+    parser.add_argument("--campaign-plan-max-k", type=int, default=None)
     parser.add_argument("--materializer-contexts", type=Path, default=None)
     parser.add_argument(
         "--run-dir",
@@ -276,7 +314,155 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _build_queue_command(args: argparse.Namespace, *, run_dir: Path) -> list[str]:
+def _action_source_count(args: argparse.Namespace) -> int:
+    return sum(
+        len(getattr(args, name))
+        for name in (
+            "scorer_response",
+            "inverse_scorer_surface",
+            "mlx_effective_spend_triage_selection",
+            "atom",
+            "observation",
+            "exact_auth_calibration_packet",
+            "queue_performance_summary",
+        )
+    )
+
+
+def _require_plan_path(args: argparse.Namespace, plan_path: Path | None = None) -> Path:
+    if plan_path is not None:
+        return plan_path
+    if args.plan is None:
+        raise SystemExit(
+            "provide --plan or high-level action sources such as "
+            "--scorer-response, --inverse-scorer-surface, "
+            "--mlx-effective-spend-triage-selection, or --atom"
+        )
+    return _resolve(args.plan)
+
+
+def _append_path_args(command: list[str], flag: str, values: list[str | Path]) -> None:
+    for raw in values:
+        command.extend([flag, _display_path(_resolve(raw))])
+
+
+def _build_action_functional_command(
+    args: argparse.Namespace,
+    *,
+    run_dir: Path,
+) -> list[str]:
+    action_path = run_dir / "inverse_steganalysis_action_functional.json"
+    md_path = run_dir / "inverse_steganalysis_action_functional.md"
+    command = [
+        sys.executable,
+        "tools/build_inverse_steganalysis_action_functional.py",
+        "--output",
+        _display_path(action_path),
+        "--md-out",
+        _display_path(md_path),
+        "--repo-root",
+        REPO_ROOT.as_posix(),
+        "--resource-kind",
+        str(args.resource_kind),
+    ]
+    _append_path_args(command, "--scorer-response", args.scorer_response)
+    _append_path_args(command, "--inverse-scorer-surface", args.inverse_scorer_surface)
+    _append_path_args(
+        command,
+        "--mlx-effective-spend-triage-selection",
+        args.mlx_effective_spend_triage_selection,
+    )
+    _append_path_args(command, "--atom", args.atom)
+    _append_path_args(command, "--observation", args.observation)
+    _append_path_args(
+        command,
+        "--exact-auth-calibration-packet",
+        args.exact_auth_calibration_packet,
+    )
+    _append_path_args(
+        command,
+        "--queue-performance-summary",
+        args.queue_performance_summary,
+    )
+    if args.candidate_id:
+        command.extend(["--candidate-id", str(args.candidate_id)])
+    if args.exact_auth_calibration_candidate_id:
+        command.extend([
+            "--exact-auth-calibration-candidate-id",
+            str(args.exact_auth_calibration_candidate_id),
+        ])
+    if args.queue_performance_runtime_identity is not None:
+        command.extend([
+            "--queue-performance-runtime-identity",
+            _display_path(_resolve(args.queue_performance_runtime_identity)),
+        ])
+    if args.queue_performance_cache_identity is not None:
+        command.extend([
+            "--queue-performance-cache-identity",
+            _display_path(_resolve(args.queue_performance_cache_identity)),
+        ])
+    if args.queue_performance_candidate_map is not None:
+        command.extend([
+            "--queue-performance-candidate-map",
+            _display_path(_resolve(args.queue_performance_candidate_map)),
+        ])
+    if args.queue_performance_axis:
+        command.extend(["--queue-performance-axis", str(args.queue_performance_axis)])
+    if args.elapsed_seconds is not None:
+        command.extend(["--elapsed-seconds", str(args.elapsed_seconds)])
+    if args.artifact_bytes is not None:
+        command.extend(["--artifact-bytes", str(args.artifact_bytes)])
+    if args.total_byte_budget is not None:
+        command.extend(["--total-byte-budget", str(args.total_byte_budget)])
+    if args.lambda_rate is not None:
+        command.extend(["--lambda-rate", str(args.lambda_rate)])
+    command.extend([
+        "--inverse-scorer-max-units",
+        str(args.inverse_scorer_max_units),
+        "--inverse-scorer-null-delta-epsilon",
+        str(args.inverse_scorer_null_delta_epsilon),
+        "--inverse-scorer-fragile-delta-threshold",
+        str(args.inverse_scorer_fragile_delta_threshold),
+    ])
+    if args.inverse_scorer_allow_native_mlx_window_objective:
+        command.append("--inverse-scorer-allow-native-mlx-window-objective")
+    return command
+
+
+def _build_campaign_plan_command(
+    args: argparse.Namespace,
+    *,
+    action_functional_path: Path,
+    run_dir: Path,
+) -> list[str]:
+    plan_path = run_dir / "byte_shaving_campaign_plan.json"
+    md_path = run_dir / "byte_shaving_campaign_plan.md"
+    command = [
+        sys.executable,
+        "tools/plan_byte_shaving_campaign.py",
+        "--source",
+        _display_path(action_functional_path),
+        "--from-inverse-action-functional",
+        "--campaign-id",
+        str(args.campaign_id),
+        "--output",
+        _display_path(plan_path),
+        "--md-out",
+        _display_path(md_path),
+        "--repo-root",
+        REPO_ROOT.as_posix(),
+    ]
+    if args.campaign_plan_max_k is not None:
+        command.extend(["--max-k", str(args.campaign_plan_max_k)])
+    return command
+
+
+def _build_queue_command(
+    args: argparse.Namespace,
+    *,
+    run_dir: Path,
+    plan_path: Path | None = None,
+) -> list[str]:
     if args.include_storage_preflight:
         try:
             validate_scheduler_storage_preflight_config(
@@ -300,7 +486,7 @@ def _build_queue_command(args: argparse.Namespace, *, run_dir: Path) -> list[str
         "--repo-root",
         REPO_ROOT.as_posix(),
         "--plan",
-        _display_path(_resolve(args.plan)),
+        _display_path(_require_plan_path(args, plan_path)),
         "--materialization-out",
         _display_path(materialization),
         "--portfolio-out",
@@ -503,8 +689,22 @@ def _ssh_executor_dry_run_command(
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    action_source_count = _action_source_count(args)
+    if args.plan is None and action_source_count == 0:
+        raise SystemExit(
+            "provide --plan or high-level action sources such as "
+            "--scorer-response, --inverse-scorer-surface, "
+            "--mlx-effective-spend-triage-selection, or --atom"
+        )
+    if args.plan is not None and action_source_count:
+        raise SystemExit(
+            "--plan is mutually exclusive with high-level action sources; "
+            "start from one authority surface per run"
+        )
     if args.candidate_limit < 1:
         raise SystemExit("--candidate-limit must be >= 1")
+    if args.campaign_plan_max_k is not None and args.campaign_plan_max_k < 1:
+        raise SystemExit("--campaign-plan-max-k must be >= 1")
     if args.max_steps < 1:
         raise SystemExit("--max-steps must be >= 1")
     if args.staircase_ssh_max_steps < 1:
@@ -540,7 +740,25 @@ def main(argv: list[str] | None = None) -> int:
     execution_queue = run_dir / "materializer_execution_queue.json"
 
     commands: list[CommandResult] = []
-    build_result = _run(_build_queue_command(args, run_dir=run_dir))
+    generated_action_functional_path: Path | None = None
+    generated_campaign_plan_path: Path | None = None
+    plan_path = _resolve(args.plan) if args.plan is not None else None
+    if plan_path is None:
+        generated_action_functional_path = run_dir / "inverse_steganalysis_action_functional.json"
+        generated_campaign_plan_path = run_dir / "byte_shaving_campaign_plan.json"
+        action_result = _run(_build_action_functional_command(args, run_dir=run_dir))
+        commands.append(action_result)
+        plan_result = _run(
+            _build_campaign_plan_command(
+                args,
+                action_functional_path=generated_action_functional_path,
+                run_dir=run_dir,
+            )
+        )
+        commands.append(plan_result)
+        plan_path = generated_campaign_plan_path
+
+    build_result = _run(_build_queue_command(args, run_dir=run_dir, plan_path=plan_path))
     commands.append(build_result)
     queue = load_queue_definition(execution_queue)
     state_path = default_state_path(REPO_ROOT, queue["queue_id"])
@@ -644,7 +862,18 @@ def main(argv: list[str] | None = None) -> int:
     payload = {
         "schema": RUN_SCHEMA,
         "run_dir": _display_path(run_dir),
-        "plan": _display_path(_resolve(args.plan)),
+        "plan": _display_path(plan_path),
+        "generated_action_functional_path": (
+            None
+            if generated_action_functional_path is None
+            else _display_path(generated_action_functional_path)
+        ),
+        "generated_campaign_plan_path": (
+            None
+            if generated_campaign_plan_path is None
+            else _display_path(generated_campaign_plan_path)
+        ),
+        "high_level_action_source_count": action_source_count,
         "queue_path": _display_path(execution_queue),
         "state_path": _display_path(state_path),
         "execute": bool(args.execute),

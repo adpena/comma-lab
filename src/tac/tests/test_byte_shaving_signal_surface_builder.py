@@ -238,6 +238,46 @@ def _inverse_response_row(
     }
 
 
+def _inverse_action_payload() -> dict[str, object]:
+    false_authority = {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    return {
+        "schema": "inverse_steganalysis_discrete_action_functional.v1",
+        "tool": "tac.optimization.inverse_steganalysis_acquisition",
+        "math_model": {
+            "representation": "discrete_riemann_sum_with_second_order_interactions",
+            "stationarity_rule": "select positive euler_lagrange_residual cells",
+            "lambda_rate": RATE_SCORE_PER_BYTE,
+        },
+        "integral_totals": {"cell_count": 1, "blocked_cell_count": 0},
+        "water_bucket": {
+            "schema": "inverse_steganalysis_water_bucket_plan.v1",
+            "selected_count": 1,
+            "selected_expected_score_gain": 0.0004,
+            "selected_cells": [
+                {
+                    "atom_id": "inverse_surface_pair0007",
+                    "candidate_id": "candidate_pair0007",
+                    "scope_axis": "pairs",
+                    "component": "posenet",
+                    "water_fill_cost_bytes": 32,
+                    "expected_score_gain": 0.0004,
+                    "euler_lagrange_residual": 0.00039,
+                }
+            ],
+            **false_authority,
+        },
+        "cells": [],
+        **false_authority,
+    }
+
+
 def test_builder_merges_queue_and_sanitized_refs_into_plannable_surface(
     tmp_path: Path,
 ) -> None:
@@ -275,6 +315,43 @@ def test_builder_merges_queue_and_sanitized_refs_into_plannable_surface(
     assert any(unit["unit_kind"] == "correction_target" for unit in surface["units"])
     assert plan["ranked_units"][0]["unit_id"] == "drop_pair_0371"
     assert plan["score_claim"] is False
+
+
+def test_builder_merges_inverse_action_functional_into_mixed_signal_surface(
+    tmp_path: Path,
+) -> None:
+    queue = tmp_path / "queue.json"
+    inverse_action = tmp_path / "inverse_action.json"
+    _candidate_queue(queue)
+    inverse_action.write_text(
+        json.dumps(_inverse_action_payload()),
+        encoding="utf-8",
+    )
+
+    surface = build_byte_shaving_signal_surface(
+        repo_root=tmp_path,
+        campaign_id="mixed_surface",
+        candidate_queue_paths=[queue],
+        inverse_action_functional_paths=[inverse_action],
+    )
+    plan = build_byte_shaving_campaign_plan(surface, repo_root=tmp_path)
+
+    kinds = {unit["unit_kind"] for unit in surface["units"]}
+    combo_ids = set(plan["recommended_combination"]["selected_unit_ids"])
+    assert "scorer_inverse_surface_cell" in kinds
+    assert "archive_section" in kinds
+    assert surface["inverse_action_functional_refs"][0]["selected_count"] == 1
+    assert surface["inverse_action_functional_refs"][0]["score_claim"] is False
+    assert any(
+        ref["kind"] == "inverse_steganalysis_action_functional"
+        for ref in surface["source_signal_refs"]
+    )
+    assert {
+        "drop_pair_0371",
+        "inverse_action_inverse_surface_pair0007",
+    }.issubset(combo_ids)
+    assert plan["score_claim"] is False
+    assert plan["recommended_combination"]["score_claim"] is False
 
 
 def test_builder_canonicalizes_scorer_response_ref_planning_targets(
@@ -480,10 +557,12 @@ def test_builder_rejects_truthy_proxy_sources(tmp_path: Path) -> None:
 def test_cli_writes_surface_and_markdown(tmp_path: Path) -> None:
     queue = tmp_path / "queue.json"
     engineered = tmp_path / "engineered.json"
+    inverse_action = tmp_path / "inverse_action.json"
     output = tmp_path / "surface.json"
     md_out = tmp_path / "surface.md"
     _candidate_queue(queue)
     _engineered_correction_targeting(engineered)
+    inverse_action.write_text(json.dumps(_inverse_action_payload()), encoding="utf-8")
 
     result = subprocess.run(
         [
@@ -495,6 +574,8 @@ def test_cli_writes_surface_and_markdown(tmp_path: Path) -> None:
             str(engineered),
             "--engineered-correction-max-targets",
             "1",
+            "--inverse-action-functional",
+            str(inverse_action),
             "--output",
             str(output),
             "--md-out",
@@ -513,6 +594,7 @@ def test_cli_writes_surface_and_markdown(tmp_path: Path) -> None:
     surface = json.loads(output.read_text(encoding="utf-8"))
     assert surface["units"][0]["unit_id"] == "drop_pair_0371"
     assert surface["engineered_correction_refs"][0]["surface_unit_count"] == 1
+    assert surface["inverse_action_functional_refs"][0]["surface_unit_count"] == 1
     assert "Authority Boundary" in md_out.read_text(encoding="utf-8")
 
 

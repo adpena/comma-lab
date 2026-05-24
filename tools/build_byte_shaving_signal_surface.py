@@ -37,6 +37,7 @@ def _render_markdown(surface: dict[str, Any]) -> str:
         f"- scorer_response_refs: `{len(surface.get('scorer_response_refs') or [])}`",
         f"- inverse_scorer_surface_refs: `{len(surface.get('inverse_scorer_surface_refs') or [])}`",
         f"- engineered_correction_refs: `{len(surface.get('engineered_correction_refs') or [])}`",
+        f"- inverse_action_functional_refs: `{len(surface.get('inverse_action_functional_refs') or [])}`",
         f"- xray_refs: `{len(surface.get('xray_refs') or [])}`",
         f"- canonical_equation_refs: `{len(surface.get('canonical_equation_refs') or [])}`",
         f"- atom_refs: `{len(surface.get('atom_refs') or [])}`",
@@ -74,6 +75,7 @@ def main(argv: list[str] | None = None) -> int:
             "Use 0 until an empirical calibration row exists."
         ),
     )
+    parser.add_argument("--inverse-action-functional", action="append", default=[])
     parser.add_argument("--master-gradient-archive-sha", action="append", default=[])
     parser.add_argument("--master-gradient-ledger", type=Path, default=None)
     parser.add_argument("--master-gradient-axis", default=None)
@@ -118,6 +120,7 @@ def main(argv: list[str] | None = None) -> int:
             engineered_correction_default_predicted_quality_score_delta=(
                 args.engineered_correction_default_delta
             ),
+            inverse_action_functional_paths=args.inverse_action_functional,
             master_gradient_archive_sha256s=args.master_gradient_archive_sha,
             master_gradient_ledger_path=args.master_gradient_ledger,
             master_gradient_axis=args.master_gradient_axis,
@@ -157,7 +160,7 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f"wrote {args.output} "
         f"(units={len(surface['units'])}, "
-        f"refs={len(surface['source_signal_refs']) + len(surface['auth_eval_refs']) + len(surface['mlx_calibration_refs']) + len(surface['scorer_response_refs']) + len(surface['inverse_scorer_surface_refs'])})"
+        f"refs={len(surface['source_signal_refs']) + len(surface['auth_eval_refs']) + len(surface['mlx_calibration_refs']) + len(surface['scorer_response_refs']) + len(surface['inverse_scorer_surface_refs']) + len(surface['inverse_action_functional_refs'])})"
     )
     print(
         "score_claim=false promotion_eligible=false "

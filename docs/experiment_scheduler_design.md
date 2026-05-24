@@ -199,6 +199,26 @@ mutually exclusive with top-level local `--execute`, takes its own
 fleet work can be launched from the generated queue without turning a detached
 SSH filesystem into implicit source-of-truth state.
 
+`tools/smoke_staircase_ssh_input_custody.py` is the no-network operator smoke
+for that contract. It builds a tiny `experiment_queue.v1`, emits a staircase
+dispatch plan, runs the production SSH executor with a fake transport, records
+the directory input manifest, verifies the directory push used `rsync --delete`,
+pulls back a local output artifact, and forces the resulting report through the
+proxy false-authority boundary. Recursive output pullbacks use content-sync
+semantics with `rsync --delete`, emit post-pull recursive manifests, and fail
+closed if the requested manifest cap truncates the pulled tree. Passing this
+smoke proves the custody plumbing; it does not prove SSH reachability, paid
+dispatch readiness, or score authority.
+
+The preferred production entry point is not a leaf materializer. Run
+`tools/run_byte_shaving_materializer_campaign.py` directly from high-level
+sources such as `--scorer-response`, `--inverse-scorer-surface`,
+`--mlx-effective-spend-triage-selection`, or `--atom`. When `--plan` is omitted
+the runner first builds an inverse-steganalysis action functional, then a
+bounded byte-shaving campaign plan, then the queue/DAG/SSH artifacts. This keeps
+inverse-cell materialization as one actuator underneath the planner instead of
+making it the planning surface.
+
 ## Exact-ready consumer
 
 `tools/build_materializer_exact_eval_consumer.py` bridges materializer exact

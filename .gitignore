@@ -47,6 +47,10 @@ experiments/queue_state*.sqlite
 experiments/queue_state*.sqlite-*
 experiments/queue_state*.db
 experiments/queue_state*.db-*
+.omx/research/**/queue_state*.sqlite
+.omx/research/**/queue_state*.sqlite-*
+.omx/research/**/queue_state*.db
+.omx/research/**/queue_state*.db-*
 
 # Large binary files (GitHub 100MB limit)
 *.raw

@@ -1,0 +1,542 @@
+{
+  "build": {
+    "action_summary_out": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/action_summary.json",
+    "blocked_row_count": 3,
+    "dqs1_blocked_row_count": 3,
+    "dqs1_executable_row_count": 0,
+    "executable_row_count": 0,
+    "local_cpu_concurrency": 18,
+    "local_cpu_concurrency_requested": "auto",
+    "materialization_out": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materialization.json",
+    "materializer_backlog_out": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_backlog.json",
+    "materializer_backlog_row_count": 1,
+    "materializer_contexts": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/materializer_contexts_campaign3.json",
+    "materializer_execution_queue": {
+      "exact_readiness_followup": true,
+      "experiment_count": 1,
+      "queue_id": "high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3",
+      "queue_out": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_execution_queue.json",
+      "selected_work_ids": [
+        "materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+      ]
+    },
+    "materializer_work_queue_blocked_row_count": 0,
+    "materializer_work_queue_executable_row_count": 1,
+    "materializer_work_queue_out": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_work_queue.json",
+    "materializer_work_queue_row_count": 1,
+    "portfolio_out": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/portfolio.json",
+    "promotion_eligible": false,
+    "queue": null,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "byte_shaving_campaign_queue_build_result.v1",
+    "score_claim": false
+  },
+  "commands": [
+    {
+      "command": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "tools/build_inverse_steganalysis_action_functional.py",
+        "--output",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_steganalysis_action_functional.json",
+        "--md-out",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_steganalysis_action_functional.md",
+        "--repo-root",
+        "/Users/adpena/Projects/pact",
+        "--resource-kind",
+        "local_mlx",
+        "--scorer-response",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/scorer_response.json",
+        "--candidate-id",
+        "high_level_smoke_candidate",
+        "--queue-performance-axis",
+        "[local-queue-performance advisory]",
+        "--total-byte-budget",
+        "64",
+        "--inverse-scorer-max-units",
+        "32",
+        "--inverse-scorer-null-delta-epsilon",
+        "1e-06",
+        "--inverse-scorer-fragile-delta-threshold",
+        "0.0"
+      ],
+      "elapsed_seconds": 0.07037070801015943,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "wrote .omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_steganalysis_action_functional.json (cells=2, selected=2)\nscore_claim=false promotion_eligible=false rank_or_kill_eligible=false ready_for_exact_eval_dispatch=false\n"
+    },
+    {
+      "command": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "tools/plan_byte_shaving_campaign.py",
+        "--source",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_steganalysis_action_functional.json",
+        "--from-inverse-action-functional",
+        "--campaign-id",
+        "high_level_byte_shaving_runner_smoke_20260524T050723Z",
+        "--output",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/byte_shaving_campaign_plan.json",
+        "--md-out",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/byte_shaving_campaign_plan.md",
+        "--repo-root",
+        "/Users/adpena/Projects/pact",
+        "--max-k",
+        "3"
+      ],
+      "elapsed_seconds": 0.027675584016833454,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "wrote .omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/byte_shaving_campaign_plan.json (units=2, prefixes=2, combinations=1)\n"
+    },
+    {
+      "command": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "tools/build_byte_shaving_campaign_queue.py",
+        "--repo-root",
+        "/Users/adpena/Projects/pact",
+        "--plan",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/byte_shaving_campaign_plan.json",
+        "--materialization-out",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materialization.json",
+        "--portfolio-out",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/portfolio.json",
+        "--action-summary-out",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/action_summary.json",
+        "--materializer-backlog-out",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_backlog.json",
+        "--materializer-work-queue-out",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_work_queue.json",
+        "--materializer-execution-queue-out",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_execution_queue.json",
+        "--materializer-execution-queue-id",
+        "high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3",
+        "--candidate-limit",
+        "32",
+        "--local-cpu-concurrency",
+        "auto",
+        "--results-root",
+        "experiments/results",
+        "--include-materializer-exact-readiness-followup",
+        "--materializer-exact-eval-dispatch-provider",
+        "lightning",
+        "--materializer-exact-eval-dispatch-label-prefix",
+        "materializer_exact_eval",
+        "--materializer-exact-eval-dispatch-estimated-cost-per-dispatch",
+        "0.3",
+        "--materializer-exact-eval-dispatch-max-total-cost",
+        "5.0",
+        "--materializer-contexts",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/materializer_contexts_campaign3.json",
+        "--materializer-execution-limit",
+        "4"
+      ],
+      "elapsed_seconds": 0.11788812500890344,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "{\n  \"action_summary_out\": \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/action_summary.json\",\n  \"blocked_row_count\": 3,\n  \"dqs1_blocked_row_count\": 3,\n  \"dqs1_executable_row_count\": 0,\n  \"executable_row_count\": 0,\n  \"local_cpu_concurrency\": 18,\n  \"local_cpu_concurrency_requested\": \"auto\",\n  \"materialization_out\": \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materialization.json\",\n  \"materializer_backlog_out\": \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_backlog.json\",\n  \"materializer_backlog_row_count\": 1,\n  \"materializer_contexts\": \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/materializer_contexts_campaign3.json\",\n  \"materializer_execution_queue\": {\n    \"exact_readiness_followup\": true,\n    \"experiment_count\": 1,\n    \"queue_id\": \"high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3\",\n    \"queue_out\": \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_execution_queue.json\",\n    \"selected_work_ids\": [\n      \"materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter\"\n    ]\n  },\n  \"materializer_work_queue_blocked_row_count\": 0,\n  \"materializer_work_queue_executable_row_count\": 1,\n  \"materializer_work_queue_out\": \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_work_queue.json\",\n  \"materializer_work_queue_row_count\": 1,\n  \"portfolio_out\": \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/portfolio.json\",\n  \"promotion_eligible\": false,\n  \"queue\": null,\n  \"rank_or_kill_eligible\": false,\n  \"ready_for_exact_eval_dispatch\": false,\n  \"schema\": \"byte_shaving_campaign_queue_build_result.v1\",\n  \"score_claim\": false\n}\n"
+    },
+    {
+      "command": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_execution_queue.json",
+        "validate"
+      ],
+      "elapsed_seconds": 0.11043358303140849,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "{\n  \"auto_parallelism\": {\n    \"local_only\": {\n      \"max_parallel\": 19,\n      \"resource_limits\": {\n        \"local_cpu\": 18,\n        \"local_mlx\": 1\n      }\n    },\n    \"with_cloud\": {\n      \"max_parallel\": 19,\n      \"resource_limits\": {\n        \"local_cpu\": 18,\n        \"local_mlx\": 1\n      }\n    }\n  },\n  \"experiment_count\": 1,\n  \"queue_id\": \"high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3\",\n  \"step_count\": 3,\n  \"valid\": true\n}\n"
+    },
+    {
+      "command": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_execution_queue.json",
+        "init"
+      ],
+      "elapsed_seconds": 0.11392674996750429,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "{\n  \"mode\": \"running\",\n  \"orphaned_step_count\": 0,\n  \"orphaned_steps\": [],\n  \"queue_id\": \"high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3\",\n  \"ready_steps\": [\n    {\n      \"command\": [\n        \".venv/bin/python\",\n        \"tools/run_inverse_scorer_cell_candidate_chain.py\",\n        \"--candidate-archive-template\",\n        \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/template.zip\",\n        \"--inverse-action-functional\",\n        \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_steganalysis_action_functional.json\",\n        \"--raw-contest-video-digest\",\n        \"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\",\n        \"--output-dir\",\n        \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain\",\n        \"--fail-if-receiver-blocked\",\n        \"--fail-if-inflate-parity-blocked\",\n        \"--selected-limit\",\n        \"1\"\n      ],\n      \"experiment_id\": \"materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter\",\n      \"priority\": 1,\n      \"queue_id\": \"high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3\",\n      \"resource_kind\": \"local_mlx\",\n      \"step_hashes\": {\n        \"command_hash\": \"ff3ef5df11cf176cab63aef6b3c853636aee5fb230b9df2c502f91c5e441021c\",\n        \"definition_hash\": \"3bfc84e9083e913b4e40931047f34261bb45fe20460522125c9cb2dca87bc2fb\",\n        \"postcondition_hash\": \"446388e9baaa7832c365ae576b3e5b1e7811bb6a4ee9df7fb384eb9b6b6a5cc6\"\n      },\n      \"step_id\": \"materialize_local_proof_chain\"\n    }\n  ],\n  \"schema\": \"experiment_queue_summary.v1\",\n  \"state\": \"/Users/adpena/Projects/pact/.omx/state/experiment_queue_high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3.sqlite\",\n  \"status_counts\": {\n    \"queued\": 3\n  },\n  \"step_count\": 3,\n  \"steps\": [\n    {\n      \"attempts\": 0,\n      \"experiment_id\": \"materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter\",\n      \"last_event\": null,\n      \"status\": \"queued\",\n      \"step_id\": \"build_exact_eval_dispatch_plan\",\n      \"updated_at_utc\": \"2026-05-24T05:12:10Z\"\n    },\n    {\n      \"attempts\": 0,\n      \"experiment_id\": \"materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter\",\n      \"last_event\": null,\n      \"status\": \"queued\",\n      \"step_id\": \"harvest_materializer_chains\",\n      \"updated_at_utc\": \"2026-05-24T05:12:10Z\"\n    },\n    {\n      \"attempts\": 0,\n      \"experiment_id\": \"materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter\",\n      \"last_event\": null,\n      \"status\": \"queued\",\n      \"step_id\": \"materialize_local_proof_chain\",\n      \"updated_at_utc\": \"2026-05-24T05:12:10Z\"\n    }\n  ]\n}\n"
+    },
+    {
+      "command": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_execution_queue.json",
+        "run-worker",
+        "--max-steps",
+        "1",
+        "--max-parallel",
+        "0",
+        "--idle-sleep-seconds",
+        "0.0",
+        "--max-idle-cycles",
+        "0"
+      ],
+      "elapsed_seconds": 0.11525833402993158,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "{\n  \"allow_cloud\": false,\n  \"claim_refused_count\": 0,\n  \"execute\": false,\n  \"failure_count\": 0,\n  \"idle_cycles\": 0,\n  \"max_experiments\": null,\n  \"max_parallel\": 19,\n  \"noncanonical_state_rationale\": null,\n  \"orphaned_state_rationale\": null,\n  \"planned_steps\": [\n    {\n      \"command\": [\n        \".venv/bin/python\",\n        \"tools/run_inverse_scorer_cell_candidate_chain.py\",\n        \"--candidate-archive-template\",\n        \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/template.zip\",\n        \"--inverse-action-functional\",\n        \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_steganalysis_action_functional.json\",\n        \"--raw-contest-video-digest\",\n        \"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\",\n        \"--output-dir\",\n        \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain\",\n        \"--fail-if-receiver-blocked\",\n        \"--fail-if-inflate-parity-blocked\",\n        \"--selected-limit\",\n        \"1\"\n      ],\n      \"experiment_id\": \"materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter\",\n      \"priority\": 1,\n      \"queue_id\": \"high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3\",\n      \"resource_kind\": \"local_mlx\",\n      \"step_hashes\": {\n        \"command_hash\": \"ff3ef5df11cf176cab63aef6b3c853636aee5fb230b9df2c502f91c5e441021c\",\n        \"definition_hash\": \"3bfc84e9083e913b4e40931047f34261bb45fe20460522125c9cb2dca87bc2fb\",\n        \"postcondition_hash\": \"446388e9baaa7832c365ae576b3e5b1e7811bb6a4ee9df7fb384eb9b6b6a5cc6\"\n      },\n      \"step_id\": \"materialize_local_proof_chain\"\n    }\n  ],\n  \"queue_id\": \"high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3\",\n  \"requested_max_parallel\": 0,\n  \"resource_limits\": {\n    \"local_cpu\": 18,\n    \"local_mlx\": 1\n  },\n  \"schema\": \"experiment_queue_worker_result.v1\",\n  \"stale_running_reconciliations\": [],\n  \"started_at_utc\": \"2026-05-24T05:12:10Z\",\n  \"started_experiment_ids\": [],\n  \"state\": \"/Users/adpena/Projects/pact/.omx/state/experiment_queue_high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3.sqlite\",\n  \"step_results\": [],\n  \"steps_started\": 0,\n  \"stop_reason\": \"dry_run\",\n  \"stop_signals\": [],\n  \"success_count\": 0\n}\n"
+    },
+    {
+      "command": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_execution_queue.json",
+        "observe",
+        "--tail-lines",
+        "20",
+        "--format",
+        "json"
+      ],
+      "elapsed_seconds": 0.148110167006962,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "{\n  \"auto_parallelism\": {\n    \"idle_declared_resources\": {},\n    \"local_only\": {\n      \"max_parallel\": 19,\n      \"resource_limits\": {\n        \"local_cpu\": 18,\n        \"local_mlx\": 1\n      }\n    },\n    \"used_resource_kinds\": [\n      \"local_cpu\",\n      \"local_mlx\"\n    ],\n    \"with_cloud\": {\n      \"max_parallel\": 19,\n      \"resource_limits\": {\n        \"local_cpu\": 18,\n        \"local_mlx\": 1\n      }\n    }\n  },\n  \"definition_drift\": {\n    \"changed_step_count\": 0,\n    \"changed_steps\": [],\n    \"missing_hash_step_count\": 0,\n    \"missing_hash_steps\": [],\n    \"missing_step_count\": 0,\n    \"missing_steps\": [],\n    \"read_only\": true,\n    \"schema\": \"experiment_queue_definition_drift.v1\"\n  },\n  \"failed_steps\": [],\n  \"generated_at_utc\": \"2026-05-24T05:12:11Z\",\n  \"mode\": \"running\",\n  \"observe_read_only\": true,\n  \"orphaned_step_count\": 0,\n  \"orphaned_steps\": [],\n  \"performance\": {\n    \"backlog_key_by_experiment\": {},\n    \"by_backlog_key\": {},\n    \"by_experiment\": {},\n    \"by_resource_kind\": {},\n    \"by_source_selection_id\": {},\n    \"by_source_unit_id\": {},\n    \"by_step\": {},\n    \"by_work_id\": {},\n    \"candidate_id_by_experiment\": {},\n    \"event_count\": 0,\n    \"promotion_eligible\": false,\n    \"queue_id\": \"high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3\",\n    \"rank_or_kill_eligible\": false,\n    \"ready_for_exact_eval_dispatch\": false,\n    \"schema\": \"experiment_queue_performance_summary.v1\",\n    \"score_claim\": false,\n    \"score_claim_valid\": false,\n    \"source_selection_ids_by_experiment\": {},\n    \"source_unit_ids_by_experiment\": {},\n    \"telemetry_only\": true,\n    \"work_id_by_experiment\": {}\n  },\n  \"queue_id\": \"high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3\",\n  \"queued_steps\": [\n    {\n      \"attempts\": 0,\n      \"expected_artifacts\": [\n        {\n          \"exists\": false,\n          \"path\": \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/dispatch_plan.json\",\n          \"postcondition_error\": \"FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/dispatch_plan.json'\",\n          \"postcondition_passed\": false,\n          \"postcondition_type\": \"json_equals\"\n        },\n        {\n          \"exists\": false,\n          \"path\": \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/dispatch_queue.json\",\n          \"postcondition_error\": \"FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/dispatch_queue.json'\",\n          \"postcondition_passed\": false,\n          \"postcondition_type\": \"json_equals\"\n        }\n      ],\n      \"experiment_id\": \"materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter\",\n      \"log_exists\": false,\n      \"log_path\": null,\n      \"pid\": null,\n      \"processes\": [],\n      \"resource_kind\": \"local_cpu\",\n      \"status\": \"queued\",\n      \"step_id\": \"build_exact_eval_dispatch_plan\",\n      \"timeout_deadline_epoch_seconds\": null,\n      \"timeout_seconds\": null,\n      \"updated_at_utc\": \"2026-05-24T05:12:10Z\",\n      \"worker_run_id\": null\n    },\n    {\n      \"attempts\": 0,\n      \"expected_artifacts\": [\n        {\n          \"exists\": false,\n          \"path\": \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/source_queue.json\",\n          \"postcondition_error\": \"FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/source_queue.json'\",\n          \"postcondition_passed\": false,\n          \"postcondition_type\": \"json_equals\"\n        },\n        {\n          \"exists\": false,\n          \"path\": \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/harvest_report.json\",\n          \"postcondition_error\": \"FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/harvest_report.json'\",\n          \"postcondition_passed\": false,\n          \"postcondition_type\": \"json_equals\"\n        },\n        {\n          \"exists\": false,\n          \"path\": \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/exact_readiness_bridge_report.json\",\n          \"postcondition_error\": \"FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/exact_readiness_bridge_report.json'\",\n          \"postcondition_passed\": false,\n          \"postcondition_type\": \"json_equals\"\n        }\n      ],\n      \"experiment_id\": \"materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter\",\n      \"log_exists\": false,\n      \"log_path\": null,\n      \"pid\": null,\n      \"processes\": [],\n      \"resource_kind\": \"local_cpu\",\n      \"status\": \"queued\",\n      \"step_id\": \"harvest_materializer_chains\",\n      \"timeout_deadline_epoch_seconds\": null,\n      \"timeout_seconds\": null,\n      \"updated_at_utc\": \"2026-05-24T05:12:10Z\",\n      \"worker_run_id\": null\n    },\n    {\n      \"attempts\": 0,\n      \"expected_artifacts\": [\n        {\n          \"exists\": false,\n          \"path\": \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/inverse_scorer_cell_candidate_chain_manifest.json\",\n          \"postcondition_error\": \"FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/inverse_scorer_cell_candidate_chain_manifest.json'\",\n          \"postcondition_passed\": false,\n          \"postcondition_type\": \"json_equals\"\n        },\n        {\n          \"exists\": false,\n          \"path\": \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/inverse_scorer_cell_candidate_chain_manifest.json\",\n          \"postcondition_error\": \"FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/inverse_scorer_cell_candidate_chain_manifest.json'\",\n          \"postcondition_passed\": false,\n          \"postcondition_type\": \"json_completion_contract\"\n        },\n        {\n          \"exists\": false,\n          \"path\": \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/inverse_scorer_cell_candidate_chain_manifest.json\",\n          \"postcondition_error\": \"FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/inverse_scorer_cell_candidate_chain_manifest.json'\",\n          \"postcondition_passed\": false,\n          \"postcondition_type\": \"materializer_chain_complete\"\n        }\n      ],\n      \"experiment_id\": \"materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter\",\n      \"log_exists\": false,\n      \"log_path\": null,\n      \"pid\": null,\n      \"processes\": [],\n      \"resource_kind\": \"local_mlx\",\n      \"status\": \"queued\",\n      \"step_id\": \"materialize_local_proof_chain\",\n      \"timeout_deadline_epoch_seconds\": null,\n      \"timeout_seconds\": null,\n      \"updated_at_utc\": \"2026-05-24T05:12:10Z\",\n      \"worker_run_id\": null\n    }\n  ],\n  \"ready_steps\": [\n    {\n      \"command\": [\n        \".venv/bin/python\",\n        \"tools/run_inverse_scorer_cell_candidate_chain.py\",\n        \"--candidate-archive-template\",\n        \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/template.zip\",\n        \"--inverse-action-functional\",\n        \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_steganalysis_action_functional.json\",\n        \"--raw-contest-video-digest\",\n        \"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\",\n        \"--output-dir\",\n        \".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain\",\n        \"--fail-if-receiver-blocked\",\n        \"--fail-if-inflate-parity-blocked\",\n        \"--selected-limit\",\n        \"1\"\n      ],\n      \"experiment_id\": \"materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter\",\n      \"priority\": 1,\n      \"queue_id\": \"high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3\",\n      \"resource_kind\": \"local_mlx\",\n      \"step_hashes\": {\n        \"command_hash\": \"ff3ef5df11cf176cab63aef6b3c853636aee5fb230b9df2c502f91c5e441021c\",\n        \"definition_hash\": \"3bfc84e9083e913b4e40931047f34261bb45fe20460522125c9cb2dca87bc2fb\",\n        \"postcondition_hash\": \"446388e9baaa7832c365ae576b3e5b1e7811bb6a4ee9df7fb384eb9b6b6a5cc6\"\n      },\n      \"step_id\": \"materialize_local_proof_chain\"\n    }\n  ],\n  \"running_steps\": [],\n  \"schema\": \"experiment_queue_observation.v1\",\n  \"state\": \".omx/state/experiment_queue_high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3.sqlite\",\n  \"status_counts\": {\n    \"queued\": 3\n  },\n  \"step_count\": 3,\n  \"suggested_commands\": {\n    \"pause\": \".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'\",\n    \"refresh\": \".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines 20\",\n    \"resume\": \".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'\",\n    \"run_worker\": \".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute\"\n  }\n}\n"
+    },
+    {
+      "command": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_execution_queue.json",
+        "performance"
+      ],
+      "elapsed_seconds": 0.11260912503348663,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "{\n  \"backlog_key_by_experiment\": {},\n  \"by_backlog_key\": {},\n  \"by_experiment\": {},\n  \"by_resource_kind\": {},\n  \"by_source_selection_id\": {},\n  \"by_source_unit_id\": {},\n  \"by_step\": {},\n  \"by_work_id\": {},\n  \"candidate_id_by_experiment\": {},\n  \"event_count\": 0,\n  \"promotion_eligible\": false,\n  \"queue_id\": \"high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3\",\n  \"rank_or_kill_eligible\": false,\n  \"ready_for_exact_eval_dispatch\": false,\n  \"schema\": \"experiment_queue_performance_summary.v1\",\n  \"score_claim\": false,\n  \"score_claim_valid\": false,\n  \"source_selection_ids_by_experiment\": {},\n  \"source_unit_ids_by_experiment\": {},\n  \"state\": \"/Users/adpena/Projects/pact/.omx/state/experiment_queue_high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3.sqlite\",\n  \"telemetry_only\": true,\n  \"work_id_by_experiment\": {}\n}\n"
+    }
+  ],
+  "execute": false,
+  "experiment_count": 1,
+  "generated_action_functional_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_steganalysis_action_functional.json",
+  "generated_campaign_plan_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/byte_shaving_campaign_plan.json",
+  "high_level_action_source_count": 1,
+  "observation": {
+    "auto_parallelism": {
+      "idle_declared_resources": {},
+      "local_only": {
+        "max_parallel": 19,
+        "resource_limits": {
+          "local_cpu": 18,
+          "local_mlx": 1
+        }
+      },
+      "used_resource_kinds": [
+        "local_cpu",
+        "local_mlx"
+      ],
+      "with_cloud": {
+        "max_parallel": 19,
+        "resource_limits": {
+          "local_cpu": 18,
+          "local_mlx": 1
+        }
+      }
+    },
+    "definition_drift": {
+      "changed_step_count": 0,
+      "changed_steps": [],
+      "missing_hash_step_count": 0,
+      "missing_hash_steps": [],
+      "missing_step_count": 0,
+      "missing_steps": [],
+      "read_only": true,
+      "schema": "experiment_queue_definition_drift.v1"
+    },
+    "failed_steps": [],
+    "generated_at_utc": "2026-05-24T05:12:11Z",
+    "mode": "running",
+    "observe_read_only": true,
+    "orphaned_step_count": 0,
+    "orphaned_steps": [],
+    "performance": {
+      "backlog_key_by_experiment": {},
+      "by_backlog_key": {},
+      "by_experiment": {},
+      "by_resource_kind": {},
+      "by_source_selection_id": {},
+      "by_source_unit_id": {},
+      "by_step": {},
+      "by_work_id": {},
+      "candidate_id_by_experiment": {},
+      "event_count": 0,
+      "promotion_eligible": false,
+      "queue_id": "high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "experiment_queue_performance_summary.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_selection_ids_by_experiment": {},
+      "source_unit_ids_by_experiment": {},
+      "telemetry_only": true,
+      "work_id_by_experiment": {}
+    },
+    "queue_id": "high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3",
+    "queued_steps": [
+      {
+        "attempts": 0,
+        "expected_artifacts": [
+          {
+            "exists": false,
+            "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/dispatch_plan.json",
+            "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/dispatch_plan.json'",
+            "postcondition_passed": false,
+            "postcondition_type": "json_equals"
+          },
+          {
+            "exists": false,
+            "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/dispatch_queue.json",
+            "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/dispatch_queue.json'",
+            "postcondition_passed": false,
+            "postcondition_type": "json_equals"
+          }
+        ],
+        "experiment_id": "materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter",
+        "log_exists": false,
+        "log_path": null,
+        "pid": null,
+        "processes": [],
+        "resource_kind": "local_cpu",
+        "status": "queued",
+        "step_id": "build_exact_eval_dispatch_plan",
+        "timeout_deadline_epoch_seconds": null,
+        "timeout_seconds": null,
+        "updated_at_utc": "2026-05-24T05:12:10Z",
+        "worker_run_id": null
+      },
+      {
+        "attempts": 0,
+        "expected_artifacts": [
+          {
+            "exists": false,
+            "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/source_queue.json",
+            "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/source_queue.json'",
+            "postcondition_passed": false,
+            "postcondition_type": "json_equals"
+          },
+          {
+            "exists": false,
+            "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/harvest_report.json",
+            "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/harvest_report.json'",
+            "postcondition_passed": false,
+            "postcondition_type": "json_equals"
+          },
+          {
+            "exists": false,
+            "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/exact_readiness_bridge_report.json",
+            "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/exact_eval_handoff/exact_readiness_bridge_report.json'",
+            "postcondition_passed": false,
+            "postcondition_type": "json_equals"
+          }
+        ],
+        "experiment_id": "materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter",
+        "log_exists": false,
+        "log_path": null,
+        "pid": null,
+        "processes": [],
+        "resource_kind": "local_cpu",
+        "status": "queued",
+        "step_id": "harvest_materializer_chains",
+        "timeout_deadline_epoch_seconds": null,
+        "timeout_seconds": null,
+        "updated_at_utc": "2026-05-24T05:12:10Z",
+        "worker_run_id": null
+      },
+      {
+        "attempts": 0,
+        "expected_artifacts": [
+          {
+            "exists": false,
+            "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/inverse_scorer_cell_candidate_chain_manifest.json",
+            "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/inverse_scorer_cell_candidate_chain_manifest.json'",
+            "postcondition_passed": false,
+            "postcondition_type": "json_equals"
+          },
+          {
+            "exists": false,
+            "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/inverse_scorer_cell_candidate_chain_manifest.json",
+            "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/inverse_scorer_cell_candidate_chain_manifest.json'",
+            "postcondition_passed": false,
+            "postcondition_type": "json_completion_contract"
+          },
+          {
+            "exists": false,
+            "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/inverse_scorer_cell_candidate_chain_manifest.json",
+            "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain/inverse_scorer_cell_candidate_chain_manifest.json'",
+            "postcondition_passed": false,
+            "postcondition_type": "materializer_chain_complete"
+          }
+        ],
+        "experiment_id": "materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter",
+        "log_exists": false,
+        "log_path": null,
+        "pid": null,
+        "processes": [],
+        "resource_kind": "local_mlx",
+        "status": "queued",
+        "step_id": "materialize_local_proof_chain",
+        "timeout_deadline_epoch_seconds": null,
+        "timeout_seconds": null,
+        "updated_at_utc": "2026-05-24T05:12:10Z",
+        "worker_run_id": null
+      }
+    ],
+    "ready_steps": [
+      {
+        "command": [
+          ".venv/bin/python",
+          "tools/run_inverse_scorer_cell_candidate_chain.py",
+          "--candidate-archive-template",
+          ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/template.zip",
+          "--inverse-action-functional",
+          ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_steganalysis_action_functional.json",
+          "--raw-contest-video-digest",
+          "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "--output-dir",
+          ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain",
+          "--fail-if-receiver-blocked",
+          "--fail-if-inflate-parity-blocked",
+          "--selected-limit",
+          "1"
+        ],
+        "experiment_id": "materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter",
+        "priority": 1,
+        "queue_id": "high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3",
+        "resource_kind": "local_mlx",
+        "step_hashes": {
+          "command_hash": "ff3ef5df11cf176cab63aef6b3c853636aee5fb230b9df2c502f91c5e441021c",
+          "definition_hash": "3bfc84e9083e913b4e40931047f34261bb45fe20460522125c9cb2dca87bc2fb",
+          "postcondition_hash": "446388e9baaa7832c365ae576b3e5b1e7811bb6a4ee9df7fb384eb9b6b6a5cc6"
+        },
+        "step_id": "materialize_local_proof_chain"
+      }
+    ],
+    "running_steps": [],
+    "schema": "experiment_queue_observation.v1",
+    "state": ".omx/state/experiment_queue_high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3.sqlite",
+    "status_counts": {
+      "queued": 3
+    },
+    "step_count": 3,
+    "suggested_commands": {
+      "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
+      "refresh": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines 20",
+      "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
+      "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute"
+    }
+  },
+  "performance": {
+    "backlog_key_by_experiment": {},
+    "by_backlog_key": {},
+    "by_experiment": {},
+    "by_resource_kind": {},
+    "by_source_selection_id": {},
+    "by_source_unit_id": {},
+    "by_step": {},
+    "by_work_id": {},
+    "candidate_id_by_experiment": {},
+    "event_count": 0,
+    "promotion_eligible": false,
+    "queue_id": "high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_performance_summary.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_selection_ids_by_experiment": {},
+    "source_unit_ids_by_experiment": {},
+    "state": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3.sqlite",
+    "telemetry_only": true,
+    "work_id_by_experiment": {}
+  },
+  "plan": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/byte_shaving_campaign_plan.json",
+  "promotion_eligible": false,
+  "queue_id": "high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3",
+  "queue_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_execution_queue.json",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "run_dir": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3",
+  "schema": "byte_shaving_materializer_campaign_run.v1",
+  "score_claim": false,
+  "ssh_executor_dry_run": null,
+  "ssh_executor_execute": null,
+  "staircase": {
+    "blocked_count": 2,
+    "dag_hash": "366a57038f7430fa3d01e7a75d2daa793eab9e732115cd7e8ceb59a56c553451",
+    "dag_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/staircase_dag.json",
+    "dispatch_plan_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/staircase_dispatch_plan.json",
+    "plan_hash": "723db8c5ae020f3fc1214eca7d6883df4284899d47e44cbd9ce12cda9a4ba8d6",
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "selected_count": 1
+  },
+  "staircase_ssh_execute": false,
+  "state_path": ".omx/state/experiment_queue_high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3.sqlite",
+  "worker": {
+    "allow_cloud": false,
+    "claim_refused_count": 0,
+    "execute": false,
+    "failure_count": 0,
+    "idle_cycles": 0,
+    "max_experiments": null,
+    "max_parallel": 19,
+    "noncanonical_state_rationale": null,
+    "orphaned_state_rationale": null,
+    "planned_steps": [
+      {
+        "command": [
+          ".venv/bin/python",
+          "tools/run_inverse_scorer_cell_candidate_chain.py",
+          "--candidate-archive-template",
+          ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/template.zip",
+          "--inverse-action-functional",
+          ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_steganalysis_action_functional.json",
+          "--raw-contest-video-digest",
+          "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "--output-dir",
+          ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_cell_chain",
+          "--fail-if-receiver-blocked",
+          "--fail-if-inflate-parity-blocked",
+          "--selected-limit",
+          "1"
+        ],
+        "experiment_id": "materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter",
+        "priority": 1,
+        "queue_id": "high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3",
+        "resource_kind": "local_mlx",
+        "step_hashes": {
+          "command_hash": "ff3ef5df11cf176cab63aef6b3c853636aee5fb230b9df2c502f91c5e441021c",
+          "definition_hash": "3bfc84e9083e913b4e40931047f34261bb45fe20460522125c9cb2dca87bc2fb",
+          "postcondition_hash": "446388e9baaa7832c365ae576b3e5b1e7811bb6a4ee9df7fb384eb9b6b6a5cc6"
+        },
+        "step_id": "materialize_local_proof_chain"
+      }
+    ],
+    "queue_id": "high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3",
+    "requested_max_parallel": 0,
+    "resource_limits": {
+      "local_cpu": 18,
+      "local_mlx": 1
+    },
+    "schema": "experiment_queue_worker_result.v1",
+    "stale_running_reconciliations": [],
+    "started_at_utc": "2026-05-24T05:12:10Z",
+    "started_experiment_ids": [],
+    "state": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3.sqlite",
+    "step_results": [],
+    "steps_started": 0,
+    "stop_reason": "dry_run",
+    "stop_signals": [],
+    "success_count": 0
+  }
+}

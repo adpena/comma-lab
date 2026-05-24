@@ -1,0 +1,16 @@
+{
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "input_bundle": "/Users/adpena/Projects/pact/.omx/research/staircase_ssh_input_custody_smoke_20260524T000000Z/inputs/directory_bundle",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "staircase_ssh_input_custody_smoke_output.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "transport": "fake_ssh_no_network"
+}

@@ -224,6 +224,93 @@ def test_materializer_campaign_runner_builds_ssh_execute_command_with_artifact_p
     assert any("staircase_ssh_executor_execute.json" in part for part in command)
 
 
+def test_materializer_campaign_runner_generates_plan_from_high_level_sources(
+    tmp_path: Path,
+) -> None:
+    scorer = tmp_path / "scorer_response.json"
+    action_path = tmp_path / "campaign" / "inverse_steganalysis_action_functional.json"
+    plan_path = tmp_path / "campaign" / "byte_shaving_campaign_plan.json"
+    scorer.write_text("{}", encoding="utf-8")
+    args = runner.parse_args(
+        [
+            "--scorer-response",
+            str(scorer),
+            "--run-dir",
+            str(tmp_path / "campaign"),
+            "--campaign-id",
+            "high_level_fixture",
+            "--candidate-id",
+            "candidate_a",
+            "--total-byte-budget",
+            "64",
+            "--campaign-plan-max-k",
+            "3",
+            "--queue-id",
+            "high_level_materializer_queue",
+        ]
+    )
+
+    action_command = runner._build_action_functional_command(
+        args,
+        run_dir=tmp_path / "campaign",
+    )
+    plan_command = runner._build_campaign_plan_command(
+        args,
+        action_functional_path=action_path,
+        run_dir=tmp_path / "campaign",
+    )
+    queue_command = runner._build_queue_command(
+        args,
+        run_dir=tmp_path / "campaign",
+        plan_path=plan_path,
+    )
+
+    assert action_command[:2] == [
+        runner.sys.executable,
+        "tools/build_inverse_steganalysis_action_functional.py",
+    ]
+    assert "--scorer-response" in action_command
+    assert str(scorer) in action_command
+    assert "--total-byte-budget" in action_command
+    assert "64" in action_command
+    assert "--candidate-id" in action_command
+    assert "candidate_a" in action_command
+    assert plan_command[:2] == [
+        runner.sys.executable,
+        "tools/plan_byte_shaving_campaign.py",
+    ]
+    assert "--from-inverse-action-functional" in plan_command
+    assert "--campaign-id" in plan_command
+    assert "high_level_fixture" in plan_command
+    assert "--max-k" in plan_command
+    assert "3" in plan_command
+    assert "--plan" in queue_command
+    assert str(plan_path) in queue_command
+
+
+def test_materializer_campaign_runner_rejects_missing_plan_and_sources(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(SystemExit, match="provide --plan or high-level action sources"):
+        runner.main(["--run-dir", str(tmp_path / "campaign")])
+
+
+def test_materializer_campaign_runner_rejects_mixed_plan_and_sources(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(SystemExit, match="mutually exclusive"):
+        runner.main(
+            [
+                "--plan",
+                str(tmp_path / "plan.json"),
+                "--scorer-response",
+                str(tmp_path / "scorer_response.json"),
+                "--run-dir",
+                str(tmp_path / "campaign"),
+            ]
+        )
+
+
 def test_materializer_campaign_runner_rejects_mixed_local_and_ssh_execute(
     tmp_path: Path,
 ) -> None:

@@ -1,0 +1,230 @@
+{
+  "blocked_count": 0,
+  "blocked_nodes": [],
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dag_hash": "e6b4d1a0c8377d989f70aa83af571713b05b705b672d4ec8790aba651db8b2c3",
+  "dag_id": "staircase_ssh_input_custody_smoke_codex_20260524_staircase",
+  "dask_task_specs": [
+    {
+      "allowed_use": null,
+      "artifact_mobility": {
+        "mode": "pullback",
+        "required": true,
+        "schema": "experiment_queue_artifact_mobility.v1"
+      },
+      "command": [
+        "python",
+        "-c",
+        "import json, pathlib; path = pathlib.Path('/Users/adpena/Projects/pact/.omx/research/staircase_ssh_input_custody_smoke_20260524T000000Z/outputs/remote_result.json'); path.parent.mkdir(parents=True, exist_ok=True); path.write_text(json.dumps({'schema': 'staircase_ssh_input_custody_smoke_output.v1', 'score_claim': False, 'promotion_eligible': False, 'rank_or_kill_eligible': False, 'ready_for_exact_eval_dispatch': False}))"
+      ],
+      "executor_boundary": "planning_only_task_must_write_back_to_experiment_queue_state",
+      "experiment_id": "directory_input_custody_smoke",
+      "experiment_metadata": {},
+      "key": "staircase_ssh_input_custody_smoke_codex_20260524_staircase:directory_input_custody_smoke.remote_materialize",
+      "machine": {
+        "disk_gb": 4.0,
+        "executor": "ssh_experiment_queue",
+        "id": "ssh_input_custody_smokebox",
+        "label": "SSH input custody smoke worker",
+        "memory_gb": 4.0,
+        "remote_repo_root": "/remote/pact-smoke",
+        "slots": {
+          "local_cpu": 1
+        },
+        "ssh_target": "smoke@sshbox",
+        "tags": [
+          "ssh",
+          "smoke",
+          "no-network"
+        ]
+      },
+      "machine_hint": "ssh_input_custody_smokebox",
+      "materializer_id": null,
+      "operation_family": null,
+      "postconditions": [
+        {
+          "path": "/Users/adpena/Projects/pact/.omx/research/staircase_ssh_input_custody_smoke_20260524T000000Z/outputs/remote_result.json",
+          "type": "path_exists"
+        },
+        {
+          "path": "/Users/adpena/Projects/pact/.omx/research/staircase_ssh_input_custody_smoke_20260524T000000Z/outputs/remote_result.json",
+          "type": "json_false_authority"
+        }
+      ],
+      "pure": false,
+      "queue_id": "staircase_ssh_input_custody_smoke_codex_20260524",
+      "queue_state_writeback": {
+        "executor_must_claim_step_before_execution": true,
+        "executor_must_record_terminal_step_event": true,
+        "experiment_id": "directory_input_custody_smoke",
+        "queue_id": "staircase_ssh_input_custody_smoke_codex_20260524",
+        "required": true,
+        "step_hashes": {
+          "command_hash": "d9ae2f1e1d6adfd5125e37f3872690e320d22d49a347630d41ed30ca94d1c52a",
+          "definition_hash": "31ca7df998a99499e49922e25c3c16dc22441a6d482f1420a90a0f0df6086fe3",
+          "postcondition_hash": "e6c722e41c1314cd555504cfdb10e4c4dea644fb88647c552c110d4c10f2c060"
+        },
+        "step_id": "remote_materialize",
+        "terminal_statuses": [
+          "succeeded",
+          "failed"
+        ]
+      },
+      "receiver_contract_id": null,
+      "receiver_contract_kind": null,
+      "resources": {
+        "local_cpu": 1,
+        "machine:ssh_input_custody_smokebox": 1
+      },
+      "step_hashes": {
+        "command_hash": "d9ae2f1e1d6adfd5125e37f3872690e320d22d49a347630d41ed30ca94d1c52a",
+        "definition_hash": "31ca7df998a99499e49922e25c3c16dc22441a6d482f1420a90a0f0df6086fe3",
+        "postcondition_hash": "e6c722e41c1314cd555504cfdb10e4c4dea644fb88647c552c110d4c10f2c060"
+      },
+      "step_id": "remote_materialize",
+      "target_kind": null,
+      "telemetry": {
+        "artifact_paths": [
+          "/Users/adpena/Projects/pact/.omx/research/staircase_ssh_input_custody_smoke_20260524T000000Z/outputs/remote_result.json"
+        ],
+        "include_postcondition_paths": true,
+        "input_artifact_paths": [
+          "/Users/adpena/Projects/pact/.omx/research/staircase_ssh_input_custody_smoke_20260524T000000Z/inputs/directory_bundle"
+        ],
+        "max_recursive_entries": 256,
+        "pullback_artifact_paths": [
+          "/Users/adpena/Projects/pact/.omx/research/staircase_ssh_input_custody_smoke_20260524T000000Z/outputs/remote_result.json"
+        ],
+        "recursive": false
+      },
+      "timeout_seconds": 60,
+      "unit_kind": null
+    }
+  ],
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "staircase_dispatch_plan_is_planning_only",
+    "executor_must_update_canonical_queue_state",
+    "score_authority_requires_exact_auth_eval_axis"
+  ],
+  "exact_cuda_auth_eval": false,
+  "executor_boundary": "planning_only_dask_or_local_executor_must_write_back_to_queue_state",
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "plan_hash": "a7346f0f4633781e833e200d1e74abe08140f882087fbf7f8597f8c6f7b42802",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_count": 1,
+  "ready_for_exact_eval_dispatch": false,
+  "resource_pools": [
+    {
+      "disk_gb": 4.0,
+      "executor": "ssh_experiment_queue",
+      "id": "ssh_input_custody_smokebox",
+      "label": "SSH input custody smoke worker",
+      "memory_gb": 4.0,
+      "remote_repo_root": "/remote/pact-smoke",
+      "slots": {
+        "local_cpu": 1
+      },
+      "ssh_target": "smoke@sshbox",
+      "tags": [
+        "ssh",
+        "smoke",
+        "no-network"
+      ]
+    }
+  ],
+  "schema": "staircase_dispatch_plan.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selected_count": 1,
+  "selected_nodes": [
+    {
+      "command": [
+        "python",
+        "-c",
+        "import json, pathlib; path = pathlib.Path('/Users/adpena/Projects/pact/.omx/research/staircase_ssh_input_custody_smoke_20260524T000000Z/outputs/remote_result.json'); path.parent.mkdir(parents=True, exist_ok=True); path.write_text(json.dumps({'schema': 'staircase_ssh_input_custody_smoke_output.v1', 'score_claim': False, 'promotion_eligible': False, 'rank_or_kill_eligible': False, 'ready_for_exact_eval_dispatch': False}))"
+      ],
+      "dependencies": [],
+      "family": "directory_input_custody_smoke",
+      "machine_id": "ssh_input_custody_smokebox",
+      "metadata": {
+        "allowed_use": null,
+        "artifact_mobility": {
+          "mode": "pullback",
+          "required": true,
+          "schema": "experiment_queue_artifact_mobility.v1"
+        },
+        "experiment_id": "directory_input_custody_smoke",
+        "experiment_metadata": {},
+        "materializer_id": null,
+        "operation_family": null,
+        "postconditions": [
+          {
+            "path": "/Users/adpena/Projects/pact/.omx/research/staircase_ssh_input_custody_smoke_20260524T000000Z/outputs/remote_result.json",
+            "type": "path_exists"
+          },
+          {
+            "path": "/Users/adpena/Projects/pact/.omx/research/staircase_ssh_input_custody_smoke_20260524T000000Z/outputs/remote_result.json",
+            "type": "json_false_authority"
+          }
+        ],
+        "queue_id": "staircase_ssh_input_custody_smoke_codex_20260524",
+        "receiver_contract_id": null,
+        "receiver_contract_kind": null,
+        "resource_requirements": {
+          "kind": "local_cpu"
+        },
+        "step_hashes": {
+          "command_hash": "d9ae2f1e1d6adfd5125e37f3872690e320d22d49a347630d41ed30ca94d1c52a",
+          "definition_hash": "31ca7df998a99499e49922e25c3c16dc22441a6d482f1420a90a0f0df6086fe3",
+          "postcondition_hash": "e6c722e41c1314cd555504cfdb10e4c4dea644fb88647c552c110d4c10f2c060"
+        },
+        "step_id": "remote_materialize",
+        "step_telemetry": {
+          "artifact_paths": [
+            "/Users/adpena/Projects/pact/.omx/research/staircase_ssh_input_custody_smoke_20260524T000000Z/outputs/remote_result.json"
+          ],
+          "include_postcondition_paths": true,
+          "input_artifact_paths": [
+            "/Users/adpena/Projects/pact/.omx/research/staircase_ssh_input_custody_smoke_20260524T000000Z/inputs/directory_bundle"
+          ],
+          "max_recursive_entries": 256,
+          "pullback_artifact_paths": [
+            "/Users/adpena/Projects/pact/.omx/research/staircase_ssh_input_custody_smoke_20260524T000000Z/outputs/remote_result.json"
+          ],
+          "recursive": false
+        },
+        "target_kind": null,
+        "timeout_seconds": 60,
+        "unit_kind": null
+      },
+      "node_id": "directory_input_custody_smoke.remote_materialize",
+      "priority": 1,
+      "resource_kind": "local_cpu",
+      "stage": "remote_materialize",
+      "utility": 1.0
+    }
+  ],
+  "source_refs": [
+    {
+      "kind": "experiment_queue",
+      "path": ".omx/research/staircase_ssh_input_custody_smoke_20260524T000000Z/experiment_queue.json",
+      "queue_hash": "a7b585febddc9d9ccc1b1683031b561ff4d35ca4499c3e3c6917930cd54960f7",
+      "queue_id": "staircase_ssh_input_custody_smoke_codex_20260524"
+    }
+  ],
+  "storage": null,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ]
+}

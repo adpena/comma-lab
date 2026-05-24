@@ -1,0 +1,1086 @@
+{
+  "auth_eval_refs": [],
+  "campaign_id": "high_level_byte_shaving_runner_smoke_20260524T050723Z",
+  "candidate_id": "inverse_steganalysis_water_bucket_plan.v1",
+  "charged_bits_changed": false,
+  "combination_ladder": [
+    {
+      "active_interactions": [],
+      "base_saved_bytes": 0,
+      "candidate_saved_bytes": 0,
+      "combo_id": "combo_0001",
+      "confidence": 0.5,
+      "confidence_adjusted_gain": 6.7e-05,
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "expected_delta_score": -0.000134,
+      "expected_score_gain": 0.000134,
+      "gpu_launched": false,
+      "interaction_delta_score": 0,
+      "interaction_extra_saved_bytes": 0,
+      "interaction_shared_overhead_bytes": 0,
+      "operation_families": [
+        "materialize_inverse_scorer_cell_candidate"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "quality_cost_score": -0.000134,
+      "rank_or_kill_eligible": false,
+      "rate_delta_score": -0.0,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "blockers": [
+            "inverse_action_unit_is_planning_only",
+            "requires_inverse_scorer_cell_materializer",
+            "requires_byte_closed_archive_before_dispatch",
+            "requires_exact_auth_eval_before_score_claim",
+            "inverse_action_cell_requires_deterministic_materializer",
+            "inverse_action_cell_requires_runtime_consumption_proof",
+            "inverse_action_cell_requires_exact_auth_eval_before_score_claim"
+          ],
+          "dispatch_attempted": false,
+          "gpu_launched": false,
+          "materializer": "inverse_scorer_cell_candidate_adapter",
+          "operation_family": "materialize_inverse_scorer_cell_candidate",
+          "operation_id": "materialize_inverse_scorer_cell_candidate",
+          "params": {
+            "atom_id": "inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+            "candidate_id": "high_level_smoke_candidate",
+            "component": "posenet",
+            "euler_lagrange_residual": 3.5e-06,
+            "scope_axis": "pairs",
+            "water_fill_cost_bytes": 24,
+            "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+          },
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "score_claim_valid": false,
+          "target_kind": "inverse_scorer_cell_candidate_v1",
+          "unit_id": "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+          "unit_kind": "scorer_inverse_surface_cell"
+        },
+        {
+          "blockers": [
+            "inverse_action_unit_is_planning_only",
+            "requires_inverse_scorer_cell_materializer",
+            "requires_byte_closed_archive_before_dispatch",
+            "requires_exact_auth_eval_before_score_claim",
+            "inverse_action_cell_requires_deterministic_materializer",
+            "inverse_action_cell_requires_runtime_consumption_proof",
+            "inverse_action_cell_requires_exact_auth_eval_before_score_claim"
+          ],
+          "dispatch_attempted": false,
+          "gpu_launched": false,
+          "materializer": "inverse_scorer_cell_candidate_adapter",
+          "operation_family": "materialize_inverse_scorer_cell_candidate",
+          "operation_id": "materialize_inverse_scorer_cell_candidate",
+          "params": {
+            "atom_id": "inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+            "candidate_id": "high_level_smoke_candidate",
+            "component": "segnet",
+            "euler_lagrange_residual": 1.8750000000000003e-06,
+            "scope_axis": "pairs",
+            "water_fill_cost_bytes": 16,
+            "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+          },
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "score_claim_valid": false,
+          "target_kind": "inverse_scorer_cell_candidate_v1",
+          "unit_id": "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "unit_kind": "scorer_inverse_surface_cell"
+        }
+      ],
+      "selected_unit_ids": [
+        "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+        "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001"
+      ],
+      "unit_count": 2
+    }
+  ],
+  "combination_policy": {
+    "beam_width": 64,
+    "conflicts_mode": "unit conflict sets cannot co-occur in one combo",
+    "interactions_mode": "direct delta_score plus extra_saved_bytes/shared_overhead_bytes for scorer-axis and runtime externalities",
+    "max_combo_count": 32,
+    "max_ops_per_unit": 3,
+    "max_units_considered": 32
+  },
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "byte_shaving_plan_is_planning_only",
+    "requires_byte_closed_materialization_before_dispatch",
+    "requires_runtime_consumption_proof_before_exact_eval",
+    "requires_same_runtime_locality_or_inflate_parity_check",
+    "requires_exact_auth_eval_before_score_claim",
+    "inverse_steganalysis_acquisition_false_authority_only",
+    "inverse_steganalysis_discrete_action_functional_is_not_score_authority",
+    "requires_byte_closed_candidate_generation_before_dispatch",
+    "requires_exact_auth_eval_before_promotion_or_rank_kill"
+  ],
+  "evidence_boundary": {
+    "next_gate": "materialize selected operation family, run locality/inflate controls, then exact auth eval before any score claim",
+    "planning_only": true,
+    "quality_cost_source": "predicted_quality_score_cost or seg/pose/master-gradient score costs",
+    "rate_delta_formula": "-25 * saved_bytes / 37545489"
+  },
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "frontier_axis": "[planning-only inverse-steganalysis action]",
+  "generated_at_utc": "2026-05-24T05:12:10Z",
+  "gpu_launched": false,
+  "inverse_scorer_surface_refs": [],
+  "lane_id": "inverse_steganalysis_action_byte_shaving",
+  "mlx_calibration_refs": [],
+  "operation_menu": {
+    "archive_section": [
+      "section_header_elide",
+      "section_entropy_recode",
+      "section_reorder",
+      "section_proceduralize"
+    ],
+    "byte_range": [
+      "entropy_recode",
+      "null_remove_or_seed",
+      "delta_encode",
+      "literal_elide"
+    ],
+    "correction_target": [
+      "apply_engineered_correction",
+      "probe_correction_neighbor"
+    ],
+    "frame": [
+      "drop_frame",
+      "substitute_frame",
+      "temporal_predict_frame",
+      "lower_frame_precision"
+    ],
+    "packet_member": [
+      "zip_header_elide",
+      "member_recompress",
+      "member_reorder",
+      "member_merge"
+    ],
+    "pair": [
+      "drop_pair",
+      "substitute_pair",
+      "lower_pair_precision",
+      "proceduralize_pair_residual"
+    ],
+    "scorer_inverse_surface_cell": [
+      "probe_inverse_scorer_surface_cell",
+      "materialize_inverse_scorer_cell_candidate"
+    ],
+    "scorer_response_row": [
+      "materialize_scorer_response_candidate",
+      "probe_followup_neighbor"
+    ],
+    "tensor": [
+      "quantize_tensor",
+      "prune_tensor",
+      "factorize_tensor",
+      "shared_codebook_tensor"
+    ]
+  },
+  "operation_order_priors": {
+    "apply_engineered_correction": 5,
+    "delta_encode": 40,
+    "drop_frame": 10,
+    "drop_pair": 10,
+    "entropy_recode": 40,
+    "factorize_tensor": 30,
+    "literal_elide": 50,
+    "lower_frame_precision": 30,
+    "lower_pair_precision": 30,
+    "materialize_inverse_scorer_cell_candidate": 1,
+    "materialize_scorer_response_candidate": 0,
+    "member_merge": 50,
+    "member_recompress": 40,
+    "member_reorder": 50,
+    "null_remove_or_seed": 50,
+    "probe_correction_neighbor": 6,
+    "probe_followup_neighbor": 1,
+    "probe_inverse_scorer_surface_cell": 0,
+    "proceduralize_pair_residual": 20,
+    "prune_tensor": 30,
+    "quantize_tensor": 30,
+    "section_entropy_recode": 40,
+    "section_header_elide": 50,
+    "section_proceduralize": 20,
+    "section_reorder": 50,
+    "shared_codebook_tensor": 30,
+    "substitute_frame": 20,
+    "substitute_pair": 20,
+    "temporal_predict_frame": 20,
+    "zip_header_elide": 50
+  },
+  "permutation_ladder": [
+    {
+      "candidate_saved_bytes": 0,
+      "combo_id": "combo_0001",
+      "combo_rank": 1,
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim",
+        "permutation_order_requires_materialization_and_empirical_probe"
+      ],
+      "expected_delta_score": -0.000134,
+      "gpu_launched": false,
+      "operation_count": 2,
+      "permutation_policy": {
+        "max_ops_permuted": 6,
+        "max_permutations_per_combo": 24,
+        "order_prior_source": "payload.operation_order_priors_or_default"
+      },
+      "permutations": [
+        {
+          "dispatch_attempted": false,
+          "fixed_suffix_count": 0,
+          "gpu_launched": false,
+          "operation_sequence": [
+            {
+              "materializer": "inverse_scorer_cell_candidate_adapter",
+              "operation_family": "materialize_inverse_scorer_cell_candidate",
+              "operation_id": "materialize_inverse_scorer_cell_candidate",
+              "order_priority": 1,
+              "target_kind": "inverse_scorer_cell_candidate_v1",
+              "unit_id": "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+              "unit_kind": "scorer_inverse_surface_cell"
+            },
+            {
+              "materializer": "inverse_scorer_cell_candidate_adapter",
+              "operation_family": "materialize_inverse_scorer_cell_candidate",
+              "operation_id": "materialize_inverse_scorer_cell_candidate",
+              "order_priority": 1,
+              "target_kind": "inverse_scorer_cell_candidate_v1",
+              "unit_id": "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+              "unit_kind": "scorer_inverse_surface_cell"
+            }
+          ],
+          "order_rank": 1,
+          "permuted_operation_count": 2,
+          "planning_notes": [
+            "operation_order_is_prior_not_score_claim",
+            "bounded_permutation_search_avoids_factorial_explosion"
+          ],
+          "prior_order_inversion_count": 0,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "score_claim_valid": false
+        },
+        {
+          "dispatch_attempted": false,
+          "fixed_suffix_count": 0,
+          "gpu_launched": false,
+          "operation_sequence": [
+            {
+              "materializer": "inverse_scorer_cell_candidate_adapter",
+              "operation_family": "materialize_inverse_scorer_cell_candidate",
+              "operation_id": "materialize_inverse_scorer_cell_candidate",
+              "order_priority": 1,
+              "target_kind": "inverse_scorer_cell_candidate_v1",
+              "unit_id": "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+              "unit_kind": "scorer_inverse_surface_cell"
+            },
+            {
+              "materializer": "inverse_scorer_cell_candidate_adapter",
+              "operation_family": "materialize_inverse_scorer_cell_candidate",
+              "operation_id": "materialize_inverse_scorer_cell_candidate",
+              "order_priority": 1,
+              "target_kind": "inverse_scorer_cell_candidate_v1",
+              "unit_id": "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+              "unit_kind": "scorer_inverse_surface_cell"
+            }
+          ],
+          "order_rank": 2,
+          "permuted_operation_count": 2,
+          "planning_notes": [
+            "operation_order_is_prior_not_score_claim",
+            "bounded_permutation_search_avoids_factorial_explosion"
+          ],
+          "prior_order_inversion_count": 0,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "score_claim_valid": false
+        }
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_operation_permutation_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "selected_unit_ids": [
+        "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+        "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001"
+      ]
+    }
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ranked_units": [
+    {
+      "atom_ids": [
+        "inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+      ],
+      "blockers": [
+        "inverse_action_unit_is_planning_only",
+        "requires_inverse_scorer_cell_materializer",
+        "requires_byte_closed_archive_before_dispatch",
+        "requires_exact_auth_eval_before_score_claim",
+        "inverse_action_cell_requires_deterministic_materializer",
+        "inverse_action_cell_requires_runtime_consumption_proof",
+        "inverse_action_cell_requires_exact_auth_eval_before_score_claim"
+      ],
+      "candidate_archive_bytes": null,
+      "candidate_archive_sha256": null,
+      "candidate_saved_bytes": 0,
+      "candidate_trust_region_blockers": [],
+      "canonical_equation_provenance": null,
+      "charged_bits_changed": false,
+      "confidence": 0.5,
+      "confidence_adjusted_gain": 4.8e-05,
+      "conservative_projected_contest_score": null,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "inverse_action_unit_is_planning_only",
+        "requires_inverse_scorer_cell_materializer",
+        "requires_byte_closed_archive_before_dispatch",
+        "requires_exact_auth_eval_before_score_claim",
+        "inverse_action_cell_requires_deterministic_materializer",
+        "inverse_action_cell_requires_runtime_consumption_proof",
+        "inverse_action_cell_requires_exact_auth_eval_before_score_claim"
+      ],
+      "engineered_correction_signal": null,
+      "evidence_grade": "[planning-only inverse-steganalysis action]",
+      "evidence_semantics": "discrete_action_water_bucket_selection",
+      "exact_cuda_auth_eval": false,
+      "expected_delta_score": -9.6e-05,
+      "expected_score_gain": 9.6e-05,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gain_per_byte": 0.0,
+      "local_axis": null,
+      "local_score": null,
+      "master_gradient_signal": null,
+      "operation_candidates": [
+        {
+          "blockers": [
+            "inverse_action_cell_requires_deterministic_materializer",
+            "inverse_action_cell_requires_runtime_consumption_proof",
+            "inverse_action_cell_requires_exact_auth_eval_before_score_claim"
+          ],
+          "candidate_saved_bytes": 0,
+          "confidence": 0.5,
+          "confidence_adjusted_gain": 4.8e-05,
+          "expected_delta_score": -9.6e-05,
+          "expected_score_gain": 9.6e-05,
+          "gain_per_byte": 0.0,
+          "materializer": "inverse_scorer_cell_candidate_adapter",
+          "operation_family": "materialize_inverse_scorer_cell_candidate",
+          "operation_id": "materialize_inverse_scorer_cell_candidate",
+          "operation_params": {
+            "atom_id": "inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+            "candidate_id": "high_level_smoke_candidate",
+            "component": "posenet",
+            "euler_lagrange_residual": 3.5e-06,
+            "scope_axis": "pairs",
+            "water_fill_cost_bytes": 24,
+            "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+          },
+          "operation_priority": 1,
+          "quality_cost_score": -9.6e-05,
+          "rate_delta_score": -0.0,
+          "target_kind": "inverse_scorer_cell_candidate_v1"
+        }
+      ],
+      "operation_families": [
+        "materialize_inverse_scorer_cell_candidate"
+      ],
+      "paired_control_required": true,
+      "projected_contest_score": null,
+      "promotable": false,
+      "promotion_eligible": false,
+      "quality_cost_score": -9.6e-05,
+      "rank_or_kill_eligible": false,
+      "rate_delta_score": -0.0,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_operation_family": "materialize_inverse_scorer_cell_candidate",
+      "recommended_operation_id": "materialize_inverse_scorer_cell_candidate",
+      "recommended_operation_materializer": "inverse_scorer_cell_candidate_adapter",
+      "recommended_operation_params": {
+        "atom_id": "inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+        "candidate_id": "high_level_smoke_candidate",
+        "component": "posenet",
+        "euler_lagrange_residual": 3.5e-06,
+        "scope_axis": "pairs",
+        "water_fill_cost_bytes": 24,
+        "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+      },
+      "recommended_operation_priority": 1,
+      "recommended_operation_target_kind": "inverse_scorer_cell_candidate_v1",
+      "score_affecting_payload_changed": false,
+      "score_axis": "posenet",
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "source_candidate_id": "high_level_smoke_candidate",
+      "source_index": 0,
+      "source_paths": [],
+      "source_span": null,
+      "target_axis": null,
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "unit_id": "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+      "unit_kind": "scorer_inverse_surface_cell",
+      "xray_signal": null
+    },
+    {
+      "atom_ids": [
+        "inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001"
+      ],
+      "blockers": [
+        "inverse_action_unit_is_planning_only",
+        "requires_inverse_scorer_cell_materializer",
+        "requires_byte_closed_archive_before_dispatch",
+        "requires_exact_auth_eval_before_score_claim",
+        "inverse_action_cell_requires_deterministic_materializer",
+        "inverse_action_cell_requires_runtime_consumption_proof",
+        "inverse_action_cell_requires_exact_auth_eval_before_score_claim"
+      ],
+      "candidate_archive_bytes": null,
+      "candidate_archive_sha256": null,
+      "candidate_saved_bytes": 0,
+      "candidate_trust_region_blockers": [],
+      "canonical_equation_provenance": null,
+      "charged_bits_changed": false,
+      "confidence": 0.5,
+      "confidence_adjusted_gain": 1.9e-05,
+      "conservative_projected_contest_score": null,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "inverse_action_unit_is_planning_only",
+        "requires_inverse_scorer_cell_materializer",
+        "requires_byte_closed_archive_before_dispatch",
+        "requires_exact_auth_eval_before_score_claim",
+        "inverse_action_cell_requires_deterministic_materializer",
+        "inverse_action_cell_requires_runtime_consumption_proof",
+        "inverse_action_cell_requires_exact_auth_eval_before_score_claim"
+      ],
+      "engineered_correction_signal": null,
+      "evidence_grade": "[planning-only inverse-steganalysis action]",
+      "evidence_semantics": "discrete_action_water_bucket_selection",
+      "exact_cuda_auth_eval": false,
+      "expected_delta_score": -3.8e-05,
+      "expected_score_gain": 3.8e-05,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gain_per_byte": 0.0,
+      "local_axis": null,
+      "local_score": null,
+      "master_gradient_signal": null,
+      "operation_candidates": [
+        {
+          "blockers": [
+            "inverse_action_cell_requires_deterministic_materializer",
+            "inverse_action_cell_requires_runtime_consumption_proof",
+            "inverse_action_cell_requires_exact_auth_eval_before_score_claim"
+          ],
+          "candidate_saved_bytes": 0,
+          "confidence": 0.5,
+          "confidence_adjusted_gain": 1.9e-05,
+          "expected_delta_score": -3.8e-05,
+          "expected_score_gain": 3.8e-05,
+          "gain_per_byte": 0.0,
+          "materializer": "inverse_scorer_cell_candidate_adapter",
+          "operation_family": "materialize_inverse_scorer_cell_candidate",
+          "operation_id": "materialize_inverse_scorer_cell_candidate",
+          "operation_params": {
+            "atom_id": "inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+            "candidate_id": "high_level_smoke_candidate",
+            "component": "segnet",
+            "euler_lagrange_residual": 1.8750000000000003e-06,
+            "scope_axis": "pairs",
+            "water_fill_cost_bytes": 16,
+            "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+          },
+          "operation_priority": 1,
+          "quality_cost_score": -3.8e-05,
+          "rate_delta_score": -0.0,
+          "target_kind": "inverse_scorer_cell_candidate_v1"
+        }
+      ],
+      "operation_families": [
+        "materialize_inverse_scorer_cell_candidate"
+      ],
+      "paired_control_required": true,
+      "projected_contest_score": null,
+      "promotable": false,
+      "promotion_eligible": false,
+      "quality_cost_score": -3.8e-05,
+      "rank_or_kill_eligible": false,
+      "rate_delta_score": -0.0,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_operation_family": "materialize_inverse_scorer_cell_candidate",
+      "recommended_operation_id": "materialize_inverse_scorer_cell_candidate",
+      "recommended_operation_materializer": "inverse_scorer_cell_candidate_adapter",
+      "recommended_operation_params": {
+        "atom_id": "inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+        "candidate_id": "high_level_smoke_candidate",
+        "component": "segnet",
+        "euler_lagrange_residual": 1.8750000000000003e-06,
+        "scope_axis": "pairs",
+        "water_fill_cost_bytes": 16,
+        "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+      },
+      "recommended_operation_priority": 1,
+      "recommended_operation_target_kind": "inverse_scorer_cell_candidate_v1",
+      "score_affecting_payload_changed": false,
+      "score_axis": "segnet",
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "source_candidate_id": "high_level_smoke_candidate",
+      "source_index": 1,
+      "source_paths": [],
+      "source_span": null,
+      "target_axis": null,
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "unit_id": "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+      "unit_kind": "scorer_inverse_surface_cell",
+      "xray_signal": null
+    }
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_combination": {
+    "active_interactions": [],
+    "base_saved_bytes": 0,
+    "candidate_saved_bytes": 0,
+    "combo_id": "combo_0001",
+    "confidence": 0.5,
+    "confidence_adjusted_gain": 6.7e-05,
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "byte_shaving_plan_is_planning_only",
+      "requires_byte_closed_materialization_before_dispatch",
+      "requires_runtime_consumption_proof_before_exact_eval",
+      "requires_same_runtime_locality_or_inflate_parity_check",
+      "requires_exact_auth_eval_before_score_claim"
+    ],
+    "expected_delta_score": -0.000134,
+    "expected_score_gain": 0.000134,
+    "gpu_launched": false,
+    "interaction_delta_score": 0,
+    "interaction_extra_saved_bytes": 0,
+    "interaction_shared_overhead_bytes": 0,
+    "operation_families": [
+      "materialize_inverse_scorer_cell_candidate"
+    ],
+    "promotable": false,
+    "promotion_eligible": false,
+    "quality_cost_score": -0.000134,
+    "rank_or_kill_eligible": false,
+    "rate_delta_score": -0.0,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "score_claim_valid": false,
+    "selected_operations": [
+      {
+        "blockers": [
+          "inverse_action_unit_is_planning_only",
+          "requires_inverse_scorer_cell_materializer",
+          "requires_byte_closed_archive_before_dispatch",
+          "requires_exact_auth_eval_before_score_claim",
+          "inverse_action_cell_requires_deterministic_materializer",
+          "inverse_action_cell_requires_runtime_consumption_proof",
+          "inverse_action_cell_requires_exact_auth_eval_before_score_claim"
+        ],
+        "dispatch_attempted": false,
+        "gpu_launched": false,
+        "materializer": "inverse_scorer_cell_candidate_adapter",
+        "operation_family": "materialize_inverse_scorer_cell_candidate",
+        "operation_id": "materialize_inverse_scorer_cell_candidate",
+        "params": {
+          "atom_id": "inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+          "candidate_id": "high_level_smoke_candidate",
+          "component": "posenet",
+          "euler_lagrange_residual": 3.5e-06,
+          "scope_axis": "pairs",
+          "water_fill_cost_bytes": 24,
+          "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+        },
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "target_kind": "inverse_scorer_cell_candidate_v1",
+        "unit_id": "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+        "unit_kind": "scorer_inverse_surface_cell"
+      },
+      {
+        "blockers": [
+          "inverse_action_unit_is_planning_only",
+          "requires_inverse_scorer_cell_materializer",
+          "requires_byte_closed_archive_before_dispatch",
+          "requires_exact_auth_eval_before_score_claim",
+          "inverse_action_cell_requires_deterministic_materializer",
+          "inverse_action_cell_requires_runtime_consumption_proof",
+          "inverse_action_cell_requires_exact_auth_eval_before_score_claim"
+        ],
+        "dispatch_attempted": false,
+        "gpu_launched": false,
+        "materializer": "inverse_scorer_cell_candidate_adapter",
+        "operation_family": "materialize_inverse_scorer_cell_candidate",
+        "operation_id": "materialize_inverse_scorer_cell_candidate",
+        "params": {
+          "atom_id": "inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "candidate_id": "high_level_smoke_candidate",
+          "component": "segnet",
+          "euler_lagrange_residual": 1.8750000000000003e-06,
+          "scope_axis": "pairs",
+          "water_fill_cost_bytes": 16,
+          "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+        },
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "target_kind": "inverse_scorer_cell_candidate_v1",
+        "unit_id": "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+        "unit_kind": "scorer_inverse_surface_cell"
+      }
+    ],
+    "selected_unit_ids": [
+      "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+      "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001"
+    ],
+    "unit_count": 2
+  },
+  "recommended_prefix": {
+    "candidate_saved_bytes": 0,
+    "conflict_violations": [],
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "byte_shaving_plan_is_planning_only",
+      "requires_byte_closed_materialization_before_dispatch",
+      "requires_runtime_consumption_proof_before_exact_eval",
+      "requires_same_runtime_locality_or_inflate_parity_check",
+      "requires_exact_auth_eval_before_score_claim"
+    ],
+    "expected_delta_score": -0.000134,
+    "expected_score_gain": 0.000134,
+    "gpu_launched": false,
+    "operation_families": [
+      "materialize_inverse_scorer_cell_candidate"
+    ],
+    "promotable": false,
+    "promotion_eligible": false,
+    "quality_cost_score": -0.000134,
+    "rank_or_kill_eligible": false,
+    "rate_delta_score": 0.0,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "score_claim_valid": false,
+    "selected_operations": [
+      {
+        "blockers": [
+          "inverse_action_unit_is_planning_only",
+          "requires_inverse_scorer_cell_materializer",
+          "requires_byte_closed_archive_before_dispatch",
+          "requires_exact_auth_eval_before_score_claim",
+          "inverse_action_cell_requires_deterministic_materializer",
+          "inverse_action_cell_requires_runtime_consumption_proof",
+          "inverse_action_cell_requires_exact_auth_eval_before_score_claim"
+        ],
+        "dispatch_attempted": false,
+        "gpu_launched": false,
+        "materializer": "inverse_scorer_cell_candidate_adapter",
+        "operation_family": "materialize_inverse_scorer_cell_candidate",
+        "operation_id": "materialize_inverse_scorer_cell_candidate",
+        "params": {
+          "atom_id": "inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+          "candidate_id": "high_level_smoke_candidate",
+          "component": "posenet",
+          "euler_lagrange_residual": 3.5e-06,
+          "scope_axis": "pairs",
+          "water_fill_cost_bytes": 24,
+          "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+        },
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "target_kind": "inverse_scorer_cell_candidate_v1",
+        "unit_id": "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+        "unit_kind": "scorer_inverse_surface_cell"
+      },
+      {
+        "blockers": [
+          "inverse_action_unit_is_planning_only",
+          "requires_inverse_scorer_cell_materializer",
+          "requires_byte_closed_archive_before_dispatch",
+          "requires_exact_auth_eval_before_score_claim",
+          "inverse_action_cell_requires_deterministic_materializer",
+          "inverse_action_cell_requires_runtime_consumption_proof",
+          "inverse_action_cell_requires_exact_auth_eval_before_score_claim"
+        ],
+        "dispatch_attempted": false,
+        "gpu_launched": false,
+        "materializer": "inverse_scorer_cell_candidate_adapter",
+        "operation_family": "materialize_inverse_scorer_cell_candidate",
+        "operation_id": "materialize_inverse_scorer_cell_candidate",
+        "params": {
+          "atom_id": "inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "candidate_id": "high_level_smoke_candidate",
+          "component": "segnet",
+          "euler_lagrange_residual": 1.8750000000000003e-06,
+          "scope_axis": "pairs",
+          "water_fill_cost_bytes": 16,
+          "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+        },
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "target_kind": "inverse_scorer_cell_candidate_v1",
+        "unit_id": "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+        "unit_kind": "scorer_inverse_surface_cell"
+      }
+    ],
+    "selected_unit_ids": [
+      "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+      "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001"
+    ],
+    "sweep_id": "top_0002",
+    "unit_count": 2
+  },
+  "schema": "byte_shaving_campaign_plan.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "scorer_response_refs": [],
+  "search_space_policy": {
+    "combination_search": "bounded_beam_over_units_and_operation_alternatives",
+    "non_bruteforce_principle": "rank by rate-distortion prior, component/scorer marginal costs, explicit interactions, conflicts, and confidence before any local or exact scorer spend",
+    "operation_layers": {
+      "archive_section": [
+        "section_header_elide",
+        "section_entropy_recode",
+        "section_reorder",
+        "section_proceduralize"
+      ],
+      "byte_range": [
+        "entropy_recode",
+        "null_remove_or_seed",
+        "delta_encode",
+        "literal_elide"
+      ],
+      "correction_target": [
+        "apply_engineered_correction",
+        "probe_correction_neighbor"
+      ],
+      "frame": [
+        "drop_frame",
+        "substitute_frame",
+        "temporal_predict_frame",
+        "lower_frame_precision"
+      ],
+      "packet_member": [
+        "zip_header_elide",
+        "member_recompress",
+        "member_reorder",
+        "member_merge"
+      ],
+      "pair": [
+        "drop_pair",
+        "substitute_pair",
+        "lower_pair_precision",
+        "proceduralize_pair_residual"
+      ],
+      "scorer_inverse_surface_cell": [
+        "probe_inverse_scorer_surface_cell",
+        "materialize_inverse_scorer_cell_candidate"
+      ],
+      "scorer_response_row": [
+        "materialize_scorer_response_candidate",
+        "probe_followup_neighbor"
+      ],
+      "tensor": [
+        "quantize_tensor",
+        "prune_tensor",
+        "factorize_tensor",
+        "shared_codebook_tensor"
+      ]
+    },
+    "permutation_search": "bounded_operation_order_permutations_for_top_combos",
+    "scorer_interaction_terms": [
+      "rate_delta_score",
+      "quality_cost_score",
+      "predicted_seg_score_cost",
+      "predicted_pose_score_cost",
+      "master_gradient_score_cost",
+      "interaction_delta_score"
+    ],
+    "unit_layers": [
+      "archive_section",
+      "byte_range",
+      "correction_target",
+      "frame",
+      "packet_member",
+      "pair",
+      "scorer_inverse_surface_cell",
+      "scorer_response_row",
+      "tensor"
+    ]
+  },
+  "source_paths": [
+    ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_steganalysis_action_functional.json"
+  ],
+  "source_signal_refs": [
+    {
+      "cell_count": 2,
+      "dispatch_attempted": false,
+      "gpu_launched": false,
+      "kind": "inverse_steganalysis_action_functional",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "inverse_steganalysis_discrete_action_functional.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "selected_count": 2,
+      "selected_expected_score_gain": 0.000134
+    }
+  ],
+  "sweep_ladder": [
+    {
+      "candidate_saved_bytes": 0,
+      "conflict_violations": [],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "expected_delta_score": -9.6e-05,
+      "expected_score_gain": 9.6e-05,
+      "gpu_launched": false,
+      "operation_families": [
+        "materialize_inverse_scorer_cell_candidate"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "quality_cost_score": -9.6e-05,
+      "rank_or_kill_eligible": false,
+      "rate_delta_score": 0.0,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "blockers": [
+            "inverse_action_unit_is_planning_only",
+            "requires_inverse_scorer_cell_materializer",
+            "requires_byte_closed_archive_before_dispatch",
+            "requires_exact_auth_eval_before_score_claim",
+            "inverse_action_cell_requires_deterministic_materializer",
+            "inverse_action_cell_requires_runtime_consumption_proof",
+            "inverse_action_cell_requires_exact_auth_eval_before_score_claim"
+          ],
+          "dispatch_attempted": false,
+          "gpu_launched": false,
+          "materializer": "inverse_scorer_cell_candidate_adapter",
+          "operation_family": "materialize_inverse_scorer_cell_candidate",
+          "operation_id": "materialize_inverse_scorer_cell_candidate",
+          "params": {
+            "atom_id": "inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+            "candidate_id": "high_level_smoke_candidate",
+            "component": "posenet",
+            "euler_lagrange_residual": 3.5e-06,
+            "scope_axis": "pairs",
+            "water_fill_cost_bytes": 24,
+            "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+          },
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "score_claim_valid": false,
+          "target_kind": "inverse_scorer_cell_candidate_v1",
+          "unit_id": "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+          "unit_kind": "scorer_inverse_surface_cell"
+        }
+      ],
+      "selected_unit_ids": [
+        "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+      ],
+      "sweep_id": "top_0001",
+      "unit_count": 1
+    },
+    {
+      "candidate_saved_bytes": 0,
+      "conflict_violations": [],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "expected_delta_score": -0.000134,
+      "expected_score_gain": 0.000134,
+      "gpu_launched": false,
+      "operation_families": [
+        "materialize_inverse_scorer_cell_candidate"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "quality_cost_score": -0.000134,
+      "rank_or_kill_eligible": false,
+      "rate_delta_score": 0.0,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "blockers": [
+            "inverse_action_unit_is_planning_only",
+            "requires_inverse_scorer_cell_materializer",
+            "requires_byte_closed_archive_before_dispatch",
+            "requires_exact_auth_eval_before_score_claim",
+            "inverse_action_cell_requires_deterministic_materializer",
+            "inverse_action_cell_requires_runtime_consumption_proof",
+            "inverse_action_cell_requires_exact_auth_eval_before_score_claim"
+          ],
+          "dispatch_attempted": false,
+          "gpu_launched": false,
+          "materializer": "inverse_scorer_cell_candidate_adapter",
+          "operation_family": "materialize_inverse_scorer_cell_candidate",
+          "operation_id": "materialize_inverse_scorer_cell_candidate",
+          "params": {
+            "atom_id": "inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+            "candidate_id": "high_level_smoke_candidate",
+            "component": "posenet",
+            "euler_lagrange_residual": 3.5e-06,
+            "scope_axis": "pairs",
+            "water_fill_cost_bytes": 24,
+            "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+          },
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "score_claim_valid": false,
+          "target_kind": "inverse_scorer_cell_candidate_v1",
+          "unit_id": "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+          "unit_kind": "scorer_inverse_surface_cell"
+        },
+        {
+          "blockers": [
+            "inverse_action_unit_is_planning_only",
+            "requires_inverse_scorer_cell_materializer",
+            "requires_byte_closed_archive_before_dispatch",
+            "requires_exact_auth_eval_before_score_claim",
+            "inverse_action_cell_requires_deterministic_materializer",
+            "inverse_action_cell_requires_runtime_consumption_proof",
+            "inverse_action_cell_requires_exact_auth_eval_before_score_claim"
+          ],
+          "dispatch_attempted": false,
+          "gpu_launched": false,
+          "materializer": "inverse_scorer_cell_candidate_adapter",
+          "operation_family": "materialize_inverse_scorer_cell_candidate",
+          "operation_id": "materialize_inverse_scorer_cell_candidate",
+          "params": {
+            "atom_id": "inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+            "candidate_id": "high_level_smoke_candidate",
+            "component": "segnet",
+            "euler_lagrange_residual": 1.8750000000000003e-06,
+            "scope_axis": "pairs",
+            "water_fill_cost_bytes": 16,
+            "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+          },
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "score_claim_valid": false,
+          "target_kind": "inverse_scorer_cell_candidate_v1",
+          "unit_id": "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "unit_kind": "scorer_inverse_surface_cell"
+        }
+      ],
+      "selected_unit_ids": [
+        "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+        "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001"
+      ],
+      "sweep_id": "top_0002",
+      "unit_count": 2
+    }
+  ],
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "tool": "tools/plan_byte_shaving_campaign.py"
+}

@@ -1,0 +1,177 @@
+{
+  "backlog_row_count": 1,
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "materializer_backlog_is_planning_only",
+    "requires_adapter_implementation_before_queue_dispatch"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "2026-05-24T05:12:10Z",
+  "gpu_launched": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "rows": [
+    {
+      "affected_unit_count": 2,
+      "backlog_key": "adapter_not_executable:inverse_scorer_cell_candidate_v1:scorer_inverse_surface_cell:materialize_inverse_scorer_cell_candidate:inverse_scorer_cell_candidate_adapter",
+      "backlog_rank": 1,
+      "best_candidate_saved_bytes": 0,
+      "best_expected_delta_score": -9.6e-05,
+      "best_expected_score_gain": 9.6e-05,
+      "blocked_resolution_count": 5,
+      "blocked_row_count": 3,
+      "blocker_counts": {
+        "materializer_not_executable:inverse_scorer_cell_candidate_adapter": 5,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:inverse_action_cell_requires_deterministic_materializer": 2,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:inverse_action_cell_requires_exact_auth_eval_before_score_claim": 2,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:inverse_action_cell_requires_runtime_consumption_proof": 2,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:inverse_action_unit_is_planning_only": 2,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:requires_byte_closed_archive_before_dispatch": 2,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:requires_exact_auth_eval_before_score_claim": 2,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:requires_inverse_scorer_cell_materializer": 2,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:inverse_action_cell_requires_deterministic_materializer": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:inverse_action_cell_requires_exact_auth_eval_before_score_claim": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:inverse_action_cell_requires_runtime_consumption_proof": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:inverse_action_unit_is_planning_only": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:requires_byte_closed_archive_before_dispatch": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:requires_exact_auth_eval_before_score_claim": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:requires_inverse_scorer_cell_materializer": 3,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:inverse_action_cell_requires_deterministic_materializer": 2,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:inverse_action_cell_requires_exact_auth_eval_before_score_claim": 2,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:inverse_action_cell_requires_runtime_consumption_proof": 2,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:inverse_action_unit_is_planning_only": 2,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:requires_byte_closed_archive_before_dispatch": 2,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:requires_exact_auth_eval_before_score_claim": 2,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:requires_inverse_scorer_cell_materializer": 2,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:inverse_action_cell_requires_deterministic_materializer": 3,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:inverse_action_cell_requires_exact_auth_eval_before_score_claim": 3,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:inverse_action_cell_requires_runtime_consumption_proof": 3,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:inverse_action_unit_is_planning_only": 3,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:requires_byte_closed_archive_before_dispatch": 3,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:requires_exact_auth_eval_before_score_claim": 3,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:requires_inverse_scorer_cell_materializer": 3
+      },
+      "candidate_saved_bytes_sum": 0,
+      "cooperative_receiver_required": true,
+      "dispatch_attempted": false,
+      "expected_score_gain_sum": 0.000364,
+      "gap_class": "adapter_not_executable",
+      "gpu_launched": false,
+      "implementation_priority_score": 0.00036700000000000003,
+      "materialization_resource_kind": "local_mlx",
+      "materializer_id": "inverse_scorer_cell_candidate_adapter",
+      "operation_family": "materialize_inverse_scorer_cell_candidate",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_contract_id": "inverse_scorer_cell_receiver.v1",
+      "receiver_contract_kind": "inverse_scorer_coordinate_candidate",
+      "receiver_contract_status": "receiver_contract_registered_but_adapter_not_executable",
+      "schema": "byte_shaving_materializer_backlog_row.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "selected_operation_count": 5,
+      "source_selection_ids": [
+        "combo_0001",
+        "top_0001",
+        "top_0002"
+      ],
+      "source_selection_samples": [
+        {
+          "candidate_saved_bytes": 0,
+          "expected_delta_score": -0.000134,
+          "expected_score_gain": 6.7e-05,
+          "selection_id": "combo_0001",
+          "selection_kind": "combo",
+          "unit_id": "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        },
+        {
+          "candidate_saved_bytes": 0,
+          "expected_delta_score": -0.000134,
+          "expected_score_gain": 6.7e-05,
+          "selection_id": "combo_0001",
+          "selection_kind": "combo",
+          "unit_id": "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001"
+        },
+        {
+          "candidate_saved_bytes": 0,
+          "expected_delta_score": -9.6e-05,
+          "expected_score_gain": 9.6e-05,
+          "selection_id": "top_0001",
+          "selection_kind": "prefix",
+          "unit_id": "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        },
+        {
+          "candidate_saved_bytes": 0,
+          "expected_delta_score": -0.000134,
+          "expected_score_gain": 6.7e-05,
+          "selection_id": "top_0002",
+          "selection_kind": "prefix",
+          "unit_id": "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        },
+        {
+          "candidate_saved_bytes": 0,
+          "expected_delta_score": -0.000134,
+          "expected_score_gain": 6.7e-05,
+          "selection_id": "top_0002",
+          "selection_kind": "prefix",
+          "unit_id": "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001"
+        }
+      ],
+      "source_unit_ids": [
+        "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+        "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001"
+      ],
+      "suggested_materializer_count": 1,
+      "suggested_materializers": [
+        {
+          "cooperative_receiver_required": true,
+          "description": "Fail-closed contract for inverse-scorer coordinate cells; requires a deterministic pixel/byte materializer and runtime-consumption proof before queue execution.",
+          "emits_candidate_archive": true,
+          "executable": false,
+          "implementation_module": "tac.optimization.inverse_scorer_cell_materializer",
+          "materialization_resource_kind": "local_mlx",
+          "materialize_function": "materialize_inverse_scorer_cell_candidate",
+          "materializer_id": "inverse_scorer_cell_candidate_adapter",
+          "plan_function": "build_inverse_scorer_cell_candidate_plan",
+          "planning_only": false,
+          "receiver_contract_id": "inverse_scorer_cell_receiver.v1",
+          "receiver_contract_kind": "inverse_scorer_coordinate_candidate",
+          "receiver_proof_function": "build_inverse_scorer_cell_receiver_proof",
+          "receiver_verify_function": "verify_inverse_scorer_cell_receiver_contract",
+          "required_context_fields": [
+            "raw_contest_video_digest",
+            "candidate_archive_template",
+            "inverse_action_functional",
+            "output_archive",
+            "manifest_out",
+            "runtime_consumption_proof"
+          ],
+          "target_kind": "inverse_scorer_cell_candidate_v1"
+        }
+      ],
+      "target_kind": "inverse_scorer_cell_candidate_v1",
+      "unit_kind": "scorer_inverse_surface_cell"
+    }
+  ],
+  "schema": "byte_shaving_materializer_backlog.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "tool": "comma_lab.scheduler.byte_shaving_campaign_queue"
+}

@@ -1,0 +1,72 @@
+{
+  "schema": "scorer_response_dataset.v1",
+  "producer": "codex_high_level_byte_shaving_runner_smoke",
+  "authority": {
+    "evidence_grade": "macOS-MLX research-signal",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "rank_or_kill_eligible": false,
+    "promotable": false
+  },
+  "score_claim": false,
+  "score_claim_valid": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "rank_or_kill_eligible": false,
+  "promotable": false,
+  "summary": {
+    "row_count": 2
+  },
+  "rows": [
+    {
+      "schema": "scorer_response_row.v1",
+      "row_id": "pair_region_pose_gain",
+      "candidate_id": "pair_region_pose_gain",
+      "family": "high_level_smoke",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "rank_or_kill_eligible": false,
+      "promotable": false,
+      "authority_source_score_claim": false,
+      "delta_vs_baseline_score": -0.00012,
+      "scorer_delta_vs_baseline": -0.00008,
+      "observed_scorer_gain_vs_baseline": 0.00008,
+      "added_archive_bytes": -24,
+      "byte_budget_margin_vs_break_even": 184,
+      "source_pair_window": [
+        12,
+        13
+      ],
+      "diagnostic_seg_share": 0.2,
+      "diagnostic_pose_share": 0.8
+    },
+    {
+      "schema": "scorer_response_row.v1",
+      "row_id": "rate_only_null_space",
+      "candidate_id": "rate_only_null_space",
+      "family": "high_level_smoke",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "rank_or_kill_eligible": false,
+      "promotable": false,
+      "authority_source_score_claim": false,
+      "delta_vs_baseline_score": -0.00004,
+      "scorer_delta_vs_baseline": 0.0,
+      "observed_scorer_gain_vs_baseline": 0.0,
+      "added_archive_bytes": -16,
+      "byte_budget_margin_vs_break_even": 96,
+      "source_pair_window": [
+        20,
+        21
+      ],
+      "diagnostic_seg_share": 0.5,
+      "diagnostic_pose_share": 0.5
+    }
+  ]
+}

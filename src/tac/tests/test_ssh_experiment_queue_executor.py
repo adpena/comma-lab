@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import sqlite3
 import subprocess
 import threading
@@ -288,6 +289,22 @@ def test_rsync_pull_command_uses_remote_source_and_local_destination() -> None:
         "--",
         "user@host:/remote/pact/out/result.json",
         "/local/pact/out/result.json",
+    ]
+
+
+def test_rsync_pull_command_deletes_stale_local_files_for_recursive_pullback() -> None:
+    command = build_rsync_pull_command(
+        rsync_binary="rsync",
+        ssh_target="user@host",
+        remote_path="/remote/pact/out",
+        local_path="/local/pact/out",
+        recursive=True,
+    )
+
+    assert "--delete" in command
+    assert command[-2:] == [
+        "user@host:/remote/pact/out/",
+        "/local/pact/out/",
     ]
 
 
@@ -938,6 +955,145 @@ def test_ssh_executor_pulls_back_mapped_telemetry_artifacts(
         pullback["local_path"]
         for pullback in last_event["artifact_mobility"]["pullbacks"]
     } == {artifact.as_posix(), telemetry_artifact.as_posix()}
+
+
+def test_ssh_executor_recursive_pullback_deletes_stale_local_tree_and_records_manifest(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out" / "chain"
+    artifact = output_dir / "done.json"
+    stale = output_dir / "stale.txt"
+    stale.parent.mkdir(parents=True)
+    stale.write_text("old\n", encoding="utf-8")
+    queue = _queue(artifact)
+    step = queue["experiments"][0]["steps"][0]
+    step["telemetry"]["artifact_paths"] = [str(output_dir)]
+    step["telemetry"]["pullback_artifact_paths"] = [str(output_dir)]
+    step["telemetry"]["pullback_recursive"] = True
+    step["telemetry"]["pullback_max_recursive_entries"] = 8
+    plan = _plan(queue)
+    state = tmp_path / "queue.sqlite"
+    calls: list[list[str]] = []
+
+    def _write_output() -> None:
+        artifact.parent.mkdir(parents=True, exist_ok=True)
+        artifact.write_text(
+            json.dumps(
+                {
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    def runner(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        calls.append(list(argv))
+        if str(argv[0]).endswith("rsync") and "--delete" in argv:
+            destination = Path(str(argv[-1]).rstrip("/"))
+            shutil.rmtree(destination, ignore_errors=True)
+            _write_output()
+            return subprocess.CompletedProcess(argv, 0, stdout="recursive pull ok\n")
+        if str(argv[0]).endswith("rsync"):
+            _write_output()
+            return subprocess.CompletedProcess(argv, 0, stdout="file pull ok\n")
+        return subprocess.CompletedProcess(argv, 0, stdout="ok\n")
+
+    result = run_staircase_ssh_executor(
+        plan,
+        queue,
+        state_path=state,
+        repo_root=REPO_ROOT,
+        execute=True,
+        allow_noncanonical_state=True,
+        artifact_path_maps={tmp_path.as_posix(): "/remote/tmp"},
+        require_artifact_mobility=True,
+        runner=runner,
+    )
+
+    assert result["success_count"] == 1
+    assert not stale.exists()
+    recursive_call = next(call for call in calls if call[0] == "rsync" and "--delete" in call)
+    assert recursive_call[-2].endswith("/remote/tmp/out/chain/")
+    assert recursive_call[-1].endswith("/out/chain/")
+    last_event = json.loads(_step_row(state)["last_event_json"])
+    recursive_pullback = next(
+        row
+        for row in last_event["artifact_mobility"]["pullbacks"]
+        if row["local_path"] == output_dir.as_posix()
+    )
+    assert recursive_pullback["recursive"] is True
+    assert recursive_pullback["pre_local_manifest"]["recursive_entry_count"] == 2
+    assert recursive_pullback["local_manifest"]["is_dir"] is True
+    assert recursive_pullback["local_manifest"]["recursive_entry_count"] == 1
+    assert recursive_pullback["local_manifest"]["recursive_truncated"] is False
+    assert len(recursive_pullback["local_manifest"]["recursive_sha256"]) == 64
+    assert len(recursive_pullback["local_manifest_sha256"]) == 64
+
+
+def test_ssh_executor_fails_recursive_pullback_when_manifest_truncates(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out" / "chain"
+    artifact = output_dir / "done.json"
+    queue = _queue(artifact)
+    step = queue["experiments"][0]["steps"][0]
+    step["telemetry"]["artifact_paths"] = [str(output_dir)]
+    step["telemetry"]["pullback_artifact_paths"] = [str(output_dir)]
+    step["telemetry"]["pullback_recursive"] = True
+    step["telemetry"]["pullback_max_recursive_entries"] = 1
+    plan = _plan(queue)
+    state = tmp_path / "queue.sqlite"
+
+    def _write_many_outputs() -> None:
+        artifact.parent.mkdir(parents=True, exist_ok=True)
+        artifact.write_text(
+            json.dumps(
+                {
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+        (artifact.parent / "extra.json").write_text("{}", encoding="utf-8")
+
+    def runner(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        if str(argv[0]).endswith("rsync"):
+            _write_many_outputs()
+        return subprocess.CompletedProcess(argv, 0, stdout="ok\n")
+
+    result = run_staircase_ssh_executor(
+        plan,
+        queue,
+        state_path=state,
+        repo_root=REPO_ROOT,
+        execute=True,
+        allow_noncanonical_state=True,
+        artifact_path_maps={tmp_path.as_posix(): "/remote/tmp"},
+        require_artifact_mobility=True,
+        runner=runner,
+    )
+
+    assert result["failure_count"] == 1
+    row = _step_row(state)
+    assert row["status"] == "failed"
+    last_event = json.loads(row["last_event_json"])
+    assert last_event["returncode"] == 75
+    assert last_event["artifact_mobility"]["succeeded"] is False
+    recursive_pullback = next(
+        row
+        for row in last_event["artifact_mobility"]["pullbacks"]
+        if row["local_path"] == output_dir.as_posix()
+    )
+    assert recursive_pullback["local_manifest"]["recursive_truncated"] is True
+    assert recursive_pullback["execution_error"].startswith(
+        "recursive_pullback_manifest_truncated:"
+    )
 
 
 def test_parallel_ssh_executor_claims_steps_before_remote_commands_and_preserves_order(

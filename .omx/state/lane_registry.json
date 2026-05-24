@@ -51138,6 +51138,88 @@
         }
       },
       "notes": "Harden exact-eval dispatch plan grouping so stable runtime identities are visible and current frontier floors drive dry-run review artifacts."
+    },
+    {
+      "id": "codex_ssh_input_custody_smoke_20260524",
+      "name": "SSH input custody smoke artifact",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Generate a non-authoritative queue-owned smoke proving directory input manifests and output pullback custody."
+    },
+    {
+      "id": "codex_high_level_byte_shaving_orchestration_20260524",
+      "name": "High-level byte-shaving orchestration and mixed signal surface",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/byte_shaving_signal_surface_builder.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_campaign_run.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_byte_shaving_signal_surface_builder.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_high_level_byte_shaving_orchestration_20260524T051600Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "docs/experiment_scheduler_design.md"
+        }
+      },
+      "notes": "Promote scorer-inverse byte shaving from leaf inverse-cell work to queue-owned mixed signal surface/action-functional/campaign planning."
     }
   ],
   "level_rules": {
@@ -51147,5 +51229,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T04:42:14Z"
+  "updated_at": "2026-05-24T05:14:26Z"
 }

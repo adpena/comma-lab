@@ -1031,16 +1031,26 @@ def _materializer_chain_postconditions(
     manifest_path: str,
     schema: str,
     require_serialized_archive_saving: bool = False,
+    require_inflate_parity: bool = False,
 ) -> list[dict[str, Any]]:
     required_positive_int = ["candidate_archive_bytes"]
     required_less_than: list[dict[str, str]] = []
     required_equals: dict[str, Any] = {"schema": schema}
+    required_true = [
+        "byte_closed_candidate_emitted",
+        "runtime_adapter_ready",
+        "receiver_proof_ready",
+        "receiver_contract_satisfied",
+        "candidate_runtime_adapter_blocker_cleared",
+    ]
     if require_serialized_archive_saving:
         required_positive_int.append("source_archive_bytes")
         required_less_than.append(
             {"left": "candidate_archive_bytes", "right": "source_archive_bytes"}
         )
         required_equals["serialized_archive_delta.status"] = "realized_saving"
+    if require_inflate_parity:
+        required_true.append("inflate_parity_satisfied")
     chain_contract: dict[str, Any] = {
         "type": "materializer_chain_complete",
         "path": manifest_path,
@@ -1048,6 +1058,8 @@ def _materializer_chain_postconditions(
     }
     if require_serialized_archive_saving:
         chain_contract["required_serialized_archive_saving"] = True
+    if require_inflate_parity:
+        chain_contract["required_inflate_parity"] = True
     return [
         {
             "type": "json_equals",
@@ -1059,13 +1071,7 @@ def _materializer_chain_postconditions(
             "type": "json_completion_contract",
             "path": manifest_path,
             "required_equals": required_equals,
-            "required_true": [
-                "byte_closed_candidate_emitted",
-                "runtime_adapter_ready",
-                "receiver_proof_ready",
-                "receiver_contract_satisfied",
-                "candidate_runtime_adapter_blocker_cleared",
-            ],
+            "required_true": required_true,
             "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -1269,9 +1275,16 @@ def build_materializer_work_queue(
                 output_dir = _path_context_value(context, "output_dir")
             manifest_out = _path_context_value(context, "manifest_out")
             if command and output_dir is not None:
+                require_inflate_parity = (
+                    _path_context_value(context, "source_inflate_output_dir") is not None
+                    or _path_context_value(context, "candidate_inflate_output_dir") is not None
+                    or _path_context_value(context, "inflate_runtime_dir") is not None
+                    or context.get("fail_if_inflate_parity_blocked") is True
+                )
                 postconditions = _materializer_chain_postconditions(
                     manifest_path=str(Path(output_dir) / INVERSE_SCORER_CELL_CHAIN_MANIFEST),
                     schema=INVERSE_SCORER_CELL_CHAIN_SCHEMA,
+                    require_inflate_parity=require_inflate_parity,
                 )
             elif command and manifest_out is not None:
                 postconditions = _materializer_candidate_postconditions(

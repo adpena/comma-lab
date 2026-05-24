@@ -1384,8 +1384,10 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
     assert completion_contract.get("required_equals") == {
         "schema": "inverse_scorer_cell_candidate_chain_v1"
     }
+    assert "inflate_parity_satisfied" in completion_contract.get("required_true", [])
     assert completion_contract.get("required_less_than") == []
     assert chain_contract.get("required_serialized_archive_saving") in (None, False)
+    assert chain_contract.get("required_inflate_parity") is True
     assert row["telemetry"]["artifact_paths"] == [
         str(output_dir),
         str(source_inflate_output_dir),

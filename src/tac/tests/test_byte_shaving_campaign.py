@@ -282,6 +282,24 @@ def test_inverse_action_functional_converts_to_plannable_surface() -> None:
     assert plan["score_claim"] is False
 
 
+def test_inverse_action_units_compose_with_non_inverse_combination_ladder() -> None:
+    surface = _surface()
+    inverse_surface = build_signal_surface_from_inverse_action_functional(
+        _inverse_action_payload()
+    )
+    surface["units"].extend(inverse_surface["units"])
+    surface["source_signal_refs"] = inverse_surface["source_signal_refs"]
+
+    plan = build_byte_shaving_campaign_plan(surface, max_k=4)
+    combo_ids = set(plan["recommended_combination"]["selected_unit_ids"])
+
+    assert "inverse_action_inverse_surface_pair0007" in combo_ids
+    assert "pair0371" in combo_ids
+    assert "byte_null_run_a" in combo_ids
+    assert plan["recommended_combination"]["score_claim"] is False
+    assert plan["score_claim"] is False
+
+
 def test_engineered_correction_targeting_subsumes_legacy_sidecar() -> None:
     sidecar = {
         "schema": "master_gradient_consumer_engineered_correction_targeting_v1",
