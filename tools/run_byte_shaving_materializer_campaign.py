@@ -29,6 +29,12 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from comma_lab.scheduler.experiment_queue import default_state_path, load_queue_definition  # noqa: E402
+from comma_lab.scheduler.staircase_dag import (  # noqa: E402
+    build_staircase_dag_from_experiment_queue,
+    experiment_queue_status_map,
+    parse_resource_pool_spec,
+    plan_staircase_dispatch,
+)
 from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 RUN_SCHEMA = "byte_shaving_materializer_campaign_run.v1"
@@ -101,6 +107,17 @@ def _json_from_stdout(result: CommandResult) -> dict[str, Any] | None:
     return payload if isinstance(payload, dict) else None
 
 
+def _require_json_stdout(result: CommandResult, *, label: str) -> dict[str, Any]:
+    if result.returncode != 0:
+        raise SystemExit(
+            f"{label} failed ({result.returncode}): {result.stderr or result.stdout}"
+        )
+    payload = _json_from_stdout(result)
+    if payload is None:
+        raise SystemExit(f"{label} did not emit a JSON object")
+    return payload
+
+
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     try:
         write_json_artifact(path, payload)
@@ -127,6 +144,16 @@ def _parse_resource_concurrency(values: list[str]) -> list[str]:
                 f"--materializer-resource-concurrency limit must be >= 1: {raw!r}"
             )
         out.extend(["--materializer-resource-concurrency", f"{key.strip()}={limit}"])
+    return out
+
+
+def _parse_remote_repo_roots(values: list[str]) -> list[str]:
+    out: list[str] = []
+    for raw in values:
+        machine, sep, root = raw.partition("=")
+        if not sep or not machine.strip() or not root.strip():
+            raise SystemExit("--staircase-ssh-remote-repo-root entries must be MACHINE_ID=PATH")
+        out.extend(["--remote-repo-root", f"{machine.strip()}={root.strip()}"])
     return out
 
 
@@ -178,6 +205,34 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--exact-eval-dispatch-label-prefix", default="materializer_exact_eval")
     parser.add_argument("--exact-eval-dispatch-estimated-cost-per-dispatch", type=float, default=0.30)
     parser.add_argument("--exact-eval-dispatch-max-total-cost", type=float, default=5.00)
+    parser.add_argument(
+        "--emit-staircase-plan",
+        action="store_true",
+        help="emit staircase_dag.v1 and staircase_dispatch_plan.v1 from the generated queue",
+    )
+    parser.add_argument(
+        "--staircase-resource-pool",
+        action="append",
+        default=[],
+        metavar="SPEC",
+        help="resource pool spec accepted by tools/plan_staircase_dag.py",
+    )
+    parser.add_argument("--staircase-max-nodes", type=int, default=None)
+    parser.add_argument("--staircase-allow-cloud", action="store_true")
+    parser.add_argument("--staircase-diversity-bucket-limit", type=int, default=None)
+    parser.add_argument(
+        "--staircase-ssh-dry-run",
+        action="store_true",
+        help="run tools/run_staircase_ssh_executor.py without --execute against the emitted plan",
+    )
+    parser.add_argument("--staircase-ssh-machine-id", default=None)
+    parser.add_argument(
+        "--staircase-ssh-remote-repo-root",
+        action="append",
+        default=[],
+        metavar="MACHINE=PATH",
+    )
+    parser.add_argument("--staircase-ssh-allow-future-executor", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -270,6 +325,82 @@ def _build_queue_command(args: argparse.Namespace, *, run_dir: Path) -> list[str
     return command
 
 
+def _build_staircase_artifacts(
+    args: argparse.Namespace,
+    *,
+    run_dir: Path,
+    execution_queue: Path,
+    state_path: Path,
+    queue: dict[str, Any],
+) -> dict[str, Any]:
+    resource_pools = [
+        parse_resource_pool_spec(spec)
+        for spec in args.staircase_resource_pool
+    ] or None
+    status_map = experiment_queue_status_map(
+        queue_path=execution_queue,
+        repo_root=REPO_ROOT,
+        state_path=state_path,
+    )
+    dag = build_staircase_dag_from_experiment_queue(
+        queue,
+        dag_id=f"{queue['queue_id']}_staircase",
+        source_path=_display_path(execution_queue),
+        resource_pools=resource_pools,
+    )
+    plan = plan_staircase_dispatch(
+        dag,
+        status_map=status_map,
+        max_nodes=args.staircase_max_nodes,
+        allow_cloud=args.staircase_allow_cloud,
+        diversity_bucket_limit=args.staircase_diversity_bucket_limit,
+    )
+    dag_path = run_dir / "staircase_dag.json"
+    plan_path = run_dir / "staircase_dispatch_plan.json"
+    _write_json(dag_path, dag)
+    _write_json(plan_path, plan)
+    return {
+        "dag_path": _display_path(dag_path),
+        "dispatch_plan_path": _display_path(plan_path),
+        "dag_hash": dag.get("dag_hash"),
+        "plan_hash": plan.get("plan_hash"),
+        "selected_count": plan.get("selected_count"),
+        "blocked_count": plan.get("blocked_count"),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _ssh_executor_dry_run_command(
+    args: argparse.Namespace,
+    *,
+    execution_queue: Path,
+    state_path: Path,
+    staircase_plan_path: Path,
+    run_dir: Path,
+) -> list[str]:
+    command = [
+        sys.executable,
+        "tools/run_staircase_ssh_executor.py",
+        "--plan",
+        _display_path(staircase_plan_path),
+        "--queue",
+        _display_path(execution_queue),
+        "--state",
+        _display_path(state_path),
+        "--output",
+        _display_path(run_dir / "staircase_ssh_executor_dry_run.json"),
+    ]
+    if args.staircase_ssh_machine_id:
+        command.extend(["--machine-id", str(args.staircase_ssh_machine_id)])
+    if args.staircase_ssh_allow_future_executor:
+        command.append("--allow-future-executor")
+    command.extend(_parse_remote_repo_roots(args.staircase_ssh_remote_repo_root))
+    return command
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     if args.candidate_limit < 1:
@@ -293,6 +424,33 @@ def main(argv: list[str] | None = None) -> int:
         [sys.executable, "tools/experiment_queue.py", "--queue", _display_path(execution_queue), "init"],
     ):
         commands.append(_run(command))
+
+    staircase_artifacts: dict[str, Any] | None = None
+    ssh_executor_dry_run: dict[str, Any] | None = None
+    if args.emit_staircase_plan or args.staircase_ssh_dry_run:
+        staircase_artifacts = _build_staircase_artifacts(
+            args,
+            run_dir=run_dir,
+            execution_queue=execution_queue,
+            state_path=state_path,
+            queue=queue,
+        )
+        if args.staircase_ssh_dry_run:
+            ssh_result = _run(
+                _ssh_executor_dry_run_command(
+                    args,
+                    execution_queue=execution_queue,
+                    state_path=state_path,
+                    staircase_plan_path=run_dir / "staircase_dispatch_plan.json",
+                    run_dir=run_dir,
+                ),
+                check=False,
+            )
+            commands.append(ssh_result)
+            ssh_executor_dry_run = _require_json_stdout(
+                ssh_result,
+                label="staircase SSH executor dry-run",
+            )
 
     worker_command = [
         sys.executable,
@@ -348,6 +506,8 @@ def main(argv: list[str] | None = None) -> int:
         "experiment_count": len(queue["experiments"]),
         "build": _json_from_stdout(build_result),
         "worker": _json_from_stdout(worker_result),
+        "staircase": staircase_artifacts,
+        "ssh_executor_dry_run": ssh_executor_dry_run,
         "observation": _json_from_stdout(observe_result),
         "performance": _json_from_stdout(performance_result),
         "commands": [result.to_dict() for result in commands],
