@@ -64,8 +64,8 @@ DEFAULT_MACHINE_PRESETS: tuple[dict[str, Any], ...] = (
         "ssh_target": "adpena@tertiary",
         "hostname": "tertiary",
         "verified_hostname": "Tertiary.local",
-        "executor": "ssh_experiment_queue_future",
-        "resource_policy": "light_cpu_only_until_remote_queue_writeback_executor_lands",
+        "executor": "ssh_experiment_queue",
+        "resource_policy": "light_cpu_only_queue_owned_ssh_executor",
     },
     {
         "id": "raspberry_pi4_8gb",
@@ -439,7 +439,14 @@ def normalize_resource_pools(raw_pools: Sequence[Mapping[str, Any]] | None) -> l
             "disk_gb": _positive_float(raw_pool.get("disk_gb"), f"{pool_id}.disk_gb", default=1.0),
             "tags": _string_list(raw_pool.get("tags"), f"{pool_id}.tags"),
         }
-        for key in ("ssh_target", "hostname", "verified_hostname", "executor", "resource_policy"):
+        for key in (
+            "ssh_target",
+            "hostname",
+            "verified_hostname",
+            "executor",
+            "resource_policy",
+            "remote_repo_root",
+        ):
             value = raw_pool.get(key)
             if value is not None:
                 row[key] = _require_text(value, f"{pool_id}.{key}")
@@ -1055,6 +1062,7 @@ def plan_staircase_dispatch(
     for node in selected:
         metadata = dict(node.metadata)
         machine = machine_by_id.get(str(node.machine_id), {"id": node.machine_id})
+        step_hashes = dict(metadata.get("step_hashes") or {})
         task = {
             "key": f"{normalized['dag_id']}:{node.node_id}",
             "command": list(node.command),
@@ -1065,7 +1073,7 @@ def plan_staircase_dispatch(
             "queue_id": metadata.get("queue_id"),
             "experiment_id": metadata.get("experiment_id"),
             "step_id": metadata.get("step_id"),
-            "step_hashes": metadata.get("step_hashes"),
+            "step_hashes": step_hashes,
             "postconditions": list(metadata.get("postconditions") or []),
             "timeout_seconds": metadata.get("timeout_seconds"),
             "telemetry": dict(metadata.get("step_telemetry") or {}),
@@ -1082,7 +1090,7 @@ def plan_staircase_dispatch(
                 "queue_id": metadata.get("queue_id"),
                 "experiment_id": metadata.get("experiment_id"),
                 "step_id": metadata.get("step_id"),
-                "step_hashes": metadata.get("step_hashes"),
+                "step_hashes": dict(step_hashes),
                 "executor_must_claim_step_before_execution": True,
                 "executor_must_record_terminal_step_event": True,
                 "terminal_statuses": ["succeeded", "failed"],
@@ -1187,7 +1195,15 @@ def parse_resource_pool_spec(spec: str) -> dict[str, Any]:
         value = value.strip()
         if key in {"memory_gb", "disk_gb"}:
             meta[key] = float(value)
-        elif key in {"label", "ssh_target", "hostname", "verified_hostname", "executor", "resource_policy"}:
+        elif key in {
+            "label",
+            "ssh_target",
+            "hostname",
+            "verified_hostname",
+            "executor",
+            "resource_policy",
+            "remote_repo_root",
+        }:
             meta[key] = value
         elif key == "tags":
             meta[key] = [item.strip() for item in value.split("+") if item.strip()]

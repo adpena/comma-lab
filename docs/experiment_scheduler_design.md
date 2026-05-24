@@ -68,8 +68,8 @@ platforms:
     max_artifact_gb: 1
     connect: "ssh adpena@tertiary"
     verified_hostname: "Tertiary.local"
-    executor: "ssh_experiment_queue_future"
-    policy: "light CPU-only work until remote queue writeback lands"
+    executor: "ssh_experiment_queue"
+    policy: "light CPU-only work through queue-owned SSH executor"
     budget: unlimited
     
   colab_free:
@@ -150,10 +150,30 @@ class BudgetTracker:
 - If no checkpoint: restart from scratch
 - Rate limit restarts: max 3 per experiment
 
+## Queue-owned SSH execution
+
+`tools/run_staircase_ssh_executor.py` consumes a `staircase_dispatch_plan.v1`
+plus its source `experiment_queue.v1`. The DAG remains planning-only; the
+executor re-reads the queue, checks the plan source hash, selects only ready
+steps with explicit `queue_state_writeback`, claims the step in SQLite before
+launch, and records a terminal `succeeded` or `failed` event after local
+postconditions are evaluated.
+
+Remote hosts must advertise `executor=ssh_experiment_queue`, `ssh_target`, and
+an absolute `remote_repo_root`; queued SSH steps must have local-visible
+postconditions because v1 terminal writeback is decided from local artifacts
+after the remote command exits. `--execute` requires the canonical queue state
+unless an explicit `--noncanonical-state-rationale` is supplied, orphaned active
+state requires `--orphaned-state-rationale`, and dirty remote git requires both
+`--allow-dirty-remote-git` and `--dirty-remote-git-rationale`. Dry runs are
+false-authority artifacts and never grant score, promotion, rank/kill, or
+exact-dispatch authority.
+
 ## Implementation plan
 
 1. Phase 1 (now): Shell script orchestrator (`run_endgame.sh`) — DONE
-2. Phase 2 (next): Python CLI with `typer` for local+bat00
+2. Phase 2 (now): `experiment_queue.v1` local worker + queue-owned SSH executor
+   for light CPU hosts
 3. Phase 3 (later): Colab/Kaggle API integration
 4. Phase 4 (stretch): Web dashboard via Cloudflare Pages
 

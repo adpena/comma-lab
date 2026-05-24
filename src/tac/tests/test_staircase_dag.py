@@ -38,9 +38,8 @@ def test_machine_presets_include_tertiary_as_light_cpu_ssh_worker() -> None:
     assert tertiary["slots"] == {"local_cpu": 2}
     assert "low_memory" in tertiary["tags"]
     assert "local_mlx" not in tertiary["slots"]
-    assert tertiary["resource_policy"] == (
-        "light_cpu_only_until_remote_queue_writeback_executor_lands"
-    )
+    assert tertiary["executor"] == "ssh_experiment_queue"
+    assert tertiary["resource_policy"] == "light_cpu_only_queue_owned_ssh_executor"
 
 
 def test_tertiary_metadata_survives_into_executor_task_specs() -> None:

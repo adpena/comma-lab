@@ -42,6 +42,7 @@ workspace/upstream_snapshot.json
 .omx/state/experiment_queue*.db
 .omx/state/experiment_queue*.db-*
 .omx/state/experiment_queue_logs/
+.omx/state/ssh_experiment_queue_logs/
 experiments/queue_state*.sqlite
 experiments/queue_state*.sqlite-*
 experiments/queue_state*.db

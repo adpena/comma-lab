@@ -35,6 +35,7 @@ from .experiment_queue import (
     assert_no_orphaned_steps_for_execution,
     connect_state,
     default_state_path,
+    finalize_claimed_step_execution,
     initialize_queue_state,
     load_queue_definition,
     normalize_queue_definition,
@@ -76,6 +77,13 @@ from .models import (
     SchedulerStatusReport,
     TrackStatus,
 )
+from .ssh_experiment_queue_executor import (
+    SSH_EXECUTION_RESULT_SCHEMA,
+    build_remote_git_preflight_command,
+    build_remote_shell_command,
+    run_staircase_ssh_executor,
+    select_ssh_tasks,
+)
 
 __all__ = [
     "BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER",
@@ -102,6 +110,7 @@ __all__ = [
     "MATERIALIZER_EXECUTION_STEP_ID",
     "MATERIALIZER_HARVEST_STEP_ID",
     "REGISTRY_SCHEMA",
+    "SSH_EXECUTION_RESULT_SCHEMA",
     "BudgetReport",
     "BudgetSpec",
     "BudgetUsage",
@@ -118,8 +127,11 @@ __all__ = [
     "assert_no_orphaned_steps_for_execution",
     "build_materializer_exact_eval_dispatch_plan",
     "build_materializer_execution_queue",
+    "build_remote_git_preflight_command",
+    "build_remote_shell_command",
     "connect_state",
     "default_state_path",
+    "finalize_claimed_step_execution",
     "harvest_materializer_chain_manifests",
     "initialize_queue_state",
     "known_materializer_target_kinds",
@@ -140,6 +152,8 @@ __all__ = [
     "run_exact_readiness_bridge_for_harvested_queue",
     "run_queue_worker",
     "run_ready_step",
+    "run_staircase_ssh_executor",
+    "select_ssh_tasks",
     "set_control_mode",
     "suggest_materializer_adapters",
 ]

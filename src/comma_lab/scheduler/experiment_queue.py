@@ -2033,6 +2033,65 @@ def run_ready_step(
     return {"executed": True, "succeeded": succeeded, **event}
 
 
+def finalize_claimed_step_execution(
+    conn: sqlite3.Connection,
+    queue: Mapping[str, Any],
+    ready: ReadyStep,
+    *,
+    repo_root: str | Path,
+    log_path: str | Path,
+    returncode: int,
+    timed_out: bool,
+    execution_error: str | None,
+    elapsed_seconds: float,
+    event: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Finalize a step already claimed by an external executor.
+
+    External executors such as SSH/Dask bridges may launch work outside the
+    local subprocess worker, but terminal queue state is still local authority.
+    This helper evaluates local postconditions and records the terminal event
+    through the same state transition path as the built-in worker.
+    """
+
+    step = _lookup_step(queue, ready.experiment_id, ready.step_id)
+    failed_conditions, postcondition_errors = _evaluate_postconditions(
+        step,
+        repo=Path(repo_root),
+    )
+    succeeded = (
+        int(returncode) == 0
+        and not timed_out
+        and execution_error is None
+        and not failed_conditions
+        and not postcondition_errors
+    )
+    terminal_event = {
+        **dict(event),
+        "returncode": int(returncode),
+        "timed_out": timed_out,
+        "execution_error": execution_error,
+        "elapsed_seconds": float(elapsed_seconds),
+        "telemetry": _step_telemetry_event(
+            step,
+            repo=Path(repo_root),
+            log_path=Path(log_path),
+        ),
+        "failed_postconditions": failed_conditions,
+        "postcondition_errors": postcondition_errors,
+    }
+    _set_step_status(
+        conn,
+        queue_id=ready.queue_id,
+        experiment_id=ready.experiment_id,
+        step_id=ready.step_id,
+        status="succeeded" if succeeded else "failed",
+        event=terminal_event,
+    )
+    conn.commit()
+    return {"executed": True, "succeeded": succeeded, **terminal_event}
+
+
 def _make_worker_run_id(ready: ReadyStep) -> str:
     payload = {
         "queue_id": ready.queue_id,
@@ -3683,6 +3742,7 @@ __all__ = [
     "connect_state",
     "connect_state_readonly",
     "default_state_path",
+    "finalize_claimed_step_execution",
     "initialize_queue_state",
     "load_queue_definition",
     "normalize_queue_definition",

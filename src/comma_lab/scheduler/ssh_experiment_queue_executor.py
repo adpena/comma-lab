@@ -1,0 +1,773 @@
+from __future__ import annotations
+
+import hashlib
+import os
+import shlex
+import subprocess
+import time
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+from tac.optimization.proxy_candidate_contract import (
+    apply_proxy_evidence_boundary,
+    require_no_truthy_authority_fields,
+)
+
+from .experiment_queue import (
+    ExperimentQueueError,
+    ReadyStep,
+    _json_text,
+    _lookup_step,
+    _utc_now,
+    assert_canonical_state_for_execution,
+    assert_no_orphaned_steps_for_execution,
+    claim_ready_step_for_execution,
+    connect_state,
+    finalize_claimed_step_execution,
+    initialize_queue_state,
+    ready_steps,
+)
+from .staircase_dag import STAIRCASE_DISPATCH_PLAN_SCHEMA
+
+SSH_EXECUTION_RESULT_SCHEMA = "staircase_ssh_execution_result.v1"
+SSH_EXECUTOR_EVENT_SCHEMA = "staircase_ssh_executor_event.v1"
+SSH_EXECUTOR_NAMES = {"ssh_experiment_queue"}
+FUTURE_SSH_EXECUTOR_NAMES = {"ssh_experiment_queue_future"}
+
+Runner = Callable[..., subprocess.CompletedProcess[str]]
+
+
+@dataclass(frozen=True)
+class SshTaskSelection:
+    task: Mapping[str, Any]
+    ready_step: ReadyStep | None
+    blockers: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = {
+            "key": self.task.get("key"),
+            "queue_id": self.task.get("queue_id"),
+            "experiment_id": self.task.get("experiment_id"),
+            "step_id": self.task.get("step_id"),
+            "machine_hint": self.task.get("machine_hint"),
+            "machine": dict(self.task.get("machine") or {}),
+            "blockers": list(self.blockers),
+        }
+        if self.ready_step is not None:
+            payload["ready_step"] = self.ready_step.to_dict()
+        return payload
+
+
+def _require_text(value: object, label: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ExperimentQueueError(f"{label} must be a non-empty string")
+    return value.strip()
+
+
+def _mapping(value: object, label: str) -> dict[str, Any]:
+    if not isinstance(value, Mapping):
+        raise ExperimentQueueError(f"{label} must be an object")
+    return dict(value)
+
+
+def _optional_mapping(value: object, label: str) -> dict[str, Any]:
+    if value is None:
+        return {}
+    return _mapping(value, label)
+
+
+def _local_git_head(repo_root: Path) -> str:
+    proc = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        raise ExperimentQueueError(f"failed to read local git HEAD: {proc.stderr.strip()}")
+    return proc.stdout.strip()
+
+
+def _sha256_json(payload: object) -> str:
+    return hashlib.sha256(_json_text(payload).encode("utf-8")).hexdigest()
+
+
+def _require_matching_queue_source_ref(plan: Mapping[str, Any], queue: Mapping[str, Any]) -> None:
+    refs = plan.get("source_refs")
+    if not isinstance(refs, list):
+        raise ExperimentQueueError("plan.source_refs must be a list")
+    queue_id = str(queue["queue_id"])
+    queue_hash = _sha256_json(queue)
+    matches = [
+        ref
+        for ref in refs
+        if isinstance(ref, Mapping)
+        and ref.get("kind") == "experiment_queue"
+        and ref.get("queue_id") == queue_id
+    ]
+    if not matches:
+        raise ExperimentQueueError("plan.source_refs missing matching experiment_queue reference")
+    for ref in matches:
+        if ref.get("queue_hash") == queue_hash:
+            return
+    raise ExperimentQueueError("plan.source_refs experiment_queue queue_hash mismatch")
+
+
+def _ssh_argv(
+    *,
+    ssh_binary: str,
+    ssh_target: str,
+    connect_timeout_seconds: int,
+    remote_script: str,
+) -> list[str]:
+    return [
+        ssh_binary,
+        "-o",
+        f"ConnectTimeout={connect_timeout_seconds}",
+        "-o",
+        "BatchMode=yes",
+        ssh_target,
+        remote_script,
+    ]
+
+
+def build_remote_shell_command(
+    *,
+    remote_repo_root: str,
+    command: Sequence[str],
+) -> str:
+    """Return the remote shell command used to execute a queue-owned argv."""
+
+    if not command:
+        raise ExperimentQueueError("remote command argv must be non-empty")
+    return f"cd {shlex.quote(remote_repo_root)} && {shlex.join([str(part) for part in command])}"
+
+
+def build_remote_git_preflight_command(
+    *,
+    remote_repo_root: str,
+    expected_head: str,
+    require_clean: bool,
+) -> str:
+    checks = [
+        f"cd {shlex.quote(remote_repo_root)}",
+        "test -d .git",
+        f'test "$(git rev-parse HEAD)" = {shlex.quote(expected_head)}',
+    ]
+    if require_clean:
+        checks.extend(["git diff --quiet", "git diff --cached --quiet"])
+    return " && ".join(checks)
+
+
+def _machine_for_task(task: Mapping[str, Any]) -> dict[str, Any]:
+    machine = task.get("machine")
+    if isinstance(machine, Mapping):
+        return dict(machine)
+    hint = task.get("machine_hint")
+    return {"id": hint} if isinstance(hint, str) and hint else {}
+
+
+def _task_step_hashes(task: Mapping[str, Any]) -> dict[str, str]:
+    hashes = task.get("step_hashes")
+    if not isinstance(hashes, Mapping):
+        return {}
+    return {str(key): str(value) for key, value in hashes.items() if isinstance(value, str)}
+
+
+def _queue_state_writeback_blockers(task: Mapping[str, Any], *, queue_id: str) -> list[str]:
+    writeback = task.get("queue_state_writeback")
+    if not isinstance(writeback, Mapping):
+        return ["queue_state_writeback_missing"]
+    blockers: list[str] = []
+    if writeback.get("queue_id") != task.get("queue_id") or writeback.get("queue_id") != queue_id:
+        blockers.append("queue_state_writeback_queue_id_mismatch")
+    for key in ("experiment_id", "step_id"):
+        if writeback.get(key) != task.get(key):
+            blockers.append(f"queue_state_writeback_{key}_mismatch")
+    task_hashes = _task_step_hashes(task)
+    if not task_hashes:
+        blockers.append("task_step_hashes_missing")
+    writeback_hashes = writeback.get("step_hashes")
+    if not isinstance(writeback_hashes, Mapping):
+        blockers.append("queue_state_writeback_step_hashes_missing")
+    else:
+        normalized_writeback_hashes = {
+            str(key): str(value)
+            for key, value in writeback_hashes.items()
+            if isinstance(value, str)
+        }
+        if task_hashes and normalized_writeback_hashes != task_hashes:
+            blockers.append("queue_state_writeback_step_hashes_mismatch")
+    if writeback.get("required") is not True:
+        blockers.append("queue_state_writeback_required_not_true")
+    if writeback.get("executor_must_claim_step_before_execution") is not True:
+        blockers.append("queue_state_writeback_claim_requirement_missing")
+    if writeback.get("executor_must_record_terminal_step_event") is not True:
+        blockers.append("queue_state_writeback_terminal_event_requirement_missing")
+    terminal = writeback.get("terminal_statuses")
+    terminal_set = {str(item) for item in terminal} if isinstance(terminal, list) else set()
+    if not isinstance(terminal, list) or {"succeeded", "failed"} - terminal_set:
+        blockers.append("queue_state_writeback_terminal_statuses_incomplete")
+    if terminal_set - {"succeeded", "failed"}:
+        blockers.append("queue_state_writeback_terminal_statuses_unknown")
+    return blockers
+
+
+def _remote_repo_root_blockers(value: object) -> list[str]:
+    if not isinstance(value, str) or not value.strip():
+        return ["remote_repo_root_missing"]
+    if not value.strip().startswith("/"):
+        return ["remote_repo_root_must_be_absolute"]
+    return []
+
+
+def _local_visible_postcondition_blockers(
+    task: Mapping[str, Any],
+    step: Mapping[str, Any],
+) -> list[str]:
+    task_postconditions = task.get("postconditions")
+    step_postconditions = step.get("postconditions")
+    blockers: list[str] = []
+    if not isinstance(task_postconditions, list) or not task_postconditions:
+        blockers.append("task_postconditions_missing_for_ssh")
+    if not isinstance(step_postconditions, list) or not step_postconditions:
+        blockers.append("ssh_executor_local_visible_postcondition_required")
+    return blockers
+
+
+def _ready_step_hashes(ready: ReadyStep) -> dict[str, str]:
+    return {
+        "definition_hash": ready.definition_hash,
+        "command_hash": ready.command_hash,
+        "postcondition_hash": ready.postcondition_hash,
+    }
+
+
+def _make_worker_run_id(ready: ReadyStep, *, machine_id: str, ssh_target: str) -> str:
+    payload = {
+        "queue_id": ready.queue_id,
+        "experiment_id": ready.experiment_id,
+        "step_id": ready.step_id,
+        "machine_id": machine_id,
+        "ssh_target": ssh_target,
+        "pid": os.getpid(),
+        "time_ns": time.time_ns(),
+    }
+    return hashlib.sha256(_json_text(payload).encode("utf-8")).hexdigest()[:16]
+
+
+def _log_path(
+    *,
+    repo_root: Path,
+    log_root: str | Path | None,
+    ready: ReadyStep,
+    worker_run_id: str,
+) -> Path:
+    root = Path(log_root) if log_root else repo_root / ".omx" / "state" / "ssh_experiment_queue_logs"
+    stamp = _utc_now().replace(":", "").replace("-", "")
+    path = root / ready.queue_id / ready.experiment_id / ready.step_id / f"{stamp}_{worker_run_id}.log"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _normalize_dispatch_plan(plan: Mapping[str, Any]) -> dict[str, Any]:
+    try:
+        require_no_truthy_authority_fields(plan, context="staircase_ssh_executor.plan")
+    except ValueError as exc:
+        raise ExperimentQueueError(str(exc)) from exc
+    schema = _require_text(plan.get("schema"), "plan.schema")
+    if schema != STAIRCASE_DISPATCH_PLAN_SCHEMA:
+        raise ExperimentQueueError(
+            f"unsupported dispatch plan schema {schema!r}; expected {STAIRCASE_DISPATCH_PLAN_SCHEMA!r}"
+        )
+    tasks = plan.get("dask_task_specs")
+    if not isinstance(tasks, list):
+        raise ExperimentQueueError("plan.dask_task_specs must be a list")
+    return dict(plan)
+
+
+def select_ssh_tasks(
+    plan: Mapping[str, Any],
+    queue: Mapping[str, Any],
+    *,
+    ready: Sequence[ReadyStep] = (),
+    machine_id: str | None = None,
+    allow_future_executor: bool = False,
+    remote_repo_roots: Mapping[str, str] | None = None,
+) -> list[SshTaskSelection]:
+    """Select SSH-executable staircase tasks without mutating queue state."""
+
+    normalized_plan = _normalize_dispatch_plan(plan)
+    _require_matching_queue_source_ref(normalized_plan, queue)
+    queue_id = str(queue["queue_id"])
+    ready_by_key = {(step.experiment_id, step.step_id): step for step in ready}
+    roots = dict(remote_repo_roots or {})
+    selections: list[SshTaskSelection] = []
+    for index, raw_task in enumerate(normalized_plan["dask_task_specs"]):
+        task = _mapping(raw_task, f"dask_task_specs[{index}]")
+        blockers: list[str] = []
+        if task.get("queue_id") != queue_id:
+            blockers.append("task_queue_id_mismatch")
+        blockers.extend(_queue_state_writeback_blockers(task, queue_id=queue_id))
+        experiment_id = task.get("experiment_id")
+        step_id = task.get("step_id")
+        if not isinstance(experiment_id, str) or not isinstance(step_id, str):
+            blockers.append("task_identity_missing")
+            ready_step = None
+        else:
+            ready_step = ready_by_key.get((experiment_id, step_id))
+            if ready_step is None and ready:
+                blockers.append("task_not_ready_in_canonical_queue_state")
+            if ready_step is not None:
+                try:
+                    step = _lookup_step(queue, experiment_id, step_id)
+                except ExperimentQueueError as exc:
+                    blockers.append(f"queue_step_lookup_failed:{exc}")
+                else:
+                    blockers.extend(_local_visible_postcondition_blockers(task, step))
+        machine = _machine_for_task(task)
+        task_machine_id = str(machine.get("id") or task.get("machine_hint") or "")
+        if machine_id is not None and task_machine_id != machine_id:
+            continue
+        executor = str(machine.get("executor") or "")
+        if executor not in SSH_EXECUTOR_NAMES:
+            if allow_future_executor and executor in FUTURE_SSH_EXECUTOR_NAMES:
+                pass
+            else:
+                blockers.append(f"machine_executor_not_enabled:{executor or 'missing'}")
+        if not isinstance(machine.get("ssh_target"), str) or not str(machine.get("ssh_target")).strip():
+            blockers.append("machine_ssh_target_missing")
+        remote_root = roots.get(task_machine_id) or machine.get("remote_repo_root")
+        blockers.extend(_remote_repo_root_blockers(remote_root))
+        resources = task.get("resources")
+        slots = machine.get("slots")
+        if (
+            ready_step is not None
+            and isinstance(slots, Mapping)
+            and int(slots.get(ready_step.resource_kind) or 0) <= 0
+        ):
+            blockers.append(f"machine_slot_missing:{ready_step.resource_kind}")
+        if ready_step is not None and isinstance(resources, Mapping):
+            machine_resource_key = f"machine:{task_machine_id}"
+            if int(resources.get(machine_resource_key) or 0) <= 0:
+                blockers.append("task_machine_resource_missing")
+        task_hashes = _task_step_hashes(task)
+        if ready_step is not None and task_hashes:
+            ready_hashes = _ready_step_hashes(ready_step)
+            mismatches = sorted(
+                key for key, value in task_hashes.items() if ready_hashes.get(key) != value
+            )
+            if mismatches:
+                blockers.append(f"task_step_hash_mismatch:{','.join(mismatches)}")
+        selections.append(SshTaskSelection(task=task, ready_step=ready_step, blockers=tuple(blockers)))
+    return selections
+
+
+def _run_remote_command(
+    runner: Runner,
+    argv: Sequence[str],
+    *,
+    timeout_seconds: int | None,
+    log_path: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
+    proc = runner(
+        list(argv),
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        timeout=timeout_seconds,
+        check=False,
+    )
+    if log_path is not None:
+        with log_path.open("a", encoding="utf-8") as handle:
+            handle.write(proc.stdout or "")
+    return proc
+
+
+def _run_remote_preflight(
+    *,
+    runner: Runner,
+    ssh_binary: str,
+    ssh_target: str,
+    connect_timeout_seconds: int,
+    remote_repo_root: str,
+    expected_head: str,
+    require_clean_remote_git: bool,
+    dirty_remote_git_rationale: str | None,
+    timeout_seconds: int,
+) -> dict[str, Any]:
+    remote_script = build_remote_git_preflight_command(
+        remote_repo_root=remote_repo_root,
+        expected_head=expected_head,
+        require_clean=require_clean_remote_git,
+    )
+    argv = _ssh_argv(
+        ssh_binary=ssh_binary,
+        ssh_target=ssh_target,
+        connect_timeout_seconds=connect_timeout_seconds,
+        remote_script=remote_script,
+    )
+    start = time.monotonic()
+    try:
+        proc = _run_remote_command(runner, argv, timeout_seconds=timeout_seconds)
+    except subprocess.TimeoutExpired as exc:
+        return {
+            "passed": False,
+            "returncode": 124,
+            "timed_out": True,
+            "elapsed_seconds": time.monotonic() - start,
+            "command": argv,
+            "require_clean_remote_git": require_clean_remote_git,
+            "dirty_remote_git_rationale": dirty_remote_git_rationale,
+            "stdout": str(exc),
+        }
+    return {
+        "passed": proc.returncode == 0,
+        "returncode": proc.returncode,
+        "timed_out": False,
+        "elapsed_seconds": time.monotonic() - start,
+        "command": argv,
+        "require_clean_remote_git": require_clean_remote_git,
+        "dirty_remote_git_rationale": dirty_remote_git_rationale,
+        "stdout": proc.stdout,
+    }
+
+
+def _execute_remote_step(
+    *,
+    runner: Runner,
+    ssh_binary: str,
+    ssh_target: str,
+    connect_timeout_seconds: int,
+    remote_repo_root: str,
+    ready: ReadyStep,
+    step: Mapping[str, Any],
+    log_path: Path,
+) -> dict[str, Any]:
+    remote_script = build_remote_shell_command(
+        remote_repo_root=remote_repo_root,
+        command=ready.command,
+    )
+    argv = _ssh_argv(
+        ssh_binary=ssh_binary,
+        ssh_target=ssh_target,
+        connect_timeout_seconds=connect_timeout_seconds,
+        remote_script=remote_script,
+    )
+    timeout_seconds = int(step.get("timeout_seconds") or 0) or None
+    start = time.monotonic()
+    with log_path.open("w", encoding="utf-8") as handle:
+        handle.write("[ssh-experiment-queue] remote command\n")
+        handle.write(shlex.join(argv))
+        handle.write("\n\n")
+    try:
+        proc = _run_remote_command(
+            runner,
+            argv,
+            timeout_seconds=timeout_seconds,
+            log_path=log_path,
+        )
+        return {
+            "returncode": proc.returncode,
+            "timed_out": False,
+            "execution_error": None,
+            "elapsed_seconds": time.monotonic() - start,
+            "ssh_argv": argv,
+            "remote_command": remote_script,
+        }
+    except subprocess.TimeoutExpired as exc:
+        with log_path.open("a", encoding="utf-8") as handle:
+            handle.write(f"\n[ssh-experiment-queue] timeout: {exc}\n")
+        return {
+            "returncode": 124,
+            "timed_out": True,
+            "execution_error": f"TimeoutExpired: {exc}",
+            "elapsed_seconds": time.monotonic() - start,
+            "ssh_argv": argv,
+            "remote_command": remote_script,
+        }
+    except OSError as exc:
+        with log_path.open("a", encoding="utf-8") as handle:
+            handle.write(f"\n[ssh-experiment-queue] execution error: {type(exc).__name__}: {exc}\n")
+        return {
+            "returncode": 127,
+            "timed_out": False,
+            "execution_error": f"{type(exc).__name__}: {exc}",
+            "elapsed_seconds": time.monotonic() - start,
+            "ssh_argv": argv,
+            "remote_command": remote_script,
+        }
+
+
+def _record_blocked_task(
+    selection: SshTaskSelection,
+    *,
+    blockers: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    merged = list(selection.blockers)
+    if blockers:
+        merged.extend(str(item) for item in blockers)
+    return {
+        "executed": False,
+        "succeeded": False,
+        "blockers": merged,
+        "task": selection.to_dict(),
+    }
+
+
+def run_staircase_ssh_executor(
+    plan: Mapping[str, Any],
+    queue: Mapping[str, Any],
+    *,
+    state_path: str | Path,
+    repo_root: str | Path,
+    execute: bool,
+    max_steps: int = 1,
+    machine_id: str | None = None,
+    remote_repo_roots: Mapping[str, str] | None = None,
+    allow_future_executor: bool = False,
+    allow_noncanonical_state: bool = False,
+    allow_orphaned_state: bool = False,
+    require_clean_remote_git: bool = True,
+    dirty_remote_git_rationale: str | None = None,
+    ssh_binary: str = "ssh",
+    ssh_connect_timeout_seconds: int = 10,
+    remote_preflight_timeout_seconds: int = 20,
+    log_root: str | Path | None = None,
+    runner: Runner = subprocess.run,
+) -> dict[str, Any]:
+    """Execute selected staircase tasks on SSH machines while local queue state stays authoritative."""
+
+    if isinstance(max_steps, bool) or not isinstance(max_steps, int) or max_steps < 0:
+        raise ExperimentQueueError("max_steps must be a non-negative integer")
+    if not require_clean_remote_git:
+        dirty_remote_git_rationale = _require_text(
+            dirty_remote_git_rationale,
+            "dirty_remote_git_rationale",
+        )
+    repo = Path(repo_root)
+    queue_id = str(queue["queue_id"])
+    state = Path(state_path)
+    task_results: list[dict[str, Any]] = []
+    executed_count = 0
+    success_count = 0
+    failure_count = 0
+    claim_refused_count = 0
+    local_head = _local_git_head(repo)
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        if execute:
+            assert_canonical_state_for_execution(
+                repo,
+                queue_id,
+                state,
+                allow_noncanonical_state=allow_noncanonical_state,
+            )
+            assert_no_orphaned_steps_for_execution(
+                conn,
+                queue,
+                allow_orphaned_state=allow_orphaned_state,
+            )
+        ready = ready_steps(conn, queue, allow_cloud=False, repo_root=repo)
+        selections = select_ssh_tasks(
+            plan,
+            queue,
+            ready=ready,
+            machine_id=machine_id,
+            allow_future_executor=allow_future_executor,
+            remote_repo_roots=remote_repo_roots,
+        )
+        selected = [selection for selection in selections if not selection.blockers]
+        blocked = [selection for selection in selections if selection.blockers]
+        if not execute:
+            return apply_proxy_evidence_boundary(
+                {
+                    "schema": SSH_EXECUTION_RESULT_SCHEMA,
+                    "queue_id": queue_id,
+                    "state_path": str(state),
+                    "execute": False,
+                    "allow_noncanonical_state": allow_noncanonical_state,
+                    "allow_orphaned_state": allow_orphaned_state,
+                    "require_clean_remote_git": require_clean_remote_git,
+                    "dirty_remote_git_rationale": dirty_remote_git_rationale,
+                    "selected_count": min(len(selected), max_steps) if max_steps else len(selected),
+                    "blocked_count": len(blocked),
+                    "selected_tasks": [selection.to_dict() for selection in selected[: max_steps or None]],
+                    "blocked_tasks": [selection.to_dict() for selection in blocked],
+                    "task_results": [],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                dispatch_blockers=["ssh_executor_dry_run_only"],
+            )
+        for selection in blocked:
+            task_results.append(_record_blocked_task(selection))
+        for selection in selected:
+            if max_steps and executed_count >= max_steps:
+                break
+            ready_step = selection.ready_step
+            if ready_step is None:
+                task_results.append(_record_blocked_task(selection, blockers=["ready_step_missing"]))
+                continue
+            machine = _machine_for_task(selection.task)
+            machine_id_value = _require_text(
+                machine.get("id") or selection.task.get("machine_hint"),
+                "machine.id",
+            )
+            ssh_target = _require_text(machine.get("ssh_target"), "machine.ssh_target")
+            remote_repo_root = _require_text(
+                (remote_repo_roots or {}).get(machine_id_value) or machine.get("remote_repo_root"),
+                "machine.remote_repo_root",
+            )
+            remote_root_blockers = _remote_repo_root_blockers(remote_repo_root)
+            if remote_root_blockers:
+                task_results.append(_record_blocked_task(selection, blockers=remote_root_blockers))
+                continue
+            preflight = _run_remote_preflight(
+                runner=runner,
+                ssh_binary=ssh_binary,
+                ssh_target=ssh_target,
+                connect_timeout_seconds=ssh_connect_timeout_seconds,
+                remote_repo_root=remote_repo_root,
+                expected_head=local_head,
+                require_clean_remote_git=require_clean_remote_git,
+                dirty_remote_git_rationale=dirty_remote_git_rationale,
+                timeout_seconds=remote_preflight_timeout_seconds,
+            )
+            if not preflight["passed"]:
+                task_results.append(
+                    _record_blocked_task(
+                        selection,
+                        blockers=[f"remote_git_preflight_failed:{preflight['returncode']}"],
+                    )
+                    | {"remote_preflight": preflight}
+                )
+                continue
+
+            step = _lookup_step(queue, ready_step.experiment_id, ready_step.step_id)
+            worker_run_id = _make_worker_run_id(
+                ready_step,
+                machine_id=machine_id_value,
+                ssh_target=ssh_target,
+            )
+            log_path = _log_path(
+                repo_root=repo,
+                log_root=log_root,
+                ready=ready_step,
+                worker_run_id=worker_run_id,
+            )
+            running_event = {
+                "schema": SSH_EXECUTOR_EVENT_SCHEMA,
+                "command": list(ready_step.command),
+                "log_path": str(log_path),
+                "resource_kind": ready_step.resource_kind,
+                "worker_run_id": worker_run_id,
+                "executor": "ssh_experiment_queue",
+                "machine": dict(machine),
+                "ssh_target": ssh_target,
+                "remote_repo_root": remote_repo_root,
+                "remote_preflight": preflight,
+                "dirty_remote_git_rationale": dirty_remote_git_rationale,
+                "timeout_seconds": int(step.get("timeout_seconds") or 0),
+            }
+            claim_refused_reason = claim_ready_step_for_execution(
+                conn,
+                queue,
+                ready_step,
+                event=running_event,
+            )
+            if claim_refused_reason:
+                claim_refused_count += 1
+                task_results.append(
+                    {
+                        "executed": False,
+                        "succeeded": False,
+                        "claim_refused": True,
+                        "claim_refused_reason": claim_refused_reason,
+                        "task": selection.to_dict(),
+                        **running_event,
+                    }
+                )
+                continue
+
+            executed_count += 1
+            remote_result = _execute_remote_step(
+                runner=runner,
+                ssh_binary=ssh_binary,
+                ssh_target=ssh_target,
+                connect_timeout_seconds=ssh_connect_timeout_seconds,
+                remote_repo_root=remote_repo_root,
+                ready=ready_step,
+                step=step,
+                log_path=log_path,
+            )
+            terminal_result = finalize_claimed_step_execution(
+                conn,
+                queue,
+                ready_step,
+                repo_root=repo,
+                log_path=log_path,
+                returncode=int(remote_result["returncode"]),
+                timed_out=bool(remote_result["timed_out"]),
+                execution_error=remote_result["execution_error"],
+                elapsed_seconds=float(remote_result["elapsed_seconds"]),
+                event={
+                    **running_event,
+                    **remote_result,
+                },
+            )
+            if terminal_result.get("succeeded"):
+                success_count += 1
+            else:
+                failure_count += 1
+            task_results.append(
+                {
+                    "executed": True,
+                    "task": selection.to_dict(),
+                    **terminal_result,
+                }
+            )
+
+    return apply_proxy_evidence_boundary(
+        {
+            "schema": SSH_EXECUTION_RESULT_SCHEMA,
+            "queue_id": queue_id,
+            "state_path": str(state),
+            "execute": execute,
+            "allow_noncanonical_state": allow_noncanonical_state,
+            "allow_orphaned_state": allow_orphaned_state,
+            "require_clean_remote_git": require_clean_remote_git,
+            "dirty_remote_git_rationale": dirty_remote_git_rationale,
+            "selected_count": len([result for result in task_results if not result.get("blockers")]),
+            "blocked_count": len([result for result in task_results if result.get("blockers")]),
+            "executed_count": executed_count,
+            "success_count": success_count,
+            "failure_count": failure_count,
+            "claim_refused_count": claim_refused_count,
+            "task_results": task_results,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        dispatch_blockers=["ssh_executor_result_is_not_score_authority"],
+    )
+
+
+__all__ = [
+    "FUTURE_SSH_EXECUTOR_NAMES",
+    "SSH_EXECUTION_RESULT_SCHEMA",
+    "SSH_EXECUTOR_EVENT_SCHEMA",
+    "SSH_EXECUTOR_NAMES",
+    "SshTaskSelection",
+    "build_remote_git_preflight_command",
+    "build_remote_shell_command",
+    "run_staircase_ssh_executor",
+    "select_ssh_tasks",
+]
