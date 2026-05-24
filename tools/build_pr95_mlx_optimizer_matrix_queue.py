@@ -166,6 +166,10 @@ def _emit_plan(
     latent_dim: int,
     output_dir: Path,
     write_byte_closed_smoke: bool,
+    write_pr95_public_archive_export: bool,
+    prove_pr95_runtime_consumption: bool,
+    runtime_proof_timeout_seconds: float,
+    runtime_proof_max_output_bytes: int,
     allow_existing_plan_dirs: bool,
 ) -> dict[str, Any]:
     command = [
@@ -193,6 +197,18 @@ def _emit_plan(
     ]
     if write_byte_closed_smoke:
         command.append("--write-byte-closed-smoke")
+    if write_pr95_public_archive_export or prove_pr95_runtime_consumption:
+        command.append("--write-pr95-public-archive-export")
+    if prove_pr95_runtime_consumption:
+        command.extend(
+            [
+                "--prove-pr95-runtime-consumption",
+                "--runtime-proof-timeout-seconds",
+                str(runtime_proof_timeout_seconds),
+                "--runtime-proof-max-output-bytes",
+                str(runtime_proof_max_output_bytes),
+            ]
+        )
     if allow_existing_plan_dirs:
         command.append("--allow-existing-output-dir")
     result = subprocess.run(
@@ -229,6 +245,10 @@ def build_pr95_mlx_optimizer_matrix_queue(
     base_channels: int,
     latent_dim: int,
     write_byte_closed_smoke: bool,
+    write_pr95_public_archive_export: bool,
+    prove_pr95_runtime_consumption: bool,
+    runtime_proof_timeout_seconds: float,
+    runtime_proof_max_output_bytes: int,
     local_cpu_concurrency: int,
     local_mlx_concurrency: int,
     local_cuda_concurrency: int,
@@ -303,6 +323,10 @@ def build_pr95_mlx_optimizer_matrix_queue(
                     latent_dim=latent_dim,
                     output_dir=plan_dir,
                     write_byte_closed_smoke=write_byte_closed_smoke,
+                    write_pr95_public_archive_export=write_pr95_public_archive_export,
+                    prove_pr95_runtime_consumption=prove_pr95_runtime_consumption,
+                    runtime_proof_timeout_seconds=runtime_proof_timeout_seconds,
+                    runtime_proof_max_output_bytes=runtime_proof_max_output_bytes,
                     allow_existing_plan_dirs=allow_existing_plan_dirs,
                 )
                 plans.append(plan)
@@ -362,6 +386,12 @@ def build_pr95_mlx_optimizer_matrix_queue(
         "base_channels": base_channels,
         "latent_dim": latent_dim,
         "write_byte_closed_smoke": write_byte_closed_smoke,
+        "write_pr95_public_archive_export": bool(
+            write_pr95_public_archive_export or prove_pr95_runtime_consumption
+        ),
+        "prove_pr95_runtime_consumption": prove_pr95_runtime_consumption,
+        "runtime_proof_timeout_seconds": runtime_proof_timeout_seconds,
+        "runtime_proof_max_output_bytes": runtime_proof_max_output_bytes,
         "plan_count": len(plan_records),
         "refusal_count": len(refusals),
         "plans": plan_records,
@@ -422,6 +452,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--base-channels", type=int, default=36)
     parser.add_argument("--latent-dim", type=int, default=28)
     parser.add_argument("--write-byte-closed-smoke", action="store_true")
+    parser.add_argument("--write-pr95-public-archive-export", action="store_true")
+    parser.add_argument("--prove-pr95-runtime-consumption", action="store_true")
+    parser.add_argument("--runtime-proof-timeout-seconds", type=float, default=900.0)
+    parser.add_argument(
+        "--runtime-proof-max-output-bytes",
+        type=int,
+        default=64 * 1024 * 1024,
+    )
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--queue-output", type=Path, required=True)
     parser.add_argument("--manifest-output", type=Path, required=True)
@@ -452,6 +490,13 @@ def main(argv: list[str] | None = None) -> int:
             base_channels=args.base_channels,
             latent_dim=args.latent_dim,
             write_byte_closed_smoke=args.write_byte_closed_smoke,
+            write_pr95_public_archive_export=(
+                args.write_pr95_public_archive_export
+                or args.prove_pr95_runtime_consumption
+            ),
+            prove_pr95_runtime_consumption=args.prove_pr95_runtime_consumption,
+            runtime_proof_timeout_seconds=args.runtime_proof_timeout_seconds,
+            runtime_proof_max_output_bytes=args.runtime_proof_max_output_bytes,
             local_cpu_concurrency=args.local_cpu_concurrency,
             local_mlx_concurrency=args.local_mlx_concurrency,
             local_cuda_concurrency=args.local_cuda_concurrency,

@@ -185,6 +185,10 @@ def test_harvest_uses_only_succeeded_representation_manifests(tmp_path: Path) ->
     assert harvested["schema"] == "optimizer_candidate_queue_v1"
     assert harvested["n_candidates"] == 1
     assert harvested["dispatch_ready_count"] == 0
+    assert harvested["score_claim"] is False
+    assert harvested["promotion_eligible"] is False
+    assert harvested["rank_or_kill_eligible"] is False
+    assert harvested["ready_for_exact_eval_dispatch"] is False
     assert harvested["top_k"][0]["candidate_id"] == "candidate_a"
     assert harvested["top_k"][0]["rank_score"] == 0.5
     assert harvested["harvest"]["schema"] == LOCAL_TRAINING_HARVEST_SCHEMA
@@ -303,6 +307,10 @@ def test_harvest_cli_writes_optimizer_candidate_queue(tmp_path: Path) -> None:
     assert summary["harvested_representation_manifest_count"] == 1
     assert harvested["n_candidates"] == 1
     assert harvested["dispatch_ready_count"] == 0
+    assert harvested["score_claim"] is False
+    assert harvested["promotion_eligible"] is False
+    assert harvested["rank_or_kill_eligible"] is False
+    assert harvested["ready_for_exact_eval_dispatch"] is False
     assert harvested["top_k"][0]["rank_score_field"] == (
         "seconds_per_step_cost_signal_not_score"
     )

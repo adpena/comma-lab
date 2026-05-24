@@ -62,6 +62,35 @@ def _json_equals_postcondition(path: str, key: str, value: Any) -> dict[str, Any
     return {"type": "json_equals", "path": path, "key": key, "equals": value}
 
 
+def _extra_artifact_postconditions_from_execution(
+    execution: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    label: str,
+) -> list[dict[str, Any]]:
+    raw_postconditions = execution.get("extra_artifact_postconditions")
+    if raw_postconditions is None:
+        return []
+    if not isinstance(raw_postconditions, list):
+        raise ExperimentQueueError(f"{label}.extra_artifact_postconditions must be a list")
+    normalized: list[dict[str, Any]] = []
+    for index, raw_condition in enumerate(raw_postconditions):
+        if not isinstance(raw_condition, Mapping):
+            raise ExperimentQueueError(
+                f"{label}.extra_artifact_postconditions[{index}] must be an object"
+            )
+        condition = dict(raw_condition)
+        path = condition.get("path")
+        if not isinstance(path, str) or not path.strip() or path.startswith("<"):
+            raise ExperimentQueueError(
+                f"{label}.extra_artifact_postconditions[{index}].path "
+                "must be a concrete path"
+            )
+        _resolve_output_path(path, repo_root=repo_root)
+        normalized.append(condition)
+    return normalized
+
+
 def _execution_from_plan(plan: Mapping[str, Any]) -> Mapping[str, Any]:
     execution = plan.get("recommended_execution")
     if not isinstance(execution, Mapping):
@@ -299,6 +328,7 @@ def build_local_training_execution_queue(
     seen_output_paths: set[str] = set()
     for index, plan in enumerate(selected):
         execution = _validate_plan(plan, index=index, repo_root=repo)
+        label = f"local_training_plan[{index}].recommended_execution"
         output_path = _resolve_output_path(execution.get("output_manifest"), repo_root=repo)
         output_key = output_path.expanduser().resolve(strict=False).as_posix()
         if output_key in seen_output_paths:
@@ -315,6 +345,11 @@ def build_local_training_execution_queue(
             _false_authority_postcondition(output_rel),
         ]
         artifact_paths = [output_rel]
+        extra_postconditions = _extra_artifact_postconditions_from_execution(
+            execution,
+            repo_root=repo,
+            label=label,
+        )
         if isinstance(representation_manifest, str) and representation_manifest:
             representation_path = _resolve_output_path(representation_manifest, repo_root=repo)
             representation_key = representation_path.expanduser().resolve(strict=False).as_posix()
@@ -369,6 +404,24 @@ def build_local_training_execution_queue(
                             optimizer_identity[identity_key],
                         )
                     )
+        extra_artifact_keys: set[str] = set()
+        for condition in extra_postconditions:
+            path_value = condition.get("path")
+            if isinstance(path_value, str):
+                extra_path = _resolve_output_path(path_value, repo_root=repo)
+                extra_key = extra_path.expanduser().resolve(strict=False).as_posix()
+                if extra_key in seen_output_paths and extra_key not in extra_artifact_keys:
+                    raise ExperimentQueueError(
+                        f"local_training_plan[{index}]: duplicate extra artifact "
+                        f"{extra_key!r}"
+                    )
+                seen_output_paths.add(extra_key)
+                extra_artifact_keys.add(extra_key)
+                extra_rel = _repo_rel(extra_path, repo)
+                condition = {**condition, "path": extra_rel}
+                if extra_rel not in artifact_paths:
+                    artifact_paths.append(extra_rel)
+            postconditions.append(condition)
         resource_kind = _resource_kind(execution)
         input_artifact_paths = [
             str(value)

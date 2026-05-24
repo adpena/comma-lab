@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -58,11 +59,15 @@ def _candidate_id(
     *,
     stage: int,
     seed: int,
+    steps: int,
     base_channels: int,
     optimizer_descriptor_id: str,
 ) -> str:
     descriptor = _slug(optimizer_descriptor_id)
-    return f"pr95_hnerv_mlx_stage{stage}_{descriptor}_seed{seed}_c{base_channels}"
+    return (
+        f"pr95_hnerv_mlx_stage{stage}_{descriptor}"
+        f"_seed{seed}_steps{steps}_c{base_channels}"
+    )
 
 
 def _stage_module(stage: int) -> str:
@@ -83,6 +88,10 @@ def _recommended_execution_command(
     latent_dim: int,
     output_dir: Path,
     write_byte_closed_smoke: bool,
+    write_pr95_public_archive_export: bool,
+    prove_pr95_runtime_consumption: bool,
+    runtime_proof_timeout_seconds: float,
+    runtime_proof_max_output_bytes: int,
     optimizer_descriptor_id: str,
 ) -> list[str]:
     command = [
@@ -110,7 +119,75 @@ def _recommended_execution_command(
     ]
     if write_byte_closed_smoke:
         command.append("--write-byte-closed-smoke")
+    if write_pr95_public_archive_export:
+        command.append("--write-pr95-public-archive-export")
+    if prove_pr95_runtime_consumption:
+        command.append("--prove-pr95-runtime-consumption")
+        command.extend(
+            [
+                "--runtime-proof-timeout-seconds",
+                str(runtime_proof_timeout_seconds),
+                "--runtime-proof-max-output-bytes",
+                str(runtime_proof_max_output_bytes),
+            ]
+        )
     return command
+
+
+def _json_equals_postcondition(path: str, key: str, value: Any) -> dict[str, Any]:
+    return {"type": "json_equals", "path": path, "key": key, "equals": value}
+
+
+def _json_false_authority_postcondition(path: str) -> dict[str, Any]:
+    return {"type": "json_false_authority", "path": path}
+
+
+def _extra_artifact_postconditions(
+    *,
+    output_dir: Path,
+    write_pr95_public_archive_export: bool,
+    prove_pr95_runtime_consumption: bool,
+) -> list[dict[str, Any]]:
+    postconditions: list[dict[str, Any]] = []
+    if write_pr95_public_archive_export:
+        export_path = _rel(output_dir / "pr95_public_archive_export.json")
+        archive_path = _rel(output_dir / "pr95_public_archive.zip")
+        postconditions.extend(
+            [
+                {"type": "path_exists", "path": archive_path},
+                {"type": "path_exists", "path": export_path},
+                _json_equals_postcondition(
+                    export_path,
+                    "schema",
+                    "pr95_hnerv_archive_export.v1",
+                ),
+                _json_equals_postcondition(
+                    export_path,
+                    "runtime_consumption_proof_present",
+                    prove_pr95_runtime_consumption,
+                ),
+                _json_false_authority_postcondition(export_path),
+            ]
+        )
+    if prove_pr95_runtime_consumption:
+        proof_path = _rel(output_dir / "runtime_consumption_proof.json")
+        postconditions.extend(
+            [
+                {"type": "path_exists", "path": proof_path},
+                _json_equals_postcondition(
+                    proof_path,
+                    "schema",
+                    "pr95_hnerv_public_runtime_consumption_proof.v1",
+                ),
+                _json_equals_postcondition(
+                    proof_path,
+                    "runtime_consumption_proven",
+                    True,
+                ),
+                _json_false_authority_postcondition(proof_path),
+            ]
+        )
+    return postconditions
 
 
 def _build_representation_training_plan(
@@ -124,6 +201,8 @@ def _build_representation_training_plan(
     latent_dim: int,
     output_dir: Path,
     write_byte_closed_smoke: bool,
+    write_pr95_public_archive_export: bool,
+    prove_pr95_runtime_consumption: bool,
     recommended_execution: dict[str, Any],
     optimizer_descriptor: dict[str, Any],
 ) -> dict[str, Any]:
@@ -146,6 +225,7 @@ def _build_representation_training_plan(
         candidate_id=_candidate_id(
             stage=stage,
             seed=seed,
+            steps=steps,
             base_channels=base_channels,
             optimizer_descriptor_id=optimizer_descriptor_id,
         ),
@@ -214,6 +294,8 @@ def _build_representation_training_plan(
                 "parameter_group_lr_policy_sha256"
             ],
             "byte_closed_smoke_archive_requested": write_byte_closed_smoke,
+            "pr95_public_archive_export_requested": write_pr95_public_archive_export,
+            "pr95_runtime_consumption_proof_requested": prove_pr95_runtime_consumption,
             "quality_comparable": False,
             "score_claim": False,
         },
@@ -292,6 +374,23 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             output_dir / "representation_training_manifest.json"
         ),
         "plan_manifest": _rel(output_dir / "plan.json"),
+        "archive_export_manifest": _rel(output_dir / "pr95_public_archive_export.json")
+        if args.write_pr95_public_archive_export or args.prove_pr95_runtime_consumption
+        else None,
+        "archive_export_zip": _rel(output_dir / "pr95_public_archive.zip")
+        if args.write_pr95_public_archive_export or args.prove_pr95_runtime_consumption
+        else None,
+        "runtime_consumption_proof": _rel(output_dir / "runtime_consumption_proof.json")
+        if args.prove_pr95_runtime_consumption
+        else None,
+        "extra_artifact_postconditions": _extra_artifact_postconditions(
+            output_dir=output_dir,
+            write_pr95_public_archive_export=(
+                args.write_pr95_public_archive_export
+                or args.prove_pr95_runtime_consumption
+            ),
+            prove_pr95_runtime_consumption=args.prove_pr95_runtime_consumption,
+        ),
         "optimizer_descriptor_id": optimizer_descriptor_id,
         "optimizer_config_sha256": optimizer_descriptor["config_sha256"],
         "optimizer_backend_status": optimizer_backend_status,
@@ -311,10 +410,20 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             latent_dim=args.latent_dim,
             output_dir=output_dir,
             write_byte_closed_smoke=args.write_byte_closed_smoke,
+            write_pr95_public_archive_export=(
+                args.write_pr95_public_archive_export
+                or args.prove_pr95_runtime_consumption
+            ),
+            prove_pr95_runtime_consumption=args.prove_pr95_runtime_consumption,
+            runtime_proof_timeout_seconds=args.runtime_proof_timeout_seconds,
+            runtime_proof_max_output_bytes=args.runtime_proof_max_output_bytes,
             optimizer_descriptor_id=optimizer_descriptor_id,
         ),
         "candidate_generation_only": True,
         **FALSE_AUTHORITY,
+    }
+    recommended_execution = {
+        key: value for key, value in recommended_execution.items() if value is not None
     }
     representation_plan = _build_representation_training_plan(
         stage=stage,
@@ -326,6 +435,11 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         latent_dim=args.latent_dim,
         output_dir=output_dir,
         write_byte_closed_smoke=args.write_byte_closed_smoke,
+        write_pr95_public_archive_export=(
+            args.write_pr95_public_archive_export
+            or args.prove_pr95_runtime_consumption
+        ),
+        prove_pr95_runtime_consumption=args.prove_pr95_runtime_consumption,
         recommended_execution=recommended_execution,
         optimizer_descriptor=optimizer_descriptor,
     )
@@ -335,6 +449,7 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         "candidate_id": _candidate_id(
             stage=stage,
             seed=args.seed,
+            steps=args.steps,
             base_channels=args.base_channels,
             optimizer_descriptor_id=optimizer_descriptor_id,
         ),
@@ -362,6 +477,10 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         ],
         "output_dir": _rel(output_dir),
         "write_byte_closed_smoke": bool(args.write_byte_closed_smoke),
+        "write_pr95_public_archive_export": bool(
+            args.write_pr95_public_archive_export or args.prove_pr95_runtime_consumption
+        ),
+        "prove_pr95_runtime_consumption": bool(args.prove_pr95_runtime_consumption),
         "recommended_execution": recommended_execution,
         "representation_training_plan": _rel(
             output_dir / "representation_training_plan.json"
@@ -382,6 +501,7 @@ def _representation_manifest(
     manifest: dict[str, Any],
     output_dir: Path,
     archive_summary: dict[str, Any] | None,
+    runtime_consumption_proof: dict[str, Any] | None,
 ) -> dict[str, Any]:
     stage_index = int(manifest["stage_index"])
     stage_module = str(manifest["stage_module"])
@@ -392,6 +512,35 @@ def _representation_manifest(
         else {}
     )
     sidecar_path = output_dir / "representation_training_manifest.json"
+    public_archive_export = (
+        manifest["pr95_public_archive_export"]
+        if isinstance(manifest.get("pr95_public_archive_export"), dict)
+        else None
+    )
+    archive_zip = public_archive_export or archive_summary
+    runtime_consumption_proven = bool(
+        runtime_consumption_proof
+        and runtime_consumption_proof.get("runtime_consumption_proven") is True
+    )
+    exact_blockers = [
+        blocker
+        for blocker in EXACT_READINESS_REFUSAL_BLOCKERS
+        if not (
+            runtime_consumption_proven
+            and blocker
+            in {
+                "byte_closed_smoke_archive_not_consumed_by_pr95_runtime",
+                "runtime_consumption_proof_missing",
+            }
+        )
+    ]
+    if runtime_consumption_proven:
+        exact_blockers.extend(
+            [
+                "runtime_consumption_smoke_is_not_score_authority",
+                "full_frame_inflate_parity_against_source_runtime_not_run",
+            ]
+        )
     return write_representation_training_probe_manifest(
         sidecar_path,
         candidate_id=candidate_id,
@@ -442,6 +591,7 @@ def _representation_manifest(
             "stage_module": stage_module,
             "stage_count": 1,
             "training_backend": "mlx",
+            "seed": manifest.get("seed"),
             "base_channels": manifest.get("architecture", {}).get("base_channels"),
             "latent_dim": manifest.get("architecture", {}).get("latent_dim"),
             "optimizer_descriptor_id": optimizer_recipe.get(
@@ -461,13 +611,15 @@ def _representation_manifest(
                 "parameter_group_fingerprint_sha256"
             ),
             "byte_closed_smoke_archive_emitted": archive_summary is not None,
+            "pr95_public_archive_export_emitted": public_archive_export is not None,
+            "pr95_runtime_consumption_proof_present": runtime_consumption_proven,
             "quality_comparable": False,
             "score_claim": False,
         },
-        archive_zip=archive_summary,
+        archive_zip=archive_zip,
         dispatch_blockers=[
             "pr95_hnerv_mlx_timing_smoke_is_proxy_signal",
-            *EXACT_READINESS_REFUSAL_BLOCKERS,
+            *exact_blockers,
         ],
         evidence_grade="[macOS-MLX research-signal]",
         source_anchor="PR95 HNeRV Muon native MLX timing smoke",
@@ -495,6 +647,8 @@ def _representation_manifest(
             "exact_readiness_refusal": manifest["exact_readiness_refusal"],
             "pytorch_export_parity": manifest["pytorch_export_parity"],
             "byte_closed_smoke_archive": archive_summary,
+            "pr95_public_archive_export": public_archive_export,
+            "runtime_consumption_proof": runtime_consumption_proof or {},
             "authority_contract": {
                 "score_claim": False,
                 "quality_authority": False,
@@ -545,6 +699,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--write-byte-closed-smoke",
         action="store_true",
         help="Emit a deterministic single-member ZIP smoke archive for queue plumbing.",
+    )
+    parser.add_argument(
+        "--write-pr95-public-archive-export",
+        action="store_true",
+        help="Emit a deterministic PR95-compatible archive.zip consumed by the public runtime.",
+    )
+    parser.add_argument(
+        "--prove-pr95-runtime-consumption",
+        action="store_true",
+        help="Run public PR95 inflate.sh against the emitted PR95 archive export.",
+    )
+    parser.add_argument("--runtime-proof-timeout-seconds", type=float, default=900.0)
+    parser.add_argument(
+        "--runtime-proof-max-output-bytes",
+        type=int,
+        default=64 * 1024 * 1024,
     )
     parser.add_argument(
         "--allow-existing-output-dir",
@@ -601,6 +771,12 @@ def main(argv: list[str] | None = None) -> int:
         base_channels=args.base_channels,
         latent_dim=args.latent_dim,
         optimizer_descriptor_id=args.optimizer_descriptor_id,
+        pr95_public_archive_export_path=(
+            output_dir / "pr95_public_archive.zip"
+            if args.write_pr95_public_archive_export
+            or args.prove_pr95_runtime_consumption
+            else None
+        ),
     )
     validate_runtime_profile_observation(manifest["runtime_profile"])
     archive_summary = (
@@ -610,6 +786,63 @@ def main(argv: list[str] | None = None) -> int:
     )
     if archive_summary is not None:
         manifest["byte_closed_smoke_archive"] = archive_summary
+    public_archive_export = (
+        manifest["pr95_public_archive_export"]
+        if isinstance(manifest.get("pr95_public_archive_export"), dict)
+        else None
+    )
+    if public_archive_export is not None:
+        _write_json(output_dir / "pr95_public_archive_export.json", public_archive_export)
+
+    runtime_consumption_proof: dict[str, Any] | None = None
+    if args.prove_pr95_runtime_consumption:
+        if public_archive_export is None:
+            raise SystemExit("--prove-pr95-runtime-consumption requires PR95 archive export")
+        proof_path = output_dir / "runtime_consumption_proof.json"
+        proof_result = subprocess.run(
+            [
+                sys.executable,
+                str(REPO_ROOT / "tools" / "prove_pr95_public_archive_runtime_consumption.py"),
+                "--archive-zip",
+                str(output_dir / "pr95_public_archive.zip"),
+                "--output-json",
+                str(proof_path),
+                "--timeout-seconds",
+                str(args.runtime_proof_timeout_seconds),
+                "--max-output-bytes",
+                str(args.runtime_proof_max_output_bytes),
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=args.runtime_proof_timeout_seconds + 30,
+        )
+        if proof_result.returncode != 0:
+            raise SystemExit(
+                "PR95 public runtime-consumption proof failed: "
+                f"{proof_result.stderr or proof_result.stdout}"
+            )
+        runtime_consumption_proof = json.loads(proof_path.read_text(encoding="utf-8"))
+        manifest["runtime_consumption_proof"] = runtime_consumption_proof
+        manifest["runtime_consumption_proof_path"] = _rel(proof_path)
+        public_archive_export["runtime_consumption_proof_present"] = True
+        public_archive_export["runtime_consumption_proof_path"] = _rel(proof_path)
+        _write_json(output_dir / "pr95_public_archive_export.json", public_archive_export)
+        manifest["runtime_profile"]["packet_compiler_bridge"][
+            "runtime_consumption_proof_present"
+        ] = runtime_consumption_proof.get("runtime_consumption_proven") is True
+        manifest["runtime_profile"]["packet_compiler_bridge"][
+            "runtime_consumption_proof_path"
+        ] = _rel(proof_path)
+        manifest["runtime_profile"]["packet_compiler_bridge"]["blockers"] = [
+            blocker
+            for blocker in manifest["runtime_profile"]["packet_compiler_bridge"].get(
+                "blockers",
+                [],
+            )
+            if blocker != "runtime_consumption_proof_missing"
+        ]
 
     _write_json(output_dir / "runtime_profile.json", manifest["runtime_profile"])
     _write_json(output_dir / "manifest.json", manifest)
@@ -617,6 +850,7 @@ def main(argv: list[str] | None = None) -> int:
         manifest=manifest,
         output_dir=output_dir,
         archive_summary=archive_summary,
+        runtime_consumption_proof=runtime_consumption_proof,
     )
     summary = {
         "schema": "pr95_hnerv_mlx_timing_smoke_run_summary_v1",
@@ -627,6 +861,8 @@ def main(argv: list[str] | None = None) -> int:
             output_dir / "representation_training_manifest.json"
         ),
         "byte_closed_smoke_archive": archive_summary,
+        "pr95_public_archive_export": public_archive_export,
+        "runtime_consumption_proof": runtime_consumption_proof,
         "candidate_id": manifest["candidate_id"],
         "seconds_per_step": manifest["timing"]["seconds_per_step"],
         "representation_manifest_schema": representation["schema"],

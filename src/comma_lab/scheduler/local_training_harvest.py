@@ -231,6 +231,14 @@ def harvest_local_training_optimizer_candidates(
         repo_root=repo,
         top_k=top_k,
     )
+    candidate_queue.update(
+        {
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    )
     candidate_queue["harvest"] = {
         "schema": LOCAL_TRAINING_HARVEST_SCHEMA,
         "source_queue_id": normalized_queue["queue_id"],

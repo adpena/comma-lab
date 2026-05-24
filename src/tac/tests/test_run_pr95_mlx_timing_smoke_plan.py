@@ -38,6 +38,10 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
             "--output-dir",
             str(output_dir),
             "--write-byte-closed-smoke",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-max-output-bytes",
+            "7000000",
             "--plan-only",
         ],
         cwd=REPO_ROOT,
@@ -74,6 +78,21 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
     assert "--optimizer-descriptor-id" in execution["python_command_args"]
     assert "--allow-existing-output-dir" in execution["python_command_args"]
     assert "--write-byte-closed-smoke" in execution["python_command_args"]
+    assert "--write-pr95-public-archive-export" in execution["python_command_args"]
+    assert "--prove-pr95-runtime-consumption" in execution["python_command_args"]
+    assert execution["archive_export_manifest"].endswith(
+        "pr95_public_archive_export.json"
+    )
+    assert execution["runtime_consumption_proof"].endswith(
+        "runtime_consumption_proof.json"
+    )
+    assert any(
+        condition["type"] == "json_equals"
+        and condition["path"].endswith("runtime_consumption_proof.json")
+        and condition["key"] == "runtime_consumption_proven"
+        and condition["equals"] is True
+        for condition in execution["extra_artifact_postconditions"]
+    )
     assert representation_plan["schema"] == "representation_training_probe_plan_v1"
     assert representation_plan["candidate_params"]["stage_module"] == (
         "stage8_muon_finetune"
@@ -104,6 +123,13 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
         condition["type"] == "json_equals"
         and condition["path"].endswith("representation_training_manifest.json")
         and condition["equals"] == "representation_training_probe_manifest_v1"
+        for condition in step["postconditions"]
+    )
+    assert any(
+        condition["type"] == "json_equals"
+        and condition["path"].endswith("runtime_consumption_proof.json")
+        and condition["key"] == "runtime_consumption_proven"
+        and condition["equals"] is True
         for condition in step["postconditions"]
     )
 

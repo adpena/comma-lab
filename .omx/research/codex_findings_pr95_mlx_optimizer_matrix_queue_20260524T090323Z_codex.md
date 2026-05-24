@@ -26,6 +26,36 @@ The generated queue validates with local auto-parallelism of 4:
 
 `experiments/results/pr95_mlx_optimizer_matrix_queue_20260524T090145Z/experiment_queue.json`
 
+The queue path now also supports public-runtime byte closure:
+
+- `--write-pr95-public-archive-export` writes a deterministic PR95-compatible
+  `pr95_public_archive.zip` plus `pr95_public_archive_export.json`.
+- `--prove-pr95-runtime-consumption` runs the public PR95 `inflate.sh` and
+  records `runtime_consumption_proof.json`.
+- The local-training queue watches those artifacts as first-class
+  postconditions, including `runtime_consumption_proven=true`.
+
+Live end-to-end artifact:
+
+`experiments/results/pr95_mlx_optimizer_matrix_runtime_proof_20260524T091705Z/`
+
+That artifact executed one scheduler-owned local-MLX cell:
+
+- Queue ID: `pr95_mlx_matrix_runtime_proof_20260524T091705Z`
+- Candidate: `pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps1_c4`
+- Archive export: `pr95_hnerv_archive_export.v1`
+- Archive ZIP bytes: `8537`
+- Archive ZIP SHA-256:
+  `00267f7e3f9c4d7d49d2a6f57030aeef85b750a94bc5886933cea6f965ed5f22`
+- Export summary records `runtime_consumption_proof_present=true`
+- Runtime proof: `pr95_hnerv_public_runtime_consumption_proof.v1`
+- Runtime consumed raw bytes: `6104016 / 6104016`
+- Runtime consumed raw SHA-256:
+  `4e4b656d7cdd7b33e784885a7d77de03e6170f6aab03cf99c528c3886d14b222`
+- Harvest output:
+  `experiments/results/pr95_mlx_optimizer_matrix_runtime_proof_20260524T091705Z/optimizer_candidate_queue.json`
+- Harvest dispatch-ready count: `0`
+
 ## Guardrails
 
 - Descriptor-only and incompatible optimizer recipes are recorded as refused
@@ -38,6 +68,8 @@ The generated queue validates with local auto-parallelism of 4:
 - Queue postconditions now bind completed sidecars to expected
   `candidate_id`, `stage_index`, `seed`, optimizer descriptor, optimizer config
   hash, and parameter-group policy identity.
+- Queue postconditions can bind PR95 public archive export and runtime proof
+  artifacts without treating those artifacts as score authority.
 - Local-training harvest now rejects completed sidecars whose identity differs
   from the queue experiment metadata.
 - All matrix, plan, queue, and harvest artifacts remain false-authority:
@@ -55,10 +87,10 @@ full public-packet inflate parity and not score authority.
 
 ## Verification
 
-- `.venv/bin/python -m pytest src/tac/tests/test_pr95_hnerv_mlx.py src/tac/tests/test_pr95_mlx_optimizer_matrix_queue.py src/tac/tests/test_local_training_execution_queue.py src/tac/tests/test_local_training_optimizer_candidate_harvest.py src/tac/tests/test_run_pr95_mlx_timing_smoke_plan.py -q` (`36 passed`)
-- `.venv/bin/python -m pytest src/tac/tests/test_optimizer_scheduler_registry.py src/tac/tests/test_run_pr95_mlx_timing_smoke.py src/tac/tests/test_run_pr95_mlx_timing_smoke_plan.py src/tac/tests/test_pr95_hnerv_mlx.py src/tac/tests/test_pr95_mlx_optimizer_matrix_queue.py src/tac/tests/test_local_training_execution_queue.py src/tac/tests/test_local_training_optimizer_candidate_harvest.py src/tac/tests/test_local_training_runtime_profile.py src/tac/tests/test_local_training_runtime_profile_cli.py src/tac/tests/test_pr95_muon_local_training_integration.py src/tac/tests/test_run_pr95_local_training_probe.py -q` (`72 passed`)
-- `.venv/bin/ruff check tools/build_pr95_mlx_optimizer_matrix_queue.py tools/prove_pr95_public_archive_runtime_consumption.py src/comma_lab/scheduler/local_training_queue.py src/comma_lab/scheduler/local_training_harvest.py src/tac/tests/test_pr95_mlx_optimizer_matrix_queue.py src/tac/tests/test_local_training_execution_queue.py src/tac/tests/test_local_training_optimizer_candidate_harvest.py src/tac/tests/test_pr95_hnerv_mlx.py`
+- `.venv/bin/python -m pytest src/tac/tests/test_pr95_hnerv_mlx.py src/tac/tests/test_pr95_mlx_optimizer_matrix_queue.py src/tac/tests/test_local_training_execution_queue.py src/tac/tests/test_local_training_optimizer_candidate_harvest.py src/tac/tests/test_run_pr95_mlx_timing_smoke.py src/tac/tests/test_run_pr95_mlx_timing_smoke_plan.py -q` (`38 passed`)
+- `.venv/bin/ruff check src/tac/local_acceleration/pr95_hnerv_mlx.py tools/run_pr95_mlx_timing_smoke.py tools/build_pr95_mlx_optimizer_matrix_queue.py src/comma_lab/scheduler/local_training_queue.py src/tac/tests/test_run_pr95_mlx_timing_smoke.py src/tac/tests/test_run_pr95_mlx_timing_smoke_plan.py src/tac/tests/test_pr95_mlx_optimizer_matrix_queue.py`
 - `.venv/bin/python tools/experiment_queue.py --queue experiments/results/pr95_mlx_optimizer_matrix_queue_20260524T090145Z/experiment_queue.json validate`
+- `.venv/bin/python tools/harvest_local_training_optimizer_candidates.py --queue experiments/results/pr95_mlx_optimizer_matrix_runtime_proof_20260524T091705Z/queue.json --state experiments/results/pr95_mlx_optimizer_matrix_runtime_proof_20260524T091705Z/queue_state.sqlite --repo-root . --output experiments/results/pr95_mlx_optimizer_matrix_runtime_proof_20260524T091705Z/optimizer_candidate_queue.json`
 
 ## Next Engineering Step
 
@@ -70,4 +102,5 @@ readiness, then implement `packet_member_recompress_v1`,
 For the PR95 reproduction lane, the next source-faithful blockers are full
 source-runtime versus rebuilt-runtime inflate parity, PR95-specific MLX to
 PyTorch forward parity, GPU MLX drift classification, and connecting MLX-trained
-outputs to the real PR95 archive grammar rather than JSON smoke archives.
+outputs to full contest-video PR95 archive grammar rather than one-pair
+synthetic runtime smokes.

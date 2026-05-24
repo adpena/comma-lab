@@ -40,6 +40,12 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
             "--output-dir",
             str(output_dir),
             "--write-byte-closed-smoke",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-max-output-bytes",
+            "7000000",
+            "--runtime-proof-timeout-seconds",
+            "180",
         ],
         cwd=REPO_ROOT,
         text=True,
@@ -59,10 +65,25 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
             encoding="utf-8"
         )
     )
+    export_summary = json.loads(
+        (output_dir / "pr95_public_archive_export.json").read_text(encoding="utf-8")
+    )
+    runtime_proof = json.loads(
+        (output_dir / "runtime_consumption_proof.json").read_text(encoding="utf-8")
+    )
 
     assert summary["ok"] is True
     assert summary["byte_closed_smoke_archive"]["member"] == "0.bin"
+    assert summary["pr95_public_archive_export"]["schema"] == (
+        "pr95_hnerv_archive_export.v1"
+    )
+    assert export_summary["runtime_consumption_proof_present"] is True
+    assert summary["runtime_consumption_proof"]["runtime_consumption_proven"] is True
     assert manifest["stage_module"] == "stage1_v328_ce"
+    assert manifest["pr95_public_archive_export"]["sha256"] == export_summary["sha256"]
+    assert manifest["runtime_consumption_proof"]["raw_output_bytes"] == (
+        runtime_proof["expected_raw_bytes"]
+    )
     assert manifest["optimizer_recipe"]["optimizer_descriptor_id"] == (
         "pr95_stage1_adamw_baseline_mlx"
     )
@@ -79,6 +100,9 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     assert representation["byte_closed_smoke_archive"]["sha256"] == summary[
         "byte_closed_smoke_archive"
     ]["sha256"]
+    assert representation["archive_zip"]["sha256"] == export_summary["sha256"]
+    assert representation["pr95_public_archive_export"]["sha256"] == export_summary["sha256"]
+    assert representation["runtime_consumption_proof"]["runtime_consumption_proven"] is True
     validate_representation_training_manifest(representation)
     row = adapt_representation_training_manifest_to_candidate(
         representation,
@@ -87,7 +111,10 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     )
     timing = row["consumer_payload"]["representation_training_probe"]["timing_smoke"]
     assert timing["runtime_profile_summary"]["best_local_backend"] == "mlx"
-    assert "runtime_consumption_proof_missing" in row["dispatch_blockers"]
+    assert "runtime_consumption_proof_missing" not in row["dispatch_blockers"]
+    assert "full_frame_inflate_parity_against_source_runtime_not_run" in row[
+        "dispatch_blockers"
+    ]
     assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in row[
         "dispatch_blockers"
     ]

@@ -243,6 +243,16 @@ manifests, but they cannot claim score, rank/kill candidates, promote archives,
 or dispatch exact eval until byte-closed export, receiver proof, runtime
 consumption proof, PyTorch parity, and contest CPU/CUDA auth anchors exist.
 
+The same PR95 matrix path can also request byte-closed public-runtime artifacts:
+`--write-pr95-public-archive-export` makes the worker emit a deterministic
+PR95-compatible single-member archive, and `--prove-pr95-runtime-consumption`
+runs the public PR95 `inflate.sh` against that archive. The queue records these
+as explicit postconditions on `pr95_public_archive_export.json`,
+`pr95_public_archive.zip`, and `runtime_consumption_proof.json`. A passing proof
+removes the local "runtime proof missing" observation from the cost-signal row,
+but the row remains non-promotable until full-frame parity, receiver proof, and
+exact CPU/CUDA auth eval are present.
+
 ## Exact-ready consumer
 
 `tools/build_materializer_exact_eval_consumer.py` bridges materializer exact

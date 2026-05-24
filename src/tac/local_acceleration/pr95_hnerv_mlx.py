@@ -567,12 +567,18 @@ def write_pr95_public_archive_zip(
         zf.comment = b""
         zf.writestr(info, member_bytes)
     reparsed = parse_pr95_public_archive_zip(output_zip_path, member_name=member_name)
+    archive_zip_bytes = output_zip_path.stat().st_size
+    archive_zip_sha256 = _sha256_file(output_zip_path)
     return {
         "schema": PR95_ARCHIVE_EXPORT_SCHEMA,
         "archive_zip_path": output_zip_path.as_posix(),
-        "archive_zip_bytes": output_zip_path.stat().st_size,
-        "archive_zip_sha256": _sha256_file(output_zip_path),
+        "archive_zip_bytes": archive_zip_bytes,
+        "archive_zip_sha256": archive_zip_sha256,
+        "path": output_zip_path.as_posix(),
+        "bytes": archive_zip_bytes,
+        "sha256": archive_zip_sha256,
         "member_name": member_name,
+        "member": member_name,
         "member_bytes": len(member_bytes),
         "member_sha256": _sha256_bytes(member_bytes),
         "member_compress_type": int(zipfile.ZIP_STORED),
@@ -1453,6 +1459,7 @@ def run_pr95_mlx_synthetic_timing_smoke(
     base_channels: int = 36,
     latent_dim: int = 28,
     optimizer_descriptor_id: str | None = None,
+    pr95_public_archive_export_path: Path | None = None,
 ) -> dict[str, Any]:
     """Run a local MLX timing smoke against synthetic targets."""
 
@@ -1520,7 +1527,8 @@ def run_pr95_mlx_synthetic_timing_smoke(
     split = partition_pr95_mlx_parameter_names(bundle.parameters())
     descriptor_fragment = _safe_descriptor_fragment(stage.optimizer_descriptor_id)
     profile_id = (
-        f"pr95_hnerv_mlx_stage{stage_index}_{descriptor_fragment}_seed{seed}_steps{steps}"
+        f"pr95_hnerv_mlx_stage{stage_index}_{descriptor_fragment}"
+        f"_seed{seed}_steps{steps}_c{base_channels}"
     )
     runtime_profile = {
         "schema": "trainer_runtime_profile_observation.v1",
@@ -1634,6 +1642,36 @@ def run_pr95_mlx_synthetic_timing_smoke(
         },
         **FALSE_AUTHORITY,
     }
+    if pr95_public_archive_export_path is not None:
+        public_archive_export = write_pr95_public_archive_zip(
+            pytorch_state_dict_from_mlx(bundle.decoder),
+            np.asarray(bundle.latents).astype(np.float32, copy=False),
+            meta={
+                "n_pairs": synthetic_pairs,
+                "latent_dim": latent_dim,
+                "base_channels": base_channels,
+                "eval_size": [384, 512],
+            },
+            output_zip_path=Path(pr95_public_archive_export_path),
+        )
+        runtime_profile["packet_compiler_bridge"].update(
+            {
+                "archive_export_schema": PR95_ARCHIVE_EXPORT_SCHEMA,
+                "byte_closed_contest_archive_export_present": True,
+                "byte_closed_contest_archive_export_path": public_archive_export[
+                    "archive_zip_path"
+                ],
+                "byte_closed_contest_archive_export_sha256": public_archive_export[
+                    "archive_zip_sha256"
+                ],
+            }
+        )
+        runtime_profile["packet_compiler_bridge"]["blockers"] = [
+            blocker
+            for blocker in runtime_profile["packet_compiler_bridge"].get("blockers", [])
+            if blocker != "byte_closed_contest_archive_export_missing"
+        ]
+        manifest["pr95_public_archive_export"] = public_archive_export
     return manifest
 
 
