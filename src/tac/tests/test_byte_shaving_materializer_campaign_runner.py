@@ -59,6 +59,34 @@ def test_materializer_campaign_runner_builds_queue_owned_followup_command(
     assert "--allow-paid-dispatch-queue" not in command
 
 
+def test_materializer_campaign_runner_can_auto_generate_contexts_from_artifact_map(
+    tmp_path: Path,
+) -> None:
+    artifact_map = tmp_path / "artifact_map.json"
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--materializer-artifact-map",
+            str(artifact_map),
+            "--run-dir",
+            str(tmp_path / "campaign"),
+            "--materializer-contexts-fail-if-blocked",
+        ]
+    )
+
+    command = runner._build_queue_command(args, run_dir=tmp_path / "campaign")
+
+    assert "--materializer-artifact-map" in command
+    assert str(artifact_map) in command
+    assert "--materializer-contexts-out" in command
+    assert str(tmp_path / "campaign" / "materializer_contexts.json") in command
+    assert "--materializer-context-default-output-root" in command
+    assert str(tmp_path / "campaign" / "materializer_outputs") in command
+    assert "--materializer-contexts-fail-if-blocked" in command
+    assert "--materializer-contexts" not in command
+
+
 def test_materializer_campaign_runner_uses_policy_cold_store_default_for_move_preflight(
     tmp_path: Path,
 ) -> None:

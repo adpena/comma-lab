@@ -27,6 +27,11 @@ from tac.optimization.byte_shaving_campaign import (
     PLAN_SCHEMA,
 )
 from tac.optimization.decoder_q_constants import FEC6_PAIR_COUNT
+from tac.optimization.family_agnostic_materializers import (
+    ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+    PACKET_MEMBER_RECOMPRESS_SCHEMA,
+    TENSOR_FACTORIZE_SCHEMA,
+)
 from tac.optimization.inverse_scorer_cell_chain import (
     CHAIN_MANIFEST_NAME as INVERSE_SCORER_CELL_CHAIN_MANIFEST,
 )
@@ -40,11 +45,15 @@ from tac.optimization.proxy_candidate_contract import (
 )
 
 from .byte_shaving_materializer_registry import (
+    ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER,
+    ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
     DQS1_PAIRSET_TARGET_KIND,
     INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER,
     INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
     INVERSE_SCORER_CELL_TARGET_KIND,
+    PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     REGISTRY_SCHEMA,
+    TENSOR_FACTORIZE_TARGET_KIND,
     known_materializer_target_kinds,
     registry_manifest,
     resolve_materializer,
@@ -73,6 +82,7 @@ ACTION_SUMMARY_SCHEMA = "cross_family_candidate_portfolio_action_summary.v1"
 PORTFOLIO_SCHEMA = "byte_shaving_campaign_dqs1_operator_portfolio.v1"
 TOOL_NAME = "comma_lab.scheduler.byte_shaving_campaign_queue"
 BYTE_RANGE_CHAIN_TOOL = "tools/run_byte_range_entropy_recode_chain.py"
+FAMILY_AGNOSTIC_MATERIALIZER_TOOL = "tools/run_family_agnostic_materializer.py"
 INVERSE_ACTION_FUNCTIONAL_TOOL = "tools/build_inverse_steganalysis_action_functional.py"
 INVERSE_SCORER_CELL_TOOL = "tools/materialize_inverse_scorer_cell_candidate.py"
 INVERSE_SCORER_CELL_CHAIN_TOOL = "tools/run_inverse_scorer_cell_candidate_chain.py"
@@ -665,6 +675,27 @@ def _path_list_context_value(context: Mapping[str, Any], key: str) -> list[str]:
     return []
 
 
+def _string_list_context_value(context: Mapping[str, Any], key: str) -> list[str]:
+    value = context.get(key)
+    if isinstance(value, (str, int)):
+        text = str(value).strip()
+        return [text] if text else []
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray, str)):
+        return ordered_unique(str(item).strip() for item in value if str(item).strip())
+    return []
+
+
+def _context_string_any(
+    context: Mapping[str, Any],
+    keys: Sequence[str],
+) -> str | None:
+    for key in keys:
+        value = context.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
 def _command_flag_values(command: Sequence[str], flags: set[str]) -> list[str]:
     values: list[str] = []
     index = 0
@@ -1067,8 +1098,185 @@ def _inverse_scorer_cell_candidate_command(
     }
 
 
+def _family_agnostic_materializer_command(
+    context: Mapping[str, Any],
+    *,
+    target_kind: str,
+) -> tuple[list[str], list[str], dict[str, Any]]:
+    blockers: list[str] = _string_list_context_value(context, "context_blockers")
+    archive_path = _path_context_value(context, "archive_path")
+    if archive_path is None:
+        archive_path = _path_context_value(context, "source_archive")
+    if archive_path is None:
+        blockers.append("materializer_context_missing:archive_path")
+    output_archive = _path_context_value(context, "output_archive")
+    if output_archive is None:
+        blockers.append("materializer_context_missing:output_archive")
+    output_manifest = _path_context_value(context, "output_manifest")
+    if output_manifest is None:
+        output_manifest = _path_context_value(context, "manifest_out")
+    if output_manifest is None:
+        output_manifest = _path_context_value(context, "json_out")
+    if output_manifest is None and output_archive is not None:
+        output_manifest = Path(output_archive).with_suffix(".json").as_posix()
+
+    input_paths: list[str] = []
+    if archive_path is not None:
+        input_paths.append(archive_path)
+    if target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND:
+        section_manifest = _path_context_value(context, "section_manifest")
+        if section_manifest is None:
+            blockers.append("materializer_context_missing:section_manifest")
+        else:
+            input_paths.append(section_manifest)
+    elif target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
+        packet_member_manifest = _path_context_value(context, "packet_member_manifest")
+        if packet_member_manifest is not None:
+            input_paths.append(packet_member_manifest)
+    elif target_kind == TENSOR_FACTORIZE_TARGET_KIND:
+        tensor_manifest = _path_context_value(context, "tensor_manifest")
+        if tensor_manifest is None:
+            blockers.append("materializer_context_missing:tensor_manifest")
+        else:
+            input_paths.append(tensor_manifest)
+        factorization_contract = _path_context_value(context, "factorization_contract")
+        if factorization_contract is None and _finite_int(context.get("rank")) is None:
+            blockers.append("materializer_context_missing:factorization_contract_or_rank")
+        elif factorization_contract is not None:
+            input_paths.append(factorization_contract)
+    else:
+        blockers.append(f"family_agnostic_materializer_target_unknown:{target_kind}")
+    if blockers:
+        return [], blockers, {}
+
+    assert archive_path is not None
+    assert output_archive is not None
+    assert output_manifest is not None
+    command = [
+        ".venv/bin/python",
+        FAMILY_AGNOSTIC_MATERIALIZER_TOOL,
+        "--target-kind",
+        target_kind,
+        "--archive-path",
+        archive_path,
+        "--output-archive",
+        output_archive,
+        "--output-manifest",
+        output_manifest,
+    ]
+    runtime_proof = _path_context_value(context, "runtime_consumption_proof")
+    if runtime_proof is not None:
+        command.extend(["--runtime-consumption-proof", runtime_proof])
+        input_paths.append(runtime_proof)
+    min_free_bytes = _finite_int(context.get("min_free_bytes"))
+    if min_free_bytes is not None:
+        command.extend(["--min-free-bytes", str(min_free_bytes)])
+    if context.get("allow_size_regression") is True or context.get("allow_rate_regression") is True:
+        command.append("--allow-size-regression")
+    if context.get("allow_overwrite") is True:
+        command.append("--allow-overwrite")
+        expected_output_sha = _context_string_any(
+            context,
+            ("expected_existing_output_sha256", "expected_output_sha256"),
+        )
+        if expected_output_sha is not None:
+            command.extend(["--expected-existing-output-sha256", expected_output_sha])
+        expected_manifest_sha = _context_string_any(
+            context,
+            ("expected_existing_manifest_sha256", "expected_manifest_sha256"),
+        )
+        if expected_manifest_sha is not None:
+            command.extend(["--expected-existing-manifest-sha256", expected_manifest_sha])
+
+    if target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND:
+        section_manifest = _path_context_value(context, "section_manifest")
+        assert section_manifest is not None
+        command.extend(["--section-manifest", section_manifest])
+        section_names = _string_list_context_value(context, "target_sections")
+        section_names.extend(_string_list_context_value(context, "target_section"))
+        section_names.extend(_string_list_context_value(context, "section_names"))
+        section_names.extend(_string_list_context_value(context, "section_name"))
+        for section in ordered_unique(section_names):
+            command.extend(["--section-name", section])
+        qualities = _string_list_context_value(context, "brotli_quality")
+        qualities.extend(_string_list_context_value(context, "brotli_qualities"))
+        qualities.extend(_string_list_context_value(context, "quality"))
+        qualities.extend(_string_list_context_value(context, "qualities"))
+        for quality in ordered_unique(qualities):
+            command.extend(["--brotli-quality", quality])
+    elif target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
+        packet_member_manifest = _path_context_value(context, "packet_member_manifest")
+        if packet_member_manifest is not None:
+            command.extend(["--packet-member-manifest", packet_member_manifest])
+        member_name = _context_string_any(
+            context,
+            ("member_name", "archive_member_name", "packet_member_name"),
+        )
+        if member_name is not None:
+            command.extend(["--member-name", member_name])
+        methods = _string_list_context_value(context, "zip_compression_method")
+        methods.extend(_string_list_context_value(context, "zip_compression_methods"))
+        methods.extend(_string_list_context_value(context, "compression_method"))
+        for method in ordered_unique(methods):
+            command.extend(["--zip-compression-method", method])
+        levels = _string_list_context_value(context, "zip_compresslevel")
+        levels.extend(_string_list_context_value(context, "zip_compresslevels"))
+        levels.extend(_string_list_context_value(context, "compresslevel"))
+        for level in ordered_unique(levels):
+            command.extend(["--zip-compresslevel", level])
+    elif target_kind == TENSOR_FACTORIZE_TARGET_KIND:
+        tensor_manifest = _path_context_value(context, "tensor_manifest")
+        assert tensor_manifest is not None
+        command.extend(["--tensor-manifest", tensor_manifest])
+        factorization_contract = _path_context_value(context, "factorization_contract")
+        if factorization_contract is not None:
+            command.extend(["--factorization-contract", factorization_contract])
+        rank = _finite_int(context.get("rank"))
+        if rank is not None:
+            command.extend(["--rank", str(rank)])
+
+    return command, [], {
+        "artifact_paths": [output_archive, output_manifest],
+        "input_artifact_paths": ordered_unique(input_paths),
+        "pullback_artifact_paths": [output_archive, output_manifest],
+        "include_postcondition_paths": True,
+        "family_agnostic_materializer_contract": {
+            "schema": "family_agnostic_materializer_command_contract.v1",
+            "target_kind": target_kind,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    }
+
+
 def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
     blockers = ["materializer_work_queue_local_proof_chain_only"]
+    if target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND:
+        blockers.extend(
+            [
+                "archive_section_entropy_recode_requires_archive_preflight",
+                "archive_section_entropy_recode_requires_same_runtime_inflate_parity",
+                "archive_section_entropy_recode_exact_readiness_bridge_not_yet_wired",
+            ]
+        )
+    if target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
+        blockers.extend(
+            [
+                "packet_member_recompress_requires_archive_preflight",
+                "packet_member_recompress_requires_runtime_consumption_proof",
+                "packet_member_recompress_exact_readiness_bridge_not_yet_wired",
+            ]
+        )
+    if target_kind == TENSOR_FACTORIZE_TARGET_KIND:
+        blockers.extend(
+            [
+                "tensor_factorize_requires_cooperative_receiver",
+                "tensor_factorize_requires_runtime_consumption_proof",
+                "tensor_factorize_exact_readiness_bridge_not_yet_wired",
+            ]
+        )
     if target_kind == INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND:
         blockers.extend(
             [
@@ -1308,6 +1516,77 @@ def build_materializer_work_queue(
                     "include_postcondition_paths": True,
                 }
         elif (
+            unit_kind == "archive_section"
+            and operation_family == "section_entropy_recode"
+            and target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
+        ):
+            command, command_blockers, telemetry = (
+                _family_agnostic_materializer_command(
+                    context,
+                    target_kind=ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+                )
+            )
+            blockers.extend(command_blockers)
+            manifest_out = _path_context_value(context, "output_manifest")
+            if manifest_out is None:
+                manifest_out = _path_context_value(context, "manifest_out")
+            if manifest_out is None:
+                manifest_out = _path_context_value(context, "json_out")
+            output_archive = _path_context_value(context, "output_archive")
+            if manifest_out is None and output_archive is not None:
+                manifest_out = Path(output_archive).with_suffix(".json").as_posix()
+            if command and manifest_out is not None:
+                postconditions = _materializer_candidate_postconditions(
+                    manifest_path=manifest_out,
+                    schema=ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+                )
+        elif (
+            unit_kind == "packet_member"
+            and operation_family == "member_recompress"
+            and target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND
+        ):
+            command, command_blockers, telemetry = (
+                _family_agnostic_materializer_command(
+                    context,
+                    target_kind=PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                )
+            )
+            blockers.extend(command_blockers)
+            manifest_out = _path_context_value(context, "output_manifest")
+            if manifest_out is None:
+                manifest_out = _path_context_value(context, "manifest_out")
+            output_archive = _path_context_value(context, "output_archive")
+            if manifest_out is None and output_archive is not None:
+                manifest_out = Path(output_archive).with_suffix(".json").as_posix()
+            if command and manifest_out is not None:
+                postconditions = _materializer_candidate_postconditions(
+                    manifest_path=manifest_out,
+                    schema=PACKET_MEMBER_RECOMPRESS_SCHEMA,
+                )
+        elif (
+            unit_kind == "tensor"
+            and operation_family == "factorize_tensor"
+            and target_kind == TENSOR_FACTORIZE_TARGET_KIND
+        ):
+            command, command_blockers, telemetry = (
+                _family_agnostic_materializer_command(
+                    context,
+                    target_kind=TENSOR_FACTORIZE_TARGET_KIND,
+                )
+            )
+            blockers.extend(command_blockers)
+            manifest_out = _path_context_value(context, "output_manifest")
+            if manifest_out is None:
+                manifest_out = _path_context_value(context, "manifest_out")
+            output_archive = _path_context_value(context, "output_archive")
+            if manifest_out is None and output_archive is not None:
+                manifest_out = Path(output_archive).with_suffix(".json").as_posix()
+            if command and manifest_out is not None:
+                postconditions = _materializer_candidate_postconditions(
+                    manifest_path=manifest_out,
+                    schema=TENSOR_FACTORIZE_SCHEMA,
+                )
+        elif (
             unit_kind == "scorer_inverse_surface_cell"
             and operation_family == "probe_inverse_scorer_surface_cell"
             and target_kind == INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND
@@ -1512,6 +1791,16 @@ def _planning_only_exact_readiness_skip_reason(row: Mapping[str, Any]) -> str | 
         or materializer_id == INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER
     ):
         return "planning_only_inverse_action_functional_not_candidate_archive"
+    if (
+        target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
+        or materializer_id == ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER
+    ):
+        return "archive_section_entropy_recode_exact_readiness_bridge_not_yet_wired"
+    if target_kind in {
+        PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        TENSOR_FACTORIZE_TARGET_KIND,
+    }:
+        return "family_agnostic_candidate_exact_readiness_bridge_not_yet_wired"
     return None
 
 

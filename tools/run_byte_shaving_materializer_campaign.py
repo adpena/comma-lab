@@ -309,6 +309,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--campaign-plan-max-k", type=int, default=None)
     parser.add_argument("--materializer-contexts", type=Path, default=None)
     parser.add_argument(
+        "--materializer-artifact-map",
+        type=Path,
+        default=None,
+        help=(
+            "artifact/custody hints used to auto-generate materializer contexts "
+            "inside the campaign run directory"
+        ),
+    )
+    parser.add_argument(
+        "--materializer-context-default-output-root",
+        type=Path,
+        default=None,
+        help=(
+            "default output root for generated materializer contexts; defaults "
+            "to RUN_DIR/materializer_outputs"
+        ),
+    )
+    parser.add_argument("--materializer-contexts-fail-if-blocked", action="store_true")
+    parser.add_argument(
         "--run-dir",
         type=Path,
         default=None,
@@ -677,6 +696,21 @@ def _build_queue_command(
     ]
     if args.materializer_contexts is not None:
         command.extend(["--materializer-contexts", _display_path(_resolve(args.materializer_contexts))])
+    if args.materializer_artifact_map is not None:
+        command.extend([
+            "--materializer-artifact-map",
+            _display_path(_resolve(args.materializer_artifact_map)),
+            "--materializer-contexts-out",
+            _display_path(run_dir / "materializer_contexts.json"),
+            "--materializer-context-default-output-root",
+            _display_path(
+                _resolve(args.materializer_context_default_output_root)
+                if args.materializer_context_default_output_root is not None
+                else run_dir / "materializer_outputs"
+            ),
+        ])
+        if args.materializer_contexts_fail_if_blocked:
+            command.append("--materializer-contexts-fail-if-blocked")
     if args.lane_id:
         command.extend(["--materializer-execution-lane-id", str(args.lane_id)])
     if args.materializer_execution_limit is not None:
@@ -860,6 +894,10 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(
             "--plan is mutually exclusive with high-level action sources; "
             "start from one authority surface per run"
+        )
+    if args.materializer_contexts is not None and args.materializer_artifact_map is not None:
+        raise SystemExit(
+            "--materializer-contexts and --materializer-artifact-map are mutually exclusive"
         )
     if args.candidate_limit < 1:
         raise SystemExit("--candidate-limit must be >= 1")

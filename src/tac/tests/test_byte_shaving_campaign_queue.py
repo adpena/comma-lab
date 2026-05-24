@@ -85,6 +85,11 @@ from tac.optimization.byte_shaving_campaign import (
     SIGNAL_SURFACE_SCHEMA,
     build_byte_shaving_campaign_plan,
 )
+from tac.optimization.family_agnostic_materializers import (
+    ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+    PACKET_MEMBER_RECOMPRESS_SCHEMA,
+    TENSOR_FACTORIZE_SCHEMA,
+)
 from tac.optimization.inverse_scorer_cell_chain import (
     CHAIN_MANIFEST_NAME as INVERSE_CELL_CHAIN_MANIFEST_NAME,
 )
@@ -255,6 +260,35 @@ def _byte_range_entropy_plan() -> dict[str, object]:
                         "operation_id": "entropy_recode_zip_member_range_a",
                         "operation_family": "entropy_recode",
                         "target_kind": BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
+                    }
+                ],
+            },
+        ],
+        **_false_authority(),
+    }
+    return build_byte_shaving_campaign_plan(surface, max_k=1)
+
+
+def _archive_section_entropy_plan() -> dict[str, object]:
+    surface = {
+        "schema": SIGNAL_SURFACE_SCHEMA,
+        "campaign_id": "archive_section_entropy_fixture",
+        "candidate_id": "fixture_seed",
+        "lane_id": "lane_archive_section_entropy_fixture",
+        "combo_beam_width": 4,
+        "max_combo_count": 4,
+        "units": [
+            {
+                "unit_id": "pr106_decoder_packed_brotli",
+                "unit_kind": "archive_section",
+                "candidate_saved_bytes": 321,
+                "predicted_quality_score_cost": 0.0,
+                "confidence": 0.8,
+                "operations": [
+                    {
+                        "operation_id": "recode_pr106_decoder_packed_brotli",
+                        "operation_family": "section_entropy_recode",
+                        "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
                     }
                 ],
             },
@@ -592,21 +626,34 @@ def test_byte_shaving_materializer_registry_registers_inverse_scorer_fail_closed
 
 
 def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None:
-    cases = [
-        (
-            {
-                "unit_id": "hnerv_decoder_section",
-                "operation_id": "recode_hnerv_decoder",
-                "operation_family": "section_entropy_recode",
-                "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
-            },
-            {
-                "unit_id": "hnerv_decoder_section",
-                "unit_kind": "archive_section",
-            },
-            ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER,
-            "local_cpu",
-        ),
+    archive_resolved = resolve_materializer(
+        operation={
+            "unit_id": "hnerv_decoder_section",
+            "operation_id": "recode_hnerv_decoder",
+            "operation_family": "section_entropy_recode",
+            "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        },
+        unit={
+            "unit_id": "hnerv_decoder_section",
+            "unit_kind": "archive_section",
+        },
+    )
+    assert archive_resolved.executable is True
+    assert archive_resolved.materializer_id == ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER
+    assert archive_resolved.cooperative_receiver_required is True
+    assert archive_resolved.materialization_resource_kind == "local_cpu"
+    assert archive_resolved.blockers == ()
+    assert archive_resolved.adapter is not None
+    assert (
+        archive_resolved.adapter.implementation_module
+        == "tac.optimization.family_agnostic_materializers"
+    )
+    assert (
+        archive_resolved.adapter.materialize_function
+        == "materialize_archive_section_entropy_recode_candidate"
+    )
+
+    executable_cases = [
         (
             {
                 "unit_id": "boostnerv_boost_weight_tensor",
@@ -621,6 +668,37 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
             TENSOR_FACTORIZE_MATERIALIZER,
             "local_cpu",
         ),
+        (
+            {
+                "unit_id": "non_nerv_payload_member",
+                "operation_id": "recompress_payload_member",
+                "operation_family": "member_recompress",
+                "target_kind": PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+            },
+            {
+                "unit_id": "non_nerv_payload_member",
+                "unit_kind": "packet_member",
+            },
+            PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
+            "local_cpu",
+        ),
+    ]
+
+    for operation, unit, materializer_id, resource_kind in executable_cases:
+        resolved = resolve_materializer(operation=operation, unit=unit)
+        assert resolved.executable is True
+        assert resolved.materializer_id == materializer_id
+        assert resolved.cooperative_receiver_required is True
+        assert resolved.materialization_resource_kind == resource_kind
+        assert resolved.blockers == ()
+        assert resolved.adapter is not None
+        assert (
+            resolved.adapter.implementation_module
+            == "tac.optimization.family_agnostic_materializers"
+        )
+        assert resolved.adapter.materialize_function
+
+    fail_closed_cases = [
         (
             {
                 "unit_id": "boostnerv_inactive_tensor",
@@ -665,20 +743,6 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
         ),
         (
             {
-                "unit_id": "non_nerv_payload_member",
-                "operation_id": "recompress_payload_member",
-                "operation_family": "member_recompress",
-                "target_kind": PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
-            },
-            {
-                "unit_id": "non_nerv_payload_member",
-                "unit_kind": "packet_member",
-            },
-            PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
-            "local_cpu",
-        ),
-        (
-            {
                 "unit_id": "bolton_side_member",
                 "operation_id": "merge_bolton_side_member",
                 "operation_family": "member_merge",
@@ -693,7 +757,7 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
         ),
     ]
 
-    for operation, unit, materializer_id, resource_kind in cases:
+    for operation, unit, materializer_id, resource_kind in fail_closed_cases:
         resolved = resolve_materializer(operation=operation, unit=unit)
         assert resolved.executable is False
         assert resolved.materializer_id == materializer_id
@@ -1199,6 +1263,231 @@ def test_materializer_work_queue_builds_byte_range_chain_command(
     assert _condition_passes(row["postconditions"][2], repo_root=Path("/")) is True
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_work_queue_wraps_archive_section_entropy_recode_adapter(
+    tmp_path: Path,
+) -> None:
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _archive_section_entropy_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+    assert compiled["executable_row_count"] == 0
+    backlog_row = compiled["materializer_backlog"]["rows"][0]
+    assert backlog_row["gap_class"] == "materializer_work_queue_required"
+    assert backlog_row["materializer_id"] == ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER
+    assert backlog_row["target_kind"] == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
+
+    source_archive = tmp_path / "source.zip"
+    section_manifest = tmp_path / "sections.json"
+    output_archive = tmp_path / "candidate.zip"
+    manifest = tmp_path / "candidate.json"
+    queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            backlog_row["backlog_key"]: {
+                "archive_path": str(source_archive),
+                "section_manifest": str(section_manifest),
+                "output_archive": str(output_archive),
+                "output_manifest": str(manifest),
+                "section_names": [
+                    "decoder_packed_brotli",
+                    "latents_and_sidecar_brotli",
+                ],
+                "brotli_quality": [11],
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    assert queue["schema"] == MATERIALIZER_WORK_QUEUE_SCHEMA
+    assert queue["executable_row_count"] == 1
+    row = queue["rows"][0]
+    assert row["executable"] is True
+    assert row["tool"] == "tools/run_family_agnostic_materializer.py"
+    assert row["command"][:6] == [
+        ".venv/bin/python",
+        "tools/run_family_agnostic_materializer.py",
+        "--target-kind",
+        ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        "--archive-path",
+        str(source_archive),
+    ]
+    assert ["--section-manifest", str(section_manifest)] in [
+        row["command"][index : index + 2]
+        for index in range(len(row["command"]) - 1)
+    ]
+    assert row["command"].count("--section-name") == 2
+    assert row["command"][-2:] == ["--brotli-quality", "11"]
+    _assert_typed_postconditions(
+        row["postconditions"],
+        path=manifest,
+        schema=ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+    )
+    completion_contract = row["postconditions"][1]
+    assert completion_contract["required_true"] == ["byte_closed_candidate_emitted"]
+    assert completion_contract["required_positive_int"] == ["candidate_archive.bytes"]
+    assert row["telemetry"]["artifact_paths"] == [
+        str(output_archive),
+        str(manifest),
+    ]
+    assert row["telemetry"]["input_artifact_paths"] == [
+        str(source_archive),
+        str(section_manifest),
+    ]
+    assert row["telemetry"]["family_agnostic_materializer_contract"]["target_kind"] == (
+        ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
+    )
+    assert (
+        "archive_section_entropy_recode_requires_same_runtime_inflate_parity"
+        in row["dispatch_blockers"]
+    )
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_archive_section_entropy_recode_fails_closed_without_section_manifest(
+    tmp_path: Path,
+) -> None:
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _archive_section_entropy_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+    backlog_row = compiled["materializer_backlog"]["rows"][0]
+    queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            backlog_row["backlog_key"]: {
+                "archive_path": "source.zip",
+                "output_archive": str(tmp_path / "candidate.zip"),
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    row = queue["rows"][0]
+    assert row["executable"] is False
+    assert row["tool"] is None
+    assert "materializer_context_missing:section_manifest" in row["materialization_blockers"]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    packet_manifest = tmp_path / "packet_members.json"
+    tensor_manifest = tmp_path / "tensor_manifest.json"
+    factor_contract = tmp_path / "factor_contract.json"
+    packet_output = tmp_path / "packet_candidate.zip"
+    packet_out_manifest = tmp_path / "packet_candidate.json"
+    tensor_output = tmp_path / "tensor_candidate.zip"
+    tensor_out_manifest = tmp_path / "tensor_candidate.json"
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "backlog_key": "packet_member_recompress_fixture",
+                "unit_kind": "packet_member",
+                "operation_family": "member_recompress",
+                "target_kind": PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                "materializer_id": PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
+            },
+            {
+                "backlog_key": "tensor_factorize_fixture",
+                "unit_kind": "tensor",
+                "operation_family": "factorize_tensor",
+                "target_kind": TENSOR_FACTORIZE_TARGET_KIND,
+                "materializer_id": TENSOR_FACTORIZE_MATERIALIZER,
+            },
+        ],
+    }
+
+    queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts={
+            "packet_member_recompress_fixture": {
+                "archive_path": str(archive),
+                "packet_member_manifest": str(packet_manifest),
+                "member_name": "payload.bin",
+                "output_archive": str(packet_output),
+                "output_manifest": str(packet_out_manifest),
+                "zip_compresslevel": [9],
+            },
+            "tensor_factorize_fixture": {
+                "archive_path": str(archive),
+                "tensor_manifest": str(tensor_manifest),
+                "factorization_contract": str(factor_contract),
+                "output_archive": str(tensor_output),
+                "output_manifest": str(tensor_out_manifest),
+            },
+        },
+        source_plan_path="plan.json",
+    )
+
+    assert queue["schema"] == MATERIALIZER_WORK_QUEUE_SCHEMA
+    assert queue["executable_row_count"] == 2
+    packet_row, tensor_row = queue["rows"]
+    assert packet_row["tool"] == "tools/run_family_agnostic_materializer.py"
+    assert [
+        "--target-kind",
+        PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+    ] in [
+        packet_row["command"][index : index + 2]
+        for index in range(len(packet_row["command"]) - 1)
+    ]
+    assert ["--member-name", "payload.bin"] in [
+        packet_row["command"][index : index + 2]
+        for index in range(len(packet_row["command"]) - 1)
+    ]
+    _assert_typed_postconditions(
+        packet_row["postconditions"],
+        path=packet_out_manifest,
+        schema=PACKET_MEMBER_RECOMPRESS_SCHEMA,
+    )
+    assert packet_row["telemetry"]["input_artifact_paths"] == [
+        str(archive),
+        str(packet_manifest),
+    ]
+    assert "packet_member_recompress_requires_runtime_consumption_proof" in (
+        packet_row["dispatch_blockers"]
+    )
+    assert packet_row["score_claim"] is False
+    assert packet_row["ready_for_exact_eval_dispatch"] is False
+
+    assert tensor_row["tool"] == "tools/run_family_agnostic_materializer.py"
+    assert [
+        "--target-kind",
+        TENSOR_FACTORIZE_TARGET_KIND,
+    ] in [
+        tensor_row["command"][index : index + 2]
+        for index in range(len(tensor_row["command"]) - 1)
+    ]
+    assert ["--factorization-contract", str(factor_contract)] in [
+        tensor_row["command"][index : index + 2]
+        for index in range(len(tensor_row["command"]) - 1)
+    ]
+    _assert_typed_postconditions(
+        tensor_row["postconditions"],
+        path=tensor_out_manifest,
+        schema=TENSOR_FACTORIZE_SCHEMA,
+    )
+    assert tensor_row["telemetry"]["input_artifact_paths"] == [
+        str(archive),
+        str(tensor_manifest),
+        str(factor_contract),
+    ]
+    assert "tensor_factorize_requires_cooperative_receiver" in tensor_row["dispatch_blockers"]
+    assert tensor_row["score_claim"] is False
+    assert tensor_row["ready_for_exact_eval_dispatch"] is False
 
 
 def test_materializer_chain_completion_contract_rejects_schema_only_and_failure(
@@ -2187,6 +2476,49 @@ def test_materializer_execution_queue_skips_exact_followup_for_planning_only_row
     )
 
 
+def test_materializer_execution_queue_skips_exact_followup_for_archive_section_candidate(
+    tmp_path: Path,
+) -> None:
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _archive_section_entropy_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+    backlog_row = compiled["materializer_backlog"]["rows"][0]
+    work_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            backlog_row["backlog_key"]: {
+                "archive_path": "source.zip",
+                "section_manifest": "sections.json",
+                "output_archive": str(tmp_path / "candidate.zip"),
+                "output_manifest": str(tmp_path / "candidate.json"),
+                "section_names": ["decoder_packed_brotli"],
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    execution_queue = build_materializer_execution_queue(
+        work_queue,
+        queue_id="packet_section_transform_exec_fixture",
+        repo_root=tmp_path,
+        include_exact_readiness_followup=True,
+    )
+
+    experiment = execution_queue["experiments"][0]
+    assert [step["id"] for step in experiment["steps"]] == [
+        MATERIALIZER_EXECUTION_STEP_ID
+    ]
+    assert experiment["metadata"]["exact_readiness_followup_requested"] is True
+    assert experiment["metadata"]["exact_readiness_followup_enabled"] is False
+    assert experiment["metadata"]["exact_readiness_followup_skipped_reason"] == (
+        "archive_section_entropy_recode_exact_readiness_bridge_not_yet_wired"
+    )
+
+
 def test_materializer_execution_queue_followup_requires_chain_postcondition_for_candidates(
     tmp_path: Path,
 ) -> None:
@@ -2810,3 +3142,90 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
         MATERIALIZER_HARVEST_STEP_ID,
         MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     ]
+
+
+def test_byte_shaving_campaign_queue_cli_generates_materializer_contexts_from_artifact_map(
+    tmp_path: Path,
+) -> None:
+    plan_path = tmp_path / "plan.json"
+    artifact_map_path = tmp_path / "artifact_map.json"
+    contexts_path = tmp_path / "generated_contexts.json"
+    materialization = tmp_path / "materialization.json"
+    portfolio = tmp_path / "portfolio.json"
+    summary = tmp_path / "action_summary.json"
+    work_queue = tmp_path / "materializer_work_queue.json"
+    output_root = tmp_path / "materializer_outputs"
+    section_manifest = tmp_path / "sections.json"
+    plan_path.write_text(json.dumps(_archive_section_entropy_plan()), encoding="utf-8")
+    artifact_map_path.write_text(
+        json.dumps(
+            {
+                "schema": "final_byte_artifact_map.fixture.v1",
+                "artifacts": {
+                    ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND: {
+                        "archive_path": str(tmp_path / "source.zip"),
+                        "section_manifest": str(section_manifest),
+                        "target_sections": ["decoder_packed_brotli"],
+                        "brotli_quality": [11],
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "rank_or_kill_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--plan",
+            str(plan_path),
+            "--materializer-artifact-map",
+            str(artifact_map_path),
+            "--materializer-contexts-out",
+            str(contexts_path),
+            "--materializer-context-default-output-root",
+            str(output_root),
+            "--materialization-out",
+            str(materialization),
+            "--portfolio-out",
+            str(portfolio),
+            "--action-summary-out",
+            str(summary),
+            "--materializer-work-queue-out",
+            str(work_queue),
+            "--repo-root",
+            str(tmp_path),
+            "--candidate-limit",
+            "4",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    stdout = json.loads(result.stdout)
+    assert stdout["materializer_contexts"] == str(contexts_path)
+    assert stdout["materializer_contexts_generated"] is True
+    assert stdout["materializer_contexts_blocked_count"] == 0
+    assert stdout["materializer_work_queue_executable_row_count"] == 1
+    contexts = json.loads(contexts_path.read_text(encoding="utf-8"))
+    assert contexts["schema"] == MATERIALIZER_CONTEXTS_SCHEMA
+    assert contexts["rows"][0]["context"]["output_archive"].startswith(
+        str(output_root)
+    )
+    work = json.loads(work_queue.read_text(encoding="utf-8"))
+    assert work["schema"] == MATERIALIZER_WORK_QUEUE_SCHEMA
+    row = work["rows"][0]
+    assert row["executable"] is True
+    assert row["tool"] == "tools/run_family_agnostic_materializer.py"
+    assert "--section-manifest" in row["command"]
+    assert str(section_manifest) in row["command"]

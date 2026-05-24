@@ -235,22 +235,29 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         emits_candidate_archive=False,
         planning_only=True,
     ),
-    _non_executable_family_adapter(
+    MaterializerAdapter(
         materializer_id=ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER,
         unit_kind="archive_section",
         operation_family="section_entropy_recode",
         target_kind=ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        executable=True,
         description=(
-            "Fail-closed contract for HNeRV/BoostNeRV/non-NeRV archive-section "
-            "entropy recode candidates; requires section grammar, archive "
-            "custody, and runtime-consumption proof before execution."
+            "Family-agnostic HNeRV/BoostNeRV/non-NeRV archive-section entropy "
+            "recode materializer. Runtime-consumption proof is required before "
+            "exact-readiness, not before local candidate emission."
         ),
+        receiver_contract_id=f"{ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND}.receiver.v1",
         receiver_contract_kind="family_agnostic_archive_section_entropy_recode",
+        cooperative_receiver_required=True,
+        materialization_resource_kind="local_cpu",
         required_context_fields=(
             "archive_path",
             "section_manifest",
-            "runtime_consumption_proof",
+            "output_archive",
+            "output_manifest",
         ),
+        implementation_module="tac.optimization.family_agnostic_materializers",
+        materialize_function="materialize_archive_section_entropy_recode_candidate",
     ),
     _non_executable_family_adapter(
         materializer_id=ARCHIVE_SECTION_HEADER_ELIDE_MATERIALIZER,
@@ -338,22 +345,30 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
             "runtime_consumption_proof",
         ),
     ),
-    _non_executable_family_adapter(
+    MaterializerAdapter(
         materializer_id=TENSOR_FACTORIZE_MATERIALIZER,
         unit_kind="tensor",
         operation_family="factorize_tensor",
         target_kind=TENSOR_FACTORIZE_TARGET_KIND,
+        executable=True,
         description=(
-            "Fail-closed contract for tensor factorization candidates, including "
-            "BoostNeRV bolt-on weights and generic representation tensors."
+            "Family-agnostic tensor factorization candidate materializer for "
+            "BoostNeRV bolt-on weights and generic representation tensors. "
+            "Cooperative receiver proof is required before exact-readiness."
         ),
+        receiver_contract_id=f"{TENSOR_FACTORIZE_TARGET_KIND}.receiver.v1",
         receiver_contract_kind="family_agnostic_tensor_factorize",
+        cooperative_receiver_required=True,
+        materialization_resource_kind="local_cpu",
         required_context_fields=(
             "archive_path",
             "tensor_manifest",
             "factorization_contract",
-            "runtime_consumption_proof",
+            "output_archive",
+            "output_manifest",
         ),
+        implementation_module="tac.optimization.family_agnostic_materializers",
+        materialize_function="materialize_tensor_factorize_candidate",
     ),
     _non_executable_family_adapter(
         materializer_id=TENSOR_SHARED_CODEBOOK_MATERIALIZER,
@@ -389,21 +404,29 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
             "runtime_consumption_proof",
         ),
     ),
-    _non_executable_family_adapter(
+    MaterializerAdapter(
         materializer_id=PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
         unit_kind="packet_member",
         operation_family="member_recompress",
         target_kind=PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        executable=True,
         description=(
-            "Fail-closed contract for generic packet-member recompression "
-            "candidates, including non-NeRV archives and bolted-on side members."
+            "Family-agnostic packet-member recompression materializer for "
+            "monolithic HNeRV packets, bolted-on side members, and non-NeRV "
+            "archives. It preserves member payload bytes and still requires "
+            "runtime-consumption proof before exact-readiness."
         ),
+        receiver_contract_id=f"{PACKET_MEMBER_RECOMPRESS_TARGET_KIND}.receiver.v1",
         receiver_contract_kind="family_agnostic_packet_member_recompress",
+        cooperative_receiver_required=True,
+        materialization_resource_kind="local_cpu",
         required_context_fields=(
             "archive_path",
-            "packet_member_manifest",
-            "runtime_consumption_proof",
+            "output_archive",
+            "output_manifest",
         ),
+        implementation_module="tac.optimization.family_agnostic_materializers",
+        materialize_function="materialize_packet_member_recompress_candidate",
     ),
     _non_executable_family_adapter(
         materializer_id=PACKET_MEMBER_REORDER_MATERIALIZER,
