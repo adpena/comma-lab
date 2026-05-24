@@ -16,7 +16,7 @@
 //! 3. **Categorical reuse** — the `from_floating_point_probabilities_fast`
 //!    construction is non-trivial; a cached Categorical that's reused
 //!    across many encodes amortises that cost.
-//! 4. **Big-endian word→bytes** — the [`super::latent_hi::words_to_be_bytes`]
+//! 4. **Big-endian word→bytes** — the private `latent_hi` helper
 //!    pre-allocates exactly `4 * n_words` and uses a tight loop with
 //!    `to_be_bytes()`. We pre-reserve in one shot here instead.
 //!
@@ -27,7 +27,7 @@
 //!
 //! # Byte-parity
 //!
-//! Verified by [`tests::hand_optimized_matches_standard_byte_for_byte`].
+//! Verified by the `hand_optimized_matches_standard_byte_for_byte` unit test.
 //! The wire format is constriction's; our optimization is in the input
 //! preparation pipeline. Output bytes are byte-identical to
 //! [`super::latent_hi::encode_latent_hi_arithmetic`].

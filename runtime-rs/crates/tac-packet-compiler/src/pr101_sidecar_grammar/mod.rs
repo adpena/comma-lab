@@ -1,4 +1,4 @@
-//! PR101 sidecar grammar — Rust port scaffold.
+//! PR101 sidecar grammar — Rust native port with one remaining decoder scaffold.
 //!
 //! Mirrors the public API of
 //! [`tac.packet_compiler.pr101_sidecar_grammar`](
@@ -6,8 +6,9 @@
 //!
 //! Three primitives are exposed:
 //!
-//! 1. **Ranked Huffman/no-op sidecar** — scaffold-only. Co-lex combination rank for no-op
-//!    positions + canonical Huffman code with rank-encoded length vector.
+//! 1. **Ranked Huffman/no-op sidecar** — encoder implemented; decoder still
+//!    scaffold-only. Co-lex combination rank for no-op positions + canonical
+//!    Huffman code with rank-encoded length vector.
 //! 2. **Centered-delta uint8 latents** — implemented. Column-major uint8 block under raw
 //!    LZMA1 (filter-only, no XZ container; dict 4 KiB, lc=3, lp=0, pb=0).
 //! 3. **Self-delimiting split Brotli** — implemented. Concatenated Brotli streams; reader

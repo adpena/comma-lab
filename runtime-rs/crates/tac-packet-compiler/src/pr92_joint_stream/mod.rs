@@ -13,21 +13,21 @@
 //! Three magic-prefix grammars land here:
 //!
 //! 1. **RMC1 — Range Mask Composite**
-//!    ([`pack_rmc1_composite`](rmc::pack_rmc1_composite) +
-//!    [`unpack_rmc1_composite`](rmc::unpack_rmc1_composite)).
+//!    ([`pack_rmc1_composite`] +
+//!    [`unpack_rmc1_composite`]).
 //!    Frame: ``b"RMC1" || <u32 seg_len LE> || <u32 side_len LE> ||
 //!    seg_bytes || side_bytes``.
 //!
 //! 2. **RSA1 — Side Action (range-coded)**
-//!    ([`pack_rsa1_side`](rmc::pack_rsa1_side) +
-//!    [`unpack_rsa1_side`](rmc::unpack_rsa1_side)).
+//!    ([`pack_rsa1_side`] +
+//!    [`unpack_rsa1_side`]).
 //!    Frame: ``b"RSA1" || <u16 count LE> || <u8 action_bits> ||
 //!    <u8 table_id> || packed_bits``. The packed-bits layout matches PR81's
 //!    [`encode_router_actions`](crate::pr81_quantizr::encode_router_actions).
 //!
 //! 3. **RSB1 — Side Action (brotli-fallback)**
-//!    ([`pack_rsb1_side`](rmc::pack_rsb1_side) +
-//!    [`unpack_rsb1_side`](rmc::unpack_rsb1_side)).
+//!    ([`pack_rsb1_side`] +
+//!    [`unpack_rsb1_side`]).
 //!    Frame: ``b"RSB1" || <u16 count LE> || <u8 table_id> || <u8 0> ||
 //!    brotli(body_bytes)``.
 

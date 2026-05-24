@@ -1,8 +1,9 @@
 # `tac-packet-compiler` — Rust native port for `tac.packet_compiler`.
 #
-# Status (2026-05-11): 19 of 19 primitives byte-for-byte parity GREEN against
-# the committed Python golden vectors — COMPLETE NATIVE PARITY. See README
-# for the per-function table.
+# Status (2026-05-11): the 19 committed golden-vector primitives are
+# byte-for-byte parity GREEN against the Python oracle. This is not complete
+# crate parity: selector/search/decode meta surfaces remain explicit
+# scaffolds. See README for the per-function table.
 #
 # Version v0.2.0-rc1 (LOCAL release tag, 2026-05-11):
 #   Per council Q5 verdict (b) (9/10 Shannon/Dykstra/Yousfi/Fridrich/
@@ -18,9 +19,10 @@
 #      `src/tac/packet_compiler/golden_vectors/`.
 #   3. Parity test (`tests/golden_vector_parity.rs`) compares Rust output
 #      byte-for-byte against the committed SHA-256 digests.
-#   4. Crate is now `v0.2.0-rc1` (release-candidate) — 19/19 GREEN +
-#      deterministic rebuild verified. `publish = false` retained pending
-#      operator approval per CLAUDE.md "Public Disclosure Hygiene".
+#   4. Crate is now `v0.2.0-rc1` (release-candidate) — primitive golden
+#      vectors GREEN; meta scaffolds remain fail-closed. `publish = false`
+#      retained pending operator approval per CLAUDE.md
+#      "Public Disclosure Hygiene".
 #
 # Source memo: handoff Bottom-line tranche item #7 + "Native-first candidates"
 # ordering 1-2 + CLAUDE.md "Deterministic packet compiler" non-negotiable.
@@ -37,7 +39,7 @@ name = "tac-packet-compiler"
 version = "0.2.0-rc1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-description = "Rust native port for tac.packet_compiler (PR101 sidecar grammar + PR103 arithmetic coding + PR91/92/93/97/sparse PacketIR primitives). 19 of 19 primitives byte-for-byte parity GREEN against committed Python golden vectors."
+description = "Rust native port for tac.packet_compiler with 19 golden-vector primitives byte-for-byte parity GREEN; selector/search/decode meta surfaces remain explicit scaffolds."
 homepage = "https://github.com/adpena/comma-lab"
 documentation = "https://github.com/adpena/comma-lab#readme"
 repository = "https://github.com/adpena/comma-lab"

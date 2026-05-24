@@ -18,7 +18,7 @@
 //! - [`rle_of_zeros::scan_nonzero_indices_i8`] — used by the sparse PacketIR
 //!   codec; the nonzero (index, value) pair stream is the input to either
 //!   raw serialisation or a follow-on AC stream.
-//! - [`centered_delta::centered_delta_uint8_quantise_rowmajor`] — used by
+//! - [`centered_delta::centered_delta_uint8_column_major`] — used by
 //!   PR101 `encode_centered_delta_uint8`; the row-major uint8 + centered
 //!   delta stream is the input to raw LZMA1.
 //!

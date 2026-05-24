@@ -7,9 +7,9 @@
 //! Two primitives are exposed:
 //!
 //! 1. **PR81 FP4 codebook** ([`FP4Codebook`] +
-//!    [`quantize_to_nibbles`](fp4_codebook::quantize_to_nibbles) +
-//!    [`dequantize_from_nibbles`](fp4_codebook::dequantize_from_nibbles) +
-//!    [`pack_nibbles`](fp4_codebook::pack_nibbles)) — implemented;
+//!    [`quantize_to_nibbles`] +
+//!    [`dequantize_from_nibbles`] +
+//!    [`pack_nibbles`]) — implemented;
 //!    byte-for-byte parity against `pr81_fp4_codebook_v1.json`.
 //!
 //!    The codebook is an asymmetric 8-level positive table
@@ -19,8 +19,8 @@
 //!    per byte (``hi << 4 | lo``). Decoded against per-block fp32 scale.
 //!
 //! 2. **PR81 ROUTER_ACTION 3-bit packing**
-//!    ([`encode_router_actions`](router_action::encode_router_actions) +
-//!    [`decode_router_actions`](router_action::decode_router_actions)) —
+//!    ([`encode_router_actions`] +
+//!    [`decode_router_actions`]) —
 //!    implemented; byte-for-byte parity against
 //!    `pr81_router_action_v1.json`.
 //!

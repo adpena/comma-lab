@@ -33,9 +33,10 @@ contract, the pinned upstream snapshot under `upstream/`, and the
 the project publishable; it does not change scores.
 
 The runtime-rs tag `v0.2.0-rc1` (a different tag, on commit `73ff0dba`,
-already public) is the Rust-side `tac-packet-compiler` 19/19 native parity
-milestone (2026-05-11). The `oss-v0.2.0-rc1` tag is the broader OSS posture
-alignment milestone (2026-05-14) and is the subject of these notes.
+already public) is the Rust-side `tac-packet-compiler` 19 committed primitive
+golden-vector parity milestone (2026-05-11), not a complete native crate-parity
+claim. The `oss-v0.2.0-rc1` tag is the broader OSS posture alignment milestone
+(2026-05-14) and is the subject of these notes.
 
 ## Posture alignment
 
@@ -63,9 +64,10 @@ for this release (see the [empirical:provenance-only] tag below).
   `TIER_<N>_OPERATOR_REQUIRED_FLAGS` manifest that propagates to the
   Modal/Vast.ai/Lightning dispatch wrappers via canonical helpers.
 - **`tac/packet_compiler/`** — deterministic submission-packet compiler
-  (Python oracle). Companion Rust port lives in `runtime-rs/` with 19/19
-  native parity vs the Python oracle on the contest packet shape (see
-  the runtime-rs `v0.2.0-rc1` tag for that milestone).
+  (Python oracle). Companion Rust port lives in `runtime-rs/` with 19 committed
+  primitive golden-vector parity fixtures vs the Python oracle; selector,
+  search, and decode meta surfaces remain Python-oracle or fail-closed Rust
+  scaffolds (see the runtime-rs `v0.2.0-rc1` tag for that milestone).
 - **`tac/cathedral_autopilot/`** — the candidate ranker that consumes
   cost-band posterior anchors + scorer-conditional MDL evidence + lane
   maturity registry rows. Updated 2026-05-14 with the Z1 empirical

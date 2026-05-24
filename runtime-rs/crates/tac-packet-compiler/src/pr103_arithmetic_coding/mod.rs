@@ -1,4 +1,4 @@
-//! PR103 arithmetic-coding — Rust port scaffold.
+//! PR103 arithmetic-coding — Rust native port with one remaining search scaffold.
 //!
 //! Mirrors the public API of
 //! [`tac.packet_compiler.pr103_arithmetic_coding`](
@@ -6,9 +6,9 @@
 //!
 //! Three primitives are exposed:
 //!
-//! 1. **Merged range stream over multiple weight tensors** — scaffold-only. One
+//! 1. **Merged range stream over multiple weight tensors** — implemented. One
 //!    range-coded byte string spanning N tensors with per-tensor histograms.
-//!    Uses [`constriction::stream::queue::RangeEncoder`].
+//!    Uses `constriction` range coding with byte-for-byte Python parity.
 //! 2. **Latent-hi arithmetic** — implemented. Encode the high byte of a uint16 zigzag
 //!    delta with a peaked histogram; beats LZMA/Brotli by ≈ 8 KB on PR103's
 //!    600×28 latent stream.

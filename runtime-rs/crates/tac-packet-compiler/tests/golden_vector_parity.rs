@@ -125,10 +125,11 @@ fn try_load(name: &str) -> Option<GoldenVectorManifest> {
     Some(load_golden_vector(&path).expect("golden vector must parse"))
 }
 
-// `assert_scaffold_refuses` was retired after the last 6 impls flipped from
-// scaffold-only to `assert_sha256_parity` (2026-05-11). The pattern is
-// preserved in git history; future stub additions should re-introduce it
-// locally to this test file rather than re-export it as crate API.
+// `assert_scaffold_refuses` was retired for the original 19 primitive
+// promotion after those fixtures flipped from scaffold-only to
+// `assert_sha256_parity` (2026-05-11). Later golden-vector families may still
+// use explicit load-only/non-claim stubs until native implementations land;
+// those stubs stay local to this test file rather than exported as crate API.
 
 // ── PR101 parity tests ───────────────────────────────────────────────────────
 

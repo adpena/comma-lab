@@ -1,7 +1,7 @@
 //! Stable function signatures for the PR103 arithmetic-coding primitives.
 //!
 //! Some functions are scaffold-only and return
-//! [`PacketCompilerError::NotImplemented`](crate::PacketCompilerError::NotImplemented).
+//! [`PacketCompilerError::NotImplemented`].
 //! Implemented primitives delegate to concrete modules. Signatures mirror the
 //! Python oracle one-to-one.
 

@@ -1,7 +1,7 @@
 //! Stable function signatures for the PR101 sidecar grammar primitives.
 //!
 //! Some functions are scaffold-only and return
-//! [`PacketCompilerError::NotImplemented`](crate::PacketCompilerError::NotImplemented).
+//! [`PacketCompilerError::NotImplemented`].
 //! Implemented primitives delegate to concrete modules while preserving the
 //! Python oracle's one-to-one API surface.
 

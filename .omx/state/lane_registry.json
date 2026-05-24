@@ -13943,7 +13943,7 @@
           "status": false
         },
         "impl_complete": {
-          "evidence": "19/19 byte-for-byte parity GREEN [empirical:runtime-rs/crates/tac-packet-compiler/tests/golden_vector_parity.rs]",
+          "evidence": "19 primitive golden-vector byte-for-byte parity GREEN [empirical:runtime-rs/crates/tac-packet-compiler/tests/golden_vector_parity.rs]",
           "status": true
         },
         "memory_entry": {
@@ -13965,8 +13965,8 @@
       },
       "id": "lane_rust_packet_compiler_complete_19_19_native_parity",
       "level": 1,
-      "name": "Rust packet-compiler 19/19 COMPLETE native parity (final 6: PR93 lowpass + PR97 H3 \u00d72 + sparse \u00d73)",
-      "notes": "research_only=false; lane_class=substrate_engineering. Per N D4 verdict + operator directive 2026-05-11. After landing: full native port complete; eligible for publish=true and crates.io release.",
+      "name": "Rust packet-compiler 19 primitive golden-vector parity (legacy lane id retained)",
+      "notes": "research_only=false; lane_class=substrate_engineering. Per N D4 verdict + operator directive 2026-05-11. Supersession 2026-05-24: 19 committed primitive golden vectors are GREEN, but this is not complete crate parity; magic_codec_v1, adaptive_brotli_param_search, decode_ranked_no_op_sidecar, and later load-only fixture families remain Python-oracle or fail-closed Rust scaffolds. publish=false remains in force until remaining selector/search/decode meta surfaces are implemented or explicitly excluded.",
       "phase": 4.0
     },
     {

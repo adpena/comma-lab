@@ -5,7 +5,7 @@ the reusable byte-grammar and entropy-coder primitives inside the `tac`
 Task-Aware Compression library, extracted from the public PR101
 (`hnerv_ft_microcodec`) and PR103 (`hnerv_lc_ac`) submissions.
 
-> **Status — `v0.2.0-rc1` LOCAL release tag (2026-05-11). 19 of 19 primitives byte-for-byte-parity GREEN. COMPLETE NATIVE PARITY.**
+> **Status — `v0.2.0-rc1` LOCAL release tag (2026-05-11). The 19 committed golden-vector primitives are byte-for-byte parity GREEN; this is not complete crate parity because selector/search/decode meta surfaces remain explicit scaffolds.**
 >
 > Per council Q5 verdict (b) (9/10 Shannon/Dykstra/Yousfi/Fridrich/Quantizr/
 > Hotz/Selfcomp/MacKay/Ballé): tag the GitHub release locally first as a
@@ -95,10 +95,11 @@ Task-Aware Compression library, extracted from the public PR101
 >     + LSB-first indicator bitmap + densely-packed K residuals. SHA-256
 >     `f4b2e6…38c0`.
 >
-> Only stub remaining: `magic_codec_v1` is a per-stream auto-selector OVER
-> primitives 1-19; the Rust scaffold remains `try_load_only` until the
-> selector itself is ported (the underlying primitives are now all GREEN
-> so a port is straightforward).
+> Remaining non-primitive/meta scaffolds are explicit: `magic_codec_v1` is a
+> per-stream auto-selector OVER primitives 1-19 and remains `try_load_only`;
+> `adaptive_brotli_param_search` has no byte-level golden vector by design;
+> `decode_ranked_no_op_sidecar` still needs the inverse length-rank + Huffman
+> bit-unpacker. The Python oracle remains authoritative for those surfaces.
 
 ## Why this exists
 
@@ -106,8 +107,8 @@ The 2026-05-11 score-lowering handoff names `tac.packet_compiler` as the
 reusable layer all sub-0.20 PRs rediscover. The same handoff's
 [Bottom-line next tranche, item #7](../../../../../Downloads/pact_score_lowering_handoff_2026-05-11.md)
 calls for "the first native PacketIR proof over the committed golden
-vectors, not over an unpinned research script." This crate is that first
-native proof — once it is implemented.
+vectors, not over an unpinned research script." This crate is that native
+proof for the implemented golden-vector primitives.
 
 Per [CLAUDE.md "Deterministic packet compiler" non-negotiable](../../../CLAUDE.md):
 
@@ -172,7 +173,7 @@ runtime-rs/crates/tac-packet-compiler/
 │   │   └── rmc.rs                        IMPL: RMC1/RSA1/RSB1 joint-stream meta-codec (parity GREEN)
 │   ├── pr91_hpac_grammar/qmqh_grammar.rs    IMPL: QM0/QH0 magic + hi-lo split (parity GREEN; sibling of arithmetic_coder_constriction)
 │   ├── pr93_pose_codec/qzmb1.rs             IMPL: QZMB1 compact-model block (parity GREEN; sibling of delta_varint)
-│   ├── sparse_packet_ir/                 (all scaffold-only)
+│   ├── sparse_packet_ir/                 IMPL: sparse RLE/AC/temporal primitives (parity GREEN)
 │   └── conformance/
 │       └── mod.rs                        golden-vector loader + sha256 helpers
 ├── tests/
@@ -202,21 +203,23 @@ whenever the Python recipe changes.
 | `proptest` (dev) | `1` | Round-trip property tests once impl lands. |
 | `criterion` (dev) | `0.6` | Microbenchmark scaffold. |
 
-## How to use the scaffold today
+## How to verify the native port
 
 ```
 $ cargo test -p tac-packet-compiler
 ```
 
-Should pass green: the parity tests assert that every stub returns
-`NotImplemented`. The coverage gate
-(`every_golden_vector_has_paired_parity_test`) confirms every committed
-vector has a matching Rust-side test entry. If you add a new vector on the
-Python side, this test will fail until you wire a paired Rust parity test.
+Should pass green. Implemented primitives assert byte-for-byte SHA parity
+against the committed Python golden vectors; remaining scaffold-only surfaces
+are explicit `try_load_only` or `NotImplemented` tests so they cannot masquerade
+as native implementations. The coverage gate
+(`every_golden_vector_has_paired_parity_test`) confirms every committed vector
+has a matching Rust-side test entry. If you add a new vector on the Python side,
+this test fails until you wire a paired Rust parity or explicit load-only test.
 
-## How to use the scaffold after impl
+## How to promote a remaining scaffold
 
-Once a Rust function lands, flip the corresponding test in
+When a remaining Rust function lands, flip the corresponding test in
 `tests/golden_vector_parity.rs`:
 
 ```rust
@@ -248,8 +251,9 @@ PR92 RMC joint stream + PR93 QZMB1 grammar) landed in the same session
 under the same directive; the FINAL 6 (PR93 lowpass-luma + PR97 H3
 length-prefixed sections + PR97 H3 tile-band streams + sparse RLE-of-zeros
 + sparse arithmetic coefficients + sparse temporal-subsampled) landed in
-the same session, bringing the total to **19 of 19 GREEN — COMPLETE
-NATIVE PARITY**.
+the same session, bringing the committed golden-vector primitive set to
+**19 GREEN**. That is a primitive-set parity claim, not a blanket complete
+crate-parity claim; the remaining meta/decode surfaces stay scaffolded below.
 
 | # | Function | Status | Notes |
 |---|---|---|---|
@@ -279,10 +283,10 @@ NATIVE PARITY**.
 | Question | Resolution |
 |---|---|
 | Who implements? | Subagent dispatch under operator directive 2026-05-11 ("compiler and insanely low level" + "keep building outside the \$5 window" + "recursively adversarially review and greenup"); 19 done across 4 sibling-subagent tranches (Y: 3, CC: 5, EE: 5, FF [this landing]: 6). |
-| Effort delivered | 19 impls + 1 regen helper + 21 binary fixtures + parity-test wire-in — ~3300 LOC of Rust + ~340 LOC of Python + 151 tests passing (130 unit + 21 integration). |
+| Effort delivered | 19 impls + 1 regen helper + 21 binary fixtures + parity-test wire-in; current unit/integration counts are owned by `cargo test -p tac-packet-compiler`, not this static README. |
 | Cost | \$0 GPU. |
 | Risk audit | Brotli pure-Rust ↔ Python C library byte-parity was the largest unknown going in; verified GREEN on the committed 3-stream fixture AND on the PR92 RSB1 fallback path. constriction (same upstream as Python package) and liblzma (same C library) were lower-risk and also GREEN. The bounded-length package-merge in PR101 ranked sidecar was the largest algorithmic risk — also GREEN on first attempt. PR81 FP4 codebook required numpy `argmin` tie-break semantics (smallest-index wins) — reproduced exactly in Rust via `<` strict-less comparison. The sparse-AC primitive's Laplace-smoothed empirical histogram was the largest f32-byte-parity risk for the final tranche — verified GREEN on a 500-symbol int32 stream by replicating Python's exact operation order (`np.bincount → astype f32 → += 1.0`). |
-| Publish eligibility | Pre-stage I council D4 verdict: **eligible for `publish = true` (drop `-prerelease` suffix)** now that all 19 primitives are byte-for-byte GREEN. Operator decision pending (see landing memo). |
+| Publish eligibility | **Not publish-ready as a complete native crate** while selector/search/decode meta surfaces remain scaffolded. `publish = false` stays in force until the public API contract and remaining scaffolds are promoted or intentionally excluded by operator decision. |
 
 See [`.omx/research/staged_rust_packet_compiler_native_port_readiness_*.md`](
 ../../../.omx/research/) for the operator-decision packet.
@@ -293,7 +297,7 @@ See [`.omx/research/staged_rust_packet_compiler_native_port_readiness_*.md`](
 |---|---|
 | **Deterministic packet compiler** | Scaffold + golden vectors + parity test harness. Byte-for-byte SHA-256 gate via [`conformance::assert_sha256_parity`](src/conformance/mod.rs). |
 | **Beauty, simplicity, DX** | Narrow public API; typed errors; docstrings cite Python oracle line-by-line; `#![forbid(unsafe_code)]`. |
-| **Native acceleration as conformance-backed PacketIR port** | Crate is named, scaffolded, and wired to the committed golden vectors before any impl is written. |
+| **Native acceleration as conformance-backed PacketIR port** | Crate is named, wired to committed golden vectors, and implemented primitive surfaces are parity-gated before promotion. |
 | **Rust/Zig is a speed layer** | `lib.rs` doc, README, and every stub doc reiterate that Python is the oracle. |
 | **No MPS authoritative / no scorer load** | No torch / scorer / inflate-side imports anywhere. |
 | **No `/tmp` paths** | Golden-vector resolution uses `CARGO_MANIFEST_DIR`, not env. |

@@ -1,13 +1,18 @@
-//! `tac-packet-compiler` — Rust native port scaffold for `tac.packet_compiler`.
+//! `tac-packet-compiler` — Rust native port for `tac.packet_compiler`.
 //!
-//! # Status — SCAFFOLD-ONLY
+//! # Status — MIXED NATIVE IMPLEMENTATION
 //!
-//! Every public function in this crate is currently `unimplemented!()`. The
-//! crate exists to:
+//! This crate is the speed layer for the Python packet-compiler oracle. Many
+//! hot-path primitives are implemented and must pass byte-for-byte SHA parity
+//! against committed Python golden vectors. A small number of lower-priority
+//! surfaces remain scaffold-only and return
+//! [`PacketCompilerError::NotImplemented`].
+//!
+//! The crate exists to:
 //!
 //! 1. Document the **byte-for-byte parity contract** against the Python oracle.
-//! 2. Wire the **golden-vector parity test harness** so the moment an impl
-//!    function lands its parity result is visible.
+//! 2. Run the **golden-vector parity test harness** for implemented native
+//!    functions and explicit load-only coverage for remaining scaffolds.
 //! 3. Pin the **dependency choices** (constriction, brotli, liblzma, ndarray)
 //!    so an implementer does not relitigate them.
 //!
@@ -103,11 +108,10 @@ pub mod pr97_h3_grammar;
 pub mod simd;
 pub mod sparse_packet_ir;
 
-/// Crate-level error type. SCAFFOLD-ONLY variants are surfaced now so callers
-/// see them in API docs; implementation work will extend the variant set.
+/// Crate-level error type.
 #[derive(Debug)]
 pub enum PacketCompilerError {
-    /// Function is in the scaffold; no implementation has landed yet.
+    /// Function is still scaffold-only; no Rust implementation has landed yet.
     NotImplemented(&'static str),
     /// Generic parity-vector load failure (corrupt JSON / missing file).
     GoldenVectorIo(String),
