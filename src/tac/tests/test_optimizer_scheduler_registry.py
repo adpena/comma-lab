@@ -154,6 +154,7 @@ def test_telemetry_record_contains_required_timing_state_and_authority_fields() 
         seed_budget=2,
         slice_budget=16,
         seconds_per_candidate=0.75,
+        seconds_per_step=0.25,
         backend="mlx",
         kernel_fusion_strategy_id="measured_mlx_conv_profile",
         backend_kernel_contract={"backend": "mlx", "score_claim": False},
@@ -177,6 +178,7 @@ def test_telemetry_record_contains_required_timing_state_and_authority_fields() 
     assert row["slice_budget"] == 16
     assert row["seconds_per_epoch"] is None
     assert row["seconds_per_candidate"] == 0.75
+    assert row["seconds_per_step"] == 0.25
     assert row["backend"] == "mlx"
     assert row["kernel_fusion_strategy_id"] == "measured_mlx_conv_profile"
     assert row["operator_mix"]["conv2d"] == 0.7

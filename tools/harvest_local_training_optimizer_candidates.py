@@ -26,6 +26,10 @@ from comma_lab.scheduler.local_training_harvest import (  # noqa: E402
     LocalTrainingHarvestError,
     harvest_local_training_optimizer_candidates,
 )
+from tac.optimization.local_training_harvest_intelligence import (  # noqa: E402
+    LocalTrainingHarvestIntelligenceError,
+    build_local_training_harvest_intelligence,
+)
 from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 
@@ -38,6 +42,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--top-k", type=int)
     parser.add_argument("--allow-overwrite", action="store_true")
     parser.add_argument("--expected-output-sha256")
+    parser.add_argument(
+        "--intelligence-output",
+        type=Path,
+        help=(
+            "Optional local-training intelligence sidecar containing neutral "
+            "optimizer atoms and scheduler telemetry."
+        ),
+    )
+    parser.add_argument(
+        "--expected-intelligence-output-sha256",
+        help="Expected existing SHA-256 when overwriting --intelligence-output.",
+    )
+    parser.add_argument(
+        "--max-atoms",
+        type=int,
+        help="Optional cap for optimizer atom materialization.",
+    )
     return parser.parse_args(argv)
 
 
@@ -58,10 +79,25 @@ def main(argv: list[str] | None = None) -> int:
             allow_overwrite=args.allow_overwrite,
             expected_existing_sha256=args.expected_output_sha256,
         )
+        intelligence = None
+        if args.intelligence_output is not None:
+            intelligence = build_local_training_harvest_intelligence(
+                harvested,
+                source_path=args.output,
+                repo_root=args.repo_root,
+                max_atoms=args.max_atoms,
+            )
+            write_json_artifact(
+                args.intelligence_output,
+                intelligence,
+                allow_overwrite=args.allow_overwrite,
+                expected_existing_sha256=args.expected_intelligence_output_sha256,
+            )
     except (
         ArtifactWriteError,
         ExperimentQueueError,
         LocalTrainingHarvestError,
+        LocalTrainingHarvestIntelligenceError,
         OSError,
         ValueError,
         json.JSONDecodeError,
@@ -81,6 +117,18 @@ def main(argv: list[str] | None = None) -> int:
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
+                "intelligence_output": str(args.intelligence_output)
+                if args.intelligence_output is not None
+                else None,
+                "intelligence_schema": intelligence["schema"]
+                if intelligence is not None
+                else None,
+                "telemetry_record_count": intelligence["telemetry_record_count"]
+                if intelligence is not None
+                else None,
+                "atom_count": intelligence["atom_count"]
+                if intelligence is not None
+                else None,
             },
             sort_keys=True,
         )

@@ -15,6 +15,14 @@ from comma_lab.scheduler.local_training_harvest import (
     harvest_local_training_optimizer_candidates,
 )
 from comma_lab.scheduler.local_training_queue import build_local_training_execution_queue
+from tac.optimization.local_training_harvest_intelligence import (
+    LOCAL_TRAINING_HARVEST_INTELLIGENCE_SCHEMA,
+    OPTIMIZER_SCHEDULER_TELEMETRY_LEDGER_SCHEMA,
+)
+from tac.optimization.optimizer_scheduler_registry import (
+    TELEMETRY_SCHEMA,
+    default_optimizer_scheduler_registry,
+)
 from tac.substrates._shared.trainer_skeleton import (
     write_representation_training_probe_manifest,
 )
@@ -31,6 +39,11 @@ def _plan(
 ) -> dict:
     output_dir = repo / candidate_id
     representation_manifest = output_dir / representation_manifest_name
+    config_sha256 = (
+        default_optimizer_scheduler_registry().get(optimizer_descriptor_id).config_sha256
+        if optimizer_descriptor_id
+        else None
+    )
     command = [
         ".venv/bin/python",
         "tools/run_local_training_plan.py",
@@ -53,7 +66,7 @@ def _plan(
             "stage_index": 8,
             "seed": 23,
             "optimizer_descriptor_id": optimizer_descriptor_id,
-            "optimizer_config_sha256": "a" * 64 if optimizer_descriptor_id else None,
+            "optimizer_config_sha256": config_sha256,
             "parameter_group_lr_policy_id": (
                 "embedding_theta1_hidden_muon_adamw"
                 if optimizer_descriptor_id
@@ -81,6 +94,9 @@ def _plan(
 
 
 def _write_completed_manifest(path: Path, *, candidate_id: str, seconds: float = 1.25) -> None:
+    optimizer_config_sha256 = default_optimizer_scheduler_registry().get(
+        "pr95_stage8_muon_adamw_mlx"
+    ).config_sha256
     write_representation_training_probe_manifest(
         path,
         candidate_id=candidate_id,
@@ -101,9 +117,10 @@ def _write_completed_manifest(path: Path, *, candidate_id: str, seconds: float =
         candidate_params={
             "stage_index": 8,
             "optimizer_descriptor_id": "pr95_stage8_muon_adamw_mlx",
-            "optimizer_config_sha256": "a" * 64,
+            "optimizer_config_sha256": optimizer_config_sha256,
             "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
             "parameter_group_lr_policy_sha256": "b" * 64,
+            "steps": 1,
         },
         dispatch_blockers=[
             "representation_training_probe_is_proxy_signal",
@@ -115,8 +132,22 @@ def _write_completed_manifest(path: Path, *, candidate_id: str, seconds: float =
                 "schema": "trainer_runtime_profile_observation.v1",
                 "candidate_id": candidate_id,
                 "training_backend": "mlx",
+                "seed": 23,
+                "stage_index": 8,
+                "stage_id": "stage8_muon_finetune",
+                "state_bytes": 4096,
                 "seconds_per_step": seconds,
                 "kernel_fusion_strategy_id": "local_training_harvest_fixture",
+                "kernel_fusion": {
+                    "kernel_fusion_strategy_id": "local_training_harvest_fixture",
+                    "operator_mix": {"conv2d": 1, "newton_schulz5": 1},
+                },
+                "packet_compiler_bridge": {
+                    "packet_compiler_target_declared": True,
+                    "runtime_consumption_proof_required": True,
+                    "runtime_consumption_proof_present": False,
+                    "blockers": ["runtime_consumption_proof_missing"],
+                },
                 "score_claim": False,
                 "promotion_eligible": False,
                 "rank_or_kill_eligible": False,
@@ -269,7 +300,11 @@ def test_harvest_refuses_queue_manifest_identity_mismatch(tmp_path: Path) -> Non
 
 
 def test_harvest_cli_writes_optimizer_candidate_queue(tmp_path: Path) -> None:
-    plan = _plan(tmp_path, candidate_id="candidate_a")
+    plan = _plan(
+        tmp_path,
+        candidate_id="candidate_a",
+        optimizer_descriptor_id="pr95_stage8_muon_adamw_mlx",
+    )
     queue = _queue(tmp_path, plan)
     queue_path = tmp_path / "experiment_queue.json"
     queue_path.write_text(json.dumps(queue, indent=2, sort_keys=True), encoding="utf-8")
@@ -280,6 +315,7 @@ def test_harvest_cli_writes_optimizer_candidate_queue(tmp_path: Path) -> None:
     )
     state_path = _state(tmp_path, queue, {queue["experiments"][0]["id"]: "succeeded"})
     output = tmp_path / "optimizer_candidate_queue.json"
+    intelligence_output = tmp_path / "optimizer_harvest_intelligence.json"
 
     result = subprocess.run(
         [
@@ -293,6 +329,8 @@ def test_harvest_cli_writes_optimizer_candidate_queue(tmp_path: Path) -> None:
             str(tmp_path),
             "--output",
             str(output),
+            "--intelligence-output",
+            str(intelligence_output),
         ],
         cwd=REPO_ROOT,
         text=True,
@@ -304,7 +342,11 @@ def test_harvest_cli_writes_optimizer_candidate_queue(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     summary = json.loads(result.stdout)
     harvested = json.loads(output.read_text(encoding="utf-8"))
+    intelligence = json.loads(intelligence_output.read_text(encoding="utf-8"))
     assert summary["harvested_representation_manifest_count"] == 1
+    assert summary["intelligence_schema"] == LOCAL_TRAINING_HARVEST_INTELLIGENCE_SCHEMA
+    assert summary["telemetry_record_count"] == 1
+    assert summary["atom_count"] == 1
     assert harvested["n_candidates"] == 1
     assert harvested["dispatch_ready_count"] == 0
     assert harvested["score_claim"] is False
@@ -314,3 +356,24 @@ def test_harvest_cli_writes_optimizer_candidate_queue(tmp_path: Path) -> None:
     assert harvested["top_k"][0]["rank_score_field"] == (
         "seconds_per_step_cost_signal_not_score"
     )
+    assert "predicted_score_mean" not in harvested["top_k"][0]
+    assert "score_mean" not in harvested["top_k"][0]
+    assert "quality_evidence" not in harvested["top_k"][0]
+    assert intelligence["schema"] == LOCAL_TRAINING_HARVEST_INTELLIGENCE_SCHEMA
+    assert intelligence["score_claim"] is False
+    assert intelligence["promotion_eligible"] is False
+    assert intelligence["ready_for_exact_eval_dispatch"] is False
+    assert intelligence["atom_count"] == 1
+    assert intelligence["telemetry_record_count"] == 1
+    telemetry = intelligence["optimizer_scheduler_telemetry"]
+    assert telemetry["schema"] == OPTIMIZER_SCHEDULER_TELEMETRY_LEDGER_SCHEMA
+    row = telemetry["records"][0]
+    assert row["schema"] == TELEMETRY_SCHEMA
+    assert row["descriptor_id"] == "pr95_stage8_muon_adamw_mlx"
+    assert row["axis_tag"] == "[macOS-MLX research-signal]"
+    assert row["seconds_per_step"] == 0.75
+    assert row["seconds_per_candidate"] is None
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["metadata"]["source_candidate_id"] == "candidate_a"
+    assert "runtime_consumption_proof_missing" in row["dispatch_blockers"]

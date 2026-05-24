@@ -45,7 +45,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         action="append",
         default=[],
-        help="Generic JSON object with candidates[]. May repeat.",
+        help=(
+            "Generic JSON object with candidates[]. May repeat. Raw "
+            "optimizer_candidate_queue_v1 timing queues are refused; use an "
+            "explicit calibrated quality adapter."
+        ),
     )
     parser.add_argument(
         "--execution-configs",

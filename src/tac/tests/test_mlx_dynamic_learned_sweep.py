@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from tac.optimization.mlx_dynamic_learned_sweep import (
+    QUALITY_EVIDENCE_SCHEMA,
     MLXDynamicLearnedSweepError,
     build_mlx_dynamic_learned_sweep_plan,
 )
@@ -309,43 +310,188 @@ def test_dynamic_sweep_rejects_explicit_candidate_missing_full_video_denominator
         )
 
 
-def test_dynamic_sweep_does_not_treat_inherited_exact_estimate_as_candidate_specific() -> None:
-    plan = build_mlx_dynamic_learned_sweep_plan(
-        incumbent_score=0.1920513168811056,
-        candidate_payloads=[
-            {
-                "schema": "decoder_q_pairset_acquisition.v1",
-                "candidates": [
-                    {
-                        "schema": "decoder_q_pairset_acquisition_candidate.v1",
-                        **_false_authority(),
-                        "candidate_id": "drop_one_child",
-                        "family": "decoder_q_selective_dqs1",
-                        "predicted_score_mean": 0.19203,
-                        "predicted_score_source": "source_selector_inherited_non_authoritative",
-                        "predicted_score_scope": "source_selector_scope_not_child_candidate",
-                        "exact_cpu_calibrated_estimate_scope": (
-                            "source_selector_scope_not_child_candidate"
-                        ),
-                        "exact_cpu_calibrated_estimate": {
-                            "schema": "decoder_q_selective_selector_exact_cpu_calibrated_estimate.v1",
+def test_dynamic_sweep_rejects_inherited_explicit_estimate_without_quality_adapter() -> None:
+    with pytest.raises(
+        MLXDynamicLearnedSweepError,
+        match="missing explicit calibrated quality evidence",
+    ):
+        build_mlx_dynamic_learned_sweep_plan(
+            incumbent_score=0.1920513168811056,
+            candidate_payloads=[
+                {
+                    "schema": "decoder_q_pairset_acquisition.v1",
+                    "candidates": [
+                        {
+                            "schema": "decoder_q_pairset_acquisition_candidate.v1",
                             **_false_authority(),
-                            "predicted_score": 0.19203,
-                            "predicted_delta_vs_base": -0.01,
-                        },
-                    }
-                ],
+                            "candidate_id": "drop_one_child",
+                            "family": "decoder_q_selective_dqs1",
+                            "predicted_score_mean": 0.19203,
+                            "predicted_score_source": (
+                                "source_selector_inherited_non_authoritative"
+                            ),
+                            "predicted_score_scope": (
+                                "source_selector_scope_not_child_candidate"
+                            ),
+                            "exact_cpu_calibrated_estimate_scope": (
+                                "source_selector_scope_not_child_candidate"
+                            ),
+                            "exact_cpu_calibrated_estimate": {
+                                "schema": (
+                                    "decoder_q_selective_selector_exact_cpu_calibrated_estimate.v1"
+                                ),
+                                **_false_authority(),
+                                "predicted_score": 0.19203,
+                                "predicted_delta_vs_base": -0.01,
+                            },
+                        }
+                    ],
+                }
+            ],
+            top_k=1,
+            default_score_variance=2.5e-10,
+        )
+
+
+def test_dynamic_sweep_rejects_optimizer_candidate_queue_payload_even_with_selector_pareto() -> None:
+    payload = {
+        "schema": "optimizer_candidate_queue_v1",
+        **_false_authority(),
+        "top_k": [
+            {
+                "candidate_id": "timing_only",
+                "rank_score": 0.1,
+                "rank_score_field": "seconds_per_step_cost_signal_not_score",
+                **_false_authority(),
             }
         ],
+    }
+
+    with pytest.raises(
+        MLXDynamicLearnedSweepError,
+        match="optimizer_candidate_queue_v1 is timing/planning signal",
+    ):
+        build_mlx_dynamic_learned_sweep_plan(
+            incumbent_score=0.1920513168811056,
+            selector_pareto=_selector_pareto(),
+            candidate_payloads=[payload],
+            top_k=4,
+        )
+
+
+def test_dynamic_sweep_cli_rejects_optimizer_candidate_queue_candidate_payload(
+    tmp_path: Path,
+) -> None:
+    queue_path = tmp_path / "optimizer_candidate_queue.json"
+    queue_path.write_text(
+        json.dumps(
+            {
+                "schema": "optimizer_candidate_queue_v1",
+                **_false_authority(),
+                "top_k": [
+                    {
+                        "candidate_id": "timing_only",
+                        "rank_score": 0.1,
+                        "rank_score_field": "seconds_per_step_cost_signal_not_score",
+                        **_false_authority(),
+                    }
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "plan_mlx_dynamic_learned_sweep.py"),
+            "--incumbent-score",
+            "0.1920513168811056",
+            "--candidate-payload",
+            str(queue_path),
+            "--json-out",
+            str(tmp_path / "plan.json"),
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=120,
+    )
+
+    assert result.returncode == 2
+    assert "optimizer_candidate_queue_v1" in result.stderr
+    assert not (tmp_path / "plan.json").exists()
+
+
+def test_dynamic_sweep_rejects_wrapped_timing_queue_candidate_as_score_mean() -> None:
+    payload = {
+        "schema": "explicit_dynamic_candidates.v1",
+        "candidates": [
+            {
+                "candidate_id": "wrapped_timing",
+                "family": "pr95_hnerv",
+                "score_mean": 0.031,
+                "rank_score_field": "seconds_per_step_cost_signal_not_score",
+                "consumer_payload": {
+                    "schema": "representation_training_candidate_payload.v1",
+                    **_false_authority(),
+                },
+                **_false_authority(),
+            }
+        ],
+    }
+
+    with pytest.raises(
+        MLXDynamicLearnedSweepError,
+        match="timing/proxy signal",
+    ):
+        build_mlx_dynamic_learned_sweep_plan(
+            incumbent_score=0.1920513168811056,
+            candidate_payloads=[payload],
+            top_k=1,
+        )
+
+
+def test_dynamic_sweep_accepts_explicit_strict_quality_adapter_candidate() -> None:
+    payload = {
+        "schema": "explicit_dynamic_candidates.v1",
+        "candidates": [
+            {
+                "candidate_id": "strict_quality_adapter",
+                "family": "decoder_q_selective_dqs1",
+                "predicted_score_mean": 0.19203,
+                "predicted_score_source": "mlx_effective_spend_triage_quality_adapter",
+                "quality_evidence": {
+                    "schema": QUALITY_EVIDENCE_SCHEMA,
+                    **_false_authority(),
+                    "source_schema": "mlx_effective_spend_triage_candidate_selection.v1",
+                    "adapter_tool": "tools/adapt_mlx_effective_spend_triage_to_learned_sweep.py",
+                    "calibrated_score_mean": 0.19203,
+                    "gate_statuses": {
+                        "calibration": "strict_pass",
+                        "parity": "strict_pass",
+                        "production_contract": "strict_pass",
+                        "effective_spend_triage": "strict_pass",
+                    },
+                },
+                **_false_authority(),
+            }
+        ],
+    }
+
+    plan = build_mlx_dynamic_learned_sweep_plan(
+        incumbent_score=0.1920513168811056,
+        candidate_payloads=[payload],
         top_k=1,
-        default_score_variance=2.5e-10,
     )
 
     row = plan["ranked_sweep_rows"][0]
-    assert row["candidate_id"] == "drop_one_child"
-    assert row["prediction_source"] == "source_selector_inherited_non_authoritative"
-    assert row["prediction_scope"] == "source_selector_scope_not_child_candidate"
-    assert row["predicted_score_variance"] == pytest.approx(2.5e-10)
+    assert row["candidate_id"] == "strict_quality_adapter"
+    assert row["predicted_score_mean"] == pytest.approx(0.19203)
+    assert row["prediction_source"] == "mlx_effective_spend_triage_quality_adapter"
 
 
 def test_dynamic_sweep_missing_exact_estimate_scope_is_not_candidate_specific() -> None:

@@ -30,6 +30,25 @@ ROW_SCHEMA = "mlx_dynamic_learned_sweep_row.v1"
 OPTIMIZATION_PASS_SCHEMA = "mlx_dynamic_learned_sweep_optimization_pass.v1"
 TOOL = "tac.optimization.mlx_dynamic_learned_sweep"
 DEFAULT_SCORE_VARIANCE = 2.5e-10
+QUALITY_EVIDENCE_SCHEMA = "mlx_dynamic_learned_sweep_quality_evidence.v1"
+DISALLOWED_CANDIDATE_PAYLOAD_SCHEMAS: frozenset[str] = frozenset(
+    {"optimizer_candidate_queue_v1"}
+)
+TIMING_OR_PROXY_RANK_FIELD_FRAGMENTS: tuple[str, ...] = (
+    "seconds_per_",
+    "timing",
+    "_cost_signal_not_score",
+    "planner_priority_not_score",
+    "negative_acquisition_value_proxy_not_score",
+    "proxy_objective_not_score",
+)
+TIMING_ONLY_CONSUMER_PAYLOAD_SCHEMAS: frozenset[str] = frozenset(
+    {
+        "trainer_runtime_profile_candidate_payload.v1",
+        "representation_training_candidate_payload.v1",
+        "pr95_muon_local_training_candidate_payload.v1",
+    }
+)
 _CONTEST_OBSERVATION_LABELS = {
     "contest_cpu",
     "contest_cuda",
@@ -116,6 +135,77 @@ def _metadata_value(row: Mapping[str, Any], keys: Sequence[str]) -> Any:
         if key in row:
             return row.get(key)
     return None
+
+
+def _require_allowed_candidate_payload_schema(payload: Mapping[str, Any]) -> None:
+    schema = str(payload.get("schema") or "")
+    if schema in DISALLOWED_CANDIDATE_PAYLOAD_SCHEMAS:
+        raise MLXDynamicLearnedSweepError(
+            f"{schema} is timing/planning signal; use an explicit calibrated "
+            "quality adapter before learned-sweep candidate intake"
+        )
+
+
+def _consumer_payload_schema(row: Mapping[str, Any]) -> str:
+    payload = row.get("consumer_payload")
+    return str(payload.get("schema") or "") if isinstance(payload, Mapping) else ""
+
+
+def _require_quality_evidence(row: Mapping[str, Any], *, label: str) -> None:
+    rank_field = str(row.get("rank_score_field") or "")
+    consumer_schema = _consumer_payload_schema(row)
+    if any(fragment in rank_field for fragment in TIMING_OR_PROXY_RANK_FIELD_FRAGMENTS):
+        raise MLXDynamicLearnedSweepError(
+            f"{label} rank_score_field={rank_field!r} is timing/proxy signal; "
+            "learned sweep requires explicit calibrated quality evidence"
+        )
+    if consumer_schema in TIMING_ONLY_CONSUMER_PAYLOAD_SCHEMAS:
+        raise MLXDynamicLearnedSweepError(
+            f"{label} consumer_payload schema {consumer_schema!r} is timing-only; "
+            "use an explicit calibrated quality adapter"
+        )
+
+    estimate = row.get("exact_cpu_calibrated_estimate")
+    if (
+        row.get("exact_cpu_calibrated_estimate_scope") == "candidate_specific"
+        and isinstance(estimate, Mapping)
+        and estimate.get("predicted_score") is not None
+    ):
+        _require_false_authority(estimate, label=f"{label} exact_cpu_calibrated_estimate")
+        return
+
+    quality = row.get("quality_evidence")
+    if not isinstance(quality, Mapping):
+        raise MLXDynamicLearnedSweepError(
+            f"{label} missing explicit calibrated quality evidence"
+        )
+    if quality.get("schema") != QUALITY_EVIDENCE_SCHEMA:
+        raise MLXDynamicLearnedSweepError(
+            f"{label} quality_evidence schema must be {QUALITY_EVIDENCE_SCHEMA}"
+        )
+    _require_false_authority(quality, label=f"{label} quality_evidence")
+    if quality.get("calibrated_score_mean") is None and quality.get(
+        "calibrated_gain_mean"
+    ) is None:
+        raise MLXDynamicLearnedSweepError(
+            f"{label} quality_evidence requires calibrated_score_mean or calibrated_gain_mean"
+        )
+    gate_statuses = quality.get("gate_statuses")
+    if not isinstance(gate_statuses, Mapping):
+        raise MLXDynamicLearnedSweepError(
+            f"{label} quality_evidence.gate_statuses must be an object"
+        )
+    required_gates = (
+        "calibration",
+        "parity",
+        "production_contract",
+        "effective_spend_triage",
+    )
+    for gate in required_gates:
+        if gate_statuses.get(gate) != "strict_pass":
+            raise MLXDynamicLearnedSweepError(
+                f"{label} quality_evidence.gate_statuses.{gate} must be strict_pass"
+            )
 
 
 def _as_int(value: Any, *, label: str) -> int:
@@ -543,6 +633,7 @@ def _explicit_candidates(
     *,
     default_score_variance: float,
 ) -> list[dict[str, Any]]:
+    _require_allowed_candidate_payload_schema(payload)
     rows = payload.get("candidates")
     if not isinstance(rows, list):
         return []
@@ -553,6 +644,7 @@ def _explicit_candidates(
         _require_false_authority(row, label=f"candidate {index}")
         row_label = str(row.get("candidate_id") or row.get("id") or f"candidate {index}")
         _validate_normalized_gain_sum(row, label=row_label)
+        _require_quality_evidence(row, label=row_label)
         predicted_score = _as_float(
             row.get("predicted_score_mean", row.get("score_mean")),
             label=f"candidate {index} predicted_score_mean",

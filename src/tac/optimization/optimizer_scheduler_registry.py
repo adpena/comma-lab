@@ -81,6 +81,7 @@ DEFAULT_PARETO_OBJECTIVES: tuple[str, ...] = (
     "archive_bytes",
     "state_bytes",
     "seconds_per_candidate",
+    "seconds_per_step",
 )
 
 
@@ -360,6 +361,7 @@ class OptimizerSchedulerTelemetryRecord:
     allowed_target_modes: Sequence[str]
     seconds_per_epoch: float | None = None
     seconds_per_candidate: float | None = None
+    seconds_per_step: float | None = None
     backend: str | None = None
     kernel_fusion_strategy_id: str | None = None
     backend_kernel_contract: Mapping[str, Any] = field(default_factory=dict)
@@ -397,11 +399,15 @@ class OptimizerSchedulerTelemetryRecord:
             raise OptimizerSchedulerRegistryError("slice_budget must be positive")
         if self.state_bytes < 0:
             raise OptimizerSchedulerRegistryError("state_bytes must be non-negative")
-        if self.seconds_per_epoch is None and self.seconds_per_candidate is None:
+        if (
+            self.seconds_per_epoch is None
+            and self.seconds_per_candidate is None
+            and self.seconds_per_step is None
+        ):
             raise OptimizerSchedulerRegistryError(
-                "seconds_per_epoch or seconds_per_candidate is required"
+                "seconds_per_epoch, seconds_per_candidate, or seconds_per_step is required"
             )
-        for name in ("seconds_per_epoch", "seconds_per_candidate"):
+        for name in ("seconds_per_epoch", "seconds_per_candidate", "seconds_per_step"):
             value = getattr(self, name)
             if value is None:
                 continue
@@ -459,6 +465,7 @@ class OptimizerSchedulerTelemetryRecord:
             "slice_budget": self.slice_budget,
             "seconds_per_epoch": self.seconds_per_epoch,
             "seconds_per_candidate": self.seconds_per_candidate,
+            "seconds_per_step": self.seconds_per_step,
             "backend": self.backend,
             "kernel_fusion_strategy_id": self.kernel_fusion_strategy_id,
             "backend_kernel_contract": _thaw_json(self.backend_kernel_contract),
@@ -754,6 +761,7 @@ def build_optimizer_scheduler_telemetry_record(
     state_bytes: int,
     seconds_per_epoch: float | None = None,
     seconds_per_candidate: float | None = None,
+    seconds_per_step: float | None = None,
     backend: str | None = None,
     kernel_fusion_strategy_id: str | None = None,
     backend_kernel_contract: Mapping[str, Any] | None = None,
@@ -783,6 +791,7 @@ def build_optimizer_scheduler_telemetry_record(
         allowed_target_modes=descriptor.allowed_target_modes,
         seconds_per_epoch=seconds_per_epoch,
         seconds_per_candidate=seconds_per_candidate,
+        seconds_per_step=seconds_per_step,
         backend=backend,
         kernel_fusion_strategy_id=kernel_fusion_strategy_id,
         backend_kernel_contract=backend_kernel_contract or {},

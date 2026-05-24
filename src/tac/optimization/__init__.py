@@ -112,6 +112,14 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "tac.optimization.optimizer_signal_atoms",
         "build_optimizer_signal_atom_ledger",
     ),
+    "build_local_training_harvest_intelligence": (
+        "tac.optimization.local_training_harvest_intelligence",
+        "build_local_training_harvest_intelligence",
+    ),
+    "build_optimizer_scheduler_telemetry_from_harvest_queue": (
+        "tac.optimization.local_training_harvest_intelligence",
+        "build_optimizer_scheduler_telemetry_from_harvest_queue",
+    ),
     "build_byte_shaving_campaign_plan": (
         "tac.optimization.byte_shaving_campaign",
         "build_byte_shaving_campaign_plan",

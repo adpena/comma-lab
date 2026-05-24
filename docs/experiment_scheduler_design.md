@@ -253,6 +253,17 @@ removes the local "runtime proof missing" observation from the cost-signal row,
 but the row remains non-promotable until full-frame parity, receiver proof, and
 exact CPU/CUDA auth eval are present.
 
+Completed local-training queues should be harvested with
+`tools/harvest_local_training_optimizer_candidates.py`. Passing
+`--intelligence-output` emits `local_training_optimizer_harvest_intelligence.v1`:
+neutral optimizer atoms plus `optimizer_scheduler_telemetry.v1` records derived
+from embedded runtime profiles. This is the canonical bridge from PR95 timing
+smokes into cost priors, scheduler telemetry, and downstream planner
+observability. It still preserves `score_claim=false`,
+`promotion_eligible=false`, `rank_or_kill_eligible=false`, and
+`ready_for_exact_eval_dispatch=false`; timing rank fields such as
+`seconds_per_step_cost_signal_not_score` are never learned-sweep quality inputs.
+
 ## Exact-ready consumer
 
 `tools/build_materializer_exact_eval_consumer.py` bridges materializer exact

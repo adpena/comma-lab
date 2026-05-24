@@ -19,6 +19,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tac.atom.ledger import append_atoms_batch  # noqa: E402
+from tac.optimization.local_training_harvest_intelligence import (  # noqa: E402
+    LocalTrainingHarvestIntelligenceError,
+    build_local_training_harvest_intelligence,
+    build_optimizer_scheduler_telemetry_from_harvest_queue,
+)
 from tac.optimization.optimizer_signal_atoms import (  # noqa: E402
     OptimizerSignalAtomError,
     build_atoms_from_optimizer_signal_source,
@@ -67,6 +72,24 @@ def main(argv: list[str] | None = None) -> int:
         help="Optional canonical atom-row JSONL output, one Atom per line.",
     )
     parser.add_argument(
+        "--scheduler-telemetry-json-out",
+        type=Path,
+        default=None,
+        help="Optional optimizer_scheduler_telemetry_ledger.v1 JSON output.",
+    )
+    parser.add_argument(
+        "--scheduler-telemetry-jsonl-out",
+        type=Path,
+        default=None,
+        help="Optional optimizer_scheduler_telemetry.v1 JSONL rows.",
+    )
+    parser.add_argument(
+        "--intelligence-json-out",
+        type=Path,
+        default=None,
+        help="Optional combined local-training harvest intelligence JSON output.",
+    )
+    parser.add_argument(
         "--max-atoms",
         type=int,
         default=None,
@@ -94,7 +117,33 @@ def main(argv: list[str] | None = None) -> int:
             source_path=source_path,
             max_atoms=args.max_atoms,
         )
-    except (OSError, json.JSONDecodeError, OptimizerSignalAtomError, ValueError) as exc:
+        telemetry = None
+        intelligence = None
+        if (
+            args.scheduler_telemetry_json_out is not None
+            or args.scheduler_telemetry_jsonl_out is not None
+        ):
+            telemetry = build_optimizer_scheduler_telemetry_from_harvest_queue(
+                payload,
+                source_path=source_path,
+                repo_root=REPO_ROOT,
+            )
+        if args.intelligence_json_out is not None:
+            intelligence = build_local_training_harvest_intelligence(
+                payload,
+                source_path=source_path,
+                repo_root=REPO_ROOT,
+                max_atoms=args.max_atoms,
+            )
+            if telemetry is None:
+                telemetry = intelligence["optimizer_scheduler_telemetry"]
+    except (
+        OSError,
+        json.JSONDecodeError,
+        OptimizerSignalAtomError,
+        LocalTrainingHarvestIntelligenceError,
+        ValueError,
+    ) as exc:
         print(f"FATAL: {exc}", file=sys.stderr)
         return 2
 
@@ -102,6 +151,12 @@ def main(argv: list[str] | None = None) -> int:
         _write_json(args.json_out, ledger)
     if args.jsonl_out is not None:
         _write_jsonl(args.jsonl_out, [atom.to_jsonl_row() for atom in atoms])
+    if args.scheduler_telemetry_json_out is not None and telemetry is not None:
+        _write_json(args.scheduler_telemetry_json_out, telemetry)
+    if args.scheduler_telemetry_jsonl_out is not None and telemetry is not None:
+        _write_jsonl(args.scheduler_telemetry_jsonl_out, telemetry["records"])
+    if args.intelligence_json_out is not None and intelligence is not None:
+        _write_json(args.intelligence_json_out, intelligence)
     appended = []
     if args.append_canonical_atom_ledger:
         appended = append_atoms_batch(atoms)
@@ -111,6 +166,14 @@ def main(argv: list[str] | None = None) -> int:
         destinations.append(f"json={args.json_out}")
     if args.jsonl_out is not None:
         destinations.append(f"jsonl={args.jsonl_out}")
+    if args.scheduler_telemetry_json_out is not None:
+        destinations.append(f"scheduler_telemetry_json={args.scheduler_telemetry_json_out}")
+    if args.scheduler_telemetry_jsonl_out is not None:
+        destinations.append(
+            f"scheduler_telemetry_jsonl={args.scheduler_telemetry_jsonl_out}"
+        )
+    if args.intelligence_json_out is not None:
+        destinations.append(f"intelligence_json={args.intelligence_json_out}")
     if args.append_canonical_atom_ledger:
         destinations.append(f"canonical_ledger_rows={len(appended)}")
     print(

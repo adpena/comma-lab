@@ -79,6 +79,175 @@ def _require_mapping(value: Any, *, label: str) -> Mapping[str, Any]:
     return value
 
 
+def _optional_mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _mapping_list(value: Any) -> list[Mapping[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, Mapping)]
+
+
+def _kernel_fusion_strategy_id(profile: Mapping[str, Any]) -> Any:
+    kernel = _optional_mapping(profile.get("kernel_fusion"))
+    return kernel.get("kernel_fusion_strategy_id") or profile.get(
+        "kernel_fusion_strategy_id"
+    )
+
+
+def _packet_compiler_bridge_snapshot(profile: Mapping[str, Any]) -> dict[str, Any]:
+    bridge = _optional_mapping(profile.get("packet_compiler_bridge"))
+    return {
+        "packet_compiler_target_declared": bridge.get("packet_compiler_target_declared"),
+        "archive_export_schema": bridge.get("archive_export_schema"),
+        "archive_export_tool": bridge.get("archive_export_tool"),
+        "runtime_consumption_proof_required": bridge.get(
+            "runtime_consumption_proof_required"
+        ),
+        "runtime_consumption_proof_present": bridge.get(
+            "runtime_consumption_proof_present"
+        ),
+        "blockers": list(bridge.get("blockers") or []),
+    }
+
+
+def _runtime_profile_snapshot(profile: Mapping[str, Any]) -> dict[str, Any]:
+    kernel = _optional_mapping(profile.get("kernel_fusion"))
+    return {
+        "schema": profile.get("schema"),
+        "candidate_id": profile.get("candidate_id"),
+        "profile_id": profile.get("profile_id"),
+        "lane_id": profile.get("lane_id"),
+        "evidence_grade": profile.get("evidence_grade"),
+        "evidence_tag": profile.get("evidence_tag"),
+        "hardware_substrate": profile.get("hardware_substrate"),
+        "training_backend": profile.get("training_backend") or profile.get("device"),
+        "scheduler_resource_kind": profile.get("scheduler_resource_kind"),
+        "stage_index": profile.get("stage_index"),
+        "stage_id": profile.get("stage_id"),
+        "seed": profile.get("seed"),
+        "timing_field": profile.get("timing_field"),
+        "timing_value_seconds": profile.get("timing_value_seconds"),
+        "seconds_per_epoch": profile.get("seconds_per_epoch"),
+        "seconds_per_candidate": profile.get("seconds_per_candidate"),
+        "seconds_per_step": profile.get("seconds_per_step"),
+        "examples_per_second": profile.get("examples_per_second"),
+        "state_bytes": profile.get("state_bytes"),
+        "peak_memory_bytes": profile.get("peak_memory_bytes"),
+        "kernel_fusion_strategy_id": _kernel_fusion_strategy_id(profile),
+        "operator_mix": dict(_optional_mapping(kernel.get("operator_mix"))),
+        "local_cloud_substitution": dict(
+            _optional_mapping(profile.get("local_cloud_substitution"))
+        ),
+        "packet_compiler_bridge": _packet_compiler_bridge_snapshot(profile),
+        "blockers": list(profile.get("blockers") or []),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "promotable": False,
+    }
+
+
+def _runtime_cost_observation_metadata(
+    record: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    consumer = _optional_mapping(record.get("consumer_payload"))
+    probe = _optional_mapping(consumer.get("representation_training_probe"))
+    timing = _optional_mapping(probe.get("timing_smoke"))
+    summary = _optional_mapping(timing.get("runtime_profile_summary"))
+    profiles = _mapping_list(summary.get("profiles"))
+    if not profiles:
+        single = _optional_mapping(probe.get("runtime_profile"))
+        if single:
+            profiles = [single]
+    if not summary and not profiles:
+        return None
+
+    return {
+        "schema": "optimizer_signal_runtime_cost_observation.v1",
+        "source_path": (
+            "consumer_payload.representation_training_probe."
+            "timing_smoke.runtime_profile_summary"
+        ),
+        "summary": {
+            "schema": summary.get("schema"),
+            "profile_count": summary.get("profile_count") or len(profiles),
+            "best_local_backend": summary.get("best_local_backend"),
+            "best_scheduler_resource_kind": summary.get(
+                "best_scheduler_resource_kind"
+            ),
+            "best_timing_field": summary.get("best_timing_field"),
+            "best_timing_value_seconds": summary.get("best_timing_value_seconds"),
+            "kernel_fusion_strategy_ids": list(
+                summary.get("kernel_fusion_strategy_ids") or []
+            ),
+            "operator_mix_keys": list(summary.get("operator_mix_keys") or []),
+            "blockers": list(summary.get("blockers") or []),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "profiles": [_runtime_profile_snapshot(profile) for profile in profiles],
+        "planning_only": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _scheduler_cost_prior_hint_metadata(
+    record: Mapping[str, Any],
+    runtime_cost: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    if runtime_cost is None:
+        return None
+    params = _optional_mapping(record.get("candidate_params"))
+    summary = _optional_mapping(runtime_cost.get("summary"))
+    return {
+        "schema": "optimizer_scheduler_cost_prior_hint.v1",
+        "source_candidate_id": record.get("candidate_id"),
+        "representation_family": record.get("representation_family")
+        or params.get("representation_family"),
+        "substrate_family": record.get("substrate_family")
+        or params.get("substrate_family"),
+        "optimizer_descriptor_id": params.get("optimizer_descriptor_id")
+        or record.get("optimizer_descriptor_id"),
+        "optimizer_config_sha256": params.get("optimizer_config_sha256")
+        or record.get("optimizer_config_sha256"),
+        "parameter_group_lr_policy_id": record.get("parameter_group_lr_policy_id")
+        or params.get("parameter_group_lr_policy_id"),
+        "parameter_group_lr_policy_sha256": record.get(
+            "parameter_group_lr_policy_sha256"
+        )
+        or params.get("parameter_group_lr_policy_sha256"),
+        "parameter_group_fingerprint_sha256": record.get(
+            "parameter_group_fingerprint_sha256"
+        )
+        or params.get("parameter_group_fingerprint_sha256"),
+        "stage_index": params.get("stage_index"),
+        "stage_module": params.get("stage_module"),
+        "base_channels": params.get("base_channels"),
+        "latent_dim": params.get("latent_dim"),
+        "training_backend": summary.get("best_local_backend"),
+        "scheduler_resource_kind": summary.get("best_scheduler_resource_kind"),
+        "timing_field": summary.get("best_timing_field"),
+        "timing_value_seconds": summary.get("best_timing_value_seconds"),
+        "kernel_fusion_strategy_ids": list(
+            summary.get("kernel_fusion_strategy_ids") or []
+        ),
+        "blockers": list(summary.get("blockers") or []),
+        "cost_signal_only": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _validate_wire_in(payload: Mapping[str, Any]) -> None:
     violations = validate_optimizer_training_signal_wire_in(payload)
     if violations:
@@ -132,6 +301,11 @@ def build_atom_from_optimizer_wire_in(
 
     candidate_atom_id = str(atom_wire_in.get("candidate_atom_id") or candidate_id).strip()
     atom_id = f"optimizer_signal:{profile_id}:{candidate_atom_id}"
+    runtime_cost_observation = _runtime_cost_observation_metadata(record)
+    scheduler_cost_prior_hint = _scheduler_cost_prior_hint_metadata(
+        record,
+        runtime_cost_observation,
+    )
     source_sha256 = sha256_payload(
         {
             "wire_in": payload,
@@ -193,6 +367,8 @@ def build_atom_from_optimizer_wire_in(
         "parameter_group_lr_policy_id": record.get("parameter_group_lr_policy_id"),
         "parameter_group_lr_policy_sha256": record.get("parameter_group_lr_policy_sha256"),
         "parameter_group_fingerprint_sha256": record.get("parameter_group_fingerprint_sha256"),
+        "runtime_cost_observation": runtime_cost_observation,
+        "scheduler_cost_prior_hint": scheduler_cost_prior_hint,
         "source_path": source_path,
         "source_record_sha256": sha256_payload(record) if record else None,
         "wire_in_sha256": sha256_payload(payload),
