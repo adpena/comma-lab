@@ -728,6 +728,19 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert summary["queue_feedback_replan_followup_action_functional_path"] == str(
         run_dir / "inverse_steganalysis_action_functional.feedback.json"
     )
+    assert summary["queue_feedback_replan_policy_path"] == str(
+        run_dir / "queue_feedback_replan_policy.json"
+    )
+    feedback_policy = json.loads(
+        (run_dir / "queue_feedback_replan_policy.json").read_text(encoding="utf-8")
+    )
+    assert feedback_policy["schema"] == "queue_feedback_replan_policy.v1"
+    assert feedback_policy["decision"] == "run_next_materializer_campaign_iteration"
+    assert feedback_policy["should_continue_feedback_loop"] is True
+    assert feedback_policy["feedback_followup_queue_validation"]["valid"] is True
+    assert feedback_policy["feedback_followup_queue_validation"]["queue_sha256"]
+    assert feedback_policy["score_claim"] is False
+    assert feedback_policy["ready_for_exact_eval_dispatch"] is False
     feedback_execution = summary["queue_feedback_replan_followup_execution"]
     assert feedback_execution["schema"] == (
         runner.QUEUE_FEEDBACK_REPLAN_FOLLOWUP_EXECUTION_SCHEMA
@@ -1292,6 +1305,51 @@ def test_materializer_campaign_feedback_followup_queue_blocks_non_action_command
     assert "queue_feedback_replan_command_not_action_functional_tool" in blockers
     assert "queue_feedback_replan_command_forbidden_flag:--dispatch-mode" in blockers
 
+    queue, blockers = runner._queue_feedback_replan_followup_queue_payload(
+        args,
+        queue_feedback_replan_request={
+            "ready_for_action_functional_feedback": True,
+            "blockers": [],
+            "command_template": [
+                runner.sys.executable,
+                "tools/build_inverse_steganalysis_action_functional.py",
+                "--output",
+                str(tmp_path / "feedback.json"),
+                "--provider=modal",
+            ],
+        },
+        queue_feedback_replan_request_path=tmp_path / "request.json",
+        run_dir=tmp_path,
+        execution_queue=tmp_path / "source_queue.json",
+        state_path=tmp_path / "source_queue.sqlite",
+        source_queue={"queue_id": "unit_queue"},
+    )
+
+    assert queue is None
+    assert "queue_feedback_replan_command_forbidden_flag:--provider=modal" in blockers
+
+    queue, blockers = runner._queue_feedback_replan_followup_queue_payload(
+        args,
+        queue_feedback_replan_request={
+            "ready_for_action_functional_feedback": True,
+            "blockers": [],
+            "command_template": [
+                runner.sys.executable,
+                "tools/build_inverse_steganalysis_action_functional.py",
+                "--output",
+                str(tmp_path.parent / "feedback.json"),
+            ],
+        },
+        queue_feedback_replan_request_path=tmp_path / "request.json",
+        run_dir=tmp_path,
+        execution_queue=tmp_path / "source_queue.json",
+        state_path=tmp_path / "source_queue.sqlite",
+        source_queue={"queue_id": "unit_queue"},
+    )
+
+    assert queue is None
+    assert "queue_feedback_replan_output_path_outside_run_dir" in blockers
+
 
 def test_materializer_campaign_feedback_followup_local_autopolicy_guard(
     tmp_path: Path,
@@ -1329,7 +1387,13 @@ def test_materializer_campaign_feedback_followup_local_autopolicy_guard(
 
     assert blockers == []
     assert queue is not None
-    assert runner._queue_feedback_replan_followup_local_autopolicy_blockers(queue) == []
+    assert (
+        runner._queue_feedback_replan_followup_local_autopolicy_blockers(
+            queue,
+            run_dir=tmp_path,
+        )
+        == []
+    )
 
     unsafe_queue = json.loads(json.dumps(queue))
     unsafe_queue["controls"]["mode"] = "running"
@@ -1345,7 +1409,8 @@ def test_materializer_campaign_feedback_followup_local_autopolicy_guard(
     unsafe_step["command"].extend(["--provider", "modal"])
 
     policy_blockers = runner._queue_feedback_replan_followup_local_autopolicy_blockers(
-        unsafe_queue
+        unsafe_queue,
+        run_dir=tmp_path,
     )
 
     assert "queue_feedback_replan_followup_control_mode_not_paused" in policy_blockers

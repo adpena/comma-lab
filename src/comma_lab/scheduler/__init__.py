@@ -122,6 +122,12 @@ from .models import (
     SchedulerStatusReport,
     TrackStatus,
 )
+from .queue_feedback_replan_policy import (
+    QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA,
+    QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA,
+    build_queue_feedback_replan_policy,
+    validate_feedback_followup_queue,
+)
 from .ssh_experiment_queue_executor import (
     SSH_ARTIFACT_MOBILITY_SCHEMA,
     SSH_EXECUTION_RESULT_SCHEMA,
@@ -172,6 +178,8 @@ __all__ = [
     "MLX_RUNTIME_TELEMETRY_STATE_DISCOVERY_POLICY_SCHEMA",
     "PACKET_MEMBER_RECOMPRESS_MATERIALIZER",
     "PACKET_MEMBER_RECOMPRESS_TARGET_KIND",
+    "QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA",
+    "QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA",
     "REGISTRY_SCHEMA",
     "SCHEDULER_RUNTIME_POLICY_SCHEMA",
     "SSH_ARTIFACT_MOBILITY_SCHEMA",
@@ -206,6 +214,7 @@ __all__ = [
     "build_mlx_learned_sweep_autopilot_batch_queue",
     "build_mlx_learned_sweep_autopilot_queue",
     "build_mlx_scorer_response_execution_queue",
+    "build_queue_feedback_replan_policy",
     "build_remote_git_preflight_command",
     "build_remote_shell_command",
     "build_rsync_pull_command",
@@ -242,4 +251,5 @@ __all__ = [
     "set_control_mode",
     "stable_candidate_identity",
     "suggest_materializer_adapters",
+    "validate_feedback_followup_queue",
 ]
