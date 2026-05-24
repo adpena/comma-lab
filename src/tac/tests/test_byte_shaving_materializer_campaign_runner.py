@@ -1011,6 +1011,119 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert not inflate_work_dir.exists()
 
 
+def test_materializer_campaign_feedback_replan_preserves_calibration_inputs(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    run_dir.mkdir()
+    plan = tmp_path / "plan.json"
+    queue = tmp_path / "materializer_execution_queue.json"
+    state = tmp_path / "materializer_execution_queue.sqlite"
+    performance = run_dir / "queue_performance_summary.json"
+    runtime_identity = run_dir / "queue_performance_runtime_identity.json"
+    cache_identity = run_dir / "queue_performance_cache_identity.json"
+    observation = tmp_path / "local_observation.json"
+    cpu_packet = tmp_path / "cpu_review_packet.json"
+    cuda_packet = tmp_path / "cuda_review_packet.json"
+    request_path = run_dir / "queue_feedback_replan_request.json"
+
+    for path in (
+        plan,
+        queue,
+        state,
+        performance,
+        runtime_identity,
+        cache_identity,
+        observation,
+        cpu_packet,
+        cuda_packet,
+    ):
+        path.write_text("{}", encoding="utf-8")
+
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(plan),
+            "--materializer-contexts",
+            str(tmp_path / "contexts.json"),
+            "--observation",
+            str(observation),
+            "--exact-auth-calibration-packet",
+            str(cpu_packet),
+            "--exact-auth-calibration-packet",
+            str(cuda_packet),
+            "--exact-auth-calibration-candidate-id",
+            "materialized_candidate_0001",
+        ]
+    )
+    performance_payload = {
+        "schema": runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA,
+        "event_count": 1,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    request = runner._queue_feedback_replan_request_payload(
+        args,
+        summary_path=run_dir / "materializer_campaign_run.json",
+        plan_path=plan,
+        queue_performance_summary_path=performance,
+        queue_performance_summary=performance_payload,
+        runtime_identity_path=runtime_identity,
+        cache_identity_path=cache_identity,
+        generated_runtime_identity=False,
+        generated_cache_identity=False,
+        run_dir=run_dir,
+        execution_queue=queue,
+        state_path=state,
+    )
+
+    command = request["command_template"]
+    assert request["ready_for_action_functional_feedback"] is True
+    assert request["feedback_observation_paths"] == [str(observation)]
+    assert request["exact_auth_calibration_packet_paths"] == [
+        str(cpu_packet),
+        str(cuda_packet),
+    ]
+    assert request["exact_auth_calibration_candidate_id"] == (
+        "materialized_candidate_0001"
+    )
+    assert [
+        command[index + 1]
+        for index, item in enumerate(command[:-1])
+        if item == "--observation"
+    ] == [str(observation)]
+    assert [
+        command[index + 1]
+        for index, item in enumerate(command[:-1])
+        if item == "--exact-auth-calibration-packet"
+    ] == [str(cpu_packet), str(cuda_packet)]
+    assert "--exact-auth-calibration-candidate-id" in command
+    assert "materialized_candidate_0001" in command
+
+    child_queue, blockers = runner._queue_feedback_replan_followup_queue_payload(
+        args,
+        queue_feedback_replan_request=request,
+        queue_feedback_replan_request_path=request_path,
+        run_dir=run_dir,
+        execution_queue=queue,
+        state_path=state,
+        source_queue={"queue_id": "materializer_unit_queue"},
+    )
+
+    assert blockers == []
+    assert child_queue is not None
+    step = child_queue["experiments"][0]["steps"][0]
+    assert step["command"] == command
+    input_paths = step["telemetry"]["input_artifact_paths"]
+    assert str(observation) in input_paths
+    assert str(cpu_packet) in input_paths
+    assert str(cuda_packet) in input_paths
+    metadata = child_queue["experiments"][0]["metadata"]
+    assert metadata["score_claim"] is False
+    assert metadata["ready_for_exact_eval_dispatch"] is False
+
+
 def test_materializer_campaign_runner_poison_summary_when_performance_stdout_invalid() -> None:
     result = runner.CommandResult(
         command=["experiment_queue", "performance"],

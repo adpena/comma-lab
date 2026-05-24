@@ -277,6 +277,10 @@ def _as_sequence(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
 
 
+def _display_path_list(paths: Sequence[str | Path]) -> list[str]:
+    return [_display_path(_resolve(path)) for path in paths]
+
+
 def _queue_feedback_replan_continuation_lane_id(
     queue: Mapping[str, Any],
     *,
@@ -419,6 +423,19 @@ def _feedback_action_functional_command_hint(
                 _display_path(_resolve(args.queue_performance_candidate_map)),
             ]
         )
+    _append_path_args(command, "--observation", args.observation)
+    _append_path_args(
+        command,
+        "--exact-auth-calibration-packet",
+        args.exact_auth_calibration_packet,
+    )
+    if args.exact_auth_calibration_candidate_id:
+        command.extend(
+            [
+                "--exact-auth-calibration-candidate-id",
+                str(args.exact_auth_calibration_candidate_id),
+            ]
+        )
     if args.total_byte_budget is not None:
         command.extend(["--total-byte-budget", str(args.total_byte_budget)])
     if args.lambda_rate is not None:
@@ -472,6 +489,11 @@ def _queue_feedback_replan_request_payload(
             ),
             "queue_performance_runtime_identity_generated": generated_runtime_identity,
             "queue_performance_cache_identity_generated": generated_cache_identity,
+            "feedback_observation_paths": _display_path_list(args.observation),
+            "exact_auth_calibration_packet_paths": _display_path_list(
+                args.exact_auth_calibration_packet
+            ),
+            "exact_auth_calibration_candidate_id": args.exact_auth_calibration_candidate_id,
             "performance_schema": queue_performance_summary.get("schema"),
             "performance_event_count": queue_performance_summary.get("event_count"),
             "ready_for_action_functional_feedback": not blockers,
@@ -571,6 +593,14 @@ def _queue_feedback_replan_followup_queue_payload(
         execution_queue,
         state_path,
     ]
+    input_artifacts.extend(
+        str(path)
+        for path in _as_sequence(queue_feedback_replan_request.get("feedback_observation_paths"))
+    )
+    input_artifacts.extend(
+        str(path)
+        for path in _as_sequence(queue_feedback_replan_request.get("exact_auth_calibration_packet_paths"))
+    )
     artifact_paths = [output_path]
     if md_path is not None:
         artifact_paths.append(md_path)
