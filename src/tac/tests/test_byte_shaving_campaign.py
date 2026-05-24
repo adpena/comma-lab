@@ -14,10 +14,12 @@ from tac.optimization.byte_shaving_campaign import (
     INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
     INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
     INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
+    INVERSE_ACTION_MATERIALIZATION_BRIDGE_SCHEMA,
     INVERSE_ACTION_WATER_BUCKET_PORTFOLIO_SCHEMA,
     SIGNAL_SURFACE_SCHEMA,
     ByteShavingCampaignError,
     build_byte_shaving_campaign_plan,
+    build_inverse_action_materialization_bridge,
     build_signal_surface_from_candidate_queue,
     build_signal_surface_from_engineered_correction_targeting,
     build_signal_surface_from_inverse_action_functional,
@@ -371,6 +373,33 @@ def test_inverse_action_functional_converts_to_plannable_surface() -> None:
     assert plan["recommended_prefix"]["selected_unit_ids"] == ["inverse_action_inverse_surface_pair0007"]
     assert plan["packet_ir_operation_sets"] == []
     assert plan["score_claim"] is False
+    bridge = build_inverse_action_materialization_bridge(plan)
+    assert bridge["schema"] == INVERSE_ACTION_MATERIALIZATION_BRIDGE_SCHEMA
+    assert bridge["portfolio_count"] == 1
+    assert bridge["portfolio_row_count"] == 1
+    assert bridge["queue_consumable_portfolio_row_count"] == 0
+    assert bridge["queue_consumable_packet_ir_operation_set_count"] == 0
+    assert bridge["queue_consumable_packet_ir_operation_set_ids"] == []
+    assert bridge["high_level_operation_compiler_required_count"] == 1
+    assert bridge["source_provenance_operation_set_count"] == 0
+    assert bridge["packet_ir_operation_set_count"] == 0
+    assert bridge["portfolio_row_bridge_links"][0]["queue_consumable"] is False
+    assert bridge["portfolio_row_bridge_links"][0][
+        "matched_packet_ir_operation_set_ids"
+    ] == []
+    assert (
+        "inverse_action_operation_set_compiler_required"
+        in bridge["portfolio_row_bridge_links"][0]["blockers"]
+    )
+    assert bridge["queue_consumption"]["next_gate"] == (
+        "inverse_action_operation_set_compiler"
+    )
+    assert (
+        "inverse_action_operation_set_compiler_required_for_cells_without_source_provenance"
+        in bridge["dispatch_blockers"]
+    )
+    assert bridge["score_claim"] is False
+    assert bridge["ready_for_exact_eval_dispatch"] is False
 
 
 def test_inverse_action_functional_leaf_cells_are_explicit_opt_in() -> None:
@@ -498,6 +527,36 @@ def test_inverse_action_functional_rehydrates_family_operations_from_provenance(
         "blockers"
     ]
     assert packet_ir["ready_for_exact_eval_dispatch"] is False
+    bridge = build_inverse_action_materialization_bridge(plan)
+    assert bridge["schema"] == INVERSE_ACTION_MATERIALIZATION_BRIDGE_SCHEMA
+    assert bridge["source_provenance_operation_set_count"] == 1
+    assert bridge["high_level_operation_compiler_required_count"] == 0
+    assert bridge["packet_ir_operation_set_count"] == len(
+        plan["packet_ir_operation_sets"]
+    )
+    assert bridge["packet_ir_byte_closed_operation_count"] >= 3
+    assert bridge["queue_consumable_portfolio_row_count"] == 1
+    assert bridge["queue_consumable_packet_ir_operation_set_count"] == 1
+    assert bridge["queue_consumable_packet_ir_operation_set_ids"] == [
+        packet_ir["operation_set_id"]
+    ]
+    assert bridge["queue_consumption"]["next_gate"] == (
+        "build_byte_shaving_campaign_queue_packet_ir_lowering"
+    )
+    assert bridge["portfolio_row_bridge_links"][0]["queue_consumable"] is True
+    assert bridge["portfolio_row_bridge_links"][0][
+        "matched_packet_ir_operation_set_ids"
+    ] == [packet_ir["operation_set_id"]]
+    assert bridge["portfolio_row_bridge_links"][0][
+        "matched_source_operation_set_ids"
+    ] == [op_set["operation_set_id"]]
+    assert set(bridge["representation_family_classes"]) == {
+        "hnerv_variant",
+        "boostnerv_bolton",
+        "non_nerv",
+    }
+    assert bridge["score_claim"] is False
+    assert bridge["ready_for_exact_eval_dispatch"] is False
 
 
 def test_inverse_action_units_compose_with_non_inverse_combination_ladder() -> None:
@@ -597,6 +656,7 @@ def test_cli_writes_json_and_markdown(tmp_path: Path) -> None:
 def test_cli_can_plan_from_inverse_action_functional(tmp_path: Path) -> None:
     source = tmp_path / "inverse_action.json"
     output = tmp_path / "plan.json"
+    bridge_out = tmp_path / "bridge.json"
     source.write_text(json.dumps(_inverse_action_payload()), encoding="utf-8")
 
     subprocess.run(
@@ -608,6 +668,8 @@ def test_cli_can_plan_from_inverse_action_functional(tmp_path: Path) -> None:
             "--from-inverse-action-functional",
             "--output",
             str(output),
+            "--inverse-action-materialization-bridge-out",
+            str(bridge_out),
             "--repo-root",
             str(tmp_path),
         ],
@@ -625,6 +687,12 @@ def test_cli_can_plan_from_inverse_action_functional(tmp_path: Path) -> None:
         "actuation_modes"
     ] == ["high_level_operation_compiler_required"]
     assert payload["score_claim"] is False
+    bridge = json.loads(bridge_out.read_text(encoding="utf-8"))
+    assert bridge["schema"] == INVERSE_ACTION_MATERIALIZATION_BRIDGE_SCHEMA
+    assert bridge["high_level_operation_compiler_required_count"] == 1
+    assert bridge["packet_ir_operation_set_count"] == 0
+    assert bridge["portfolio_row_bridge_links"][0]["queue_consumable"] is False
+    assert bridge["score_claim"] is False
 
 
 def test_master_gradient_anchor_builds_planning_only_byte_surface(tmp_path: Path) -> None:

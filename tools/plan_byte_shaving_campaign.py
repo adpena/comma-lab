@@ -22,6 +22,7 @@ from tac.optimization.byte_shaving_campaign import (  # noqa: E402
     SIGNAL_SURFACE_SCHEMA,
     ByteShavingCampaignError,
     build_byte_shaving_campaign_plan,
+    build_inverse_action_materialization_bridge,
     build_signal_surface_from_candidate_queue,
     build_signal_surface_from_inverse_action_functional,
     build_signal_surface_from_master_gradient_anchor,
@@ -134,6 +135,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--md-out", type=Path, default=None)
     parser.add_argument(
+        "--inverse-action-materialization-bridge-out",
+        type=Path,
+        default=None,
+        help=(
+            "write a standalone inverse-steganalysis water-bucket materialization "
+            "bridge extracted from the plan, including PacketIR operation sets "
+            "and compiler-required gap counts"
+        ),
+    )
+    parser.add_argument(
         "--from-candidate-queue",
         action="store_true",
         help="convert optimizer_candidate_queue_v1 saved-byte rows into a signal surface first",
@@ -243,6 +254,16 @@ def main(argv: list[str] | None = None) -> int:
     if args.md_out is not None:
         args.md_out.parent.mkdir(parents=True, exist_ok=True)
         args.md_out.write_text(_render_markdown(plan), encoding="utf-8")
+    if args.inverse_action_materialization_bridge_out is not None:
+        bridge = build_inverse_action_materialization_bridge(plan)
+        args.inverse_action_materialization_bridge_out.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+        args.inverse_action_materialization_bridge_out.write_text(
+            json.dumps(bridge, indent=2, sort_keys=True, allow_nan=False) + "\n",
+            encoding="utf-8",
+        )
     print(
         f"wrote {args.output} "
         f"(units={len(plan['ranked_units'])}, "

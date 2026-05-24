@@ -47,6 +47,9 @@ MLX_ACQUISITION_BATCH_OPERATION_SET_PROVENANCE_SCHEMA = (
 INVERSE_ACTION_WATER_BUCKET_PORTFOLIO_SCHEMA = (
     "inverse_steganalysis_water_bucket_materialization_portfolio.v1"
 )
+INVERSE_ACTION_MATERIALIZATION_BRIDGE_SCHEMA = (
+    "inverse_steganalysis_water_bucket_materialization_bridge.v1"
+)
 INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY = (
     "compile_inverse_steganalysis_operation_set"
 )
@@ -1476,6 +1479,232 @@ def _inverse_action_materialization_portfolios(
     return out
 
 
+def _mapping_rows(payload: Mapping[str, Any], key: str) -> list[dict[str, Any]]:
+    return [dict(item) for item in _as_list(payload.get(key)) if isinstance(item, Mapping)]
+
+
+def _inverse_action_portfolio_row_links(
+    portfolio_rows: Sequence[Mapping[str, Any]],
+    packet_ir_operation_sets: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    links: list[dict[str, Any]] = []
+    for row in portfolio_rows:
+        unit_ids = [str(item) for item in _as_list(row.get("unit_ids")) if str(item)]
+        unit_id_set = set(unit_ids)
+        matched_packet_ir = []
+        for operation_set in packet_ir_operation_sets:
+            selected_ids = {
+                str(item)
+                for item in _as_list(operation_set.get("selected_unit_ids"))
+                if str(item)
+            }
+            if unit_id_set and unit_id_set.issubset(selected_ids):
+                matched_packet_ir.append(operation_set)
+        actuation_mode = str(row.get("actuation_mode") or "")
+        blockers = [str(item) for item in _as_list(row.get("blockers")) if str(item)]
+        if actuation_mode == "high_level_operation_compiler_required":
+            blockers.append("inverse_action_operation_set_compiler_required")
+        elif actuation_mode == "source_provenance_operation_set" and not matched_packet_ir:
+            blockers.append("source_provenance_packet_ir_operation_set_missing")
+        elif actuation_mode == "leaf_cell_candidate_explicit_opt_in":
+            blockers.append("leaf_cell_candidate_probe_not_portfolio_actuator")
+        links.append(
+            {
+                "schema": "inverse_steganalysis_water_bucket_materialization_bridge_link.v1",
+                "atom_id": row.get("atom_id"),
+                "source_index": row.get("source_index"),
+                "actuation_mode": actuation_mode,
+                "unit_ids": unit_ids,
+                "matched_packet_ir_operation_set_ids": [
+                    str(item.get("operation_set_id") or "")
+                    for item in matched_packet_ir
+                    if str(item.get("operation_set_id") or "")
+                ],
+                "matched_source_operation_set_ids": [
+                    str(item.get("source_operation_set_id") or "")
+                    for item in matched_packet_ir
+                    if str(item.get("source_operation_set_id") or "")
+                ],
+                "packet_ir_lowering_ready": bool(matched_packet_ir),
+                "queue_consumable": (
+                    actuation_mode == "source_provenance_operation_set"
+                    and bool(matched_packet_ir)
+                ),
+                "blockers": ordered_unique(blockers),
+                **FALSE_AUTHORITY,
+            }
+        )
+    return links
+
+
+def build_inverse_action_materialization_bridge(
+    plan_payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Extract inverse-action water-bucket handoff state from a campaign plan."""
+
+    if plan_payload.get("schema") != PLAN_SCHEMA:
+        raise ByteShavingCampaignError(f"expected {PLAN_SCHEMA}")
+    try:
+        require_no_truthy_authority_fields(
+            plan_payload,
+            context="inverse_action_materialization_bridge",
+        )
+    except ValueError as exc:
+        raise ByteShavingCampaignError(str(exc)) from exc
+
+    portfolios = _inverse_action_materialization_portfolios(plan_payload)
+    portfolio_rows = [
+        dict(row)
+        for portfolio in portfolios
+        for row in _as_list(portfolio.get("rows"))
+        if isinstance(row, Mapping)
+    ]
+    packet_ir_operation_sets = _mapping_rows(plan_payload, "packet_ir_operation_sets")
+    portfolio_row_links = _inverse_action_portfolio_row_links(
+        portfolio_rows,
+        packet_ir_operation_sets,
+    )
+    queue_consumable_packet_ir_operation_set_ids = ordered_unique(
+        str(packet_ir_id)
+        for link in portfolio_row_links
+        if link.get("queue_consumable") is True
+        for packet_ir_id in _as_list(link.get("matched_packet_ir_operation_set_ids"))
+    )
+    actuation_mode_counts = Counter(
+        str(row.get("actuation_mode") or "unknown")
+        for row in portfolio_rows
+    )
+    operation_families = ordered_unique(
+        [
+            *(
+                str(family)
+                for row in portfolio_rows
+                for family in _as_list(row.get("operation_families"))
+            ),
+            *(
+                str(operation.get("operation_family") or "")
+                for operation_set in packet_ir_operation_sets
+                for operation in _as_list(operation_set.get("operations"))
+                if isinstance(operation, Mapping)
+            ),
+        ]
+    )
+    target_kinds = ordered_unique(
+        [
+            *(
+                str(target)
+                for row in portfolio_rows
+                for target in _as_list(row.get("target_kinds"))
+            ),
+            *(
+                str(operation.get("target_kind") or "")
+                for operation_set in packet_ir_operation_sets
+                for operation in _as_list(operation_set.get("operations"))
+                if isinstance(operation, Mapping)
+            ),
+        ]
+    )
+    representation_family_classes = ordered_unique(
+        str(operation.get("representation_family_class") or "")
+        for operation_set in packet_ir_operation_sets
+        for operation in _as_list(operation_set.get("operations"))
+        if isinstance(operation, Mapping)
+    )
+    compiler_required_count = actuation_mode_counts.get(
+        "high_level_operation_compiler_required",
+        0,
+    )
+    source_provenance_count = actuation_mode_counts.get(
+        "source_provenance_operation_set",
+        0,
+    )
+    leaf_cell_count = actuation_mode_counts.get(
+        "leaf_cell_candidate_explicit_opt_in",
+        0,
+    )
+    dispatch_blockers = [
+        *BASE_BLOCKERS,
+        *[str(item) for item in _as_list(plan_payload.get("dispatch_blockers"))],
+    ]
+    if not portfolios:
+        dispatch_blockers.append("inverse_action_materialization_portfolio_missing")
+    if compiler_required_count:
+        dispatch_blockers.append(
+            "inverse_action_operation_set_compiler_required_for_cells_without_source_provenance"
+        )
+    if leaf_cell_count:
+        dispatch_blockers.append(
+            "inverse_action_leaf_cell_candidates_are_probe_only_until_materialized"
+        )
+    if packet_ir_operation_sets:
+        dispatch_blockers.append(
+            "packet_ir_operation_sets_require_materializer_contexts_and_runtime_proofs"
+        )
+        next_gate = "build_byte_shaving_campaign_queue_packet_ir_lowering"
+    else:
+        dispatch_blockers.append(
+            "packet_ir_operation_sets_missing_until_source_provenance_or_compiler"
+        )
+        next_gate = "inverse_action_operation_set_compiler"
+
+    bridge = {
+        "schema": INVERSE_ACTION_MATERIALIZATION_BRIDGE_SCHEMA,
+        "source_schema": PLAN_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "campaign_id": plan_payload.get("campaign_id"),
+        "candidate_id": plan_payload.get("candidate_id"),
+        "lane_id": plan_payload.get("lane_id"),
+        "source_paths": _as_list(plan_payload.get("source_paths")),
+        "portfolio_count": len(portfolios),
+        "portfolio_row_count": len(portfolio_rows),
+        "water_bucket_materialization_portfolios": portfolios,
+        "portfolio_row_bridge_links": portfolio_row_links,
+        "queue_consumable_portfolio_row_count": sum(
+            1 for link in portfolio_row_links if link["queue_consumable"]
+        ),
+        "queue_consumable_packet_ir_operation_set_count": len(
+            queue_consumable_packet_ir_operation_set_ids
+        ),
+        "queue_consumable_packet_ir_operation_set_ids": (
+            queue_consumable_packet_ir_operation_set_ids
+        ),
+        "actuation_mode_counts": {
+            key: actuation_mode_counts[key] for key in sorted(actuation_mode_counts)
+        },
+        "high_level_operation_compiler_required_count": compiler_required_count,
+        "source_provenance_operation_set_count": source_provenance_count,
+        "leaf_cell_candidate_count": leaf_cell_count,
+        "packet_ir_operation_set_count": len(packet_ir_operation_sets),
+        "packet_ir_byte_closed_operation_count": sum(
+            int(operation_set.get("byte_closed_operation_count") or 0)
+            for operation_set in packet_ir_operation_sets
+        ),
+        "packet_ir_operation_sets": packet_ir_operation_sets,
+        "operation_families": operation_families,
+        "target_kinds": target_kinds,
+        "representation_family_classes": representation_family_classes,
+        "queue_consumption": {
+            "next_gate": next_gate,
+            "plan_queue_builder": "tools/build_byte_shaving_campaign_queue.py",
+            "packet_ir_lowering_ready": bool(packet_ir_operation_sets),
+            "compiler_required": bool(compiler_required_count),
+            "requires_plan_path": True,
+            "requires_materializer_contexts": bool(packet_ir_operation_sets),
+        },
+        "evidence_boundary": {
+            "planning_only": True,
+            "authority": "no_score_no_promotion_no_dispatch",
+            "score_axis": "[planning-only inverse-steganalysis action]",
+        },
+        "dispatch_blockers": ordered_unique(dispatch_blockers),
+        **FALSE_AUTHORITY,
+    }
+    return apply_proxy_evidence_boundary(
+        bridge,
+        dispatch_blockers=bridge["dispatch_blockers"],
+    )
+
+
 def build_signal_surface_from_candidate_queue(
     queue_payload: Mapping[str, Any],
     *,
@@ -2496,12 +2725,14 @@ __all__ = [
     "INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER",
     "INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY",
     "INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND",
+    "INVERSE_ACTION_MATERIALIZATION_BRIDGE_SCHEMA",
     "INVERSE_ACTION_WATER_BUCKET_PORTFOLIO_SCHEMA",
     "PACKET_IR_OPERATION_SCHEMA",
     "PLAN_SCHEMA",
     "SIGNAL_SURFACE_SCHEMA",
     "ByteShavingCampaignError",
     "build_byte_shaving_campaign_plan",
+    "build_inverse_action_materialization_bridge",
     "build_signal_surface_from_candidate_queue",
     "build_signal_surface_from_engineered_correction_targeting",
     "build_signal_surface_from_inverse_action_functional",
