@@ -179,6 +179,94 @@ def _mlx_selection(path: Path) -> None:
     )
 
 
+def _byte_shaving_signal_surface(path: Path) -> None:
+    false_authority = _false_authority()
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "byte_shaving_signal_surface.v1",
+                "campaign_id": "family_agnostic_inverse_surface",
+                "candidate_id": "hnerv_boostnerv_packetir_mix",
+                "lane_id": "local_inverse_waterfill_family_mix",
+                "combo_beam_width": 16,
+                "max_combo_count": 8,
+                **false_authority,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+                "units": [
+                    {
+                        "unit_id": "hnerv_section_hi_latents",
+                        "unit_kind": "archive_section",
+                        "candidate_saved_bytes": 1300,
+                        "predicted_quality_score_delta": -0.0002,
+                        "confidence": 0.8,
+                        "operations": [
+                            {
+                                "operation_id": "hnerv_section_recode",
+                                "operation_family": "section_entropy_recode",
+                                "candidate_saved_bytes": 1300,
+                                "predicted_quality_score_delta": -0.0002,
+                                "materializer": "hnerv_section_recode_adapter",
+                                "target_kind": "hnerv_payload_section_recode_v1",
+                            }
+                        ],
+                    },
+                    {
+                        "unit_id": "boostnerv_overlay_tensor_07",
+                        "unit_kind": "tensor",
+                        "candidate_saved_bytes": 900,
+                        "predicted_quality_score_cost": 0.00002,
+                        "confidence": 0.75,
+                        "operations": [
+                            {
+                                "operation_id": "boostnerv_tensor_factorize",
+                                "operation_family": "factorize_tensor",
+                                "candidate_saved_bytes": 900,
+                                "predicted_quality_score_cost": 0.00002,
+                                "materializer": "boostnerv_tensor_overlay_adapter",
+                                "target_kind": "boostnerv_tensor_factorization_v1",
+                            }
+                        ],
+                    },
+                    {
+                        "unit_id": "packetir_member_merge",
+                        "unit_kind": "packet_member",
+                        "candidate_saved_bytes": 400,
+                        "predicted_quality_score_cost": 0.0,
+                        "confidence": 0.9,
+                        "operations": [
+                            {
+                                "operation_id": "packetir_member_merge",
+                                "operation_family": "member_merge",
+                                "candidate_saved_bytes": 400,
+                                "predicted_quality_score_cost": 0.0,
+                                "materializer": "packet_member_merge_adapter",
+                                "target_kind": "packet_member_merge_v1",
+                            }
+                        ],
+                    },
+                ],
+                "interactions": [
+                    {
+                        "interaction_id": "shared_hnerv_boostnerv_overlay_header",
+                        "unit_ids": [
+                            "hnerv_section_hi_latents",
+                            "boostnerv_overlay_tensor_07",
+                        ],
+                        "operation_families": [
+                            "section_entropy_recode",
+                            "factorize_tensor",
+                        ],
+                        "extra_saved_bytes": 180,
+                        "delta_score": -0.00003,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 def _review_packet(axis: str, *, score: float, baseline: float, aggregate: str) -> dict[str, object]:
     exact_cuda = axis == "contest_cuda"
     return {
@@ -420,6 +508,54 @@ def test_cli_accepts_mlx_effective_spend_triage_selection(tmp_path: Path) -> Non
     assert cell["candidate_generation_only"] is True
     for key, value in PROXY_FALSE_AUTHORITY_FIELDS.items():
         assert cell[key] is value
+        assert action[key] is value
+
+
+def test_cli_accepts_byte_shaving_signal_surface_for_family_mix(
+    tmp_path: Path,
+) -> None:
+    surface = tmp_path / "family_surface.json"
+    output = tmp_path / "action.json"
+    _byte_shaving_signal_surface(surface)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--byte-shaving-signal-surface",
+            str(surface),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(tmp_path),
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    action = json.loads(output.read_text(encoding="utf-8"))
+    cell = action["cells"][0]
+    provenances = [row["source_provenance"] for row in action["cells"]]
+    provenance = next(
+        row
+        for row in provenances
+        if "factorize_tensor" in row["operation_families"]
+    )
+    assert "score_claim=false" in result.stdout
+    assert action["schema"] == ACTION_FUNCTIONAL_SCHEMA
+    assert action["integral_totals"]["cell_count"] >= 1
+    assert action["water_bucket"]["selected_count"] >= 1
+    assert provenance["schema"] == (
+        "inverse_steganalysis_byte_shaving_operation_set_provenance.v1"
+    )
+    assert provenance["source_path"] == "family_surface.json"
+    assert "section_entropy_recode" in provenance["operation_families"]
+    assert "factorize_tensor" in provenance["operation_families"]
+    assert cell["candidate_generation_only"] is True
+    for key, value in PROXY_FALSE_AUTHORITY_FIELDS.items():
+        assert cell[key] is value
+        assert provenance[key] is value
         assert action[key] is value
 
 

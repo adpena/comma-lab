@@ -17,6 +17,7 @@ from tac.optimization.l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan import (
     l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_json,
     render_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_markdown,
 )
+from tac.optimizer.exact_readiness import runtime_dependency_manifest
 
 
 def _sha256(path: Path) -> str:
@@ -30,21 +31,89 @@ def _write_runtime(root: Path) -> Path:
     runtime.mkdir(parents=True, exist_ok=True)
     (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
     os.chmod(runtime / "inflate.sh", 0o755)
+    (runtime / "inflate.py").write_text("# fixture inflate\n", encoding="utf-8")
     (runtime / "report.txt").write_text(
         "TT5L side-info effect-curve test runtime\n",
+        encoding="utf-8",
+    )
+    inflate_sh_sha = _sha256(runtime / "inflate.sh")
+    inflate_py_sha = _sha256(runtime / "inflate.py")
+    (runtime / "runtime_packet_manifest.json").write_text(
+        json.dumps(
+            {
+                "schema": "pr101_kaggle_proxy_runtime_packet_v1",
+                "packet_dir": runtime.relative_to(root).as_posix(),
+                "runtime_custody": {
+                    "runtime_files": [
+                        {"relpath": "inflate.sh", "sha256": inflate_sh_sha},
+                        {"relpath": "inflate.py", "sha256": inflate_py_sha},
+                    ],
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
         encoding="utf-8",
     )
     return runtime
 
 
+def _write_runtime_consumption_proof(
+    root: Path,
+    runtime: Path,
+    archive_sha256: str,
+    proof_path: Path,
+) -> None:
+    inflate_sh_sha = _sha256(runtime / "inflate.sh")
+    inflate_py_sha = _sha256(runtime / "inflate.py")
+    manifest_path = runtime / "runtime_packet_manifest.json"
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema": "pr101_kaggle_proxy_runtime_consumption_proof_v1",
+                "proof_kind": "fixture_runtime_bound_tt5l_proof",
+                "manifest_path": manifest_path.relative_to(root).as_posix(),
+                "manifest_sha256": _sha256(manifest_path),
+                "packet_dir": runtime.relative_to(root).as_posix(),
+                "runtime_consumption_proven_for_supported_bias_params": True,
+                "inflate_sh_routes_to_packet_inflate_py": True,
+                "archive_unchanged_proof": {"archive_sha256": archive_sha256},
+                "inflate_wrapper_route_proof": {
+                    "wrapper_invoked_packet_inflate_py": True,
+                    "inflate_sh_sha256": inflate_sh_sha,
+                    "packet_inflate_py_sha256": inflate_py_sha,
+                },
+                "inflate_static_bias_patch_proof": {
+                    "inflate_sha256": inflate_py_sha,
+                },
+                "inflate_runtime_bias_logic_proof": {
+                    "packet_inflate_function_executed": True,
+                    "inflate_py_sha256": inflate_py_sha,
+                },
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def _write_manifest(root: Path) -> Path:
     runtime = _write_runtime(root)
+    runtime_manifest = runtime_dependency_manifest(runtime, root)
     variants = []
     for index, variant in enumerate(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS):
         archive = root / f"experiments/results/tt5l/{variant}/archive.zip"
         archive.parent.mkdir(parents=True, exist_ok=True)
         with ZipFile(archive, "w") as zf:
             zf.writestr("0.bin", f"archive:{variant}:{index}".encode())
+        proof_path = archive.parent / "runtime_consumption_proof.json"
+        _write_runtime_consumption_proof(root, runtime, _sha256(archive), proof_path)
         archive_manifest = archive.parent / "archive_manifest.json"
         archive_manifest.write_text(
             json.dumps(
@@ -73,6 +142,7 @@ def _write_manifest(root: Path) -> Path:
                 "archive_sha256": _sha256(archive),
                 "archive_bytes": archive.stat().st_size,
                 "archive_manifest_path": archive_manifest.relative_to(root).as_posix(),
+                "runtime_consumption_proof_path": proof_path.relative_to(root).as_posix(),
                 "source_archive_sha256": "1" * 64,
                 "source_archive_member_sha256": "2" * 64,
                 "source_sideinfo_section_sha256": "3" * 64,
@@ -104,9 +174,11 @@ def _write_manifest(root: Path) -> Path:
                 "runtime": {
                     "available": True,
                     "submission_dir": runtime.relative_to(root).as_posix(),
-                    "runtime_tree_sha256": "a" * 64,
-                    "runtime_content_tree_sha256": "b" * 64,
-                    "runtime_file_count": 1,
+                    "runtime_tree_sha256": runtime_manifest["runtime_tree_sha256"],
+                    "runtime_content_tree_sha256": runtime_manifest[
+                        "runtime_content_tree_sha256"
+                    ],
+                    "runtime_file_count": runtime_manifest["runtime_file_count"],
                     "blockers": [],
                 },
                 "required_effect_curve_variants": list(

@@ -21,6 +21,8 @@ ensure_repo_imports(REPO_ROOT)
 from tac.optimization.inverse_steganalysis_acquisition import (  # noqa: E402
     CONTEST_RATE_SCORE_PER_BYTE,
     InverseSteganalysisAcquisitionError,
+    action_atoms_from_byte_shaving_campaign_plan,
+    action_atoms_from_byte_shaving_signal_surface,
     action_atoms_from_inverse_scorer_surface,
     build_discrete_scorer_action_functional,
     inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection,
@@ -120,6 +122,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
     parser.add_argument("--scorer-response", action="append", default=[])
     parser.add_argument("--inverse-scorer-surface", action="append", default=[])
+    parser.add_argument("--byte-shaving-signal-surface", action="append", default=[])
+    parser.add_argument("--byte-shaving-campaign-plan", action="append", default=[])
     parser.add_argument("--mlx-effective-spend-triage-selection", action="append", default=[])
     parser.add_argument("--atom", action="append", default=[])
     parser.add_argument("--observation", action="append", default=[])
@@ -178,6 +182,30 @@ def main(argv: list[str] | None = None) -> int:
             atoms.extend(
                 action_atoms_from_inverse_scorer_surface(
                     _load_json(path),
+                    candidate_id=args.candidate_id,
+                    elapsed_seconds=args.elapsed_seconds,
+                    artifact_bytes=args.artifact_bytes,
+                    resource_kind=args.resource_kind,
+                )
+            )
+        for raw_path in args.byte_shaving_signal_surface:
+            path = Path(raw_path)
+            atoms.extend(
+                action_atoms_from_byte_shaving_signal_surface(
+                    _load_mapping(path, label="byte-shaving signal surface"),
+                    source_path=_repo_rel(path, args.repo_root),
+                    candidate_id=args.candidate_id,
+                    elapsed_seconds=args.elapsed_seconds,
+                    artifact_bytes=args.artifact_bytes,
+                    resource_kind=args.resource_kind,
+                )
+            )
+        for raw_path in args.byte_shaving_campaign_plan:
+            path = Path(raw_path)
+            atoms.extend(
+                action_atoms_from_byte_shaving_campaign_plan(
+                    _load_mapping(path, label="byte-shaving campaign plan"),
+                    source_path=_repo_rel(path, args.repo_root),
                     candidate_id=args.candidate_id,
                     elapsed_seconds=args.elapsed_seconds,
                     artifact_bytes=args.artifact_bytes,
@@ -259,6 +287,7 @@ def main(argv: list[str] | None = None) -> int:
         if not atoms:
             raise SystemExit(
                 "provide at least one --scorer-response, --inverse-scorer-surface, "
+                "--byte-shaving-signal-surface, --byte-shaving-campaign-plan, "
                 "--mlx-effective-spend-triage-selection, or --atom"
             )
         action = build_discrete_scorer_action_functional(

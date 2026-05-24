@@ -196,6 +196,9 @@ def _candidate_params(
                 "best_runtime_timing_value_seconds": runtime_profile_summary.get(
                     "best_timing_value_seconds"
                 ),
+                "best_scheduler_resource_kind": runtime_profile_summary.get(
+                    "best_scheduler_resource_kind"
+                ),
                 "kernel_fusion_strategy_ids": runtime_profile_summary.get(
                     "kernel_fusion_strategy_ids"
                 ),

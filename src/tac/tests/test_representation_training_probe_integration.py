@@ -176,8 +176,10 @@ def test_generic_representation_training_manifest_carries_runtime_profile(
     ]["runtime_profile_summary"]
     assert runtime_summary["profile_count"] == 1
     assert runtime_summary["best_local_backend"] == "mlx"
+    assert runtime_summary["best_scheduler_resource_kind"] == "local_mlx"
     assert runtime_summary["best_timing_value_seconds"] == 5.5
     assert row["candidate_params"]["best_local_backend"] == "mlx"
+    assert row["candidate_params"]["best_scheduler_resource_kind"] == "local_mlx"
     assert row["candidate_params"]["best_runtime_timing_value_seconds"] == 5.5
     assert "runtime_consumption_proof_missing" in row["dispatch_blockers"]
     assert validate_proxy_candidate(row) == []

@@ -1055,7 +1055,9 @@ def build_dqs1_local_first_queue(
                     "requires": ["build_mlx_local_advisory_cache"],
                     "timeout_seconds": 600,
                     "command": run_mlx_response_command,
-                    "resources": {"kind": "local_mlx"},
+                    "resources": {
+                        "kind": "local_mlx" if mlx_device == "gpu" else "local_cpu"
+                    },
                     "postconditions": [
                         _false_authority_postcondition(
                             mlx_response,

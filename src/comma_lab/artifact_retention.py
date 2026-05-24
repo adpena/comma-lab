@@ -1500,12 +1500,28 @@ def _select_cold_store_root(
     roots: list[Path],
     planned_free_by_tier: dict[int, int],
     reserve_bytes: int,
+    source_device_id: int | None = None,
 ) -> tuple[int, Path, int] | None:
+    eligible: list[tuple[int, Path, int]] = []
     for index, root in enumerate(roots):
         free_before = int(planned_free_by_tier.get(index, 0))
         if free_before - int(candidate.bytes) >= int(reserve_bytes):
-            return index, root, free_before
-    return None
+            eligible.append((index, root, free_before))
+    if not eligible:
+        return None
+    if source_device_id is not None:
+        for selected in eligible:
+            _, root, _ = selected
+            try:
+                if _path_device_id(root) != source_device_id:
+                    return selected
+            except OSError:
+                continue
+    return eligible[0]
+
+
+def _path_device_id(path: Path) -> int:
+    return int(path.stat().st_dev)
 
 
 def execute_retention_plan(
@@ -1601,6 +1617,7 @@ def execute_retention_plan(
                     roots=move_roots,
                     planned_free_by_tier=planned_free_by_tier,
                     reserve_bytes=int(cold_store_reserve_bytes),
+                    source_device_id=_path_device_id(source),
                 )
                 if selected is None:
                     row["status"] = "skipped_no_cold_store_capacity"
@@ -1630,9 +1647,10 @@ def execute_retention_plan(
                 row["cold_store_free_bytes_after_planned"] = planned_free_by_tier[tier_index]
                 row["cold_store_reserve_bytes"] = int(cold_store_reserve_bytes)
                 row["cold_store_verification"] = verification
-                contract = cold_store_contracts[tier_index]
                 row["local_bytes_reclaimed"] = (
-                    0 if contract.get("same_device_as_repo") is True else int(candidate.bytes)
+                    0
+                    if verification.get("same_device_as_source") is True
+                    else int(candidate.bytes)
                 )
         except Exception as exc:
             row["status"] = "error"
@@ -1847,8 +1865,51 @@ def _copy_verify_then_delete(
         raise ArtifactRetentionError(
             f"cold-store partial destination exists: {partial_destination}"
         )
-    source_digest = directory_digest(source)
     destination.parent.mkdir(parents=True, exist_ok=True)
+    source_device_id = _path_device_id(source)
+    destination_device_id = _path_device_id(destination.parent)
+    same_device_as_source = source_device_id == destination_device_id
+    source_digest = directory_digest(source)
+    if same_device_as_source:
+        moved_to_partial = False
+        finalized = False
+        try:
+            source.replace(partial_destination)
+            moved_to_partial = True
+            destination_digest = directory_digest(partial_destination)
+            if source_digest["sha256"] != destination_digest["sha256"]:
+                raise ArtifactRetentionError("cold-store copy verification failed")
+            partial_destination.replace(destination)
+            finalized = True
+            final_digest = directory_digest(destination)
+            if source_digest["sha256"] != final_digest["sha256"]:
+                raise ArtifactRetentionError("cold-store copy verification failed")
+        except Exception:
+            if finalized and destination.exists() and not source.exists():
+                try:
+                    destination.replace(source)
+                except OSError:
+                    pass
+            elif moved_to_partial and partial_destination.exists() and not source.exists():
+                try:
+                    partial_destination.replace(source)
+                except OSError:
+                    pass
+            shutil.rmtree(partial_destination, ignore_errors=True)
+            raise
+        return {
+            "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+            "method": "same_device_rename",
+            "same_device_as_source": True,
+            "source_device_id": source_device_id,
+            "destination_device_id": destination_device_id,
+            "source_digest": source_digest,
+            "destination_digest": final_digest,
+            "bytes_estimate": int(bytes_estimate),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
     try:
         shutil.copytree(source, partial_destination, symlinks=False)
         destination_digest = directory_digest(partial_destination)
@@ -1872,6 +1933,10 @@ def _copy_verify_then_delete(
     )
     return {
         "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+        "method": "copy_verify_delete",
+        "same_device_as_source": False,
+        "source_device_id": source_device_id,
+        "destination_device_id": destination_device_id,
         "source_digest": source_digest,
         "destination_digest": final_digest,
         "bytes_estimate": int(bytes_estimate),

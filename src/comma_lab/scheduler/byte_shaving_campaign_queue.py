@@ -21,7 +21,11 @@ from tac.optimization.byte_range_entropy_recode_chain import (
     CHAIN_MANIFEST_NAME,
     CHAIN_SCHEMA,
 )
-from tac.optimization.byte_shaving_campaign import FALSE_AUTHORITY, PLAN_SCHEMA
+from tac.optimization.byte_shaving_campaign import (
+    COUPLED_OPERATION_SET_SCHEMA,
+    FALSE_AUTHORITY,
+    PLAN_SCHEMA,
+)
 from tac.optimization.decoder_q_constants import FEC6_PAIR_COUNT
 from tac.optimization.inverse_scorer_cell_chain import (
     CHAIN_MANIFEST_NAME as INVERSE_SCORER_CELL_CHAIN_MANIFEST,
@@ -86,6 +90,15 @@ MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA = (
 )
 MATERIALIZER_EXACT_EVAL_DISPATCH_PLAN_SCHEMA = "materializer_exact_eval_dispatch_plan.v1"
 OPTIMIZER_CANDIDATE_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
+OPERATION_SET_CLEARABLE_SOURCE_BLOCKERS = frozenset(
+    {
+        "operation_set_requires_atomic_materializer_or_explicit_partial_set_split",
+        "operation_set_order_requires_materialization_probe",
+    }
+)
+OPERATION_SET_ENFORCED_SOURCE_BLOCKERS = OPERATION_SET_CLEARABLE_SOURCE_BLOCKERS | {
+    "operation_set_sequence_not_permutation_of_selected_operations"
+}
 
 
 def _utc_now() -> str:
@@ -135,6 +148,13 @@ def _path_under_root(path: Path, root: Path) -> bool:
 
 def _as_list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
+
+
+def _operation_sequence_key(operation: Mapping[str, Any]) -> tuple[str, str]:
+    return (
+        str(operation.get("unit_id") or ""),
+        str(operation.get("operation_id") or ""),
+    )
 
 
 def _finite_int(value: Any) -> int | None:
@@ -223,7 +243,12 @@ def _candidate_id(kind: str, selection_id: str, dropped_pairs: Sequence[int]) ->
 
 
 def _selection_id(kind: str, row: Mapping[str, Any]) -> str:
-    value = row.get("combo_id") or row.get("sweep_id") or row.get("selection_id")
+    value = (
+        row.get("operation_set_id")
+        or row.get("combo_id")
+        or row.get("sweep_id")
+        or row.get("selection_id")
+    )
     if isinstance(value, str) and value.strip():
         return value
     return kind
@@ -231,7 +256,20 @@ def _selection_id(kind: str, row: Mapping[str, Any]) -> str:
 
 def _iter_plan_rows(payload: Mapping[str, Any]) -> list[tuple[str, Mapping[str, Any]]]:
     rows: list[tuple[str, Mapping[str, Any]]] = []
-    for kind, key in (("combo", "combination_ladder"), ("prefix", "sweep_ladder")):
+    operation_sets = [
+        row
+        for row in _as_list(payload.get("operation_set_ladder"))
+        if isinstance(row, Mapping)
+    ]
+    if operation_sets:
+        rows.extend(("operation_set", row) for row in operation_sets)
+    else:
+        rows.extend(
+            ("combo", row)
+            for row in _as_list(payload.get("combination_ladder"))
+            if isinstance(row, Mapping)
+        )
+    for kind, key in (("prefix", "sweep_ladder"),):
         for row in _as_list(payload.get(key)):
             if isinstance(row, Mapping):
                 rows.append((kind, row))
@@ -779,9 +817,23 @@ def _inverse_scorer_action_functional_command(
     scorer_responses.extend(_path_list_context_value(context, "scorer_responses"))
     inverse_surfaces = _path_list_context_value(context, "inverse_scorer_surface")
     inverse_surfaces.extend(_path_list_context_value(context, "inverse_scorer_surfaces"))
-    if not scorer_responses and not inverse_surfaces:
+    byte_shaving_surfaces = _path_list_context_value(
+        context,
+        "byte_shaving_signal_surface",
+    )
+    byte_shaving_surfaces.extend(
+        _path_list_context_value(context, "byte_shaving_signal_surfaces")
+    )
+    byte_shaving_plans = _path_list_context_value(
+        context,
+        "byte_shaving_campaign_plan",
+    )
+    byte_shaving_plans.extend(
+        _path_list_context_value(context, "byte_shaving_campaign_plans")
+    )
+    if not scorer_responses and not inverse_surfaces and not byte_shaving_surfaces and not byte_shaving_plans:
         blockers.append(
-            "materializer_context_missing:scorer_response_or_inverse_scorer_surface"
+            "materializer_context_missing:inverse_action_source_surface"
         )
     if blockers:
         return [], blockers, {}
@@ -797,8 +849,17 @@ def _inverse_scorer_action_functional_command(
         command.extend(["--scorer-response", path])
     for path in inverse_surfaces:
         command.extend(["--inverse-scorer-surface", path])
+    for path in byte_shaving_surfaces:
+        command.extend(["--byte-shaving-signal-surface", path])
+    for path in byte_shaving_plans:
+        command.extend(["--byte-shaving-campaign-plan", path])
 
-    input_paths = [*scorer_responses, *inverse_surfaces]
+    input_paths = [
+        *scorer_responses,
+        *inverse_surfaces,
+        *byte_shaving_surfaces,
+        *byte_shaving_plans,
+    ]
     optional_path_flags = (
         ("md_out", "--md-out"),
         ("queue_performance_runtime_identity", "--queue-performance-runtime-identity"),
@@ -1952,18 +2013,53 @@ def _materialize_row(
     selected_operations = [
         item for item in _as_list(row.get("selected_operations")) if isinstance(item, Mapping)
     ]
+    chosen_operation_sequence = [
+        item
+        for item in _as_list(row.get("chosen_operation_sequence"))
+        if isinstance(item, Mapping)
+    ]
     source_dispatch_blockers = [
         str(item) for item in _as_list(row.get("dispatch_blockers")) if str(item)
     ]
     blockers: list[str] = []
     if not selected_operations:
         blockers.append("selected_operations_missing")
+    if kind == "operation_set" and row.get("schema") != COUPLED_OPERATION_SET_SCHEMA:
+        blockers.append("operation_set_schema_mismatch")
+    operations_for_materialization = selected_operations
+    operation_set_sequence_valid: bool | None = None
+    if kind == "operation_set":
+        if not chosen_operation_sequence:
+            blockers.append("operation_set_chosen_sequence_missing")
+        else:
+            selected_keys = [
+                _operation_sequence_key(operation) for operation in selected_operations
+            ]
+            chosen_keys = [
+                _operation_sequence_key(operation)
+                for operation in chosen_operation_sequence
+            ]
+            operation_set_sequence_valid = Counter(selected_keys) == Counter(chosen_keys)
+            if not operation_set_sequence_valid:
+                blockers.append(
+                    "operation_set_sequence_not_permutation_of_selected_operations"
+                )
+            else:
+                selected_by_key: dict[tuple[str, str], list[Mapping[str, Any]]] = {}
+                for operation in selected_operations:
+                    selected_by_key.setdefault(
+                        _operation_sequence_key(operation), []
+                    ).append(operation)
+                ordered_operations: list[Mapping[str, Any]] = []
+                for key in chosen_keys:
+                    ordered_operations.append(selected_by_key[key].pop(0))
+                operations_for_materialization = ordered_operations
 
     dropped_pairs: list[int] = []
     dqs1_operation_count = 0
     materializer_resolutions: list[dict[str, Any]] = []
     source_units: list[dict[str, Any]] = []
-    for operation in selected_operations:
+    for operation in operations_for_materialization:
         unit_id = str(operation.get("unit_id") or "")
         unit = units_by_id.get(unit_id)
         operation_blockers = ordered_unique(
@@ -2062,6 +2158,38 @@ def _materialize_row(
     ]
     if unsupported_targets:
         blockers.append("unsupported_materializer_target:" + ",".join(unsupported_targets))
+    operation_set_materialization_mode: str | None = None
+    if kind == "operation_set":
+        can_clear_operation_set_source_blockers = (
+            operation_set_sequence_valid is True
+            and bool(materializer_resolutions)
+            and all(
+                resolution["target_kind"] == DQS1_PAIRSET_TARGET_KIND
+                and resolution["executable"] is True
+                for resolution in materializer_resolutions
+            )
+        )
+        if can_clear_operation_set_source_blockers:
+            operation_set_materialization_mode = "ordered_dqs1_pairset_sequence"
+            enforced_source_blockers = [
+                blocker
+                for blocker in source_dispatch_blockers
+                if blocker in OPERATION_SET_ENFORCED_SOURCE_BLOCKERS
+                and blocker not in OPERATION_SET_CLEARABLE_SOURCE_BLOCKERS
+            ]
+        else:
+            operation_set_materialization_mode = (
+                "blocked_or_requires_atomic_materializer"
+            )
+            enforced_source_blockers = [
+                blocker
+                for blocker in source_dispatch_blockers
+                if blocker in OPERATION_SET_ENFORCED_SOURCE_BLOCKERS
+            ]
+        blockers.extend(
+            f"source_dispatch_blocker:{blocker}"
+            for blocker in enforced_source_blockers
+        )
     if dqs1_operation_count and base_pairs is None:
         blockers.append("dqs1_base_pair_indices_required")
     dropped_pairs = sorted(set(dropped_pairs))
@@ -2105,6 +2233,13 @@ def _materialize_row(
         "operator_action_rank": rank,
         "source_plan_schema": payload.get("schema"),
         "selected_operations": selected_operations,
+        "operation_set_id": row.get("operation_set_id"),
+        "chosen_operation_sequence": chosen_operation_sequence,
+        "chosen_operation_sequence_sha256": row.get("chosen_operation_sequence_sha256"),
+        "chosen_operation_sequence_source": row.get("chosen_operation_sequence_source"),
+        "chosen_operation_sequence_is_permutation": operation_set_sequence_valid,
+        "operation_set_materialization_mode": operation_set_materialization_mode,
+        "active_interactions": _as_list(row.get("active_interactions")),
         "selected_unit_ids": _as_list(row.get("selected_unit_ids")),
         "operation_families": _as_list(row.get("operation_families")),
         "source_dispatch_blockers": source_dispatch_blockers,
@@ -2122,8 +2257,17 @@ def _materialize_row(
         "source_row": {
             "selection_kind": kind,
             "selection_id": selection_id,
+            "operation_set_id": row.get("operation_set_id"),
             "combo_id": row.get("combo_id"),
             "sweep_id": row.get("sweep_id"),
+            "chosen_operation_sequence": chosen_operation_sequence,
+            "chosen_operation_sequence_sha256": row.get(
+                "chosen_operation_sequence_sha256"
+            ),
+            "chosen_operation_sequence_source": row.get("chosen_operation_sequence_source"),
+            "chosen_operation_sequence_is_permutation": operation_set_sequence_valid,
+            "operation_set_materialization_mode": operation_set_materialization_mode,
+            "active_interactions": _as_list(row.get("active_interactions")),
         },
         "executable": executable,
         "materialization_blockers": blockers,
@@ -2223,6 +2367,21 @@ def compile_dqs1_byte_shaving_campaign(
             "base_pair_indices": row["base_pair_indices"],
             "dropped_pair_indices": row["dropped_pair_indices"],
             "selected_operations": row["selected_operations"],
+            "operation_set_id": row.get("operation_set_id"),
+            "chosen_operation_sequence": row.get("chosen_operation_sequence"),
+            "chosen_operation_sequence_sha256": row.get(
+                "chosen_operation_sequence_sha256"
+            ),
+            "chosen_operation_sequence_source": row.get(
+                "chosen_operation_sequence_source"
+            ),
+            "chosen_operation_sequence_is_permutation": row.get(
+                "chosen_operation_sequence_is_permutation"
+            ),
+            "operation_set_materialization_mode": row.get(
+                "operation_set_materialization_mode"
+            ),
+            "active_interactions": row.get("active_interactions"),
             "materializer_resolutions": row["materializer_resolutions"],
             "source_units": row["source_units"],
             "selection_kind": row["selection_kind"],

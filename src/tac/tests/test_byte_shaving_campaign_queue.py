@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import copy
 import hashlib
 import importlib.util
 import json
@@ -423,7 +424,7 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
         "receiver_contract_kind": (INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_KIND),
         "required_context_fields": [
             "output",
-            "scorer_response_or_inverse_scorer_surface",
+            "inverse_action_source_surface",
         ],
         "target_kind": INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
         "unit_kind": "scorer_inverse_surface_cell",
@@ -662,6 +663,14 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
     )
     both = next(row for row in compiled["executable_rows"] if row["dropped_pair_indices"] == [320, 371])
     assert both["selected_pair_indices"] == [101, 501]
+    assert both["selection_kind"] == "operation_set"
+    assert both["operation_set_id"].startswith("opset_combo_")
+    assert both["chosen_operation_sequence"]
+    assert len(both["chosen_operation_sequence_sha256"]) == 64
+    assert both["chosen_operation_sequence_is_permutation"] is True
+    assert both["operation_set_materialization_mode"] == "ordered_dqs1_pairset_sequence"
+    assert both["source_row"]["operation_set_id"] == both["operation_set_id"]
+    assert both["materialization_blockers"] == []
     assert {unit["unit_id"] for unit in both["source_units"]} == {"pair0320", "pair0371"}
     assert all(
         resolution["materializer_id"] == DQS1_DROP_PAIR_MATERIALIZER for resolution in both["materializer_resolutions"]
@@ -678,6 +687,16 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
         row for row in compiled["portfolio"]["operator_action_rows"] if row["candidate_id"] == both["candidate_id"]
     )
     assert portfolio_row["source_metadata"]["selected_pair_indices"] == [101, 501]
+    assert portfolio_row["source_metadata"]["operation_set_id"] == both["operation_set_id"]
+    assert portfolio_row["source_metadata"]["chosen_operation_sequence"] == (
+        both["chosen_operation_sequence"]
+    )
+    assert portfolio_row["source_metadata"]["chosen_operation_sequence_sha256"] == (
+        both["chosen_operation_sequence_sha256"]
+    )
+    assert portfolio_row["source_metadata"]["operation_set_materialization_mode"] == (
+        "ordered_dqs1_pairset_sequence"
+    )
     assert portfolio_row["source_metadata"]["materializer_resolutions"] == both["materializer_resolutions"]
     assert portfolio_row["source_metadata"]["receiver_contracts"] == [DQS1_RECEIVER_CONTRACT_ID]
     assert portfolio_row["source_metadata"]["cooperative_receiver_required"] is True
@@ -686,6 +705,44 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
         "pair0371",
     }
     assert portfolio_row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_compile_dqs1_byte_shaving_plan_blocks_operation_set_sequence_mismatch(
+    tmp_path: Path,
+) -> None:
+    plan = copy.deepcopy(_pair_drop_plan())
+    operation_set = next(
+        row
+        for row in plan["operation_set_ladder"]
+        if set(row["selected_unit_ids"]) == {"pair0320", "pair0371"}
+    )
+    operation_set["chosen_operation_sequence"] = (
+        operation_set["chosen_operation_sequence"][:-1]
+    )
+
+    compiled = compile_dqs1_byte_shaving_campaign(
+        plan,
+        repo_root=tmp_path,
+        base_pair_indices=[101, 320, 371, 501],
+        candidate_limit=8,
+        portfolio_json="portfolio.json",
+        allow_partial_materialization=True,
+        partial_materialization_rationale="unit-test mixed fixture",
+    )
+
+    blocked = next(
+        row
+        for row in compiled["blocked_rows"]
+        if row.get("operation_set_id") == operation_set["operation_set_id"]
+    )
+    assert blocked["chosen_operation_sequence_is_permutation"] is False
+    assert (
+        "operation_set_sequence_not_permutation_of_selected_operations"
+        in blocked["materialization_blockers"]
+    )
+    assert blocked["operation_set_materialization_mode"] == (
+        "blocked_or_requires_atomic_materializer"
+    )
 
 
 def test_compile_dqs1_byte_shaving_plan_suggests_registered_byte_range_contract(
@@ -1088,12 +1145,14 @@ def test_inverse_surface_cells_compile_to_action_functional_work_queue(
     tmp_path: Path,
 ) -> None:
     scorer_response = tmp_path / "scorer_response.json"
+    byte_shaving_plan = tmp_path / "byte_shaving_plan.json"
     action_output = tmp_path / "inverse_action.json"
     action_md = tmp_path / "inverse_action.md"
     scorer_response.write_text(
         json.dumps({"schema": "scorer_response_dataset.v1", "rows": []}),
         encoding="utf-8",
     )
+    byte_shaving_plan.write_text(json.dumps(_pair_drop_plan()), encoding="utf-8")
     compiled = compile_dqs1_byte_shaving_campaign(
         _inverse_surface_plan(),
         repo_root=tmp_path,
@@ -1157,6 +1216,28 @@ def test_inverse_surface_cells_compile_to_action_functional_work_queue(
     assert "inverse_action_functional_is_not_candidate_archive" in row["dispatch_blockers"]
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+
+    byte_shaving_work_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND: {
+                "byte_shaving_campaign_plan": str(byte_shaving_plan),
+                "output": str(action_output),
+            }
+        },
+        source_plan_path="plan.json",
+    )
+    byte_shaving_row = byte_shaving_work_queue["rows"][0]
+    assert byte_shaving_row["executable"] is True
+    assert "--byte-shaving-campaign-plan" in byte_shaving_row["command"]
+    assert [
+        "--byte-shaving-campaign-plan",
+        str(byte_shaving_plan),
+    ] == byte_shaving_row["command"][4:6]
+    assert byte_shaving_row["telemetry"]["input_artifact_paths"] == [
+        str(byte_shaving_plan)
+    ]
 
 
 def test_non_dqs1_executable_materializers_do_not_emit_dqs1_portfolio_rows(
@@ -2291,7 +2372,7 @@ def test_compile_dqs1_byte_shaving_plan_blocks_explicit_unknown_materializer(
     tmp_path: Path,
 ) -> None:
     plan = _pair_drop_plan()
-    for ladder in ("combination_ladder", "sweep_ladder"):
+    for ladder in ("operation_set_ladder", "combination_ladder", "sweep_ladder"):
         for row in plan[ladder]:
             for operation in row["selected_operations"]:
                 if operation["unit_id"] == "pair0371":
@@ -2321,7 +2402,7 @@ def test_compile_dqs1_byte_shaving_plan_blocks_spoofed_registered_materializer(
     for unit in plan["ranked_units"]:
         if unit["unit_id"] == "pair0371":
             unit["unit_kind"] = "byte_range"
-    for ladder in ("combination_ladder", "sweep_ladder"):
+    for ladder in ("operation_set_ladder", "combination_ladder", "sweep_ladder"):
         for row in plan[ladder]:
             for operation in row["selected_operations"]:
                 if operation["unit_id"] == "pair0371":

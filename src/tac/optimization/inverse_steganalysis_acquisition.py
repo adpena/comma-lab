@@ -14,6 +14,18 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from tac.optimization.byte_shaving_campaign import (
+    COUPLED_OPERATION_SET_SCHEMA as BYTE_SHAVING_OPERATION_SET_SCHEMA,
+)
+from tac.optimization.byte_shaving_campaign import (
+    PLAN_SCHEMA as BYTE_SHAVING_CAMPAIGN_PLAN_SCHEMA,
+)
+from tac.optimization.byte_shaving_campaign import (
+    build_byte_shaving_campaign_plan,
+)
+from tac.optimization.byte_shaving_campaign import (
+    validate_signal_surface as validate_byte_shaving_signal_surface,
+)
 from tac.optimization.candidate_evidence_contract import is_sha256_hex
 from tac.optimization.proxy_candidate_contract import (
     CONSUMER_PAYLOAD_FORBIDDEN_TRUE_AUTHORITY_FIELDS,
@@ -34,6 +46,12 @@ PRIORITY_SCHEMA = "inverse_steganalysis_acquisition_priority.v1"
 ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
 ACTION_CELL_SCHEMA = "inverse_steganalysis_action_cell.v1"
 INVERSE_SCORER_SURFACE_SCHEMA = "scorer_inverse_decision_surface.v1"
+BYTE_SHAVING_OPERATION_SET_PROVENANCE_SCHEMA = (
+    "inverse_steganalysis_byte_shaving_operation_set_provenance.v1"
+)
+BYTE_SHAVING_UNIT_PROVENANCE_SCHEMA = (
+    "inverse_steganalysis_byte_shaving_ranked_unit_provenance.v1"
+)
 MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA = (
     "mlx_effective_spend_triage_candidate_selection.v1"
 )
@@ -889,6 +907,111 @@ def build_discrete_scorer_action_functional(
     )
 
 
+def action_atoms_from_byte_shaving_signal_surface(
+    surface: Mapping[str, Any],
+    *,
+    source_path: str | None = None,
+    candidate_id: str | None = None,
+    elapsed_seconds: float | None = None,
+    artifact_bytes: int | None = None,
+    resource_kind: str = "local_mlx",
+    max_k: int | None = None,
+) -> list[dict[str, Any]]:
+    """Convert a family-agnostic byte-shaving surface into action atoms.
+
+    This is the bridge from HNeRV sections, BoostNeRV/NeRV tensor units,
+    packet/member recodes, and non-NeRV candidate matrices into the same
+    inverse-steganalysis action functional used by scorer-response atoms.  It
+    preserves coupled operation sets and interaction terms as provenance; the
+    emitted rows remain planning-only.
+    """
+
+    _reject_truthy_authority(surface, label="byte-shaving signal surface")
+    validate_byte_shaving_signal_surface(surface)
+    plan = build_byte_shaving_campaign_plan(surface, max_k=max_k)
+    return action_atoms_from_byte_shaving_campaign_plan(
+        plan,
+        source_path=source_path,
+        candidate_id=candidate_id,
+        elapsed_seconds=elapsed_seconds,
+        artifact_bytes=artifact_bytes,
+        resource_kind=resource_kind,
+    )
+
+
+def action_atoms_from_byte_shaving_campaign_plan(
+    plan: Mapping[str, Any],
+    *,
+    source_path: str | None = None,
+    candidate_id: str | None = None,
+    elapsed_seconds: float | None = None,
+    artifact_bytes: int | None = None,
+    resource_kind: str = "local_mlx",
+) -> list[dict[str, Any]]:
+    """Convert byte-shaving operation sets into inverse-action atoms."""
+
+    _reject_truthy_authority(plan, label="byte-shaving campaign plan")
+    if plan.get("schema") != BYTE_SHAVING_CAMPAIGN_PLAN_SCHEMA:
+        raise InverseSteganalysisAcquisitionError(
+            f"plan schema must be {BYTE_SHAVING_CAMPAIGN_PLAN_SCHEMA}"
+        )
+    if elapsed_seconds is not None:
+        elapsed_seconds = _float(
+            elapsed_seconds,
+            "elapsed_seconds",
+            minimum=0.0,
+            exclusive=True,
+        )
+    if artifact_bytes is not None:
+        artifact_bytes = _int(artifact_bytes, "artifact_bytes", minimum=0)
+
+    atoms: list[dict[str, Any]] = []
+    operation_sets = [
+        item
+        for item in _sequence_of_mappings(plan.get("operation_set_ladder"))
+        if item.get("schema") == BYTE_SHAVING_OPERATION_SET_SCHEMA
+    ]
+    for index, operation_set in enumerate(operation_sets):
+        atoms.append(
+            normalize_inverse_steganalysis_atom(
+                _action_atom_from_byte_shaving_operation_set(
+                    operation_set,
+                    plan=plan,
+                    index=index,
+                    source_path=source_path,
+                    default_candidate_id=candidate_id,
+                    elapsed_seconds=elapsed_seconds,
+                    artifact_bytes=artifact_bytes,
+                    resource_kind=resource_kind,
+                )
+            )
+        )
+    if atoms:
+        return atoms
+
+    ranked_units = _sequence_of_mappings(plan.get("ranked_units"))
+    if not ranked_units:
+        raise InverseSteganalysisAcquisitionError(
+            "byte-shaving plan must contain operation_set_ladder or ranked_units"
+        )
+    for index, unit in enumerate(ranked_units):
+        atoms.append(
+            normalize_inverse_steganalysis_atom(
+                _action_atom_from_byte_shaving_ranked_unit(
+                    unit,
+                    plan=plan,
+                    index=index,
+                    source_path=source_path,
+                    default_candidate_id=candidate_id,
+                    elapsed_seconds=elapsed_seconds,
+                    artifact_bytes=artifact_bytes,
+                    resource_kind=resource_kind,
+                )
+            )
+        )
+    return atoms
+
+
 def action_atoms_from_inverse_scorer_surface(
     surface: Mapping[str, Any],
     *,
@@ -1476,6 +1599,529 @@ def _action_atom_from_inverse_cell(
         ),
         "resource_kind": resource_kind,
     }
+
+
+def _action_atom_from_byte_shaving_operation_set(
+    operation_set: Mapping[str, Any],
+    *,
+    plan: Mapping[str, Any],
+    index: int,
+    source_path: str | None,
+    default_candidate_id: str | None,
+    elapsed_seconds: float | None,
+    artifact_bytes: int | None,
+    resource_kind: str,
+) -> dict[str, Any]:
+    operation_set_id = _text(
+        operation_set.get("operation_set_id"),
+        "operation_set.operation_set_id",
+    )
+    candidate_id = (
+        default_candidate_id
+        or _optional_text(plan.get("candidate_id"))
+        or f"byte_shaving_{_slug(operation_set_id)}"
+    )
+    unit_kinds = ordered_unique(
+        str(operation.get("unit_kind") or "")
+        for operation in _sequence_of_mappings(operation_set.get("selected_operations"))
+        if str(operation.get("unit_kind") or "")
+    )
+    scale = _byte_shaving_scale(unit_kinds)
+    scope_axis = _byte_shaving_scope_axis(unit_kinds)
+    saved_bytes = _int(
+        _first(operation_set.get("candidate_saved_bytes"), 0),
+        "operation_set.candidate_saved_bytes",
+        minimum=0,
+    )
+    expected_gain = _expected_score_gain(operation_set, "operation_set")
+    second_order = _byte_shaving_second_order_gain(operation_set)
+    first_order = expected_gain - second_order
+    active_interactions = _sequence_of_mappings(operation_set.get("active_interactions"))
+    blockers = ordered_unique(
+        str(item)
+        for item in (
+            *(_list_strings(operation_set.get("dispatch_blockers"))),
+            *(_list_strings(operation_set.get("blockers"))),
+        )
+    )
+    risk = _byte_shaving_discontinuity_risk(
+        blockers=blockers,
+        active_interactions=active_interactions,
+        unit_kinds=unit_kinds,
+    )
+    uncertainty = max(
+        abs(second_order),
+        float(operation_set.get("quality_cost_score") or 0.0) * 0.25,
+    )
+    row_artifact_bytes = artifact_bytes
+    if row_artifact_bytes is None:
+        row_artifact_bytes = max(1, saved_bytes)
+    return {
+        "atom_id": f"byte_shaving_opset_{_slug(operation_set_id)}_{index:04d}",
+        "candidate_id": str(candidate_id),
+        "scale": scale,
+        "scope_axis": scope_axis,
+        "parent_unit_id": f"byte_shaving_operation_set:{operation_set_id}",
+        "pair_indices": _byte_shaving_pair_indices(operation_set),
+        "component": _byte_shaving_component(operation_set, plan),
+        "frequency_band": _byte_shaving_frequency_band(operation_set),
+        "byte_range": _byte_shaving_byte_range(operation_set),
+        "coherence_group": _byte_shaving_coherence_group(operation_set, plan),
+        "sparsity_prior": _byte_shaving_sparsity_prior(unit_kinds),
+        "predicted_segnet_gain": 0.0,
+        "predicted_posenet_gain": 0.0,
+        "predicted_rate_gain": CONTEST_RATE_SCORE_PER_BYTE * float(saved_bytes),
+        "predicted_rate_cost": 0.0,
+        "predicted_score_gain": max(0.0, expected_gain),
+        "first_order_marginal_effect": first_order,
+        "second_order_interaction_effect": second_order,
+        "discontinuity_risk": risk,
+        "discontinuity_threshold": 0.75,
+        "uncertainty": uncertainty,
+        "calibration_error": uncertainty * 0.25,
+        "elapsed_seconds": elapsed_seconds,
+        "artifact_bytes": row_artifact_bytes,
+        "resource_kind": resource_kind,
+        "source_provenance": _byte_shaving_operation_set_provenance(
+            operation_set,
+            plan=plan,
+            source_path=source_path,
+            expected_gain=expected_gain,
+            first_order=first_order,
+            second_order=second_order,
+        ),
+    }
+
+
+def _action_atom_from_byte_shaving_ranked_unit(
+    unit: Mapping[str, Any],
+    *,
+    plan: Mapping[str, Any],
+    index: int,
+    source_path: str | None,
+    default_candidate_id: str | None,
+    elapsed_seconds: float | None,
+    artifact_bytes: int | None,
+    resource_kind: str,
+) -> dict[str, Any]:
+    unit_id = _text(unit.get("unit_id"), "ranked_unit.unit_id")
+    candidate_id = (
+        default_candidate_id
+        or _optional_text(unit.get("source_candidate_id"))
+        or _optional_text(plan.get("candidate_id"))
+        or f"byte_shaving_{_slug(unit_id)}"
+    )
+    unit_kind = str(unit.get("unit_kind") or "byte_range")
+    saved_bytes = _int(
+        _first(unit.get("candidate_saved_bytes"), 0),
+        "ranked_unit.candidate_saved_bytes",
+        minimum=0,
+    )
+    expected_gain = _expected_score_gain(unit, "ranked_unit")
+    blockers = ordered_unique(
+        str(item)
+        for item in (
+            *(_list_strings(unit.get("dispatch_blockers"))),
+            *(_list_strings(unit.get("blockers"))),
+        )
+    )
+    risk = _byte_shaving_discontinuity_risk(
+        blockers=blockers,
+        active_interactions=(),
+        unit_kinds=[unit_kind],
+    )
+    uncertainty = max(0.0, float(unit.get("quality_cost_score") or 0.0) * 0.25)
+    row_artifact_bytes = artifact_bytes
+    if row_artifact_bytes is None:
+        row_artifact_bytes = max(1, saved_bytes)
+    source_span = unit.get("source_span")
+    return {
+        "atom_id": f"byte_shaving_unit_{_slug(unit_id)}_{index:04d}",
+        "candidate_id": str(candidate_id),
+        "scale": _byte_shaving_scale([unit_kind]),
+        "scope_axis": _byte_shaving_scope_axis([unit_kind]),
+        "parent_unit_id": f"byte_shaving_ranked_unit:{unit_id}",
+        "pair_indices": _byte_shaving_pair_indices(unit),
+        "component": _byte_shaving_component(unit, plan),
+        "frequency_band": str(unit.get("recommended_operation_family") or unit_kind),
+        "byte_range": _source_span_byte_range(source_span),
+        "coherence_group": str(
+            unit.get("recommended_operation_family")
+            or unit.get("unit_kind")
+            or "byte_shaving_unit"
+        ),
+        "sparsity_prior": _byte_shaving_sparsity_prior([unit_kind]),
+        "predicted_segnet_gain": 0.0,
+        "predicted_posenet_gain": 0.0,
+        "predicted_rate_gain": CONTEST_RATE_SCORE_PER_BYTE * float(saved_bytes),
+        "predicted_rate_cost": 0.0,
+        "predicted_score_gain": max(0.0, expected_gain),
+        "first_order_marginal_effect": expected_gain,
+        "second_order_interaction_effect": 0.0,
+        "discontinuity_risk": risk,
+        "discontinuity_threshold": 0.75,
+        "uncertainty": uncertainty,
+        "calibration_error": uncertainty * 0.25,
+        "elapsed_seconds": elapsed_seconds,
+        "artifact_bytes": row_artifact_bytes,
+        "resource_kind": resource_kind,
+        "source_provenance": _byte_shaving_unit_provenance(
+            unit,
+            plan=plan,
+            source_path=source_path,
+            expected_gain=expected_gain,
+        ),
+    }
+
+
+def _byte_shaving_operation_set_provenance(
+    operation_set: Mapping[str, Any],
+    *,
+    plan: Mapping[str, Any],
+    source_path: str | None,
+    expected_gain: float,
+    first_order: float,
+    second_order: float,
+) -> dict[str, Any]:
+    return _false_authority(
+        {
+            "schema": BYTE_SHAVING_OPERATION_SET_PROVENANCE_SCHEMA,
+            "source_path": source_path,
+            "source_plan_schema": plan.get("schema"),
+            "source_campaign_id": plan.get("campaign_id"),
+            "source_plan_candidate_id": plan.get("candidate_id"),
+            "source_lane_id": plan.get("lane_id"),
+            "operation_set_id": operation_set.get("operation_set_id"),
+            "combo_id": operation_set.get("combo_id"),
+            "operation_set_rank": operation_set.get("operation_set_rank"),
+            "selected_unit_ids": _list_strings(operation_set.get("selected_unit_ids")),
+            "operation_families": _list_strings(operation_set.get("operation_families")),
+            "chosen_operation_sequence": _sequence_of_mappings(
+                operation_set.get("chosen_operation_sequence")
+            ),
+            "chosen_operation_sequence_source": operation_set.get(
+                "chosen_operation_sequence_source"
+            ),
+            "selected_operations": _sequence_of_mappings(
+                operation_set.get("selected_operations")
+            ),
+            "active_interactions": _sequence_of_mappings(
+                operation_set.get("active_interactions")
+            ),
+            "candidate_saved_bytes": operation_set.get("candidate_saved_bytes"),
+            "base_saved_bytes": operation_set.get("base_saved_bytes"),
+            "interaction_extra_saved_bytes": operation_set.get(
+                "interaction_extra_saved_bytes"
+            ),
+            "interaction_shared_overhead_bytes": operation_set.get(
+                "interaction_shared_overhead_bytes"
+            ),
+            "quality_cost_score": operation_set.get("quality_cost_score"),
+            "interaction_delta_score": operation_set.get("interaction_delta_score"),
+            "expected_delta_score": operation_set.get("expected_delta_score"),
+            "expected_score_gain": expected_gain,
+            "first_order_marginal_effect": first_order,
+            "second_order_interaction_effect": second_order,
+            "partial_materialization_allowed": operation_set.get(
+                "partial_materialization_allowed"
+            ),
+            "dispatch_blockers": _list_strings(operation_set.get("dispatch_blockers")),
+            "source_signal_refs": _sequence_of_mappings(plan.get("source_signal_refs")),
+            "scorer_response_refs": _sequence_of_mappings(
+                plan.get("scorer_response_refs")
+            ),
+            "inverse_scorer_surface_refs": _sequence_of_mappings(
+                plan.get("inverse_scorer_surface_refs")
+            ),
+            "mlx_calibration_refs": _sequence_of_mappings(
+                plan.get("mlx_calibration_refs")
+            ),
+            "allowed_use": "inverse_steganalysis_planning_rank_only",
+            "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        },
+        "byte_shaving_operation_set_provenance_is_planning_only",
+    )
+
+
+def _byte_shaving_unit_provenance(
+    unit: Mapping[str, Any],
+    *,
+    plan: Mapping[str, Any],
+    source_path: str | None,
+    expected_gain: float,
+) -> dict[str, Any]:
+    return _false_authority(
+        {
+            "schema": BYTE_SHAVING_UNIT_PROVENANCE_SCHEMA,
+            "source_path": source_path,
+            "source_plan_schema": plan.get("schema"),
+            "source_campaign_id": plan.get("campaign_id"),
+            "source_plan_candidate_id": plan.get("candidate_id"),
+            "source_lane_id": plan.get("lane_id"),
+            "unit_id": unit.get("unit_id"),
+            "unit_kind": unit.get("unit_kind"),
+            "source_candidate_id": unit.get("source_candidate_id"),
+            "source_span": unit.get("source_span"),
+            "candidate_saved_bytes": unit.get("candidate_saved_bytes"),
+            "quality_cost_score": unit.get("quality_cost_score"),
+            "expected_delta_score": unit.get("expected_delta_score"),
+            "expected_score_gain": expected_gain,
+            "recommended_operation_id": unit.get("recommended_operation_id"),
+            "recommended_operation_family": unit.get("recommended_operation_family"),
+            "recommended_operation_materializer": unit.get(
+                "recommended_operation_materializer"
+            ),
+            "recommended_operation_target_kind": unit.get(
+                "recommended_operation_target_kind"
+            ),
+            "operation_candidates": _sequence_of_mappings(unit.get("operation_candidates")),
+            "source_paths": _list_strings(unit.get("source_paths")),
+            "master_gradient_signal": unit.get("master_gradient_signal"),
+            "engineered_correction_signal": unit.get("engineered_correction_signal"),
+            "canonical_equation_provenance": unit.get("canonical_equation_provenance"),
+            "candidate_trust_region_blockers": _list_strings(
+                unit.get("candidate_trust_region_blockers")
+            ),
+            "dispatch_blockers": _list_strings(unit.get("dispatch_blockers")),
+            "allowed_use": "inverse_steganalysis_planning_rank_only",
+            "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        },
+        "byte_shaving_ranked_unit_provenance_is_planning_only",
+    )
+
+
+def _expected_score_gain(row: Mapping[str, Any], label: str) -> float:
+    explicit = _float_or_none(row.get("expected_score_gain"), f"{label}.expected_score_gain")
+    if explicit is not None:
+        return explicit
+    expected_delta = _float_or_none(
+        row.get("expected_delta_score"),
+        f"{label}.expected_delta_score",
+    )
+    if expected_delta is None:
+        saved_bytes = _int(
+            _first(row.get("candidate_saved_bytes"), 0),
+            f"{label}.candidate_saved_bytes",
+            minimum=0,
+        )
+        quality_cost = _float(
+            _first(row.get("quality_cost_score"), 0.0),
+            f"{label}.quality_cost_score",
+        )
+        return (CONTEST_RATE_SCORE_PER_BYTE * float(saved_bytes)) - quality_cost
+    return -expected_delta
+
+
+def _byte_shaving_second_order_gain(operation_set: Mapping[str, Any]) -> float:
+    direct_gain = -_float(
+        _first(operation_set.get("interaction_delta_score"), 0.0),
+        "operation_set.interaction_delta_score",
+    )
+    extra_saved = _int(
+        _first(operation_set.get("interaction_extra_saved_bytes"), 0),
+        "operation_set.interaction_extra_saved_bytes",
+        minimum=0,
+    )
+    overhead = _int(
+        _first(operation_set.get("interaction_shared_overhead_bytes"), 0),
+        "operation_set.interaction_shared_overhead_bytes",
+        minimum=0,
+    )
+    quality_gain = -sum(
+        _float(
+            _first(interaction.get("quality_cost_delta_score"), 0.0),
+            "interaction.quality_cost_delta_score",
+        )
+        for interaction in _sequence_of_mappings(operation_set.get("active_interactions"))
+    )
+    return direct_gain + quality_gain + (
+        CONTEST_RATE_SCORE_PER_BYTE * float(extra_saved - overhead)
+    )
+
+
+def _byte_shaving_scale(unit_kinds: Sequence[str]) -> str:
+    normalized = [str(kind) for kind in unit_kinds if str(kind)]
+    if len(set(normalized)) > 1:
+        return "multiscale"
+    kind = normalized[0] if normalized else "byte_range"
+    return {
+        "pair": "pair",
+        "frame": "frame",
+        "byte_range": "byte_range",
+        "archive_section": "byte_range",
+        "tensor": "component",
+        "packet_member": "byte_range",
+        "scorer_response_row": "candidate",
+        "scorer_inverse_surface_cell": "multiscale",
+        "correction_target": "byte",
+    }.get(kind, "multiscale")
+
+
+def _byte_shaving_scope_axis(unit_kinds: Sequence[str]) -> str:
+    normalized = [str(kind) for kind in unit_kinds if str(kind)]
+    mapped = {
+        "pair": "pairs",
+        "frame": "frames",
+        "byte_range": "bytes",
+        "archive_section": "bytes",
+        "tensor": "full_video",
+        "packet_member": "bytes",
+        "scorer_response_row": "full_video",
+        "scorer_inverse_surface_cell": "full_video",
+        "correction_target": "bytes",
+    }
+    scopes = {mapped.get(kind, "full_video") for kind in normalized}
+    if len(scopes) == 1:
+        return next(iter(scopes))
+    if "pairs" in scopes and len(scopes) == 1:
+        return "pairs"
+    return "full_video"
+
+
+def _byte_shaving_component(row: Mapping[str, Any], plan: Mapping[str, Any]) -> str:
+    for value in (
+        row.get("component"),
+        row.get("score_axis"),
+        row.get("frontier_axis"),
+        plan.get("frontier_axis"),
+    ):
+        text = _optional_text(value)
+        if not text:
+            continue
+        token = _token(text)
+        if "seg" in token:
+            return "segnet"
+        if "pose" in token:
+            return "posenet"
+        if "rate" in token or "byte" in token:
+            return "rate"
+    families = set(_list_strings(row.get("operation_families")))
+    if any(
+        family in families
+        for family in (
+            "drop_pair",
+            "drop_frame",
+            "entropy_recode",
+            "null_remove_or_seed",
+            "section_entropy_recode",
+            "zip_header_elide",
+            "member_recompress",
+            "member_merge",
+        )
+    ):
+        return "rate"
+    return "scorer"
+
+
+def _byte_shaving_frequency_band(row: Mapping[str, Any]) -> str:
+    families = _list_strings(row.get("operation_families"))
+    if families:
+        return "+".join(families[:4])
+    return str(row.get("unit_kind") or "byte_shaving")
+
+
+def _byte_shaving_coherence_group(row: Mapping[str, Any], plan: Mapping[str, Any]) -> str:
+    families = _list_strings(row.get("operation_families"))
+    unit_ids = _list_strings(row.get("selected_unit_ids"))
+    return ":".join(
+        item
+        for item in (
+            str(plan.get("campaign_id") or "byte_shaving"),
+            "+".join(families[:4]) if families else "",
+            "+".join(unit_ids[:4]) if unit_ids else str(row.get("unit_id") or ""),
+        )
+        if item
+    )
+
+
+def _byte_shaving_pair_indices(row: Mapping[str, Any]) -> list[int] | None:
+    values: list[int] = []
+    for key in ("pair_indices", "selected_pair_indices"):
+        parsed = _int_list(row.get(key), key)
+        if parsed:
+            values.extend(parsed)
+    for operation in _sequence_of_mappings(row.get("selected_operations")):
+        parsed = _int_list(operation.get("pair_indices"), "operation.pair_indices")
+        if parsed:
+            values.extend(parsed)
+        params = operation.get("params")
+        if isinstance(params, Mapping):
+            parsed = _int_list(params.get("pair_indices"), "operation.params.pair_indices")
+            if parsed:
+                values.extend(parsed)
+    return sorted(set(values)) or None
+
+
+def _byte_shaving_byte_range(row: Mapping[str, Any]) -> list[int] | None:
+    for key in ("byte_range", "archive_byte_range"):
+        parsed = _range(row.get(key), key)
+        if parsed is not None:
+            return parsed
+    spans = [
+        _source_span_byte_range(operation.get("source_span"))
+        for operation in _sequence_of_mappings(row.get("selected_operations"))
+    ]
+    spans = [span for span in spans if span is not None]
+    if len(spans) == 1:
+        return spans[0]
+    return None
+
+
+def _source_span_byte_range(value: Any) -> list[int] | None:
+    if not isinstance(value, Mapping):
+        return None
+    start = _optional_int(value.get("start"), "source_span.start", minimum=0)
+    end = _optional_int(
+        value.get("end_exclusive"),
+        "source_span.end_exclusive",
+        minimum=0,
+    )
+    if start is None or end is None or end < start:
+        return None
+    return [start, end]
+
+
+def _byte_shaving_sparsity_prior(unit_kinds: Sequence[str]) -> float:
+    kinds = {str(kind) for kind in unit_kinds if str(kind)}
+    if kinds & {"byte_range", "archive_section", "packet_member"}:
+        return 1.0
+    if kinds & {"tensor", "scorer_inverse_surface_cell", "scorer_response_row"}:
+        return 0.5
+    return 0.75
+
+
+def _byte_shaving_discontinuity_risk(
+    *,
+    blockers: Sequence[str],
+    active_interactions: Sequence[Mapping[str, Any]],
+    unit_kinds: Sequence[str],
+) -> float:
+    blocker_text = " ".join(str(blocker).lower() for blocker in blockers)
+    if (
+        "fragile" in blocker_text
+        or "discontinuity" in blocker_text
+        or "parity_failed" in blocker_text
+    ):
+        return 0.8
+    if "missing" in blocker_text or "materializer_gap" in blocker_text:
+        return 0.45
+    if active_interactions:
+        return 0.2
+    if set(unit_kinds) & {"scorer_inverse_surface_cell", "scorer_response_row"}:
+        return 0.3
+    return 0.1
+
+
+def _sequence_of_mappings(value: Any) -> list[dict[str, Any]]:
+    return [dict(item) for item in value if isinstance(item, Mapping)] if isinstance(value, Sequence) and not isinstance(value, str | bytes) else []
+
+
+def _list_strings(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [value] if value else []
+    if not isinstance(value, Sequence):
+        return []
+    return [str(item) for item in value if str(item)]
 
 
 def _best_observation(atom: Mapping[str, Any], observations: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None:
@@ -2310,6 +2956,8 @@ __all__ = [
     "TOOL",
     "AcquisitionPriorityTerms",
     "InverseSteganalysisAcquisitionError",
+    "action_atoms_from_byte_shaving_campaign_plan",
+    "action_atoms_from_byte_shaving_signal_surface",
     "action_atoms_from_inverse_scorer_surface",
     "action_surface_terms",
     "build_discrete_scorer_action_functional",

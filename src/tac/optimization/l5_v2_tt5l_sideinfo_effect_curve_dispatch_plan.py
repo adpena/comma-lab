@@ -31,13 +31,13 @@ from tac.deploy.modal.paired_dispatch import (
 from tac.deploy.modal.paired_dispatch_contract import (
     paired_auth_eval_dispatch_command_blockers,
 )
-from tac.optimizer.exact_dispatch_authority import exact_dispatch_authority
 from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES,
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
     L5V2_TT5L_SIDEINFO_VARIANT_PACKET_REPORT_PATH,
     L5V2_TT5L_SIDEINFO_VARIANT_PACKET_SCHEMA,
 )
+from tac.optimizer.exact_dispatch_authority import exact_dispatch_authority
 
 L5V2_TT5L_SIDEINFO_EFFECT_CURVE_DISPATCH_PLAN_SCHEMA = (
     "l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_v1"
@@ -469,6 +469,7 @@ def _exact_dispatch_authority_for_variant(
     variant: str,
     row: Mapping[str, Any],
     archive: Mapping[str, Any],
+    runtime: Mapping[str, Any],
     submission_dir: str,
     lanes: Mapping[str, str],
     repo_root: Path,
@@ -505,6 +506,14 @@ def _exact_dispatch_authority_for_variant(
         "source_archive_sha256": row.get("source_archive_sha256"),
         "source_payload_sha256": row.get("source_sideinfo_section_sha256"),
         "candidate_payload_sha256": archive_sha256,
+        "runtime_tree_sha256": runtime.get("runtime_tree_sha256"),
+        "runtime_content_tree_sha256": runtime.get("runtime_content_tree_sha256"),
+        "runtime_consumption_proof_required": True,
+        "runtime_consumption_proof_status": "present",
+        "runtime_consumption_proof_path": str(
+            row.get("runtime_consumption_proof_path")
+            or (Path(submission_dir) / "runtime_consumption_proof.json").as_posix()
+        ),
     }
     verdicts: dict[str, Any] = {}
     combined_blockers: list[str] = []
@@ -524,6 +533,7 @@ def _exact_dispatch_authority_for_variant(
             ),
             dispatch_claims_path=claims_path,
             claim_policy="preclaim_conflict_check",
+            required_score_axis=axis,
         ).as_dict()
         verdicts[axis] = verdict
         combined_blockers.extend(
@@ -616,6 +626,7 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan(
             variant=variant,
             row=row,
             archive=archive,
+            runtime=runtime,
             submission_dir=submission_dir,
             lanes=lanes,
             repo_root=root,

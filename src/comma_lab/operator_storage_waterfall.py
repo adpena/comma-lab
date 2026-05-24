@@ -46,6 +46,8 @@ GITIGNORED_STORAGE_PREFLIGHT_ARTIFACT_PATTERNS: tuple[str, ...] = (
     ".omx/research/byte_shaving_materializer_storage_plan_*.json",
     ".omx/research/byte_shaving_materializer_proactive_cleanup_*.json",
     ".omx/research/byte_shaving_materializer_proactive_cleanup_*.json.journal.jsonl",
+    ".omx/research/*_artifact_retention_*.json",
+    ".omx/research/*_artifact_retention_*.json.journal.jsonl",
 )
 
 

@@ -72,3 +72,14 @@ def test_operator_storage_waterfall_marks_ignored_preflight_artifacts_local_only
     ]
     assert boundary["local_only"] is True
     assert boundary["git_boundary"] == "gitignored_local_control_artifact"
+
+    retention_metadata = storage_preflight_artifact_catalog_metadata(
+        storage_plan_path=None,
+        cleanup_plan_path=".omx/research/dqs1_proactive_artifact_retention_20260524T052547Z_round000.json",
+        journal_path=".omx/research/dqs1_proactive_artifact_retention_20260524T052547Z_round000.json.journal.jsonl",
+    )
+    retention_boundary = retention_metadata["tracked_local_boundary"][
+        ".omx/research/dqs1_proactive_artifact_retention_20260524T052547Z_round000.json"
+    ]
+    assert retention_boundary["local_only"] is True
+    assert retention_boundary["git_boundary"] == "gitignored_local_control_artifact"

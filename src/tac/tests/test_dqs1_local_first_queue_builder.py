@@ -526,6 +526,33 @@ def test_dqs1_queue_builder_can_emit_local_mlx_advisory_debug_steps(
     )
 
 
+def test_dqs1_queue_builder_uses_local_cpu_resource_for_mlx_cpu_debug(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="results",
+        eureka_run_id="20260523T010203Z",
+        include_mlx_local_advisory_debug=True,
+        allow_large_mlx_cache=True,
+        mlx_reference_cache_dir="reference/full600",
+        mlx_device="cpu",
+    )
+
+    steps_by_id = {
+        step["id"]: step
+        for step in result.queue["experiments"][0]["steps"]
+    }
+    mlx_response = steps_by_id["local_mlx_advisory_response"]
+    assert mlx_response["resources"]["kind"] == "local_cpu"
+    assert "--device" in mlx_response["command"]
+    assert mlx_response["command"][mlx_response["command"].index("--device") + 1] == "cpu"
+    assert "--allow-gpu-research-signal" not in mlx_response["command"]
+
+
 def test_dqs1_queue_builder_can_emit_scheduler_preflight_gate(tmp_path: Path) -> None:
     summary = _write_summary(tmp_path)
 
@@ -577,9 +604,17 @@ def test_dqs1_queue_builder_preflight_hashes_existing_storage_plan(
     storage_plan = (
         tmp_path / ".omx" / "research" / "dqs1_local_first_storage_plan_20260522.json"
     )
+    cleanup_plan = (
+        tmp_path
+        / ".omx"
+        / "research"
+        / "dqs1_local_first_proactive_cleanup_20260522.json"
+    )
     storage_plan.parent.mkdir(parents=True)
     storage_plan.write_text('{"prior":true}\n', encoding="utf-8")
+    cleanup_plan.write_text('{"cleanup":true}\n', encoding="utf-8")
     expected_sha = sha256(storage_plan.read_bytes()).hexdigest()
+    expected_cleanup_sha = sha256(cleanup_plan.read_bytes()).hexdigest()
 
     result = build_queue_from_action_summary(
         summary,
@@ -598,9 +633,18 @@ def test_dqs1_queue_builder_preflight_hashes_existing_storage_plan(
         ),
     )
 
-    command = result.queue["experiments"][0]["steps"][0]["command"]
-    assert "--expected-output-sha256" in command
-    assert command[command.index("--expected-output-sha256") + 1] == expected_sha
+    storage_command = result.queue["experiments"][0]["steps"][0]["command"]
+    cleanup_command = result.queue["experiments"][0]["steps"][1]["command"]
+    assert "--expected-output-sha256" in storage_command
+    assert (
+        storage_command[storage_command.index("--expected-output-sha256") + 1]
+        == expected_sha
+    )
+    assert "--expected-output-sha256" in cleanup_command
+    assert (
+        cleanup_command[cleanup_command.index("--expected-output-sha256") + 1]
+        == expected_cleanup_sha
+    )
 
 
 def test_dqs1_queue_builder_preflight_uses_run_id_not_stale_summary_date(

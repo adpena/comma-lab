@@ -249,6 +249,61 @@ def test_parallel_dispatch_does_not_treat_contest_mode_as_exact_eval(
     assert "exact_dispatch_authority:contest_exact_eval_target_mode_missing" in blockers
 
 
+def test_parallel_dispatch_does_not_treat_deployment_target_as_exact_eval(
+    tmp_path: Path,
+) -> None:
+    spec = importlib.util.spec_from_file_location(
+        "parallel_dispatch_top_k_deployment_target_test",
+        TOOL,
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    candidate = _live_dispatch_candidate(tmp_path)
+    candidate.pop("target_modes", None)
+    candidate["deployment_target"] = "contest_exact_eval"
+
+    blockers = module._candidate_blockers(
+        candidate,
+        ranked_input_dir=tmp_path,
+        active_floor_archive_bytes=999_999,
+        active_floor_score=0.2,
+        dispatch_claims_path=tmp_path / "claims.md",
+    )
+
+    assert "exact_dispatch_authority:contest_exact_eval_target_mode_missing" in blockers
+    assert any(blocker.startswith("target_modes_missing;") for blocker in blockers)
+
+
+def test_parallel_dispatch_blocks_proxy_score_fields(tmp_path: Path) -> None:
+    spec = importlib.util.spec_from_file_location(
+        "parallel_dispatch_top_k_proxy_score_field_test",
+        TOOL,
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    candidate = _live_dispatch_candidate(tmp_path)
+    candidate["proxy_score"] = 0.1
+    candidate["macos_cpu_score"] = 0.2
+
+    blockers = module._candidate_blockers(
+        candidate,
+        ranked_input_dir=tmp_path,
+        active_floor_archive_bytes=999_999,
+        active_floor_score=0.2,
+        dispatch_claims_path=tmp_path / "claims.md",
+    )
+
+    assert (
+        "exact_dispatch_authority:pre_dispatch_score_field_present:"
+        "macos_cpu_score,proxy_score"
+    ) in blockers
+    assert "predicted_score_field_present:macos_cpu_score,proxy_score" in blockers
+
+
 def test_parallel_dispatch_refuses_stale_exact_ready_terminal_claim(tmp_path: Path) -> None:
     submission = tmp_path / "submission"
     archive_bytes, archive_sha = _write_archive(submission / "archive.zip")

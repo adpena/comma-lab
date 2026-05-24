@@ -72,6 +72,19 @@ def test_generated_research_artifact_externalizes_even_when_small_text() -> None
     assert "rebuildable custody outputs" in reason
 
 
+def test_queue_local_control_json_stays_private_local() -> None:
+    category, disposition, target, reason = classify_relpath(
+        ".omx/research/dqs1_proactive_artifact_retention_20260524T052547Z_round000.json",
+        12_000,
+        "ignored",
+    )
+
+    assert category == "queue_local_control_artifact"
+    assert disposition == "keep_private_local"
+    assert target == "local only plus dated research memo for durable findings"
+    assert "machine-local volume choices" in reason
+
+
 def test_generated_public_site_bundle_is_not_tracked_as_source() -> None:
     category, disposition, target, reason = classify_relpath(
         "reports/graphs/public_site/final_writeup_draft.md",
@@ -131,6 +144,9 @@ def test_repo_policy_keeps_research_state_boundary_in_comma_lab() -> None:
     assert ".omx/research/materializer_exact_eval_consumer_report_*.json" in gitignore
     assert ".omx/research/*_artifact_retention_*.json" in gitignore
     assert ".omx/research/*_artifact_retention_*.json.journal.jsonl" in gitignore
+    assert "LOCAL_RESEARCH_CONTROL_PATTERNS" in (
+        REPO / "src/comma_lab/research_state.py"
+    ).read_text()
     assert "**/.*.tmp-*" in gitignore
     assert "experiments/results/lightning_batch/**/source_manifest.json" in gitignore
     assert "!experiments/results/lightning_batch/**/custody_anchor.json" in gitignore

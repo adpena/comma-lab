@@ -74,6 +74,8 @@ def test_runtime_profile_normalizes_mlx_cost_signal_without_score_authority() ->
 
     assert normalized["schema"] == SCHEMA
     assert normalized["training_backend"] == "mlx"
+    assert normalized["scheduler_resource_kind"] == "local_mlx"
+    assert normalized["evidence_grade"] == "[macOS-MLX research-signal]"
     assert normalized["timing_field"] == "seconds_per_epoch"
     assert normalized["timing_value_seconds"] == 3.25
     assert normalized["kernel_fusion"]["kernel_fusion_strategy_id"] == (
@@ -84,6 +86,32 @@ def test_runtime_profile_normalizes_mlx_cost_signal_without_score_authority() ->
     assert "runtime_consumption_proof_missing" in normalized["blockers"]
     assert normalized["score_claim"] is False
     assert normalized["ready_for_exact_eval_dispatch"] is False
+
+
+def test_runtime_profile_normalizes_local_numpy_to_local_cpu_resource() -> None:
+    profile = {
+        **_profile(),
+        "candidate_id": "hnerv_numpy_smoke_seed3",
+        "training_backend": "numpy",
+        "device": "local_numpy",
+        "seconds_per_epoch": 11.5,
+    }
+
+    normalized = normalize_runtime_profile_observation(profile)
+    row = adapt_runtime_profile_observation_to_candidate(
+        profile,
+        source_path=Path("runtime_profile.json"),
+        repo_root=Path("."),
+    )
+
+    assert normalized["training_backend"] == "local_numpy"
+    assert normalized["scheduler_resource_kind"] == "local_cpu"
+    assert normalized["evidence_grade"] == "[local-NumPy research-signal]"
+    assert "local_numpy_training_profile_not_score_authority" in normalized["blockers"]
+    assert row["candidate_id"] == "hnerv_numpy_smoke_seed3::runtime_profile::local_numpy"
+    assert row["candidate_params"]["scheduler_resource_kind"] == "local_cpu"
+    assert row["evidence_grade"] == "[local-NumPy research-signal]"
+    assert row["ready_for_exact_eval_dispatch"] is False
 
 
 def test_runtime_profile_adapter_and_candidate_queue_are_planning_only(
@@ -148,6 +176,7 @@ def test_training_manifest_runtime_profile_summary_is_generic() -> None:
 
     assert summary["profile_count"] == 2
     assert summary["best_local_backend"] == "mlx"
+    assert summary["best_scheduler_resource_kind"] == "local_mlx"
     assert summary["best_timing_value_seconds"] == 4.0
     assert "coda_like_gemm_epilogue_profile_only" in summary[
         "kernel_fusion_strategy_ids"

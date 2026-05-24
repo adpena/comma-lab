@@ -1092,7 +1092,12 @@ def _byte_shaving_campaign_candidates(
     rows: list[dict[str, Any]] = []
 
     def append_plan_row(kind: str, item: Mapping[str, Any]) -> None:
-        row_id = str(item.get("combo_id") or item.get("sweep_id") or "")
+        row_id = str(
+            item.get("operation_set_id")
+            or item.get("combo_id")
+            or item.get("sweep_id")
+            or ""
+        )
         if not row_id:
             return
         require_no_truthy_authority_fields(
@@ -1103,6 +1108,10 @@ def _byte_shaving_campaign_candidates(
         selected_unit_ids = [
             str(value) for value in item.get("selected_unit_ids", []) if str(value)
         ]
+        chosen_operation_sequence = list(item.get("chosen_operation_sequence") or [])
+        chosen_operation_sequence_sha256 = item.get(
+            "chosen_operation_sequence_sha256"
+        )
         candidate_id = f"{campaign_id}::{kind}::{row_id}"
         expected_delta = _as_float(item.get("expected_delta_score"))
         candidate_saved_bytes = _as_int(item.get("candidate_saved_bytes"))
@@ -1117,20 +1126,36 @@ def _byte_shaving_campaign_candidates(
             "lane_id": lane_id,
             "lane_class": "byte_shaving_campaign",
             "candidate_family": "post_training_byte_shaving_plan",
-            "param_schema": "byte_shaving_campaign_operation_selection_v1",
+            "param_schema": (
+                "byte_shaving_coupled_operation_set.v1"
+                if kind == "operation_set"
+                else "byte_shaving_campaign_operation_selection_v1"
+            ),
             "optimizer_tool": payload.get("tool")
             or "tools/plan_byte_shaving_campaign.py",
             "selection_kind": kind,
             "selection_id": row_id,
+            "operation_set_id": item.get("operation_set_id"),
             "candidate_params": {
                 "selection_kind": kind,
                 "selection_id": row_id,
+                "operation_set_id": item.get("operation_set_id"),
                 "selected_unit_ids": selected_unit_ids,
                 "selected_operations": selected_operations,
+                "chosen_operation_sequence": chosen_operation_sequence,
+                "chosen_operation_sequence_sha256": chosen_operation_sequence_sha256,
+                "chosen_operation_sequence_is_permutation": item.get(
+                    "chosen_operation_sequence_is_permutation"
+                ),
+                "chosen_operation_sequence_source": item.get(
+                    "chosen_operation_sequence_source"
+                ),
                 "active_interactions": list(item.get("active_interactions") or []),
             },
             "op_params": {
                 "selected_operations": selected_operations,
+                "chosen_operation_sequence": chosen_operation_sequence,
+                "chosen_operation_sequence_sha256": chosen_operation_sequence_sha256,
                 "operation_families": list(item.get("operation_families") or []),
             },
             "selected_unit_ids": selected_unit_ids,
@@ -1164,9 +1189,18 @@ def _byte_shaving_campaign_candidates(
                 "campaign_id": campaign_id,
                 "selection_kind": kind,
                 "selection_id": row_id,
+                "operation_set_id": item.get("operation_set_id"),
                 "source_candidate_id": source_candidate_id,
                 "selected_unit_ids": selected_unit_ids,
                 "selected_operations": selected_operations,
+                "chosen_operation_sequence": chosen_operation_sequence,
+                "chosen_operation_sequence_sha256": chosen_operation_sequence_sha256,
+                "chosen_operation_sequence_is_permutation": item.get(
+                    "chosen_operation_sequence_is_permutation"
+                ),
+                "chosen_operation_sequence_source": item.get(
+                    "chosen_operation_sequence_source"
+                ),
                 "active_interactions": list(item.get("active_interactions") or []),
                 "source_signal_refs": source_refs,
                 "auth_eval_refs": auth_eval_refs,
@@ -1194,12 +1228,21 @@ def _byte_shaving_campaign_candidates(
         )
         rows.append(row)
 
+    operation_sets = [
+        item
+        for item in payload.get("operation_set_ladder") or []
+        if isinstance(item, Mapping)
+    ]
+    if operation_sets:
+        for item in operation_sets:
+            append_plan_row("operation_set", item)
+    else:
+        for item in payload.get("combination_ladder") or []:
+            if isinstance(item, Mapping):
+                append_plan_row("combo", item)
     for item in payload.get("sweep_ladder") or []:
         if isinstance(item, Mapping):
             append_plan_row("prefix", item)
-    for item in payload.get("combination_ladder") or []:
-        if isinstance(item, Mapping):
-            append_plan_row("combo", item)
     return rows
 
 

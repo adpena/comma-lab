@@ -156,7 +156,10 @@ def _ready_row(repo: Path) -> dict[str, object]:
         repo_root=repo,
         active_floor_archive_bytes=None,
     )
-    return result["promoted_queue"]["dispatch_ready"][0]
+    row = result["promoted_queue"]["dispatch_ready"][0]
+    row["score_axis"] = "contest_cuda"
+    row["target_score_axis"] = "contest_cuda"
+    return row
 
 
 def _write_claims(path: Path, rows: list[tuple[str, str, str, str]]) -> None:
@@ -409,6 +412,24 @@ def test_exact_dispatch_authority_does_not_treat_contest_mode_as_exact_eval(
     assert "contest_exact_eval_target_mode_missing" in verdict.blockers
 
 
+def test_exact_dispatch_authority_does_not_treat_deployment_target_as_exact_eval(
+    tmp_path: Path,
+) -> None:
+    row = _ready_row(tmp_path)
+    row.pop("target_modes", None)
+    row["deployment_target"] = "contest_exact_eval"
+
+    verdict = exact_dispatch_authority(
+        row,
+        repo_root=tmp_path,
+        source="test",
+        active_floor_archive_bytes=None,
+    )
+
+    assert verdict.authorized is False
+    assert "contest_exact_eval_target_mode_missing" in verdict.blockers
+
+
 def test_exact_dispatch_authority_blocks_truthy_pre_dispatch_authority_fields(
     tmp_path: Path,
 ) -> None:
@@ -434,6 +455,67 @@ def test_exact_dispatch_authority_blocks_truthy_pre_dispatch_authority_fields(
 
         assert verdict.authorized is False
         assert f"truthy_authority_field:{field}=truthy" in verdict.blockers
+
+
+def test_exact_dispatch_authority_blocks_pre_dispatch_score_fields(
+    tmp_path: Path,
+) -> None:
+    row = _ready_row(tmp_path)
+    row["proxy_score"] = 0.1
+    row["macos_cpu_score"] = 0.2
+
+    verdict = exact_dispatch_authority(
+        row,
+        repo_root=tmp_path,
+        source="test",
+        active_floor_archive_bytes=None,
+    )
+
+    assert verdict.authorized is False
+    assert (
+        "pre_dispatch_score_field_present:macos_cpu_score,proxy_score"
+        in verdict.blockers
+    )
+
+
+def test_exact_dispatch_authority_requires_some_explicit_score_axis(
+    tmp_path: Path,
+) -> None:
+    row = _ready_row(tmp_path)
+    row.pop("score_axis", None)
+    row.pop("target_score_axis", None)
+
+    verdict = exact_dispatch_authority(
+        row,
+        repo_root=tmp_path,
+        source="test",
+        active_floor_archive_bytes=None,
+    )
+
+    assert verdict.authorized is False
+    assert "score_axis_missing:required=explicit_contest_axis" in verdict.blockers
+
+
+def test_exact_dispatch_authority_requires_contest_score_axis_for_exact_target(
+    tmp_path: Path,
+) -> None:
+    row = _ready_row(tmp_path)
+    row["score_axis"] = "[macOS-MLX research-signal]"
+    row["target_score_axis"] = "[macOS-MLX research-signal]"
+
+    verdict = exact_dispatch_authority(
+        row,
+        repo_root=tmp_path,
+        source="test",
+        active_floor_archive_bytes=None,
+    )
+
+    assert verdict.authorized is False
+    assert (
+        "score_axis_non_contest_for_exact_dispatch:"
+        "score_axis=[macos_mlx_research_signal],"
+        "target_score_axis=[macos_mlx_research_signal]"
+    ) in verdict.blockers
 
 
 def test_exact_dispatch_authority_requires_declared_score_axis_when_requested(
@@ -475,3 +557,25 @@ def test_exact_dispatch_authority_blocks_wrong_score_axis_when_requested(
         "score_axis_required:contest_cuda:declared=score_axis=contest_cpu,"
         "target_score_axis=contest_cpu"
     ) in verdict.blockers
+
+
+def test_exact_dispatch_authority_blocks_conflicting_score_axis_aliases(
+    tmp_path: Path,
+) -> None:
+    row = _ready_row(tmp_path)
+    row["target_auth_axis"] = "contest_cpu"
+    row["contest_axis"] = "contest_cuda"
+
+    verdict = exact_dispatch_authority(
+        row,
+        repo_root=tmp_path,
+        source="test",
+        active_floor_archive_bytes=None,
+        required_score_axis="contest_cuda",
+    )
+
+    assert verdict.authorized is False
+    assert any(
+        blocker.startswith("score_axis_field_mismatch:")
+        for blocker in verdict.blockers
+    )

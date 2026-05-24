@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from comma_lab.scheduler.local_training_queue import build_local_training_execution_queue
 from tac.optimizer.candidate_queue import build_candidate_queue
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -159,7 +160,22 @@ def test_plan_only_writes_plan_without_running_training(tmp_path: Path) -> None:
     assert generic_plan["candidate_id"] == "pr95_muon_hnerv_local_cpu_stages1_seed1234"
     assert generic_plan["representation_family"] == "hnerv"
     assert generic_plan["substrate_family"] == "nerv_family"
+    assert generic_plan["recommended_execution"]["tool"] == (
+        "tools/run_pr95_local_training_probe.py"
+    )
+    assert generic_plan["recommended_execution"]["training_backend"] == "torch"
+    assert generic_plan["recommended_execution"]["output_manifest"].endswith(
+        "manifest.json"
+    )
     assert generic_plan["score_claim"] is False
+    local_queue = build_local_training_execution_queue(
+        [generic_plan],
+        queue_id="pr95_plan_only_local_training_fixture",
+        repo_root=REPO_ROOT,
+    )
+    local_training_step = local_queue["experiments"][0]["steps"][0]
+    assert local_training_step["resources"]["kind"] == "local_cpu"
+    assert "tools/run_pr95_local_training_probe.py" in local_training_step["command"]
     queue = build_candidate_queue(
         [tmp_path / "representation_training_plan.json"],
         repo_root=REPO_ROOT,

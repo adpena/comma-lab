@@ -10,6 +10,7 @@ import pytest
 
 from tac.archive_byte_profile import CONTEST_ORIGINAL_BYTES
 from tac.optimization.byte_shaving_campaign import (
+    COUPLED_OPERATION_SET_SCHEMA,
     SIGNAL_SURFACE_SCHEMA,
     ByteShavingCampaignError,
     build_byte_shaving_campaign_plan,
@@ -154,9 +155,22 @@ def test_plan_builds_combination_ladder_with_interactions_and_conflicts() -> Non
     assert combo["expected_delta_score"] == pytest.approx(-25.0 * 1620 / CONTEST_ORIGINAL_BYTES + 0.00015 - 0.00001)
     assert plan["search_space_policy"]["combination_search"] == ("bounded_beam_over_units_and_operation_alternatives")
     assert plan["search_space_policy"]["permutation_search"] == ("bounded_operation_order_permutations_for_top_combos")
+    assert plan["search_space_policy"]["operation_set_search"] == (
+        "durable_coupled_operation_sets_preserve_interactions_and_order_for_queueing"
+    )
     assert "pair" in plan["search_space_policy"]["unit_layers"]
     assert "drop_pair" in plan["operation_order_priors"]
     assert plan["inverse_scorer_surface_refs"] == surface["inverse_scorer_surface_refs"]
+    operation_set = plan["recommended_operation_set"]
+    assert operation_set["schema"] == COUPLED_OPERATION_SET_SCHEMA
+    assert operation_set["operation_set_id"] == f"opset_{combo['combo_id']}"
+    assert operation_set["selected_unit_ids"] == combo["selected_unit_ids"]
+    assert operation_set["active_interactions"] == combo["active_interactions"]
+    assert operation_set["requires_atomic_materialization"] is True
+    assert operation_set["chosen_operation_sequence_is_permutation"] is True
+    assert len(operation_set["chosen_operation_sequence_sha256"]) == 64
+    assert operation_set["partial_materialization_allowed"] is False
+    assert operation_set["score_claim"] is False
 
 
 def test_plan_exposes_bounded_operation_permutation_ladder() -> None:
@@ -174,6 +188,16 @@ def test_plan_exposes_bounded_operation_permutation_ladder() -> None:
     assert best_order[1]["operation_family"] == "drop_pair"
     assert permutation_row["permutations"][0]["prior_order_inversion_count"] == 0
     assert permutation_row["score_claim"] is False
+    operation_set = plan["operation_set_ladder"][0]
+    assert operation_set["chosen_operation_sequence_source"] == (
+        "bounded_permutation_ladder_rank_1"
+    )
+    assert operation_set["chosen_operation_sequence"][0]["operation_family"] == (
+        "null_remove_or_seed"
+    )
+    assert operation_set["chosen_operation_sequence"][1]["operation_family"] == (
+        "drop_pair"
+    )
 
 
 def test_prefix_ladder_marks_conflicting_prefixes_and_does_not_recommend_them() -> None:

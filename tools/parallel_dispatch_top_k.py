@@ -68,6 +68,7 @@ from tac.optimizer.exact_dispatch_authority import (  # noqa: E402
     ClaimPolicy,
     exact_dispatch_authority,
 )
+from tac.optimizer.exact_readiness import PREDICTED_SCORE_FIELDS as EXACT_READINESS_SCORE_FIELDS  # noqa: E402
 from tac.optimizer.exact_readiness import QUEUE_SCHEMA as EXACT_READY_QUEUE_SCHEMA  # noqa: E402
 from tac.optimizer.exact_ready_audit import audit_exact_ready_queue  # noqa: E402
 from tac.zipwire_archive import inspect_zip_headers  # noqa: E402
@@ -185,11 +186,7 @@ BLOCKED_CONTEST_DISPATCH_VERDICT_MARKERS = (
     "prediction",
     "predicted",
 )
-PREDICTED_SCORE_FIELDS = (
-    "predicted_score",
-    "predicted_score_point_estimate",
-    "predicted_score_band",
-)
+PREDICTED_SCORE_FIELDS = tuple(sorted(EXACT_READINESS_SCORE_FIELDS))
 CONTEST_TARGET_MARKERS = {
     "contest_exact_eval",
 }
@@ -452,8 +449,6 @@ def _candidate_target_modes(candidate: dict) -> set[str]:
         "target_mode",
         "target_modes",
         "dispatch_target",
-        "deployment_target",
-        "deployment_targets",
     ):
         for part in _flatten_text(candidate.get(key)):
             token = _normalize_target_token(part)

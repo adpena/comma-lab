@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -474,8 +475,34 @@ def test_retention_moves_local_cpu_advisory_scratch(tmp_path: Path) -> None:
     assert not inflated.exists()
     moved = cold_store / plan.candidates[0].path
     assert (moved / "0.raw").read_bytes() == b"r" * 16
+    assert execution["rows"][0]["cold_store_verification"]["method"] == "same_device_rename"
+    assert execution["rows"][0]["local_bytes_reclaimed"] == 0
     assert execution["rows"][0]["cold_store_verification"]["source_digest"]["sha256"]
     assert load_json_object(work / "contest_auth_eval.json")["n_samples"] == 600
+
+
+def test_retention_same_device_move_does_not_copytree(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    inflated = _write_locality_candidate(repo)
+    cold_store = tmp_path / "cold"
+    cold_store.mkdir()
+    plan = build_retention_plan([repo], repo_root=repo, min_bytes=1)
+
+    def fail_copytree(*args: object, **kwargs: object) -> None:
+        raise AssertionError("same-device retention should use rename")
+
+    monkeypatch.setattr(shutil, "copytree", fail_copytree)
+
+    execution = execute_retention_plan(plan, action="move", cold_store_root=cold_store)
+
+    row = execution["rows"][0]
+    assert row["cold_store_verification"]["method"] == "same_device_rename"
+    assert row["local_bytes_reclaimed"] == 0
+    assert not inflated.exists()
+    assert (cold_store / plan.candidates[0].path / "0.raw").is_file()
 
 
 def test_retention_move_rejects_cold_store_inside_repo(tmp_path: Path) -> None:
@@ -551,6 +578,44 @@ def test_retention_tiered_move_uses_first_cold_store_root(tmp_path: Path) -> Non
     assert not inflated.exists()
     assert (cold_fast / plan.candidates[0].path / "0.raw").is_file()
     assert not any(cold_slow.rglob("0.raw"))
+
+
+def test_retention_tiered_move_prefers_different_source_device(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    inflated = _write_locality_candidate(repo)
+    cold_same = tmp_path / "cold_same"
+    cold_other = tmp_path / "cold_other"
+    cold_same.mkdir()
+    cold_other.mkdir()
+    plan = build_retention_plan([repo], repo_root=repo, min_bytes=1)
+    original_device_id = retention._path_device_id
+
+    def fake_device_id(path: Path) -> int:
+        resolved = path.resolve(strict=False)
+        if resolved == cold_other or cold_other in resolved.parents:
+            return 2
+        if resolved == cold_same or cold_same in resolved.parents:
+            return 1
+        if resolved == inflated or inflated in resolved.parents:
+            return 1
+        return original_device_id(path)
+
+    monkeypatch.setattr(retention, "_path_device_id", fake_device_id)
+
+    execution = execute_retention_plan(
+        plan,
+        action="move",
+        cold_store_roots=[cold_same, cold_other],
+    )
+
+    assert execution["rows"][0]["cold_store_tier_index"] == 1
+    assert execution["rows"][0]["cold_store_root"] == str(cold_other)
+    assert not inflated.exists()
+    assert not any(cold_same.rglob("0.raw"))
+    assert (cold_other / plan.candidates[0].path / "0.raw").is_file()
 
 
 def test_retention_tiered_move_respects_cold_store_reserve(tmp_path: Path) -> None:

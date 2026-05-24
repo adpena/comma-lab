@@ -43,6 +43,7 @@ from tac.frontier_scan import build_frontier_scan_payload  # noqa: E402
 from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 TRANCHE_SCHEMA = "dqs1_local_first_tranche_result.v1"
+INACTIVE_PAIRSET_OBSERVATION_MODEL_MARKER = "pairset observation response model inactive"
 DEFAULT_EXECUTOR_MODE = "dqs1_local_first"
 DEFAULT_STORAGE_WORKLOAD_SUBDIR = "experiments/results/dqs1_local_first"
 DEFAULT_PROACTIVE_CLEANUP_ROOTS = (
@@ -151,6 +152,30 @@ def _json_from_stdout(result: CommandResult, *, label: str) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise RuntimeError(f"{label}: expected JSON object")
     return payload
+
+
+def _run_portfolio_with_exploratory_fallback(
+    command: list[str],
+) -> tuple[CommandResult, bool]:
+    """Run strict portfolio planning, then fall back when calibration is not active."""
+
+    result = _run(command, check=False)
+    if result.returncode == 0:
+        return result, False
+    combined = f"{result.stdout}\n{result.stderr}"
+    if (
+        INACTIVE_PAIRSET_OBSERVATION_MODEL_MARKER not in combined
+        or "--require-active-pairset-observation-model" not in command
+    ):
+        sys.stderr.write(result.stdout)
+        sys.stderr.write(result.stderr)
+        raise RuntimeError(f"command failed ({result.returncode}): {' '.join(command)}")
+    exploratory = [
+        item
+        for item in command
+        if item != "--require-active-pairset-observation-model"
+    ]
+    return _run(exploratory), True
 
 
 def _free_disk_gb(path: Path) -> float:
@@ -299,6 +324,16 @@ def _queue_build_common_args(args: argparse.Namespace, *, results_root: Path) ->
         "--local-io-concurrency",
         str(args.local_io_concurrency),
     ]
+    if args.include_mlx_local_advisory_debug:
+        base_args.append("--include-mlx-local-advisory-debug")
+    if args.allow_large_mlx_cache:
+        base_args.append("--allow-large-mlx-cache")
+    base_args.extend(["--mlx-reference-cache-dir", args.mlx_reference_cache_dir])
+    base_args.extend(["--mlx-device", args.mlx_device])
+    base_args.extend(["--mlx-batch-pairs", str(args.mlx_batch_pairs)])
+    base_args.extend(["--mlx-cache-batch-pairs", str(args.mlx_cache_batch_pairs)])
+    if args.skip_mlx_retention_plan:
+        base_args.append("--skip-mlx-retention-plan")
     if not args.storage_waterfall:
         return base_args
     preflight_args = [
@@ -457,15 +492,26 @@ def _run_proactive_cleanup(
     payload = json.loads(output_path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise RuntimeError(f"{output_path}: proactive cleanup did not write a JSON object")
+    expected_output_sha = _sha256_file(output_path)
     payload["schema"] = "dqs1_local_first_proactive_cleanup.v1"
     payload["round_index"] = round_index
     payload["command"] = command
     payload["elapsed_seconds"] = result.elapsed_seconds
     payload["artifact_path"] = str(output_path)
+    payload["expected_existing_sha256_before_enrichment"] = expected_output_sha
     payload["score_claim"] = False
     payload["promotion_eligible"] = False
     payload["rank_or_kill_eligible"] = False
     payload["ready_for_exact_eval_dispatch"] = False
+    try:
+        write_json_artifact(
+            output_path,
+            payload,
+            allow_overwrite=True,
+            expected_existing_sha256=expected_output_sha,
+        )
+    except ArtifactWriteError as exc:
+        raise RuntimeError(f"{output_path}: failed to persist enriched cleanup payload: {exc}") from exc
     return payload
 
 
@@ -660,6 +706,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--queue-candidate-limit", type=int, default=2)
     parser.add_argument("--local-cpu-concurrency", type=int, default=2)
     parser.add_argument("--local-io-concurrency", type=int, default=2)
+    parser.add_argument(
+        "--include-mlx-local-advisory-debug",
+        action="store_true",
+        help="add local MLX scorer-cache/response steps to generated DQS1 queues",
+    )
+    parser.add_argument(
+        "--allow-large-mlx-cache",
+        action="store_true",
+        help="required with --include-mlx-local-advisory-debug for full local caches",
+    )
+    parser.add_argument(
+        "--mlx-reference-cache-dir",
+        default=(
+            "experiments/results/"
+            "mlx_scorer_input_cache_reference_video_20260521T2304Z_full600"
+        ),
+    )
+    parser.add_argument("--mlx-device", choices=("cpu", "gpu"), default="gpu")
+    parser.add_argument("--mlx-batch-pairs", type=int, default=1)
+    parser.add_argument("--mlx-cache-batch-pairs", type=int, default=8)
+    parser.add_argument("--skip-mlx-retention-plan", action="store_true")
     parser.add_argument("--json-out", default=None)
     parser.add_argument(
         "--stop-on-eureka",
@@ -680,6 +747,10 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--local-cpu-concurrency must be >= 1")
     if args.local_io_concurrency < 1:
         raise SystemExit("--local-io-concurrency must be >= 1")
+    if args.mlx_batch_pairs < 1:
+        raise SystemExit("--mlx-batch-pairs must be >= 1")
+    if args.mlx_cache_batch_pairs < 1:
+        raise SystemExit("--mlx-cache-batch-pairs must be >= 1")
     queue_path = _resolve(args.queue)
     frontier_scores, frontier_payload = _frontier_scores()
     incumbent_score = args.incumbent_score or str(frontier_scores["contest_cuda"])
@@ -868,7 +939,9 @@ def main(argv: list[str] | None = None) -> int:
                 _display_path(action_summary),
             ]
         )
-        portfolio_result = _run(portfolio_cmd)
+        portfolio_result, exploratory_portfolio_fallback = (
+            _run_portfolio_with_exploratory_fallback(portfolio_cmd)
+        )
         _json_from_stdout(portfolio_result, label="portfolio")
 
         queue_sha = _sha256_file(queue_path)
@@ -911,6 +984,9 @@ def main(argv: list[str] | None = None) -> int:
             "action_summary": str(action_summary),
             "portfolio_json": str(portfolio_dir / "portfolio.json"),
             "portfolio_md": str(portfolio_dir / "portfolio.md"),
+            "exploratory_pairset_observation_model_fallback": (
+                exploratory_portfolio_fallback
+            ),
         }
         round_record["queue_rebuild"] = queue_payload
         round_record["queue_validate"] = validate_payload

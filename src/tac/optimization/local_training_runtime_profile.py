@@ -33,7 +33,7 @@ RUNTIME_PROFILE_BLOCKERS: tuple[str, ...] = (
 )
 
 SUPPORTED_LOCAL_BACKENDS: frozenset[str] = frozenset(
-    {"cpu", "mlx", "mps", "cuda", "torch", "unknown"}
+    {"cpu", "local_numpy", "mlx", "mps", "cuda", "torch", "unknown"}
 )
 
 FALSE_AUTHORITY: dict[str, bool] = {
@@ -100,8 +100,12 @@ def _normalized_backend(payload: Mapping[str, Any]) -> str:
         or payload.get("device")
         or "unknown"
     ).lower()
-    if backend.startswith("mlx"):
+    if backend in {"local_mlx", "macos_mlx"} or backend.startswith("mlx"):
         return "mlx"
+    if backend in {"numpy", "np", "local_numpy", "macos_numpy"}:
+        return "local_numpy"
+    if backend.startswith("numpy") or backend.startswith("local_numpy"):
+        return "local_numpy"
     if backend.startswith("mps"):
         return "mps"
     if backend.startswith("cuda"):
@@ -207,6 +211,34 @@ def _local_cloud_substitution(payload: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _backend_dispatch_blockers(backend: str) -> list[str]:
+    if backend == "mlx":
+        return ["local_mlx_training_profile_not_score_authority"]
+    if backend == "local_numpy":
+        return ["local_numpy_training_profile_not_score_authority"]
+    return []
+
+
+def _backend_evidence_grade(backend: str) -> str:
+    if backend == "mlx":
+        return "[macOS-MLX research-signal]"
+    if backend == "local_numpy":
+        return "[local-NumPy research-signal]"
+    return "[local-training-runtime-profile]"
+
+
+def _scheduler_resource_kind(backend: str) -> str:
+    if backend == "mlx":
+        return "local_mlx"
+    if backend == "local_numpy":
+        return "local_cpu"
+    if backend == "cuda":
+        return "local_cuda"
+    if backend == "mps":
+        return "local_mps"
+    return "local_cpu"
+
+
 def validate_runtime_profile_observation(payload: Mapping[str, Any]) -> None:
     """Validate one runtime observation without granting score authority."""
 
@@ -246,11 +278,7 @@ def normalize_runtime_profile_observation(payload: Mapping[str, Any]) -> dict[st
     profile_blockers = ordered_unique(
         [
             *RUNTIME_PROFILE_BLOCKERS,
-            *(
-                ["local_mlx_training_profile_not_score_authority"]
-                if backend == "mlx"
-                else []
-            ),
+            *_backend_dispatch_blockers(backend),
             *(
                 ["packet_compiler_target_missing"]
                 if not packet_bridge["packet_compiler_target_declared"]
@@ -278,6 +306,9 @@ def normalize_runtime_profile_observation(payload: Mapping[str, Any]) -> dict[st
         "representation_family": payload.get("representation_family"),
         "substrate_family": payload.get("substrate_family"),
         "training_backend": backend,
+        "scheduler_resource_kind": _scheduler_resource_kind(backend),
+        "evidence_grade": _backend_evidence_grade(backend),
+        "evidence_tag": _backend_evidence_grade(backend),
         "device": payload.get("device") or payload.get("device_selected") or backend,
         "hardware_substrate": payload.get("hardware_substrate"),
         "seed": _finite_int(payload.get("seed")),
@@ -360,6 +391,7 @@ def runtime_profile_summary_from_training_manifest(
             "best_local_backend": None,
             "best_timing_field": None,
             "best_timing_value_seconds": None,
+            "best_scheduler_resource_kind": None,
             "kernel_fusion_strategy_ids": [],
             "operator_mix_keys": [],
             "blockers": ["local_training_runtime_profile_missing"],
@@ -387,6 +419,7 @@ def runtime_profile_summary_from_training_manifest(
         "best_local_backend": best["training_backend"],
         "best_timing_field": best["timing_field"],
         "best_timing_value_seconds": best["timing_value_seconds"],
+        "best_scheduler_resource_kind": best["scheduler_resource_kind"],
         "kernel_fusion_strategy_ids": ordered_unique(
             str(_mapping(profile.get("kernel_fusion")).get("kernel_fusion_strategy_id"))
             for profile in profiles
@@ -432,6 +465,7 @@ def adapt_runtime_profile_observation_to_candidate(
         "param_schema": "trainer_runtime_profile_params_v1",
         "candidate_params": {
             "training_backend": backend,
+            "scheduler_resource_kind": profile["scheduler_resource_kind"],
             "device": profile.get("device"),
             "seed": profile.get("seed"),
             "stage_id": profile.get("stage_id"),
@@ -442,11 +476,8 @@ def adapt_runtime_profile_observation_to_candidate(
         "rank_score": profile["timing_value_seconds"],
         "rank_score_field": f"{timing_field}_cost_signal_not_score",
         "evidence_semantics": "local_training_runtime_profile_cost_signal_not_score",
-        "evidence_grade": (
-            "[macOS-MLX research-signal]"
-            if backend == "mlx"
-            else "[local-training-runtime-profile]"
-        ),
+        "evidence_grade": profile["evidence_grade"],
+        "evidence_tag": profile["evidence_tag"],
         "consumer_payload": {
             "schema": CANDIDATE_PAYLOAD_SCHEMA,
             "runtime_profile": profile,

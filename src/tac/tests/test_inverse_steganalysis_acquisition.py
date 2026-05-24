@@ -3,6 +3,10 @@ from __future__ import annotations
 
 import pytest
 
+from tac.optimization.byte_shaving_campaign import (
+    SIGNAL_SURFACE_SCHEMA,
+    build_byte_shaving_campaign_plan,
+)
 from tac.optimization.inverse_steganalysis_acquisition import (
     ACTION_FUNCTIONAL_SCHEMA,
     ATOM_SCHEMA,
@@ -11,6 +15,8 @@ from tac.optimization.inverse_steganalysis_acquisition import (
     OBSERVATION_SCHEMA,
     SCHEMA,
     InverseSteganalysisAcquisitionError,
+    action_atoms_from_byte_shaving_campaign_plan,
+    action_atoms_from_byte_shaving_signal_surface,
     action_surface_terms,
     build_discrete_scorer_action_functional,
     build_inverse_steganalysis_acquisition_plan,
@@ -22,6 +28,19 @@ from tac.optimization.inverse_steganalysis_acquisition import (
     paired_exact_auth_calibration_observations_from_review_packets,
 )
 from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
+
+
+def _planning_false_authority() -> dict[str, bool]:
+    return {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
 
 
 def _atom(candidate_id: str = "candidate_a", **overrides: object) -> dict[str, object]:
@@ -286,6 +305,87 @@ def _mlx_selection(**overrides: object) -> dict[str, object]:
     return selection
 
 
+def _cross_family_byte_shaving_surface() -> dict[str, object]:
+    return {
+        "schema": SIGNAL_SURFACE_SCHEMA,
+        "campaign_id": "family_agnostic_inverse_surface",
+        "candidate_id": "hnerv_boostnerv_packetir_mix",
+        "lane_id": "local_inverse_waterfill_family_mix",
+        "combo_beam_width": 32,
+        "max_combo_count": 8,
+        "units": [
+            {
+                "unit_id": "hnerv_section_hi_latents",
+                "unit_kind": "archive_section",
+                "candidate_saved_bytes": 1300,
+                "predicted_quality_score_delta": -0.0002,
+                "confidence": 0.8,
+                "operations": [
+                    {
+                        "operation_id": "hnerv_section_recode",
+                        "operation_family": "section_entropy_recode",
+                        "candidate_saved_bytes": 1300,
+                        "predicted_quality_score_delta": -0.0002,
+                        "materializer": "hnerv_section_recode_adapter",
+                        "target_kind": "hnerv_payload_section_recode_v1",
+                    }
+                ],
+            },
+            {
+                "unit_id": "boostnerv_overlay_tensor_07",
+                "unit_kind": "tensor",
+                "candidate_saved_bytes": 900,
+                "predicted_quality_score_cost": 0.00002,
+                "confidence": 0.75,
+                "operations": [
+                    {
+                        "operation_id": "boostnerv_tensor_factorize",
+                        "operation_family": "factorize_tensor",
+                        "candidate_saved_bytes": 900,
+                        "predicted_quality_score_cost": 0.00002,
+                        "materializer": "boostnerv_tensor_overlay_adapter",
+                        "target_kind": "boostnerv_tensor_factorization_v1",
+                    }
+                ],
+            },
+            {
+                "unit_id": "packetir_member_merge",
+                "unit_kind": "packet_member",
+                "candidate_saved_bytes": 400,
+                "predicted_quality_score_cost": 0.0,
+                "confidence": 0.9,
+                "operations": [
+                    {
+                        "operation_id": "packetir_member_merge",
+                        "operation_family": "member_merge",
+                        "candidate_saved_bytes": 400,
+                        "predicted_quality_score_cost": 0.0,
+                        "materializer": "packet_member_merge_adapter",
+                        "target_kind": "packet_member_merge_v1",
+                    }
+                ],
+            },
+        ],
+        "interactions": [
+            {
+                "interaction_id": "shared_hnerv_boostnerv_overlay_header",
+                "unit_ids": [
+                    "hnerv_section_hi_latents",
+                    "boostnerv_overlay_tensor_07",
+                ],
+                "operation_families": [
+                    "section_entropy_recode",
+                    "factorize_tensor",
+                ],
+                "extra_saved_bytes": 180,
+                "delta_score": -0.00003,
+                "rationale": "shared overlay header disappears when section and tensor are compiled together",
+            }
+        ],
+        **_planning_false_authority(),
+    }
+
+
 def test_atom_normalization_is_false_authority_only() -> None:
     atom = normalize_inverse_steganalysis_atom(_atom())
 
@@ -477,6 +577,65 @@ def test_mlx_effective_spend_triage_selection_becomes_false_authority_atoms() ->
     for key, value in PROXY_FALSE_AUTHORITY_FIELDS.items():
         assert cell[key] is value
         assert action[key] is value
+
+
+def test_byte_shaving_surface_becomes_family_agnostic_action_atoms() -> None:
+    atoms = action_atoms_from_byte_shaving_signal_surface(
+        _cross_family_byte_shaving_surface(),
+        source_path="artifacts/family_surface.json",
+        resource_kind="local_mlx",
+        elapsed_seconds=6.0,
+    )
+    action = build_discrete_scorer_action_functional(atoms)
+    top_atom = atoms[0]
+    provenance = top_atom["source_provenance"]
+
+    assert top_atom["schema"] == ATOM_SCHEMA
+    assert top_atom["candidate_id"] == "hnerv_boostnerv_packetir_mix"
+    assert top_atom["scale"] == "multiscale"
+    assert top_atom["scope_axis"] == "full_video"
+    assert top_atom["resource_kind"] == "local_mlx"
+    assert top_atom["second_order_interaction_effect"] > 0.0
+    assert provenance["schema"] == (
+        "inverse_steganalysis_byte_shaving_operation_set_provenance.v1"
+    )
+    assert provenance["source_path"] == "artifacts/family_surface.json"
+    assert "section_entropy_recode" in provenance["operation_families"]
+    assert "factorize_tensor" in provenance["operation_families"]
+    assert provenance["active_interactions"][0]["interaction_id"] == (
+        "shared_hnerv_boostnerv_overlay_header"
+    )
+    assert provenance["chosen_operation_sequence"]
+    assert action["water_bucket"]["selected_count"] >= 1
+    assert action["cells"][0]["source_provenance"]["score_claim"] is False
+    for key, value in PROXY_FALSE_AUTHORITY_FIELDS.items():
+        assert top_atom[key] is value
+        assert provenance[key] is value
+        assert action[key] is value
+
+
+def test_byte_shaving_campaign_plan_bridge_preserves_operation_sets() -> None:
+    plan = build_byte_shaving_campaign_plan(_cross_family_byte_shaving_surface())
+    atoms = action_atoms_from_byte_shaving_campaign_plan(
+        plan,
+        source_path="artifacts/family_plan.json",
+    )
+
+    assert atoms
+    assert atoms[0]["source_provenance"]["source_plan_schema"] == (
+        "byte_shaving_campaign_plan.v1"
+    )
+    assert atoms[0]["source_provenance"]["operation_set_id"].startswith("opset_")
+    assert atoms[0]["source_provenance"]["partial_materialization_allowed"] is False
+    assert atoms[0]["score_claim"] is False
+
+    bad = dict(plan)
+    bad["ready_for_exact_eval_dispatch"] = True
+    with pytest.raises(
+        InverseSteganalysisAcquisitionError,
+        match="ready_for_exact_eval_dispatch=truthy",
+    ):
+        action_atoms_from_byte_shaving_campaign_plan(bad)
 
 
 def test_mlx_effective_spend_triage_selection_bridge_rejects_wrong_schema() -> None:

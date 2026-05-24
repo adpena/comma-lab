@@ -25,6 +25,7 @@ from comma_lab.operator_storage_waterfall import (  # noqa: E402
     operator_storage_policy_payload,
     storage_preflight_artifact_catalog_metadata,
 )
+from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 
 def _parse_bytes(value: str) -> int:
@@ -93,6 +94,11 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--storage-plan-path", default=None)
     parser.add_argument("--cleanup-plan-path", default=None)
     parser.add_argument("--lifecycle-kind", default="HISTORICAL_PROVENANCE")
+    parser.add_argument(
+        "--expected-output-sha256",
+        default=None,
+        help="required SHA-256 of existing --json-output when replacing a prior plan",
+    )
     return parser.parse_args(argv)
 
 
@@ -155,8 +161,16 @@ def main(argv: list[str] | None = None) -> int:
         )
     text = dumps_json(payload)
     if args.json_output is not None:
-        args.json_output.parent.mkdir(parents=True, exist_ok=True)
-        args.json_output.write_text(text, encoding="utf-8")
+        try:
+            write_json_artifact(
+                args.json_output,
+                payload,
+                allow_overwrite=True,
+                expected_existing_sha256=args.expected_output_sha256,
+            )
+        except ArtifactWriteError as exc:
+            print(f"FATAL: {exc}", file=sys.stderr)
+            return 2
     else:
         sys.stdout.write(text)
     return 0

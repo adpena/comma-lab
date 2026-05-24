@@ -19,6 +19,7 @@ from tac.optimization.proxy_candidate_contract import (
     truthy_authority_field_violations,
 )
 from tac.optimizer.exact_readiness import (
+    PREDICTED_SCORE_FIELDS,
     claim_status_terminal,
     is_sha256,
     parse_claim_rows,
@@ -28,6 +29,7 @@ from tac.optimizer.exact_readiness import (
 )
 
 CONTEST_EXACT_EVAL_TARGET_MODE = "contest_exact_eval"
+CONTEST_SCORE_AXES = frozenset({"contest_cpu", "contest_cuda"})
 ClaimPolicy = Literal["preclaim_conflict_check", "require_active_claim"]
 PRE_DISPATCH_ALLOWED_TRUTHY_AUTHORITY_FIELDS = frozenset(
     {"dispatch_packet_ready", "ready_for_exact_eval_dispatch"}
@@ -37,6 +39,8 @@ SCORE_AXIS_FIELDS = (
     "target_score_axis",
     "exact_eval_axis",
     "auth_eval_axis",
+    "target_auth_axis",
+    "contest_axis",
 )
 
 
@@ -91,8 +95,6 @@ def _target_modes(row: Mapping[str, Any]) -> set[str]:
         "target_mode",
         "target_modes",
         "dispatch_target",
-        "deployment_target",
-        "deployment_targets",
     ):
         for item in _as_text_items(row.get(key)):
             token = item.strip().lower().replace("-", "_").replace(" ", "_")
@@ -144,6 +146,17 @@ def _truthy_authority_blockers(row: Mapping[str, Any]) -> list[str]:
         f"truthy_authority_field:{violation}"
         for violation in truthy_authority_field_violations(row, fields=fields)
     ]
+
+
+def _pre_dispatch_score_field_blockers(row: Mapping[str, Any]) -> list[str]:
+    fields = sorted(
+        key
+        for key in PREDICTED_SCORE_FIELDS
+        if key in row and row.get(key) is not None
+    )
+    if not fields:
+        return []
+    return ["pre_dispatch_score_field_present:" + ",".join(fields)]
 
 
 def _optional_resolved_path(
@@ -252,12 +265,12 @@ def exact_dispatch_authority(
             blockers.append("active_dispatch_claim_required_platform_missing")
         if not required_jobs:
             blockers.append("active_dispatch_claim_required_job_id_missing")
-
     if row.get("score_claim") is True:
         blockers.append("score_claim_true_requires_result_review")
     if row.get("promotion_eligible") is True:
         blockers.append("promotion_eligible_true_requires_result_review")
     blockers.extend(_truthy_authority_blockers(row))
+    blockers.extend(_pre_dispatch_score_field_blockers(row))
     if require_ready_flag and not ready_flag:
         blockers.append("ready_for_exact_eval_dispatch_not_true")
     if require_contest_target and not contest_target:
@@ -267,6 +280,22 @@ def exact_dispatch_authority(
         required_score_axis=required_score_axis,
     )
     blockers.extend(score_axis_blockers)
+    if require_contest_target and required_score_axis is None:
+        if not declared_score_axes:
+            blockers.append("score_axis_missing:required=explicit_contest_axis")
+        else:
+            noncontest_axes = {
+                key: value
+                for key, value in declared_score_axes.items()
+                if value not in CONTEST_SCORE_AXES
+            }
+            if noncontest_axes:
+                details = ",".join(
+                    f"{key}={value}" for key, value in sorted(noncontest_axes.items())
+                )
+                blockers.append(
+                    "score_axis_non_contest_for_exact_dispatch:" + details
+                )
 
     submission_dir = _optional_resolved_path(
         row,

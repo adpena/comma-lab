@@ -569,6 +569,7 @@ class CandidateRow:
                 active_floor_score=None,
                 dispatch_claims_path=dispatch_claims_path
                 or REPO_ROOT / ".omx" / "state" / "active_lane_dispatch_claims.md",
+                required_score_axis="contest_cuda",
             )
             blockers.extend(
                 f"exact_dispatch_authority:{blocker}"

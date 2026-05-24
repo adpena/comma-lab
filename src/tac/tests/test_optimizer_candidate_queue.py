@@ -1213,6 +1213,53 @@ def test_candidate_queue_accepts_byte_shaving_campaign_plan_as_planning_only(
                     "ready_for_exact_eval_dispatch": False,
                 }
             ],
+            "operation_set_ladder": [
+                {
+                    "schema": "byte_shaving_coupled_operation_set.v1",
+                    "operation_set_id": "opset_combo_0001",
+                    "combo_id": "combo_0001",
+                    "unit_count": 2,
+                    "candidate_saved_bytes": 120,
+                    "expected_delta_score": -0.00005,
+                    "expected_score_gain": 0.00005,
+                    "confidence": 0.6,
+                    "confidence_adjusted_gain": 0.00003,
+                    "operation_families": ["entropy_recode", "drop_pair"],
+                    "selected_unit_ids": ["span_a", "pair0371"],
+                    "selected_operations": [
+                        {
+                            "unit_id": "span_a",
+                            "operation_id": "entropy_recode",
+                            "operation_family": "entropy_recode",
+                        },
+                        {
+                            "unit_id": "pair0371",
+                            "operation_id": "drop_pair",
+                            "operation_family": "drop_pair",
+                        },
+                    ],
+                    "chosen_operation_sequence": [
+                        {
+                            "unit_id": "span_a",
+                            "operation_id": "entropy_recode",
+                            "operation_family": "entropy_recode",
+                        },
+                        {
+                            "unit_id": "pair0371",
+                            "operation_id": "drop_pair",
+                            "operation_family": "drop_pair",
+                        },
+                    ],
+                    "chosen_operation_sequence_sha256": "a" * 64,
+                    "chosen_operation_sequence_is_permutation": True,
+                    "chosen_operation_sequence_source": "bounded_permutation_ladder_rank_1",
+                    "active_interactions": [{"interaction_id": "shared_header"}],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ],
             "combination_ladder": [
                 {
                     "combo_id": "combo_0001",
@@ -1249,8 +1296,12 @@ def test_candidate_queue_accepts_byte_shaving_campaign_plan_as_planning_only(
     queue = build_candidate_queue([plan], repo_root=tmp_path)
     row = queue["top_k"][0]
 
-    assert row["candidate_id"] == "seed7_post_train_shave::combo::combo_0001"
-    assert row["selection_kind"] == "combo"
+    assert row["candidate_id"] == (
+        "seed7_post_train_shave::operation_set::opset_combo_0001"
+    )
+    assert row["selection_kind"] == "operation_set"
+    assert row["operation_set_id"] == "opset_combo_0001"
+    assert row["param_schema"] == "byte_shaving_coupled_operation_set.v1"
     assert row["rank_score"] == -0.00005
     assert row["candidate_saved_bytes"] == 120
     assert row["predicted_saved_bytes"] == 120
@@ -1270,6 +1321,12 @@ def test_candidate_queue_accepts_byte_shaving_campaign_plan_as_planning_only(
         "span_a",
         "pair0371",
     ]
+    assert row["consumer_payload"]["operation_set_id"] == "opset_combo_0001"
+    assert row["consumer_payload"]["chosen_operation_sequence"][0]["unit_id"] == (
+        "span_a"
+    )
+    assert row["consumer_payload"]["chosen_operation_sequence_sha256"] == "a" * 64
+    assert row["candidate_params"]["chosen_operation_sequence_is_permutation"] is True
     assert "selected_operations_require_materializer" in row["dispatch_blockers"]
     assert row["ready_for_exact_eval_dispatch"] is False
     assert row["score_claim"] is False

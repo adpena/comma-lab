@@ -237,6 +237,12 @@ def build_scheduler_storage_preflight_experiment(
         )
         for cold_store_root in effective_cold_store_roots:
             cleanup_command.extend(["--cold-store-root", cold_store_root])
+    expected_cleanup_sha = _existing_sha256(
+        cleanup_plan,
+        base=Path(repo_root) if repo_root is not None else None,
+    )
+    if expected_cleanup_sha is not None:
+        cleanup_command.extend(["--expected-output-sha256", expected_cleanup_sha])
 
     return {
         "id": experiment_id,

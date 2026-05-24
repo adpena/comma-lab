@@ -162,3 +162,89 @@ def test_storage_tool_allows_expected_sha_overwrite(tmp_path: Path) -> None:
     )
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert payload["score_claim"] is False
+
+
+def test_storage_tool_rejects_expected_sha_mismatch_without_clobber(
+    tmp_path: Path,
+) -> None:
+    tier_root = tmp_path / "tier"
+    tier_root.mkdir()
+    output = tmp_path / "storage.json"
+    prior = '{"prior":true}\n'
+    output.write_text(prior, encoding="utf-8")
+
+    assert (
+        plan_experiment_storage.main(
+            [
+                "--output",
+                str(output),
+                "--storage-tier",
+                f"fixture={tier_root}",
+                "--workload-subdir",
+                "work",
+                "--reserve-free-gb",
+                "0",
+                "--create",
+                "--allow-local-storage-tier",
+                "--expected-output-sha256",
+                "0" * 64,
+            ]
+        )
+        == 2
+    )
+    assert output.read_text(encoding="utf-8") == prior
+
+
+def test_compact_tool_allows_expected_sha_overwrite(tmp_path: Path) -> None:
+    cleanup_root = tmp_path / "empty_results"
+    cleanup_root.mkdir()
+    output = tmp_path / "cleanup.json"
+    output.write_text('{"prior":true}\n', encoding="utf-8")
+    expected_sha = sha256(output.read_bytes()).hexdigest()
+
+    assert (
+        compact_experiment_artifacts.main(
+            [
+                str(cleanup_root),
+                "--repo-root",
+                str(tmp_path),
+                "--min-bytes",
+                "1",
+                "--json-output",
+                str(output),
+                "--expected-output-sha256",
+                expected_sha,
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["artifact_catalog_metadata"]["score_claim"] is False
+
+
+def test_compact_tool_rejects_expected_sha_mismatch_without_clobber(
+    tmp_path: Path,
+) -> None:
+    cleanup_root = tmp_path / "empty_results"
+    cleanup_root.mkdir()
+    output = tmp_path / "cleanup.json"
+    prior = '{"prior":true}\n'
+    output.write_text(prior, encoding="utf-8")
+
+    assert (
+        compact_experiment_artifacts.main(
+            [
+                str(cleanup_root),
+                "--repo-root",
+                str(tmp_path),
+                "--min-bytes",
+                "1",
+                "--json-output",
+                str(output),
+                "--expected-output-sha256",
+                "0" * 64,
+            ]
+        )
+        == 2
+    )
+    assert output.read_text(encoding="utf-8") == prior

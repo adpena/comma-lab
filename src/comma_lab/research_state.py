@@ -15,6 +15,7 @@ provider logs, or release custody policy.
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import subprocess
 from collections import Counter
@@ -25,6 +26,13 @@ from pathlib import Path
 TEXT_SUFFIXES = {".md", ".txt", ".json", ".jsonl", ".yaml", ".yml", ".csv", ".tsv"}
 SMALL_TEXT_LIMIT_BYTES = 1_000_000
 LARGE_ARTIFACT_LIMIT_BYTES = 5_000_000
+LOCAL_RESEARCH_CONTROL_PATTERNS = (
+    ".omx/research/*_storage_plan_*.json",
+    ".omx/research/*_proactive_cleanup_*.json",
+    ".omx/research/*_proactive_cleanup_*.json.journal.jsonl",
+    ".omx/research/*_artifact_retention_*.json",
+    ".omx/research/*_artifact_retention_*.json.journal.jsonl",
+)
 
 DEFAULT_SCAN_ROOTS = (
     ".omx",
@@ -122,6 +130,14 @@ def classify_relpath(relpath: str, size: int, git_status: str) -> tuple[str, str
             "externalize_with_manifest",
             "external artifact store plus committed manifest",
             "Generated audit/profile artifacts are rebuildable custody outputs; summarize or manifest them instead of committing every run output.",
+        )
+
+    if any(fnmatch.fnmatch(relpath, pattern) for pattern in LOCAL_RESEARCH_CONTROL_PATTERNS):
+        return (
+            "queue_local_control_artifact",
+            "keep_private_local",
+            "local only plus dated research memo for durable findings",
+            "Queue-owned storage, cleanup, and retention JSON can contain machine-local volume choices and should not be tracked directly.",
         )
 
     if relpath.startswith(".omx/research/"):

@@ -1,0 +1,258 @@
+# SPDX-License-Identifier: MIT
+"""Compile local representation-training plans into experiment_queue work."""
+
+from __future__ import annotations
+
+import re
+import time
+from collections.abc import Mapping, Sequence
+from pathlib import Path
+from typing import Any
+
+from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
+
+from .experiment_queue import QUEUE_SCHEMA, ExperimentQueueError, normalize_queue_definition
+
+LOCAL_TRAINING_QUEUE_SCHEMA = "local_training_execution_queue_plan.v1"
+TOOL_NAME = "comma_lab.scheduler.local_training_queue"
+SUPPORTED_PLAN_SCHEMAS = frozenset(
+    {
+        "local_training_execution_plan.v1",
+        "representation_training_probe_plan_v1",
+        "pr95_local_training_probe_plan_v1",
+    }
+)
+FALSE_AUTHORITY: dict[str, bool] = {
+    "score_claim": False,
+    "score_claim_valid": False,
+    "promotion_eligible": False,
+    "promotable": False,
+    "rank_or_kill_eligible": False,
+    "ready_for_exact_eval_dispatch": False,
+}
+
+
+def _utc_now() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def _repo_rel(path: Path, repo_root: Path) -> str:
+    try:
+        return path.resolve(strict=False).relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _safe_id(value: str) -> str:
+    return re.sub(r"[^a-z0-9_]+", "_", value.lower()).strip("_") or "local_training"
+
+
+def _resolve_output_path(value: Any, *, repo_root: Path) -> Path:
+    if not isinstance(value, str) or not value.strip() or value.startswith("<"):
+        raise ExperimentQueueError("local training execution requires concrete output_manifest")
+    path = Path(value).expanduser()
+    return path if path.is_absolute() else repo_root / path
+
+
+def _false_authority_postcondition(path: str) -> dict[str, Any]:
+    return {"type": "json_false_authority", "path": path}
+
+
+def _execution_from_plan(plan: Mapping[str, Any]) -> Mapping[str, Any]:
+    execution = plan.get("recommended_execution")
+    if not isinstance(execution, Mapping):
+        raise ExperimentQueueError(
+            "local training plan missing recommended_execution; "
+            "queue compilation requires a concrete runner command"
+        )
+    return execution
+
+
+def _resource_kind(execution: Mapping[str, Any]) -> str:
+    explicit = str(execution.get("resource_kind") or "").strip()
+    if explicit:
+        return explicit
+    scheduler_resource = str(execution.get("scheduler_resource_kind") or "").strip()
+    if scheduler_resource:
+        return scheduler_resource
+    backend = str(execution.get("training_backend") or execution.get("backend") or "").lower()
+    device = str(execution.get("device") or "").lower()
+    if backend == "mlx":
+        return "local_mlx" if device in {"gpu", "auto", "mlx", ""} else "local_cpu"
+    if backend in {"numpy", "np", "local_numpy", "macos_numpy"}:
+        return "local_cpu"
+    if device == "cuda":
+        return "local_cuda"
+    if device == "mps":
+        return "local_mps"
+    if device in {"cpu", "numpy", "local_numpy"}:
+        return "local_cpu"
+    return "local"
+
+
+def _command_args(execution: Mapping[str, Any]) -> list[str]:
+    command = execution.get("python_command_args")
+    if not isinstance(command, list) or not all(isinstance(item, str) and item for item in command):
+        raise ExperimentQueueError("local training execution missing python_command_args")
+    if any(item.startswith("<") and item.endswith(">") for item in command):
+        raise ExperimentQueueError("local training command contains placeholder argument")
+    if command[0] != ".venv/bin/python":
+        raise ExperimentQueueError("local training command must run under .venv/bin/python")
+    tool = str(execution.get("tool") or "")
+    if tool and len(command) > 1 and command[1] != tool:
+        raise ExperimentQueueError(
+            f"local training command tool {command[1]!r} does not match {tool!r}"
+        )
+    return list(command)
+
+
+def _validate_plan(plan: Mapping[str, Any], *, index: int) -> Mapping[str, Any]:
+    label = f"local_training_plan[{index}]"
+    schema = str(plan.get("schema") or "")
+    if schema not in SUPPORTED_PLAN_SCHEMAS:
+        raise ExperimentQueueError(f"{label}: unsupported schema {schema!r}")
+    try:
+        require_no_truthy_authority_fields(plan, context=label)
+    except ValueError as exc:
+        raise ExperimentQueueError(str(exc)) from exc
+    execution = _execution_from_plan(plan)
+    try:
+        require_no_truthy_authority_fields(execution, context=f"{label}.recommended_execution")
+    except ValueError as exc:
+        raise ExperimentQueueError(str(exc)) from exc
+    for key, expected in FALSE_AUTHORITY.items():
+        if key in execution and execution.get(key) is not expected:
+            raise ExperimentQueueError(f"{label}.recommended_execution.{key} must be false")
+    _command_args(execution)
+    _resolve_output_path(execution.get("output_manifest"), repo_root=Path("."))
+    return execution
+
+
+def build_local_training_execution_queue(
+    plans: Sequence[Mapping[str, Any]],
+    *,
+    queue_id: str,
+    repo_root: str | Path,
+    lane_id: str = "local_representation_training",
+    local_cpu_concurrency: int = 1,
+    local_mlx_concurrency: int = 1,
+    local_cuda_concurrency: int = 1,
+    local_mps_concurrency: int = 1,
+    timeout_seconds: int = 0,
+    limit: int | None = None,
+) -> dict[str, Any]:
+    """Return ``experiment_queue.v1`` work for local training execution plans."""
+
+    if not plans:
+        raise ExperimentQueueError("at least one local training plan is required")
+    for label, value in (
+        ("local_cpu_concurrency", local_cpu_concurrency),
+        ("local_mlx_concurrency", local_mlx_concurrency),
+        ("local_cuda_concurrency", local_cuda_concurrency),
+        ("local_mps_concurrency", local_mps_concurrency),
+    ):
+        if isinstance(value, bool) or value < 1:
+            raise ExperimentQueueError(f"{label} must be >= 1")
+    if isinstance(timeout_seconds, bool) or timeout_seconds < 0:
+        raise ExperimentQueueError("timeout_seconds must be non-negative")
+    if limit is not None and (isinstance(limit, bool) or limit < 1):
+        raise ExperimentQueueError("limit must be >= 1 when provided")
+
+    repo = Path(repo_root)
+    selected = list(plans[:limit] if limit is not None else plans)
+    generated_at = _utc_now()
+    experiments: list[dict[str, Any]] = []
+    for index, plan in enumerate(selected):
+        execution = _validate_plan(plan, index=index)
+        output_path = _resolve_output_path(execution.get("output_manifest"), repo_root=repo)
+        output_rel = _repo_rel(output_path, repo)
+        representation_manifest = execution.get("representation_manifest")
+        experiment_id = f"local_training_{index:04d}_{_safe_id(str(plan.get('candidate_id') or index))}"
+        postconditions: list[dict[str, Any]] = [
+            {"type": "path_exists", "path": output_rel},
+            _false_authority_postcondition(output_rel),
+        ]
+        artifact_paths = [output_rel]
+        if isinstance(representation_manifest, str) and representation_manifest:
+            representation_path = _resolve_output_path(representation_manifest, repo_root=repo)
+            representation_rel = _repo_rel(representation_path, repo)
+            artifact_paths.append(representation_rel)
+            postconditions.extend(
+                [
+                    {"type": "path_exists", "path": representation_rel},
+                    {
+                        "type": "json_equals",
+                        "path": representation_rel,
+                        "key": "schema",
+                        "equals": "representation_training_probe_manifest_v1",
+                    },
+                    _false_authority_postcondition(representation_rel),
+                ]
+            )
+        resource_kind = _resource_kind(execution)
+        input_artifact_paths = [
+            str(value)
+            for value in (plan.get("source_dir"), plan.get("source_tree_sha256"))
+            if str(value or "").strip()
+        ]
+        experiments.append(
+            {
+                "id": experiment_id,
+                "lane_id": str(plan.get("lane_id") or lane_id),
+                "priority": 10 + index,
+                "metadata": {
+                    "schema": LOCAL_TRAINING_QUEUE_SCHEMA,
+                    "tool": TOOL_NAME,
+                    "generated_at_utc": generated_at,
+                    "source_plan_schema": plan.get("schema"),
+                    "candidate_id": plan.get("candidate_id"),
+                    "representation_family": plan.get("representation_family"),
+                    "substrate_family": plan.get("substrate_family"),
+                    "training_backend": execution.get("training_backend"),
+                    "device": execution.get("device"),
+                    "candidate_generation_only": True,
+                    "requires_exact_eval_before_promotion": True,
+                    **FALSE_AUTHORITY,
+                },
+                "steps": [
+                    {
+                        "id": "run_local_training",
+                        "kind": "command",
+                        "command": _command_args(execution),
+                        "resources": {"kind": resource_kind},
+                        "timeout_seconds": timeout_seconds,
+                        "postconditions": postconditions,
+                        "telemetry": {
+                            "artifact_paths": artifact_paths,
+                            "input_artifact_paths": input_artifact_paths,
+                            "recursive": True,
+                            "max_recursive_entries": 512,
+                        },
+                    }
+                ],
+            }
+        )
+
+    return normalize_queue_definition(
+        {
+            "schema": QUEUE_SCHEMA,
+            "queue_id": queue_id,
+            "controls": {
+                "mode": "running",
+                "local_first": True,
+                "max_concurrency": {
+                    "local_cpu": local_cpu_concurrency,
+                    "local_mlx": local_mlx_concurrency,
+                    "local_cuda": local_cuda_concurrency,
+                    "local_mps": local_mps_concurrency,
+                },
+            },
+            "experiments": experiments,
+        }
+    )
+
+
+__all__ = [
+    "LOCAL_TRAINING_QUEUE_SCHEMA",
+    "build_local_training_execution_queue",
+]

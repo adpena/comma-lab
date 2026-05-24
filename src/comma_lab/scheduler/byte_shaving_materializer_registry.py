@@ -179,7 +179,7 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         materialization_resource_kind="local_cpu",
         required_context_fields=(
             "output",
-            "scorer_response_or_inverse_scorer_surface",
+            "inverse_action_source_surface",
         ),
         implementation_module="comma_lab.scheduler.byte_shaving_campaign_queue",
         plan_function="build_inverse_steganalysis_action_functional",

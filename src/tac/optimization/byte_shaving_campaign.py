@@ -11,9 +11,11 @@ exact auth-eval gates pass.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import time
+from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
 from itertools import permutations
 from pathlib import Path
@@ -28,6 +30,7 @@ from tac.optimization.proxy_candidate_contract import (
 
 SIGNAL_SURFACE_SCHEMA = "byte_shaving_signal_surface.v1"
 PLAN_SCHEMA = "byte_shaving_campaign_plan.v1"
+COUPLED_OPERATION_SET_SCHEMA = "byte_shaving_coupled_operation_set.v1"
 TOOL_NAME = "tools/plan_byte_shaving_campaign.py"
 INVERSE_ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
 RATE_MULTIPLIER = 25.0
@@ -692,6 +695,27 @@ def _operation_sequence_record(
     ]
 
 
+def _operation_sequence_key(operation: Mapping[str, Any]) -> tuple[str, str]:
+    return (
+        str(operation.get("unit_id") or ""),
+        str(operation.get("operation_id") or ""),
+    )
+
+
+def _operation_sequence_hash(sequence: Sequence[Mapping[str, Any]]) -> str:
+    payload = [
+        {
+            "unit_id": str(operation.get("unit_id") or ""),
+            "operation_id": str(operation.get("operation_id") or ""),
+            "operation_family": str(operation.get("operation_family") or ""),
+            "unit_kind": str(operation.get("unit_kind") or ""),
+        }
+        for operation in sequence
+    ]
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def _bounded_operation_permutations(
     operations: Sequence[Mapping[str, Any]],
     *,
@@ -781,6 +805,114 @@ def _permutation_ladder(
                     *BASE_BLOCKERS,
                     "permutation_order_requires_materialization_and_empirical_probe",
                 ],
+                **FALSE_AUTHORITY,
+            }
+        )
+    return rows
+
+
+def _operation_set_ladder(
+    combo_rows: Sequence[Mapping[str, Any]],
+    permutation_rows: Sequence[Mapping[str, Any]],
+    *,
+    operation_order_priors: Mapping[str, int],
+) -> list[dict[str, Any]]:
+    """Promote coupled combo/permutation rows into durable atomic action sets."""
+
+    permutations_by_combo = {
+        str(row.get("combo_id") or ""): row
+        for row in permutation_rows
+        if str(row.get("combo_id") or "")
+    }
+    rows: list[dict[str, Any]] = []
+    for rank, combo in enumerate(combo_rows, start=1):
+        combo_id = str(combo.get("combo_id") or f"combo_{rank:04d}")
+        operations = [
+            item
+            for item in _as_list(combo.get("selected_operations"))
+            if isinstance(item, Mapping)
+        ]
+        permutation_row = permutations_by_combo.get(combo_id)
+        chosen_sequence: list[dict[str, Any]] = []
+        order_inversion_count: int | None = None
+        sequence_source = "selected_operations_order"
+        if permutation_row is not None:
+            permutations_payload = [
+                item
+                for item in _as_list(permutation_row.get("permutations"))
+                if isinstance(item, Mapping)
+            ]
+            if permutations_payload:
+                best_permutation = permutations_payload[0]
+                chosen_sequence = [
+                    dict(item)
+                    for item in _as_list(best_permutation.get("operation_sequence"))
+                    if isinstance(item, Mapping)
+                ]
+                parsed_penalty = _finite_int(
+                    best_permutation.get("prior_order_inversion_count")
+                )
+                order_inversion_count = parsed_penalty if parsed_penalty is not None else None
+                sequence_source = "bounded_permutation_ladder_rank_1"
+        if not chosen_sequence:
+            chosen_sequence = _operation_sequence_record(
+                operations,
+                priors=operation_order_priors,
+            )
+        sequence_is_permutation = Counter(
+            _operation_sequence_key(operation) for operation in operations
+        ) == Counter(_operation_sequence_key(operation) for operation in chosen_sequence)
+        dispatch_blockers = ordered_unique(
+            [
+                *[str(item) for item in _as_list(combo.get("dispatch_blockers"))],
+                "operation_set_requires_atomic_materializer_or_explicit_partial_set_split",
+                "operation_set_order_requires_materialization_probe",
+                *(
+                    []
+                    if sequence_is_permutation
+                    else [
+                        (
+                            "operation_set_sequence_not_permutation_of_"
+                            "selected_operations"
+                        )
+                    ]
+                ),
+            ]
+        )
+        rows.append(
+            {
+                "schema": COUPLED_OPERATION_SET_SCHEMA,
+                "operation_set_id": f"opset_{combo_id}",
+                "combo_id": combo_id,
+                "operation_set_rank": rank,
+                "unit_count": combo.get("unit_count"),
+                "selected_unit_ids": _as_list(combo.get("selected_unit_ids")),
+                "selected_operations": [dict(operation) for operation in operations],
+                "chosen_operation_sequence": chosen_sequence,
+                "chosen_operation_sequence_sha256": _operation_sequence_hash(
+                    chosen_sequence
+                ),
+                "chosen_operation_sequence_source": sequence_source,
+                "chosen_operation_sequence_is_permutation": sequence_is_permutation,
+                "prior_order_inversion_count": order_inversion_count,
+                "active_interactions": _as_list(combo.get("active_interactions")),
+                "operation_families": _as_list(combo.get("operation_families")),
+                "candidate_saved_bytes": combo.get("candidate_saved_bytes"),
+                "base_saved_bytes": combo.get("base_saved_bytes"),
+                "interaction_extra_saved_bytes": combo.get("interaction_extra_saved_bytes"),
+                "interaction_shared_overhead_bytes": combo.get(
+                    "interaction_shared_overhead_bytes"
+                ),
+                "rate_delta_score": combo.get("rate_delta_score"),
+                "quality_cost_score": combo.get("quality_cost_score"),
+                "interaction_delta_score": combo.get("interaction_delta_score"),
+                "expected_delta_score": combo.get("expected_delta_score"),
+                "expected_score_gain": combo.get("expected_score_gain"),
+                "confidence": combo.get("confidence"),
+                "confidence_adjusted_gain": combo.get("confidence_adjusted_gain"),
+                "partial_materialization_allowed": False,
+                "requires_atomic_materialization": True,
+                "dispatch_blockers": dispatch_blockers,
                 **FALSE_AUTHORITY,
             }
         )
@@ -970,8 +1102,14 @@ def build_byte_shaving_campaign_plan(
         payload,
         operation_order_priors=operation_order_priors,
     )
+    operation_set_rows = _operation_set_ladder(
+        combo_rows,
+        permutation_rows,
+        operation_order_priors=operation_order_priors,
+    )
     best = _best_nonpositive_prefix(prefix_rows)
     best_combo = _best_nonpositive_prefix(combo_rows)
+    best_operation_set = _best_nonpositive_prefix(operation_set_rows)
     source_paths = [_repo_rel(source_path, repo_root)] if source_path is not None else []
     plan = {
         "schema": PLAN_SCHEMA,
@@ -992,7 +1130,11 @@ def build_byte_shaving_campaign_plan(
         "recommended_prefix": dict(best) if best is not None else None,
         "combination_ladder": combo_rows,
         "permutation_ladder": permutation_rows,
+        "operation_set_ladder": operation_set_rows,
         "recommended_combination": dict(best_combo) if best_combo is not None else None,
+        "recommended_operation_set": (
+            dict(best_operation_set) if best_operation_set is not None else None
+        ),
         "operation_menu": DEFAULT_OPERATION_FAMILIES,
         "operation_order_priors": operation_order_priors,
         "combination_policy": {
@@ -1021,6 +1163,9 @@ def build_byte_shaving_campaign_plan(
             ],
             "combination_search": "bounded_beam_over_units_and_operation_alternatives",
             "permutation_search": "bounded_operation_order_permutations_for_top_combos",
+            "operation_set_search": (
+                "durable_coupled_operation_sets_preserve_interactions_and_order_for_queueing"
+            ),
             "non_bruteforce_principle": (
                 "rank by rate-distortion prior, component/scorer marginal costs, "
                 "explicit interactions, conflicts, and confidence before any local "
@@ -1649,6 +1794,7 @@ def load_json(path: Path) -> Any:
 
 __all__ = [
     "BASE_BLOCKERS",
+    "COUPLED_OPERATION_SET_SCHEMA",
     "FALSE_AUTHORITY",
     "PLAN_SCHEMA",
     "SIGNAL_SURFACE_SCHEMA",

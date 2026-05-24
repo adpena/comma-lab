@@ -449,6 +449,46 @@ def _stage_builder_modules() -> list[Any]:
     ]
 
 
+def _recommended_execution_command(
+    *,
+    output_dir: Path,
+    device: str,
+    full_curriculum: bool,
+    stage_limit: int,
+    stage_epoch_overrides: dict[int, int],
+    eval_every: int | None,
+    allow_mps_fallback: bool,
+    seed: int,
+    source_dir: Path,
+    public_archive: Path | None,
+) -> list[str]:
+    command = [
+        ".venv/bin/python",
+        "tools/run_pr95_local_training_probe.py",
+        "--source-dir",
+        _rel(source_dir),
+        "--output-dir",
+        _rel(output_dir),
+        "--device",
+        device,
+        "--seed",
+        str(seed),
+    ]
+    if public_archive is not None:
+        command.extend(["--public-archive", _rel(public_archive)])
+    if full_curriculum:
+        command.append("--full-curriculum")
+    else:
+        command.extend(["--stage-limit", str(stage_limit)])
+    for stage_index, epochs in sorted(stage_epoch_overrides.items()):
+        command.extend(["--stage-epochs", f"{stage_index}={epochs}"])
+    if eval_every is not None:
+        command.extend(["--eval-every", str(eval_every)])
+    if allow_mps_fallback:
+        command.append("--allow-mps-fallback")
+    return command
+
+
 def build_plan(
     *,
     layout: Pr95SourceLayout,
@@ -480,6 +520,18 @@ def build_plan(
             "epoch_override": stage_epoch_overrides.get(index),
             "eval_every_override": eval_every,
         })
+    command = _recommended_execution_command(
+        output_dir=output_dir,
+        device=device,
+        full_curriculum=full_curriculum,
+        stage_limit=stage_limit,
+        stage_epoch_overrides=stage_epoch_overrides,
+        eval_every=eval_every,
+        allow_mps_fallback=allow_mps_fallback,
+        seed=seed,
+        source_dir=layout.source_dir,
+        public_archive=layout.public_archive,
+    )
     return {
         "schema": "pr95_local_training_probe_plan_v1",
         "lane_id": LANE_ID,
@@ -507,6 +559,32 @@ def build_plan(
             "local_mps_or_cpu": "training_velocity_and_transfer_probe_only",
             "score_authority": "requires byte_closed_archive_replay_on_contest_CPU_and_contest_CUDA",
             "fallback_policy": "fail_closed_unless_allow_mps_fallback_for_debug",
+        },
+        "recommended_execution": {
+            "schema": "local_training_recommended_execution.v1",
+            "tool": "tools/run_pr95_local_training_probe.py",
+            "training_backend": "torch",
+            "device": device,
+            "resource_kind": (
+                "local_cuda"
+                if device == "cuda"
+                else "local_mps"
+                if device == "mps"
+                else "local_cpu"
+                if device == "cpu"
+                else "local"
+            ),
+            "output_manifest": _rel(output_dir / "manifest.json"),
+            "representation_manifest": _rel(
+                output_dir / "representation_training_manifest.json"
+            ),
+            "plan_manifest": _rel(output_dir / "plan.json"),
+            "python_command_args": command,
+            "candidate_generation_only": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
         },
         "source_faithful_command": (
             f"cd {layout.challenge_root} && COMMA_CHALLENGE_ROOT=$PWD "
@@ -632,6 +710,7 @@ def _write_pr95_representation_training_sidecar(
             "public_archive": payload.get("public_archive"),
             "source_faithful_command": payload.get("source_faithful_command"),
             "authority_contract": payload.get("authority_contract"),
+            "recommended_execution": payload.get("recommended_execution"),
             "ok": payload.get("ok"),
         },
     )
