@@ -7,6 +7,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -3590,3 +3591,147 @@ def test_byte_shaving_campaign_queue_cli_generates_materializer_contexts_from_ar
     assert row["tool"] == "tools/run_family_agnostic_materializer.py"
     assert "--section-manifest" in row["command"]
     assert str(section_manifest) in row["command"]
+
+
+def test_byte_shaving_campaign_queue_cli_generates_inverse_scorer_contexts_and_smoke_materializes(
+    tmp_path: Path,
+) -> None:
+    plan_path = tmp_path / "plan.json"
+    artifact_map_path = tmp_path / "artifact_map.json"
+    contexts_path = tmp_path / "generated_contexts.json"
+    materialization = tmp_path / "materialization.json"
+    portfolio = tmp_path / "portfolio.json"
+    summary = tmp_path / "action_summary.json"
+    work_queue = tmp_path / "materializer_work_queue.json"
+    output_root = tmp_path / "materializer_outputs"
+    template = tmp_path / "template.zip"
+    action = tmp_path / "inverse_action.json"
+    with zipfile.ZipFile(template, "w", compression=zipfile.ZIP_STORED) as archive:
+        archive.writestr("x", b"base-payload")
+    action.write_text(
+        json.dumps(
+            {
+                "schema": "inverse_steganalysis_discrete_action_functional.v1",
+                "water_bucket": {
+                    "schema": "inverse_steganalysis_water_bucket_plan.v1",
+                    "selected_count": 1,
+                    "selected_cells": [
+                        {
+                            "atom_id": "inverse_surface_pair0007",
+                            "candidate_id": "candidate_pair0007",
+                            "scope_axis": "pairs",
+                            "component": "posenet",
+                            "water_fill_cost_bytes": 32,
+                            "expected_score_gain": 0.0001,
+                            "euler_lagrange_residual": 0.00009,
+                        }
+                    ],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    plan_path.write_text(json.dumps(_inverse_cell_candidate_plan()), encoding="utf-8")
+    artifact_map_path.write_text(
+        json.dumps(
+            {
+                "schema": "final_byte_artifact_map.fixture.v1",
+                "artifacts": {
+                    INVERSE_SCORER_CELL_TARGET_KIND: {
+                        "candidate_archive_template": str(template),
+                        "inverse_action_functional": str(action),
+                        "raw_contest_video_digest": "f" * 64,
+                        "atom_ids": ["inverse_surface_pair0007"],
+                        "selected_limit": 1,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "rank_or_kill_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--plan",
+            str(plan_path),
+            "--materializer-artifact-map",
+            str(artifact_map_path),
+            "--materializer-contexts-out",
+            str(contexts_path),
+            "--materializer-context-default-output-root",
+            str(output_root),
+            "--materializer-contexts-fail-if-blocked",
+            "--materialization-out",
+            str(materialization),
+            "--portfolio-out",
+            str(portfolio),
+            "--action-summary-out",
+            str(summary),
+            "--materializer-work-queue-out",
+            str(work_queue),
+            "--repo-root",
+            str(tmp_path),
+            "--candidate-limit",
+            "4",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    stdout = json.loads(result.stdout)
+    assert stdout["materializer_contexts_generated"] is True
+    assert stdout["materializer_contexts_blocked_count"] == 0
+    assert stdout["materializer_work_queue_executable_row_count"] == 1
+    contexts = json.loads(contexts_path.read_text(encoding="utf-8"))
+    context = contexts["rows"][0]["context"]
+    assert context["candidate_archive_template"] == str(template)
+    assert context["inverse_action_functional"] == str(action)
+    assert context["output_archive"].startswith(str(output_root))
+    assert context["manifest_out"].startswith(str(output_root))
+    work = json.loads(work_queue.read_text(encoding="utf-8"))
+    row = work["rows"][0]
+    assert row["tool"] == "tools/materialize_inverse_scorer_cell_candidate.py"
+    assert row["executable"] is True
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+    command = [sys.executable, str(REPO_ROOT / row["command"][1]), *row["command"][2:]]
+    smoke = subprocess.run(
+        command,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    smoke_stdout = json.loads(smoke.stdout)
+    assert smoke_stdout["selected_cell_count"] == 1
+    assert smoke_stdout["receiver_contract_satisfied"] is False
+    assert smoke_stdout["score_claim"] is False
+    manifest = json.loads(Path(context["manifest_out"]).read_text(encoding="utf-8"))
+    assert manifest["schema"] == "inverse_scorer_cell_candidate_v1"
+    assert manifest["byte_closed_candidate_emitted"] is True
+    assert manifest["candidate_generation_only"] is True
+    assert manifest["receiver_contract_satisfied"] is False
+    assert "runtime_consumption_proof_missing" in manifest["readiness_blockers"]
+    assert Path(context["output_archive"]).is_file()

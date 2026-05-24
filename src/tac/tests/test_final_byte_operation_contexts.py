@@ -19,6 +19,8 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
     INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
     INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
+    INVERSE_SCORER_CELL_MATERIALIZER,
+    INVERSE_SCORER_CELL_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     TENSOR_FACTORIZE_MATERIALIZER,
@@ -128,6 +130,38 @@ def _unsupported_high_level_backlog() -> dict[str, object]:
     }
 
 
+def _inverse_scorer_cell_backlog() -> dict[str, object]:
+    return {
+        "schema": "byte_shaving_materializer_backlog.v1",
+        "rows": [
+            {
+                "schema": "byte_shaving_materializer_backlog_row.v1",
+                "backlog_key": "inverse_scorer_cell_candidate_fixture",
+                "backlog_rank": 1,
+                "unit_kind": "scorer_inverse_surface_cell",
+                "operation_family": "materialize_inverse_scorer_cell_candidate",
+                "target_kind": INVERSE_SCORER_CELL_TARGET_KIND,
+                "materializer_id": INVERSE_SCORER_CELL_MATERIALIZER,
+                "source_unit_ids": ["inverse_surface_pair0007"],
+                "source_packet_ir_schemas": ["packet_ir_operation_set_v1"],
+                "source_packet_ir_operation_set_ids": ["packetir_opset_0007"],
+                "source_packet_ir_source_operation_set_ids": ["opset_0007"],
+                "packet_ir_blocker_counts": {
+                    "packetir_operation_set_requires_materializer_contexts": 1,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _artifact_map(tmp_path: Path) -> dict[str, object]:
     return {
         "schema": "final_byte_artifact_map.fixture.v1",
@@ -176,6 +210,29 @@ def _mixed_artifact_map(tmp_path: Path) -> dict[str, object]:
         "ready_for_exact_eval_dispatch": False,
     }
     return payload
+
+
+def _inverse_scorer_artifact_map(tmp_path: Path) -> dict[str, object]:
+    return {
+        "schema": "final_byte_artifact_map.fixture.v1",
+        "artifacts": {
+            INVERSE_SCORER_CELL_TARGET_KIND: {
+                "candidate_archive_template": str(tmp_path / "template.zip"),
+                "inverse_action_functional": str(tmp_path / "inverse_action.json"),
+                "raw_contest_video_digest": "f" * 64,
+                "atom_ids": ["inverse_surface_pair0007"],
+                "selected_limit": 1,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def test_final_byte_context_compiler_emits_consumable_materializer_contexts(
@@ -317,6 +374,100 @@ def test_final_byte_context_compiler_covers_packet_member_and_tensor_families(
     ]
     assert work_queue["score_claim"] is False
     assert work_queue["ready_for_exact_eval_dispatch"] is False
+
+
+def test_final_byte_context_compiler_covers_inverse_scorer_cell_candidate(
+    tmp_path: Path,
+) -> None:
+    backlog = _inverse_scorer_cell_backlog()
+    rows = backlog["rows"]
+    assert isinstance(rows, list)
+    row = rows[0]
+    assert isinstance(row, dict)
+    row["packet_ir_blocker_counts"] = {
+        "packetir_operation_set_requires_materializer_contexts": "1",
+        "zero_count": 0,
+        "negative_count": -3,
+        "bool_count": True,
+        "nonnumeric_count": "not-an-int",
+    }
+
+    payload = build_final_byte_operation_contexts(
+        backlog,
+        artifact_map=_inverse_scorer_artifact_map(tmp_path),
+        repo_root=tmp_path,
+        default_output_root=tmp_path / "out",
+    )
+
+    assert payload["row_count"] == 1
+    assert payload["blocked_context_count"] == 0
+    row = payload["rows"][0]
+    context = row["context"]
+    assert row["source_packet_ir_operation_set_ids"] == ["packetir_opset_0007"]
+    assert context["source_packet_ir_operation_set_ids"] == ["packetir_opset_0007"]
+    assert context["packet_ir_blocker_counts"] == {
+        "packetir_operation_set_requires_materializer_contexts": 1,
+    }
+    assert context["candidate_archive_template"].endswith("template.zip")
+    assert context["inverse_action_functional"].endswith("inverse_action.json")
+    assert context["output_archive"].endswith(".zip")
+    assert context["manifest_out"].endswith(".json")
+    assert context["atom_ids"] == ["inverse_surface_pair0007"]
+    assert context["score_claim"] is False
+
+    resolved = materializer_contexts_from_payload(payload)
+    work_queue = build_materializer_work_queue(
+        _inverse_scorer_cell_backlog(),
+        repo_root=tmp_path,
+        contexts=resolved,
+        source_plan_path="plan.json",
+    )
+
+    assert work_queue["executable_row_count"] == 1
+    work = work_queue["rows"][0]
+    assert work["tool"] == "tools/materialize_inverse_scorer_cell_candidate.py"
+    assert "--candidate-archive-template" in work["command"]
+    assert "--inverse-action-functional" in work["command"]
+    assert "--atom-id" in work["command"]
+    assert work["source_packet_ir_operation_set_ids"] == ["packetir_opset_0007"]
+    assert work["score_claim"] is False
+    assert work["ready_for_exact_eval_dispatch"] is False
+
+
+def test_final_byte_context_compiler_blocks_inverse_scorer_chain_without_parity(
+    tmp_path: Path,
+) -> None:
+    artifact_map = _inverse_scorer_artifact_map(tmp_path)
+    artifacts = artifact_map["artifacts"]
+    assert isinstance(artifacts, dict)
+    inverse_hints = artifacts[INVERSE_SCORER_CELL_TARGET_KIND]
+    assert isinstance(inverse_hints, dict)
+    inverse_hints["output_dir"] = str(tmp_path / "chain")
+
+    payload = build_final_byte_operation_contexts(
+        _inverse_scorer_cell_backlog(),
+        artifact_map=artifact_map,
+        repo_root=tmp_path,
+        default_output_root=tmp_path / "out",
+    )
+
+    assert payload["blocked_context_count"] == 1
+    assert (
+        "materializer_context_missing:inverse_scorer_cell_inflate_parity_context"
+        in payload["rows"][0]["context_blockers"]
+    )
+    resolved = materializer_contexts_from_payload(payload)
+    work_queue = build_materializer_work_queue(
+        _inverse_scorer_cell_backlog(),
+        repo_root=tmp_path,
+        contexts=resolved,
+        source_plan_path="plan.json",
+    )
+    assert work_queue["executable_row_count"] == 0
+    assert (
+        "materializer_context_missing:inverse_scorer_cell_inflate_parity_context"
+        in work_queue["rows"][0]["materialization_blockers"]
+    )
 
 
 def test_final_byte_context_compiler_rejects_truthy_authority(

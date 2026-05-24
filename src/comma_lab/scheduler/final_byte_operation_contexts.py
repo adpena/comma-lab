@@ -25,6 +25,7 @@ from .byte_shaving_campaign_queue import (
 )
 from .byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    INVERSE_SCORER_CELL_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
 )
@@ -53,6 +54,22 @@ def _string_list(value: Any) -> list[str]:
     if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray, str)):
         return ordered_unique(str(item).strip() for item in value if str(item).strip())
     return []
+
+
+def _int_mapping(value: Any) -> dict[str, int]:
+    if not isinstance(value, Mapping):
+        return {}
+    out: dict[str, int] = {}
+    for key, raw_count in value.items():
+        if isinstance(raw_count, bool):
+            continue
+        try:
+            count = int(raw_count)
+        except (TypeError, ValueError):
+            continue
+        if count > 0:
+            out[str(key)] = count
+    return out
 
 
 def _text(value: Any) -> str | None:
@@ -239,20 +256,7 @@ def _archive_section_context_row(
             context[key] = values
     if hints.get("allow_rate_regression") is True:
         context["allow_rate_regression"] = True
-    return {
-        "schema": "byte_shaving_materializer_context_row.v1",
-        "backlog_key": row.get("backlog_key"),
-        "backlog_rank": row.get("backlog_rank"),
-        "materializer_id": row.get("materializer_id"),
-        "target_kind": row.get("target_kind"),
-        "unit_kind": row.get("unit_kind"),
-        "operation_family": row.get("operation_family"),
-        "source_unit_ids": _as_list(row.get("source_unit_ids")),
-        "context_keys": _context_keys(row),
-        "context": context,
-        "context_blockers": blockers,
-        **FALSE_AUTHORITY,
-    }
+    return _context_row_payload(row, context=context, blockers=blockers)
 
 
 def _packet_member_context_row(
@@ -361,12 +365,154 @@ def _tensor_factorize_context_row(
     return _context_row_payload(row, context=context, blockers=blockers)
 
 
+def _inverse_scorer_cell_context_row(
+    row: Mapping[str, Any],
+    *,
+    hints: Mapping[str, Any],
+    repo_root: Path,
+    default_output_root: Path | None,
+) -> dict[str, Any]:
+    context: dict[str, Any] = {}
+    blockers: list[str] = []
+    template = _first_text(
+        hints,
+        (
+            "candidate_archive_template",
+            "archive_template",
+            "source_archive_template",
+        ),
+    )
+    action_functional = _first_text(
+        hints,
+        (
+            "inverse_action_functional",
+            "action_functional",
+            "inverse_action",
+        ),
+    )
+    raw_digest = _first_text(
+        hints,
+        (
+            "raw_contest_video_digest",
+            "contest_video_digest",
+            "raw_video_digest",
+        ),
+    )
+    output_dir = _first_text(hints, ("chain_output_dir", "output_dir"))
+    output_archive = None
+    json_out = None
+    if output_dir is None:
+        output_archive, json_out = _output_paths(
+            row=row,
+            hints=hints,
+            repo_root=repo_root,
+            default_output_root=default_output_root,
+        )
+    if template is None:
+        blockers.append("materializer_context_missing:candidate_archive_template")
+    if action_functional is None:
+        blockers.append("materializer_context_missing:inverse_action_functional")
+    if raw_digest is None:
+        blockers.append("materializer_context_missing:raw_contest_video_digest")
+    if output_dir is None and output_archive is None:
+        blockers.append("materializer_context_missing:output_archive")
+    if output_dir is None and json_out is None:
+        blockers.append("materializer_context_missing:manifest_out")
+
+    source_inflate = _first_text(hints, ("source_inflate_output_dir",))
+    candidate_inflate = _first_text(hints, ("candidate_inflate_output_dir",))
+    inflate_runtime = _first_text(hints, ("inflate_runtime_dir",))
+    descriptor_probe_only = hints.get("descriptor_probe_only") is True
+    has_partial_parity_dirs = (source_inflate is None) != (candidate_inflate is None)
+    if output_dir is not None and has_partial_parity_dirs:
+        blockers.append(
+            "materializer_context_missing:inverse_scorer_cell_complete_inflate_parity_dirs"
+        )
+    if (
+        output_dir is not None
+        and not descriptor_probe_only
+        and not (
+            (source_inflate is not None and candidate_inflate is not None)
+            or inflate_runtime is not None
+        )
+    ):
+        blockers.append(
+            "materializer_context_missing:inverse_scorer_cell_inflate_parity_context"
+        )
+
+    context.update(
+        {
+            "context_blockers": blockers,
+            **_packetir_operation_set_contract_context(),
+            **FALSE_AUTHORITY,
+        }
+    )
+    if template is not None:
+        context["candidate_archive_template"] = template
+    if action_functional is not None:
+        context["inverse_action_functional"] = action_functional
+    if raw_digest is not None:
+        context["raw_contest_video_digest"] = raw_digest
+    if output_dir is not None:
+        context["output_dir"] = output_dir
+        context["chain_output_dir"] = output_dir
+    elif output_archive is not None:
+        context["output_archive"] = output_archive
+    if json_out is not None:
+        context["manifest_out"] = json_out
+        context["output_manifest"] = json_out
+    for key, value in (
+        ("source_inflate_output_dir", source_inflate),
+        ("candidate_inflate_output_dir", candidate_inflate),
+        ("inflate_runtime_dir", inflate_runtime),
+        ("source_archive_for_parity", _first_text(hints, ("source_archive_for_parity",))),
+        ("inflate_work_dir", _first_text(hints, ("inflate_work_dir",))),
+        ("runtime_consumption_proof", _first_text(hints, ("runtime_consumption_proof",))),
+    ):
+        if value is not None:
+            context[key] = value
+    for key in ("atom_id", "atom_ids"):
+        values = _string_list(hints.get(key))
+        if values:
+            context[key] = values
+    for key in ("selected_limit", "min_free_bytes", "inflate_timeout_seconds"):
+        value = hints.get(key)
+        if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+            context[key] = value
+    for key in (
+        "allow_overwrite",
+        "descriptor_probe_only",
+        "fail_if_receiver_blocked",
+        "fail_if_inflate_parity_blocked",
+        "keep_inflate_work_dir",
+    ):
+        if hints.get(key) is True:
+            context[key] = True
+    for key in ("expected_output_sha256", "expected_manifest_sha256"):
+        value = _text(hints.get(key))
+        if value is not None:
+            context[key] = value
+    return _context_row_payload(row, context=context, blockers=blockers)
+
+
 def _context_row_payload(
     row: Mapping[str, Any],
     *,
     context: Mapping[str, Any],
     blockers: Sequence[str],
 ) -> dict[str, Any]:
+    context_payload = dict(context)
+    for key in (
+        "source_packet_ir_schemas",
+        "source_packet_ir_operation_set_ids",
+        "source_packet_ir_source_operation_set_ids",
+    ):
+        values = _as_list(row.get(key))
+        if values:
+            context_payload[key] = values
+    packet_ir_blocker_counts = _int_mapping(row.get("packet_ir_blocker_counts"))
+    if packet_ir_blocker_counts:
+        context_payload["packet_ir_blocker_counts"] = packet_ir_blocker_counts
     return {
         "schema": "byte_shaving_materializer_context_row.v1",
         "backlog_key": row.get("backlog_key"),
@@ -376,8 +522,16 @@ def _context_row_payload(
         "unit_kind": row.get("unit_kind"),
         "operation_family": row.get("operation_family"),
         "source_unit_ids": _as_list(row.get("source_unit_ids")),
+        "source_packet_ir_schemas": _as_list(row.get("source_packet_ir_schemas")),
+        "source_packet_ir_operation_set_ids": _as_list(
+            row.get("source_packet_ir_operation_set_ids")
+        ),
+        "source_packet_ir_source_operation_set_ids": _as_list(
+            row.get("source_packet_ir_source_operation_set_ids")
+        ),
+        "packet_ir_blocker_counts": packet_ir_blocker_counts,
         "context_keys": _context_keys(row),
-        "context": dict(context),
+        "context": context_payload,
         "context_blockers": list(blockers),
         **FALSE_AUTHORITY,
     }
@@ -505,6 +659,20 @@ def build_final_byte_operation_contexts(
         ):
             rows.append(
                 _tensor_factorize_context_row(
+                    row,
+                    hints=_merged_hints(hints, row),
+                    repo_root=repo,
+                    default_output_root=output_root,
+                )
+            )
+        elif (
+            row.get("unit_kind") == "scorer_inverse_surface_cell"
+            and row.get("operation_family")
+            == "materialize_inverse_scorer_cell_candidate"
+            and row.get("target_kind") == INVERSE_SCORER_CELL_TARGET_KIND
+        ):
+            rows.append(
+                _inverse_scorer_cell_context_row(
                     row,
                     hints=_merged_hints(hints, row),
                     repo_root=repo,
