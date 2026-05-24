@@ -21,6 +21,10 @@ Export round-trip artifact:
 
 `experiments/results/pr95_public_archive_export_roundtrip_20260524T084706Z/export_summary.json`
 
+Runtime-consumption proof artifact:
+
+`experiments/results/pr95_native_export_runtime_consumption_20260524T085523Z/runtime_consumption_proof.json`
+
 Public packet custody:
 
 - Archive ZIP SHA-256: `e976acd5fe565c94fb9a8c62e5200c949919f76150e84599f268d6a58588440a`
@@ -55,6 +59,18 @@ member SHA (`4b8013fb1168e21b12fc7ee6c395e032660d88daded48a0b845085e7d5eb11c4`);
 the rebuilt ZIP SHA differs because the deterministic writer normalizes ZIP
 container metadata.
 
+The native-export runtime proof now exercises the actual public PR95
+`inflate.sh` contract on a one-pair native-built packet:
+
+- Runtime proof: `runtime_consumption_proven=true`
+- Expected raw bytes: `6104016`
+- Actual raw bytes: `6104016`
+- Raw SHA-256: `3f672470f2142b7eeee0e20082a29e46e8c7d3355e696eb7b0be3fe40cab188f`
+
+This proves runtime consumption for the PR95 grammar/export path. It is still a
+small runtime smoke, not full public-packet inflate parity and not score
+authority.
+
 ## False-Authority Boundary
 
 Every emitted packet and result carries:
@@ -70,16 +86,18 @@ Every emitted packet and result carries:
 
 - `.venv/bin/ruff check src/tac/local_acceleration/pr95_hnerv_mlx.py src/tac/tests/test_pr95_hnerv_mlx.py tools/probe_pr95_public_archive_mlx_parity.py`
 - `.venv/bin/python -m pytest src/tac/tests/test_pr95_hnerv_mlx.py -q`
-- `.venv/bin/python -m pytest src/tac/tests/test_optimizer_scheduler_registry.py src/tac/tests/test_run_pr95_mlx_timing_smoke.py src/tac/tests/test_run_pr95_mlx_timing_smoke_plan.py src/tac/tests/test_pr95_hnerv_mlx.py -q`
+- `.venv/bin/python -m pytest src/tac/tests/test_optimizer_scheduler_registry.py src/tac/tests/test_run_pr95_mlx_timing_smoke.py src/tac/tests/test_run_pr95_mlx_timing_smoke_plan.py src/tac/tests/test_pr95_hnerv_mlx.py -q` (`24 passed`)
 - `.venv/bin/python tools/probe_pr95_public_archive_mlx_parity.py --mlx-device cpu --mlx-device gpu --sample-indices 0 --output-json experiments/results/pr95_public_archive_mlx_parity_20260524T083932Z/forward_parity_probe.json`
 - Native export round trip to `experiments/results/pr95_public_archive_export_roundtrip_20260524T084706Z/export_summary.json`
+- Native one-pair runtime proof with `tools/prove_pr95_public_archive_runtime_consumption.py` to `experiments/results/pr95_native_export_runtime_consumption_20260524T085523Z/runtime_consumption_proof.json`
+- `.venv/bin/python tools/lane_maturity.py validate`
 
 ## Next Engineering Step
 
-Use the packet parser/exporter to build a byte-closed PR95 runtime parity loop
-for locally trained MLX candidates:
+Use the packet parser/exporter/runtime proof to build a byte-closed PR95 queue
+bridge for locally trained MLX candidates:
 
 1. Export MLX state and latents into PR95 `0.bin` grammar.
-2. Run same-runtime `inflate.sh` output parity on a tiny file list.
+2. Run same-runtime `inflate.sh` output proof on a tiny file list.
 3. Feed candidate runtime/profile rows into the optimizer queue as non-promotable
    local training signal until exact CPU/CUDA auth gates land.

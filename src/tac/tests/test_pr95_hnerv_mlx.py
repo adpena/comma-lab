@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -310,6 +311,64 @@ def test_public_pr95_archive_export_fails_closed_on_invalid_inputs() -> None:
         bad_state["rgb_1.bias"] = bad_state["rgb_1.bias"].copy()
         bad_state["rgb_1.bias"][0] = np.inf
         build_pr95_public_archive_member(bad_state, packet.latents, meta=packet.meta)
+
+
+def test_public_pr95_runtime_consumption_cli_accepts_native_export(
+    tmp_path: Path,
+) -> None:
+    torch = pytest.importorskip("torch")
+    module = _load_public_pr95_model_module()
+    torch.manual_seed(44)
+    model = module.HNeRVDecoder(
+        latent_dim=28,
+        base_channels=4,
+        eval_size=(384, 512),
+    ).eval()
+    latents = torch.randn(1, 28)
+    archive_summary = write_pr95_public_archive_zip(
+        model.state_dict(),
+        latents,
+        meta={
+            "n_pairs": 1,
+            "latent_dim": 28,
+            "base_channels": 4,
+            "eval_size": [384, 512],
+        },
+        output_zip_path=tmp_path / "archive.zip",
+    )
+
+    output_json = tmp_path / "runtime_consumption_proof.json"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools/prove_pr95_public_archive_runtime_consumption.py"),
+            "--archive-zip",
+            str(tmp_path / "archive.zip"),
+            "--output-json",
+            str(output_json),
+            "--max-output-bytes",
+            "10000000",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=120,
+    )
+    assert result.returncode == 0, result.stderr
+
+    proof = json.loads(output_json.read_text())
+    assert proof["schema"] == "pr95_hnerv_public_runtime_consumption_proof.v1"
+    assert proof["runtime_consumption_proven"] is True
+    assert proof["expected_raw_bytes"] == 2 * 874 * 1164 * 3
+    assert proof["raw_output_bytes"] == proof["expected_raw_bytes"]
+    assert proof["raw_output_sha256"]
+    assert proof["archive_packet"]["member_sha256"] == archive_summary["member_sha256"]
+    assert proof["exact_readiness_refusal"]["ready"] is False
+    assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in proof[
+        "exact_readiness_refusal"
+    ]["blockers"]
+    _assert_false_authority(proof)
 
 
 def test_pr95_stage8_partition_keeps_muon_off_latents_stem_and_rgb_heads() -> None:
