@@ -1,0 +1,421 @@
+{
+  "dispatch_ready": [
+    {
+      "archive_bytes": 178258,
+      "archive_manifest_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/runtime_packet_manifest.json",
+      "archive_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/archive.zip",
+      "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "archive_size_bytes": 178258,
+      "candidate_archive_bytes": 178258,
+      "candidate_archive_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/archive.zip",
+      "candidate_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "candidate_id": "bias_refine_cmaes_0061_pr101_nonlocal_bias_runtime_packet",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "contest_dispatch_verdict": "ready_for_contest_exact_eval_dispatch_after_lane_claim",
+      "cpu_or_proxy_score_not_cuda_evidence": true,
+      "cuda_gap_review_required_before_promotion": true,
+      "deployment_target": "t4_contest_runtime",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [],
+      "dispatch_claim_required_before_gpu_or_remote_eval": true,
+      "evidence_grade": "[exact-eval-ready-no-score]",
+      "evidence_semantics": "byte_closed_archive_runtime_ready_for_exact_eval",
+      "exact_cuda_auth_eval": false,
+      "inflate_sh_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/inflate.sh",
+      "lane_id": "pr101_nonlocal_bias_refine_cmaes_0061_exact_eval",
+      "operator_override_reason": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "readiness_gate_generated_at_utc": "2026-05-14T13:22:23Z",
+      "readiness_gate_tool": "tools/promote_optimizer_candidate_for_exact_eval.py",
+      "ready_for_exact_eval_dispatch": true,
+      "runtime_consumption_proof_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/runtime_consumption_proof.json",
+      "runtime_consumption_proof_required": true,
+      "runtime_consumption_proof_schema": "pr101_kaggle_proxy_runtime_consumption_proof_v1",
+      "runtime_consumption_proof_sha256": "c92ca237e73749ea55bf35aab49db0a7804db00e9d390097f5e5659f98ca43b6",
+      "runtime_consumption_proof_status": "present",
+      "runtime_content_tree_sha256": "3a40136dc53e2ea0e41cfc7a4082c457f4e92648c71e7c604f851a30de64eea2",
+      "runtime_manifest": {
+        "external_dependency_roots": [],
+        "files": [
+          {
+            "bytes": 2120,
+            "relative_path": "inflate.py",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/inflate.py",
+            "sha256": "6263febb0d11f77a43535cf268979fd11428e3e5699c98dbff500b95a3406088"
+          },
+          {
+            "bytes": 820,
+            "relative_path": "inflate.sh",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/inflate.sh",
+            "sha256": "b1108b4e208bc846653575c024ccd9d91d857c3a956a7ca74597a7a9188a7eaf"
+          },
+          {
+            "bytes": 781,
+            "relative_path": "report.txt",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/report.txt",
+            "sha256": "3508ac761247b7e0a5255d0fcbc0ee58847f480bf65f96d9c360c97c82aeb623"
+          },
+          {
+            "bytes": 6963,
+            "relative_path": "runtime_consumption_proof.json",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/runtime_consumption_proof.json",
+            "sha256": "c92ca237e73749ea55bf35aab49db0a7804db00e9d390097f5e5659f98ca43b6"
+          },
+          {
+            "bytes": 5684,
+            "relative_path": "runtime_packet_manifest.json",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/runtime_packet_manifest.json",
+            "sha256": "77d2151c83f4631b4e3966e60a7dfd10738a6e8b27e7c7cb558d0b091e4d6f73"
+          },
+          {
+            "bytes": 16734,
+            "relative_path": "src/codec.py",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/src/codec.py",
+            "sha256": "637fa5e4b47bfb2595358903dfaafbbc7a7ca48d5f7ccd81c06d1397e060bb72"
+          },
+          {
+            "bytes": 2197,
+            "relative_path": "src/model.py",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/src/model.py",
+            "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+          }
+        ],
+        "repo_local_tac_import_manifest": {
+          "discovery": "static_ast_recursive_import_closure",
+          "file_count": 0,
+          "files": [],
+          "module_count": 0,
+          "parse_errors": [],
+          "root_import_modules": [],
+          "runtime_root_name": "bias_refine_cmaes_0061",
+          "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+          "tac_root_relative_path": "src/tac",
+          "unresolved_modules": []
+        },
+        "runtime_content_tree_sha256": "3a40136dc53e2ea0e41cfc7a4082c457f4e92648c71e7c604f851a30de64eea2",
+        "runtime_file_count": 7,
+        "runtime_root": "/Users/adpena/Projects/pact/experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061",
+        "runtime_tree_sha256": "7f5f424a57bcdf59a9f341296c93ca6f868844cb1ce08158349be060d7aea519",
+        "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+        "upstream_evaluate_py": {
+          "bytes": 6005,
+          "relative_path": "evaluate.py",
+          "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+        }
+      },
+      "runtime_tree_sha256": "7f5f424a57bcdf59a9f341296c93ca6f868844cb1ce08158349be060d7aea519",
+      "score_affecting_change_proofs": [
+        "score_affecting_runtime_changed=true"
+      ],
+      "score_affecting_payload_changed": false,
+      "score_affecting_runtime_changed": true,
+      "score_axis": "contest_cuda",
+      "score_claim": false,
+      "score_claim_verified": false,
+      "source_candidate_fields": {
+        "candidate_family": "pr101_nonlocal_bias_runtime_packet",
+        "lane_class": "pr101_nonlocal_sweep_runtime_bias",
+        "source_manifest_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/runtime_packet_manifest.json",
+        "source_paths": [
+          "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/runtime_packet_manifest.json"
+        ]
+      },
+      "source_candidate_id": "bias_refine_cmaes_0061_pr101_nonlocal_bias_runtime_packet",
+      "source_queue_list": "top_k",
+      "source_queue_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/optimizer_queue.pr101_nonlocal_bias.json",
+      "submission_dir": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061",
+      "target_modes": [
+        "contest_exact_eval"
+      ],
+      "target_score_axis": "contest_cuda"
+    }
+  ],
+  "dispatch_ready_count": 1,
+  "evidence_boundary": {
+    "cpu_or_proxy_score_not_cuda_evidence": true,
+    "cuda_gap_review_required_before_promotion": true,
+    "exact_cuda_required_before_score_or_rank_claim": true,
+    "lane_dispatch_claim_required_before_gpu_or_remote_eval": true,
+    "readiness_scope": "local_byte_closed_archive_runtime_custody_only",
+    "score_claim": false
+  },
+  "generated_at_utc": "2026-05-14T13:22:23Z",
+  "n_candidates": 1,
+  "schema": "optimizer_candidate_exact_eval_ready_queue_v1",
+  "score_axis_repair": {
+    "generated_at_utc": "2026-05-24T04:07:43Z",
+    "non_destructive_copy": true,
+    "schema": "optimizer_exact_ready_score_axis_repair_metadata_v1",
+    "score_axis": "contest_cuda",
+    "source_blockers": [
+      "score_axis_missing"
+    ],
+    "source_queue_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/exact_ready/bias_refine_cmaes_0061_pr101_nonlocal_bias_runtime_packet.exact_ready_queue.json",
+    "source_queue_sha256": "5528649087b317408a4a8cbacd71cc8a28446050c5f798c3bc594ee2c00c280c"
+  },
+  "tool": "tools/promote_optimizer_candidate_for_exact_eval.py",
+  "top_k": [
+    {
+      "archive_bytes": 178258,
+      "archive_manifest_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/runtime_packet_manifest.json",
+      "archive_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/archive.zip",
+      "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "archive_size_bytes": 178258,
+      "candidate_archive_bytes": 178258,
+      "candidate_archive_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/archive.zip",
+      "candidate_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "candidate_id": "bias_refine_cmaes_0061_pr101_nonlocal_bias_runtime_packet",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "contest_dispatch_verdict": "ready_for_contest_exact_eval_dispatch_after_lane_claim",
+      "cpu_or_proxy_score_not_cuda_evidence": true,
+      "cuda_gap_review_required_before_promotion": true,
+      "deployment_target": "t4_contest_runtime",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [],
+      "dispatch_claim_required_before_gpu_or_remote_eval": true,
+      "evidence_grade": "[exact-eval-ready-no-score]",
+      "evidence_semantics": "byte_closed_archive_runtime_ready_for_exact_eval",
+      "exact_cuda_auth_eval": false,
+      "inflate_sh_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/inflate.sh",
+      "lane_id": "pr101_nonlocal_bias_refine_cmaes_0061_exact_eval",
+      "operator_override_reason": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "readiness_gate_generated_at_utc": "2026-05-14T13:22:23Z",
+      "readiness_gate_tool": "tools/promote_optimizer_candidate_for_exact_eval.py",
+      "ready_for_exact_eval_dispatch": true,
+      "runtime_consumption_proof_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/runtime_consumption_proof.json",
+      "runtime_consumption_proof_required": true,
+      "runtime_consumption_proof_schema": "pr101_kaggle_proxy_runtime_consumption_proof_v1",
+      "runtime_consumption_proof_sha256": "c92ca237e73749ea55bf35aab49db0a7804db00e9d390097f5e5659f98ca43b6",
+      "runtime_consumption_proof_status": "present",
+      "runtime_content_tree_sha256": "3a40136dc53e2ea0e41cfc7a4082c457f4e92648c71e7c604f851a30de64eea2",
+      "runtime_manifest": {
+        "external_dependency_roots": [],
+        "files": [
+          {
+            "bytes": 2120,
+            "relative_path": "inflate.py",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/inflate.py",
+            "sha256": "6263febb0d11f77a43535cf268979fd11428e3e5699c98dbff500b95a3406088"
+          },
+          {
+            "bytes": 820,
+            "relative_path": "inflate.sh",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/inflate.sh",
+            "sha256": "b1108b4e208bc846653575c024ccd9d91d857c3a956a7ca74597a7a9188a7eaf"
+          },
+          {
+            "bytes": 781,
+            "relative_path": "report.txt",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/report.txt",
+            "sha256": "3508ac761247b7e0a5255d0fcbc0ee58847f480bf65f96d9c360c97c82aeb623"
+          },
+          {
+            "bytes": 6963,
+            "relative_path": "runtime_consumption_proof.json",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/runtime_consumption_proof.json",
+            "sha256": "c92ca237e73749ea55bf35aab49db0a7804db00e9d390097f5e5659f98ca43b6"
+          },
+          {
+            "bytes": 5684,
+            "relative_path": "runtime_packet_manifest.json",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/runtime_packet_manifest.json",
+            "sha256": "77d2151c83f4631b4e3966e60a7dfd10738a6e8b27e7c7cb558d0b091e4d6f73"
+          },
+          {
+            "bytes": 16734,
+            "relative_path": "src/codec.py",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/src/codec.py",
+            "sha256": "637fa5e4b47bfb2595358903dfaafbbc7a7ca48d5f7ccd81c06d1397e060bb72"
+          },
+          {
+            "bytes": 2197,
+            "relative_path": "src/model.py",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/src/model.py",
+            "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+          }
+        ],
+        "repo_local_tac_import_manifest": {
+          "discovery": "static_ast_recursive_import_closure",
+          "file_count": 0,
+          "files": [],
+          "module_count": 0,
+          "parse_errors": [],
+          "root_import_modules": [],
+          "runtime_root_name": "bias_refine_cmaes_0061",
+          "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+          "tac_root_relative_path": "src/tac",
+          "unresolved_modules": []
+        },
+        "runtime_content_tree_sha256": "3a40136dc53e2ea0e41cfc7a4082c457f4e92648c71e7c604f851a30de64eea2",
+        "runtime_file_count": 7,
+        "runtime_root": "/Users/adpena/Projects/pact/experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061",
+        "runtime_tree_sha256": "7f5f424a57bcdf59a9f341296c93ca6f868844cb1ce08158349be060d7aea519",
+        "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+        "upstream_evaluate_py": {
+          "bytes": 6005,
+          "relative_path": "evaluate.py",
+          "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+        }
+      },
+      "runtime_tree_sha256": "7f5f424a57bcdf59a9f341296c93ca6f868844cb1ce08158349be060d7aea519",
+      "score_affecting_change_proofs": [
+        "score_affecting_runtime_changed=true"
+      ],
+      "score_affecting_payload_changed": false,
+      "score_affecting_runtime_changed": true,
+      "score_axis": "contest_cuda",
+      "score_claim": false,
+      "score_claim_verified": false,
+      "source_candidate_fields": {
+        "candidate_family": "pr101_nonlocal_bias_runtime_packet",
+        "lane_class": "pr101_nonlocal_sweep_runtime_bias",
+        "source_manifest_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/runtime_packet_manifest.json",
+        "source_paths": [
+          "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/runtime_packet_manifest.json"
+        ]
+      },
+      "source_candidate_id": "bias_refine_cmaes_0061_pr101_nonlocal_bias_runtime_packet",
+      "source_queue_list": "top_k",
+      "source_queue_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/optimizer_queue.pr101_nonlocal_bias.json",
+      "submission_dir": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061",
+      "target_modes": [
+        "contest_exact_eval"
+      ],
+      "target_score_axis": "contest_cuda"
+    }
+  ],
+  "top_k_count": 1,
+  "top_k_forensic": [
+    {
+      "archive_bytes": 178258,
+      "archive_manifest_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/runtime_packet_manifest.json",
+      "archive_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/archive.zip",
+      "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "archive_size_bytes": 178258,
+      "candidate_archive_bytes": 178258,
+      "candidate_archive_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/archive.zip",
+      "candidate_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "candidate_id": "bias_refine_cmaes_0061_pr101_nonlocal_bias_runtime_packet",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "contest_dispatch_verdict": "ready_for_contest_exact_eval_dispatch_after_lane_claim",
+      "cpu_or_proxy_score_not_cuda_evidence": true,
+      "cuda_gap_review_required_before_promotion": true,
+      "deployment_target": "t4_contest_runtime",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [],
+      "dispatch_claim_required_before_gpu_or_remote_eval": true,
+      "evidence_grade": "[exact-eval-ready-no-score]",
+      "evidence_semantics": "byte_closed_archive_runtime_ready_for_exact_eval",
+      "exact_cuda_auth_eval": false,
+      "inflate_sh_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/inflate.sh",
+      "lane_id": "pr101_nonlocal_bias_refine_cmaes_0061_exact_eval",
+      "operator_override_reason": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "readiness_gate_generated_at_utc": "2026-05-14T13:22:23Z",
+      "readiness_gate_tool": "tools/promote_optimizer_candidate_for_exact_eval.py",
+      "ready_for_exact_eval_dispatch": true,
+      "runtime_consumption_proof_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/runtime_consumption_proof.json",
+      "runtime_consumption_proof_schema": "pr101_kaggle_proxy_runtime_consumption_proof_v1",
+      "runtime_consumption_proof_sha256": "c92ca237e73749ea55bf35aab49db0a7804db00e9d390097f5e5659f98ca43b6",
+      "runtime_manifest": {
+        "external_dependency_roots": [],
+        "files": [
+          {
+            "bytes": 2120,
+            "relative_path": "inflate.py",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/inflate.py",
+            "sha256": "6263febb0d11f77a43535cf268979fd11428e3e5699c98dbff500b95a3406088"
+          },
+          {
+            "bytes": 820,
+            "relative_path": "inflate.sh",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/inflate.sh",
+            "sha256": "b1108b4e208bc846653575c024ccd9d91d857c3a956a7ca74597a7a9188a7eaf"
+          },
+          {
+            "bytes": 781,
+            "relative_path": "report.txt",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/report.txt",
+            "sha256": "3508ac761247b7e0a5255d0fcbc0ee58847f480bf65f96d9c360c97c82aeb623"
+          },
+          {
+            "bytes": 6963,
+            "relative_path": "runtime_consumption_proof.json",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/runtime_consumption_proof.json",
+            "sha256": "c92ca237e73749ea55bf35aab49db0a7804db00e9d390097f5e5659f98ca43b6"
+          },
+          {
+            "bytes": 5684,
+            "relative_path": "runtime_packet_manifest.json",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/runtime_packet_manifest.json",
+            "sha256": "77d2151c83f4631b4e3966e60a7dfd10738a6e8b27e7c7cb558d0b091e4d6f73"
+          },
+          {
+            "bytes": 16734,
+            "relative_path": "src/codec.py",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/src/codec.py",
+            "sha256": "637fa5e4b47bfb2595358903dfaafbbc7a7ca48d5f7ccd81c06d1397e060bb72"
+          },
+          {
+            "bytes": 2197,
+            "relative_path": "src/model.py",
+            "repo_relative_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/src/model.py",
+            "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+          }
+        ],
+        "repo_local_tac_import_manifest": {
+          "discovery": "static_ast_recursive_import_closure",
+          "file_count": 0,
+          "files": [],
+          "module_count": 0,
+          "parse_errors": [],
+          "root_import_modules": [],
+          "runtime_root_name": "bias_refine_cmaes_0061",
+          "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+          "tac_root_relative_path": "src/tac",
+          "unresolved_modules": []
+        },
+        "runtime_content_tree_sha256": "3a40136dc53e2ea0e41cfc7a4082c457f4e92648c71e7c604f851a30de64eea2",
+        "runtime_file_count": 7,
+        "runtime_root": "/Users/adpena/Projects/pact/experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061",
+        "runtime_tree_sha256": "7f5f424a57bcdf59a9f341296c93ca6f868844cb1ce08158349be060d7aea519",
+        "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+        "upstream_evaluate_py": {
+          "bytes": 6005,
+          "relative_path": "evaluate.py",
+          "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+        }
+      },
+      "runtime_tree_sha256": "7f5f424a57bcdf59a9f341296c93ca6f868844cb1ce08158349be060d7aea519",
+      "score_affecting_change_proofs": [
+        "score_affecting_runtime_changed=true"
+      ],
+      "score_affecting_payload_changed": false,
+      "score_affecting_runtime_changed": true,
+      "score_claim": false,
+      "score_claim_verified": false,
+      "source_candidate_fields": {
+        "candidate_family": "pr101_nonlocal_bias_runtime_packet",
+        "lane_class": "pr101_nonlocal_sweep_runtime_bias",
+        "source_manifest_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/runtime_packet_manifest.json",
+        "source_paths": [
+          "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061/runtime_packet_manifest.json"
+        ]
+      },
+      "source_candidate_id": "bias_refine_cmaes_0061_pr101_nonlocal_bias_runtime_packet",
+      "source_queue_list": "top_k",
+      "source_queue_path": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/optimizer_queue.pr101_nonlocal_bias.json",
+      "submission_dir": "experiments/results/pr101_nonlocal_sweep_20260514_agent_codex/packets/bias_refine_cmaes_0061",
+      "target_modes": [
+        "contest_exact_eval"
+      ]
+    }
+  ]
+}

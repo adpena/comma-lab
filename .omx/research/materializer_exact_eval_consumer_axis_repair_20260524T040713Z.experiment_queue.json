@@ -1,0 +1,1249 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1
+    },
+    "mode": "paused"
+  },
+  "experiments": [
+    {
+      "id": "materializer_exact_eval_consumer_bias_refine_cmaes_0042_pr101_nonlocal_bias_runtime_packet_747f29b35bdc",
+      "lane_id": null,
+      "metadata": {
+        "candidate_id": "bias_refine_cmaes_0042_pr101_nonlocal_bias_runtime_packet",
+        "consumer_schema": "materializer_exact_eval_consumer.v1",
+        "dispatch_attempted": false,
+        "exact_ready_queue_path": ".omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0042_pr101_nonlocal_bias_runtime_packet_79ee0bf5112c_contest_cuda.exact_ready_queue.json",
+        "lane_id": "pr101_nonlocal_bias_refine_cmaes_0042_exact_eval",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "stable_identity": "archive=b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e:runtime_content=334830f1b3b1a86d70ad56cf51b534d6dbed8a1da9c1813c94e99e614b1b5a3f:runtime_tree=ad2da3f17f8ad95d902468091ed623f012fbd27a5b2b422b769a62ee09d4584e:score_axis=contest_cuda"
+      },
+      "priority": 100,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/claim_lane_dispatch.py",
+            "claim",
+            "--claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--lane-id",
+            "pr101_nonlocal_bias_refine_cmaes_0042_exact_eval",
+            "--platform",
+            "lightning",
+            "--instance-job-id",
+            "materializer_exact_eval_consumer_bias_refine_cmaes_0042_pr101_nonlocal_bias_runtime_packet_747f29b35bdc",
+            "--agent",
+            "codex",
+            "--status",
+            "planned_exact_eval",
+            "--notes",
+            "materializer exact-eval consumer materializer_exact_eval_consumer",
+            "--dry-run"
+          ],
+          "id": "claim_lane_dispatch",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/parallel_dispatch_top_k.py",
+            "--ranked-input",
+            "/Users/adpena/Projects/pact/.omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0042_pr101_nonlocal_bias_runtime_packet_79ee0bf5112c_contest_cuda.exact_ready_queue.json",
+            "--top-k",
+            "1",
+            "--max-concurrency",
+            "1",
+            "--provider",
+            "lightning",
+            "--label-prefix",
+            "materializer_exact_eval_consumer",
+            "--estimated-cost-per-dispatch",
+            "0.3",
+            "--max-total-cost",
+            "3.6",
+            "--dispatch-claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--dry-run",
+            "--active-floor-archive-bytes",
+            "185578",
+            "--active-floor-score",
+            "0.206316386616"
+          ],
+          "id": "dispatch_exact_eval_dry_run",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "claim_lane_dispatch"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "materializer_exact_eval_consumer_bias_refine_cmaes_0042_pr101_nonlocal_bias_runtime_packet_69483e4897ff",
+      "lane_id": null,
+      "metadata": {
+        "candidate_id": "bias_refine_cmaes_0042_pr101_nonlocal_bias_runtime_packet",
+        "consumer_schema": "materializer_exact_eval_consumer.v1",
+        "dispatch_attempted": false,
+        "exact_ready_queue_path": ".omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0042_pr101_nonlocal_bias_runtime_packet_d6690452fa92_contest_cuda.exact_ready_queue.json",
+        "lane_id": "pr101_nonlocal_bias_refine_cmaes_0042_exact_eval",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "stable_identity": "archive=b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e:runtime_content=2689be67c6f5d0e7a4d77b1e367769a677448230776abf61fa9d868255898b60:runtime_tree=6215aba0f2827ca9d86de1babc0096222f2a4f79dd96f1649d89f02b7aa5a18c:score_axis=contest_cuda"
+      },
+      "priority": 100,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/claim_lane_dispatch.py",
+            "claim",
+            "--claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--lane-id",
+            "pr101_nonlocal_bias_refine_cmaes_0042_exact_eval",
+            "--platform",
+            "lightning",
+            "--instance-job-id",
+            "materializer_exact_eval_consumer_bias_refine_cmaes_0042_pr101_nonlocal_bias_runtime_packet_69483e4897ff",
+            "--agent",
+            "codex",
+            "--status",
+            "planned_exact_eval",
+            "--notes",
+            "materializer exact-eval consumer materializer_exact_eval_consumer",
+            "--dry-run"
+          ],
+          "id": "claim_lane_dispatch",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/parallel_dispatch_top_k.py",
+            "--ranked-input",
+            "/Users/adpena/Projects/pact/.omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0042_pr101_nonlocal_bias_runtime_packet_d6690452fa92_contest_cuda.exact_ready_queue.json",
+            "--top-k",
+            "1",
+            "--max-concurrency",
+            "1",
+            "--provider",
+            "lightning",
+            "--label-prefix",
+            "materializer_exact_eval_consumer",
+            "--estimated-cost-per-dispatch",
+            "0.3",
+            "--max-total-cost",
+            "3.6",
+            "--dispatch-claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--dry-run",
+            "--active-floor-archive-bytes",
+            "185578",
+            "--active-floor-score",
+            "0.206316386616"
+          ],
+          "id": "dispatch_exact_eval_dry_run",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "claim_lane_dispatch"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "materializer_exact_eval_consumer_bias_refine_cmaes_0044_pr101_nonlocal_bias_runtime_packet_271488245b24",
+      "lane_id": null,
+      "metadata": {
+        "candidate_id": "bias_refine_cmaes_0044_pr101_nonlocal_bias_runtime_packet",
+        "consumer_schema": "materializer_exact_eval_consumer.v1",
+        "dispatch_attempted": false,
+        "exact_ready_queue_path": ".omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0044_pr101_nonlocal_bias_runtime_packet_0311ea3a7adf_contest_cuda.exact_ready_queue.json",
+        "lane_id": "pr101_nonlocal_bias_refine_cmaes_0044_exact_eval",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "stable_identity": "archive=b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e:runtime_content=65491c7afd9d015cc6d7231f16f4f4ae20e3755057dda32884f0c3698e1f45a0:runtime_tree=d4dcd529fae5f89514d97c58cb3da128413af7055db910f6085977e94e6abde3:score_axis=contest_cuda"
+      },
+      "priority": 100,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/claim_lane_dispatch.py",
+            "claim",
+            "--claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--lane-id",
+            "pr101_nonlocal_bias_refine_cmaes_0044_exact_eval",
+            "--platform",
+            "lightning",
+            "--instance-job-id",
+            "materializer_exact_eval_consumer_bias_refine_cmaes_0044_pr101_nonlocal_bias_runtime_packet_271488245b24",
+            "--agent",
+            "codex",
+            "--status",
+            "planned_exact_eval",
+            "--notes",
+            "materializer exact-eval consumer materializer_exact_eval_consumer",
+            "--dry-run"
+          ],
+          "id": "claim_lane_dispatch",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/parallel_dispatch_top_k.py",
+            "--ranked-input",
+            "/Users/adpena/Projects/pact/.omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0044_pr101_nonlocal_bias_runtime_packet_0311ea3a7adf_contest_cuda.exact_ready_queue.json",
+            "--top-k",
+            "1",
+            "--max-concurrency",
+            "1",
+            "--provider",
+            "lightning",
+            "--label-prefix",
+            "materializer_exact_eval_consumer",
+            "--estimated-cost-per-dispatch",
+            "0.3",
+            "--max-total-cost",
+            "3.6",
+            "--dispatch-claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--dry-run",
+            "--active-floor-archive-bytes",
+            "185578",
+            "--active-floor-score",
+            "0.206316386616"
+          ],
+          "id": "dispatch_exact_eval_dry_run",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "claim_lane_dispatch"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "materializer_exact_eval_consumer_bias_refine_cmaes_0044_pr101_nonlocal_bias_runtime_packet_b9bad15a4da3",
+      "lane_id": null,
+      "metadata": {
+        "candidate_id": "bias_refine_cmaes_0044_pr101_nonlocal_bias_runtime_packet",
+        "consumer_schema": "materializer_exact_eval_consumer.v1",
+        "dispatch_attempted": false,
+        "exact_ready_queue_path": ".omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0044_pr101_nonlocal_bias_runtime_packet_d6f06fd05f24_contest_cuda.exact_ready_queue.json",
+        "lane_id": "pr101_nonlocal_bias_refine_cmaes_0044_exact_eval",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "stable_identity": "archive=b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e:runtime_content=53144b03604bb0212111f6e3850c4255f8b9ea900450eb8121e075de8e3cb989:runtime_tree=c755f811812f349ee2ff93a24f2ab3905b2449aa0afa0a778b4261958d600171:score_axis=contest_cuda"
+      },
+      "priority": 100,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/claim_lane_dispatch.py",
+            "claim",
+            "--claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--lane-id",
+            "pr101_nonlocal_bias_refine_cmaes_0044_exact_eval",
+            "--platform",
+            "lightning",
+            "--instance-job-id",
+            "materializer_exact_eval_consumer_bias_refine_cmaes_0044_pr101_nonlocal_bias_runtime_packet_b9bad15a4da3",
+            "--agent",
+            "codex",
+            "--status",
+            "planned_exact_eval",
+            "--notes",
+            "materializer exact-eval consumer materializer_exact_eval_consumer",
+            "--dry-run"
+          ],
+          "id": "claim_lane_dispatch",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/parallel_dispatch_top_k.py",
+            "--ranked-input",
+            "/Users/adpena/Projects/pact/.omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0044_pr101_nonlocal_bias_runtime_packet_d6f06fd05f24_contest_cuda.exact_ready_queue.json",
+            "--top-k",
+            "1",
+            "--max-concurrency",
+            "1",
+            "--provider",
+            "lightning",
+            "--label-prefix",
+            "materializer_exact_eval_consumer",
+            "--estimated-cost-per-dispatch",
+            "0.3",
+            "--max-total-cost",
+            "3.6",
+            "--dispatch-claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--dry-run",
+            "--active-floor-archive-bytes",
+            "185578",
+            "--active-floor-score",
+            "0.206316386616"
+          ],
+          "id": "dispatch_exact_eval_dry_run",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "claim_lane_dispatch"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "materializer_exact_eval_consumer_bias_refine_cmaes_0046_pr101_nonlocal_bias_runtime_packet_44acee2eb4d0",
+      "lane_id": null,
+      "metadata": {
+        "candidate_id": "bias_refine_cmaes_0046_pr101_nonlocal_bias_runtime_packet",
+        "consumer_schema": "materializer_exact_eval_consumer.v1",
+        "dispatch_attempted": false,
+        "exact_ready_queue_path": ".omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0046_pr101_nonlocal_bias_runtime_packet_4e2a25c60cb2_contest_cuda.exact_ready_queue.json",
+        "lane_id": "pr101_nonlocal_bias_refine_cmaes_0046_exact_eval",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "stable_identity": "archive=b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e:runtime_content=56adf5601e507852995d3beb3458892329c99b7b8b31a02cc56bb331070e972b:runtime_tree=d02af5940febc46231d3361bf695cd378a9a22309f8260aeca512ea37c460a82:score_axis=contest_cuda"
+      },
+      "priority": 100,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/claim_lane_dispatch.py",
+            "claim",
+            "--claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--lane-id",
+            "pr101_nonlocal_bias_refine_cmaes_0046_exact_eval",
+            "--platform",
+            "lightning",
+            "--instance-job-id",
+            "materializer_exact_eval_consumer_bias_refine_cmaes_0046_pr101_nonlocal_bias_runtime_packet_44acee2eb4d0",
+            "--agent",
+            "codex",
+            "--status",
+            "planned_exact_eval",
+            "--notes",
+            "materializer exact-eval consumer materializer_exact_eval_consumer",
+            "--dry-run"
+          ],
+          "id": "claim_lane_dispatch",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/parallel_dispatch_top_k.py",
+            "--ranked-input",
+            "/Users/adpena/Projects/pact/.omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0046_pr101_nonlocal_bias_runtime_packet_4e2a25c60cb2_contest_cuda.exact_ready_queue.json",
+            "--top-k",
+            "1",
+            "--max-concurrency",
+            "1",
+            "--provider",
+            "lightning",
+            "--label-prefix",
+            "materializer_exact_eval_consumer",
+            "--estimated-cost-per-dispatch",
+            "0.3",
+            "--max-total-cost",
+            "3.6",
+            "--dispatch-claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--dry-run",
+            "--active-floor-archive-bytes",
+            "185578",
+            "--active-floor-score",
+            "0.206316386616"
+          ],
+          "id": "dispatch_exact_eval_dry_run",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "claim_lane_dispatch"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "materializer_exact_eval_consumer_bias_refine_cmaes_0046_pr101_nonlocal_bias_runtime_packet_d2eaeafe389c",
+      "lane_id": null,
+      "metadata": {
+        "candidate_id": "bias_refine_cmaes_0046_pr101_nonlocal_bias_runtime_packet",
+        "consumer_schema": "materializer_exact_eval_consumer.v1",
+        "dispatch_attempted": false,
+        "exact_ready_queue_path": ".omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0046_pr101_nonlocal_bias_runtime_packet_4fc6bca2c9cf_contest_cuda.exact_ready_queue.json",
+        "lane_id": "pr101_nonlocal_bias_refine_cmaes_0046_exact_eval",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "stable_identity": "archive=b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e:runtime_content=35cc2e2cc824581b86550199b7445ea1bfe3709e0e61d1123e82652a0f6d48df:runtime_tree=adc97a066038adc334dd574270ccea82c567c194e8c4cc7c9663f6b595dc1811:score_axis=contest_cuda"
+      },
+      "priority": 100,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/claim_lane_dispatch.py",
+            "claim",
+            "--claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--lane-id",
+            "pr101_nonlocal_bias_refine_cmaes_0046_exact_eval",
+            "--platform",
+            "lightning",
+            "--instance-job-id",
+            "materializer_exact_eval_consumer_bias_refine_cmaes_0046_pr101_nonlocal_bias_runtime_packet_d2eaeafe389c",
+            "--agent",
+            "codex",
+            "--status",
+            "planned_exact_eval",
+            "--notes",
+            "materializer exact-eval consumer materializer_exact_eval_consumer",
+            "--dry-run"
+          ],
+          "id": "claim_lane_dispatch",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/parallel_dispatch_top_k.py",
+            "--ranked-input",
+            "/Users/adpena/Projects/pact/.omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0046_pr101_nonlocal_bias_runtime_packet_4fc6bca2c9cf_contest_cuda.exact_ready_queue.json",
+            "--top-k",
+            "1",
+            "--max-concurrency",
+            "1",
+            "--provider",
+            "lightning",
+            "--label-prefix",
+            "materializer_exact_eval_consumer",
+            "--estimated-cost-per-dispatch",
+            "0.3",
+            "--max-total-cost",
+            "3.6",
+            "--dispatch-claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--dry-run",
+            "--active-floor-archive-bytes",
+            "185578",
+            "--active-floor-score",
+            "0.206316386616"
+          ],
+          "id": "dispatch_exact_eval_dry_run",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "claim_lane_dispatch"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "materializer_exact_eval_consumer_bias_refine_cmaes_0047_pr101_nonlocal_bias_runtime_packet_55a6c956ac28",
+      "lane_id": null,
+      "metadata": {
+        "candidate_id": "bias_refine_cmaes_0047_pr101_nonlocal_bias_runtime_packet",
+        "consumer_schema": "materializer_exact_eval_consumer.v1",
+        "dispatch_attempted": false,
+        "exact_ready_queue_path": ".omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0047_pr101_nonlocal_bias_runtime_packet_02c02f0a3937_contest_cuda.exact_ready_queue.json",
+        "lane_id": "pr101_nonlocal_bias_refine_cmaes_0047_exact_eval",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "stable_identity": "archive=b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e:runtime_content=bea76f30bcb3c363ce8228cd54dec6e4f3ad913d73c8900304b84efe6b9e4607:runtime_tree=702973900c73faca8ffdefc34b20c75ec31dac1166c0698bc364eb05c613210b:score_axis=contest_cuda"
+      },
+      "priority": 100,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/claim_lane_dispatch.py",
+            "claim",
+            "--claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--lane-id",
+            "pr101_nonlocal_bias_refine_cmaes_0047_exact_eval",
+            "--platform",
+            "lightning",
+            "--instance-job-id",
+            "materializer_exact_eval_consumer_bias_refine_cmaes_0047_pr101_nonlocal_bias_runtime_packet_55a6c956ac28",
+            "--agent",
+            "codex",
+            "--status",
+            "planned_exact_eval",
+            "--notes",
+            "materializer exact-eval consumer materializer_exact_eval_consumer",
+            "--dry-run"
+          ],
+          "id": "claim_lane_dispatch",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/parallel_dispatch_top_k.py",
+            "--ranked-input",
+            "/Users/adpena/Projects/pact/.omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0047_pr101_nonlocal_bias_runtime_packet_02c02f0a3937_contest_cuda.exact_ready_queue.json",
+            "--top-k",
+            "1",
+            "--max-concurrency",
+            "1",
+            "--provider",
+            "lightning",
+            "--label-prefix",
+            "materializer_exact_eval_consumer",
+            "--estimated-cost-per-dispatch",
+            "0.3",
+            "--max-total-cost",
+            "3.6",
+            "--dispatch-claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--dry-run",
+            "--active-floor-archive-bytes",
+            "185578",
+            "--active-floor-score",
+            "0.206316386616"
+          ],
+          "id": "dispatch_exact_eval_dry_run",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "claim_lane_dispatch"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "materializer_exact_eval_consumer_bias_refine_cmaes_0047_pr101_nonlocal_bias_runtime_packet_71631b13d0c9",
+      "lane_id": null,
+      "metadata": {
+        "candidate_id": "bias_refine_cmaes_0047_pr101_nonlocal_bias_runtime_packet",
+        "consumer_schema": "materializer_exact_eval_consumer.v1",
+        "dispatch_attempted": false,
+        "exact_ready_queue_path": ".omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0047_pr101_nonlocal_bias_runtime_packet_c8301b383067_contest_cuda.exact_ready_queue.json",
+        "lane_id": "pr101_nonlocal_bias_refine_cmaes_0047_exact_eval",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "stable_identity": "archive=b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e:runtime_content=bd64fa8cc1405db9127f55bcde58f1ef5a5a46400f51e7ea6c50e01fb3927f2b:runtime_tree=8ddcecfb9008d7b6c23944579099ca4a8a5915431ef61de85d17372b19f1e5ce:score_axis=contest_cuda"
+      },
+      "priority": 100,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/claim_lane_dispatch.py",
+            "claim",
+            "--claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--lane-id",
+            "pr101_nonlocal_bias_refine_cmaes_0047_exact_eval",
+            "--platform",
+            "lightning",
+            "--instance-job-id",
+            "materializer_exact_eval_consumer_bias_refine_cmaes_0047_pr101_nonlocal_bias_runtime_packet_71631b13d0c9",
+            "--agent",
+            "codex",
+            "--status",
+            "planned_exact_eval",
+            "--notes",
+            "materializer exact-eval consumer materializer_exact_eval_consumer",
+            "--dry-run"
+          ],
+          "id": "claim_lane_dispatch",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/parallel_dispatch_top_k.py",
+            "--ranked-input",
+            "/Users/adpena/Projects/pact/.omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0047_pr101_nonlocal_bias_runtime_packet_c8301b383067_contest_cuda.exact_ready_queue.json",
+            "--top-k",
+            "1",
+            "--max-concurrency",
+            "1",
+            "--provider",
+            "lightning",
+            "--label-prefix",
+            "materializer_exact_eval_consumer",
+            "--estimated-cost-per-dispatch",
+            "0.3",
+            "--max-total-cost",
+            "3.6",
+            "--dispatch-claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--dry-run",
+            "--active-floor-archive-bytes",
+            "185578",
+            "--active-floor-score",
+            "0.206316386616"
+          ],
+          "id": "dispatch_exact_eval_dry_run",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "claim_lane_dispatch"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "materializer_exact_eval_consumer_bias_refine_cmaes_0047_pr101_nonlocal_bias_runtime_packet_04b1d2f155ce",
+      "lane_id": null,
+      "metadata": {
+        "candidate_id": "bias_refine_cmaes_0047_pr101_nonlocal_bias_runtime_packet",
+        "consumer_schema": "materializer_exact_eval_consumer.v1",
+        "dispatch_attempted": false,
+        "exact_ready_queue_path": ".omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0047_pr101_nonlocal_bias_runtime_packet_e4a8c3d4a6a9_contest_cuda.exact_ready_queue.json",
+        "lane_id": "pr101_nonlocal_bias_refine_cmaes_0047_exact_eval",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "stable_identity": "archive=b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e:runtime_content=27b0691a9b27eec61b21e66b03a07ea8c38fe9c0e662a9aadc046641bf9546b9:runtime_tree=3bbf7ec3b66322478a74cd72bdc04b931c1d943cbb31e66134124bcdea248269:score_axis=contest_cuda"
+      },
+      "priority": 100,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/claim_lane_dispatch.py",
+            "claim",
+            "--claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--lane-id",
+            "pr101_nonlocal_bias_refine_cmaes_0047_exact_eval",
+            "--platform",
+            "lightning",
+            "--instance-job-id",
+            "materializer_exact_eval_consumer_bias_refine_cmaes_0047_pr101_nonlocal_bias_runtime_packet_04b1d2f155ce",
+            "--agent",
+            "codex",
+            "--status",
+            "planned_exact_eval",
+            "--notes",
+            "materializer exact-eval consumer materializer_exact_eval_consumer",
+            "--dry-run"
+          ],
+          "id": "claim_lane_dispatch",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/parallel_dispatch_top_k.py",
+            "--ranked-input",
+            "/Users/adpena/Projects/pact/.omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0047_pr101_nonlocal_bias_runtime_packet_e4a8c3d4a6a9_contest_cuda.exact_ready_queue.json",
+            "--top-k",
+            "1",
+            "--max-concurrency",
+            "1",
+            "--provider",
+            "lightning",
+            "--label-prefix",
+            "materializer_exact_eval_consumer",
+            "--estimated-cost-per-dispatch",
+            "0.3",
+            "--max-total-cost",
+            "3.6",
+            "--dispatch-claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--dry-run",
+            "--active-floor-archive-bytes",
+            "185578",
+            "--active-floor-score",
+            "0.206316386616"
+          ],
+          "id": "dispatch_exact_eval_dry_run",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "claim_lane_dispatch"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "materializer_exact_eval_consumer_bias_refine_cmaes_0061_pr101_nonlocal_bias_runtime_packet_f5ac3c839c22",
+      "lane_id": null,
+      "metadata": {
+        "candidate_id": "bias_refine_cmaes_0061_pr101_nonlocal_bias_runtime_packet",
+        "consumer_schema": "materializer_exact_eval_consumer.v1",
+        "dispatch_attempted": false,
+        "exact_ready_queue_path": ".omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0061_pr101_nonlocal_bias_runtime_packet_d4cf97469ba3_contest_cuda.exact_ready_queue.json",
+        "lane_id": "pr101_nonlocal_bias_refine_cmaes_0061_exact_eval",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "stable_identity": "archive=b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e:runtime_content=3a40136dc53e2ea0e41cfc7a4082c457f4e92648c71e7c604f851a30de64eea2:runtime_tree=7f5f424a57bcdf59a9f341296c93ca6f868844cb1ce08158349be060d7aea519:score_axis=contest_cuda"
+      },
+      "priority": 100,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/claim_lane_dispatch.py",
+            "claim",
+            "--claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--lane-id",
+            "pr101_nonlocal_bias_refine_cmaes_0061_exact_eval",
+            "--platform",
+            "lightning",
+            "--instance-job-id",
+            "materializer_exact_eval_consumer_bias_refine_cmaes_0061_pr101_nonlocal_bias_runtime_packet_f5ac3c839c22",
+            "--agent",
+            "codex",
+            "--status",
+            "planned_exact_eval",
+            "--notes",
+            "materializer exact-eval consumer materializer_exact_eval_consumer",
+            "--dry-run"
+          ],
+          "id": "claim_lane_dispatch",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/parallel_dispatch_top_k.py",
+            "--ranked-input",
+            "/Users/adpena/Projects/pact/.omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0061_pr101_nonlocal_bias_runtime_packet_d4cf97469ba3_contest_cuda.exact_ready_queue.json",
+            "--top-k",
+            "1",
+            "--max-concurrency",
+            "1",
+            "--provider",
+            "lightning",
+            "--label-prefix",
+            "materializer_exact_eval_consumer",
+            "--estimated-cost-per-dispatch",
+            "0.3",
+            "--max-total-cost",
+            "3.6",
+            "--dispatch-claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--dry-run",
+            "--active-floor-archive-bytes",
+            "185578",
+            "--active-floor-score",
+            "0.206316386616"
+          ],
+          "id": "dispatch_exact_eval_dry_run",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "claim_lane_dispatch"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "materializer_exact_eval_consumer_bias_refine_cmaes_0062_pr101_nonlocal_bias_runtime_packet_2f3b63d5a27a",
+      "lane_id": null,
+      "metadata": {
+        "candidate_id": "bias_refine_cmaes_0062_pr101_nonlocal_bias_runtime_packet",
+        "consumer_schema": "materializer_exact_eval_consumer.v1",
+        "dispatch_attempted": false,
+        "exact_ready_queue_path": ".omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0062_pr101_nonlocal_bias_runtime_packet_1eb959cd0e84_contest_cuda.exact_ready_queue.json",
+        "lane_id": "pr101_nonlocal_bias_refine_cmaes_0062_exact_eval",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "stable_identity": "archive=b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e:runtime_content=7659acdcc472987b5bc977424703afad7ac9379504d8dfdbc9d2b447201ac524:runtime_tree=317d9bb101c0dca0854dcb334fc05172315b82a982eb09d93830bc005229738d:score_axis=contest_cuda"
+      },
+      "priority": 100,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/claim_lane_dispatch.py",
+            "claim",
+            "--claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--lane-id",
+            "pr101_nonlocal_bias_refine_cmaes_0062_exact_eval",
+            "--platform",
+            "lightning",
+            "--instance-job-id",
+            "materializer_exact_eval_consumer_bias_refine_cmaes_0062_pr101_nonlocal_bias_runtime_packet_2f3b63d5a27a",
+            "--agent",
+            "codex",
+            "--status",
+            "planned_exact_eval",
+            "--notes",
+            "materializer exact-eval consumer materializer_exact_eval_consumer",
+            "--dry-run"
+          ],
+          "id": "claim_lane_dispatch",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/parallel_dispatch_top_k.py",
+            "--ranked-input",
+            "/Users/adpena/Projects/pact/.omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0062_pr101_nonlocal_bias_runtime_packet_1eb959cd0e84_contest_cuda.exact_ready_queue.json",
+            "--top-k",
+            "1",
+            "--max-concurrency",
+            "1",
+            "--provider",
+            "lightning",
+            "--label-prefix",
+            "materializer_exact_eval_consumer",
+            "--estimated-cost-per-dispatch",
+            "0.3",
+            "--max-total-cost",
+            "3.6",
+            "--dispatch-claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--dry-run",
+            "--active-floor-archive-bytes",
+            "185578",
+            "--active-floor-score",
+            "0.206316386616"
+          ],
+          "id": "dispatch_exact_eval_dry_run",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "claim_lane_dispatch"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "materializer_exact_eval_consumer_bias_refine_cmaes_0062_pr101_nonlocal_bias_runtime_packet_07c4f60504f1",
+      "lane_id": null,
+      "metadata": {
+        "candidate_id": "bias_refine_cmaes_0062_pr101_nonlocal_bias_runtime_packet",
+        "consumer_schema": "materializer_exact_eval_consumer.v1",
+        "dispatch_attempted": false,
+        "exact_ready_queue_path": ".omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0062_pr101_nonlocal_bias_runtime_packet_4cb5bf03116f_contest_cuda.exact_ready_queue.json",
+        "lane_id": "pr101_nonlocal_bias_refine_cmaes_0062_exact_eval",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "stable_identity": "archive=b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e:runtime_content=e165d674cbb0aaf90c1aedb866d7b6e20ae62c2462292d1dea6c608afb3b4bec:runtime_tree=cd7cb1b01d5750a7357cc23e5d58fa4dfaaf76a05291f69ef02f42c514394d97:score_axis=contest_cuda"
+      },
+      "priority": 100,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/claim_lane_dispatch.py",
+            "claim",
+            "--claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--lane-id",
+            "pr101_nonlocal_bias_refine_cmaes_0062_exact_eval",
+            "--platform",
+            "lightning",
+            "--instance-job-id",
+            "materializer_exact_eval_consumer_bias_refine_cmaes_0062_pr101_nonlocal_bias_runtime_packet_07c4f60504f1",
+            "--agent",
+            "codex",
+            "--status",
+            "planned_exact_eval",
+            "--notes",
+            "materializer exact-eval consumer materializer_exact_eval_consumer",
+            "--dry-run"
+          ],
+          "id": "claim_lane_dispatch",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/parallel_dispatch_top_k.py",
+            "--ranked-input",
+            "/Users/adpena/Projects/pact/.omx/research/exact_ready_score_axis_repair_20260524T040713Z/bias_refine_cmaes_0062_pr101_nonlocal_bias_runtime_packet_4cb5bf03116f_contest_cuda.exact_ready_queue.json",
+            "--top-k",
+            "1",
+            "--max-concurrency",
+            "1",
+            "--provider",
+            "lightning",
+            "--label-prefix",
+            "materializer_exact_eval_consumer",
+            "--estimated-cost-per-dispatch",
+            "0.3",
+            "--max-total-cost",
+            "3.6",
+            "--dispatch-claims-path",
+            "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+            "--dry-run",
+            "--active-floor-archive-bytes",
+            "185578",
+            "--active-floor-score",
+            "0.206316386616"
+          ],
+          "id": "dispatch_exact_eval_dry_run",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [
+            "claim_lane_dispatch"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": []
+    }
+  ],
+  "queue_id": "materializer_exact_eval_consumer_queue",
+  "schema": "experiment_queue.v1"
+}

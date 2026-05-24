@@ -1074,6 +1074,16 @@ def _classify_blockers(blockers: Iterable[object]) -> tuple[str, str, list[str],
             ],
             terminal_evidence,
         )
+    if blocker_text == ["score_axis_missing"]:
+        return (
+            "retracted_legacy_exact_ready_score_axis_missing",
+            "use_axis_explicit_repair_copy_before_dispatch",
+            [
+                "Do not dispatch the legacy raw queue row without explicit score-axis metadata.",
+                "Reactivate through an axis-explicit non-destructive repair copy and fresh exact-ready audit.",
+            ],
+            None,
+        )
     if any(blocker.startswith("ready_row_runtime_tree_sha_mismatch:") for blocker in blocker_text):
         return (
             "retracted_stale_live_runtime_metadata",

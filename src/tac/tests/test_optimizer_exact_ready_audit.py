@@ -244,6 +244,34 @@ def test_suppression_manifest_matches_terminal_score_floor_drift(
     assert suppressed_row["suppression"]["match_basis"] == "terminal_score_semantic"
 
 
+def test_suppression_manifest_classifies_axis_only_legacy_rows() -> None:
+    manifest = build_suppression_manifest(
+        {
+            "schema": "optimizer_exact_ready_queue_terminal_evidence_audit_v1",
+            "queues": [
+                {
+                    "queue_path": "experiments/results/legacy/exact_ready_queue.json",
+                    "stale_ready_rows": [
+                        {
+                            "candidate_id": "legacy",
+                            "lane_id": "lane_legacy",
+                            "archive_sha256": "a" * 64,
+                            "runtime_tree_sha256": "b" * 64,
+                            "score_affecting_runtime_changed": True,
+                            "blockers": ["score_axis_missing"],
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    entry = manifest["entries"][0]
+    assert entry["classification"] == "retracted_legacy_exact_ready_score_axis_missing"
+    assert entry["operator_action"] == "use_axis_explicit_repair_copy_before_dispatch"
+    assert entry["dispatch_allowed"] is False
+
+
 def test_audit_cli_applies_default_suppression_manifest(tmp_path: Path) -> None:
     repo = tmp_path.resolve()
     archive_sha = "9" * 64

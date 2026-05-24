@@ -61,6 +61,7 @@ MATERIALIZER_HANDOFF_SCAN_ROOTS = (
     REPO_ROOT / ".omx" / "research",
 )
 MATERIALIZER_EXACT_EVAL_CONSUMER_TOOL = "tools/build_materializer_exact_eval_consumer.py"
+EXACT_READY_SCORE_AXIS_REPAIR_TOOL = "tools/repair_exact_ready_score_axis.py"
 EXACT_READY_SUPPRESSION_MANIFEST = (
     REPO_ROOT / ".omx/research/exact_ready_queue_retraction_manifest_20260510_codex.json"
 )
@@ -98,6 +99,9 @@ from tac.optimizer.exact_ready_audit import (  # noqa: E402
     audit_exact_ready_queues,
     discover_exact_ready_queues,
     load_suppression_manifest,
+)
+from tac.optimizer.exact_ready_axis_repair import (  # noqa: E402
+    plan_exact_ready_score_axis_repairs_from_audit,
 )
 from tac.score_target_filter import (  # noqa: E402
     DEFAULT_SCORE_LOWERING_TARGET,
@@ -690,6 +694,92 @@ def _format_exact_ready_queue_audit() -> str:
     return "\n".join(lines)
 
 
+def _exact_ready_score_axis_repair_summary() -> dict[str, object]:
+    audit = _exact_ready_queue_audit()
+    plan = plan_exact_ready_score_axis_repairs_from_audit(audit)
+    rows = plan.get("rows")
+    row_list = rows if isinstance(rows, list) else []
+    repairable_rows = [
+        row
+        for row in row_list
+        if isinstance(row, dict) and row.get("status") == "repairable"
+    ]
+    skipped_rows = [
+        row
+        for row in row_list
+        if isinstance(row, dict) and row.get("status") != "repairable"
+    ]
+    skip_reasons = _unique_strings(
+        [row.get("skip_reason") for row in skipped_rows if row.get("skip_reason")]
+    )
+    if repairable_rows:
+        next_command = (
+            "UTC=$(date -u +%Y%m%dT%H%M%SZ); "
+            f".venv/bin/python {EXACT_READY_SCORE_AXIS_REPAIR_TOOL} "
+            "--out-dir .omx/research/exact_ready_score_axis_repair_${UTC} "
+            "--report-out .omx/research/exact_ready_score_axis_repair_${UTC}.json"
+            " --write-repaired-queues"
+        )
+    else:
+        next_command = f".venv/bin/python {EXACT_READY_SCORE_AXIS_REPAIR_TOOL} --help"
+    return {
+        "schema": "pact.exact_ready_score_axis_repair_summary.v1",
+        "repair_tool": EXACT_READY_SCORE_AXIS_REPAIR_TOOL,
+        "repair_tool_exists": (REPO_ROOT / EXACT_READY_SCORE_AXIS_REPAIR_TOOL).is_file(),
+        "status": "REPAIRABLE" if repairable_rows else "NO_AXIS_ONLY_REPAIR",
+        "reason": (
+            f"{len(repairable_rows)} score-axis-only legacy row(s) can be copied "
+            "through the reviewed repair tool"
+            if repairable_rows
+            else "no unresolved exact-ready row is blocked only by missing score axis"
+        ),
+        "queue_count": plan.get("queue_count"),
+        "stale_ready_row_count": plan.get("stale_ready_row_count"),
+        "repairable_or_repaired_count": plan.get("repairable_or_repaired_count"),
+        "skipped_count": plan.get("skipped_count"),
+        "automatic_mutation_count": plan.get("automatic_mutation_count"),
+        "skip_reasons": skip_reasons[:8],
+        "repairable_rows": repairable_rows[:8],
+        "next_command": next_command,
+        **_false_authority_fields(),
+    }
+
+
+def _format_exact_ready_score_axis_repairs() -> str:
+    payload = _exact_ready_score_axis_repair_summary()
+    lines = [
+        f"status: {payload['status']} — {payload['reason']}",
+        f"repair tool: {payload['repair_tool']} present={payload['repair_tool_exists']}",
+        (
+            "counts: "
+            f"queues={payload['queue_count']} "
+            f"stale_rows={payload['stale_ready_row_count']} "
+            f"repairable={payload['repairable_or_repaired_count']} "
+            f"skipped={payload['skipped_count']} "
+            f"automatic_mutations={payload['automatic_mutation_count']}"
+        ),
+    ]
+    repairable_rows = payload.get("repairable_rows")
+    if isinstance(repairable_rows, list) and repairable_rows:
+        lines.append("repairable rows:")
+        for row in repairable_rows[:5]:
+            if not isinstance(row, dict):
+                continue
+            lines.append(
+                "  - "
+                f"{row.get('source_queue_path')} :: {row.get('candidate_id')} "
+                f"axis={row.get('score_axis')}"
+            )
+    skip_reasons = payload.get("skip_reasons")
+    if isinstance(skip_reasons, list) and skip_reasons:
+        lines.append("first skip reasons:")
+        for reason in skip_reasons[:6]:
+            lines.append(f"  - {reason}")
+    lines.append("next command:")
+    lines.append(f"  {payload['next_command']}")
+    return "\n".join(lines)
+
+
 def _false_authority_fields() -> dict[str, bool]:
     return {
         "score_claim": False,
@@ -778,6 +868,30 @@ def _row_exact_ready_queue_paths(rows: object) -> list[str]:
     )
 
 
+def _row_values(rows: object, key: str) -> list[str]:
+    if not isinstance(rows, list):
+        return []
+    return _unique_strings(
+        [
+            row.get(key)
+            for row in rows
+            if isinstance(row, dict) and row.get(key)
+        ]
+    )
+
+
+def _row_values_where(rows: object, key: str, truthy_key: str) -> list[str]:
+    if not isinstance(rows, list):
+        return []
+    return _unique_strings(
+        [
+            row.get(key)
+            for row in rows
+            if isinstance(row, dict) and row.get(truthy_key) is True and row.get(key)
+        ]
+    )
+
+
 def _row_blockers(rows: object, *, limit: int = 12) -> list[str]:
     if not isinstance(rows, list):
         return []
@@ -849,6 +963,22 @@ def _materializer_handoff_summary_row(path: Path) -> dict[str, object]:
                 payload.get("duplicate_candidate_count")
             ),
             "experiment_queue_id": str(payload.get("experiment_queue_id") or ""),
+            "candidate_ids": _row_values(consumer_rows, "candidate_id"),
+            "archive_sha256s": _row_values(consumer_rows, "archive_sha256"),
+            "authorized_stable_identities": _row_values_where(
+                consumer_rows,
+                "stable_identity",
+                "authorized_for_paused_dry_run_queue",
+            ),
+            "blocked_stable_identities": _unique_strings(
+                [
+                    row.get("stable_identity") or row.get("candidate_id")
+                    for row in consumer_rows
+                    if isinstance(row, dict) and row.get("blockers")
+                ]
+                if isinstance(consumer_rows, list)
+                else []
+            ),
             "exact_ready_queue_paths": _row_exact_ready_queue_paths(consumer_rows),
             "hard_plan_blockers": [
                 str(item) for item in payload.get("hard_plan_blockers", []) if str(item)
@@ -915,6 +1045,16 @@ def _materializer_row_recency(row: dict[str, object]) -> int:
 def _materializer_row_identity(row: dict[str, object]) -> str:
     kind = str(row.get("kind") or "")
     experiment_queue_id = str(row.get("experiment_queue_id") or "").strip()
+    candidate_ids = row.get("candidate_ids")
+    archive_sha256s = row.get("archive_sha256s")
+    if isinstance(candidate_ids, list) and candidate_ids:
+        candidates = ",".join(str(item) for item in candidate_ids if str(item))
+        archives = (
+            ",".join(str(item) for item in archive_sha256s if str(item))
+            if isinstance(archive_sha256s, list)
+            else ""
+        )
+        return f"{kind}:queue={experiment_queue_id}:candidates={candidates}:archives={archives}"
     exact_ready_paths = row.get("exact_ready_queue_paths")
     if isinstance(exact_ready_paths, list):
         joined = ",".join(str(path) for path in exact_ready_paths if str(path))
@@ -1008,12 +1148,38 @@ def _materializer_exact_ready_handoff_summary() -> dict[str, object]:
     consumer_authorized = sum(
         _safe_int(row.get("authorized_candidate_count")) for row in consumer_rows
     )
+    unique_consumer_authorized = _unique_strings(
+        [
+            identity
+            for row in consumer_rows
+            for identity in (
+                row.get("authorized_stable_identities", [])
+                if isinstance(row.get("authorized_stable_identities"), list)
+                else []
+            )
+        ]
+    )
+    if unique_consumer_authorized:
+        consumer_authorized = len(unique_consumer_authorized)
     dispatch_authorized = sum(
         _safe_int(row.get("authorized_candidate_count")) for row in dispatch_rows
     )
     blocked_count = sum(
         _safe_int(row.get("blocked_candidate_count")) for row in consumer_rows
     )
+    unique_consumer_blocked = _unique_strings(
+        [
+            identity
+            for row in consumer_rows
+            for identity in (
+                row.get("blocked_stable_identities", [])
+                if isinstance(row.get("blocked_stable_identities"), list)
+                else []
+            )
+        ]
+    )
+    if unique_consumer_blocked:
+        blocked_count = len(unique_consumer_blocked)
     blocked_count += sum(
         _safe_int(row.get("blocked_candidate_count")) for row in dispatch_rows
     )
@@ -1079,9 +1245,9 @@ def _materializer_exact_ready_handoff_summary() -> dict[str, object]:
         ),
         "consumer_report_count": len(consumer_rows),
         "consumer_authorized_candidate_count": consumer_authorized,
-        "consumer_blocked_candidate_count": sum(
-            _safe_int(row.get("blocked_candidate_count")) for row in consumer_rows
-        ),
+        "consumer_blocked_candidate_count": len(unique_consumer_blocked)
+        if unique_consumer_blocked
+        else sum(_safe_int(row.get("blocked_candidate_count")) for row in consumer_rows),
         "consumer_duplicate_candidate_count": sum(
             _safe_int(row.get("duplicate_candidate_count")) for row in consumer_rows
         ),
@@ -2877,6 +3043,9 @@ def _packet_is_terminal(packet: dict[str, object]) -> bool:
 def _dispatch_readiness() -> dict[str, object]:
     """Structured per-phase dispatch readiness used by JSON and human output."""
     exact_ready_audit = _exact_ready_queue_audit()
+    exact_ready_repairs = plan_exact_ready_score_axis_repairs_from_audit(
+        exact_ready_audit
+    )
     materializer_handoffs = _materializer_exact_ready_handoff_summary()
     stale_rows = int(exact_ready_audit.get("stale_ready_row_count") or 0)
     exact_packets = _exact_eval_packet_summaries()
@@ -2942,6 +3111,20 @@ def _dispatch_readiness() -> dict[str, object]:
             "reason": queue_reason,
             "stale_ready_row_count": stale_rows,
         },
+        "phase_1_exact_ready_score_axis_repairs": {
+            "status": "REPAIRABLE"
+            if int(exact_ready_repairs.get("repairable_or_repaired_count") or 0)
+            else "NO_AXIS_ONLY_REPAIR",
+            "reason": (
+                f"{exact_ready_repairs.get('repairable_or_repaired_count')} row(s) "
+                "are score-axis-only repair candidates"
+            )
+            if int(exact_ready_repairs.get("repairable_or_repaired_count") or 0)
+            else "no unresolved exact-ready row is axis-only repairable",
+            "repairable_or_repaired_count": exact_ready_repairs.get(
+                "repairable_or_repaired_count"
+            ),
+        },
         "phase_1_materializer_exact_ready_handoffs": materializer_handoffs,
         "phase_4_gated_next_tick": {
             "status": "GATED",
@@ -2976,6 +3159,11 @@ def _format_dispatch_readiness() -> str:
     lines.append(
         "  Phase 1 exact-ready queue hygiene:          "
         f"{queue['status']} — {queue['reason']}"
+    )
+    repairs = readiness["phase_1_exact_ready_score_axis_repairs"]
+    lines.append(
+        "  Phase 1 exact-ready score-axis repairs:     "
+        f"{repairs['status']} — {repairs['reason']}"
     )
     handoffs = readiness["phase_1_materializer_exact_ready_handoffs"]
     lines.append(
@@ -3072,6 +3260,9 @@ def main(argv: list[str] | None = None) -> int:
         if not args.skip_provider_readiness:
             out["provider_readiness"] = _provider_readiness(refresh=args.refresh_provider_readiness)
         out["exact_ready_queue_audit"] = _exact_ready_queue_audit()
+        out["exact_ready_score_axis_repairs"] = (
+            _exact_ready_score_axis_repair_summary()
+        )
         out["materializer_exact_ready_handoffs"] = (
             _materializer_exact_ready_handoff_summary()
         )
@@ -3152,6 +3343,10 @@ def main(argv: list[str] | None = None) -> int:
         parts.append(_section(
             "Phase 1 exact-ready queues — terminal-evidence audit",
             _format_exact_ready_queue_audit(),
+        ))
+        parts.append(_section(
+            "Phase 1 exact-ready queues — score-axis repair planner",
+            _format_exact_ready_score_axis_repairs(),
         ))
         parts.append(_section(
             "Phase 1 materializer exact-ready handoffs — queue-owned bridge/consumer state",

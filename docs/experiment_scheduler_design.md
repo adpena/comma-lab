@@ -210,6 +210,21 @@ the paused dry-run queue only after the exact-dispatch authority path says it
 is ready; score, promotion, rank/kill, and contest authority still require the
 later contest CPU/CUDA auth result artifact.
 
+## Exact-ready score-axis repair
+
+Legacy exact-ready queues that predate explicit `score_axis` metadata are not
+hand-edited in place. `tools/repair_exact_ready_score_axis.py` audits each
+source queue, copies only rows whose sole blocker is `score_axis_missing`, and
+then reruns the exact-ready audit on each copy. The source queue remains
+unchanged, the report keeps score/promotion/rank/dispatch authority false, and
+copy writing requires `--write-repaired-queues`.
+
+This repair is metadata hygiene, not dispatch authority. Repaired queues still
+flow through `tools/build_materializer_exact_eval_consumer.py` or the normal
+exact-dispatch authority path, where runtime-consumption proof, runtime-content
+custody, active claims, and terminal result-review blockers can still reject
+the row.
+
 ## Implementation plan
 
 1. Phase 1 (now): Shell script orchestrator (`run_endgame.sh`) — DONE

@@ -1042,7 +1042,7 @@ def test_materializer_exact_ready_handoff_summary_supersedes_old_queue_reports(
             "experiment_queue_id": "same_queue",
             "rows": [
                 {
-                    "candidate_id": "old",
+                    "candidate_id": "same_candidate",
                     "exact_ready_queue_path": "experiments/results/run/same.json",
                 }
             ],
@@ -1058,7 +1058,7 @@ def test_materializer_exact_ready_handoff_summary_supersedes_old_queue_reports(
             "experiment_queue_id": "same_queue",
             "rows": [
                 {
-                    "candidate_id": "new",
+                    "candidate_id": "same_candidate",
                     "exact_ready_queue_path": "experiments/results/run/same.json",
                 }
             ],
@@ -1134,6 +1134,62 @@ def test_materializer_exact_ready_handoff_summary_keeps_reused_queue_id_inputs_d
         "experiments/results/run_a/input.json",
         "experiments/results/run_b/input.json",
     }
+
+
+def test_materializer_exact_ready_handoff_summary_supersedes_old_candidate_reports(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    root = tmp_path / "experiments" / "results"
+    old_report = _write_json(
+        root / "old" / "consumer_report.json",
+        {
+            "schema": "materializer_exact_eval_consumer.v1",
+            "authorized_candidate_count": 0,
+            "blocked_candidate_count": 1,
+            "duplicate_candidate_count": 0,
+            "experiment_queue_id": "same_queue",
+            "rows": [
+                {
+                    "candidate_id": "same_candidate",
+                    "archive_sha256": "a" * 64,
+                    "blockers": ["old_blocker"],
+                    "exact_ready_queue_path": "experiments/results/old/input.json",
+                }
+            ],
+        },
+    )
+    new_report = _write_json(
+        root / "new" / "consumer_report.json",
+        {
+            "schema": "materializer_exact_eval_consumer.v1",
+            "authorized_candidate_count": 1,
+            "blocked_candidate_count": 0,
+            "duplicate_candidate_count": 0,
+            "experiment_queue_id": "same_queue",
+            "rows": [
+                {
+                    "candidate_id": "same_candidate",
+                    "archive_sha256": "a" * 64,
+                    "exact_ready_queue_path": "experiments/results/new/input.json",
+                }
+            ],
+        },
+    )
+    os.utime(old_report, ns=(1_000, 1_000))
+    os.utime(new_report, ns=(2_000, 2_000))
+    monkeypatch.setattr(mod, "MATERIALIZER_HANDOFF_SCAN_ROOTS", (root,))
+
+    summary = mod._materializer_exact_ready_handoff_summary()
+
+    assert summary["consumer_report_count"] == 1
+    assert summary["consumer_authorized_candidate_count"] == 1
+    assert summary["consumer_blocked_candidate_count"] == 0
+    assert summary["top_blockers"] == []
+    assert summary["superseded_handoff_artifact_count"] == 1
+    assert summary["recent_exact_ready_queue_paths"] == ["experiments/results/new/input.json"]
 
 
 def test_briefing_json_each_phase_has_n_total_or_n_configs():
