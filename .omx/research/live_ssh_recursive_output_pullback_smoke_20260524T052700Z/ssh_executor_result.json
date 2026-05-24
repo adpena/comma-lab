@@ -1,0 +1,410 @@
+{
+  "allow_noncanonical_state": false,
+  "allow_orphaned_state": false,
+  "artifact_path_map_count": 1,
+  "artifact_shared_path_rationale": null,
+  "blocked_count": 0,
+  "charged_bits_changed": false,
+  "claim_refused_count": 0,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dirty_remote_git_rationale": null,
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "ssh_executor_result_is_not_score_authority"
+  ],
+  "exact_cuda_auth_eval": false,
+  "execute": true,
+  "executed_count": 1,
+  "execution_mode": "bounded_parallel_ssh_executor",
+  "failure_count": 0,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "max_workers": 1,
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "live_ssh_recursive_output_pullback_smoke_20260524T052700Z",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "require_artifact_mobility": true,
+  "require_clean_remote_git": true,
+  "schema": "staircase_ssh_execution_result.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selected_count": 1,
+  "state_path": ".omx/state/experiment_queue_live_ssh_recursive_output_pullback_smoke_20260524T052700Z.sqlite",
+  "success_count": 1,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "task_results": [
+    {
+      "artifact_mobility": {
+        "attempted": true,
+        "elapsed_seconds": 0.504364957974758,
+        "execution_error": null,
+        "mode": "rsync_pull",
+        "pullbacks": [
+          {
+            "argv": [
+              "rsync",
+              "-a",
+              "-e",
+              "ssh -o ConnectTimeout=10 -o BatchMode=yes -o ConnectionAttempts=1 -o ServerAliveInterval=15 -o ServerAliveCountMax=2",
+              "--",
+              "tertiary:/Users/adpena/Projects/pact/.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree/result.json",
+              "/Users/adpena/Projects/pact/.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree/result.json"
+            ],
+            "elapsed_seconds": 0.2455856670276262,
+            "local_manifest": {
+              "bytes": 174,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_ns": 1779599972000000000,
+              "path": ".omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree/result.json",
+              "schema": "staircase_ssh_pullback_artifact_manifest.v1",
+              "sha256": "5c744daac88958ac4d1f6e16920dd34959a53edd18f42c7b048b15eb7bc9b695"
+            },
+            "local_manifest_sha256": "77efc0cad1077e86fb87cf8cf38d574e5a8dac91a2139833a8095e02111c780b",
+            "local_path": "/Users/adpena/Projects/pact/.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree/result.json",
+            "pre_local_manifest": {
+              "exists": false,
+              "is_symlink": false,
+              "path": ".omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree/result.json",
+              "schema": "staircase_ssh_pullback_artifact_manifest.v1"
+            },
+            "pre_local_manifest_sha256": "541e6d243d74068868b49cb65adc9d9a64d85e9883998a312274192be5752096",
+            "recursive": false,
+            "remote_path": "/Users/adpena/Projects/pact/.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree/result.json",
+            "returncode": 0,
+            "stdout": "",
+            "timed_out": false
+          },
+          {
+            "argv": [
+              "rsync",
+              "-a",
+              "--delete",
+              "-e",
+              "ssh -o ConnectTimeout=10 -o BatchMode=yes -o ConnectionAttempts=1 -o ServerAliveInterval=15 -o ServerAliveCountMax=2",
+              "--",
+              "tertiary:/Users/adpena/Projects/pact/.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree/",
+              "/Users/adpena/Projects/pact/.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree/"
+            ],
+            "elapsed_seconds": 0.25838645902695134,
+            "local_manifest": {
+              "bytes": 128,
+              "entries": [
+                {
+                  "is_dir": true,
+                  "is_file": false,
+                  "is_symlink": false,
+                  "path": "nested"
+                },
+                {
+                  "bytes": 25,
+                  "is_dir": false,
+                  "is_file": true,
+                  "is_symlink": false,
+                  "path": "nested/payload.txt",
+                  "sha256": "0f6384910dca654fe3bd9355f66058bf44fd8c24f82a124044542d8b31fd3b61"
+                },
+                {
+                  "bytes": 174,
+                  "is_dir": false,
+                  "is_file": true,
+                  "is_symlink": false,
+                  "path": "result.json",
+                  "sha256": "5c744daac88958ac4d1f6e16920dd34959a53edd18f42c7b048b15eb7bc9b695"
+                }
+              ],
+              "exists": true,
+              "is_dir": true,
+              "is_file": false,
+              "is_symlink": false,
+              "mtime_ns": 1779599972000000000,
+              "path": ".omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree",
+              "recursive_bytes": 199,
+              "recursive_entry_count": 3,
+              "recursive_entry_limit": 10,
+              "recursive_sha256": "84f68f6c43dca2e3114fcb49501529652f1ef937c28967e921276a3ab65eee31",
+              "recursive_truncated": false,
+              "schema": "staircase_ssh_pullback_artifact_manifest.v1"
+            },
+            "local_manifest_sha256": "b9f71cc4e7e5e1475637e6a3a41d02a30837f5674531f6ddd6a626fc18f231fd",
+            "local_path": "/Users/adpena/Projects/pact/.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree",
+            "pre_local_manifest": {
+              "bytes": 128,
+              "entries": [
+                {
+                  "bytes": 174,
+                  "is_dir": false,
+                  "is_file": true,
+                  "is_symlink": false,
+                  "path": "result.json",
+                  "sha256": "5c744daac88958ac4d1f6e16920dd34959a53edd18f42c7b048b15eb7bc9b695"
+                },
+                {
+                  "bytes": 36,
+                  "is_dir": false,
+                  "is_file": true,
+                  "is_symlink": false,
+                  "path": "stale_local_only.txt",
+                  "sha256": "778ad5b4e656bf80d721e75392a4f60de842d44b749a9063eac1c54baf663a9b"
+                }
+              ],
+              "exists": true,
+              "is_dir": true,
+              "is_file": false,
+              "is_symlink": false,
+              "mtime_ns": 1779599972288325688,
+              "path": ".omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree",
+              "recursive_bytes": 210,
+              "recursive_entry_count": 2,
+              "recursive_entry_limit": 10,
+              "recursive_sha256": "d914a0169f9e189106b1d801a98c8106599adfd2cb26d4e97ed245a617dc1ce9",
+              "recursive_truncated": false,
+              "schema": "staircase_ssh_pullback_artifact_manifest.v1"
+            },
+            "pre_local_manifest_sha256": "8f1b68cd36c6badbb798e048ecca9c872563119d859b2aeb632f0e048e118ddb",
+            "recursive": true,
+            "remote_path": "/Users/adpena/Projects/pact/.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree",
+            "returncode": 0,
+            "stdout": "",
+            "timed_out": false
+          }
+        ],
+        "returncode": 0,
+        "schema": "staircase_ssh_artifact_mobility.v1",
+        "succeeded": true,
+        "timed_out": false
+      },
+      "artifact_shared_path_rationale": null,
+      "command": [
+        ".venv/bin/python",
+        "-c",
+        "import json, pathlib; root=pathlib.Path('.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree'); root.mkdir(parents=True, exist_ok=True); (root/'nested').mkdir(exist_ok=True); (root/'nested'/'payload.txt').write_text('remote recursive payload\\n'); (root/'result.json').write_text(json.dumps({'schema':'live_ssh_recursive_output_pullback.v1','score_claim':False,'promotion_eligible':False,'rank_or_kill_eligible':False,'ready_for_exact_eval_dispatch':False}))"
+      ],
+      "dirty_remote_git_rationale": null,
+      "elapsed_seconds": 1.2163407079642639,
+      "executed": true,
+      "execution_error": null,
+      "executor": "ssh_experiment_queue",
+      "failed_postconditions": [],
+      "input_mobility": {
+        "attempted": true,
+        "elapsed_seconds": 0.436060042004101,
+        "execution_error": null,
+        "mode": "rsync_push",
+        "pushes": [
+          {
+            "argv": [
+              "rsync",
+              "-a",
+              "--delete",
+              "-e",
+              "ssh -o ConnectTimeout=10 -o BatchMode=yes -o ConnectionAttempts=1 -o ServerAliveInterval=15 -o ServerAliveCountMax=2",
+              "--",
+              "/Users/adpena/Projects/pact/.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/inputs/directory_bundle/",
+              "tertiary:/Users/adpena/Projects/pact/.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/inputs/directory_bundle/"
+            ],
+            "elapsed_seconds": 0.435858000011649,
+            "local_manifest": {
+              "bytes": 128,
+              "entries": [
+                {
+                  "is_dir": true,
+                  "is_file": false,
+                  "is_symlink": false,
+                  "path": "nested"
+                },
+                {
+                  "bytes": 31,
+                  "is_dir": false,
+                  "is_file": true,
+                  "is_symlink": false,
+                  "path": "nested/payload.bin",
+                  "sha256": "698abbe94ed427192bb92dffb4f8682288ff1f48bb97218d01e935df374eef97"
+                },
+                {
+                  "bytes": 167,
+                  "is_dir": false,
+                  "is_file": true,
+                  "is_symlink": false,
+                  "path": "surface.json",
+                  "sha256": "34e22d3e6b609f573a918de2152c2a8ff01c5dafdc80851fa0abdd7fc3df1e8e"
+                }
+              ],
+              "exists": true,
+              "is_dir": true,
+              "is_file": false,
+              "is_symlink": false,
+              "mtime_ns": 1779599970917519515,
+              "path": ".omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/inputs/directory_bundle",
+              "recursive_bytes": 198,
+              "recursive_entry_count": 3,
+              "recursive_sha256": "859dcaa5ffd9fef88aae827a1b99952057b6bf67ed904e1e7734da15d486a826",
+              "recursive_truncated": false,
+              "schema": "staircase_ssh_input_artifact_manifest.v1"
+            },
+            "local_manifest_sha256": "6fc4d81a3fd9868d1e98686d4a983588dbc75d0b7a82454279f746e0b1c6cc74",
+            "local_path": "/Users/adpena/Projects/pact/.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/inputs/directory_bundle",
+            "mkdir_argv": [
+              "ssh",
+              "-o",
+              "ConnectTimeout=10",
+              "-o",
+              "BatchMode=yes",
+              "tertiary",
+              "mkdir -p /Users/adpena/Projects/pact/.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/inputs/directory_bundle"
+            ],
+            "remote_path": "/Users/adpena/Projects/pact/.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/inputs/directory_bundle",
+            "returncode": 0,
+            "stdout": "",
+            "timed_out": false
+          }
+        ],
+        "returncode": 0,
+        "schema": "staircase_ssh_input_mobility.v1",
+        "succeeded": true,
+        "timed_out": false
+      },
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/ssh_experiment_queue_logs/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/recursive_output_pullback_smoke/remote_materialize/20260524T051931Z_97bbfa2de600c9e8.log",
+      "machine": {
+        "disk_gb": 4.0,
+        "executor": "ssh_experiment_queue",
+        "id": "tertiary_m1_macbook_pro_8gb",
+        "label": "tertiary live recursive output smoke",
+        "memory_gb": 4.0,
+        "remote_repo_root": "/Users/adpena/Projects/pact",
+        "slots": {
+          "local_cpu": 1
+        },
+        "ssh_target": "tertiary",
+        "tags": [
+          "ssh",
+          "smoke",
+          "recursive-output"
+        ]
+      },
+      "parent_pid": 35826,
+      "postcondition_errors": [],
+      "remote_command": "cd /Users/adpena/Projects/pact && test -d .git && test \"$(git rev-parse HEAD)\" = 7a1f3050b6a754a0cd07daf90690f86c8fd18e29 && git diff --quiet && git diff --cached --quiet && .venv/bin/python -c 'import json, pathlib; root=pathlib.Path('\"'\"'.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree'\"'\"'); root.mkdir(parents=True, exist_ok=True); (root/'\"'\"'nested'\"'\"').mkdir(exist_ok=True); (root/'\"'\"'nested'\"'\"'/'\"'\"'payload.txt'\"'\"').write_text('\"'\"'remote recursive payload\\n'\"'\"'); (root/'\"'\"'result.json'\"'\"').write_text(json.dumps({'\"'\"'schema'\"'\"':'\"'\"'live_ssh_recursive_output_pullback.v1'\"'\"','\"'\"'score_claim'\"'\"':False,'\"'\"'promotion_eligible'\"'\"':False,'\"'\"'rank_or_kill_eligible'\"'\"':False,'\"'\"'ready_for_exact_eval_dispatch'\"'\"':False}))'",
+      "remote_elapsed_seconds": 0.2745505000348203,
+      "remote_preflight": {
+        "command": [
+          "ssh",
+          "-o",
+          "ConnectTimeout=10",
+          "-o",
+          "BatchMode=yes",
+          "tertiary",
+          "cd /Users/adpena/Projects/pact && test -d .git && test \"$(git rev-parse HEAD)\" = 7a1f3050b6a754a0cd07daf90690f86c8fd18e29 && git diff --quiet && git diff --cached --quiet"
+        ],
+        "dirty_remote_git_rationale": null,
+        "elapsed_seconds": 0.3093335829908028,
+        "passed": true,
+        "require_clean_remote_git": true,
+        "returncode": 0,
+        "stdout": "",
+        "timed_out": false
+      },
+      "remote_repo_root": "/Users/adpena/Projects/pact",
+      "require_artifact_mobility": true,
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "schema": "staircase_ssh_executor_event.v1",
+      "ssh_argv": [
+        "ssh",
+        "-o",
+        "ConnectTimeout=10",
+        "-o",
+        "BatchMode=yes",
+        "tertiary",
+        "cd /Users/adpena/Projects/pact && test -d .git && test \"$(git rev-parse HEAD)\" = 7a1f3050b6a754a0cd07daf90690f86c8fd18e29 && git diff --quiet && git diff --cached --quiet && .venv/bin/python -c 'import json, pathlib; root=pathlib.Path('\"'\"'.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree'\"'\"'); root.mkdir(parents=True, exist_ok=True); (root/'\"'\"'nested'\"'\"').mkdir(exist_ok=True); (root/'\"'\"'nested'\"'\"'/'\"'\"'payload.txt'\"'\"').write_text('\"'\"'remote recursive payload\\n'\"'\"'); (root/'\"'\"'result.json'\"'\"').write_text(json.dumps({'\"'\"'schema'\"'\"':'\"'\"'live_ssh_recursive_output_pullback.v1'\"'\"','\"'\"'score_claim'\"'\"':False,'\"'\"'promotion_eligible'\"'\"':False,'\"'\"'rank_or_kill_eligible'\"'\"':False,'\"'\"'ready_for_exact_eval_dispatch'\"'\"':False}))'"
+      ],
+      "ssh_target": "tertiary",
+      "succeeded": true,
+      "task": {
+        "blockers": [],
+        "experiment_id": "recursive_output_pullback_smoke",
+        "key": "live_ssh_recursive_output_pullback_smoke_20260524T052700Z_staircase:recursive_output_pullback_smoke.remote_materialize",
+        "machine": {
+          "disk_gb": 4.0,
+          "executor": "ssh_experiment_queue",
+          "id": "tertiary_m1_macbook_pro_8gb",
+          "label": "tertiary live recursive output smoke",
+          "memory_gb": 4.0,
+          "remote_repo_root": "/Users/adpena/Projects/pact",
+          "slots": {
+            "local_cpu": 1
+          },
+          "ssh_target": "tertiary",
+          "tags": [
+            "ssh",
+            "smoke",
+            "recursive-output"
+          ]
+        },
+        "machine_hint": "tertiary_m1_macbook_pro_8gb",
+        "queue_id": "live_ssh_recursive_output_pullback_smoke_20260524T052700Z",
+        "ready_step": {
+          "command": [
+            ".venv/bin/python",
+            "-c",
+            "import json, pathlib; root=pathlib.Path('.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree'); root.mkdir(parents=True, exist_ok=True); (root/'nested').mkdir(exist_ok=True); (root/'nested'/'payload.txt').write_text('remote recursive payload\\n'); (root/'result.json').write_text(json.dumps({'schema':'live_ssh_recursive_output_pullback.v1','score_claim':False,'promotion_eligible':False,'rank_or_kill_eligible':False,'ready_for_exact_eval_dispatch':False}))"
+          ],
+          "experiment_id": "recursive_output_pullback_smoke",
+          "priority": 1,
+          "queue_id": "live_ssh_recursive_output_pullback_smoke_20260524T052700Z",
+          "resource_kind": "local_cpu",
+          "step_hashes": {
+            "command_hash": "76e632a869422db4c0695a61902615c643bfbb2b02bfb3e1f61a0d007aaec951",
+            "definition_hash": "9aef84886c9ef4b435b8cf5bbd97b7dddc91cf4e10057848f2b916b26bb57cee",
+            "postcondition_hash": "a51cd527e7976e8a3df1aa22f217b96f86de639926cf035df4cc4a5a81f4bd30"
+          },
+          "step_id": "remote_materialize"
+        },
+        "step_id": "remote_materialize"
+      },
+      "telemetry": {
+        "artifact_record_count": 2,
+        "artifact_records": [
+          {
+            "bytes": 128,
+            "exists": true,
+            "is_dir": true,
+            "is_file": false,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-24T05:19:32Z",
+            "path": ".omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 174,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-24T05:19:32Z",
+            "path": ".omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree/result.json",
+            "source": "step.postconditions.path"
+          }
+        ],
+        "log_bytes": 1226,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "timeout_seconds": 60,
+      "worker_run_id": "97bbfa2de600c9e8"
+    }
+  ]
+}

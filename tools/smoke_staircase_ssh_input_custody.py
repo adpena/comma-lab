@@ -117,7 +117,7 @@ def _make_queue(
     output_path: Path,
 ) -> dict[str, Any]:
     command = [
-        "python",
+        ".venv/bin/python",
         "-c",
         (
             "import json, pathlib; "

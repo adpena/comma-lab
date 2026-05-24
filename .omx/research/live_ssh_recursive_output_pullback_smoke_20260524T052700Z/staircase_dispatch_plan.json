@@ -1,0 +1,234 @@
+{
+  "blocked_count": 0,
+  "blocked_nodes": [],
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dag_hash": "d12683978cb8ca627492ba513835757c4a0497641651feb4a9095459e8c8a3e9",
+  "dag_id": "live_ssh_recursive_output_pullback_smoke_20260524T052700Z_staircase",
+  "dask_task_specs": [
+    {
+      "allowed_use": null,
+      "artifact_mobility": {
+        "mode": "pullback",
+        "required": true,
+        "schema": "experiment_queue_artifact_mobility.v1"
+      },
+      "command": [
+        ".venv/bin/python",
+        "-c",
+        "import json, pathlib; root=pathlib.Path('.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree'); root.mkdir(parents=True, exist_ok=True); (root/'nested').mkdir(exist_ok=True); (root/'nested'/'payload.txt').write_text('remote recursive payload\\n'); (root/'result.json').write_text(json.dumps({'schema':'live_ssh_recursive_output_pullback.v1','score_claim':False,'promotion_eligible':False,'rank_or_kill_eligible':False,'ready_for_exact_eval_dispatch':False}))"
+      ],
+      "executor_boundary": "planning_only_task_must_write_back_to_experiment_queue_state",
+      "experiment_id": "recursive_output_pullback_smoke",
+      "experiment_metadata": {},
+      "key": "live_ssh_recursive_output_pullback_smoke_20260524T052700Z_staircase:recursive_output_pullback_smoke.remote_materialize",
+      "machine": {
+        "disk_gb": 4.0,
+        "executor": "ssh_experiment_queue",
+        "id": "tertiary_m1_macbook_pro_8gb",
+        "label": "tertiary live recursive output smoke",
+        "memory_gb": 4.0,
+        "remote_repo_root": "/Users/adpena/Projects/pact",
+        "slots": {
+          "local_cpu": 1
+        },
+        "ssh_target": "tertiary",
+        "tags": [
+          "ssh",
+          "smoke",
+          "recursive-output"
+        ]
+      },
+      "machine_hint": "tertiary_m1_macbook_pro_8gb",
+      "materializer_id": null,
+      "operation_family": null,
+      "postconditions": [
+        {
+          "path": ".omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree/result.json",
+          "type": "path_exists"
+        },
+        {
+          "path": ".omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree/result.json",
+          "type": "json_false_authority"
+        }
+      ],
+      "pure": false,
+      "queue_id": "live_ssh_recursive_output_pullback_smoke_20260524T052700Z",
+      "queue_state_writeback": {
+        "executor_must_claim_step_before_execution": true,
+        "executor_must_record_terminal_step_event": true,
+        "experiment_id": "recursive_output_pullback_smoke",
+        "queue_id": "live_ssh_recursive_output_pullback_smoke_20260524T052700Z",
+        "required": true,
+        "step_hashes": {
+          "command_hash": "76e632a869422db4c0695a61902615c643bfbb2b02bfb3e1f61a0d007aaec951",
+          "definition_hash": "9aef84886c9ef4b435b8cf5bbd97b7dddc91cf4e10057848f2b916b26bb57cee",
+          "postcondition_hash": "a51cd527e7976e8a3df1aa22f217b96f86de639926cf035df4cc4a5a81f4bd30"
+        },
+        "step_id": "remote_materialize",
+        "terminal_statuses": [
+          "succeeded",
+          "failed"
+        ]
+      },
+      "receiver_contract_id": null,
+      "receiver_contract_kind": null,
+      "resources": {
+        "local_cpu": 1,
+        "machine:tertiary_m1_macbook_pro_8gb": 1
+      },
+      "step_hashes": {
+        "command_hash": "76e632a869422db4c0695a61902615c643bfbb2b02bfb3e1f61a0d007aaec951",
+        "definition_hash": "9aef84886c9ef4b435b8cf5bbd97b7dddc91cf4e10057848f2b916b26bb57cee",
+        "postcondition_hash": "a51cd527e7976e8a3df1aa22f217b96f86de639926cf035df4cc4a5a81f4bd30"
+      },
+      "step_id": "remote_materialize",
+      "target_kind": null,
+      "telemetry": {
+        "artifact_paths": [
+          ".omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree"
+        ],
+        "include_postcondition_paths": true,
+        "input_artifact_paths": [
+          ".omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/inputs/directory_bundle"
+        ],
+        "max_recursive_entries": 256,
+        "pullback_artifact_paths": [
+          ".omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree"
+        ],
+        "pullback_max_recursive_entries": 10,
+        "pullback_recursive": true,
+        "recursive": false
+      },
+      "timeout_seconds": 60,
+      "unit_kind": null
+    }
+  ],
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "staircase_dispatch_plan_is_planning_only",
+    "executor_must_update_canonical_queue_state",
+    "score_authority_requires_exact_auth_eval_axis"
+  ],
+  "exact_cuda_auth_eval": false,
+  "executor_boundary": "planning_only_dask_or_local_executor_must_write_back_to_queue_state",
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "plan_hash": "c8b4f3cd068a202d70315a8f5831d4695932b1cc10e5ec4c3068bb282607c1e2",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_count": 1,
+  "ready_for_exact_eval_dispatch": false,
+  "resource_pools": [
+    {
+      "disk_gb": 4.0,
+      "executor": "ssh_experiment_queue",
+      "id": "tertiary_m1_macbook_pro_8gb",
+      "label": "tertiary live recursive output smoke",
+      "memory_gb": 4.0,
+      "remote_repo_root": "/Users/adpena/Projects/pact",
+      "slots": {
+        "local_cpu": 1
+      },
+      "ssh_target": "tertiary",
+      "tags": [
+        "ssh",
+        "smoke",
+        "recursive-output"
+      ]
+    }
+  ],
+  "schema": "staircase_dispatch_plan.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selected_count": 1,
+  "selected_nodes": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "-c",
+        "import json, pathlib; root=pathlib.Path('.omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree'); root.mkdir(parents=True, exist_ok=True); (root/'nested').mkdir(exist_ok=True); (root/'nested'/'payload.txt').write_text('remote recursive payload\\n'); (root/'result.json').write_text(json.dumps({'schema':'live_ssh_recursive_output_pullback.v1','score_claim':False,'promotion_eligible':False,'rank_or_kill_eligible':False,'ready_for_exact_eval_dispatch':False}))"
+      ],
+      "dependencies": [],
+      "family": "recursive_output_pullback_smoke",
+      "machine_id": "tertiary_m1_macbook_pro_8gb",
+      "metadata": {
+        "allowed_use": null,
+        "artifact_mobility": {
+          "mode": "pullback",
+          "required": true,
+          "schema": "experiment_queue_artifact_mobility.v1"
+        },
+        "experiment_id": "recursive_output_pullback_smoke",
+        "experiment_metadata": {},
+        "materializer_id": null,
+        "operation_family": null,
+        "postconditions": [
+          {
+            "path": ".omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree/result.json",
+            "type": "path_exists"
+          },
+          {
+            "path": ".omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree/result.json",
+            "type": "json_false_authority"
+          }
+        ],
+        "queue_id": "live_ssh_recursive_output_pullback_smoke_20260524T052700Z",
+        "receiver_contract_id": null,
+        "receiver_contract_kind": null,
+        "resource_requirements": {
+          "kind": "local_cpu"
+        },
+        "step_hashes": {
+          "command_hash": "76e632a869422db4c0695a61902615c643bfbb2b02bfb3e1f61a0d007aaec951",
+          "definition_hash": "9aef84886c9ef4b435b8cf5bbd97b7dddc91cf4e10057848f2b916b26bb57cee",
+          "postcondition_hash": "a51cd527e7976e8a3df1aa22f217b96f86de639926cf035df4cc4a5a81f4bd30"
+        },
+        "step_id": "remote_materialize",
+        "step_telemetry": {
+          "artifact_paths": [
+            ".omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree"
+          ],
+          "include_postcondition_paths": true,
+          "input_artifact_paths": [
+            ".omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/inputs/directory_bundle"
+          ],
+          "max_recursive_entries": 256,
+          "pullback_artifact_paths": [
+            ".omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/outputs/remote_tree"
+          ],
+          "pullback_max_recursive_entries": 10,
+          "pullback_recursive": true,
+          "recursive": false
+        },
+        "target_kind": null,
+        "timeout_seconds": 60,
+        "unit_kind": null
+      },
+      "node_id": "recursive_output_pullback_smoke.remote_materialize",
+      "priority": 1,
+      "resource_kind": "local_cpu",
+      "stage": "remote_materialize",
+      "utility": 1.0
+    }
+  ],
+  "source_refs": [
+    {
+      "kind": "experiment_queue",
+      "path": ".omx/research/live_ssh_recursive_output_pullback_smoke_20260524T052700Z/experiment_queue.json",
+      "queue_hash": "3192a977ce068d52ed9ee3ffcbc6eba3403bd1017648be240c3acbed4d6335a2",
+      "queue_id": "live_ssh_recursive_output_pullback_smoke_20260524T052700Z"
+    }
+  ],
+  "storage": null,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ]
+}

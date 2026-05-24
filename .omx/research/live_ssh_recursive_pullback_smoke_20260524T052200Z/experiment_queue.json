@@ -1,0 +1,66 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "directory_input_custody_smoke",
+      "lane_id": null,
+      "metadata": {},
+      "priority": 1,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {
+            "mode": "pullback",
+            "required": true,
+            "schema": "experiment_queue_artifact_mobility.v1"
+          },
+          "command": [
+            "python",
+            "-c",
+            "import json, pathlib; path = pathlib.Path('.omx/research/live_ssh_recursive_pullback_smoke_20260524T052200Z/outputs/remote_result.json'); path.parent.mkdir(parents=True, exist_ok=True); path.write_text(json.dumps({'schema': 'staircase_ssh_input_custody_smoke_output.v1', 'score_claim': False, 'promotion_eligible': False, 'rank_or_kill_eligible': False, 'ready_for_exact_eval_dispatch': False}))"
+          ],
+          "id": "remote_materialize",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/live_ssh_recursive_pullback_smoke_20260524T052200Z/outputs/remote_result.json",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/live_ssh_recursive_pullback_smoke_20260524T052200Z/outputs/remote_result.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/live_ssh_recursive_pullback_smoke_20260524T052200Z/outputs/remote_result.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/live_ssh_recursive_pullback_smoke_20260524T052200Z/inputs/directory_bundle"
+            ],
+            "max_recursive_entries": 256,
+            "pullback_artifact_paths": [
+              ".omx/research/live_ssh_recursive_pullback_smoke_20260524T052200Z/outputs/remote_result.json"
+            ],
+            "recursive": false
+          },
+          "timeout_seconds": 60
+        }
+      ],
+      "tags": []
+    }
+  ],
+  "queue_id": "live_ssh_recursive_pullback_smoke_20260524T052200Z",
+  "schema": "experiment_queue.v1"
+}
