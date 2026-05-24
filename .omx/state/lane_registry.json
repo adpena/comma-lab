@@ -52319,7 +52319,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_materializer_runner_replan_artifacts_20260524T181135Z_codex.md"
+          "evidence": ".omx/research/codex_findings_materializer_runner_feedback_replan_request_20260524T181635Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -52336,5 +52336,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T18:11:59Z"
+  "updated_at": "2026-05-24T18:16:57Z"
 }

@@ -319,6 +319,26 @@ def test_materializer_campaign_runner_builds_stateful_experiment_queue_command(
     ]
 
 
+def test_materializer_campaign_runner_performance_fallback_is_fail_closed() -> None:
+    payload = runner._queue_performance_summary_payload(
+        runner.CommandResult(
+            command=["experiment_queue", "performance"],
+            returncode=2,
+            stdout="not json",
+            stderr="boom",
+            elapsed_seconds=0.25,
+        ),
+        queue={"queue_id": "fallback_queue"},
+    )
+
+    assert payload["schema"] == runner.UNAVAILABLE_QUEUE_PERFORMANCE_SUMMARY_SCHEMA
+    assert payload["queue_id"] == "fallback_queue"
+    assert payload["performance_command_failed"] is True
+    assert "queue_performance_command_failed" in payload["blockers"]
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+
+
 def test_materializer_campaign_runner_builds_runtime_policy_command(
     tmp_path: Path,
 ) -> None:
@@ -672,15 +692,28 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert summary["queue_performance_summary_path"] == str(
         run_dir / "queue_performance_summary.json"
     )
+    assert summary["queue_feedback_replan_request_path"] == str(
+        run_dir / "queue_feedback_replan_request.json"
+    )
     assert summary["response_update_placeholder_path"] == str(
         run_dir / "canonical_response_update_placeholder.json"
     )
     assert summary["response_update_applied"] is False
     assert summary["replan_required"] is True
+    assert summary["queue_feedback_replan_ready"] is False
+    assert "queue_performance_runtime_identity_missing" in summary[
+        "queue_feedback_replan_blockers"
+    ]
+    assert "queue_performance_cache_identity_missing" in summary[
+        "queue_feedback_replan_blockers"
+    ]
     assert summary["runtime_policy"]["schema"] == "scheduler_runtime_policy.v1"
     assert summary["runtime_policy"]["score_claim"] is False
     assert summary["performance"]["schema"] == runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA
     assert summary["performance"]["score_claim"] is False
+    assert summary["performance"]["producer"] == "tools/run_byte_shaving_materializer_campaign.py"
+    assert summary["performance"]["source_run_path"] == str(run_dir / "materializer_campaign_run.json")
+    assert summary["performance"]["worker_returncode"] == 0
     assert summary["worker"]["schema"] == "experiment_queue_worker_result.v1"
     assert summary["worker"]["success_count"] == 3
     assert summary["worker"]["failure_count"] == 0
@@ -693,13 +726,29 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
             encoding="utf-8"
         )
     )
+    replan_request = json.loads(
+        (run_dir / "queue_feedback_replan_request.json").read_text(encoding="utf-8")
+    )
     assert performance == summary["performance"]
     assert performance["schema"] == runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA
     assert performance["queue_id"] == "inverse_scorer_runner_e2e_fixture"
     assert performance["score_claim"] is False
+    assert replan_request["schema"] == runner.QUEUE_FEEDBACK_REPLAN_REQUEST_SCHEMA
+    assert replan_request["queue_performance_summary_path"] == str(
+        run_dir / "queue_performance_summary.json"
+    )
+    assert replan_request["ready_for_action_functional_feedback"] is False
+    assert replan_request["score_claim"] is False
+    assert "queue_performance_runtime_identity_missing" in replan_request["blockers"]
+    assert "queue_performance_cache_identity_missing" in replan_request["blockers"]
+    assert replan_request["command_template"][1] == "tools/build_inverse_steganalysis_action_functional.py"
+    assert "--queue-performance-summary" in replan_request["command_template"]
     assert placeholder["schema"] == runner.RESPONSE_UPDATE_PLACEHOLDER_SCHEMA
     assert placeholder["queue_performance_summary_path"] == str(
         run_dir / "queue_performance_summary.json"
+    )
+    assert placeholder["queue_feedback_replan_request_path"] == str(
+        run_dir / "queue_feedback_replan_request.json"
     )
     assert placeholder["next_run_hint"] == [
         "--queue-performance-summary",
@@ -707,6 +756,9 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     ]
     assert placeholder["response_update_applied"] is False
     assert placeholder["replan_required"] is True
+    assert "placeholder_not_scorer_response_dataset" in placeholder["blockers"]
+    assert "queue_performance_runtime_identity_missing" in placeholder["blockers"]
+    assert "queue_performance_cache_identity_missing" in placeholder["blockers"]
     assert placeholder["score_claim"] is False
     observations = observations_from_queue_performance_summary(
         performance,
@@ -744,6 +796,10 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert handoff_paths[0]["harvest_report_exists"] is True
     assert handoff_paths[0]["exact_readiness_bridge_report_exists"] is True
     assert handoff_paths[0]["dispatch_plan_exists"] is True
+    assert handoff_paths[0]["readiness_dir_path"] == str(
+        handoff_dir / "exact_readiness"
+    )
+    assert handoff_paths[0]["readiness_dir_exists"] is True
     assert harvest["accepted_manifest_count"] == 1
     assert harvest["source_queue_dispatch_ready_count"] == 0
     assert bridge["candidate_count"] == 1
@@ -752,6 +808,84 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert dispatch_plan["authorized_candidate_count"] == 0
     assert dispatch_plan["score_claim"] is False
     assert not inflate_work_dir.exists()
+
+
+def test_materializer_campaign_runner_poison_summary_when_performance_stdout_invalid() -> None:
+    result = runner.CommandResult(
+        command=["experiment_queue", "performance"],
+        returncode=0,
+        stdout="not-json",
+        stderr="",
+        elapsed_seconds=0.1,
+    )
+
+    payload = runner._queue_performance_summary_payload(
+        result,
+        queue={"queue_id": "queue_a"},
+    )
+
+    assert payload["schema"] == runner.UNAVAILABLE_QUEUE_PERFORMANCE_SUMMARY_SCHEMA
+    assert payload["queue_id"] == "queue_a"
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["blockers"] == ["queue_performance_stdout_not_json_object"]
+
+
+def test_materializer_campaign_runner_poison_summary_when_performance_command_fails() -> None:
+    result = runner.CommandResult(
+        command=["experiment_queue", "performance"],
+        returncode=7,
+        stdout="",
+        stderr="boom",
+        elapsed_seconds=0.2,
+    )
+
+    payload = runner._queue_performance_summary_payload(
+        result,
+        queue={"queue_id": "queue_a"},
+    )
+
+    assert payload["schema"] == runner.UNAVAILABLE_QUEUE_PERFORMANCE_SUMMARY_SCHEMA
+    assert payload["performance_command_failed"] is True
+    assert payload["blockers"] == ["queue_performance_command_failed"]
+    assert payload["score_claim"] is False
+
+
+def test_materializer_campaign_runner_poison_summary_with_nested_authority() -> None:
+    result = runner.CommandResult(
+        command=["experiment_queue", "performance"],
+        returncode=0,
+        stdout=json.dumps(
+            {
+                "schema": runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA,
+                "queue_id": "queue_a",
+                "telemetry_only": True,
+                "event_count": 1,
+                "candidate_id_by_experiment": {"exp": ["candidate"]},
+                "by_step": {
+                    "exp.step": {
+                        "run_count": 1,
+                        "success_count": 1,
+                        "score_claim": True,
+                    }
+                },
+            }
+        ),
+        stderr="",
+        elapsed_seconds=0.2,
+    )
+
+    payload = runner._queue_performance_summary_payload(
+        result,
+        queue={"queue_id": "queue_a"},
+    )
+
+    assert payload["schema"] == runner.UNAVAILABLE_QUEUE_PERFORMANCE_SUMMARY_SCHEMA
+    assert payload["blockers"] == [
+        "queue_performance_summary_truthy_authority_fields"
+    ]
+    assert payload["authority_violations"] == ["by_step.exp.step.score_claim=truthy"]
+    assert payload["score_claim"] is False
 
 
 def test_materializer_campaign_runner_executes_no_paid_packet_member_handoff(
@@ -807,6 +941,7 @@ def test_materializer_campaign_runner_executes_no_paid_packet_member_handoff(
     assert summary["score_claim"] is False
     assert summary["ready_for_exact_eval_dispatch"] is False
     assert (run_dir / "queue_performance_summary.json").exists()
+    assert (run_dir / "queue_feedback_replan_request.json").exists()
     assert (run_dir / "canonical_response_update_placeholder.json").exists()
     assert summary["next_run_hint"] == [
         "--queue-performance-summary",
@@ -852,6 +987,67 @@ def test_materializer_campaign_runner_executes_no_paid_packet_member_handoff(
     assert bridge["score_claim"] is False
     assert dispatch_plan["authorized_candidate_count"] == 0
     assert dispatch_plan["score_claim"] is False
+
+
+def test_materializer_campaign_runner_preserves_feedback_artifacts_when_worker_fails(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    state_path = tmp_path / "materializer_execution_queue.sqlite"
+    plan = tmp_path / "plan.json"
+    source_archive = tmp_path / "not_a_zip.zip"
+
+    plan.write_text(json.dumps(_packet_member_recompress_plan()), encoding="utf-8")
+    source_archive.write_bytes(b"not a zip archive")
+
+    result = runner.main(
+        [
+            "--plan",
+            str(plan),
+            "--packet-member-archive-path",
+            str(source_archive),
+            "--packet-member-name",
+            "payload.bin",
+            "--packet-member-zip-compression-method",
+            "stored",
+            "--materializer-contexts-fail-if-blocked",
+            "--run-dir",
+            str(run_dir),
+            "--queue-state",
+            str(state_path),
+            "--queue-state-rationale",
+            "isolated worker failure feedback preservation smoke",
+            "--queue-id",
+            "packet_member_failure_runner_fixture",
+            "--max-steps",
+            "1",
+            "--max-parallel",
+            "1",
+            "--idle-sleep-seconds",
+            "0",
+            "--max-idle-cycles",
+            "1",
+            "--execute",
+        ]
+    )
+
+    assert result == 2
+    summary = json.loads((run_dir / "materializer_campaign_run.json").read_text(encoding="utf-8"))
+    performance = json.loads((run_dir / "queue_performance_summary.json").read_text(encoding="utf-8"))
+    replan = json.loads((run_dir / "queue_feedback_replan_request.json").read_text(encoding="utf-8"))
+    placeholder = json.loads(
+        (run_dir / "canonical_response_update_placeholder.json").read_text(encoding="utf-8")
+    )
+
+    assert summary["worker"]["schema"] == "experiment_queue_worker_result.v1"
+    assert summary["worker"]["failure_count"] == 1
+    assert summary["performance"]["worker_returncode"] == 2
+    assert performance["schema"] == runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA
+    assert performance["event_count"] == 1
+    assert performance["score_claim"] is False
+    assert replan["score_claim"] is False
+    assert placeholder["score_claim"] is False
+    assert placeholder["replan_required"] is True
 
 
 def test_materializer_campaign_runner_uses_policy_cold_store_default_for_move_preflight(

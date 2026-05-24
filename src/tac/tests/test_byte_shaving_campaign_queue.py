@@ -1918,11 +1918,22 @@ def test_inverse_surface_cells_compile_to_action_functional_work_queue(
     byte_shaving_plan = tmp_path / "byte_shaving_plan.json"
     action_output = tmp_path / "inverse_action.json"
     action_md = tmp_path / "inverse_action.md"
+    queue_performance = tmp_path / "queue_performance_summary.json"
+    runtime_identity = tmp_path / "runtime_identity.json"
+    cache_identity = tmp_path / "cache_identity.json"
+    candidate_map = tmp_path / "candidate_map.json"
     scorer_response.write_text(
         json.dumps({"schema": "scorer_response_dataset.v1", "rows": []}),
         encoding="utf-8",
     )
     byte_shaving_plan.write_text(json.dumps(_pair_drop_plan()), encoding="utf-8")
+    queue_performance.write_text(
+        json.dumps({"schema": "experiment_queue_performance_summary.v1"}),
+        encoding="utf-8",
+    )
+    runtime_identity.write_text(json.dumps({"runtime_tree_sha256": "d" * 64}), encoding="utf-8")
+    cache_identity.write_text(json.dumps({"cache_sha256": "e" * 64}), encoding="utf-8")
+    candidate_map.write_text(json.dumps({"candidate_a": "candidate_a"}), encoding="utf-8")
     compiled = compile_dqs1_byte_shaving_campaign(
         _inverse_surface_plan(),
         repo_root=tmp_path,
@@ -1955,6 +1966,11 @@ def test_inverse_surface_cells_compile_to_action_functional_work_queue(
                 "scorer_response": str(scorer_response),
                 "output": str(action_output),
                 "md_out": str(action_md),
+                "queue_performance_summary": [str(queue_performance)],
+                "queue_performance_runtime_identity": str(runtime_identity),
+                "queue_performance_cache_identity": str(cache_identity),
+                "queue_performance_candidate_map": str(candidate_map),
+                "queue_performance_axis": "[local-queue-performance advisory]",
                 "total_byte_budget": 64,
                 "resource_kind": "local_mlx",
                 "inverse_scorer_allow_native_mlx_window_objective": True,
@@ -1975,6 +1991,15 @@ def test_inverse_surface_cells_compile_to_action_functional_work_queue(
         str(action_output),
     ]
     assert ["--scorer-response", str(scorer_response)] == row["command"][4:6]
+    runtime_index = row["command"].index("--queue-performance-runtime-identity")
+    cache_index = row["command"].index("--queue-performance-cache-identity")
+    candidate_map_index = row["command"].index("--queue-performance-candidate-map")
+    summary_index = row["command"].index("--queue-performance-summary")
+    assert row["command"][runtime_index + 1] == str(runtime_identity)
+    assert row["command"][cache_index + 1] == str(cache_identity)
+    assert row["command"][candidate_map_index + 1] == str(candidate_map)
+    assert row["command"][summary_index + 1] == str(queue_performance)
+    assert "--queue-performance-axis" in row["command"]
     assert "--inverse-scorer-allow-native-mlx-window-objective" in row["command"]
     _assert_typed_postconditions(
         row["postconditions"],
@@ -1982,7 +2007,13 @@ def test_inverse_surface_cells_compile_to_action_functional_work_queue(
         schema="inverse_steganalysis_discrete_action_functional.v1",
     )
     assert row["telemetry"]["artifact_paths"] == [str(action_output), str(action_md)]
-    assert row["telemetry"]["input_artifact_paths"] == [str(scorer_response)]
+    assert row["telemetry"]["input_artifact_paths"] == [
+        str(scorer_response),
+        str(runtime_identity),
+        str(cache_identity),
+        str(candidate_map),
+        str(queue_performance),
+    ]
     assert "inverse_action_functional_is_not_candidate_archive" in row["dispatch_blockers"]
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
