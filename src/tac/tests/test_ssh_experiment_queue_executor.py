@@ -343,6 +343,62 @@ def test_ssh_executor_pulls_back_artifacts_before_local_postconditions(
     assert last_event["artifact_mobility"]["succeeded"] is True
 
 
+def test_ssh_executor_pulls_back_mapped_telemetry_artifacts(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "out" / "done.json"
+    telemetry_artifact = tmp_path / "out" / "done.md"
+    queue = _queue(artifact)
+    step = queue["experiments"][0]["steps"][0]
+    step["telemetry"]["artifact_paths"] = [str(artifact), str(telemetry_artifact)]
+    plan = _plan(queue)
+    state = tmp_path / "queue.sqlite"
+    calls: list[list[str]] = []
+
+    def runner(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        calls.append(list(argv))
+        if str(argv[0]).endswith("rsync"):
+            target = Path(argv[-1])
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if target.suffix == ".json":
+                target.write_text(
+                    json.dumps(
+                        {
+                            "score_claim": False,
+                            "promotion_eligible": False,
+                            "rank_or_kill_eligible": False,
+                            "ready_for_exact_eval_dispatch": False,
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+            else:
+                target.write_text("remote telemetry\n", encoding="utf-8")
+        return subprocess.CompletedProcess(argv, 0, stdout="ok\n")
+
+    result = run_staircase_ssh_executor(
+        plan,
+        queue,
+        state_path=state,
+        repo_root=REPO_ROOT,
+        execute=True,
+        allow_noncanonical_state=True,
+        artifact_path_maps={tmp_path.as_posix(): "/remote/tmp"},
+        require_artifact_mobility=True,
+        runner=runner,
+    )
+
+    assert result["success_count"] == 1
+    rsync_calls = [call for call in calls if call[0] == "rsync"]
+    assert len(rsync_calls) == 2
+    assert telemetry_artifact.read_text(encoding="utf-8") == "remote telemetry\n"
+    last_event = json.loads(_step_row(state)["last_event_json"])
+    assert {
+        pullback["local_path"]
+        for pullback in last_event["artifact_mobility"]["pullbacks"]
+    } == {artifact.as_posix(), telemetry_artifact.as_posix()}
+
+
 def test_ssh_executor_fails_remote_success_when_artifact_pullback_fails(
     tmp_path: Path,
 ) -> None:

@@ -247,6 +247,40 @@ def _postcondition_artifact_paths(step: Mapping[str, Any], *, repo_root: Path) -
     return paths
 
 
+def _telemetry_artifact_paths(step: Mapping[str, Any], *, repo_root: Path) -> list[Path]:
+    telemetry = step.get("telemetry")
+    raw_paths = telemetry.get("artifact_paths") if isinstance(telemetry, Mapping) else None
+    if not isinstance(raw_paths, list):
+        return []
+    seen: set[str] = set()
+    paths: list[Path] = []
+    for path_value in raw_paths:
+        if not isinstance(path_value, str) or not path_value.strip():
+            continue
+        path = _resolve_local_artifact_path(path_value, repo_root=repo_root)
+        key = path.resolve(strict=False).as_posix()
+        if key in seen:
+            continue
+        seen.add(key)
+        paths.append(path)
+    return paths
+
+
+def _artifact_paths_for_pullback(step: Mapping[str, Any], *, repo_root: Path) -> list[Path]:
+    seen: set[str] = set()
+    paths: list[Path] = []
+    for path in (
+        *_postcondition_artifact_paths(step, repo_root=repo_root),
+        *_telemetry_artifact_paths(step, repo_root=repo_root),
+    ):
+        key = path.resolve(strict=False).as_posix()
+        if key in seen:
+            continue
+        seen.add(key)
+        paths.append(path)
+    return paths
+
+
 def _local_visible_postcondition_blockers(
     task: Mapping[str, Any],
     step: Mapping[str, Any],
@@ -331,6 +365,9 @@ def _artifact_mobility_blockers(
     for path in _postcondition_artifact_paths(step, repo_root=repo_root):
         if _remote_artifact_path_for_local(path, path_maps=path_maps) is None:
             blockers.append(f"artifact_pullback_missing_for_postcondition:{path.as_posix()}")
+    for path in _telemetry_artifact_paths(step, repo_root=repo_root):
+        if _remote_artifact_path_for_local(path, path_maps=path_maps) is None:
+            blockers.append(f"artifact_pullback_missing_for_telemetry:{path.as_posix()}")
     return blockers
 
 
@@ -358,7 +395,7 @@ def _artifact_pullbacks_for_step(
     path_maps: Sequence[tuple[Path, str]],
 ) -> list[dict[str, str]]:
     pullbacks: list[dict[str, str]] = []
-    for local_path in _postcondition_artifact_paths(step, repo_root=repo_root):
+    for local_path in _artifact_paths_for_pullback(step, repo_root=repo_root):
         remote_path = _remote_artifact_path_for_local(local_path, path_maps=path_maps)
         if remote_path is None:
             continue
