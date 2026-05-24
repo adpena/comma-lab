@@ -38,17 +38,25 @@ import sys
 import textwrap
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TAC_ROOT = REPO_ROOT / "src" / "tac"
+COMMA_LAB_ROOT = REPO_ROOT / "src" / "comma_lab"
 TRACKER_JSON = REPO_ROOT / ".omx" / "state" / "review_tracker.json"
 TRACKER_DB = REPO_ROOT / ".omx" / "state" / "review_tracker.duckdb"
 EXPERIMENTS_ROOT = REPO_ROOT / "experiments"
 POLICY_PATH = REPO_ROOT / ".omx" / "state" / "review_policy.json"
 
-SCAN_PREFIXES = ("src/tac/", "experiments/", "tools/", "submissions/", "scripts/")
+SCAN_PREFIXES = (
+    "src/tac/",
+    "src/comma_lab/",
+    "experiments/",
+    "tools/",
+    "submissions/",
+    "scripts/",
+)
 SCAN_EXCLUDE_GLOBS = (
     "experiments/results/**",
     "experiments/tmp/**",
@@ -281,6 +289,7 @@ def _tracked_reviewable_python_files() -> list[Path]:
     candidates: list[Path] = []
     for scan_dir in [
         TAC_ROOT,
+        COMMA_LAB_ROOT,
         EXPERIMENTS_ROOT,
         REPO_ROOT / "tools",
         REPO_ROOT / "submissions",
@@ -416,7 +425,7 @@ def _export_json(con) -> None:
     rows = con.execute("SELECT * FROM entities ORDER BY qualified_name").fetchall()
     cols = [d[0] for d in con.description]
     for row in rows:
-        d = dict(zip(cols, row))
+        d = dict(zip(cols, row, strict=False))
         qn = d.pop("qualified_name")
         entities[qn] = d
 
@@ -425,7 +434,7 @@ def _export_json(con) -> None:
         rows = con.execute("SELECT * FROM reviews ORDER BY timestamp").fetchall()
         cols = [d[0] for d in con.description]
         for row in rows:
-            reviews.append(dict(zip(cols, row)))
+            reviews.append(dict(zip(cols, row, strict=False)))
     except Exception as e:
         print(f"WARN: failed to export reviews: {e}", file=sys.stderr)
 
@@ -540,7 +549,7 @@ def count_consecutive_clean_passes(con, qualified_name: str) -> int:
         return 0
 
     count = 0
-    for action, reviewer in rows:
+    for action, _reviewer in rows:
         if action == "marked_reviewed":
             count += 1
         elif action in ("auto_stale_diff", "marked_needs_fix", "marked_stale", "marked_unreviewed"):
@@ -658,8 +667,11 @@ def cmd_policy_check(file_path: str | None = None) -> None:
         con.close()
         return
 
-    G = "\033[32m"; Y = "\033[33m"; R = "\033[31m"; C = "\033[36m"
-    RST = "\033[0m"; B = "\033[1m"
+    G = "\033[32m"
+    Y = "\033[33m"
+    R = "\033[31m"
+    RST = "\033[0m"
+    B = "\033[1m"
 
     if file_path:
         rows = con.execute(
@@ -681,7 +693,7 @@ def cmd_policy_check(file_path: str | None = None) -> None:
     met_count = 0
     current_file = ""
 
-    for qn, fp, name, status in rows:
+    for qn, fp, name, _status in rows:
         result = check_entity_policy(con, qn, fp, policy)
 
         if fp != current_file:
@@ -797,7 +809,7 @@ def _changed_reviewable_paths_since_last_scan(
 def cmd_scan(full: bool = False) -> None:
     """Scan the codebase and update the tracker."""
     con = _init_db()
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     current_head = (_run_git("rev-parse", "HEAD", timeout=5) or "")[:12]
 
     new_count = 0
@@ -948,7 +960,7 @@ def cmd_mark(pattern: str, status: str = "reviewed",
         return
 
     con = _init_db()
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
 
     rows = con.execute(
         "SELECT qualified_name FROM entities WHERE qualified_name LIKE ?",
@@ -998,7 +1010,7 @@ def cmd_mark_file(file_path: str, status: str = "reviewed",
         return 1
 
     con = _init_db()
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
 
     # Normalize path
     normalized = file_path.replace("\\", "/")
@@ -1092,8 +1104,13 @@ def cmd_status() -> None:
     t_total = t_rev = t_unr = t_stl = t_fix = t_lines = t_rlines = 0
     for fp, total, reviewed, unreviewed, stale, needs_fix, lines, rlines in rows:
         cov = reviewed / total * 100 if total else 0
-        t_total += total; t_rev += reviewed; t_unr += unreviewed
-        t_stl += stale; t_fix += needs_fix; t_lines += lines; t_rlines += rlines
+        t_total += total
+        t_rev += reviewed
+        t_unr += unreviewed
+        t_stl += stale
+        t_fix += needs_fix
+        t_lines += lines
+        t_rlines += rlines
 
         icon = "+" if cov == 100 else ("~" if cov > 0 else " ")
         short = fp if len(fp) <= 48 else "..." + fp[-45:]
@@ -1129,8 +1146,12 @@ def cmd_dashboard() -> None:
     stale = stats.get("stale", 0)
     needs_fix = stats.get("needs_fix", 0)
 
-    G = "\033[32m"; Y = "\033[33m"; R = "\033[31m"; C = "\033[36m"
-    RST = "\033[0m"; B = "\033[1m"
+    G = "\033[32m"
+    Y = "\033[33m"
+    R = "\033[31m"
+    C = "\033[36m"
+    RST = "\033[0m"
+    B = "\033[1m"
 
     pct = reviewed / total * 100
     w = 40
@@ -1154,7 +1175,7 @@ def cmd_dashboard() -> None:
 
     if unrev:
         print(f"  {B}Top unreviewed (by complexity):{RST}")
-        for name, etype, lc, cx, st, fp in unrev:
+        for name, _etype, lc, cx, st, fp in unrev:
             color = R if cx > 15 else (Y if cx > 8 else RST)
             st_tag = f" [{st}]" if st != "unreviewed" else ""
             short_fp = fp.split("/")[-1].replace(".py", "")
@@ -1190,7 +1211,7 @@ def cmd_diff_scan(since: str = "") -> None:
                    uses the commit closest to that timestamp; otherwise HEAD~10.
     """
     con = _init_db()
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
 
     if not since:
         # Try to use last_scan timestamp for a smarter default
@@ -1255,8 +1276,12 @@ def cmd_dag() -> None:
         con.close()
         return
 
-    G = "\033[32m"; Y = "\033[33m"; R = "\033[31m"; C = "\033[36m"
-    RST = "\033[0m"; B = "\033[1m"
+    G = "\033[32m"
+    Y = "\033[33m"
+    R = "\033[31m"
+    C = "\033[36m"
+    RST = "\033[0m"
+    B = "\033[1m"
 
     print(f"\n{B}  Review DAG — Recent Commits vs Review Status{RST}")
     print(f"  {'=' * 60}\n")
@@ -1321,7 +1346,7 @@ def cmd_greenup_import(pass_file: str) -> None:
         return
 
     con = _init_db()
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     matched = 0
 
     for cf in clean_files:
@@ -1393,7 +1418,7 @@ def cmd_report() -> None:
         con.close()
         return
 
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     reviewed = stats.get("reviewed", 0)
 
     lines = [
@@ -1431,7 +1456,7 @@ def cmd_report() -> None:
         """).fetchall()
         if recent:
             lines.append("\n## Recent Review Activity\n")
-            for ent, action, reviewer, rpass, ts in recent:
+            for ent, action, reviewer, rpass, _ts in recent:
                 lines.append(f"- `{ent}` — {action} by {reviewer} ({rpass})")
     except Exception:
         pass
@@ -1687,7 +1712,7 @@ def cmd_greenup(file_patterns: list[str], reviewer: str = "council",
         pass_name: name for this greenup pass (auto-generated if empty)
     """
     con = _init_db()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if not pass_name:
         pass_name = f"greenup_{now.strftime('%Y%m%dT%H%M%S')}_{reviewer}"
 
@@ -1699,17 +1724,23 @@ def cmd_greenup(file_patterns: list[str], reviewer: str = "council",
     for pat in file_patterns:
         normalized = pat.replace("\\", "/")
         for fp in all_files:
-            if normalized in fp or _fnm.fnmatch(fp, f"*{normalized}*"):
-                if fp not in matched_files:
-                    matched_files.append(fp)
+            if (
+                (normalized in fp or _fnm.fnmatch(fp, f"*{normalized}*"))
+                and fp not in matched_files
+            ):
+                matched_files.append(fp)
 
     if not matched_files:
         print(f"No tracked files matching: {file_patterns}")
         con.close()
         return
 
-    G = "\033[32m"; Y = "\033[33m"; R = "\033[31m"; C = "\033[36m"
-    RST = "\033[0m"; B = "\033[1m"
+    G = "\033[32m"
+    Y = "\033[33m"
+    R = "\033[31m"
+    C = "\033[36m"
+    RST = "\033[0m"
+    B = "\033[1m"
 
     # Get entity counts per file
     file_stats: list[tuple[str, int, int, int, int]] = []
@@ -1753,7 +1784,7 @@ def cmd_greenup(file_patterns: list[str], reviewer: str = "council",
         print(f"Reviewer: {reviewer}")
         print()
 
-        for fp, total, rev, fix, unrev in file_stats:
+        for fp, total, _rev, _fix, _unrev in file_stats:
             rigor = get_rigor_for_file(fp)
             level = rigor.get("_name", "relaxed")
             color = R if level == "critical" else (Y if level == "standard" else RST)
@@ -1832,13 +1863,13 @@ def cmd_greenup(file_patterns: list[str], reviewer: str = "council",
 def _mark_file_internal(con, file_path: str, status: str, reviewer: str,
                         review_pass: str, only_status: list[str] | None = None) -> int:
     """Internal: mark entities in a file, returns count marked."""
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     if only_status:
         placeholders = ",".join(["?"] * len(only_status))
         rows = con.execute(f"""
             SELECT qualified_name FROM entities
             WHERE file_path = ? AND review_status IN ({placeholders})
-        """, [file_path] + only_status).fetchall()
+        """, [file_path, *only_status]).fetchall()
     else:
         rows = con.execute(
             "SELECT qualified_name FROM entities WHERE file_path = ?",
@@ -1875,10 +1906,13 @@ def cmd_greenup_ingest(result_file: str, reviewer: str = "council",
         pass_name = path.stem
 
     con = _init_db()
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
 
-    G = "\033[32m"; R = "\033[31m"; Y = "\033[33m"
-    RST = "\033[0m"; B = "\033[1m"
+    G = "\033[32m"
+    R = "\033[31m"
+    Y = "\033[33m"
+    RST = "\033[0m"
+    B = "\033[1m"
 
     # Parse "### <path> — CLEAN" and "### <path> — ISSUES FOUND" lines
     clean_count = 0

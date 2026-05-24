@@ -12,6 +12,9 @@ def _rel(path: Path) -> str:
 
 def test_review_tracker_scan_scope_excludes_custody_mirrors() -> None:
     assert review_tracker._is_reviewable_python_path("src/tac/preflight.py")
+    assert review_tracker._is_reviewable_python_path(
+        "src/comma_lab/scheduler/ssh_experiment_queue_executor.py"
+    )
     assert review_tracker._is_reviewable_python_path("experiments/train_renderer.py")
     assert review_tracker._is_reviewable_python_path("tools/review_tracker.py")
     assert review_tracker._is_reviewable_python_path("submissions/robust_current/inflate.py")
@@ -31,6 +34,7 @@ def test_git_ls_files_output_is_deduped_and_deterministic() -> None:
             [
                 "experiments/results/mirror/source/train.py",
                 "tools/review_tracker.py",
+                "src/comma_lab/scheduler/staircase_dag.py",
                 "src/tac/preflight.py",
                 "src/tac/preflight.py",
                 "reports/raw/generated.py",
@@ -40,6 +44,7 @@ def test_git_ls_files_output_is_deduped_and_deterministic() -> None:
     )
 
     assert [_rel(path) for path in paths] == [
+        "src/comma_lab/scheduler/staircase_dag.py",
         "src/tac/preflight.py",
         "submissions/robust_current/inflate.py",
         "tools/review_tracker.py",
