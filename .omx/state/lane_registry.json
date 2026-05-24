@@ -53023,7 +53023,7 @@
           "evidence": ""
         }
       },
-      "notes": "Wire optional RGB+YUV6 scorer-preprocess-coupled MLX loss for source-video timing smokes; local MLX research-signal only."
+      "notes": "Superseded by codex_pr95_mlx_rgb_yuv6_loss_surface_20260524; duplicate pre-registration preserved for provenance/no-signal-loss."
     },
     {
       "id": "codex_pr95_mlx_rgb_yuv6_loss_surface_20260524",
@@ -53033,7 +53033,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/tac/local_acceleration/pr95_hnerv_mlx.py"
+          "evidence": "src/tac/local_acceleration/pr95_hnerv_mlx.py tools/run_pr95_mlx_timing_smoke.py tools/build_pr95_mlx_optimizer_matrix_queue.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -53048,12 +53048,12 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "ruff PR95 MLX RGB+YUV6 focused files; pytest PR95 MLX focused suite 44 passed; review_tracker policy-check 0 violations"
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "direct MLX smoke, experiment_queue.v1 execution smoke, focused regression suite all clean"
         },
         "memory_entry": {
           "status": true,
@@ -53064,7 +53064,7 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "Executable PR95 MLX source-video RGB+YUV6 timing loss surface wired through direct CLI and experiment_queue.v1; local MLX research-signal only, exact archive and contest-axis gates remain blocked."
     }
   ],
   "level_rules": {
@@ -53074,5 +53074,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T20:48:40Z"
+  "updated_at": "2026-05-24T20:51:21Z"
 }

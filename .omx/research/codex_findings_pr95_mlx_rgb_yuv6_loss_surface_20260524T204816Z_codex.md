@@ -34,9 +34,20 @@ runtime replay, full-frame parity, and exact CPU/CUDA auth eval.
 
 ## Verification
 
+- Direct local MLX executable smoke:
+  `experiments/results/codex_pr95_mlx_source_video_rgb_yuv6_loss_20260524T204916Z/`.
+  The runtime profile records `training_loss_surface=rgb_yuv6_mse`,
+  `loss_surface_weights={"rgb_mse": 0.5, "yuv6_mse": 0.5}`,
+  `target_yuv6_shape=[1, 2, 192, 256, 6]`, and
+  `seconds_per_step=0.027323624992277473`.
+- Queue-owned executable smoke:
+  `experiments/results/codex_pr95_mlx_source_video_rgb_yuv6_queue_20260524T204928Z/`.
+  `experiment_queue.v1` validated the queue, initialized canonical state, ran
+  the local MLX step, satisfied postconditions, and ended with `succeeded=1`
+  and `orphaned_step_count=0`.
 - `.venv/bin/python -m ruff check src/tac/local_acceleration/pr95_hnerv_mlx.py tools/run_pr95_mlx_timing_smoke.py tools/build_pr95_mlx_optimizer_matrix_queue.py src/tac/tests/test_pr95_hnerv_mlx.py src/tac/tests/test_run_pr95_mlx_timing_smoke.py src/tac/tests/test_run_pr95_mlx_timing_smoke_plan.py src/tac/tests/test_pr95_mlx_optimizer_matrix_queue.py`
-- `.venv/bin/python -m pytest src/tac/tests/test_pr95_hnerv_mlx.py src/tac/tests/test_pr95_hnerv_mlx_training.py src/tac/tests/test_run_pr95_mlx_timing_smoke.py src/tac/tests/test_run_pr95_mlx_timing_smoke_plan.py src/tac/tests/test_pr95_mlx_optimizer_matrix_queue.py -q`
-  passed with `35 passed`.
+- `.venv/bin/python -m pytest src/tac/tests/test_pr95_hnerv_mlx.py src/tac/tests/test_pr95_hnerv_mlx_training.py src/tac/tests/test_run_pr95_mlx_timing_smoke.py src/tac/tests/test_run_pr95_mlx_timing_smoke_plan.py src/tac/tests/test_pr95_mlx_optimizer_matrix_queue.py src/tac/tests/test_representation_training_probe_integration.py -q`
+  passed with `44 passed`.
 - `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python tools/review_tracker.py policy-check src/tac/local_acceleration/pr95_hnerv_mlx.py tools/run_pr95_mlx_timing_smoke.py tools/build_pr95_mlx_optimizer_matrix_queue.py src/tac/tests/test_pr95_hnerv_mlx.py src/tac/tests/test_run_pr95_mlx_timing_smoke.py src/tac/tests/test_pr95_mlx_optimizer_matrix_queue.py`
   reported `0 violations`.
 - `.venv/bin/python tools/lane_maturity.py validate`
