@@ -35,6 +35,17 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     run_pr95_mlx_synthetic_timing_smoke,
     write_pr95_mlx_byte_closed_smoke_archive,
 )
+from tac.local_acceleration.pr95_hnerv_mlx_contract import (  # noqa: E402
+    PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER,
+    PR95_LEGACY_TRAINING_LOOP_NOT_SOURCE_FAITHFUL_BLOCKER,
+    PR95_PREPROCESS_SMOKE_NOT_SOURCE_VIDEO_TRAINING_BLOCKER,
+    PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER,
+    PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER,
+    PR95_SOURCE_VIDEO_RGB_NOT_FULL_SCORER_BLOCKER,
+    PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER,
+    PR95_SOURCE_VIDEO_TARGETS_READY_SCORER_LOSS_UNWIRED_BLOCKER,
+    PR95_YUV6_SCORER_LOSS_UNWIRED_BLOCKER,
+)
 from tac.local_acceleration.pr95_hnerv_mlx_training import (  # noqa: E402
     SOURCE_FAITHFUL_PREPROCESS_SCHEMA,
     SOURCE_VIDEO_PREPROCESS_SCHEMA,
@@ -54,9 +65,7 @@ from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
 SOURCE_PREPROCESS_CONFLATED_BLOCKER = (
     "pr95_eval_roundtrip_scorer_preprocess_loss_not_ported_to_mlx"
 )
-SOURCE_PREPROCESS_PORTED_LOSS_UNWIRED_BLOCKER = (
-    "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx"
-)
+SOURCE_PREPROCESS_PORTED_LOSS_UNWIRED_BLOCKER = PR95_YUV6_SCORER_LOSS_UNWIRED_BLOCKER
 SOURCE_VIDEO_LOADER_UNWIRED_BLOCKER = (
     "pr95_source_video_loader_ported_but_training_loop_not_source_video_backed"
 )
@@ -203,7 +212,7 @@ def _exact_readiness_blockers(
         blockers = [
             blocker
             for blocker in blockers
-            if blocker != "pr95_source_video_loader_not_ported_to_mlx"
+            if blocker != PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER
         ]
         blockers.append(SOURCE_VIDEO_LOADER_UNWIRED_BLOCKER)
         source_video_refusal = source_video_preprocess_smoke.get(
@@ -220,9 +229,11 @@ def _exact_readiness_blockers(
             for blocker in blockers
             if blocker
             not in {
-                "pr95_source_video_loader_not_ported_to_mlx",
+                PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER,
                 "synthetic_targets_do_not_establish_contest_quality",
                 "pr95_hnerv_mlx_training_is_synthetic_timing_only_not_source_faithful",
+                SOURCE_VIDEO_LOADER_UNWIRED_BLOCKER,
+                PR95_LEGACY_TRAINING_LOOP_NOT_SOURCE_FAITHFUL_BLOCKER,
             }
         ]
         if training_loss_surface == PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE:
@@ -233,15 +244,15 @@ def _exact_readiness_blockers(
             ]
             blockers.extend(
                 [
-                    "pr95_source_video_rgb_yuv6_preprocess_loss_is_not_full_scorer_loss",
-                    "pr95_segnet_posenet_network_loss_not_wired_to_mlx",
+                    PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER,
+                    PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER,
                     "source_video_rgb_yuv6_preprocess_loss_is_not_score_authority",
                 ]
             )
         else:
             blockers.extend(
                 [
-                    "source_video_rgb_targets_do_not_establish_full_scorer_quality",
+                    PR95_SOURCE_VIDEO_RGB_NOT_FULL_SCORER_BLOCKER,
                     "source_video_rgb_timing_smoke_is_not_score_authority",
                 ]
             )
@@ -249,7 +260,7 @@ def _exact_readiness_blockers(
         blockers.extend(
             [
                 "runtime_consumption_smoke_is_not_score_authority",
-                "full_frame_inflate_parity_against_source_runtime_not_run",
+                PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER,
             ]
         )
     return list(dict.fromkeys(blockers))
@@ -467,7 +478,7 @@ def _extra_artifact_postconditions(
                 _json_array_contains_postcondition(
                     smoke_path,
                     "exact_readiness_refusal.blockers",
-                    "pr95_training_loop_not_yet_source_faithful",
+                    PR95_PREPROCESS_SMOKE_NOT_SOURCE_VIDEO_TRAINING_BLOCKER,
                 ),
                 _json_false_authority_postcondition(smoke_path),
             ]
@@ -505,7 +516,7 @@ def _extra_artifact_postconditions(
                 _json_array_contains_postcondition(
                     smoke_path,
                     "exact_readiness_refusal.blockers",
-                    "pr95_training_loop_not_yet_source_faithful",
+                    PR95_SOURCE_VIDEO_TARGETS_READY_SCORER_LOSS_UNWIRED_BLOCKER,
                 ),
                 _json_false_authority_postcondition(smoke_path),
             ]
@@ -591,6 +602,26 @@ def _build_representation_training_plan(
         optimizer_training_config.get("dispatch_blockers", [])
         if isinstance(optimizer_training_config, dict)
         else []
+    )
+    effective_optimizer_blockers = [str(item) for item in optimizer_blockers]
+    if train_on_source_video_pairs:
+        effective_optimizer_blockers = [
+            blocker
+            for blocker in effective_optimizer_blockers
+            if blocker != PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER
+        ]
+    if (
+        train_on_source_video_pairs
+        and source_video_loss_surface == PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
+    ):
+        effective_optimizer_blockers = [
+            blocker
+            for blocker in effective_optimizer_blockers
+            if blocker != PR95_YUV6_SCORER_LOSS_UNWIRED_BLOCKER
+        ]
+    exact_blockers = _exact_readiness_blockers(
+        source_video_training=train_on_source_video_pairs,
+        training_loss_surface=source_video_loss_surface,
     )
     return write_representation_training_probe_manifest(
         output_dir / "representation_training_plan.json",
@@ -713,8 +744,8 @@ def _build_representation_training_plan(
         },
         dispatch_blockers=[
             "pr95_hnerv_mlx_timing_smoke_is_proxy_signal",
-            *[str(item) for item in optimizer_blockers],
-            *EXACT_READINESS_REFUSAL_BLOCKERS,
+            *effective_optimizer_blockers,
+            *exact_blockers,
         ],
         evidence_grade="[macOS-MLX research-signal]",
         source_anchor="PR95 HNeRV Muon native MLX timing smoke plan",
@@ -951,6 +982,10 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         recommended_execution=recommended_execution,
         optimizer_descriptor=optimizer_descriptor,
     )
+    exact_blockers = _exact_readiness_blockers(
+        source_video_training=bool(args.train_on_source_video_pairs),
+        training_loss_surface=args.source_video_loss_surface,
+    )
     return {
         "schema": "representation_training_probe_plan_v1",
         "lane_id": LANE_ID,
@@ -1015,7 +1050,7 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         "dispatch_blockers": [
             "pr95_hnerv_mlx_timing_smoke_plan_is_proxy_signal",
             *[str(item) for item in optimizer_blockers],
-            *EXACT_READINESS_REFUSAL_BLOCKERS,
+            *exact_blockers,
         ],
         "evidence_grade": "[macOS-MLX research-signal]",
         **FALSE_AUTHORITY,
@@ -1435,15 +1470,15 @@ def main(argv: list[str] | None = None) -> int:
                 "ready": False,
                 "blockers": (
                     [
-                        "pr95_source_video_rgb_yuv6_preprocess_loss_is_not_full_scorer_loss",
-                        "pr95_segnet_posenet_network_loss_not_wired_to_mlx",
+                        PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER,
+                        PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER,
                         "source_video_rgb_yuv6_preprocess_loss_is_not_score_authority",
                         "requires_exact_cpu_cuda_auth_eval_before_score_claim",
                     ]
                     if args.source_video_loss_surface
                     == PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
                     else [
-                        "source_video_rgb_targets_do_not_establish_full_scorer_quality",
+                        PR95_SOURCE_VIDEO_RGB_NOT_FULL_SCORER_BLOCKER,
                         "source_video_rgb_timing_smoke_is_not_score_authority",
                         "requires_exact_cpu_cuda_auth_eval_before_score_claim",
                     ]

@@ -29,7 +29,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     EXACT_READINESS_REFUSAL_BLOCKERS,
     FALSE_AUTHORITY,
     LANE_ID,
-    PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY,
+    PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY,
     PR95_MLX_LOSS_SURFACE_RGB_MSE,
     PR95_MLX_LOSS_SURFACES,
     PR95_STAGE_MODULES,
@@ -94,7 +94,7 @@ def _executable_descriptors_for_stage(stage: int) -> list[str]:
             continue
         if (
             training_config.get("backend_status")
-            != PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY
+            != PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY
         ):
             continue
         if int(stage) not in _descriptor_stage_indices(row):

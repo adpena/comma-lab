@@ -3,11 +3,11 @@
 
 This module is deliberately narrow: it ports the PR95 decoder topology, archive
 grammar, and optimizer partition into MLX so local Apple Silicon timing and
-parity work can become queueable evidence. The current training loop is a
-synthetic timing smoke, not a source-faithful PR95 reproduction. It does not
-claim score authority; archive smokes emitted from this lane remain byte-closed
-training artifacts until the source loader/loss/export contract and exact
-CPU/CUDA auth eval anchor them.
+parity work can become queueable evidence. The training loop now supports both
+synthetic timing targets and real PR95 source-video RGB/YUV6 target losses, but
+it is still not a full PR95 reproduction until scorer-network loss,
+stage/QAT/resume parity, export parity, full-frame inflate parity, and exact
+CPU/CUDA auth eval anchor it.
 """
 
 from __future__ import annotations
@@ -28,6 +28,16 @@ from typing import Any
 
 import numpy as np
 
+from tac.local_acceleration.pr95_hnerv_mlx_contract import (
+    PR95_EXPORT_FORWARD_PARITY_BLOCKER,
+    PR95_QAT_RESUME_UNPORTED_BLOCKER,
+    PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER,
+    PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER,
+    PR95_SOURCE_VIDEO_RGB_NOT_FULL_SCORER_BLOCKER,
+    PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER,
+    PR95_STAGE_SCHEDULE_SOURCE_MISMATCH_BLOCKER,
+    PR95_YUV6_SCORER_LOSS_UNWIRED_BLOCKER,
+)
 from tac.optimization.optimizer_scheduler_registry import (
     OptimizerSchedulerRegistryError,
     default_optimizer_scheduler_registry,
@@ -68,7 +78,7 @@ PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS: dict[int, str] = {
     5: "pr95_stage5_adamw_baseline_mlx",
     8: "pr95_stage8_muon_adamw_mlx",
 }
-PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY = "implemented_mlx_synthetic_timing_only"
+PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY = "implemented_mlx_local_timing_proxy"
 PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY = "synthetic_timing_only"
 PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY = (
     "source_video_rgb_timing_only"
@@ -83,25 +93,25 @@ PR95_MLX_LOSS_SURFACES = (
     PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE,
 )
 PR95_MLX_SOURCE_FAITHFUL_BLOCKERS: tuple[str, ...] = (
-    "pr95_source_video_loader_not_ported_to_mlx",
-    "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx",
-    "pr95_stage_hparams_and_cosine_schedules_not_all_source_matched",
-    "pr95_qat_c1a_and_resume_semantics_not_ported_to_mlx",
-    "pr95_export_forward_parity_not_established",
+    PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER,
+    PR95_YUV6_SCORER_LOSS_UNWIRED_BLOCKER,
+    PR95_STAGE_SCHEDULE_SOURCE_MISMATCH_BLOCKER,
+    PR95_QAT_RESUME_UNPORTED_BLOCKER,
+    PR95_EXPORT_FORWARD_PARITY_BLOCKER,
 )
 PR95_MLX_SOURCE_VIDEO_RGB_BLOCKERS: tuple[str, ...] = (
-    "pr95_source_video_rgb_targets_are_not_full_scorer_loss",
-    "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx",
-    "pr95_stage_hparams_and_cosine_schedules_not_all_source_matched",
-    "pr95_qat_c1a_and_resume_semantics_not_ported_to_mlx",
-    "pr95_export_forward_parity_not_established",
+    PR95_SOURCE_VIDEO_RGB_NOT_FULL_SCORER_BLOCKER,
+    PR95_YUV6_SCORER_LOSS_UNWIRED_BLOCKER,
+    PR95_STAGE_SCHEDULE_SOURCE_MISMATCH_BLOCKER,
+    PR95_QAT_RESUME_UNPORTED_BLOCKER,
+    PR95_EXPORT_FORWARD_PARITY_BLOCKER,
 )
 PR95_MLX_SOURCE_VIDEO_RGB_YUV6_BLOCKERS: tuple[str, ...] = (
-    "pr95_source_video_rgb_yuv6_preprocess_loss_is_not_full_scorer_loss",
-    "pr95_segnet_posenet_network_loss_not_wired_to_mlx",
-    "pr95_stage_hparams_and_cosine_schedules_not_all_source_matched",
-    "pr95_qat_c1a_and_resume_semantics_not_ported_to_mlx",
-    "pr95_export_forward_parity_not_established",
+    PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER,
+    PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER,
+    PR95_STAGE_SCHEDULE_SOURCE_MISMATCH_BLOCKER,
+    PR95_QAT_RESUME_UNPORTED_BLOCKER,
+    PR95_EXPORT_FORWARD_PARITY_BLOCKER,
 )
 
 FALSE_AUTHORITY: dict[str, bool] = {
@@ -1245,7 +1255,7 @@ def pr95_mlx_optimizer_config_from_descriptor(
     if not isinstance(training_config, Mapping):
         raise Pr95HNeRVMlxError(f"{descriptor_id}: descriptor missing training_config")
     backend_status = str(training_config.get("backend_status") or "")
-    if backend_status != PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY:
+    if backend_status != PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY:
         raise Pr95HNeRVMlxError(
             f"{descriptor_id}: optimizer descriptor is not executable on MLX "
             f"(backend_status={backend_status or 'missing'})"
@@ -1379,9 +1389,7 @@ def _exact_readiness_blockers_for_timing_smoke(
                 "source_video_rgb_yuv6_preprocess_loss_is_not_score_authority"
             )
         else:
-            blockers.append(
-                "source_video_rgb_targets_do_not_establish_full_scorer_quality"
-            )
+            blockers.append(PR95_SOURCE_VIDEO_RGB_NOT_FULL_SCORER_BLOCKER)
             blockers.append("source_video_rgb_timing_smoke_is_not_score_authority")
     return list(dict.fromkeys(blockers))
 
@@ -1681,6 +1689,13 @@ def run_pr95_mlx_synthetic_timing_smoke(
         profile_id += "_source_video_rgb_yuv6"
     elif source_video_training:
         profile_id += "_source_video_rgb"
+    source_video_target_loss_training = bool(source_video_training)
+    source_faithful_training = False
+    source_faithful_training_scope = (
+        "source_video_target_loss_only"
+        if source_video_training
+        else "synthetic_timing_only"
+    )
     runtime_profile = {
         "schema": "trainer_runtime_profile_observation.v1",
         "profile_id": profile_id,
@@ -1690,8 +1705,11 @@ def run_pr95_mlx_synthetic_timing_smoke(
         "substrate_family": "nerv_family",
         "training_backend": "mlx",
         "training_fidelity": training_fidelity,
-        "source_faithful_training": False,
+        "source_faithful_training": source_faithful_training,
+        "source_faithful_training_scope": source_faithful_training_scope,
+        "full_pr95_source_faithful_training": False,
         "source_video_training": source_video_training,
+        "source_video_target_loss_training": source_video_target_loss_training,
         "source_faithfulness_blockers": source_faithfulness_blockers,
         "training_loss_surface": loss_surface,
         "loss_surface_weights": loss_surface_weights,
@@ -1755,8 +1773,11 @@ def run_pr95_mlx_synthetic_timing_smoke(
         "substrate_family": "nerv_family",
         "training_backend": "mlx",
         "training_fidelity": training_fidelity,
-        "source_faithful_training": False,
+        "source_faithful_training": source_faithful_training,
+        "source_faithful_training_scope": source_faithful_training_scope,
+        "full_pr95_source_faithful_training": False,
         "source_video_training": source_video_training,
+        "source_video_target_loss_training": source_video_target_loss_training,
         "source_faithfulness_blockers": source_faithfulness_blockers,
         "training_loss_surface": loss_surface,
         "loss_surface_weights": loss_surface_weights,
@@ -1779,8 +1800,11 @@ def run_pr95_mlx_synthetic_timing_smoke(
             "optimizer_config_sha256": stage.optimizer_config_sha256,
             "optimizer_backend_status": stage.optimizer_backend_status,
             "training_fidelity": training_fidelity,
-            "source_faithful_training": False,
+            "source_faithful_training": source_faithful_training,
+            "source_faithful_training_scope": source_faithful_training_scope,
+            "full_pr95_source_faithful_training": False,
             "source_video_training": source_video_training,
+            "source_video_target_loss_training": source_video_target_loss_training,
             "source_faithfulness_blockers": source_faithfulness_blockers,
             "training_loss_surface": loss_surface,
             "loss_surface_weights": loss_surface_weights,
@@ -1916,7 +1940,7 @@ __all__ = [
     "LANE_ID",
     "PR95_ARCHIVE_EXPORT_SCHEMA",
     "PR95_ARCHIVE_N_QUANT",
-    "PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY",
+    "PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY",
     "PR95_MLX_LOSS_SURFACES",
     "PR95_MLX_LOSS_SURFACE_RGB_MSE",
     "PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE",

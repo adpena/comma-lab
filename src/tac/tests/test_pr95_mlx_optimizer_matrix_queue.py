@@ -6,6 +6,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tac.local_acceleration.pr95_hnerv_mlx_contract import (
+    PR95_PREPROCESS_SMOKE_NOT_SOURCE_VIDEO_TRAINING_BLOCKER,
+    PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER,
+    PR95_SOURCE_VIDEO_RGB_NOT_FULL_SCORER_BLOCKER,
+    PR95_SOURCE_VIDEO_TARGETS_READY_SCORER_LOSS_UNWIRED_BLOCKER,
+)
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -177,7 +184,8 @@ def test_pr95_mlx_optimizer_matrix_cli_emits_queueable_plans(
             condition["type"] == "json_array_contains"
             and condition["path"].endswith("source_faithful_preprocess_smoke.json")
             and condition["key"] == "exact_readiness_refusal.blockers"
-            and condition["contains"] == "pr95_training_loop_not_yet_source_faithful"
+            and condition["contains"]
+            == PR95_PREPROCESS_SMOKE_NOT_SOURCE_VIDEO_TRAINING_BLOCKER
             for condition in experiment["steps"][0]["postconditions"]
         )
         for experiment in queue["experiments"]
@@ -197,7 +205,8 @@ def test_pr95_mlx_optimizer_matrix_cli_emits_queueable_plans(
             condition["type"] == "json_array_contains"
             and condition["path"].endswith("source_video_preprocess_smoke.json")
             and condition["key"] == "exact_readiness_refusal.blockers"
-            and condition["contains"] == "pr95_training_loop_not_yet_source_faithful"
+            and condition["contains"]
+            == PR95_SOURCE_VIDEO_TARGETS_READY_SCORER_LOSS_UNWIRED_BLOCKER
             for condition in experiment["steps"][0]["postconditions"]
         )
         for experiment in queue["experiments"]
@@ -431,13 +440,13 @@ def test_pr95_mlx_optimizer_matrix_queue_executes_and_harvests_one_cell(
     ]
     assert preprocess_signal["present"] is True
     assert preprocess_signal["gradient_reachable"] is True
-    assert "pr95_training_loop_not_yet_source_faithful" in (
+    assert PR95_PREPROCESS_SMOKE_NOT_SOURCE_VIDEO_TRAINING_BLOCKER in (
         preprocess_signal["exact_readiness_blockers"]
     )
-    assert "source_video_rgb_targets_do_not_establish_full_scorer_quality" not in (
+    assert PR95_SOURCE_VIDEO_RGB_NOT_FULL_SCORER_BLOCKER not in (
         candidate["dispatch_blockers"]
     )
-    assert "pr95_segnet_posenet_network_loss_not_wired_to_mlx" in (
+    assert PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER in (
         candidate["dispatch_blockers"]
     )
     assert candidate["ready_for_exact_eval_dispatch"] is False

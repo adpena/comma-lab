@@ -73,6 +73,7 @@ RESPONSE_UPDATE_PLACEHOLDER_SCHEMA = "byte_shaving_campaign_response_update_plac
 QUEUE_PERFORMANCE_SUMMARY_SCHEMA = "experiment_queue_performance_summary.v1"
 UNAVAILABLE_QUEUE_PERFORMANCE_SUMMARY_SCHEMA = "experiment_queue_performance_summary_unavailable.v1"
 QUEUE_FEEDBACK_REPLAN_REQUEST_SCHEMA = "byte_shaving_materializer_campaign_feedback_replan_request.v1"
+RESULT_REVIEW_PACKET_SCHEMA = "tac_result_review_packet_v1"
 QUEUE_FEEDBACK_REPLAN_EXPERIMENT_METADATA_SCHEMA = (
     "byte_shaving_materializer_campaign_feedback_replan_experiment_metadata.v1"
 )
@@ -281,6 +282,303 @@ def _display_path_list(paths: Sequence[str | Path]) -> list[str]:
     return [_display_path(_resolve(path)) for path in paths]
 
 
+def _load_json_object_if_present(path: Path) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _review_packet_axis(packet: Mapping[str, Any]) -> str | None:
+    axis = str(packet.get("score_axis") or "").strip().lower()
+    if axis == "contest_cpu" and packet.get("exact_cpu_evidence") is True:
+        return axis
+    if axis == "contest_cuda" and packet.get("exact_cuda_evidence") is True:
+        return axis
+    return None
+
+
+def _nested_mapping(value: Any, key: str) -> Mapping[str, Any]:
+    item = value.get(key) if isinstance(value, Mapping) else None
+    return item if isinstance(item, Mapping) else {}
+
+
+def _packet_pair_identity(packet: Mapping[str, Any]) -> tuple[str, int, int, str] | None:
+    custody = _nested_mapping(packet, "custody")
+    runtime = _nested_mapping(packet, "runtime_custody")
+    archive_sha = str(custody.get("archive_sha256") or "").strip()
+    runtime_content = str(runtime.get("runtime_content_tree_sha256") or "").strip()
+    try:
+        archive_bytes = int(custody.get("archive_bytes"))
+        n_samples = int(custody.get("n_samples"))
+    except (TypeError, ValueError):
+        return None
+    if not (archive_sha and runtime_content):
+        return None
+    return archive_sha, archive_bytes, n_samples, runtime_content
+
+
+def _candidate_id_from_packet_pair(cpu: Mapping[str, Any], cuda: Mapping[str, Any]) -> str:
+    for key in ("candidate_id", "technique"):
+        cpu_value = str(cpu.get(key) or "").strip()
+        cuda_value = str(cuda.get(key) or "").strip()
+        if cpu_value and cpu_value == cuda_value:
+            return cpu_value
+    archive_sha = _nested_mapping(cpu, "custody").get("archive_sha256")
+    return f"exact_auth_pair_{str(archive_sha or '')[:12] or 'unknown'}"
+
+
+def _validate_discovered_exact_auth_packet_pair(
+    *,
+    candidate_id: str,
+    cpu_packet: Mapping[str, Any],
+    cuda_packet: Mapping[str, Any],
+    cpu_path: Path,
+    cuda_path: Path,
+) -> str | None:
+    from tac.optimization.inverse_steganalysis_acquisition import (
+        InverseSteganalysisAcquisitionError,
+        paired_exact_auth_calibration_observations_from_review_packets,
+    )
+
+    try:
+        paired_exact_auth_calibration_observations_from_review_packets(
+            [cpu_packet, cuda_packet],
+            candidate_id=candidate_id,
+            packet_paths=[_display_path(cpu_path), _display_path(cuda_path)],
+        )
+    except InverseSteganalysisAcquisitionError as exc:
+        return str(exc)
+    return None
+
+
+def _iter_exact_auth_calibration_packet_candidates(
+    roots: Sequence[str | Path],
+    *,
+    glob_pattern: str,
+) -> tuple[list[Path], list[str]]:
+    paths: list[Path] = []
+    blockers: list[str] = []
+    for raw_root in roots:
+        root = _resolve(raw_root)
+        if root.is_file():
+            paths.append(root)
+            continue
+        if root.is_dir():
+            paths.extend(path for path in root.glob(glob_pattern) if path.is_file())
+            continue
+        blockers.append(f"exact_auth_calibration_packet_root_missing:{_display_path(root)}")
+    return sorted(dict.fromkeys(paths), key=lambda path: path.as_posix()), blockers
+
+
+def _derived_exact_auth_calibration_packet_roots(*, run_dir: Path) -> list[Path]:
+    roots = [run_dir]
+    roots.extend(path for path in run_dir.rglob("exact_eval_handoff") if path.is_dir())
+    roots.extend(path.parent for path in run_dir.rglob("*result_review*.json") if path.is_file())
+    return sorted(dict.fromkeys(roots), key=lambda path: path.as_posix())
+
+
+def _feedback_exact_auth_calibration_inputs(
+    args: argparse.Namespace,
+    *,
+    run_dir: Path | None = None,
+) -> dict[str, Any]:
+    explicit_packet_paths = [_resolve(path) for path in args.exact_auth_calibration_packet]
+    explicit_paths = [_display_path(path) for path in explicit_packet_paths]
+    explicit_candidate_id = args.exact_auth_calibration_candidate_id or args.candidate_id
+    if explicit_packet_paths:
+        blockers: list[str] = []
+        discovery_pair: dict[str, Any] | None = None
+        packet_paths = explicit_paths
+        if not explicit_candidate_id:
+            blockers.append("exact_auth_calibration_candidate_id_missing_for_explicit_packets")
+        if len(explicit_packet_paths) != 2:
+            blockers.append("exact_auth_calibration_explicit_packets_must_be_paired_cpu_cuda")
+        else:
+            packets = [
+                _load_json_object_if_present(path)
+                for path in explicit_packet_paths
+            ]
+            if any(packet is None for packet in packets):
+                blockers.append("exact_auth_calibration_explicit_packet_json_invalid")
+            elif explicit_candidate_id:
+                by_axis: dict[str, tuple[Path, dict[str, Any]]] = {}
+                for path, packet in zip(explicit_packet_paths, packets, strict=True):
+                    if packet is None:
+                        continue
+                    axis = _review_packet_axis(packet)
+                    if axis is None:
+                        blockers.append(
+                            f"exact_auth_calibration_explicit_packet_axis_invalid:{_display_path(path)}"
+                        )
+                        continue
+                    by_axis[axis] = (path, packet)
+                if {"contest_cpu", "contest_cuda"} <= set(by_axis):
+                    cpu_path, cpu_packet = by_axis["contest_cpu"]
+                    cuda_path, cuda_packet = by_axis["contest_cuda"]
+                    invalid_reason = _validate_discovered_exact_auth_packet_pair(
+                        candidate_id=str(explicit_candidate_id),
+                        cpu_packet=cpu_packet,
+                        cuda_packet=cuda_packet,
+                        cpu_path=cpu_path,
+                        cuda_path=cuda_path,
+                    )
+                    if invalid_reason is not None:
+                        blockers.append(
+                            "exact_auth_calibration_explicit_packet_pair_invalid:"
+                            f"{invalid_reason}"
+                        )
+                    else:
+                        identity = _packet_pair_identity(cpu_packet)
+                        if identity is not None:
+                            packet_paths = [_display_path(cpu_path), _display_path(cuda_path)]
+                            discovery_pair = {
+                                "archive_sha256": identity[0],
+                                "archive_bytes": identity[1],
+                                "n_samples": identity[2],
+                                "runtime_content_tree_sha256": identity[3],
+                                "contest_cpu_packet_path": _display_path(cpu_path),
+                                "contest_cuda_packet_path": _display_path(cuda_path),
+                            }
+                else:
+                    blockers.append(
+                        "exact_auth_calibration_explicit_packets_require_one_cpu_one_cuda"
+                    )
+        return {
+            "packet_paths": packet_paths,
+            "candidate_id": explicit_candidate_id,
+            "source": "explicit_cli",
+            "discovery_roots": [],
+            "discovery_pair": discovery_pair,
+            "blockers": blockers,
+        }
+    explicit_roots = list(args.exact_auth_calibration_packet_root)
+    roots: list[str | Path] = explicit_roots
+    required_roots = bool(explicit_roots)
+    source = "auto_discovery"
+    if not roots and run_dir is not None:
+        roots = _derived_exact_auth_calibration_packet_roots(run_dir=run_dir)
+        source = "run_derived_discovery"
+    if not roots:
+        return {
+            "packet_paths": [],
+            "candidate_id": args.exact_auth_calibration_candidate_id or args.candidate_id,
+            "source": "none",
+            "discovery_roots": [],
+            "discovery_pair": None,
+            "blockers": [],
+        }
+
+    candidate_paths, discovery_blockers = _iter_exact_auth_calibration_packet_candidates(
+        roots,
+        glob_pattern=args.exact_auth_calibration_packet_glob,
+    )
+    grouped: dict[tuple[str, int, int, str], dict[str, tuple[Path, dict[str, Any]]]] = {}
+    for path in candidate_paths:
+        packet = _load_json_object_if_present(path)
+        if packet is None or packet.get("schema") != RESULT_REVIEW_PACKET_SCHEMA:
+            continue
+        axis = _review_packet_axis(packet)
+        identity = _packet_pair_identity(packet)
+        if axis is None or identity is None:
+            continue
+        current = grouped.setdefault(identity, {})
+        previous = current.get(axis)
+        if previous is None or path.stat().st_mtime >= previous[0].stat().st_mtime:
+            current[axis] = (path, packet)
+
+    pairs: list[tuple[tuple[str, int, int, str], dict[str, tuple[Path, dict[str, Any]]]]] = [
+        (identity, rows)
+        for identity, rows in grouped.items()
+        if {"contest_cpu", "contest_cuda"} <= set(rows)
+    ]
+    if not pairs:
+        if not required_roots and not candidate_paths and not discovery_blockers:
+            return {
+                "packet_paths": [],
+                "candidate_id": args.exact_auth_calibration_candidate_id or args.candidate_id,
+                "source": source,
+                "discovery_roots": _display_path_list(roots),
+                "discovery_pair": None,
+                "blockers": [],
+            }
+        return {
+            "packet_paths": [],
+            "candidate_id": args.exact_auth_calibration_candidate_id or args.candidate_id,
+            "source": source,
+            "discovery_roots": _display_path_list(roots),
+            "discovery_pair": None,
+            "blockers": [
+                *discovery_blockers,
+                "exact_auth_calibration_packet_pair_not_found",
+            ],
+        }
+    pairs.sort(
+        key=lambda item: (
+            max(path.stat().st_mtime for path, _packet in item[1].values()),
+            item[0][0],
+            item[0][1],
+            item[0][2],
+            item[0][3],
+        ),
+        reverse=True,
+    )
+    invalid_pair_reasons: list[str] = []
+    selected_identity: tuple[str, int, int, str] | None = None
+    for pair_identity, rows in pairs:
+        cpu_path, cpu_packet = rows["contest_cpu"]
+        cuda_path, cuda_packet = rows["contest_cuda"]
+        candidate_id = (
+            args.exact_auth_calibration_candidate_id
+            or args.candidate_id
+            or _candidate_id_from_packet_pair(cpu_packet, cuda_packet)
+        )
+        invalid_reason = _validate_discovered_exact_auth_packet_pair(
+            candidate_id=candidate_id,
+            cpu_packet=cpu_packet,
+            cuda_packet=cuda_packet,
+            cpu_path=cpu_path,
+            cuda_path=cuda_path,
+        )
+        if invalid_reason is None:
+            selected_identity = pair_identity
+            break
+        invalid_pair_reasons.append(
+            f"exact_auth_calibration_packet_pair_invalid:{invalid_reason}"
+        )
+    else:
+        return {
+            "packet_paths": [],
+            "candidate_id": args.exact_auth_calibration_candidate_id or args.candidate_id,
+            "source": source,
+            "discovery_roots": _display_path_list(roots),
+            "discovery_pair": None,
+            "blockers": [
+                *discovery_blockers,
+                *list(dict.fromkeys(invalid_pair_reasons)),
+                "exact_auth_calibration_packet_pair_not_found",
+            ],
+        }
+    if selected_identity is None:  # pragma: no cover - guarded by the loop else above.
+        raise RuntimeError("exact-auth calibration packet selection invariant failed")
+    return {
+        "packet_paths": [_display_path(cpu_path), _display_path(cuda_path)],
+        "candidate_id": candidate_id,
+        "source": source,
+        "discovery_roots": _display_path_list(roots),
+        "discovery_pair": {
+            "archive_sha256": selected_identity[0],
+            "archive_bytes": selected_identity[1],
+            "n_samples": selected_identity[2],
+            "runtime_content_tree_sha256": selected_identity[3],
+            "contest_cpu_packet_path": _display_path(cpu_path),
+            "contest_cuda_packet_path": _display_path(cuda_path),
+        },
+        "blockers": [],
+    }
+
+
 def _queue_feedback_replan_continuation_lane_id(
     queue: Mapping[str, Any],
     *,
@@ -362,6 +660,7 @@ def _queue_performance_replan_blockers(
     queue_performance_summary: Mapping[str, Any],
     runtime_identity_path: Path | None,
     cache_identity_path: Path | None,
+    exact_auth_calibration_inputs: Mapping[str, Any] | None = None,
 ) -> list[str]:
     blockers: list[str] = []
     if queue_performance_summary.get("schema") != QUEUE_PERFORMANCE_SUMMARY_SCHEMA:
@@ -372,6 +671,11 @@ def _queue_performance_replan_blockers(
         blockers.append("queue_performance_runtime_identity_missing")
     if cache_identity_path is None or not cache_identity_path.exists():
         blockers.append("queue_performance_cache_identity_missing")
+    if exact_auth_calibration_inputs is not None:
+        blockers.extend(
+            str(item)
+            for item in _as_sequence(exact_auth_calibration_inputs.get("blockers"))
+        )
     return blockers
 
 
@@ -383,6 +687,7 @@ def _feedback_action_functional_command_hint(
     queue_performance_summary_path: Path,
     runtime_identity_path: Path | None,
     cache_identity_path: Path | None,
+    exact_auth_calibration_inputs: Mapping[str, Any] | None = None,
 ) -> list[str]:
     command = [
         sys.executable,
@@ -424,16 +729,22 @@ def _feedback_action_functional_command_hint(
             ]
         )
     _append_path_args(command, "--observation", args.observation)
+    calibration_inputs = (
+        exact_auth_calibration_inputs
+        if exact_auth_calibration_inputs is not None
+        else _feedback_exact_auth_calibration_inputs(args, run_dir=run_dir)
+    )
     _append_path_args(
         command,
         "--exact-auth-calibration-packet",
-        args.exact_auth_calibration_packet,
+        [str(path) for path in _as_sequence(calibration_inputs.get("packet_paths"))],
     )
-    if args.exact_auth_calibration_candidate_id:
+    calibration_candidate = calibration_inputs.get("candidate_id")
+    if calibration_candidate:
         command.extend(
             [
                 "--exact-auth-calibration-candidate-id",
-                str(args.exact_auth_calibration_candidate_id),
+                str(calibration_candidate),
             ]
         )
     if args.total_byte_budget is not None:
@@ -458,11 +769,16 @@ def _queue_feedback_replan_request_payload(
     execution_queue: Path,
     state_path: Path,
 ) -> dict[str, Any]:
+    exact_auth_calibration_inputs = _feedback_exact_auth_calibration_inputs(
+        args,
+        run_dir=run_dir,
+    )
     blockers = _queue_performance_replan_blockers(
         args,
         queue_performance_summary=queue_performance_summary,
         runtime_identity_path=runtime_identity_path,
         cache_identity_path=cache_identity_path,
+        exact_auth_calibration_inputs=exact_auth_calibration_inputs,
     )
     command_hint = _feedback_action_functional_command_hint(
         args,
@@ -471,6 +787,7 @@ def _queue_feedback_replan_request_payload(
         queue_performance_summary_path=queue_performance_summary_path,
         runtime_identity_path=runtime_identity_path,
         cache_identity_path=cache_identity_path,
+        exact_auth_calibration_inputs=exact_auth_calibration_inputs,
     )
     return _false_authority_payload(
         {
@@ -490,10 +807,21 @@ def _queue_feedback_replan_request_payload(
             "queue_performance_runtime_identity_generated": generated_runtime_identity,
             "queue_performance_cache_identity_generated": generated_cache_identity,
             "feedback_observation_paths": _display_path_list(args.observation),
-            "exact_auth_calibration_packet_paths": _display_path_list(
-                args.exact_auth_calibration_packet
-            ),
-            "exact_auth_calibration_candidate_id": args.exact_auth_calibration_candidate_id,
+            "exact_auth_calibration_packet_paths": exact_auth_calibration_inputs[
+                "packet_paths"
+            ],
+            "exact_auth_calibration_candidate_id": exact_auth_calibration_inputs[
+                "candidate_id"
+            ],
+            "exact_auth_calibration_packet_source": exact_auth_calibration_inputs[
+                "source"
+            ],
+            "exact_auth_calibration_discovery_roots": exact_auth_calibration_inputs[
+                "discovery_roots"
+            ],
+            "exact_auth_calibration_discovery_pair": exact_auth_calibration_inputs[
+                "discovery_pair"
+            ],
             "performance_schema": queue_performance_summary.get("schema"),
             "performance_event_count": queue_performance_summary.get("event_count"),
             "ready_for_action_functional_feedback": not blockers,
@@ -1220,6 +1548,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--atom", action="append", default=[])
     parser.add_argument("--observation", action="append", default=[])
     parser.add_argument("--exact-auth-calibration-packet", action="append", default=[])
+    parser.add_argument(
+        "--exact-auth-calibration-packet-root",
+        action="append",
+        default=[],
+        help=(
+            "file or directory root to scan for paired tac_result_review_packet_v1 "
+            "contest_cpu/contest_cuda calibration packets for feedback replans"
+        ),
+    )
+    parser.add_argument(
+        "--exact-auth-calibration-packet-glob",
+        default="**/*result_review*.json",
+        help="glob used under each calibration packet root",
+    )
     parser.add_argument("--exact-auth-calibration-candidate-id", default=None)
     parser.add_argument("--queue-performance-summary", action="append", default=[])
     parser.add_argument("--queue-performance-runtime-identity", type=Path, default=None)

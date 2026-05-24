@@ -182,6 +182,59 @@ def _telemetry_truncation_markers(payload: Any, *, prefix: str = "") -> list[str
     return markers
 
 
+def _exact_auth_calibration_pair_policy(
+    run_summary: Mapping[str, Any],
+) -> dict[str, Any]:
+    request = run_summary.get("queue_feedback_replan_request")
+    request = request if isinstance(request, Mapping) else {}
+    packet_paths = _string_list(request.get("exact_auth_calibration_packet_paths"))
+    pair = request.get("exact_auth_calibration_discovery_pair")
+    pair = pair if isinstance(pair, Mapping) else None
+    blockers: list[str] = []
+
+    if packet_paths and len(packet_paths) != 2:
+        blockers.append("exact_auth_calibration_requires_exactly_two_packet_paths")
+    if packet_paths and pair is None:
+        blockers.append("exact_auth_calibration_pair_metadata_missing")
+    if pair is not None:
+        required_pair_fields = (
+            "archive_sha256",
+            "archive_bytes",
+            "n_samples",
+            "runtime_content_tree_sha256",
+            "contest_cpu_packet_path",
+            "contest_cuda_packet_path",
+        )
+        for field in required_pair_fields:
+            if _nonempty_str(pair.get(field)) is None:
+                blockers.append(f"exact_auth_calibration_pair_field_missing:{field}")
+        if _safe_int(pair.get("archive_bytes")) < 1:
+            blockers.append("exact_auth_calibration_archive_bytes_invalid")
+        if _safe_int(pair.get("n_samples")) < 1:
+            blockers.append("exact_auth_calibration_n_samples_invalid")
+        pair_paths = {
+            _nonempty_str(pair.get("contest_cpu_packet_path")),
+            _nonempty_str(pair.get("contest_cuda_packet_path")),
+        }
+        if packet_paths and pair_paths != set(packet_paths):
+            blockers.append("exact_auth_calibration_pair_paths_mismatch")
+
+    return _false_authority_payload(
+        {
+            "source": _nonempty_str(
+                request.get("exact_auth_calibration_packet_source")
+            ),
+            "packet_paths": packet_paths,
+            "packet_count": len(packet_paths),
+            "pair": dict(pair) if pair is not None else None,
+            "usable_for_feedback_trust_region": bool(packet_paths) and not blockers,
+            "blockers": list(dict.fromkeys(blockers)),
+            "allowed_use": "feedback_replan_trust_region_calibration_only",
+            "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_dispatch_authority",
+        }
+    )
+
+
 def validate_feedback_followup_queue(
     child_queue: Mapping[str, Any],
     *,
@@ -592,9 +645,12 @@ def build_queue_feedback_replan_policy(
     followup_action_functional_path = _nonempty_str(
         run_summary.get("queue_feedback_replan_followup_action_functional_path")
     )
+    exact_auth_calibration_policy = _exact_auth_calibration_pair_policy(run_summary)
 
     if exact_handoff_count:
         warnings.append("exact_readiness_handoffs_available")
+    if exact_auth_calibration_policy["packet_count"] == 0:
+        warnings.append("exact_auth_calibration_packet_pair_absent")
 
     queue_validation: dict[str, Any] | None = None
     feedback_queue_artifact_not_validated = False
@@ -621,6 +677,11 @@ def build_queue_feedback_replan_policy(
         for item in telemetry_truncation_markers
     ]
     blockers.extend(telemetry_blockers)
+    calibration_blockers = [
+        f"exact_auth_calibration_policy:{item}"
+        for item in _string_list(exact_auth_calibration_policy.get("blockers"))
+    ]
+    blockers.extend(calibration_blockers)
 
     if iteration_index >= max_iterations:
         decision = ACTION_STOP_MAX_ITERATIONS
@@ -637,6 +698,9 @@ def build_queue_feedback_replan_policy(
     elif telemetry_blockers:
         decision = ACTION_BLOCKED
         stop_reason = "queue_performance_telemetry_truncated"
+    elif calibration_blockers:
+        decision = ACTION_BLOCKED
+        stop_reason = "exact_auth_calibration_policy_failed"
     elif not replan_ready:
         decision = ACTION_BLOCKED
         stop_reason = "queue_feedback_replan_not_ready"
@@ -768,6 +832,10 @@ def build_queue_feedback_replan_policy(
                 decision == ACTION_RUN_NEXT_ITERATION
             ),
             "exact_readiness_handoff_count": exact_handoff_count,
+            "exact_auth_calibration_policy": exact_auth_calibration_policy,
+            "exact_auth_calibration_usable": exact_auth_calibration_policy[
+                "usable_for_feedback_trust_region"
+            ],
             "feedback_followup_queue_emitted": followup_queue_emitted,
             "feedback_followup_policy_enabled": followup_policy_enabled,
             "feedback_followup_executed": followup_executed,

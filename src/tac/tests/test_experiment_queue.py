@@ -2315,7 +2315,7 @@ def test_json_array_contains_postcondition_checks_dotted_list_value(
                 "exact_readiness_refusal": {
                     "ready": False,
                     "blockers": [
-                        "pr95_training_loop_not_yet_source_faithful",
+                        "fixture_exact_readiness_blocker",
                         "requires_exact_cpu_cuda_auth_eval_before_score_claim",
                     ],
                 }
@@ -2328,7 +2328,7 @@ def test_json_array_contains_postcondition_checks_dotted_list_value(
         "type": "json_array_contains",
         "path": advisory.name,
         "key": "exact_readiness_refusal.blockers",
-        "contains": "pr95_training_loop_not_yet_source_faithful",
+        "contains": "fixture_exact_readiness_blocker",
     }
     missing = {**condition, "contains": "missing_blocker"}
 

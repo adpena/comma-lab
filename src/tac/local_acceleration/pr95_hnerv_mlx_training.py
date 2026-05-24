@@ -28,6 +28,15 @@ from tac.local_acceleration.pr95_hnerv_mlx import (
     mx,
     require_mlx,
 )
+from tac.local_acceleration.pr95_hnerv_mlx_contract import (
+    PR95_EXPORT_FORWARD_PARITY_BLOCKER,
+    PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER,
+    PR95_PREPROCESS_SMOKE_NOT_SOURCE_VIDEO_TRAINING_BLOCKER,
+    PR95_QAT_RESUME_UNPORTED_BLOCKER,
+    PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER,
+    PR95_SOURCE_VIDEO_TARGETS_READY_SCORER_LOSS_UNWIRED_BLOCKER,
+    PR95_STAGE_SCHEDULE_SOURCE_MISMATCH_BLOCKER,
+)
 
 CAMERA_HW: tuple[int, int] = (874, 1164)
 SCORER_HW: tuple[int, int] = (384, 512)
@@ -394,7 +403,11 @@ def run_pr95_mlx_source_faithful_smoke(
     blockers = [
         "pr95_source_video_loader_not_wired_to_mlx_preprocess_smoke",
         "pr95_scorer_loss_not_wired_to_mlx_preprocess_smoke",
-        "pr95_training_loop_not_yet_source_faithful",
+        PR95_PREPROCESS_SMOKE_NOT_SOURCE_VIDEO_TRAINING_BLOCKER,
+        PR95_STAGE_SCHEDULE_SOURCE_MISMATCH_BLOCKER,
+        PR95_QAT_RESUME_UNPORTED_BLOCKER,
+        PR95_EXPORT_FORWARD_PARITY_BLOCKER,
+        PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER,
         "requires_pytorch_export_forward_parity_on_source_checkpoint",
         "requires_byte_closed_contest_archive_export",
         "requires_exact_cpu_cuda_auth_eval_before_score_claim",
@@ -466,9 +479,12 @@ def run_pr95_mlx_source_video_preprocess_smoke(
     video = Path(video_path)
     source_hash = _sha256_file(video) if video.is_file() and frame_reader is None else None
     blockers = [
-        "pr95_decoder_training_loop_not_wired_to_source_video_preprocess",
-        "pr95_scorer_loss_not_wired_to_mlx_source_video_preprocess",
-        "pr95_training_loop_not_yet_source_faithful",
+        PR95_SOURCE_VIDEO_TARGETS_READY_SCORER_LOSS_UNWIRED_BLOCKER,
+        PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER,
+        PR95_STAGE_SCHEDULE_SOURCE_MISMATCH_BLOCKER,
+        PR95_QAT_RESUME_UNPORTED_BLOCKER,
+        PR95_EXPORT_FORWARD_PARITY_BLOCKER,
+        PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER,
         "requires_pytorch_export_forward_parity_on_source_checkpoint",
         "requires_byte_closed_contest_archive_export",
         "requires_exact_cpu_cuda_auth_eval_before_score_claim",
@@ -589,6 +605,13 @@ def _positive_hw(size: tuple[int, int]) -> tuple[int, int]:
 __all__ = [
     "CAMERA_HW",
     "GRAD_PROBE_SCHEMA",
+    "PR95_EXPORT_FORWARD_PARITY_BLOCKER",
+    "PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER",
+    "PR95_PREPROCESS_SMOKE_NOT_SOURCE_VIDEO_TRAINING_BLOCKER",
+    "PR95_QAT_RESUME_UNPORTED_BLOCKER",
+    "PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER",
+    "PR95_SOURCE_VIDEO_TARGETS_READY_SCORER_LOSS_UNWIRED_BLOCKER",
+    "PR95_STAGE_SCHEDULE_SOURCE_MISMATCH_BLOCKER",
     "SCORER_HW",
     "SOURCE_FAITHFUL_PREPROCESS_SCHEMA",
     "SOURCE_VIDEO_PREPROCESS_SCHEMA",

@@ -14,6 +14,8 @@ from tac.differentiable_eval_roundtrip import (  # noqa: E402
 )
 from tac.local_acceleration.pr95_hnerv_mlx import FALSE_AUTHORITY  # noqa: E402
 from tac.local_acceleration.pr95_hnerv_mlx_training import (  # noqa: E402
+    PR95_PREPROCESS_SMOKE_NOT_SOURCE_VIDEO_TRAINING_BLOCKER,
+    PR95_SOURCE_VIDEO_TARGETS_READY_SCORER_LOSS_UNWIRED_BLOCKER,
     apply_eval_roundtrip_nhwc,
     bicubic_resize_to_camera_nhwc,
     bilinear_eval_roundtrip_downsample_nhwc,
@@ -214,7 +216,7 @@ def test_source_video_preprocess_smoke_uses_injected_pair_reader() -> None:
     assert manifest["yuv6_output_shape"] == [2, 2, 4, 5, 6]
     assert manifest["gradient_probe"]["gradient_reachable"] is True
     assert manifest["exact_readiness_refusal"]["ready"] is False
-    assert "pr95_training_loop_not_yet_source_faithful" in (
+    assert PR95_SOURCE_VIDEO_TARGETS_READY_SCORER_LOSS_UNWIRED_BLOCKER in (
         manifest["exact_readiness_refusal"]["blockers"]
     )
     _assert_false_authority(manifest)
@@ -248,6 +250,9 @@ def test_source_faithful_preprocess_smoke_is_false_authority() -> None:
     assert manifest["yuv6_output_shape"] == [1, 2, 4, 5, 6]
     assert manifest["gradient_probe"]["gradient_reachable"] is True
     assert manifest["exact_readiness_refusal"]["ready"] is False
+    assert PR95_PREPROCESS_SMOKE_NOT_SOURCE_VIDEO_TRAINING_BLOCKER in (
+        manifest["exact_readiness_refusal"]["blockers"]
+    )
     assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in (
         manifest["exact_readiness_refusal"]["blockers"]
     )

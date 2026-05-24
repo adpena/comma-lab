@@ -7,6 +7,13 @@ import sys
 from pathlib import Path
 
 from comma_lab.scheduler.local_training_queue import build_local_training_execution_queue
+from tac.local_acceleration.pr95_hnerv_mlx_contract import (
+    PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER,
+    PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER,
+    PR95_SOURCE_VIDEO_RGB_NOT_FULL_SCORER_BLOCKER,
+    PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER,
+    PR95_SOURCE_VIDEO_TARGETS_READY_SCORER_LOSS_UNWIRED_BLOCKER,
+)
 from tac.optimization.proxy_candidate_contract import validate_proxy_candidate
 from tac.optimization.representation_training_probe_integration import (
     adapt_representation_training_manifest_to_candidate,
@@ -50,9 +57,12 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
             "--source-video-pair-index",
             "0",
             "--source-video-output-hw",
-            "8,10",
+            "384,512",
             "--source-video-gradient-shape",
             "1,2,8,10,3",
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse",
             "--plan-only",
         ],
         cwd=REPO_ROOT,
@@ -77,6 +87,17 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
     assert plan["stage_count"] == 1
     assert plan["stage_index"] == 8
     assert plan["optimizer_descriptor_id"] == "pr95_stage8_muon_adamw_mlx"
+    assert PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER not in plan["dispatch_blockers"]
+    assert "synthetic_targets_do_not_establish_contest_quality" not in plan[
+        "dispatch_blockers"
+    ]
+    assert PR95_SOURCE_VIDEO_RGB_NOT_FULL_SCORER_BLOCKER not in plan[
+        "dispatch_blockers"
+    ]
+    assert PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER in plan[
+        "dispatch_blockers"
+    ]
+    assert PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER in plan["dispatch_blockers"]
     assert len(plan["optimizer_config_sha256"]) == 64
     assert plan["parameter_group_lr_policy_id"] == (
         "embedding_theta1_hidden_muon_adamw"
@@ -105,7 +126,7 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
     assert "--source-video-path" in execution["python_command_args"]
     assert "upstream/videos/0.mkv" in execution["python_command_args"]
     assert "--source-video-output-hw" in execution["python_command_args"]
-    assert "8,10" in execution["python_command_args"]
+    assert "384,512" in execution["python_command_args"]
     assert any(
         condition["type"] == "json_equals"
         and condition["path"].endswith("runtime_consumption_proof.json")
@@ -124,7 +145,8 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
         condition["type"] == "json_array_contains"
         and condition["path"].endswith("source_video_preprocess_smoke.json")
         and condition["key"] == "exact_readiness_refusal.blockers"
-        and condition["contains"] == "pr95_training_loop_not_yet_source_faithful"
+        and condition["contains"]
+        == PR95_SOURCE_VIDEO_TARGETS_READY_SCORER_LOSS_UNWIRED_BLOCKER
         for condition in execution["extra_artifact_postconditions"]
     )
     assert representation_plan["schema"] == "representation_training_probe_plan_v1"
@@ -138,8 +160,17 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
     assert representation_plan["candidate_params"][
         "source_video_preprocess_smoke_requested"
     ] is True
+    assert PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER not in representation_plan[
+        "dispatch_blockers"
+    ]
+    assert "synthetic_targets_do_not_establish_contest_quality" not in (
+        representation_plan["dispatch_blockers"]
+    )
+    assert PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER in (
+        representation_plan["dispatch_blockers"]
+    )
     assert representation_plan["candidate_params"]["source_video_pair_indices"] == [0]
-    assert representation_plan["candidate_params"]["source_video_output_hw"] == "8,10"
+    assert representation_plan["candidate_params"]["source_video_output_hw"] == "384,512"
     assert representation_plan["recommended_execution"] == execution
 
     queue = build_local_training_execution_queue(
@@ -191,5 +222,7 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
     assert row["ready_for_exact_eval_dispatch"] is False
     assert "runtime_consumption_proof_missing" in row["dispatch_blockers"]
     assert "requires_lane_claim_before_dispatch" in row["dispatch_blockers"]
+    assert PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER not in row["dispatch_blockers"]
     assert row["candidate_params"]["source_video_preprocess_smoke_requested"] is True
+    assert row["candidate_params"]["train_on_source_video_pairs"] is True
     assert validate_proxy_candidate(row) == []

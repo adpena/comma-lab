@@ -24,6 +24,9 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     FALSE_AUTHORITY,
     parse_pr95_public_archive_zip,
 )
+from tac.local_acceleration.pr95_hnerv_mlx_contract import (  # noqa: E402
+    PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER,
+)
 from tac.repo_io import write_json_artifact  # noqa: E402
 
 DEFAULT_INFLATE_SH = (
@@ -171,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
             "ready": False,
             "blockers": [
                 "runtime_consumption_smoke_is_not_score_authority",
-                "full_frame_inflate_parity_against_source_runtime_not_run",
+                PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER,
                 "requires_exact_cpu_cuda_auth_eval_before_score_claim",
             ],
         },

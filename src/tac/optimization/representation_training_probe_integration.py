@@ -153,6 +153,10 @@ def validate_representation_training_manifest(payload: Mapping[str, Any]) -> Non
     _reject_truthy_authority(payload)
     bridge = _mapping(payload.get("auth_eval_bridge"))
     _reject_truthy_authority(bridge, prefix="auth_eval_bridge")
+    _reject_truthy_authority(
+        _mapping(payload.get("source_video_training_target")),
+        prefix="source_video_training_target",
+    )
     try:
         require_no_truthy_authority_fields(
             payload,
@@ -309,6 +313,33 @@ def _source_video_preprocess_signal(payload: Mapping[str, Any]) -> dict[str, Any
     }
 
 
+def _source_video_training_target_signal(payload: Mapping[str, Any]) -> dict[str, Any]:
+    target = _mapping(payload.get("source_video_training_target"))
+    if not target:
+        return {
+            "present": False,
+            "source_video_target_loss_training": False,
+            "exact_readiness_ready": False,
+            "exact_readiness_blockers": [],
+        }
+    exact_readiness = _mapping(target.get("exact_readiness_refusal"))
+    return {
+        "present": True,
+        "schema": target.get("schema"),
+        "source_video_target_loss_training": True,
+        "training_loss_surface": target.get("training_loss_surface"),
+        "target_source": dict(_mapping(target.get("target_source"))),
+        "target_source_kind": _mapping(target.get("target_source")).get("kind"),
+        "target_shape_n2chw": _as_list(target.get("target_shape_n2chw")),
+        "exact_readiness_ready": exact_readiness.get("ready") is True,
+        "exact_readiness_blockers": _str_list(exact_readiness.get("blockers")),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _build_wire_in(
     payload: Mapping[str, Any],
     *,
@@ -381,9 +412,13 @@ def adapt_representation_training_manifest_to_candidate(
     has_auth_bridge = bool(bridge.get("ok") is True and bridge.get("auth_eval_json_sha256"))
     preprocess_signal = _source_faithful_preprocess_signal(payload)
     source_video_signal = _source_video_preprocess_signal(payload)
+    source_video_target_signal = _source_video_training_target_signal(payload)
     blockers = _extra_blockers(payload)
     blockers.extend(_str_list(preprocess_signal.get("exact_readiness_blockers")))
     blockers.extend(_str_list(source_video_signal.get("exact_readiness_blockers")))
+    blockers.extend(
+        _str_list(source_video_target_signal.get("exact_readiness_blockers"))
+    )
     blockers.extend(_str_list(runtime_profile_summary.get("blockers")))
     if not has_archive:
         blockers.append("representation_training_archive_export_missing")
@@ -472,6 +507,7 @@ def adapt_representation_training_manifest_to_candidate(
             },
             "source_faithful_preprocess": dict(preprocess_signal),
             "source_video_preprocess": dict(source_video_signal),
+            "source_video_training_target": dict(source_video_target_signal),
             "missing_blockers": blockers,
             "source_tree_sha256": payload.get("source_tree_sha256"),
             "runtime_tree_sha256": payload.get("runtime_tree_sha256"),

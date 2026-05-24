@@ -17,7 +17,7 @@ mx = pytest.importorskip("mlx.core")
 from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     EXACT_READINESS_REFUSAL_BLOCKERS,
     FALSE_AUTHORITY,
-    PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY,
+    PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY,
     PR95_MLX_LOSS_SURFACE_RGB_MSE,
     PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE,
     PR95_MLX_SOURCE_FAITHFUL_BLOCKERS,
@@ -44,6 +44,13 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     write_pr95_mlx_byte_closed_smoke_archive,
     write_pr95_public_archive_zip,
     zeropower_via_newtonschulz5_mlx,
+)
+from tac.local_acceleration.pr95_hnerv_mlx_contract import (  # noqa: E402
+    PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER,
+    PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER,
+    PR95_SOURCE_VIDEO_RGB_NOT_FULL_SCORER_BLOCKER,
+    PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER,
+    PR95_YUV6_SCORER_LOSS_UNWIRED_BLOCKER,
 )
 from tac.optimization.local_training_runtime_profile import (  # noqa: E402
     normalize_runtime_profile_observation,
@@ -423,18 +430,23 @@ def test_synthetic_timing_smoke_emits_runtime_profile_and_refusal() -> None:
         PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY
     )
     assert manifest["source_faithful_training"] is False
+    assert manifest["source_faithful_training_scope"] == "synthetic_timing_only"
+    assert manifest["full_pr95_source_faithful_training"] is False
     assert manifest["source_faithfulness_blockers"] == list(
         PR95_MLX_SOURCE_FAITHFUL_BLOCKERS
     )
     assert "pr95_eval_roundtrip_scorer_preprocess_loss_not_ported_to_mlx" not in (
         manifest["source_faithfulness_blockers"]
     )
-    assert (
-        "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx"
-        in manifest["source_faithfulness_blockers"]
-    )
+    assert PR95_YUV6_SCORER_LOSS_UNWIRED_BLOCKER in manifest[
+        "source_faithfulness_blockers"
+    ]
     assert manifest["optimizer_recipe"]["stage_uses_muon"] is True
     assert manifest["optimizer_recipe"]["source_faithful_training"] is False
+    assert manifest["optimizer_recipe"]["source_faithful_training_scope"] == (
+        "synthetic_timing_only"
+    )
+    assert manifest["optimizer_recipe"]["full_pr95_source_faithful_training"] is False
     assert manifest["exact_readiness_refusal"]["ready"] is False
     assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in manifest[
         "exact_readiness_refusal"
@@ -473,7 +485,10 @@ def test_source_video_rgb_target_timing_smoke_replaces_synthetic_target_blocker(
     )
     assert manifest["training_loss_surface"] == PR95_MLX_LOSS_SURFACE_RGB_MSE
     assert manifest["source_video_training"] is True
+    assert manifest["source_video_target_loss_training"] is True
     assert manifest["source_faithful_training"] is False
+    assert manifest["source_faithful_training_scope"] == "source_video_target_loss_only"
+    assert manifest["full_pr95_source_faithful_training"] is False
     assert manifest["source_faithfulness_blockers"] == list(
         PR95_MLX_SOURCE_VIDEO_RGB_BLOCKERS
     )
@@ -481,16 +496,22 @@ def test_source_video_rgb_target_timing_smoke_replaces_synthetic_target_blocker(
     assert manifest["training_pair_count"] == 1
     assert manifest["target_source_kind"] == "pr95_source_video_rgb_pairs"
     assert manifest["runtime_profile"]["source_video_training"] is True
+    assert manifest["runtime_profile"]["source_video_target_loss_training"] is True
+    assert manifest["runtime_profile"]["source_faithful_training"] is False
+    assert manifest["runtime_profile"]["source_faithful_training_scope"] == (
+        "source_video_target_loss_only"
+    )
+    assert manifest["runtime_profile"]["full_pr95_source_faithful_training"] is False
     assert manifest["runtime_profile"]["target_source"]["pair_indices"] == [0]
     assert np.isfinite(manifest["last_loss"])
     blockers = manifest["exact_readiness_refusal"]["blockers"]
-    assert "pr95_source_video_loader_not_ported_to_mlx" not in blockers
+    assert PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER not in blockers
     assert "synthetic_targets_do_not_establish_contest_quality" not in blockers
     assert (
         "pr95_hnerv_mlx_training_is_synthetic_timing_only_not_source_faithful"
         not in blockers
     )
-    assert "source_video_rgb_targets_do_not_establish_full_scorer_quality" in blockers
+    assert PR95_SOURCE_VIDEO_RGB_NOT_FULL_SCORER_BLOCKER in blockers
     assert "source_video_rgb_timing_smoke_is_not_score_authority" in blockers
     assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in blockers
     _assert_false_authority(manifest)
@@ -518,6 +539,10 @@ def test_source_video_rgb_yuv6_loss_surface_records_preprocess_coupling() -> Non
     )
     assert manifest["candidate_id"].endswith("_source_video_rgb_yuv6")
     assert manifest["training_loss_surface"] == PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
+    assert manifest["source_video_target_loss_training"] is True
+    assert manifest["source_faithful_training"] is False
+    assert manifest["source_faithful_training_scope"] == "source_video_target_loss_only"
+    assert manifest["full_pr95_source_faithful_training"] is False
     assert manifest["loss_surface_weights"] == {"rgb_mse": 0.5, "yuv6_mse": 0.5}
     assert manifest["target_yuv6_shape"] == [1, 2, 192, 256, 6]
     assert manifest["yuv6_preprocess_kind"] == (
@@ -529,16 +554,14 @@ def test_source_video_rgb_yuv6_loss_surface_records_preprocess_coupling() -> Non
     assert np.isfinite(manifest["last_loss"])
     blockers = manifest["exact_readiness_refusal"]["blockers"]
     assert (
-        "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx"
-        not in blockers
+        PR95_YUV6_SCORER_LOSS_UNWIRED_BLOCKER not in blockers
     )
-    assert "source_video_rgb_targets_do_not_establish_full_scorer_quality" not in blockers
+    assert PR95_SOURCE_VIDEO_RGB_NOT_FULL_SCORER_BLOCKER not in blockers
     assert "source_video_rgb_timing_smoke_is_not_score_authority" not in blockers
     assert (
-        "pr95_source_video_rgb_yuv6_preprocess_loss_is_not_full_scorer_loss"
-        in blockers
+        PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER in blockers
     )
-    assert "pr95_segnet_posenet_network_loss_not_wired_to_mlx" in blockers
+    assert PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER in blockers
     assert "source_video_rgb_yuv6_preprocess_loss_is_not_score_authority" in blockers
     _assert_false_authority(manifest)
 
@@ -551,7 +574,7 @@ def test_pr95_optimizer_descriptor_drives_stage8_partition() -> None:
     assert stage.optimizer_config_sha256
     assert stage.parameter_group_lr_policy_id == "embedding_theta1_hidden_muon_adamw"
     assert stage.optimizer_backend_status == (
-        PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY
+        PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY
     )
 
     bundle = HNeRVSyntheticTrainingBundleMLX(

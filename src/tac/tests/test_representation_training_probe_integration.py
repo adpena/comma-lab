@@ -6,6 +6,10 @@ from pathlib import Path
 
 import pytest
 
+from tac.local_acceleration.pr95_hnerv_mlx_contract import (
+    PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER,
+    PR95_SOURCE_VIDEO_TARGETS_READY_SCORER_LOSS_UNWIRED_BLOCKER,
+)
 from tac.optimization.proxy_candidate_contract import validate_proxy_candidate
 from tac.optimization.representation_training_probe_integration import (
     CANDIDATE_PAYLOAD_SCHEMA,
@@ -202,8 +206,24 @@ def test_generic_manifest_carries_source_video_preprocess_signal(
         "exact_readiness_refusal": {
             "ready": False,
             "blockers": [
-                "pr95_training_loop_not_yet_source_faithful",
+                PR95_SOURCE_VIDEO_TARGETS_READY_SCORER_LOSS_UNWIRED_BLOCKER,
                 "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+            ],
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    payload["source_video_training_target"] = {
+        "schema": "pr95_hnerv_mlx_source_video_training_target.v1",
+        "training_loss_surface": "rgb_yuv6_mse",
+        "target_source": {"kind": "pr95_source_video_rgb_pairs"},
+        "target_shape_n2chw": [2, 2, 3, 384, 512],
+        "exact_readiness_refusal": {
+            "ready": False,
+            "blockers": [
+                PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER,
             ],
         },
         "score_claim": False,
@@ -229,7 +249,19 @@ def test_generic_manifest_carries_source_video_preprocess_signal(
     assert source_video["frame_indices"] == [0, 1, 2, 3]
     assert source_video["gradient_reachable"] is True
     assert source_video["exact_readiness_ready"] is False
-    assert "pr95_training_loop_not_yet_source_faithful" in row["dispatch_blockers"]
+    source_target = row["consumer_payload"]["representation_training_probe"][
+        "source_video_training_target"
+    ]
+    assert source_target["present"] is True
+    assert source_target["source_video_target_loss_training"] is True
+    assert source_target["target_source_kind"] == "pr95_source_video_rgb_pairs"
+    assert source_target["target_shape_n2chw"] == [2, 2, 3, 384, 512]
+    assert PR95_SOURCE_VIDEO_TARGETS_READY_SCORER_LOSS_UNWIRED_BLOCKER in row[
+        "dispatch_blockers"
+    ]
+    assert PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER in row[
+        "dispatch_blockers"
+    ]
     assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in row[
         "dispatch_blockers"
     ]

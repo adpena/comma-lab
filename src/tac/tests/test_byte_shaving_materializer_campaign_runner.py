@@ -173,6 +173,66 @@ def _write_inverse_action_functional(path: Path) -> None:
     )
 
 
+def _write_result_review_packet(
+    path: Path,
+    *,
+    axis: str,
+    technique: str = "auto_calibration_candidate",
+    archive_sha256: str = "a" * 64,
+    archive_bytes: int = 12345,
+    n_samples: int = 600,
+    runtime_content_tree_sha256: str = "b" * 64,
+) -> None:
+    is_cpu = axis == "contest_cpu"
+    path.write_text(
+        json.dumps(
+            {
+                "schema": runner.RESULT_REVIEW_PACKET_SCHEMA,
+                "technique": technique,
+                "score_axis": axis,
+                "exact_cpu_evidence": is_cpu,
+                "exact_cuda_evidence": not is_cpu,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "family_falsified": False,
+                "method_family_retired": False,
+                "baseline_score": 0.2,
+                "canonical_score": 0.199,
+                "measured_config_status": (
+                    "contest_cpu_result_reviewed"
+                    if is_cpu
+                    else "exact_cuda_result_reviewed"
+                ),
+                "custody": {
+                    "archive_sha256": archive_sha256,
+                    "archive_bytes": archive_bytes,
+                    "n_samples": n_samples,
+                },
+                "runtime_custody": {
+                    "runtime_content_tree_sha256": runtime_content_tree_sha256,
+                    "inflated_output_aggregate_sha256": ("c" if is_cpu else "d") * 64,
+                },
+                "score_recomputation": {
+                    "available": True,
+                    "matches_reported": True,
+                },
+                "engineering_forensic_audit": {
+                    "engineering_or_config_bug_found": False,
+                    "score_formula_reviewed": True,
+                    "archive_runtime_closure_reviewed": True,
+                },
+                "dispatch_claim_state": {
+                    "terminal_status_recorded": True,
+                },
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+
 def test_materializer_campaign_runner_builds_queue_owned_followup_command(
     tmp_path: Path,
 ) -> None:
@@ -1035,10 +1095,10 @@ def test_materializer_campaign_feedback_replan_preserves_calibration_inputs(
         runtime_identity,
         cache_identity,
         observation,
-        cpu_packet,
-        cuda_packet,
     ):
         path.write_text("{}", encoding="utf-8")
+    _write_result_review_packet(cpu_packet, axis="contest_cpu")
+    _write_result_review_packet(cuda_packet, axis="contest_cuda")
 
     args = runner.parse_args(
         [
@@ -1088,6 +1148,14 @@ def test_materializer_campaign_feedback_replan_preserves_calibration_inputs(
     assert request["exact_auth_calibration_candidate_id"] == (
         "materialized_candidate_0001"
     )
+    assert request["exact_auth_calibration_discovery_pair"] == {
+        "archive_sha256": "a" * 64,
+        "archive_bytes": 12345,
+        "n_samples": 600,
+        "runtime_content_tree_sha256": "b" * 64,
+        "contest_cpu_packet_path": str(cpu_packet),
+        "contest_cuda_packet_path": str(cuda_packet),
+    }
     assert [
         command[index + 1]
         for index, item in enumerate(command[:-1])
@@ -1122,6 +1190,349 @@ def test_materializer_campaign_feedback_replan_preserves_calibration_inputs(
     metadata = child_queue["experiments"][0]["metadata"]
     assert metadata["score_claim"] is False
     assert metadata["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_campaign_feedback_replan_discovers_calibration_packet_pair(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    run_dir.mkdir()
+    packet_root = tmp_path / "review_packets"
+    packet_root.mkdir()
+    plan = tmp_path / "plan.json"
+    queue = tmp_path / "materializer_execution_queue.json"
+    state = tmp_path / "materializer_execution_queue.sqlite"
+    performance = run_dir / "queue_performance_summary.json"
+    runtime_identity = run_dir / "queue_performance_runtime_identity.json"
+    cache_identity = run_dir / "queue_performance_cache_identity.json"
+    cpu_packet = packet_root / "candidate_contest_cpu_result_review.json"
+    cuda_packet = packet_root / "candidate_contest_cuda_result_review.json"
+
+    for path in (plan, queue, state, performance, runtime_identity, cache_identity):
+        path.write_text("{}", encoding="utf-8")
+    _write_result_review_packet(cpu_packet, axis="contest_cpu")
+    _write_result_review_packet(cuda_packet, axis="contest_cuda")
+
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(plan),
+            "--materializer-contexts",
+            str(tmp_path / "contexts.json"),
+            "--exact-auth-calibration-packet-root",
+            str(packet_root),
+        ]
+    )
+    performance_payload = {
+        "schema": runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA,
+        "event_count": 1,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    request = runner._queue_feedback_replan_request_payload(
+        args,
+        summary_path=run_dir / "materializer_campaign_run.json",
+        plan_path=plan,
+        queue_performance_summary_path=performance,
+        queue_performance_summary=performance_payload,
+        runtime_identity_path=runtime_identity,
+        cache_identity_path=cache_identity,
+        generated_runtime_identity=False,
+        generated_cache_identity=False,
+        run_dir=run_dir,
+        execution_queue=queue,
+        state_path=state,
+    )
+
+    command = request["command_template"]
+    assert request["ready_for_action_functional_feedback"] is True
+    assert request["blockers"] == []
+    assert request["exact_auth_calibration_packet_paths"] == [
+        str(cpu_packet),
+        str(cuda_packet),
+    ]
+    assert request["exact_auth_calibration_candidate_id"] == "auto_calibration_candidate"
+    assert request["exact_auth_calibration_packet_source"] == "auto_discovery"
+    assert request["exact_auth_calibration_discovery_roots"] == [str(packet_root)]
+    assert request["exact_auth_calibration_discovery_pair"] == {
+        "archive_sha256": "a" * 64,
+        "archive_bytes": 12345,
+        "n_samples": 600,
+        "runtime_content_tree_sha256": "b" * 64,
+        "contest_cpu_packet_path": str(cpu_packet),
+        "contest_cuda_packet_path": str(cuda_packet),
+    }
+    assert [
+        command[index + 1]
+        for index, item in enumerate(command[:-1])
+        if item == "--exact-auth-calibration-packet"
+    ] == [str(cpu_packet), str(cuda_packet)]
+    assert "--exact-auth-calibration-candidate-id" in command
+    assert "auto_calibration_candidate" in command
+
+    child_queue, blockers = runner._queue_feedback_replan_followup_queue_payload(
+        args,
+        queue_feedback_replan_request=request,
+        queue_feedback_replan_request_path=run_dir / "queue_feedback_replan_request.json",
+        run_dir=run_dir,
+        execution_queue=queue,
+        state_path=state,
+        source_queue={"queue_id": "materializer_unit_queue"},
+    )
+
+    assert blockers == []
+    assert child_queue is not None
+    input_paths = child_queue["experiments"][0]["steps"][0]["telemetry"][
+        "input_artifact_paths"
+    ]
+    assert str(cpu_packet) in input_paths
+    assert str(cuda_packet) in input_paths
+
+
+def test_materializer_campaign_feedback_replan_discovers_run_derived_packet_pair(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    packet_root = run_dir / "exact_eval_handoff" / "result_reviews"
+    packet_root.mkdir(parents=True)
+    plan = tmp_path / "plan.json"
+    queue = tmp_path / "materializer_execution_queue.json"
+    state = tmp_path / "materializer_execution_queue.sqlite"
+    performance = run_dir / "queue_performance_summary.json"
+    runtime_identity = run_dir / "queue_performance_runtime_identity.json"
+    cache_identity = run_dir / "queue_performance_cache_identity.json"
+    cpu_packet = packet_root / "candidate_contest_cpu_result_review.json"
+    cuda_packet = packet_root / "candidate_contest_cuda_result_review.json"
+
+    for path in (plan, queue, state, performance, runtime_identity, cache_identity):
+        path.write_text("{}", encoding="utf-8")
+    _write_result_review_packet(cpu_packet, axis="contest_cpu")
+    _write_result_review_packet(cuda_packet, axis="contest_cuda")
+
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(plan),
+            "--materializer-contexts",
+            str(tmp_path / "contexts.json"),
+        ]
+    )
+    performance_payload = {
+        "schema": runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA,
+        "event_count": 1,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    request = runner._queue_feedback_replan_request_payload(
+        args,
+        summary_path=run_dir / "materializer_campaign_run.json",
+        plan_path=plan,
+        queue_performance_summary_path=performance,
+        queue_performance_summary=performance_payload,
+        runtime_identity_path=runtime_identity,
+        cache_identity_path=cache_identity,
+        generated_runtime_identity=False,
+        generated_cache_identity=False,
+        run_dir=run_dir,
+        execution_queue=queue,
+        state_path=state,
+    )
+
+    command = request["command_template"]
+    assert request["ready_for_action_functional_feedback"] is True
+    assert request["blockers"] == []
+    assert request["exact_auth_calibration_packet_paths"] == [
+        str(cpu_packet),
+        str(cuda_packet),
+    ]
+    assert request["exact_auth_calibration_packet_source"] == "run_derived_discovery"
+    assert str(run_dir) in request["exact_auth_calibration_discovery_roots"]
+    assert str(run_dir / "exact_eval_handoff") in request[
+        "exact_auth_calibration_discovery_roots"
+    ]
+    assert [
+        command[index + 1]
+        for index, item in enumerate(command[:-1])
+        if item == "--exact-auth-calibration-packet"
+    ] == [str(cpu_packet), str(cuda_packet)]
+
+
+def test_materializer_campaign_feedback_replan_treats_empty_run_root_as_optional(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    run_dir.mkdir()
+    plan = tmp_path / "plan.json"
+    queue = tmp_path / "materializer_execution_queue.json"
+    state = tmp_path / "materializer_execution_queue.sqlite"
+    performance = run_dir / "queue_performance_summary.json"
+    runtime_identity = run_dir / "queue_performance_runtime_identity.json"
+    cache_identity = run_dir / "queue_performance_cache_identity.json"
+
+    for path in (plan, queue, state, performance, runtime_identity, cache_identity):
+        path.write_text("{}", encoding="utf-8")
+
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(plan),
+            "--materializer-contexts",
+            str(tmp_path / "contexts.json"),
+        ]
+    )
+    performance_payload = {
+        "schema": runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA,
+        "event_count": 1,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    request = runner._queue_feedback_replan_request_payload(
+        args,
+        summary_path=run_dir / "materializer_campaign_run.json",
+        plan_path=plan,
+        queue_performance_summary_path=performance,
+        queue_performance_summary=performance_payload,
+        runtime_identity_path=runtime_identity,
+        cache_identity_path=cache_identity,
+        generated_runtime_identity=False,
+        generated_cache_identity=False,
+        run_dir=run_dir,
+        execution_queue=queue,
+        state_path=state,
+    )
+
+    assert request["ready_for_action_functional_feedback"] is True
+    assert request["exact_auth_calibration_packet_paths"] == []
+    assert request["exact_auth_calibration_packet_source"] == "run_derived_discovery"
+    assert request["exact_auth_calibration_discovery_roots"] == [str(run_dir)]
+    assert request["blockers"] == []
+
+
+def test_materializer_campaign_feedback_replan_blocks_on_missing_calibration_pair(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    run_dir.mkdir()
+    packet_root = tmp_path / "empty_review_packets"
+    packet_root.mkdir()
+    plan = tmp_path / "plan.json"
+    queue = tmp_path / "materializer_execution_queue.json"
+    state = tmp_path / "materializer_execution_queue.sqlite"
+    performance = run_dir / "queue_performance_summary.json"
+    runtime_identity = run_dir / "queue_performance_runtime_identity.json"
+    cache_identity = run_dir / "queue_performance_cache_identity.json"
+
+    for path in (plan, queue, state, performance, runtime_identity, cache_identity):
+        path.write_text("{}", encoding="utf-8")
+
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(plan),
+            "--materializer-contexts",
+            str(tmp_path / "contexts.json"),
+            "--exact-auth-calibration-packet-root",
+            str(packet_root),
+        ]
+    )
+    performance_payload = {
+        "schema": runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA,
+        "event_count": 1,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    request = runner._queue_feedback_replan_request_payload(
+        args,
+        summary_path=run_dir / "materializer_campaign_run.json",
+        plan_path=plan,
+        queue_performance_summary_path=performance,
+        queue_performance_summary=performance_payload,
+        runtime_identity_path=runtime_identity,
+        cache_identity_path=cache_identity,
+        generated_runtime_identity=False,
+        generated_cache_identity=False,
+        run_dir=run_dir,
+        execution_queue=queue,
+        state_path=state,
+    )
+
+    assert request["ready_for_action_functional_feedback"] is False
+    assert request["exact_auth_calibration_packet_paths"] == []
+    assert request["exact_auth_calibration_packet_source"] == "auto_discovery"
+    assert request["exact_auth_calibration_discovery_roots"] == [str(packet_root)]
+    assert request["suggested_action_functional_command"] is None
+    assert "exact_auth_calibration_packet_pair_not_found" in request["blockers"]
+
+
+def test_materializer_campaign_feedback_replan_blocks_on_invalid_calibration_pair(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    run_dir.mkdir()
+    packet_root = tmp_path / "invalid_review_packets"
+    packet_root.mkdir()
+    plan = tmp_path / "plan.json"
+    queue = tmp_path / "materializer_execution_queue.json"
+    state = tmp_path / "materializer_execution_queue.sqlite"
+    performance = run_dir / "queue_performance_summary.json"
+    runtime_identity = run_dir / "queue_performance_runtime_identity.json"
+    cache_identity = run_dir / "queue_performance_cache_identity.json"
+    cpu_packet = packet_root / "candidate_contest_cpu_result_review.json"
+    cuda_packet = packet_root / "candidate_contest_cuda_result_review.json"
+
+    for path in (plan, queue, state, performance, runtime_identity, cache_identity):
+        path.write_text("{}", encoding="utf-8")
+    _write_result_review_packet(cpu_packet, axis="contest_cpu")
+    _write_result_review_packet(cuda_packet, axis="contest_cuda")
+    invalid_cpu_payload = json.loads(cpu_packet.read_text(encoding="utf-8"))
+    invalid_cpu_payload.pop("baseline_score")
+    cpu_packet.write_text(json.dumps(invalid_cpu_payload), encoding="utf-8")
+
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(plan),
+            "--materializer-contexts",
+            str(tmp_path / "contexts.json"),
+            "--exact-auth-calibration-packet-root",
+            str(packet_root),
+        ]
+    )
+    performance_payload = {
+        "schema": runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA,
+        "event_count": 1,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    request = runner._queue_feedback_replan_request_payload(
+        args,
+        summary_path=run_dir / "materializer_campaign_run.json",
+        plan_path=plan,
+        queue_performance_summary_path=performance,
+        queue_performance_summary=performance_payload,
+        runtime_identity_path=runtime_identity,
+        cache_identity_path=cache_identity,
+        generated_runtime_identity=False,
+        generated_cache_identity=False,
+        run_dir=run_dir,
+        execution_queue=queue,
+        state_path=state,
+    )
+
+    assert request["ready_for_action_functional_feedback"] is False
+    assert request["exact_auth_calibration_packet_paths"] == []
+    assert request["suggested_action_functional_command"] is None
+    assert "exact_auth_calibration_packet_pair_not_found" in request["blockers"]
+    assert any(
+        blocker.startswith("exact_auth_calibration_packet_pair_invalid:")
+        and "baseline_score is required" in blocker
+        for blocker in request["blockers"]
+    )
 
 
 def test_materializer_campaign_runner_poison_summary_when_performance_stdout_invalid() -> None:

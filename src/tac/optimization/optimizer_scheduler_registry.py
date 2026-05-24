@@ -17,6 +17,13 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any
 
+from tac.local_acceleration.pr95_hnerv_mlx_contract import (
+    PR95_EXPORT_FORWARD_PARITY_BLOCKER,
+    PR95_QAT_RESUME_UNPORTED_BLOCKER,
+    PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER,
+    PR95_STAGE_SCHEDULE_SOURCE_MISMATCH_BLOCKER,
+    PR95_YUV6_SCORER_LOSS_UNWIRED_BLOCKER,
+)
 from tac.optimization.parameter_group_lr_policy import (
     DEFAULT_PARAMETER_GROUP_LR_POLICY,
     EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY,
@@ -83,14 +90,23 @@ DEFAULT_PARETO_OBJECTIVES: tuple[str, ...] = (
     "seconds_per_candidate",
     "seconds_per_step",
 )
-PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY = "implemented_mlx_synthetic_timing_only"
+PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY = "implemented_mlx_local_timing_proxy"
 PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY = "synthetic_timing_only"
+PR95_MLX_SUPPORTED_TRAINING_FIDELITIES: tuple[str, ...] = (
+    "synthetic_timing_only",
+    "source_video_rgb_timing_only",
+    "source_video_rgb_yuv6_preprocess_coupled_timing_only",
+)
+PR95_MLX_SUPPORTED_LOSS_SURFACES: tuple[str, ...] = (
+    "rgb_mse",
+    "rgb_yuv6_mse",
+)
 PR95_MLX_SOURCE_FAITHFUL_BLOCKERS: tuple[str, ...] = (
-    "pr95_source_video_loader_not_ported_to_mlx",
-    "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx",
-    "pr95_stage_hparams_and_cosine_schedules_not_all_source_matched",
-    "pr95_qat_c1a_and_resume_semantics_not_ported_to_mlx",
-    "pr95_export_forward_parity_not_established",
+    PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER,
+    PR95_YUV6_SCORER_LOSS_UNWIRED_BLOCKER,
+    PR95_STAGE_SCHEDULE_SOURCE_MISMATCH_BLOCKER,
+    PR95_QAT_RESUME_UNPORTED_BLOCKER,
+    PR95_EXPORT_FORWARD_PARITY_BLOCKER,
 )
 
 
@@ -576,8 +592,12 @@ def default_optimizer_scheduler_descriptors() -> tuple[OptimizerSchedulerDescrip
             },
             scheduler_config={"stage_indices": [1], "source_pr": 95},
             training_config={
-                "backend_status": PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY,
+                "backend_status": PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY,
                 "training_fidelity": PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY,
+                "supported_training_fidelities": list(
+                    PR95_MLX_SUPPORTED_TRAINING_FIDELITIES
+                ),
+                "supported_loss_surfaces": list(PR95_MLX_SUPPORTED_LOSS_SURFACES),
                 "source_faithful_training": False,
                 "source_faithfulness_blockers": list(
                     PR95_MLX_SOURCE_FAITHFUL_BLOCKERS
@@ -607,8 +627,12 @@ def default_optimizer_scheduler_descriptors() -> tuple[OptimizerSchedulerDescrip
             },
             scheduler_config={"stage_indices": [5], "source_pr": 95},
             training_config={
-                "backend_status": PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY,
+                "backend_status": PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY,
                 "training_fidelity": PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY,
+                "supported_training_fidelities": list(
+                    PR95_MLX_SUPPORTED_TRAINING_FIDELITIES
+                ),
+                "supported_loss_surfaces": list(PR95_MLX_SUPPORTED_LOSS_SURFACES),
                 "source_faithful_training": False,
                 "source_faithfulness_blockers": list(
                     PR95_MLX_SOURCE_FAITHFUL_BLOCKERS
@@ -644,8 +668,12 @@ def default_optimizer_scheduler_descriptors() -> tuple[OptimizerSchedulerDescrip
             },
             scheduler_config={"stage_indices": [8], "source_pr": 95},
             training_config={
-                "backend_status": PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY,
+                "backend_status": PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY,
                 "training_fidelity": PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY,
+                "supported_training_fidelities": list(
+                    PR95_MLX_SUPPORTED_TRAINING_FIDELITIES
+                ),
+                "supported_loss_surfaces": list(PR95_MLX_SUPPORTED_LOSS_SURFACES),
                 "source_faithful_training": False,
                 "source_faithfulness_blockers": list(
                     PR95_MLX_SOURCE_FAITHFUL_BLOCKERS

@@ -60,6 +60,30 @@ def _run_summary(**overrides: object) -> dict[str, object]:
     return row
 
 
+def _calibration_request(**overrides: object) -> dict[str, object]:
+    row: dict[str, object] = {
+        "exact_auth_calibration_packet_source": "run_derived_discovery",
+        "exact_auth_calibration_packet_paths": [
+            ".omx/research/campaign/cpu_result_review.json",
+            ".omx/research/campaign/cuda_result_review.json",
+        ],
+        "exact_auth_calibration_discovery_pair": {
+            "archive_sha256": "a" * 64,
+            "archive_bytes": 12345,
+            "n_samples": 600,
+            "runtime_content_tree_sha256": "b" * 64,
+            "contest_cpu_packet_path": (
+                ".omx/research/campaign/cpu_result_review.json"
+            ),
+            "contest_cuda_packet_path": (
+                ".omx/research/campaign/cuda_result_review.json"
+            ),
+        },
+    }
+    row.update(overrides)
+    return row
+
+
 def _child_queue(command: list[str] | None = None) -> dict[str, object]:
     return {
         "schema": "experiment_queue.v1",
@@ -128,6 +152,45 @@ def test_feedback_replan_policy_executes_safe_followup_queue() -> None:
     assert policy["ready_for_exact_eval_dispatch"] is False
     assert policy["recommended_actions"][0]["action"] == ACTION_EXECUTE_FEEDBACK_FOLLOWUP
     assert policy["recommended_actions"][0]["local_only"] is True
+
+
+def test_feedback_replan_policy_counts_only_paired_exact_auth_calibration() -> None:
+    policy = build_queue_feedback_replan_policy(
+        _run_summary(queue_feedback_replan_request=_calibration_request()),
+        feedback_followup_queue=_child_queue(),
+    )
+
+    assert policy["decision"] == ACTION_EXECUTE_FEEDBACK_FOLLOWUP
+    assert policy["exact_auth_calibration_usable"] is True
+    calibration = policy["exact_auth_calibration_policy"]
+    assert calibration["usable_for_feedback_trust_region"] is True
+    assert calibration["packet_count"] == 2
+    assert calibration["pair"]["archive_bytes"] == 12345
+    assert calibration["score_claim"] is False
+    assert calibration["ready_for_exact_eval_dispatch"] is False
+
+
+def test_feedback_replan_policy_blocks_unpaired_exact_auth_calibration() -> None:
+    policy = build_queue_feedback_replan_policy(
+        _run_summary(
+            queue_feedback_replan_request=_calibration_request(
+                exact_auth_calibration_packet_paths=[
+                    ".omx/research/campaign/cpu_result_review.json",
+                    ".omx/research/campaign/cuda_result_review.json",
+                ],
+                exact_auth_calibration_discovery_pair=None,
+            )
+        ),
+        feedback_followup_queue=_child_queue(),
+    )
+
+    assert policy["decision"] == ACTION_BLOCKED
+    assert policy["stop_reason"] == "exact_auth_calibration_policy_failed"
+    assert policy["exact_auth_calibration_usable"] is False
+    assert (
+        "exact_auth_calibration_policy:exact_auth_calibration_pair_metadata_missing"
+        in policy["blockers"]
+    )
 
 
 def test_feedback_replan_policy_builds_next_iteration_command_after_success() -> None:

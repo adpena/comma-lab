@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import pytest
 
+from tac.local_acceleration.pr95_hnerv_mlx_contract import (
+    PR95_YUV6_SCORER_LOSS_UNWIRED_BLOCKER,
+)
 from tac.optimization.optimizer_scheduler_registry import (
     DESCRIPTOR_SCHEMA,
     EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY,
@@ -122,13 +125,19 @@ def test_registry_exposes_pr95_mlx_optimizer_descriptors_fail_closed() -> None:
     assert stage8["parameter_group_lr_policy_id"] == (
         "embedding_theta1_hidden_muon_adamw"
     )
+    assert stage8["training_config"]["backend_status"] == (
+        "implemented_mlx_local_timing_proxy"
+    )
+    assert "source_video_rgb_yuv6_preprocess_coupled_timing_only" in (
+        stage8["training_config"]["supported_training_fidelities"]
+    )
+    assert "rgb_yuv6_mse" in stage8["training_config"]["supported_loss_surfaces"]
     assert "pr95_eval_roundtrip_scorer_preprocess_loss_not_ported_to_mlx" not in (
         stage8["training_config"]["source_faithfulness_blockers"]
     )
-    assert (
-        "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx"
-        in stage8["training_config"]["source_faithfulness_blockers"]
-    )
+    assert PR95_YUV6_SCORER_LOSS_UNWIRED_BLOCKER in stage8["training_config"][
+        "source_faithfulness_blockers"
+    ]
     assert descriptor_only["training_config"]["backend_status"] == (
         "optimizer_backend_missing"
     )

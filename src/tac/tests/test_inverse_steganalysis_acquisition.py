@@ -114,6 +114,7 @@ def _review_packet(
     archive_bytes: int = 181_232,
     runtime_content_tree_sha256: str = "2" * 64,
     inflated_output_aggregate_sha256: str = "3" * 64,
+    **overrides: object,
 ) -> dict[str, object]:
     exact_cuda = axis == "contest_cuda"
     exact_cpu = axis == "contest_cpu"
@@ -131,7 +132,7 @@ def _review_packet(
         if exact_cpu
         else "not_negative_against_supplied_baseline"
     )
-    return {
+    row: dict[str, object] = {
         "schema": "tac_result_review_packet_v1",
         "tool": "tools/build_result_review_packet.py",
         "technique": "ias1_runtime_parity_top4",
@@ -211,6 +212,8 @@ def _review_packet(
             "provide a byte-closed implementation change before redispatch"
         ],
     }
+    row.update(overrides)
+    return row
 
 
 def _mlx_selection(**overrides: object) -> dict[str, object]:
@@ -1250,7 +1253,11 @@ def test_paired_exact_auth_calibration_demotes_regressed_measured_config() -> No
         "regresses_vs_axis_baseline"
     )
     assert calibration["score_claim"] is False
+    assert calibration["promotion_eligible"] is False
     assert calibration["rank_or_kill_eligible"] is False
+    assert calibration["ready_for_exact_eval_dispatch"] is False
+    assert calibration.get("family_falsified") is not True
+    assert calibration.get("method_family_retired") is not True
     assert cell["best_observation_id"] == observations[0]["observation_id"]
     assert cell["best_observation_kind"] == "paired_exact_auth_calibration"
     assert cell["exact_auth_calibration"]["pair_status"] == (
@@ -1260,7 +1267,11 @@ def test_paired_exact_auth_calibration_demotes_regressed_measured_config() -> No
     assert action["observation_feedback"]["exact_auth_calibration_count"] == 1
     assert action["water_bucket"]["selected_count"] == 0
     assert action["score_claim"] is False
+    assert action["promotion_eligible"] is False
     assert action["rank_or_kill_eligible"] is False
+    assert action["ready_for_exact_eval_dispatch"] is False
+    assert action.get("family_falsified") is not True
+    assert action.get("method_family_retired") is not True
 
 
 def test_paired_exact_auth_calibration_requires_shared_archive_custody() -> None:
@@ -1281,6 +1292,29 @@ def test_paired_exact_auth_calibration_requires_shared_archive_custody() -> None
                     score=0.228,
                     baseline_score=0.205,
                     archive_sha256="b" * 64,
+                ),
+            ],
+            candidate_id="ias1_runtime_parity_top4",
+        )
+
+
+def test_paired_exact_auth_calibration_refuses_family_retirement_authority() -> None:
+    with pytest.raises(
+        InverseSteganalysisAcquisitionError,
+        match="must not retire a family",
+    ):
+        paired_exact_auth_calibration_observations_from_review_packets(
+            [
+                _review_packet(
+                    "contest_cpu",
+                    score=0.193,
+                    baseline_score=0.192,
+                    family_falsified=True,
+                ),
+                _review_packet(
+                    "contest_cuda",
+                    score=0.228,
+                    baseline_score=0.205,
                 ),
             ],
             candidate_id="ias1_runtime_parity_top4",
