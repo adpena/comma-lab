@@ -44,6 +44,7 @@ from tac.optimization.byte_range_entropy_recode_chain import (
 )
 from tac.optimization.family_agnostic_materializers import (
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
+    materialize_packet_member_recompress_candidate,
 )
 from tac.optimization.proxy_candidate_contract import truthy_authority_field_violations
 from tac.optimization.serialized_archive_economics import (
@@ -524,6 +525,90 @@ def test_harvest_work_queue_family_agnostic_candidate_manifest(
     assert "runtime_consumption_proof_missing" in row["dispatch_blockers"]
     assert row["runtime_consumption_proof_status"] == "missing"
     assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_harvest_family_agnostic_packet_recompress_payload_identity_proof(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    archive = repo / "source.zip"
+    output = repo / "candidate.zip"
+    proof = repo / "runtime_consumption_proof.json"
+    manifest_path = repo / "family_candidate.json"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("payload.bin", b"A" * 4096)
+    manifest = materialize_packet_member_recompress_candidate(
+        archive_path=archive,
+        output_archive=output,
+        member_name="payload.bin",
+        runtime_consumption_proof_out=proof,
+        repo_root=repo,
+    )
+    manifest["candidate_id"] = "family_agnostic_packet_member_with_proof"
+    _write_json(manifest_path, manifest)
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[manifest_path],
+    )
+
+    queue = result["source_queue"]
+    row = queue["top_k"][0]
+    assert result["report"]["accepted_manifest_count"] == 1
+    assert row["candidate_id"] == "family_agnostic_packet_member_with_proof"
+    assert row["candidate_family"] == "packet_member_recompress"
+    assert row["candidate_member_name"] == "payload.bin"
+    assert row["candidate_member_sha256"] == manifest["candidate_member"]["sha256"]
+    assert row["source_member_sha256"] == manifest["source_member"]["sha256"]
+    assert row["runtime_consumption_proof_status"] == "present"
+    assert row["runtime_consumption_proof_path"] == str(proof)
+    assert row["runtime_adapter_ready"] is True
+    assert row["receiver_contract_satisfied"] is True
+    assert row["candidate_runtime_adapter_blocker_cleared"] is True
+    assert "runtime_consumption_proof_missing" not in row["dispatch_blockers"]
+    assert "family_agnostic_receiver_contract_not_satisfied" not in (
+        row["dispatch_blockers"]
+    )
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_harvest_family_agnostic_packet_recompress_accepts_empty_member(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    archive = repo / "source.zip"
+    output = repo / "candidate.zip"
+    proof = repo / "runtime_consumption_proof.json"
+    manifest_path = repo / "family_candidate.json"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("empty.bin", b"")
+    manifest = materialize_packet_member_recompress_candidate(
+        archive_path=archive,
+        output_archive=output,
+        member_name="empty.bin",
+        runtime_consumption_proof_out=proof,
+        allow_size_regression=True,
+        compression_methods=("stored",),
+        repo_root=repo,
+    )
+    manifest["candidate_id"] = "family_agnostic_packet_member_empty_with_proof"
+    _write_json(manifest_path, manifest)
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[manifest_path],
+    )
+
+    row = result["source_queue"]["top_k"][0]
+    assert row["candidate_id"] == "family_agnostic_packet_member_empty_with_proof"
+    assert row["candidate_member_name"] == "empty.bin"
+    assert row["candidate_member_bytes"] == 0
+    assert row["source_member_bytes"] == 0
+    assert row["runtime_consumption_proof_status"] == "present"
+    assert row["receiver_contract_satisfied"] is True
 
 
 def test_harvest_requires_succeeded_state_for_work_queue_rows(

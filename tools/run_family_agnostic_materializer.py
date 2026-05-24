@@ -49,6 +49,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-archive", required=True, type=Path)
     parser.add_argument("--output-manifest", required=True, type=Path)
     parser.add_argument("--runtime-consumption-proof", type=Path)
+    parser.add_argument("--runtime-consumption-proof-out", type=Path)
     parser.add_argument("--section-manifest", type=Path)
     parser.add_argument("--section-name", action="append", default=[])
     parser.add_argument("--brotli-quality", action="append", type=int, default=[])
@@ -62,6 +63,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--allow-size-regression", action="store_true")
     parser.add_argument("--allow-overwrite", action="store_true")
     parser.add_argument("--expected-existing-output-sha256")
+    parser.add_argument("--expected-existing-runtime-consumption-proof-sha256")
     parser.add_argument("--expected-existing-manifest-sha256")
     parser.add_argument("--min-free-bytes", type=int, default=0)
     return parser.parse_args(argv)
@@ -73,6 +75,16 @@ def main(argv: list[str] | None = None) -> int:
     input_paths = [args.archive_path]
     if args.runtime_consumption_proof is not None:
         input_paths.append(args.runtime_consumption_proof)
+    if (
+        args.runtime_consumption_proof is not None
+        and args.runtime_consumption_proof_out is not None
+    ):
+        print(
+            "FATAL: --runtime-consumption-proof and --runtime-consumption-proof-out "
+            "are mutually exclusive",
+            file=sys.stderr,
+        )
+        return 2
     try:
         manifest = _run_materializer(args, input_paths=input_paths)
     except (OSError, ArtifactWriteError, FamilyAgnosticMaterializerError) as exc:
@@ -113,6 +125,14 @@ def _run_materializer(
     *,
     input_paths: list[Path],
 ) -> dict:
+    if (
+        args.runtime_consumption_proof_out is not None
+        and args.target_kind != PACKET_MEMBER_RECOMPRESS_TARGET_KIND
+    ):
+        raise FamilyAgnosticMaterializerError(
+            "--runtime-consumption-proof-out is currently supported only for "
+            "packet_member_recompress_v1"
+        )
     common = {
         "archive_path": args.archive_path,
         "output_archive": args.output_archive,
@@ -136,12 +156,21 @@ def _run_materializer(
     if args.target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
         if args.packet_member_manifest is not None:
             input_paths.append(args.packet_member_manifest)
+        runtime_proof_out = args.runtime_consumption_proof_out
+        if args.runtime_consumption_proof is None and runtime_proof_out is None:
+            runtime_proof_out = args.output_manifest.with_name(
+                f"{args.output_manifest.stem}.runtime_consumption_proof.json"
+            )
         return materialize_packet_member_recompress_candidate(
             **common,
             packet_member_manifest=args.packet_member_manifest,
             member_name=args.member_name,
             compression_methods=tuple(args.zip_compression_method or ["stored", "deflated"]),
             compresslevels=tuple(args.zip_compresslevel or [9]),
+            runtime_consumption_proof_out=runtime_proof_out,
+            expected_existing_runtime_consumption_proof_sha256=(
+                args.expected_existing_runtime_consumption_proof_sha256
+            ),
         )
     if args.target_kind == TENSOR_FACTORIZE_TARGET_KIND:
         if args.tensor_manifest is None:

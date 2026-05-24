@@ -21,7 +21,7 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
-from tac.repo_io import read_json, sha256_bytes, sha256_file, write_bytes_artifact
+from tac.repo_io import read_json, sha256_bytes, sha256_file, write_bytes_artifact, write_json_artifact
 
 ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA = "archive_section_entropy_recode_candidate.v1"
 PACKET_MEMBER_RECOMPRESS_SCHEMA = "packet_member_recompress_candidate.v1"
@@ -57,17 +57,28 @@ def materialize_packet_member_recompress_candidate(
     compression_methods: Sequence[str] = ("stored", "deflated"),
     compresslevels: Sequence[int] = (9,),
     runtime_consumption_proof: str | Path | Mapping[str, Any] | None = None,
+    runtime_consumption_proof_out: str | Path | None = None,
     repo_root: str | Path | None = None,
     allow_size_regression: bool = False,
     allow_overwrite: bool = False,
     expected_existing_output_sha256: str | None = None,
+    expected_existing_runtime_consumption_proof_sha256: str | None = None,
     min_free_bytes: int = 0,
 ) -> dict[str, Any]:
     """Recompress one ZIP member without changing its member payload bytes."""
 
     repo = _repo(repo_root)
+    if runtime_consumption_proof is not None and runtime_consumption_proof_out is not None:
+        raise FamilyAgnosticMaterializerError(
+            "runtime_consumption_proof and runtime_consumption_proof_out are mutually exclusive"
+        )
     archive = _resolve_path(archive_path, repo=repo)
     output = _resolve_path(output_archive, repo=repo)
+    proof_out = (
+        _resolve_path(runtime_consumption_proof_out, repo=repo)
+        if runtime_consumption_proof_out is not None
+        else None
+    )
     manifest = _load_mapping(packet_member_manifest, repo=repo)
     target_member = _select_member_name(
         archive,
@@ -122,8 +133,34 @@ def materialize_packet_member_recompress_candidate(
         min_free_bytes=min_free_bytes,
     )
     candidate_record = _archive_record(output)
+    candidate_member_record = _member_record(output, target_member)
+    proof_write_result = None
+    runtime_proof_ref: str | Path | Mapping[str, Any] | None = runtime_consumption_proof
+    if proof_out is not None:
+        runtime_proof_payload = _packet_member_recompress_runtime_consumption_proof(
+            source_archive=source_record,
+            source_member=member_record,
+            candidate_archive=candidate_record,
+            candidate_member=candidate_member_record,
+            selected_member_name=target_member,
+            selected_compression={
+                "compression_method": best["compression_method"],
+                "compresslevel": best["compresslevel"],
+                "source_archive_bytes": source_record["bytes"],
+                "candidate_archive_bytes": candidate_record["bytes"],
+                "saved_bytes": saved_bytes,
+            },
+        )
+        proof_write_result = write_json_artifact(
+            proof_out,
+            runtime_proof_payload,
+            allow_overwrite=allow_overwrite,
+            expected_existing_sha256=expected_existing_runtime_consumption_proof_sha256,
+            min_free_bytes=min_free_bytes,
+        )
+        runtime_proof_ref = proof_out
     receiver_verification = verify_runtime_consumption_proof(
-        runtime_consumption_proof=runtime_consumption_proof,
+        runtime_consumption_proof=runtime_proof_ref,
         required_candidate_archive_sha256=candidate_record["sha256"],
         required_candidate_member_sha256=member_record["sha256"],
         repo_root=repo,
@@ -143,7 +180,7 @@ def materialize_packet_member_recompress_candidate(
         "source_archive": source_record,
         "source_member": member_record,
         "candidate_archive": candidate_record,
-        "candidate_member": _member_record(output, target_member),
+        "candidate_member": candidate_member_record,
         "selected_member_name": target_member,
         "selected_compression": {
             "compression_method": best["compression_method"],
@@ -161,12 +198,77 @@ def materialize_packet_member_recompress_candidate(
             for trial in candidates
         ],
         "receiver_verification": receiver_verification,
+        "runtime_consumption_proof_path": (
+            proof_out.as_posix() if proof_out is not None else receiver_verification.get("proof_path")
+        ),
+        "runtime_consumption_proof_write": (
+            proof_write_result.__dict__ if proof_write_result is not None else None
+        ),
         "receiver_contract_satisfied": (
             receiver_verification["receiver_contract_satisfied"] is True
         ),
         "readiness_blockers": readiness_blockers,
         "artifact_write": write_result.__dict__,
         **FALSE_AUTHORITY,
+    }
+
+
+def _packet_member_recompress_runtime_consumption_proof(
+    *,
+    source_archive: Mapping[str, Any],
+    source_member: Mapping[str, Any],
+    candidate_archive: Mapping[str, Any],
+    candidate_member: Mapping[str, Any],
+    selected_member_name: str,
+    selected_compression: Mapping[str, Any],
+) -> dict[str, Any]:
+    source_member_sha = _clean_str(source_member.get("sha256"))
+    candidate_member_sha = _clean_str(candidate_member.get("sha256"))
+    member_payload_identical = (
+        source_member_sha is not None and candidate_member_sha == source_member_sha
+    )
+    return {
+        "schema": "family_agnostic_runtime_consumption_proof_v1",
+        "proof_kind": "packet_member_recompress_payload_identity_receiver_proof.v1",
+        "proof_scope": "zip_member_payload_identity_after_archive_recompression",
+        "target_kind": PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        "materializer_id": PACKET_MEMBER_RECOMPRESS_MATERIALIZER_ID,
+        "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+        "receiver_contract_id": f"{PACKET_MEMBER_RECOMPRESS_TARGET_KIND}.receiver.v1",
+        "selected_member_name": selected_member_name,
+        "source_archive": dict(source_archive),
+        "source_member": dict(source_member),
+        "candidate_archive": dict(candidate_archive),
+        "candidate_member": dict(candidate_member),
+        "candidate_archive_sha256": candidate_archive.get("sha256"),
+        "candidate_member_sha256": candidate_member_sha,
+        "member_sha256": candidate_member_sha,
+        "source_member_sha256": source_member_sha,
+        "candidate_member_payload_identical_to_source": member_payload_identical,
+        "runtime_consumption_probe": {
+            "schema": "packet_member_payload_identity_probe.v1",
+            "passed": member_payload_identical,
+            "source_member_sha256": source_member_sha,
+            "candidate_member_sha256": candidate_member_sha,
+            "candidate_member_bytes": candidate_member.get("bytes"),
+            "source_member_bytes": source_member.get("bytes"),
+        },
+        "selected_compression": dict(selected_compression),
+        "receiver_contract_satisfied": member_payload_identical,
+        "runtime_consumption_proof_passed": member_payload_identical,
+        "passed": member_payload_identical,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+        "exact_cuda_auth_eval": False,
+        "contest_cuda_auth_eval": False,
+        "score_affecting_payload_changed": False,
+        "charged_bits_changed": False,
     }
 
 

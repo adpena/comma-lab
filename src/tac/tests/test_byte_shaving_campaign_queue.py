@@ -1703,6 +1703,9 @@ def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
     assert queue["schema"] == MATERIALIZER_WORK_QUEUE_SCHEMA
     assert queue["executable_row_count"] == 2
     packet_row, tensor_row = queue["rows"]
+    packet_runtime_proof = packet_out_manifest.with_name(
+        f"{packet_out_manifest.stem}.runtime_consumption_proof.json"
+    )
     assert packet_row["tool"] == "tools/run_family_agnostic_materializer.py"
     assert [
         "--target-kind",
@@ -1710,6 +1713,10 @@ def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
     ] in [packet_row["command"][index : index + 2] for index in range(len(packet_row["command"]) - 1)]
     assert ["--member-name", "payload.bin"] in [
         packet_row["command"][index : index + 2] for index in range(len(packet_row["command"]) - 1)
+    ]
+    assert ["--runtime-consumption-proof-out", str(packet_runtime_proof)] in [
+        packet_row["command"][index : index + 2]
+        for index in range(len(packet_row["command"]) - 1)
     ]
     _assert_typed_postconditions(
         packet_row["postconditions"],
@@ -1720,6 +1727,8 @@ def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
         str(archive),
         str(packet_manifest),
     ]
+    assert str(packet_runtime_proof) in packet_row["telemetry"]["artifact_paths"]
+    assert str(packet_runtime_proof) in packet_row["telemetry"]["pullback_artifact_paths"]
     assert "packet_member_recompress_requires_runtime_consumption_proof" in (packet_row["dispatch_blockers"])
     assert packet_row["score_claim"] is False
     assert packet_row["ready_for_exact_eval_dispatch"] is False

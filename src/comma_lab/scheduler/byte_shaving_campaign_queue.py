@@ -1476,6 +1476,19 @@ def _family_agnostic_materializer_command(
     if runtime_proof is not None:
         command.extend(["--runtime-consumption-proof", runtime_proof])
         input_paths.append(runtime_proof)
+    runtime_proof_out: str | None = None
+    if runtime_proof is None and target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
+        runtime_proof_out = _path_context_value(context, "runtime_consumption_proof_out")
+        if runtime_proof_out is None:
+            runtime_proof_out = _path_context_value(
+                context,
+                "runtime_consumption_proof_output",
+            )
+        if runtime_proof_out is None:
+            runtime_proof_out = Path(output_manifest).with_name(
+                f"{Path(output_manifest).stem}.runtime_consumption_proof.json"
+            ).as_posix()
+        command.extend(["--runtime-consumption-proof-out", runtime_proof_out])
     min_free_bytes = _finite_int(context.get("min_free_bytes"))
     if min_free_bytes is not None:
         command.extend(["--min-free-bytes", str(min_free_bytes)])
@@ -1495,6 +1508,20 @@ def _family_agnostic_materializer_command(
         )
         if expected_manifest_sha is not None:
             command.extend(["--expected-existing-manifest-sha256", expected_manifest_sha])
+        expected_runtime_proof_sha = _context_string_any(
+            context,
+            (
+                "expected_existing_runtime_consumption_proof_sha256",
+                "expected_runtime_consumption_proof_sha256",
+            ),
+        )
+        if expected_runtime_proof_sha is not None:
+            command.extend(
+                [
+                    "--expected-existing-runtime-consumption-proof-sha256",
+                    expected_runtime_proof_sha,
+                ]
+            )
 
     if target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND:
         section_manifest = _path_context_value(context, "section_manifest")
@@ -1543,13 +1570,17 @@ def _family_agnostic_materializer_command(
         if rank is not None:
             command.extend(["--rank", str(rank)])
 
+    artifact_paths = [output_archive, output_manifest]
+    if runtime_proof_out is not None:
+        artifact_paths.append(runtime_proof_out)
+
     return (
         command,
         [],
         {
-            "artifact_paths": [output_archive, output_manifest],
+            "artifact_paths": artifact_paths,
             "input_artifact_paths": ordered_unique(input_paths),
-            "pullback_artifact_paths": [output_archive, output_manifest],
+            "pullback_artifact_paths": artifact_paths,
             "include_postcondition_paths": True,
             "family_agnostic_materializer_contract": {
                 "schema": "family_agnostic_materializer_command_contract.v1",

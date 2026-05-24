@@ -52500,7 +52500,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/comma_lab/scheduler/staircase_dag.py"
+          "evidence": "staircase dependent_queue_refs, materializer feedback child DAG refs, packet-member runtime proof output, verified member harvest fields, and CLI child-queue planning refs"
         },
         "real_archive_empirical": {
           "status": false,
@@ -52516,11 +52516,11 @@
         },
         "strict_preflight": {
           "status": true,
-          "evidence": "src/tac/tests/test_staircase_dag.py"
+          "evidence": "ruff modified surfaces; pytest 161 materializer/staircase tests; git diff --check; lane_maturity validate; review_tracker policy-check clean for touched Python files"
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "codex two-pass review_tracker marks plus focused adversarial review of child-queue false-authority, packet-member proof behavior, and zero-byte member harvest"
         },
         "memory_entry": {
           "status": true,
@@ -52532,6 +52532,47 @@
         }
       },
       "notes": "Wire materializer feedback follow-up queues into staircase/DAG artifacts as paused child queue edges"
+    },
+    {
+      "id": "codex_packet_member_recompress_runtime_proof_20260524",
+      "name": "Packet member recompress runtime proof",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "packet_member_recompress runtime proof output, harvest member custody fields, exact-readiness member binding, zero-byte member acceptance"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "pytest 217 materializer/staircase/exact-readiness tests; targeted packet proof 23 tests; ruff modified surfaces; git diff --check; review_tracker policy-check clean"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "codex two-pass review_tracker marks plus adversarial stale-proof, truthy-authority, and zero-byte member tests"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_packet_member_recompress_runtime_proof_20260524T190010Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Emit and bind packet-member recompress payload-identity runtime proof through materializer harvest and exact-readiness member custody"
     }
   ],
   "level_rules": {
@@ -52541,5 +52582,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T18:52:12Z"
+  "updated_at": "2026-05-24T19:03:16Z"
 }

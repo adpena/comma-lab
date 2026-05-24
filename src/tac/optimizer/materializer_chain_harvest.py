@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import time
+import zipfile
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
@@ -234,6 +235,24 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
         receiver_map.get("proof_path") or manifest.get("runtime_consumption_proof_path")
     )
     proof_path = raw_proof_path.strip() if isinstance(raw_proof_path, str) else None
+    candidate_member = _zip_member_record_from_manifest(
+        manifest,
+        "candidate_member",
+        archive_path=_record_path(
+            manifest["candidate_archive"],
+            repo_root=repo_root,
+            label="candidate_archive",
+        ),
+    )
+    source_member = _zip_member_record_from_manifest(
+        manifest,
+        "source_member",
+        archive_path=_record_path(
+            manifest["source_archive"],
+            repo_root=repo_root,
+            label="source_archive",
+        ),
+    )
     candidate_id = _candidate_id(
         manifest,
         schema=schema,
@@ -257,6 +276,8 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
         "source_archive_sha256": source_sha,
         "source_archive_bytes": source_bytes,
         "source_archive_path": source_archive.get("path"),
+        **_member_candidate_fields("candidate", candidate_member),
+        **_member_candidate_fields("source", source_member),
         "serialized_archive_delta": serialized_delta,
         "score_affecting_payload_changed": archive_changed,
         "charged_bits_changed": byte_changed,
@@ -307,6 +328,56 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
     out["receiver_contract_satisfied"] = receiver_satisfied
     out["candidate_runtime_adapter_blocker_cleared"] = receiver_satisfied
     return out
+
+
+def _zip_member_record_from_manifest(
+    manifest: Mapping[str, Any],
+    key: str,
+    *,
+    archive_path: Path,
+) -> dict[str, Any]:
+    raw = manifest.get(key)
+    if not isinstance(raw, Mapping):
+        return {}
+    name = _string_or_none(raw.get("name") or raw.get("member_name"))
+    if name is None:
+        return {}
+    try:
+        with zipfile.ZipFile(archive_path, "r") as archive:
+            try:
+                payload = archive.read(name)
+            except KeyError as exc:
+                raise MaterializerChainHarvestError(f"{key}_missing_in_archive:{name}") from exc
+    except zipfile.BadZipFile as exc:
+        raise MaterializerChainHarvestError(f"{key}_archive_not_zip") from exc
+    observed_sha = hashlib.sha256(payload).hexdigest()
+    observed_bytes = len(payload)
+    declared_sha = _string_or_none(raw.get("sha256") or raw.get("member_sha256"))
+    if declared_sha is not None and declared_sha != observed_sha:
+        raise MaterializerChainHarvestError(f"{key}_sha256_mismatch")
+    declared_bytes_value = raw.get("bytes")
+    if declared_bytes_value is None:
+        declared_bytes_value = raw.get("member_bytes")
+    declared_bytes = _non_negative_int(declared_bytes_value)
+    if declared_bytes is not None and declared_bytes != observed_bytes:
+        raise MaterializerChainHarvestError(f"{key}_bytes_mismatch")
+    return {
+        **dict(raw),
+        "name": name,
+        "sha256": observed_sha,
+        "bytes": observed_bytes,
+    }
+
+
+def _member_candidate_fields(prefix: str, member: Mapping[str, Any]) -> dict[str, Any]:
+    if not member:
+        return {}
+    return {
+        f"{prefix}_member_name": member.get("name"),
+        f"{prefix}_member_sha256": member.get("sha256"),
+        f"{prefix}_member_bytes": member.get("bytes"),
+        f"{prefix}_member": dict(member),
+    }
 
 
 def _runtime_consumption_proof_fields(chain: Mapping[str, Any]) -> dict[str, Any]:
@@ -568,6 +639,18 @@ def _positive_int(value: Any) -> int | None:
     if isinstance(value, str) and value.strip().isdigit():
         parsed = int(value.strip())
         return parsed if parsed > 0 else None
+    return None
+
+
+def _non_negative_int(value: Any) -> int | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, int) and value >= 0:
+        return value
+    if isinstance(value, float) and value.is_integer() and value >= 0:
+        return int(value)
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
     return None
 
 

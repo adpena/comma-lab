@@ -1261,6 +1261,14 @@ def _family_agnostic_runtime_proof_archive_sha(proof: Mapping[str, Any]) -> str 
     return str(value).lower() if is_sha256(value) else None
 
 
+def _family_agnostic_runtime_proof_member_sha(proof: Mapping[str, Any]) -> str | None:
+    candidate_member = proof.get("candidate_member")
+    if isinstance(candidate_member, Mapping) and is_sha256(candidate_member.get("sha256")):
+        return str(candidate_member["sha256"]).lower()
+    value = proof.get("candidate_member_sha256") or proof.get("member_sha256")
+    return str(value).lower() if is_sha256(value) else None
+
+
 def validate_runtime_consumption_proof(
     row: Mapping[str, Any],
     *,
@@ -1352,6 +1360,16 @@ def validate_runtime_consumption_proof(
                 blockers.append("runtime_consumption_proof_archive_sha_missing")
             elif proof_archive_sha != archive_sha256:
                 blockers.append("runtime_consumption_proof_archive_sha_mismatch")
+        expected_member_sha = row.get("candidate_member_sha256")
+        if is_sha256(expected_member_sha):
+            proof_member_sha = _family_agnostic_runtime_proof_member_sha(proof_raw)
+            facts["runtime_consumption_proof_candidate_member_sha256"] = (
+                proof_member_sha
+            )
+            if proof_member_sha is None:
+                blockers.append("runtime_consumption_proof_candidate_member_sha_missing")
+            elif proof_member_sha != str(expected_member_sha).lower():
+                blockers.append("runtime_consumption_proof_candidate_member_sha_mismatch")
         for false_authority_field in (
             field for field in PROXY_FALSE_AUTHORITY_FIELDS if field in proof_raw
         ):
@@ -1755,6 +1773,9 @@ def promoted_row(
         "runtime_consumption_proof_archive_sha256": facts.get(
             "runtime_consumption_proof_archive_sha256"
         ),
+        "runtime_consumption_proof_candidate_member_sha256": facts.get(
+            "runtime_consumption_proof_candidate_member_sha256"
+        ),
         "cuda_component_risk_gate_required": bool(
             facts.get("hdm8_selector_cuda_component_gate_required")
         ),
@@ -1898,6 +1919,9 @@ def promote_candidate_for_exact_eval(
             ),
             "runtime_consumption_proof_archive_sha256": facts.get(
                 "runtime_consumption_proof_archive_sha256"
+            ),
+            "runtime_consumption_proof_candidate_member_sha256": facts.get(
+                "runtime_consumption_proof_candidate_member_sha256"
             ),
             "cuda_component_risk_gate_required": facts.get(
                 "hdm8_selector_cuda_component_gate_required"

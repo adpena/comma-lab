@@ -1105,6 +1105,73 @@ def test_promotes_family_agnostic_candidate_with_receiver_proof(
     assert row["runtime_consumption_proof_archive_sha256"] == archive_sha
 
 
+def test_promotes_family_agnostic_packet_member_proof_with_member_binding(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    member_sha = "2" * 64
+    proof_path = _write_family_agnostic_runtime_proof(
+        submission,
+        archive_sha,
+        extra_fields={
+            "proof_kind": "packet_member_recompress_payload_identity_receiver_proof.v1",
+            "candidate_member_sha256": member_sha,
+        },
+    )
+    _add_required_runtime_proof_fields(queue, submission, tmp_path, status="present")
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    payload["top_k"][0]["candidate_member_sha256"] = member_sha
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is True
+    row = result["promoted_queue"]["dispatch_ready"][0]
+    assert row["runtime_consumption_proof_path"] == proof_path.relative_to(
+        tmp_path
+    ).as_posix()
+    assert row["runtime_consumption_proof_candidate_member_sha256"] == member_sha
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+
+
+def test_family_agnostic_packet_member_proof_rejects_member_sha_mismatch(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _write_family_agnostic_runtime_proof(
+        submission,
+        archive_sha,
+        extra_fields={
+            "proof_kind": "packet_member_recompress_payload_identity_receiver_proof.v1",
+            "candidate_member_sha256": "1" * 64,
+        },
+    )
+    _add_required_runtime_proof_fields(queue, submission, tmp_path, status="present")
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    payload["top_k"][0]["candidate_member_sha256"] = "2" * 64
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert "runtime_consumption_proof_candidate_member_sha_mismatch" in (
+        result["report"]["blockers"]
+    )
+
+
 @pytest.mark.parametrize(
     ("proof_kwargs", "expected_blocker"),
     [
