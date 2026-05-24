@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -37,6 +38,7 @@ DISPATCH_STEP_ID = "dispatch_exact_eval"
 DRY_RUN_DISPATCH_STEP_ID = "dispatch_exact_eval_dry_run"
 SUPPORTED_DISPATCH_MODES = frozenset({"dry_run", "execute"})
 SUPPORTED_PROVIDERS = frozenset({"lightning", "vastai"})
+SUPPORTED_EXACT_EVAL_SCORE_AXES = frozenset({"contest_cuda"})
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
     "score_claim_valid": False,
@@ -205,7 +207,7 @@ def build_materializer_exact_eval_dispatch_plan(
         job_id = _dispatch_job_id(
             label_prefix=label_prefix,
             candidate_id=candidate_id,
-            archive_sha256=archive_sha,
+            stable_identity=stable_identity,
         )
         claim_command = _claim_command(
             lane_id=lane_id,
@@ -466,7 +468,7 @@ def _stable_candidate_identity(row: Mapping[str, Any]) -> tuple[str, list[str]]:
     archive_sha = _row_archive_sha(row)
     runtime_content_sha = _row_runtime_content_sha(row)
     runtime_tree_sha = _row_runtime_tree_sha(row)
-    score_axis = _row_score_axis(row)
+    score_axis, score_axis_blocker = _row_score_axis_with_blocker(row)
     blockers: list[str] = []
     blockers.extend(_archive_sha_alias_blockers(row))
     if archive_sha is None:
@@ -475,12 +477,15 @@ def _stable_candidate_identity(row: Mapping[str, Any]) -> tuple[str, list[str]]:
         blockers.append("stable_identity_runtime_content_tree_sha256_missing")
     if runtime_tree_sha is None:
         blockers.append("stable_identity_runtime_tree_sha256_missing")
+    if score_axis_blocker is not None:
+        blockers.append(score_axis_blocker)
     if blockers:
         fallback = str(row.get("candidate_id") or "").strip()
         return (f"unstable:{fallback}" if fallback else "unstable:missing_candidate_id"), blockers
     return (
         "archive="
         f"{archive_sha}:runtime_content={runtime_content_sha}:"
+        f"runtime_tree={runtime_tree_sha}:"
         f"score_axis={score_axis}",
         [],
     )
@@ -747,7 +752,12 @@ def _row_runtime_tree_sha(row: Mapping[str, Any]) -> str | None:
     return None
 
 
-def _row_score_axis(row: Mapping[str, Any]) -> str:
+def _row_score_axis(row: Mapping[str, Any]) -> str | None:
+    score_axis, _ = _row_score_axis_with_blocker(row)
+    return score_axis
+
+
+def _row_score_axis_with_blocker(row: Mapping[str, Any]) -> tuple[str | None, str | None]:
     for key in (
         "score_axis",
         "target_score_axis",
@@ -757,8 +767,11 @@ def _row_score_axis(row: Mapping[str, Any]) -> str:
     ):
         value = row.get(key)
         if isinstance(value, str) and value.strip():
-            return value.strip()
-    return "contest_cuda"
+            score_axis = value.strip().lower()
+            if score_axis in SUPPORTED_EXACT_EVAL_SCORE_AXES:
+                return score_axis, None
+            return None, f"stable_identity_score_axis_unsupported:{value.strip()}"
+    return None, "stable_identity_score_axis_missing"
 
 
 def _row_sha(row: Mapping[str, Any], key: str) -> str | None:
@@ -774,12 +787,10 @@ def _dispatch_job_id(
     *,
     label_prefix: str,
     candidate_id: str,
-    archive_sha256: str | None,
+    stable_identity: str,
 ) -> str:
-    parts = [label_prefix, candidate_id]
-    if archive_sha256:
-        parts.append(archive_sha256[:12])
-    return _safe_slug("_".join(parts))[:120]
+    identity_suffix = hashlib.sha256(stable_identity.encode("utf-8")).hexdigest()[:12]
+    return _safe_slug(f"{label_prefix}_{candidate_id}_{identity_suffix}")[:120]
 
 
 def _resolve_path(path: str | Path | None, *, repo_root: Path) -> Path:

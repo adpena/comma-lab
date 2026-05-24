@@ -460,6 +460,8 @@ def test_promotes_byte_closed_candidate_without_score_claim(tmp_path: Path) -> N
     assert row["score_claim"] is False
     assert row["promotion_eligible"] is False
     assert row["target_modes"] == ["contest_exact_eval"]
+    assert row["score_axis"] == "contest_cuda"
+    assert row["target_score_axis"] == "contest_cuda"
     assert row["archive_sha256"] == archive_sha
     assert row["archive_bytes"] == archive_bytes
     assert "predicted_contest_cpu_gha" not in row

@@ -41,7 +41,14 @@ def _write_claims(path: Path, rows: list[str]) -> Path:
     return path
 
 
-def _ready_queue(path: Path, *, lane_id: str, archive_sha: str, ready: bool = True) -> Path:
+def _ready_queue(
+    path: Path,
+    *,
+    lane_id: str,
+    archive_sha: str,
+    ready: bool = True,
+    score_axis: str = "contest_cuda",
+) -> Path:
     return _write_json(
         path,
         {
@@ -54,6 +61,8 @@ def _ready_queue(path: Path, *, lane_id: str, archive_sha: str, ready: bool = Tr
                     "candidate_archive_sha256": archive_sha,
                     "archive_sha256": archive_sha,
                     "archive_bytes": 123,
+                    "score_axis": score_axis,
+                    "target_score_axis": score_axis,
                     "score_claim": False,
                     "dispatch_blockers": [],
                 }
@@ -127,6 +136,29 @@ def test_audit_flags_ready_queue_after_terminal_negative_same_archive(
         blocker.startswith("same_lane_terminal_negative_for_same_archive")
         for blocker in blockers
     )
+
+
+def test_audit_flags_unsupported_exact_ready_score_axis(tmp_path: Path) -> None:
+    queue = _ready_queue(
+        tmp_path / "experiments/results/fixture/exact_ready_queue.json",
+        lane_id="lane_bad_axis",  # FAKE_LANE_OK: synthetic audit fixture.
+        archive_sha="a" * 64,
+        score_axis="contest_cpu",
+    )
+    claims = _write_claims(
+        tmp_path / ".omx/state/active_lane_dispatch_claims.md",
+        [],
+    )
+
+    payload = audit_exact_ready_queues(
+        [queue],
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+    )
+
+    assert payload["passed"] is False
+    blockers = payload["queues"][0]["stale_ready_rows"][0]["blockers"]
+    assert "score_axis_unsupported:contest_cpu" in blockers
 
 
 def test_audit_flags_ready_queue_after_cuda_score_not_below_floor(
@@ -676,6 +708,7 @@ def test_audit_blocks_ready_row_closed_by_packetir_exact_closure(
     _add_live_runtime_fields(queue, repo_root=tmp_path)
     payload = json.loads(queue.read_text(encoding="utf-8"))
     archive_sha = payload["dispatch_ready"][0]["archive_sha256"]
+    runtime_tree_sha = payload["dispatch_ready"][0]["runtime_tree_sha256"]
     payload["dispatch_ready"][0]["runtime_content_tree_sha256"] = "e" * 64
     payload["dispatch_ready"][0]["score_axis"] = "contest_cuda"
     queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -697,7 +730,7 @@ def test_audit_blocks_ready_row_closed_by_packetir_exact_closure(
                     "archive_sha256": archive_sha,
                     "runtime_content_tree_sha256": "e" * 64,
                     "score_axis": "contest_cuda",
-                    "key": f"{archive_sha}:{'e' * 64}:contest_cuda",
+                    "key": f"{archive_sha}:{'e' * 64}:{runtime_tree_sha}:contest_cuda",
                 }
             ],
         },
@@ -739,6 +772,7 @@ def test_audit_indexes_packetir_closure_from_omx_research(
     _add_live_runtime_fields(queue, repo_root=tmp_path)
     payload = json.loads(queue.read_text(encoding="utf-8"))
     archive_sha = payload["dispatch_ready"][0]["archive_sha256"]
+    runtime_tree_sha = payload["dispatch_ready"][0]["runtime_tree_sha256"]
     payload["dispatch_ready"][0]["runtime_content_tree_sha256"] = "b" * 64
     payload["dispatch_ready"][0]["score_axis"] = "contest_cuda"
     queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -759,7 +793,7 @@ def test_audit_indexes_packetir_closure_from_omx_research(
                     "archive_sha256": archive_sha,
                     "runtime_content_tree_sha256": "b" * 64,
                     "score_axis": "contest_cuda",
-                    "key": f"{archive_sha}:{'b' * 64}:contest_cuda",
+                    "key": f"{archive_sha}:{'b' * 64}:{runtime_tree_sha}:contest_cuda",
                 }
             ],
         },
@@ -797,6 +831,7 @@ def test_audit_indexes_packetir_closure_with_duplicate_keys_only(
     _add_live_runtime_fields(queue, repo_root=tmp_path)
     payload = json.loads(queue.read_text(encoding="utf-8"))
     archive_sha = payload["dispatch_ready"][0]["archive_sha256"]
+    runtime_tree_sha = payload["dispatch_ready"][0]["runtime_tree_sha256"]
     payload["dispatch_ready"][0]["runtime_content_tree_sha256"] = "a" * 64
     payload["dispatch_ready"][0]["score_axis"] = "contest_cuda"
     queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -815,7 +850,7 @@ def test_audit_indexes_packetir_closure_with_duplicate_keys_only(
                     "archive_sha256": archive_sha,
                     "runtime_content_tree_sha256": "a" * 64,
                     "score_axis": "contest_cuda",
-                    "key": f"{archive_sha}:{'a' * 64}:contest_cuda",
+                    "key": f"{archive_sha}:{'a' * 64}:{runtime_tree_sha}:contest_cuda",
                 }
             ],
         },
@@ -913,6 +948,61 @@ def test_audit_blocks_ready_row_closed_by_exact_cuda_result_review_runtime_conte
             "result_review_exact_cuda_duplicate_runtime_content_for_same_archive"
         )
         for blocker in stale_row["blockers"]
+    )
+
+
+def test_audit_fails_closed_on_result_review_missing_score_axis(
+    tmp_path: Path,
+) -> None:
+    queue = _ready_queue(
+        tmp_path / "experiments/results/fixture/exact_ready_queue.json",
+        lane_id="lane_result_review",  # FAKE_LANE_OK: synthetic review fixture.
+        archive_sha="a" * 64,
+    )
+    _add_live_runtime_fields(queue, repo_root=tmp_path)
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["dispatch_ready"][0]
+    archive_sha = row["archive_sha256"]
+    runtime_content_sha = "c" * 64
+    row["runtime_content_tree_sha256"] = runtime_content_sha
+    row["score_axis"] = "contest_cuda"
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_json(
+        tmp_path / ".omx/research/fixture_exact_cuda_result_review.json",
+        {
+            "schema": "tac_result_review_packet_v1",
+            "lane_id": "lane_result_review",
+            "job_id": "fixture_job",
+            "exact_cuda_evidence": True,
+            "score_claim": False,
+            "score_claim_valid": True,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "custody": {
+                "archive_sha256": archive_sha,
+                "archive_bytes": row["archive_bytes"],
+                "n_samples": 600,
+            },
+            "runtime_custody": {
+                "runtime_content_tree_sha256": runtime_content_sha,
+            },
+        },
+    )
+    claims = _write_claims(
+        tmp_path / ".omx/state/active_lane_dispatch_claims.md",
+        [],
+    )
+
+    result = audit_exact_ready_queues(
+        [queue],
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+    )
+
+    blockers = result["queues"][0]["stale_ready_rows"][0]["blockers"]
+    assert any(
+        blocker.startswith("result_review_exact_cuda_score_axis_missing_for_same_archive")
+        for blocker in blockers
     )
 
 

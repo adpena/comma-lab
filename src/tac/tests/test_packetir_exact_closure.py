@@ -62,6 +62,10 @@ def test_packetir_exact_closure_closes_measured_not_current_frontier(tmp_path: P
     assert closure["packetir"]["runtime_consumption_proof"]["valid"] is True
     assert closure["packetir"]["same_runtime_full_frame_parity"]["valid"] is True
     assert closure["exact_eval_duplicate_keys"][0]["key"].endswith(":contest_cuda")
+    assert closure["exact_eval_duplicate_keys"][0]["runtime_tree_sha256"]
+    assert closure["exact_eval_duplicate_keys"][0]["runtime_tree_sha256"] in closure[
+        "exact_eval_duplicate_keys"
+    ][0]["key"]
     assert all(check["passed"] for check in closure["checks"])
 
 

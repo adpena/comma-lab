@@ -33,6 +33,7 @@ from tac.zipwire_archive import inspect_zip_headers
 
 AUDIT_SCHEMA = "optimizer_exact_ready_queue_terminal_evidence_audit_v1"
 SUPPRESSION_MANIFEST_SCHEMA = "optimizer_exact_ready_queue_suppression_manifest_v1"
+SUPPORTED_EXACT_READY_SCORE_AXES = frozenset({"contest_cuda"})
 
 
 def _claim_lane_aliases(lane_id: str) -> tuple[str, ...]:
@@ -67,10 +68,32 @@ def _row_runtime_tree_sha(row: Mapping[str, Any]) -> str | None:
 def _row_exact_eval_duplicate_key(row: Mapping[str, Any]) -> str | None:
     archive_sha = _row_archive_sha(row)
     runtime_sha = _row_runtime_content_sha(row)
-    score_axis = row.get("score_axis") or row.get("target_score_axis")
-    if archive_sha is None or runtime_sha is None or not isinstance(score_axis, str):
+    runtime_tree_sha = _row_runtime_tree_sha(row)
+    score_axis, _ = _row_score_axis_with_blocker(row)
+    if (
+        archive_sha is None
+        or runtime_sha is None
+        or runtime_tree_sha is None
+        or score_axis is None
+    ):
         return None
-    return f"{archive_sha}:{runtime_sha}:{score_axis}"
+    return f"{archive_sha}:{runtime_sha}:{runtime_tree_sha}:{score_axis}"
+
+
+def _row_score_axis(row: Mapping[str, Any]) -> str | None:
+    score_axis, _ = _row_score_axis_with_blocker(row)
+    return score_axis
+
+
+def _row_score_axis_with_blocker(row: Mapping[str, Any]) -> tuple[str | None, str | None]:
+    for key in ("score_axis", "target_score_axis"):
+        value = row.get(key)
+        if isinstance(value, str) and value.strip():
+            score_axis = value.strip().lower()
+            if score_axis in SUPPORTED_EXACT_READY_SCORE_AXES:
+                return score_axis, None
+            return None, f"score_axis_unsupported:{value.strip()}"
+    return None, "score_axis_missing"
 
 
 def _row_runtime_content_sha(row: Mapping[str, Any]) -> str | None:
@@ -238,8 +261,6 @@ def _discover_exact_cuda_result_review_records(
         if score is None and isinstance(payload.get("canonical_score"), int | float):
             score = float(payload["canonical_score"])
         score_axis = payload.get("score_axis")
-        if not isinstance(score_axis, str):
-            score_axis = "contest_cuda"
         records.setdefault(str(archive_sha).lower(), []).append(
             {
                 "review_path": repo_rel(path, repo_root),
@@ -278,12 +299,12 @@ def _exact_cuda_result_review_blockers(
     blockers: list[str] = []
     for record in records:
         record_axis = record.get("score_axis")
-        if (
-            isinstance(score_axis, str)
-            and isinstance(record_axis, str)
-            and record_axis != score_axis
-        ):
-            continue
+        record_axis_missing = not isinstance(record_axis, str) or not record_axis.strip()
+        if isinstance(score_axis, str):
+            if record_axis_missing:
+                pass
+            elif str(record_axis).strip().lower() != score_axis:
+                continue
         record_lane = record.get("lane_id")
         same_lane = isinstance(lane_id, str) and record_lane == lane_id
         record_runtime_content = record.get("runtime_content_tree_sha256")
@@ -296,6 +317,11 @@ def _exact_cuda_result_review_blockers(
             continue
         review_path = str(record.get("review_path") or "<unknown>")
         record_id = f"{record_lane}:{record.get('job_id')}:{review_path}"
+        if record_axis_missing:
+            blockers.append(
+                "result_review_exact_cuda_score_axis_missing_for_same_archive:"
+                f"{record_id}"
+            )
         score = record.get("canonical_score")
         if isinstance(score, int | float) and active_floor_score is not None:
             if score >= active_floor_score:
@@ -598,6 +624,7 @@ def audit_exact_ready_queue(
         archive_sha = _row_archive_sha(row)
         runtime_tree_sha = _row_runtime_tree_sha(row)
         runtime_content_sha = _row_runtime_content_sha(row)
+        score_axis, score_axis_blocker = _row_score_axis_with_blocker(row)
         runtime_changed = as_bool(row.get("score_affecting_runtime_changed"))
         custody_blockers, custody_facts = _ready_row_live_custody_blockers(
             row,
@@ -628,6 +655,8 @@ def audit_exact_ready_queue(
             if archive_sha is None:
                 blockers.append("archive_sha256_missing_or_invalid")
             else:
+                if score_axis_blocker is not None:
+                    blockers.append(score_axis_blocker)
                 blockers.extend(custody_blockers)
                 closure_blockers, closure_evidence = _packetir_exact_closure_blockers(
                     archive_sha,
@@ -637,13 +666,12 @@ def audit_exact_ready_queue(
                 if closure_evidence:
                     custody_facts["packetir_exact_closure_records"] = closure_evidence
                 blockers.extend(closure_blockers)
-                row_axis = row.get("score_axis") or row.get("target_score_axis")
                 review_blockers, review_evidence = _exact_cuda_result_review_blockers(
                     archive_sha,
                     review_records,
                     lane_id=lane_id.strip(),
                     runtime_content_sha=_row_runtime_content_sha(row),
-                    score_axis=row_axis if isinstance(row_axis, str) else None,
+                    score_axis=score_axis,
                     active_floor_score=active_floor_score,
                 )
                 if review_evidence:
@@ -682,6 +710,7 @@ def audit_exact_ready_queue(
                 "archive_sha256": archive_sha,
                 "runtime_tree_sha256": runtime_tree_sha,
                 "runtime_content_tree_sha256": runtime_content_sha,
+                "score_axis": score_axis,
                 "score_affecting_runtime_changed": runtime_changed,
                 "live_custody": custody_facts,
                 "ready_for_exact_eval_dispatch": True,

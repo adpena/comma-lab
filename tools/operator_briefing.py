@@ -56,6 +56,11 @@ EXACT_READY_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
     REPO_ROOT / ".omx" / "research",
 )
+MATERIALIZER_HANDOFF_SCAN_ROOTS = (
+    REPO_ROOT / "experiments" / "results",
+    REPO_ROOT / ".omx" / "research",
+)
+MATERIALIZER_EXACT_EVAL_CONSUMER_TOOL = "tools/build_materializer_exact_eval_consumer.py"
 EXACT_READY_SUPPRESSION_MANIFEST = (
     REPO_ROOT / ".omx/research/exact_ready_queue_retraction_manifest_20260510_codex.json"
 )
@@ -682,6 +687,494 @@ def _format_exact_ready_queue_audit() -> str:
                     f"lane={row.get('lane_id')} runtime={row.get('runtime_tree_sha256')} "
                     f"blockers={blockers}"
                 )
+    return "\n".join(lines)
+
+
+def _false_authority_fields() -> dict[str, bool]:
+    return {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+    }
+
+
+def _safe_int(value: object) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _materializer_handoff_paths(
+    scan_roots: tuple[Path, ...] | None = None,
+) -> list[Path]:
+    if scan_roots is None:
+        scan_roots = MATERIALIZER_HANDOFF_SCAN_ROOTS
+    patterns = (
+        "exact_readiness_bridge_report.json",
+        "*/exact_readiness_bridge_report.json",
+        "*/*/exact_readiness_bridge_report.json",
+        "materializer_chain_exact_readiness_bridge_report_*.json",
+        "*/materializer_chain_exact_readiness_bridge_report_*.json",
+        "*/*/materializer_chain_exact_readiness_bridge_report_*.json",
+        "consumer_report.json",
+        "*/consumer_report.json",
+        "*/*/consumer_report.json",
+        "materializer_exact_eval_consumer*.json",
+        "*/materializer_exact_eval_consumer*.json",
+        "*/*/materializer_exact_eval_consumer*.json",
+        "dispatch_plan.json",
+        "*/dispatch_plan.json",
+        "*/*/dispatch_plan.json",
+        "materializer_exact_eval_dispatch_plan_*.json",
+        "*/materializer_exact_eval_dispatch_plan_*.json",
+        "*/*/materializer_exact_eval_dispatch_plan_*.json",
+    )
+    seen: set[Path] = set()
+    paths: list[Path] = []
+    for root in scan_roots:
+        if not root.exists():
+            continue
+        for pattern in patterns:
+            for path in root.glob(pattern):
+                resolved = path.resolve(strict=False)
+                if resolved in seen or not path.is_file():
+                    continue
+                seen.add(resolved)
+                paths.append(path)
+    return sorted(
+        paths,
+        key=lambda item: item.stat().st_mtime if item.exists() else 0.0,
+        reverse=True,
+    )
+
+
+def _unique_strings(values: list[object]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        text = str(value or "").strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        out.append(text)
+    return out
+
+
+def _row_exact_ready_queue_paths(rows: object) -> list[str]:
+    if not isinstance(rows, list):
+        return []
+    return _unique_strings(
+        [
+            row.get("exact_ready_queue_path")
+            for row in rows
+            if isinstance(row, dict) and row.get("exact_ready_queue_path")
+        ]
+    )
+
+
+def _row_blockers(rows: object, *, limit: int = 12) -> list[str]:
+    if not isinstance(rows, list):
+        return []
+    blockers: list[object] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        row_blockers = row.get("blockers")
+        if isinstance(row_blockers, list):
+            blockers.extend(row_blockers)
+    return _unique_strings(blockers)[:limit]
+
+
+def _materializer_handoff_summary_row(path: Path) -> dict[str, object]:
+    payload = _load_json_file(path)
+    base: dict[str, object] = {
+        "path": _repo_rel(path),
+        "sha256": _sha256_file(path) if path.is_file() else "",
+        "mtime_ns": path.stat().st_mtime_ns if path.is_file() else 0,
+        **_false_authority_fields(),
+    }
+    if "_error" in payload:
+        return {
+            **base,
+            "kind": "unreadable",
+            "schema": None,
+            "authorized_candidate_count": 0,
+            "blocked_candidate_count": 0,
+            "duplicate_candidate_count": 0,
+            "blockers": [str(payload["_error"])],
+        }
+    schema = payload.get("schema")
+    if schema == "materializer_chain_exact_readiness_bridge_report.v1":
+        rows = payload.get("rows")
+        bridge_rows = rows if isinstance(rows, list) else []
+        ready_count = _safe_int(payload.get("ready_candidate_count")) or sum(
+            1
+            for row in bridge_rows
+            if isinstance(row, dict) and row.get("exact_ready_queue_written") is True
+        )
+        blocked_count = _safe_int(payload.get("blocked_candidate_count")) or sum(
+            1
+            for row in bridge_rows
+            if isinstance(row, dict) and row.get("exact_ready_queue_written") is not True
+        )
+        return {
+            **base,
+            "kind": "bridge_report",
+            "schema": schema,
+            "ready_candidate_count": ready_count,
+            "blocked_candidate_count": blocked_count,
+            "row_count": len(bridge_rows),
+            "exact_ready_queue_paths": _row_exact_ready_queue_paths(bridge_rows),
+            "blockers": [],
+        }
+    if schema == "materializer_exact_eval_consumer.v1":
+        consumer_rows = payload.get("rows")
+        return {
+            **base,
+            "kind": "consumer_report",
+            "schema": schema,
+            "authorized_candidate_count": _safe_int(
+                payload.get("authorized_candidate_count")
+            ),
+            "blocked_candidate_count": _safe_int(
+                payload.get("blocked_candidate_count")
+            ),
+            "duplicate_candidate_count": _safe_int(
+                payload.get("duplicate_candidate_count")
+            ),
+            "experiment_queue_id": str(payload.get("experiment_queue_id") or ""),
+            "exact_ready_queue_paths": _row_exact_ready_queue_paths(consumer_rows),
+            "hard_plan_blockers": [
+                str(item) for item in payload.get("hard_plan_blockers", []) if str(item)
+            ]
+            if isinstance(payload.get("hard_plan_blockers"), list)
+            else [],
+            "blockers": _row_blockers(consumer_rows),
+        }
+    if schema == "experiment_queue.v1":
+        experiments = payload.get("experiments")
+        return {
+            **base,
+            "kind": "consumer_experiment_queue",
+            "schema": schema,
+            "experiment_queue_id": str(payload.get("queue_id") or payload.get("id") or ""),
+            "experiment_count": len(experiments) if isinstance(experiments, list) else 0,
+            "authorized_candidate_count": 0,
+            "blocked_candidate_count": 0,
+            "duplicate_candidate_count": 0,
+            "blockers": [],
+        }
+    if schema == "materializer_exact_eval_dispatch_plan.v1":
+        plan_blockers = payload.get("plan_blockers")
+        hard_plan_blockers = payload.get("hard_plan_blockers")
+        plan_rows = payload.get("rows")
+        return {
+            **base,
+            "kind": "dispatch_plan",
+            "schema": schema,
+            "authorized_candidate_count": _safe_int(
+                payload.get("authorized_candidate_count")
+            ),
+            "blocked_candidate_count": _safe_int(
+                payload.get("blocked_candidate_count")
+            ),
+            "duplicate_candidate_count": _safe_int(
+                payload.get("duplicate_candidate_count")
+            ),
+            "dispatch_mode": str(payload.get("dispatch_mode") or ""),
+            "experiment_queue_id": str(payload.get("experiment_queue_id") or ""),
+            "plan_blockers": [str(item) for item in plan_blockers if str(item)]
+            if isinstance(plan_blockers, list)
+            else [],
+            "hard_plan_blockers": [str(item) for item in hard_plan_blockers if str(item)]
+            if isinstance(hard_plan_blockers, list)
+            else [],
+            "blockers": _row_blockers(plan_rows),
+        }
+    return {
+        **base,
+        "kind": "ignored",
+        "schema": schema if isinstance(schema, str) else None,
+        "authorized_candidate_count": 0,
+        "blocked_candidate_count": 0,
+        "duplicate_candidate_count": 0,
+        "blockers": [f"unsupported_materializer_handoff_schema:{schema!r}"],
+    }
+
+
+def _materializer_row_recency(row: dict[str, object]) -> int:
+    return _safe_int(row.get("mtime_ns"))
+
+
+def _materializer_row_identity(row: dict[str, object]) -> str:
+    kind = str(row.get("kind") or "")
+    experiment_queue_id = str(row.get("experiment_queue_id") or "").strip()
+    exact_ready_paths = row.get("exact_ready_queue_paths")
+    if isinstance(exact_ready_paths, list):
+        joined = ",".join(str(path) for path in exact_ready_paths if str(path))
+        if joined:
+            return f"{kind}:queue={experiment_queue_id}:inputs={joined}"
+    return f"{kind}:path={row.get('path') or ''}"
+
+
+def _latest_materializer_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    latest_by_identity: dict[str, dict[str, object]] = {}
+    for row in rows:
+        identity = _materializer_row_identity(row)
+        current = latest_by_identity.get(identity)
+        if current is None or _materializer_row_recency(row) > _materializer_row_recency(
+            current
+        ):
+            latest_by_identity[identity] = row
+    return sorted(
+        latest_by_identity.values(),
+        key=_materializer_row_recency,
+        reverse=True,
+    )
+
+
+def _materializer_exact_eval_consumer_next_command(
+    *,
+    bridge_report_paths: list[str],
+    exact_ready_queue_paths: list[str],
+) -> str:
+    input_args: list[str] = []
+    if bridge_report_paths:
+        input_args = [f"--bridge-report {path}" for path in bridge_report_paths[:3]]
+    elif exact_ready_queue_paths:
+        input_args = [
+            f"--exact-ready-queue {path}" for path in exact_ready_queue_paths[:3]
+        ]
+    else:
+        return f".venv/bin/python {MATERIALIZER_EXACT_EVAL_CONSUMER_TOOL} --help"
+    return (
+        "UTC=$(date -u +%Y%m%dT%H%M%SZ); "
+        f".venv/bin/python {MATERIALIZER_EXACT_EVAL_CONSUMER_TOOL} "
+        f"{' '.join(input_args)} "
+        "--consumer-report-out "
+        ".omx/research/materializer_exact_eval_consumer_report_${UTC}.json "
+        "--experiment-queue-out "
+        ".omx/research/materializer_exact_eval_consumer_experiment_queue_${UTC}.json"
+    )
+
+
+def _materializer_exact_ready_handoff_summary() -> dict[str, object]:
+    discovered_rows = [
+        row
+        for row in (
+            _materializer_handoff_summary_row(path)
+            for path in _materializer_handoff_paths()
+        )
+        if row.get("kind") != "ignored"
+    ]
+    bridge_rows = _latest_materializer_rows(
+        [row for row in discovered_rows if row.get("kind") == "bridge_report"]
+    )
+    consumer_rows = _latest_materializer_rows(
+        [row for row in discovered_rows if row.get("kind") == "consumer_report"]
+    )
+    consumer_queue_rows = _latest_materializer_rows(
+        [row for row in discovered_rows if row.get("kind") == "consumer_experiment_queue"]
+    )
+    dispatch_rows = _latest_materializer_rows(
+        [row for row in discovered_rows if row.get("kind") == "dispatch_plan"]
+    )
+    error_rows = [row for row in discovered_rows if row.get("kind") == "unreadable"]
+    rows = sorted(
+        [*bridge_rows, *consumer_rows, *consumer_queue_rows, *dispatch_rows, *error_rows],
+        key=_materializer_row_recency,
+        reverse=True,
+    )
+    bridge_report_paths = [str(row.get("path")) for row in bridge_rows]
+    consumer_output_paths = [str(row.get("path")) for row in consumer_rows]
+    consumer_output_paths.extend(str(row.get("path")) for row in consumer_queue_rows)
+    exact_ready_queue_paths = _unique_strings(
+        [
+            path
+            for row in [*bridge_rows, *consumer_rows]
+            for path in (
+                row.get("exact_ready_queue_paths", [])
+                if isinstance(row.get("exact_ready_queue_paths"), list)
+                else []
+            )
+        ]
+    )
+    consumer_authorized = sum(
+        _safe_int(row.get("authorized_candidate_count")) for row in consumer_rows
+    )
+    dispatch_authorized = sum(
+        _safe_int(row.get("authorized_candidate_count")) for row in dispatch_rows
+    )
+    blocked_count = sum(
+        _safe_int(row.get("blocked_candidate_count")) for row in consumer_rows
+    )
+    blocked_count += sum(
+        _safe_int(row.get("blocked_candidate_count")) for row in dispatch_rows
+    )
+    hard_blockers = [
+        blocker
+        for row in [*consumer_rows, *dispatch_rows]
+        for blocker in (
+            row.get("hard_plan_blockers")
+            if isinstance(row.get("hard_plan_blockers"), list)
+            else []
+        )
+    ]
+    row_blockers = [
+        blocker
+        for row in [*consumer_rows, *dispatch_rows]
+        for blocker in (
+            row.get("blockers") if isinstance(row.get("blockers"), list) else []
+        )
+    ]
+    if error_rows:
+        status = "BLOCKED"
+        reason = f"{len(error_rows)} materializer handoff artifact(s) failed JSON load"
+    elif hard_blockers:
+        status = "BLOCKED"
+        reason = (
+            f"{len(hard_blockers)} hard plan blocker(s) freeze materializer "
+            "handoff authority"
+        )
+    elif consumer_authorized or dispatch_authorized:
+        status = "READY"
+        reason = (
+            f"{consumer_authorized} consumer row(s), {dispatch_authorized} dispatch-plan "
+            "row(s) authorized into paused queue handoffs"
+        )
+    elif bridge_rows or consumer_rows or dispatch_rows:
+        status = "PENDING"
+        reason = "materializer handoff artifacts exist but no authorized paused queue rows"
+    else:
+        status = "PENDING"
+        reason = "no materializer exact-ready handoff artifacts found"
+    return {
+        "schema": "pact.materializer_exact_ready_handoff_summary.v1",
+        "scan_roots": [_repo_rel(root) for root in MATERIALIZER_HANDOFF_SCAN_ROOTS],
+        "consumer_tool": MATERIALIZER_EXACT_EVAL_CONSUMER_TOOL,
+        "consumer_tool_exists": (
+            REPO_ROOT / MATERIALIZER_EXACT_EVAL_CONSUMER_TOOL
+        ).is_file(),
+        "status": status,
+        "reason": reason,
+        "discoverability_status": "VISIBLE"
+        if consumer_output_paths
+        else (
+            "NEXT_COMMAND_AVAILABLE"
+            if bridge_report_paths or exact_ready_queue_paths
+            else "NO_RECENT_INPUTS"
+        ),
+        "bridge_report_count": len(bridge_rows),
+        "bridge_ready_candidate_count": sum(
+            _safe_int(row.get("ready_candidate_count")) for row in bridge_rows
+        ),
+        "bridge_blocked_candidate_count": sum(
+            _safe_int(row.get("blocked_candidate_count")) for row in bridge_rows
+        ),
+        "consumer_report_count": len(consumer_rows),
+        "consumer_authorized_candidate_count": consumer_authorized,
+        "consumer_blocked_candidate_count": sum(
+            _safe_int(row.get("blocked_candidate_count")) for row in consumer_rows
+        ),
+        "consumer_duplicate_candidate_count": sum(
+            _safe_int(row.get("duplicate_candidate_count")) for row in consumer_rows
+        ),
+        "consumer_experiment_queue_count": len(consumer_queue_rows),
+        "dispatch_plan_count": len(dispatch_rows),
+        "dispatch_plan_authorized_candidate_count": dispatch_authorized,
+        "dispatch_plan_blocked_candidate_count": sum(
+            _safe_int(row.get("blocked_candidate_count")) for row in dispatch_rows
+        ),
+        "dispatch_plan_duplicate_candidate_count": sum(
+            _safe_int(row.get("duplicate_candidate_count")) for row in dispatch_rows
+        ),
+        "blocked_candidate_count": blocked_count,
+        "hard_plan_blocker_count": len(hard_blockers),
+        "top_blockers": _unique_strings(row_blockers + hard_blockers)[:12],
+        "error_count": len(error_rows),
+        "scanned_handoff_artifact_count": len(discovered_rows),
+        "superseded_handoff_artifact_count": max(0, len(discovered_rows) - len(rows)),
+        "recent_consumer_output_paths": _unique_strings(consumer_output_paths)[:5],
+        "recent_bridge_report_paths": _unique_strings(bridge_report_paths)[:5],
+        "recent_exact_ready_queue_paths": exact_ready_queue_paths[:5],
+        "next_command": _materializer_exact_eval_consumer_next_command(
+            bridge_report_paths=_unique_strings(bridge_report_paths),
+            exact_ready_queue_paths=exact_ready_queue_paths,
+        ),
+        "latest_rows": rows[:8],
+        **_false_authority_fields(),
+    }
+
+
+def _format_materializer_exact_ready_handoffs() -> str:
+    payload = _materializer_exact_ready_handoff_summary()
+    lines = [
+        f"status: {payload['status']} — {payload['reason']}",
+        f"discoverability: {payload['discoverability_status']}",
+        f"consumer tool: {payload['consumer_tool']} present={payload['consumer_tool_exists']}",
+        (
+            "bridge reports: "
+            f"{payload['bridge_report_count']} "
+            f"(ready={payload['bridge_ready_candidate_count']} "
+            f"blocked={payload['bridge_blocked_candidate_count']})"
+        ),
+        (
+            "consumer reports: "
+            f"{payload['consumer_report_count']} "
+            f"(authorized={payload['consumer_authorized_candidate_count']} "
+            f"blocked={payload['consumer_blocked_candidate_count']} "
+            f"duplicates={payload['consumer_duplicate_candidate_count']})"
+        ),
+        f"consumer experiment queues: {payload['consumer_experiment_queue_count']}",
+        (
+            "dispatch plans: "
+            f"{payload['dispatch_plan_count']} "
+            f"(authorized={payload['dispatch_plan_authorized_candidate_count']} "
+            f"blocked={payload['dispatch_plan_blocked_candidate_count']} "
+            f"duplicates={payload['dispatch_plan_duplicate_candidate_count']})"
+        ),
+        (
+            "artifact scan: "
+            f"{payload['scanned_handoff_artifact_count']} found, "
+            f"{payload['superseded_handoff_artifact_count']} superseded by newer "
+            "queue-identity reports"
+        ),
+    ]
+    latest = payload.get("latest_rows")
+    if isinstance(latest, list) and latest:
+        lines.append("latest handoffs:")
+        for row in latest[:5]:
+            if not isinstance(row, dict):
+                continue
+            lines.append(
+                "  - "
+                f"{row.get('kind')} {row.get('path')} "
+                f"authorized={row.get('authorized_candidate_count', row.get('ready_candidate_count', 0))} "
+                f"blocked={row.get('blocked_candidate_count', 0)}"
+            )
+    blockers = payload.get("top_blockers")
+    if isinstance(blockers, list) and blockers:
+        lines.append("first blockers:")
+        for blocker in blockers[:8]:
+            lines.append(f"  - {blocker}")
+    outputs = payload.get("recent_consumer_output_paths")
+    if isinstance(outputs, list) and outputs:
+        lines.append("recent consumer outputs:")
+        for path in outputs[:5]:
+            lines.append(f"  - {path}")
+    exact_ready_inputs = payload.get("recent_exact_ready_queue_paths")
+    if isinstance(exact_ready_inputs, list) and exact_ready_inputs:
+        lines.append("recent exact-ready inputs:")
+        for path in exact_ready_inputs[:5]:
+            lines.append(f"  - {path}")
+    lines.append("next command:")
+    lines.append(f"  {payload['next_command']}")
     return "\n".join(lines)
 
 
@@ -2384,6 +2877,7 @@ def _packet_is_terminal(packet: dict[str, object]) -> bool:
 def _dispatch_readiness() -> dict[str, object]:
     """Structured per-phase dispatch readiness used by JSON and human output."""
     exact_ready_audit = _exact_ready_queue_audit()
+    materializer_handoffs = _materializer_exact_ready_handoff_summary()
     stale_rows = int(exact_ready_audit.get("stale_ready_row_count") or 0)
     exact_packets = _exact_eval_packet_summaries()
     ready_packets = [
@@ -2448,6 +2942,7 @@ def _dispatch_readiness() -> dict[str, object]:
             "reason": queue_reason,
             "stale_ready_row_count": stale_rows,
         },
+        "phase_1_materializer_exact_ready_handoffs": materializer_handoffs,
         "phase_4_gated_next_tick": {
             "status": "GATED",
             "n_lanes": n_gated,
@@ -2481,6 +2976,11 @@ def _format_dispatch_readiness() -> str:
     lines.append(
         "  Phase 1 exact-ready queue hygiene:          "
         f"{queue['status']} — {queue['reason']}"
+    )
+    handoffs = readiness["phase_1_materializer_exact_ready_handoffs"]
+    lines.append(
+        "  Phase 1 materializer exact-ready handoffs:  "
+        f"{handoffs['status']} — {handoffs['reason']}"
     )
     phase4 = readiness["phase_4_gated_next_tick"]
     lines.append(
@@ -2572,6 +3072,9 @@ def main(argv: list[str] | None = None) -> int:
         if not args.skip_provider_readiness:
             out["provider_readiness"] = _provider_readiness(refresh=args.refresh_provider_readiness)
         out["exact_ready_queue_audit"] = _exact_ready_queue_audit()
+        out["materializer_exact_ready_handoffs"] = (
+            _materializer_exact_ready_handoff_summary()
+        )
         if not args.skip_pareto:
             out["pareto"] = _run_json(PARETO, ["--json"])
             out["supplementary_lanes"] = _annotate_score_target_lanes(
@@ -2649,6 +3152,10 @@ def main(argv: list[str] | None = None) -> int:
         parts.append(_section(
             "Phase 1 exact-ready queues — terminal-evidence audit",
             _format_exact_ready_queue_audit(),
+        ))
+        parts.append(_section(
+            "Phase 1 materializer exact-ready handoffs — queue-owned bridge/consumer state",
+            _format_materializer_exact_ready_handoffs(),
         ))
         parts.append(_section(
             "Phase 1 blocked readiness artifacts — non-dispatchable public frontier work",

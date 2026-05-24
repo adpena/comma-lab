@@ -1659,6 +1659,8 @@ def promoted_row(
         "lane_id": facts["lane_id"],
         "target_modes": ["contest_exact_eval"],
         "deployment_target": "t4_contest_runtime",
+        "score_axis": "contest_cuda",
+        "target_score_axis": "contest_cuda",
         "ready_for_exact_eval_dispatch": True,
         "dispatch_packet_ready": True,
         "dispatch_attempted": False,

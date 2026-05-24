@@ -1,0 +1,54 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 2
+    },
+    "mode": "paused"
+  },
+  "experiments": [
+    {
+      "id": "no_authorized_materializer_exact_eval_consumer_rows",
+      "lane_id": null,
+      "metadata": {
+        "consumer_schema": "materializer_exact_eval_consumer.v1",
+        "dispatch_attempted": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "no_authorized_rows",
+        "score_claim": false,
+        "score_claim_valid": false
+      },
+      "priority": 100,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "-c",
+            "print('no authorized exact-eval consumer rows')"
+          ],
+          "id": "noop",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": []
+    }
+  ],
+  "queue_id": "materializer_exact_eval_consumer_queue",
+  "schema": "experiment_queue.v1"
+}

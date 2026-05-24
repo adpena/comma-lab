@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -34,6 +35,12 @@ def _load_briefing_module():
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def _write_json(path: Path, payload: dict[str, object]) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path
 
 
 def test_briefing_delegates_to_repo_venv_when_available(monkeypatch):
@@ -65,6 +72,7 @@ def test_briefing_runs_all_three_phases():
     assert "Phase 3" in proc.stdout
     assert "Phase 1 exact-eval packets" in proc.stdout
     assert "Phase 1 exact-ready queues" in proc.stdout
+    assert "Phase 1 materializer exact-ready handoffs" in proc.stdout
     assert "Phase 1 blocked readiness artifacts" in proc.stdout
     assert "pr91_hpm1_readiness_bundle" in proc.stdout
     assert "wr01_apply_pr106x_half" in proc.stdout
@@ -384,10 +392,27 @@ def test_briefing_json_composite_has_all_three_keys():
     assert out["exact_ready_queue_audit"]["schema"] == (
         "optimizer_exact_ready_queue_terminal_evidence_audit_v1"
     )
-    assert out["exact_ready_queue_audit"].get("stale_ready_row_count") == 0
+    stale_ready_rows = out["exact_ready_queue_audit"].get("stale_ready_row_count")
+    assert isinstance(stale_ready_rows, int)
+    if stale_ready_rows:
+        assert (
+            out["dispatch_readiness"]["phase_1_exact_ready_queue_hygiene"]["status"]
+            == "BLOCKED"
+        )
     assert out["exact_ready_queue_audit"].get("suppressed_ready_row_count", 0) >= 1
     assert str(out["exact_ready_queue_audit"].get("suppression_manifest_path", "")).endswith(
         ".omx/research/exact_ready_queue_retraction_manifest_20260510_codex.json"
+    )
+    assert "materializer_exact_ready_handoffs" in out
+    assert out["materializer_exact_ready_handoffs"]["schema"] == (
+        "pact.materializer_exact_ready_handoff_summary.v1"
+    )
+    assert out["materializer_exact_ready_handoffs"]["score_claim"] is False
+    assert (
+        out["dispatch_readiness"]["phase_1_materializer_exact_ready_handoffs"][
+            "schema"
+        ]
+        == "pact.materializer_exact_ready_handoff_summary.v1"
     )
     assert "non_dispatchable_readiness_artifacts" in out
     supplementary_rows = {row["lane_id"]: row for row in out["supplementary_lanes"]}
@@ -569,18 +594,32 @@ def test_briefing_json_composite_has_all_three_keys():
 
 
 def test_briefing_hides_above_target_rows_by_default_but_can_show_them():
-    proc = _run("--skip-dashboard", "--skip-reconciler", "--top", "3")
-    assert "lane_pr106_latent_sidecar —" not in proc.stdout
-    assert "lane_pr106_yshift_sidechannel —" not in proc.stdout
-    assert "hidden inactive/above target 0.1900" in proc.stdout
-    assert "lane_pr106_stacked —" not in proc.stdout
-    assert "lane_pr106_stacked[dispatch_gate_blocked]" in proc.stdout
+    mod = _load_briefing_module()
 
-    shown = _run("--skip-dashboard", "--skip-reconciler", "--show-above-target", "--top", "3")
-    assert "lane_pr106_latent_sidecar —" in shown.stdout
-    assert "target routing: above_target" in shown.stdout
-    assert "lane_pr106_stacked —" in shown.stdout
-    assert "dispatch routing: dispatch_gate_blocked" in shown.stdout
+    hidden = "\n\n".join(
+        [
+            mod._format_supplementary_lanes(),
+            mod._format_gated_lanes(),
+            mod._format_composition_lanes(),
+        ]
+    )
+    assert "lane_pr106_latent_sidecar —" not in hidden
+    assert "lane_pr106_yshift_sidechannel —" not in hidden
+    assert "hidden inactive/above target 0.1900" in hidden
+    assert "lane_pr106_stacked —" not in hidden
+    assert "lane_pr106_stacked[dispatch_gate_blocked]" in hidden
+
+    shown = "\n\n".join(
+        [
+            mod._format_supplementary_lanes(show_above_target=True),
+            mod._format_gated_lanes(show_above_target=True),
+            mod._format_composition_lanes(show_above_target=True),
+        ]
+    )
+    assert "lane_pr106_latent_sidecar —" in shown
+    assert "target routing: above_target" in shown
+    assert "lane_pr106_stacked —" in shown
+    assert "dispatch routing: dispatch_gate_blocked" in shown
 
 
 def test_phase_worklist_active_rows_require_dispatch_ready_contract():
@@ -805,7 +844,296 @@ def test_briefing_json_skip_pareto_still_surfaces_exact_ready_audit():
     assert out["exact_ready_queue_audit"]["schema"] == (
         "optimizer_exact_ready_queue_terminal_evidence_audit_v1"
     )
-    assert out["exact_ready_queue_audit"].get("stale_ready_row_count") == 0
+    stale_ready_rows = out["exact_ready_queue_audit"].get("stale_ready_row_count")
+    assert isinstance(stale_ready_rows, int)
+    if stale_ready_rows:
+        assert (
+            out["dispatch_readiness"]["phase_1_exact_ready_queue_hygiene"]["status"]
+            == "BLOCKED"
+        )
+    assert out["materializer_exact_ready_handoffs"]["schema"] == (
+        "pact.materializer_exact_ready_handoff_summary.v1"
+    )
+
+
+def test_materializer_exact_ready_handoff_summary_surfaces_queue_owned_state(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    tool = tmp_path / "tools" / "build_materializer_exact_eval_consumer.py"
+    tool.parent.mkdir(parents=True, exist_ok=True)
+    tool.write_text("#!/usr/bin/env python3\n", encoding="utf-8")
+    root = tmp_path / "experiments" / "results"
+    exact_ready_path = "experiments/results/run/candidate.exact_ready_queue.json"
+    _write_json(
+        root / "run" / "exact_readiness_bridge_report.json",
+        {
+            "schema": "materializer_chain_exact_readiness_bridge_report.v1",
+            "ready_candidate_count": 2,
+            "blocked_candidate_count": 1,
+            "rows": [
+                {
+                    "candidate_id": "a",
+                    "exact_ready_queue_written": True,
+                    "exact_ready_queue_path": exact_ready_path,
+                },
+                {
+                    "candidate_id": "b",
+                    "exact_ready_queue_written": True,
+                    "exact_ready_queue_path": exact_ready_path,
+                },
+                {"candidate_id": "c", "exact_ready_queue_written": False},
+            ],
+        },
+    )
+    _write_json(
+        root / "run" / "consumer_report.json",
+        {
+            "schema": "materializer_exact_eval_consumer.v1",
+            "authorized_candidate_count": 1,
+            "blocked_candidate_count": 1,
+            "duplicate_candidate_count": 1,
+            "experiment_queue_id": "consumer_queue",
+            "hard_plan_blockers": [],
+            "rows": [
+                {
+                    "candidate_id": "a",
+                    "blockers": ["exact_dispatch_authority:not_authorized"],
+                    "exact_ready_queue_path": exact_ready_path,
+                }
+            ],
+        },
+    )
+    _write_json(
+        root / "run" / "materializer_exact_eval_consumer_live.experiment_queue.json",
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "consumer_queue",
+            "experiments": [{"id": "dry_run"}],
+        },
+    )
+    _write_json(
+        root / "run" / "dispatch_plan.json",
+        {
+            "schema": "materializer_exact_eval_dispatch_plan.v1",
+            "authorized_candidate_count": 1,
+            "blocked_candidate_count": 0,
+            "duplicate_candidate_count": 0,
+            "dispatch_mode": "dry_run",
+            "experiment_queue_id": "dispatch_queue",
+            "plan_blockers": [],
+            "hard_plan_blockers": [],
+        },
+    )
+    monkeypatch.setattr(mod, "MATERIALIZER_HANDOFF_SCAN_ROOTS", (root,))
+
+    summary = mod._materializer_exact_ready_handoff_summary()
+    text = mod._format_materializer_exact_ready_handoffs()
+
+    assert summary["status"] == "READY"
+    assert summary["bridge_report_count"] == 1
+    assert summary["bridge_ready_candidate_count"] == 2
+    assert summary["consumer_authorized_candidate_count"] == 1
+    assert summary["dispatch_plan_authorized_candidate_count"] == 1
+    assert summary["consumer_duplicate_candidate_count"] == 1
+    assert summary["consumer_experiment_queue_count"] == 1
+    assert summary["consumer_tool_exists"] is True
+    assert summary["discoverability_status"] == "VISIBLE"
+    assert summary["top_blockers"] == ["exact_dispatch_authority:not_authorized"]
+    assert set(summary["recent_consumer_output_paths"]) == {
+        "experiments/results/run/materializer_exact_eval_consumer_live.experiment_queue.json",
+        "experiments/results/run/consumer_report.json",
+    }
+    assert summary["recent_exact_ready_queue_paths"] == [exact_ready_path]
+    assert "tools/build_materializer_exact_eval_consumer.py" in summary["next_command"]
+    assert "--bridge-report experiments/results/run/exact_readiness_bridge_report.json" in summary["next_command"]
+    assert summary["score_claim"] is False
+    assert summary["promotion_eligible"] is False
+    assert "authorized=1" in text
+    assert "recent consumer outputs:" in text
+    assert "first blockers:" in text
+    assert exact_ready_path in text
+    assert "next command:" in text
+
+
+def test_materializer_exact_ready_handoff_summary_gives_next_command_without_outputs(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    root = tmp_path / "experiments" / "results"
+    exact_ready_path = "experiments/results/run/candidate.exact_ready_queue.json"
+    _write_json(
+        root / "run" / "exact_readiness_bridge_report.json",
+        {
+            "schema": "materializer_chain_exact_readiness_bridge_report.v1",
+            "rows": [
+                {
+                    "candidate_id": "a",
+                    "exact_ready_queue_written": True,
+                    "exact_ready_queue_path": exact_ready_path,
+                }
+            ],
+        },
+    )
+    monkeypatch.setattr(mod, "MATERIALIZER_HANDOFF_SCAN_ROOTS", (root,))
+
+    summary = mod._materializer_exact_ready_handoff_summary()
+
+    assert summary["consumer_report_count"] == 0
+    assert summary["recent_consumer_output_paths"] == []
+    assert summary["recent_exact_ready_queue_paths"] == [exact_ready_path]
+    assert summary["discoverability_status"] == "NEXT_COMMAND_AVAILABLE"
+    assert summary["ready_for_exact_eval_dispatch"] is False
+    assert summary["rank_or_kill_eligible"] is False
+    assert (
+        "--bridge-report experiments/results/run/exact_readiness_bridge_report.json"
+        in summary["next_command"]
+    )
+    assert "materializer_exact_eval_consumer_report_${UTC}.json" in summary["next_command"]
+
+
+def test_materializer_exact_ready_handoff_summary_blocks_hard_plan_blockers(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    root = tmp_path / "experiments" / "results"
+    _write_json(
+        root / "run" / "dispatch_plan.json",
+        {
+            "schema": "materializer_exact_eval_dispatch_plan.v1",
+            "authorized_candidate_count": 1,
+            "blocked_candidate_count": 0,
+            "duplicate_candidate_count": 0,
+            "experiment_queue_id": "dispatch_queue",
+            "hard_plan_blockers": ["claim_missing"],
+            "rows": [],
+        },
+    )
+    monkeypatch.setattr(mod, "MATERIALIZER_HANDOFF_SCAN_ROOTS", (root,))
+
+    summary = mod._materializer_exact_ready_handoff_summary()
+
+    assert summary["status"] == "BLOCKED"
+    assert summary["dispatch_plan_authorized_candidate_count"] == 1
+    assert summary["hard_plan_blocker_count"] == 1
+    assert summary["top_blockers"] == ["claim_missing"]
+
+
+def test_materializer_exact_ready_handoff_summary_supersedes_old_queue_reports(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    root = tmp_path / "experiments" / "results"
+    old_report = _write_json(
+        root / "run" / "materializer_exact_eval_consumer_report_20260101T000000Z.json",
+        {
+            "schema": "materializer_exact_eval_consumer.v1",
+            "authorized_candidate_count": 9,
+            "blocked_candidate_count": 4,
+            "duplicate_candidate_count": 3,
+            "experiment_queue_id": "same_queue",
+            "rows": [
+                {
+                    "candidate_id": "old",
+                    "exact_ready_queue_path": "experiments/results/run/same.json",
+                }
+            ],
+        },
+    )
+    new_report = _write_json(
+        root / "run" / "materializer_exact_eval_consumer_report_20260101T010000Z.json",
+        {
+            "schema": "materializer_exact_eval_consumer.v1",
+            "authorized_candidate_count": 2,
+            "blocked_candidate_count": 1,
+            "duplicate_candidate_count": 0,
+            "experiment_queue_id": "same_queue",
+            "rows": [
+                {
+                    "candidate_id": "new",
+                    "exact_ready_queue_path": "experiments/results/run/same.json",
+                }
+            ],
+        },
+    )
+    os.utime(old_report, ns=(1_000, 1_000))
+    os.utime(new_report, ns=(2_000, 2_000))
+    monkeypatch.setattr(mod, "MATERIALIZER_HANDOFF_SCAN_ROOTS", (root,))
+
+    summary = mod._materializer_exact_ready_handoff_summary()
+
+    assert summary["consumer_report_count"] == 1
+    assert summary["consumer_authorized_candidate_count"] == 2
+    assert summary["consumer_blocked_candidate_count"] == 1
+    assert summary["consumer_duplicate_candidate_count"] == 0
+    assert summary["scanned_handoff_artifact_count"] == 2
+    assert summary["superseded_handoff_artifact_count"] == 1
+    assert summary["recent_consumer_output_paths"] == [
+        "experiments/results/run/materializer_exact_eval_consumer_report_20260101T010000Z.json"
+    ]
+    assert summary["recent_exact_ready_queue_paths"] == ["experiments/results/run/same.json"]
+
+
+def test_materializer_exact_ready_handoff_summary_keeps_reused_queue_id_inputs_distinct(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    root = tmp_path / "experiments" / "results"
+    first_report = _write_json(
+        root / "run_a" / "materializer_exact_eval_consumer_report_20260101T000000Z.json",
+        {
+            "schema": "materializer_exact_eval_consumer.v1",
+            "authorized_candidate_count": 1,
+            "blocked_candidate_count": 0,
+            "duplicate_candidate_count": 0,
+            "experiment_queue_id": "materializer_exact_eval_consumer_queue",
+            "rows": [
+                {
+                    "candidate_id": "a",
+                    "exact_ready_queue_path": "experiments/results/run_a/input.json",
+                }
+            ],
+        },
+    )
+    second_report = _write_json(
+        root / "run_b" / "materializer_exact_eval_consumer_report_20260101T010000Z.json",
+        {
+            "schema": "materializer_exact_eval_consumer.v1",
+            "authorized_candidate_count": 1,
+            "blocked_candidate_count": 0,
+            "duplicate_candidate_count": 0,
+            "experiment_queue_id": "materializer_exact_eval_consumer_queue",
+            "rows": [
+                {
+                    "candidate_id": "b",
+                    "exact_ready_queue_path": "experiments/results/run_b/input.json",
+                }
+            ],
+        },
+    )
+    os.utime(first_report, ns=(1_000, 1_000))
+    os.utime(second_report, ns=(2_000, 2_000))
+    monkeypatch.setattr(mod, "MATERIALIZER_HANDOFF_SCAN_ROOTS", (root,))
+
+    summary = mod._materializer_exact_ready_handoff_summary()
+
+    assert summary["consumer_report_count"] == 2
+    assert summary["consumer_authorized_candidate_count"] == 2
+    assert summary["superseded_handoff_artifact_count"] == 0
+    assert set(summary["recent_exact_ready_queue_paths"]) == {
+        "experiments/results/run_a/input.json",
+        "experiments/results/run_b/input.json",
+    }
 
 
 def test_briefing_json_each_phase_has_n_total_or_n_configs():

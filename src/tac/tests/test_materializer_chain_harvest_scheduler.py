@@ -624,8 +624,54 @@ def test_materializer_dispatch_plan_dedupes_stable_archive_runtime_identity(
     blocked = [row for row in plan["rows"] if row["blockers"]]
     assert blocked[0]["blockers"][0].startswith("duplicate_stable_identity:")
     assert blocked[0]["stable_identity"].startswith("archive=")
-    assert ":runtime_tree=" not in blocked[0]["stable_identity"]
+    assert ":runtime_tree=" in blocked[0]["stable_identity"]
     assert plan["rows"][0]["stable_identity"] == blocked[0]["stable_identity"]
+
+
+def test_materializer_dispatch_plan_does_not_dedupe_different_runtime_tree(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+    first_queue = repo / str(bridge["rows"][0]["exact_ready_queue_path"])
+    alternate_payload = json.loads(first_queue.read_text(encoding="utf-8"))
+    for key in ("dispatch_ready", "top_k"):
+        rows = alternate_payload.get(key) or []
+        for row in rows:
+            row["candidate_id"] = "same_archive_alternate_runtime_tree"
+            row["runtime_tree_sha256"] = "d" * 64
+            runtime_manifest = row.get("runtime_manifest")
+            if isinstance(runtime_manifest, dict):
+                runtime_manifest["runtime_tree_sha256"] = "d" * 64
+    alternate_queue = _write_json(
+        repo / "alternate_runtime_tree.exact_ready_queue.json",
+        alternate_payload,
+    )
+
+    result = build_materializer_exact_eval_dispatch_plan(
+        repo_root=repo,
+        exact_ready_queue_paths=[first_queue, alternate_queue],
+        active_floor_archive_bytes=None,
+    )
+
+    plan = result["plan"]
+    assert plan["duplicate_candidate_count"] == 0
+    identities = [row["stable_identity"] for row in plan["rows"]]
+    assert len(set(identities)) == 2
+    assert all(":runtime_tree=" in identity for identity in identities)
 
 
 def test_materializer_dispatch_plan_blocks_archive_sha_alias_disagreement(
@@ -715,6 +761,50 @@ def test_materializer_dispatch_plan_requires_stable_archive_runtime_identity(
     ]
     assert plan["rows"][0]["score_claim_valid"] is False
     assert result["experiment_queue"]["controls"]["mode"] == "paused"
+
+
+def test_materializer_dispatch_plan_blocks_unsupported_score_axis(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+    ready_queue = repo / str(bridge["rows"][0]["exact_ready_queue_path"])
+    payload = json.loads(ready_queue.read_text(encoding="utf-8"))
+    for key in ("dispatch_ready", "top_k"):
+        rows = payload.get(key) or []
+        for row in rows:
+            row["score_axis"] = "contest_cpu"
+            row["target_score_axis"] = "contest_cpu"
+    unsupported_queue = _write_json(
+        repo / "unsupported_axis.exact_ready_queue.json",
+        payload,
+    )
+
+    result = build_materializer_exact_eval_dispatch_plan(
+        repo_root=repo,
+        exact_ready_queue_paths=[unsupported_queue],
+        active_floor_archive_bytes=None,
+    )
+
+    plan = result["plan"]
+    assert plan["authorized_candidate_count"] == 0
+    assert plan["blocked_candidate_count"] == 1
+    assert plan["rows"][0]["blockers"] == [
+        "stable_identity_score_axis_unsupported:contest_cpu"
+    ]
 
 
 def test_materializer_dispatch_plan_execute_requires_active_claim_for_dispatch(

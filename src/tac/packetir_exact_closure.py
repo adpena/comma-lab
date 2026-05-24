@@ -1486,20 +1486,23 @@ def _runtime_identity_matches_eval(
 
 def _exact_eval_duplicate_keys(cuda_summary: Mapping[str, Any]) -> list[dict[str, Any]]:
     archive_sha = cuda_summary.get("archive_sha256")
-    runtime_sha = cuda_summary.get("runtime_content_tree_sha256")
+    runtime_content_sha = cuda_summary.get("runtime_content_tree_sha256")
+    runtime_tree_sha = cuda_summary.get("runtime_tree_sha256")
     score_axis = cuda_summary.get("score_axis")
     if not (
         isinstance(archive_sha, str)
-        and isinstance(runtime_sha, str)
+        and isinstance(runtime_content_sha, str)
+        and isinstance(runtime_tree_sha, str)
         and isinstance(score_axis, str)
     ):
         return []
     return [
         {
             "archive_sha256": archive_sha,
-            "runtime_content_tree_sha256": runtime_sha,
+            "runtime_content_tree_sha256": runtime_content_sha,
+            "runtime_tree_sha256": runtime_tree_sha,
             "score_axis": score_axis,
-            "key": f"{archive_sha}:{runtime_sha}:{score_axis}",
+            "key": f"{archive_sha}:{runtime_content_sha}:{runtime_tree_sha}:{score_axis}",
         }
     ]
 

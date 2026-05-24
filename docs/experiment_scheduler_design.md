@@ -198,8 +198,8 @@ SSH filesystem into implicit source-of-truth state.
 readiness into queue-owned dry-run dispatch preparation. It consumes
 `materializer_chain_exact_readiness_bridge_report.v1` and/or
 `optimizer_candidate_exact_eval_ready_queue_v1` artifacts, dedupes candidates
-by archive SHA plus runtime content/tree SHA, re-runs the exact-ready audit and
-`exact_dispatch_authority` preclaim gate, and emits a paused
+by archive SHA plus runtime content/tree SHA plus explicit score axis, re-runs
+the exact-ready audit and `exact_dispatch_authority` preclaim gate, and emits a paused
 `experiment_queue.v1`.
 
 The consumer is intentionally not a paid dispatcher. Generated claim steps use

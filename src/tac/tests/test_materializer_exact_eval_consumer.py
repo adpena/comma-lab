@@ -40,6 +40,8 @@ def _exact_ready_queue(
         "target_modes": ["contest_exact_eval"],
         "ready_for_exact_eval_dispatch": True,
         "dispatch_packet_ready": True,
+        "score_axis": "contest_cuda",
+        "target_score_axis": "contest_cuda",
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
@@ -154,7 +156,7 @@ def test_consumer_builds_paused_dry_run_queue_from_bridge_and_dedupes_identity(
     assert blocked[0]["blockers"][0].startswith("duplicate_stable_identity:")
 
 
-def test_consumer_dedupes_same_runtime_content_with_different_runtime_tree(
+def test_consumer_keeps_different_runtime_tree_as_distinct_identity(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -177,11 +179,11 @@ def test_consumer_dedupes_same_runtime_content_with_different_runtime_tree(
     )
 
     report = result["report"]
-    assert report["authorized_candidate_count"] == 1
-    assert report["duplicate_candidate_count"] == 1
-    blocked = [row for row in report["rows"] if row["blockers"]]
-    assert blocked[0]["blockers"][0].startswith("duplicate_stable_identity:")
-    assert ":runtime_tree=" not in blocked[0]["stable_identity"]
+    assert report["authorized_candidate_count"] == 2
+    assert report["duplicate_candidate_count"] == 0
+    identities = [row["stable_identity"] for row in report["rows"]]
+    assert len(set(identities)) == 2
+    assert all(":runtime_tree=" in identity for identity in identities)
 
 
 def test_consumer_blocks_archive_sha_alias_disagreement(
@@ -300,6 +302,58 @@ def test_consumer_blocks_rows_without_stable_archive_runtime_identity(
     assert result["report"]["authorized_candidate_count"] == 0
     assert row["blockers"] == ["stable_identity_runtime_content_tree_sha256_missing"]
     assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_consumer_blocks_rows_without_explicit_score_axis(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    ready_queue = _exact_ready_queue(repo, "missing_axis.exact_ready_queue.json")
+    payload = json.loads(ready_queue.read_text(encoding="utf-8"))
+    for key in ("dispatch_ready", "top_k"):
+        for row in payload[key]:
+            row.pop("score_axis", None)
+            row.pop("target_score_axis", None)
+    _write_json(ready_queue, payload)
+    _patch_authority(monkeypatch)
+
+    result = consumer.build_materializer_exact_eval_consumer_queue(
+        repo_root=repo,
+        exact_ready_queue_paths=[ready_queue],
+    )
+
+    row = result["report"]["rows"][0]
+    assert result["report"]["authorized_candidate_count"] == 0
+    assert row["blockers"] == ["stable_identity_score_axis_missing"]
+    assert row["stable_identity"] == "unstable:candidate_a"
+
+
+def test_consumer_blocks_rows_with_unsupported_score_axis(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    ready_queue = _exact_ready_queue(repo, "unsupported_axis.exact_ready_queue.json")
+    payload = json.loads(ready_queue.read_text(encoding="utf-8"))
+    for key in ("dispatch_ready", "top_k"):
+        for row in payload[key]:
+            row["score_axis"] = "contest_cpu"
+            row["target_score_axis"] = "contest_cpu"
+    _write_json(ready_queue, payload)
+    _patch_authority(monkeypatch)
+
+    result = consumer.build_materializer_exact_eval_consumer_queue(
+        repo_root=repo,
+        exact_ready_queue_paths=[ready_queue],
+    )
+
+    row = result["report"]["rows"][0]
+    assert result["report"]["authorized_candidate_count"] == 0
+    assert row["blockers"] == ["stable_identity_score_axis_unsupported:contest_cpu"]
+    assert row["stable_identity"] == "unstable:candidate_a"
 
 
 def test_write_json_refuses_overwrite_by_default(tmp_path: Path) -> None:
