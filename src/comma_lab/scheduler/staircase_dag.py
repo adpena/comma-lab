@@ -44,6 +44,9 @@ from tac.repo_io import ArtifactWriteError, write_json_artifact
 STAIRCASE_DAG_SCHEMA = "staircase_dag.v1"
 STAIRCASE_DISPATCH_PLAN_SCHEMA = "staircase_dispatch_plan.v1"
 STORAGE_PREFLIGHT_DEPENDENCY_SCHEMA = "staircase_storage_preflight_dependency.v1"
+MLX_RUNTIME_TELEMETRY_STATE_DISCOVERY_POLICY_SCHEMA = (
+    "mlx_runtime_telemetry_state_discovery_policy.v1"
+)
 
 DEFAULT_MACHINE_PRESETS: tuple[dict[str, Any], ...] = (
     {
@@ -425,6 +428,69 @@ def _storage_preflight_dependencies_from_queue(queue: Mapping[str, Any]) -> dict
     return preflights
 
 
+def _normalize_runtime_telemetry_policy_payload(
+    value: object,
+    *,
+    label: str,
+) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise ExperimentQueueError(f"{label} must be an object")
+    try:
+        require_no_truthy_authority_fields(value, context=label)
+    except ValueError as exc:
+        raise ExperimentQueueError(str(exc)) from exc
+    schema = _require_text(value.get("schema"), f"{label}.schema")
+    if schema != MLX_RUNTIME_TELEMETRY_STATE_DISCOVERY_POLICY_SCHEMA:
+        raise ExperimentQueueError(
+            f"{label}.schema must be "
+            f"{MLX_RUNTIME_TELEMETRY_STATE_DISCOVERY_POLICY_SCHEMA}"
+        )
+    policy_id = _require_text(value.get("policy_id"), f"{label}.policy_id")
+    mode = _require_text(value.get("mode"), f"{label}.mode")
+    if mode not in {"explicit_states", "auto_discover_compatible_states"}:
+        raise ExperimentQueueError(
+            f"{label}.mode must be explicit_states or "
+            "auto_discover_compatible_states"
+        )
+    selected_state_paths = _string_list(
+        value.get("selected_state_paths"),
+        f"{label}.selected_state_paths",
+    )
+    discovered_state_paths = _string_list(
+        value.get("discovered_state_paths", []),
+        f"{label}.discovered_state_paths",
+    )
+    return apply_proxy_evidence_boundary(
+        {
+            **dict(value),
+            "schema": schema,
+            "policy_id": policy_id,
+            "mode": mode,
+            "selected_state_paths": selected_state_paths,
+            "discovered_state_paths": discovered_state_paths,
+            "allowed_use": value.get(
+                "allowed_use",
+                "local_mlx_runtime_balanced_batch_planning_only",
+            ),
+            "executor_contract": {
+                **_mapping(
+                    value.get("executor_contract"),
+                    f"{label}.executor_contract",
+                ),
+                "planner_may_use_for_runtime_balancing": True,
+                "executor_must_not_treat_policy_as_score_authority": True,
+                "exact_auth_eval_required_before_promotion": True,
+            },
+        },
+        dispatch_blockers=[
+            "runtime_telemetry_policy_is_advisory_only",
+            "runtime_telemetry_policy_does_not_grant_score_authority",
+        ],
+    )
+
+
 def normalize_resource_pools(raw_pools: Sequence[Mapping[str, Any]] | None) -> list[dict[str, Any]]:
     pools = list(raw_pools or default_local_resource_pools())
     normalized: list[dict[str, Any]] = []
@@ -607,6 +673,10 @@ def build_staircase_dag_from_experiment_queue(
         experiment_tags = _string_list(experiment.get("tags"), f"{experiment_id}.tags")
         family = str(experiment.get("lane_id") or (experiment_tags[0] if experiment_tags else experiment_id))
         experiment_metadata = dict(experiment.get("metadata") or {})
+        runtime_telemetry_policy = _normalize_runtime_telemetry_policy_payload(
+            experiment_metadata.get("runtime_telemetry_policy"),
+            label=f"{experiment_id}.metadata.runtime_telemetry_policy",
+        )
         for step in experiment.get("steps", []):
             if not isinstance(step, Mapping):
                 continue
@@ -636,6 +706,8 @@ def build_staircase_dag_from_experiment_queue(
                 "receiver_contract_kind": experiment_metadata.get("receiver_contract_kind"),
                 "allowed_use": experiment_metadata.get("allowed_use"),
             }
+            if runtime_telemetry_policy is not None:
+                metadata["runtime_telemetry_policy"] = runtime_telemetry_policy
             dependencies = [
                 _queue_dependency_node_id(str(required), default_experiment_id=experiment_id)
                 for required in _string_list(step.get("requires"), f"{experiment_id}.{step_id}.requires")
@@ -1113,6 +1185,10 @@ def plan_staircase_dispatch(
             },
             "executor_boundary": "planning_only_task_must_write_back_to_experiment_queue_state",
         }
+        if isinstance(metadata.get("runtime_telemetry_policy"), Mapping):
+            task["runtime_telemetry_policy"] = dict(
+                metadata["runtime_telemetry_policy"]
+            )
         if storage_hint is not None:
             task["storage_hint"] = storage_hint
         if isinstance(metadata.get("storage_preflight_dependency"), Mapping):

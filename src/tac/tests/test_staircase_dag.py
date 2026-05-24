@@ -14,6 +14,12 @@ from comma_lab.scheduler.experiment_queue import (
     connect_state,
     initialize_queue_state,
 )
+from comma_lab.scheduler.mlx_learned_sweep_autopilot_queue import (
+    MLX_LEARNED_SWEEP_AUTOPILOT_QUEUE_SCHEMA,
+    MLX_RUNTIME_TELEMETRY_STATE_DISCOVERY_POLICY_SCHEMA,
+    build_mlx_learned_sweep_autopilot_batch_queue,
+    build_mlx_learned_sweep_autopilot_queue,
+)
 from comma_lab.scheduler.staircase_dag import (
     DEFAULT_MACHINE_PRESETS,
     build_staircase_dag_from_experiment_queue,
@@ -23,6 +29,16 @@ from comma_lab.scheduler.staircase_dag import (
     parse_resource_pool_spec,
     plan_staircase_dispatch,
     write_staircase_dag,
+)
+from tac.tests.test_mlx_dynamic_learned_sweep_local_actuator import (
+    INCUMBENT_SCORE,
+    _candidate_payload,
+)
+from tac.tests.test_mlx_dynamic_learned_sweep_local_actuator import (
+    _plan as _mlx_learned_sweep_plan,
+)
+from tac.tests.test_mlx_dynamic_learned_sweep_local_actuator import (
+    _selection as _mlx_selection,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -150,6 +166,218 @@ def test_build_queue_dag_plans_executor_specs_without_authority(tmp_path: Path) 
         plan["dask_task_specs"][0]["executor_boundary"]
         == "planning_only_task_must_write_back_to_experiment_queue_state"
     )
+
+
+def test_staircase_dag_projects_mlx_learned_sweep_autopilot_queue(
+    tmp_path: Path,
+) -> None:
+    selection = _mlx_selection(tmp_path)
+    candidate_payload = _candidate_payload(selection)
+    learned_plan = _mlx_learned_sweep_plan(selection)
+    plan_path = tmp_path / "learned_plan.json"
+    selection_path = tmp_path / "selection.json"
+    candidate_payload_path = tmp_path / "candidate_payload.json"
+    plan_path.write_text(json.dumps(learned_plan), encoding="utf-8")
+    selection_path.write_text(json.dumps(selection), encoding="utf-8")
+    candidate_payload_path.write_text(json.dumps(candidate_payload), encoding="utf-8")
+    queue = build_mlx_learned_sweep_autopilot_queue(
+        plan_path=plan_path,
+        selection_path=selection_path,
+        candidate_payload_paths=[candidate_payload_path],
+        incumbent_score=INCUMBENT_SCORE,
+        output_root=tmp_path / "autopilot_runs",
+        observation_jsonl=tmp_path / "observations.jsonl",
+        queue_id="mlx_autopilot_staircase_fixture",
+        repo_root=tmp_path,
+        device="gpu",
+        allow_gpu_research_signal=True,
+        max_new_observations=1,
+    )
+
+    dag = build_staircase_dag_from_experiment_queue(
+        queue,
+        dag_id="mlx_autopilot_staircase_fixture_dag",
+        resource_pools=[
+            {
+                "id": "m5",
+                "slots": {"local_cpu": 2, "local_mlx": 1},
+                "memory_gb": 128,
+                "disk_gb": 80,
+            }
+        ],
+    )
+    dispatch = plan_staircase_dispatch(dag, max_nodes=1)
+
+    assert dag["score_claim"] is False
+    node = dispatch["selected_nodes"][0]
+    assert node["resource_kind"] == "local_mlx"
+    experiment_metadata = node["metadata"]["experiment_metadata"]
+    assert experiment_metadata["schema"] == MLX_LEARNED_SWEEP_AUTOPILOT_QUEUE_SCHEMA
+    assert experiment_metadata["score_claim"] is False
+    assert experiment_metadata["ready_for_exact_eval_dispatch"] is False
+    task = dispatch["dask_task_specs"][0]
+    assert task["resources"] == {"local_mlx": 1, "machine:m5": 1}
+    assert task["command"][:2] == [
+        ".venv/bin/python",
+        "tools/run_mlx_dynamic_learned_sweep_autopilot.py",
+    ]
+    assert any(
+        condition["type"] == "json_false_authority"
+        for condition in task["postconditions"]
+    )
+
+
+def test_staircase_dag_projects_mlx_autopilot_batch_roots_as_parallel_nodes(
+    tmp_path: Path,
+) -> None:
+    selection = _mlx_selection(tmp_path)
+    candidate_payload = _candidate_payload(selection)
+    learned_plan = _mlx_learned_sweep_plan(selection)
+    plan_path = tmp_path / "learned_plan.json"
+    selection_path = tmp_path / "selection.json"
+    candidate_payload_path = tmp_path / "candidate_payload.json"
+    plan_path.write_text(json.dumps(learned_plan), encoding="utf-8")
+    selection_path.write_text(json.dumps(selection), encoding="utf-8")
+    candidate_payload_path.write_text(json.dumps(candidate_payload), encoding="utf-8")
+    runtime_policy = {
+        "schema": MLX_RUNTIME_TELEMETRY_STATE_DISCOVERY_POLICY_SCHEMA,
+        "policy_id": "test_runtime_state_policy",
+        "mode": "auto_discover_compatible_states",
+        "selected_state_paths": [str(tmp_path / "prior.sqlite")],
+        "discovered_state_paths": [str(tmp_path / "prior.sqlite")],
+        "score_claim": False,
+        "score_claim_valid": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+    queue = build_mlx_learned_sweep_autopilot_batch_queue(
+        [
+            {
+                "run_id": "root_a",
+                "plan_path": str(plan_path),
+                "selection_path": str(selection_path),
+                "candidate_payload_paths": [str(candidate_payload_path)],
+                "incumbent_score": INCUMBENT_SCORE,
+                "output_root": str(tmp_path / "autopilot_runs" / "root_a"),
+                "observation_jsonl": str(tmp_path / "root_a.jsonl"),
+                "optimization_pass_id": "micro",
+            },
+            {
+                "run_id": "root_b",
+                "plan_path": str(plan_path),
+                "selection_path": str(selection_path),
+                "candidate_payload_paths": [str(candidate_payload_path)],
+                "incumbent_score": INCUMBENT_SCORE,
+                "output_root": str(tmp_path / "autopilot_runs" / "root_b"),
+                "observation_jsonl": str(tmp_path / "root_b.jsonl"),
+                "optimization_pass_id": "micro",
+            },
+        ],
+        queue_id="mlx_autopilot_batch_staircase_fixture",
+        repo_root=tmp_path,
+        local_mlx_concurrency=2,
+        device="gpu",
+        allow_gpu_research_signal=True,
+        max_new_observations=1,
+        runtime_telemetry_policy=runtime_policy,
+    )
+
+    dag = build_staircase_dag_from_experiment_queue(
+        queue,
+        dag_id="mlx_autopilot_batch_staircase_fixture_dag",
+        resource_pools=[
+            {
+                "id": "m5",
+                "slots": {"local_cpu": 2, "local_mlx": 2},
+                "memory_gb": 128,
+                "disk_gb": 80,
+            }
+        ],
+    )
+    dispatch = plan_staircase_dispatch(dag, max_nodes=2)
+
+    assert len(dispatch["selected_nodes"]) == 2
+    assert {node["resource_kind"] for node in dispatch["selected_nodes"]} == {
+        "local_mlx"
+    }
+    assert all(
+        task["resources"] == {"local_mlx": 1, "machine:m5": 1}
+        for task in dispatch["dask_task_specs"]
+    )
+    assert {
+        task["experiment_metadata"]["batch_run_id"]
+        for task in dispatch["dask_task_specs"]
+    } == {"root_a", "root_b"}
+    for task in dispatch["dask_task_specs"]:
+        policy = task["runtime_telemetry_policy"]
+        assert policy["schema"] == MLX_RUNTIME_TELEMETRY_STATE_DISCOVERY_POLICY_SCHEMA
+        assert policy["policy_id"] == "test_runtime_state_policy"
+        assert policy["score_claim"] is False
+        assert policy["executor_contract"][
+            "executor_must_not_treat_policy_as_score_authority"
+        ] is True
+
+
+def test_staircase_dag_respects_mlx_batch_queue_concurrency_with_richer_pool(
+    tmp_path: Path,
+) -> None:
+    selection = _mlx_selection(tmp_path)
+    candidate_payload = _candidate_payload(selection)
+    learned_plan = _mlx_learned_sweep_plan(selection)
+    plan_path = tmp_path / "learned_plan.json"
+    selection_path = tmp_path / "selection.json"
+    candidate_payload_path = tmp_path / "candidate_payload.json"
+    plan_path.write_text(json.dumps(learned_plan), encoding="utf-8")
+    selection_path.write_text(json.dumps(selection), encoding="utf-8")
+    candidate_payload_path.write_text(json.dumps(candidate_payload), encoding="utf-8")
+    queue = build_mlx_learned_sweep_autopilot_batch_queue(
+        [
+            {
+                "run_id": f"root_{index}",
+                "plan_path": str(plan_path),
+                "selection_path": str(selection_path),
+                "candidate_payload_paths": [str(candidate_payload_path)],
+                "incumbent_score": INCUMBENT_SCORE,
+                "output_root": str(tmp_path / "autopilot_runs" / f"root_{index}"),
+                "observation_jsonl": str(tmp_path / f"root_{index}.jsonl"),
+                "optimization_pass_id": "micro",
+            }
+            for index in range(3)
+        ],
+        queue_id="mlx_autopilot_batch_concurrency_fixture",
+        repo_root=tmp_path,
+        local_mlx_concurrency=2,
+        device="gpu",
+        allow_gpu_research_signal=True,
+        max_new_observations=1,
+    )
+
+    dag = build_staircase_dag_from_experiment_queue(
+        queue,
+        dag_id="mlx_autopilot_batch_concurrency_fixture_dag",
+        resource_pools=[
+            {
+                "id": "m5",
+                "slots": {"local_cpu": 2, "local_mlx": 4},
+                "memory_gb": 128,
+                "disk_gb": 80,
+            }
+        ],
+    )
+    dispatch = plan_staircase_dispatch(dag, max_nodes=4)
+
+    assert dag["controls"]["max_concurrency"]["local_mlx"] == 2
+    assert len(dispatch["selected_nodes"]) == 2
+    assert {
+        task["resources"]["local_mlx"] for task in dispatch["dask_task_specs"]
+    } == {1}
+    assert {task["machine"]["slots"]["local_mlx"] for task in dispatch["dask_task_specs"]} == {
+        4
+    }
 
 
 def test_staircase_dag_carries_artifact_mobility_to_executor_specs() -> None:

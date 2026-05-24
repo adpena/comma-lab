@@ -489,11 +489,32 @@ def append_observation_row(
     return normalized
 
 
-def _duplicate_observation_key(row: Mapping[str, Any]) -> tuple[tuple[str, str | None], ...]:
+def observation_duplicate_key(row: Mapping[str, Any]) -> tuple[tuple[str, str | None], ...]:
+    """Return the canonical identity key used to suppress duplicate observations."""
+
     return tuple(
         (field, None if row.get(field) is None else str(row[field]))
         for field in DUPLICATE_OBSERVATION_KEY_FIELDS
     )
+
+
+def deduplicate_observation_rows(rows: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Normalize rows and keep the first row for each duplicate-observation key."""
+
+    out: list[dict[str, Any]] = []
+    seen: set[tuple[tuple[str, str | None], ...]] = set()
+    for row in rows:
+        normalized = normalize_observation_row(row)
+        key = observation_duplicate_key(normalized)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(normalized)
+    return out
+
+
+def _duplicate_observation_key(row: Mapping[str, Any]) -> tuple[tuple[str, str | None], ...]:
+    return observation_duplicate_key(row)
 
 
 def _find_duplicate_observation(
@@ -645,10 +666,12 @@ __all__ = [
     "MLXDynamicSweepObservationError",
     "append_observation_row",
     "build_observation_row",
+    "deduplicate_observation_rows",
     "file_sha256",
     "json_text",
     "load_observation_rows",
     "normalize_observation_row",
+    "observation_duplicate_key",
     "summarize_observation_file",
     "summarize_observations",
 ]

@@ -184,6 +184,44 @@ def test_selection_uses_observed_strict_gated_rows_not_positive_predictions() ->
     )
 
 
+def test_selection_normalizes_legacy_window_rows_from_strict_gate_inputs() -> None:
+    dataset = _dataset()
+    for key in (
+        "full_video_denominator",
+        "normalized_full_video_scorer_gain_vs_baseline",
+        "projected_full_video_delta_vs_baseline_score",
+        "break_even_added_bytes_from_normalized_full_video_gain",
+        "normalized_full_video_byte_budget_margin_vs_break_even",
+    ):
+        dataset["rows"][0].pop(key)
+    plan = _plan()
+    plan["effective_mlx_spend_triage_gate"].pop("spend_triage_allowed_families")
+    plan["effective_mlx_spend_triage_gate"]["input_rows"] = [
+        dataset["rows"][0]["row_id"],
+    ]
+
+    selection = build_mlx_effective_spend_triage_selection(
+        dataset,
+        plan,
+        top_k=1,
+        families=["mlx_decoder_q"],
+    )
+
+    row = selection["selected_rows"][0]
+    assert row["row_id"] == "best"
+    assert row["selection_basis"] == "normalized_full_video_mlx_singleton_response_gain"
+    assert row["full_video_denominator"] == 600
+    assert row["normalized_full_video_scorer_gain_vs_baseline"] == pytest.approx(
+        0.012 / 600.0
+    )
+    assert row["projected_full_video_delta_vs_baseline_score"] == pytest.approx(
+        -0.012 / 600.0
+    )
+    assert selection["selection_policy"]["gate_spend_triage_allowed_families"] == [
+        "mlx_decoder_q"
+    ]
+
+
 def test_selection_can_require_negative_predictions_when_requested() -> None:
     selection = build_mlx_effective_spend_triage_selection(
         _dataset(),
@@ -278,10 +316,10 @@ def test_selection_min_observed_gain_can_only_raise_calibrated_gap() -> None:
         _dataset(),
         _plan(),
         top_k=4,
-        min_observed_gain=0.000018,
+        min_observed_gain=0.01,
     )
 
-    assert selection["selection_policy"]["min_observed_gain"] == pytest.approx(0.000018)
+    assert selection["selection_policy"]["min_observed_gain"] == pytest.approx(0.01)
     assert [row["row_id"] for row in selection["selected_rows"]] == ["best"]
 
 

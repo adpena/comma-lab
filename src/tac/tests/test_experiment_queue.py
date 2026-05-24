@@ -2115,6 +2115,69 @@ def test_json_false_authority_explicit_false_or_missing_override_is_exact(
     assert _condition_passes(condition, repo_root=tmp_path) is True
 
 
+def test_jsonl_false_authority_blocks_truthy_rows(tmp_path: Path) -> None:
+    advisory = tmp_path / "observations.jsonl"
+    advisory.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "schema": "mlx_dynamic_sweep_observation.v1",
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ),
+                json.dumps(
+                    {
+                        "schema": "mlx_dynamic_sweep_observation.v1",
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": True,
+                    }
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    condition = {
+        "type": "jsonl_false_authority",
+        "path": advisory.name,
+        "schema_equals": "mlx_dynamic_sweep_observation.v1",
+    }
+
+    assert _condition_passes(condition, repo_root=tmp_path) is False
+
+
+def test_jsonl_false_authority_accepts_all_false_rows(tmp_path: Path) -> None:
+    advisory = tmp_path / "observations.jsonl"
+    advisory.write_text(
+        json.dumps(
+            {
+                "schema": "mlx_dynamic_sweep_observation.v1",
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    condition = {
+        "type": "jsonl_false_authority",
+        "path": advisory.name,
+        "schema_equals": "mlx_dynamic_sweep_observation.v1",
+    }
+
+    assert _condition_passes(condition, repo_root=tmp_path) is True
+
+
 def _postcondition_artifact(path: Path, payload: bytes = b"artifact") -> dict[str, object]:
     path.write_bytes(payload)
     return {

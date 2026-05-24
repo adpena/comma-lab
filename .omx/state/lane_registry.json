@@ -51507,6 +51507,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_mlx_learned_sweep_auto_batch_roots_20260524",
+      "name": "MLX learned-sweep automatic batch roots",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/mlx_learned_sweep_batch_roots.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/mlx_effective_spend_triage_learned_sweep_live_20260524T100114Z/local_mlx_state_harvest_adaptive_row_group_batch_autopilot_run_20260524T125348Z/pass_0001_mlx_scorer_response_window_544_545__mlx_local_response__micro/mlx_learned_sweep_state_harvest_adaptive_row_group_batch_live_20260524t125348z_pass_0001_mlx_scorer_response_window_544_545__mlx_local_response__micro/local_mlx_autopilot_summary.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_mlx_learned_sweep_autopilot_queue.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_session_summary_20260524T141702Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -51516,5 +51557,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T09:04:07Z"
+  "updated_at": "2026-05-24T14:17:40Z"
 }

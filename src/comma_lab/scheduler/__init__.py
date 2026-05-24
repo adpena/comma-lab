@@ -100,6 +100,13 @@ from .mlx_execution_queue import (
     MLX_EXECUTION_QUEUE_SCHEMA,
     build_mlx_scorer_response_execution_queue,
 )
+from .mlx_learned_sweep_autopilot_queue import (
+    MLX_LEARNED_SWEEP_AUTOPILOT_BATCH_QUEUE_SCHEMA,
+    MLX_LEARNED_SWEEP_AUTOPILOT_QUEUE_SCHEMA,
+    MLX_RUNTIME_TELEMETRY_STATE_DISCOVERY_POLICY_SCHEMA,
+    build_mlx_learned_sweep_autopilot_batch_queue,
+    build_mlx_learned_sweep_autopilot_queue,
+)
 from .models import (
     BudgetReport,
     BudgetSpec,
@@ -157,6 +164,9 @@ __all__ = [
     "MATERIALIZER_HARVEST_STEP_ID",
     "MLX_ACQUISITION_FOLLOWUP_SCHEMA",
     "MLX_EXECUTION_QUEUE_SCHEMA",
+    "MLX_LEARNED_SWEEP_AUTOPILOT_BATCH_QUEUE_SCHEMA",
+    "MLX_LEARNED_SWEEP_AUTOPILOT_QUEUE_SCHEMA",
+    "MLX_RUNTIME_TELEMETRY_STATE_DISCOVERY_POLICY_SCHEMA",
     "PACKET_MEMBER_RECOMPRESS_MATERIALIZER",
     "PACKET_MEMBER_RECOMPRESS_TARGET_KIND",
     "REGISTRY_SCHEMA",
@@ -188,6 +198,8 @@ __all__ = [
     "build_materializer_exact_eval_consumer_queue",
     "build_materializer_exact_eval_dispatch_plan",
     "build_materializer_execution_queue",
+    "build_mlx_learned_sweep_autopilot_batch_queue",
+    "build_mlx_learned_sweep_autopilot_queue",
     "build_mlx_scorer_response_execution_queue",
     "build_remote_git_preflight_command",
     "build_remote_shell_command",

@@ -116,6 +116,30 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "tac.optimization.local_training_harvest_intelligence",
         "build_local_training_harvest_intelligence",
     ),
+    "build_mlx_effective_spend_triage_learned_sweep_candidates": (
+        "tac.optimization.mlx_effective_spend_triage_learned_sweep_adapter",
+        "build_mlx_effective_spend_triage_learned_sweep_candidates",
+    ),
+    "build_observation_rows_from_learned_sweep_plan": (
+        "tac.optimization.mlx_dynamic_learned_sweep_observation_harvest",
+        "build_observation_rows_from_learned_sweep_plan",
+    ),
+    "execute_local_mlx_sweep_rows": (
+        "tac.optimization.mlx_dynamic_learned_sweep_local_actuator",
+        "execute_local_mlx_sweep_rows",
+    ),
+    "run_local_mlx_sweep_autopilot": (
+        "tac.optimization.mlx_dynamic_learned_sweep_local_autopilot",
+        "run_local_mlx_sweep_autopilot",
+    ),
+    "MLX_LEARNED_SWEEP_BATCH_ROOT_PLAN_SCHEMA": (
+        "tac.optimization.mlx_learned_sweep_batch_roots",
+        "MLX_LEARNED_SWEEP_BATCH_ROOT_PLAN_SCHEMA",
+    ),
+    "build_mlx_learned_sweep_autopilot_batch_root_plan": (
+        "tac.optimization.mlx_learned_sweep_batch_roots",
+        "build_mlx_learned_sweep_autopilot_batch_root_plan",
+    ),
     "build_optimizer_scheduler_telemetry_from_harvest_queue": (
         "tac.optimization.local_training_harvest_intelligence",
         "build_optimizer_scheduler_telemetry_from_harvest_queue",

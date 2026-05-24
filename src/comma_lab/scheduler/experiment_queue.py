@@ -1167,6 +1167,52 @@ def _false_authority_payload_valid(
     return True
 
 
+def _jsonl_false_authority_valid(
+    condition: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> bool:
+    rel_path = _require_text(condition.get("path"), "postcondition.path")
+    path = _resolve_postcondition_path(rel_path, repo_root=repo_root)
+    if not path.is_file() or path.is_symlink():
+        return False
+    required_false = _string_list(
+        condition.get("required_false", list(DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS)),
+        "postcondition.required_false",
+    )
+    false_or_missing = _string_list(
+        condition.get(
+            "false_or_missing",
+            list(DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS),
+        ),
+        "postcondition.false_or_missing",
+    )
+    require_nonempty = bool(condition.get("require_nonempty", True))
+    schema_equals = condition.get("schema_equals")
+    seen_rows = 0
+    with path.open(encoding="utf-8") as handle:
+        for line in handle:
+            text = line.strip()
+            if not text:
+                continue
+            try:
+                payload = json.loads(text)
+            except json.JSONDecodeError:
+                return False
+            if not isinstance(payload, Mapping):
+                return False
+            if schema_equals is not None and payload.get("schema") != schema_equals:
+                return False
+            if not _false_authority_payload_valid(
+                payload,
+                required_false=required_false,
+                false_or_missing=false_or_missing,
+            ):
+                return False
+            seen_rows += 1
+    return seen_rows > 0 if require_nonempty else True
+
+
 def _nonempty_value(value: Any) -> bool:
     if isinstance(value, str):
         return bool(value.strip())
@@ -1410,6 +1456,8 @@ def _condition_passes(condition: Mapping[str, Any], *, repo_root: Path) -> bool:
             if actual_axis != expected_axis:
                 return False
         return True
+    if condition_type == "jsonl_false_authority":
+        return _jsonl_false_authority_valid(condition, repo_root=repo_root)
     if condition_type == "json_completion_contract":
         return _json_completion_contract(condition, repo_root=repo_root)
     if condition_type == "materializer_chain_complete":
