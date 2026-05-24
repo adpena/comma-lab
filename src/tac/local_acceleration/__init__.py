@@ -67,6 +67,7 @@ __all__ = [
     "EVIDENCE_TAG_MLX",
     "MLX_ACQUISITION_BATCH_OPERATION_SET_SCHEMA",
     "MLX_ACQUISITION_BATCH_SCHEMA",
+    "MLX_ACQUISITION_REPRESENTATION_CONTRACT_SCHEMA",
     "SCHEMA_VERSION",
 ]
 
@@ -84,3 +85,6 @@ EVIDENCE_TAG_METAL = "[macOS-Metal research-signal]"
 
 MLX_ACQUISITION_BATCH_SCHEMA = "mlx_acquisition_batch.v1"
 MLX_ACQUISITION_BATCH_OPERATION_SET_SCHEMA = "mlx_acquisition_operation_set.v1"
+MLX_ACQUISITION_REPRESENTATION_CONTRACT_SCHEMA = (
+    "mlx_acquisition_representation_contract.v1"
+)

@@ -12,10 +12,12 @@ from tac.local_acceleration import (
     EVIDENCE_TAG_MLX,
     MLX_ACQUISITION_BATCH_OPERATION_SET_SCHEMA,
     MLX_ACQUISITION_BATCH_SCHEMA,
+    MLX_ACQUISITION_REPRESENTATION_CONTRACT_SCHEMA,
 )
 from tac.optimization.proxy_candidate_contract import (
     PROXY_FALSE_AUTHORITY_FIELDS,
     apply_proxy_evidence_boundary,
+    ordered_unique,
     require_no_truthy_authority_fields,
 )
 
@@ -28,6 +30,69 @@ MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_ROW_SCHEMA = (
     "mlx_effective_spend_triage_candidate_row.v1"
 )
 TOOL_NAME = "tac.local_acceleration.mlx_acquisition_batch"
+REPRESENTATION_CONTRACT_SCHEMA = MLX_ACQUISITION_REPRESENTATION_CONTRACT_SCHEMA
+REPRESENTATION_FAMILY_CLASSES = frozenset(
+    {
+        "hnerv_variant",
+        "boostnerv_bolton",
+        "nerv_family",
+        "non_nerv",
+        "unknown",
+    }
+)
+REPRESENTATION_CLASS_ALIASES = {
+    "hnerv": "hnerv_variant",
+    "hnerv_variant": "hnerv_variant",
+    "hnerv_variants": "hnerv_variant",
+    "boostnerv": "boostnerv_bolton",
+    "boost_nerv": "boostnerv_bolton",
+    "boostnerv_bolton": "boostnerv_bolton",
+    "boostnerv_boltons": "boostnerv_bolton",
+    "nerv": "nerv_family",
+    "nerv_family": "nerv_family",
+    "nerv_family_variant": "nerv_family",
+    "non_nerv": "non_nerv",
+    "non_nerv_family": "non_nerv",
+    "generic": "non_nerv",
+    "unknown": "unknown",
+}
+HNERV_TOKENS = frozenset(
+    {
+        "hnerv",
+        "hnerv_ft_microcodec",
+        "hnerv_lc",
+        "hnerv_lc_ac",
+        "hnerv_lc_v2",
+        "ff_packed_brotli_hnerv",
+    }
+)
+BOOSTNERV_TOKENS = frozenset({"boostnerv", "boost_nerv", "boost-nerv"})
+NON_NERV_TOKENS = frozenset(
+    {
+        "non_nerv",
+        "non-nerv",
+        "non_nerv_family",
+        "non-nerv-family",
+        "nonneural",
+        "generic",
+        "decoder_q",
+        "packetir",
+        "packet_ir",
+        "wavelet",
+        "cool_chic",
+        "c3",
+        "siren",
+        "wire",
+        "bacon",
+        "compressai",
+        "dcvc",
+        "raft",
+        "stc",
+        "symbolic",
+        "pose_codec",
+        "lfv1",
+    }
+)
 
 
 class MLXAcquisitionBatchError(ValueError):
@@ -111,6 +176,128 @@ def _slug(value: str) -> str:
     return "".join(ch if ch.isalnum() else "_" for ch in value.lower()).strip("_") or "row"
 
 
+def _optional_string(value: Any) -> str | None:
+    text = str(value or "").strip()
+    return text or None
+
+
+def _string_list(value: Any, *, label: str) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        text = value.strip()
+        return [text] if text else []
+    if not isinstance(value, Sequence) or isinstance(value, bytes):
+        raise MLXAcquisitionBatchError(f"{label} must be a string or list of strings")
+    out: list[str] = []
+    for index, item in enumerate(value):
+        text = str(item or "").strip()
+        if not text:
+            raise MLXAcquisitionBatchError(f"{label}[{index}] must be non-empty")
+        out.append(text)
+    return out
+
+
+def _family_tokens(row: Mapping[str, Any]) -> list[str]:
+    tokens: list[str] = []
+    for key in (
+        "representation_family",
+        "substrate_family",
+        "architecture_family",
+        "architecture_class",
+        "codec_family",
+        "family",
+        "candidate_family",
+        "materializer_family",
+    ):
+        text = _optional_string(row.get(key))
+        if text:
+            tokens.append(text)
+    for key in ("bolt_on_families", "addon_families", "family_tags"):
+        tokens.extend(_string_list(row.get(key), label=key))
+    return ordered_unique(tokens)
+
+
+def _normalize_family_class(value: Any) -> str | None:
+    text = _optional_string(value)
+    if not text:
+        return None
+    key = _slug(text)
+    family_class = REPRESENTATION_CLASS_ALIASES.get(key)
+    if family_class is None:
+        raise MLXAcquisitionBatchError(
+            "representation_family_class must be one of "
+            f"{sorted(REPRESENTATION_FAMILY_CLASSES)}"
+        )
+    return family_class
+
+
+def _infer_family_class(tokens: Sequence[str]) -> str:
+    normalized = {_slug(token) for token in tokens}
+    joined = " ".join(normalized)
+    if normalized & {_slug(token) for token in BOOSTNERV_TOKENS}:
+        return "boostnerv_bolton"
+    if normalized & {_slug(token) for token in HNERV_TOKENS}:
+        return "hnerv_variant"
+    if normalized & {_slug(token) for token in NON_NERV_TOKENS}:
+        return "non_nerv"
+    if any(_slug(token) in joined for token in NON_NERV_TOKENS):
+        return "non_nerv"
+    if "boostnerv" in joined or "boost_nerv" in joined:
+        return "boostnerv_bolton"
+    if "hnerv" in joined:
+        return "hnerv_variant"
+    if "nerv" in joined:
+        return "nerv_family"
+    return "unknown"
+
+
+def _representation_contract(row: Mapping[str, Any]) -> dict[str, Any]:
+    source_family = _optional_string(row.get("family")) or "unknown"
+    tokens = _family_tokens(row)
+    family_class = _normalize_family_class(
+        row.get("representation_family_class") or row.get("family_class")
+    ) or _infer_family_class(tokens or [source_family])
+    representation_family = (
+        _optional_string(row.get("representation_family"))
+        or _optional_string(row.get("architecture_family"))
+        or source_family
+    )
+    bolt_ons = _string_list(row.get("bolt_on_families"), label="bolt_on_families")
+    bolt_ons.extend(_string_list(row.get("addon_families"), label="addon_families"))
+    if family_class == "boostnerv_bolton" and "boostnerv" not in {
+        _slug(item) for item in bolt_ons
+    }:
+        bolt_ons.append("boostnerv")
+    return {
+        "schema": REPRESENTATION_CONTRACT_SCHEMA,
+        "source_family": source_family,
+        "representation_family": representation_family,
+        "representation_family_class": family_class,
+        "representation_variant": _optional_string(
+            row.get("representation_variant")
+            or row.get("architecture_variant")
+            or row.get("codec_variant")
+        ),
+        "substrate_family": _optional_string(row.get("substrate_family")),
+        "family_tokens": sorted({_slug(token) for token in tokens if _slug(token)}),
+        "bolt_on_families": ordered_unique(bolt_ons),
+        "receiver_contract_kind": (
+            _optional_string(row.get("receiver_contract_kind"))
+            or f"family_agnostic_{family_class}_mlx_candidate_receiver"
+        ),
+        "materializer_contract_kind": (
+            _optional_string(row.get("materializer_contract_kind"))
+            or f"family_agnostic_{family_class}_candidate_materializer"
+        ),
+        "runtime_contract_kind": (
+            _optional_string(row.get("runtime_contract_kind"))
+            or "runtime_consumption_proof_required"
+        ),
+        "operation_portability": "family_agnostic",
+    }
+
+
 def _selection_rows(selection: Mapping[str, Any]) -> list[dict[str, Any]]:
     require_no_truthy_authority_fields(selection, context="mlx_acquisition_selection")
     if selection.get("schema") != MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA:
@@ -170,6 +357,10 @@ def _operation_set_from_selection_rows(
     expected_score_gain = 0.0
     candidate_saved_bytes = 0
     families: list[str] = []
+    family_classes: list[str] = []
+    receiver_contract_kinds: list[str] = []
+    materializer_contract_kinds: list[str] = []
+    representation_contracts: list[dict[str, Any]] = []
     row_refs: list[dict[str, Any]] = []
     for offset, row in enumerate(rows):
         row_index = set_index + offset
@@ -177,6 +368,13 @@ def _operation_set_from_selection_rows(
         candidate_id = _text(row.get("candidate_id"), "selection candidate_id")
         family = str(row.get("family") or "mlx_scorer_response")
         families.append(family)
+        representation_contract = _representation_contract(row)
+        representation_contracts.append(representation_contract)
+        family_classes.append(str(representation_contract["representation_family_class"]))
+        receiver_contract_kinds.append(str(representation_contract["receiver_contract_kind"]))
+        materializer_contract_kinds.append(
+            str(representation_contract["materializer_contract_kind"])
+        )
         unit_id = f"mlx_row_{_slug(row_id)}"
         selected_unit_ids.append(unit_id)
         row_pairs = _int_list(
@@ -196,6 +394,21 @@ def _operation_set_from_selection_rows(
                 "unit_kind": "scorer_response_row",
                 "target_kind": "mlx_scorer_response_candidate_v1",
                 "candidate_id": candidate_id,
+                "source_family": family,
+                "representation_family": representation_contract[
+                    "representation_family"
+                ],
+                "representation_family_class": representation_contract[
+                    "representation_family_class"
+                ],
+                "representation_contract": representation_contract,
+                "bolt_on_families": representation_contract["bolt_on_families"],
+                "receiver_contract_kind": representation_contract[
+                    "receiver_contract_kind"
+                ],
+                "materializer_contract_kind": representation_contract[
+                    "materializer_contract_kind"
+                ],
                 "candidate_saved_bytes": max(0, -added_bytes),
                 "predicted_quality_score_delta": -_row_gain(row, index=row_index),
                 "pair_indices": row_pairs,
@@ -217,6 +430,15 @@ def _operation_set_from_selection_rows(
                 "row_id": row_id,
                 "candidate_id": candidate_id,
                 "family": family,
+                "representation_family": representation_contract[
+                    "representation_family"
+                ],
+                "representation_family_class": representation_contract[
+                    "representation_family_class"
+                ],
+                "receiver_contract_kind": representation_contract[
+                    "receiver_contract_kind"
+                ],
                 "source_path": row.get("source_path"),
             }
         )
@@ -235,6 +457,11 @@ def _operation_set_from_selection_rows(
             "source_schema": MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA,
             "operation_families": ["materialize_scorer_response_candidate"],
             "source_families": sorted(set(families)),
+            "source_family_classes": sorted(set(family_classes)),
+            "representation_contracts": representation_contracts,
+            "receiver_contract_kinds": sorted(set(receiver_contract_kinds)),
+            "materializer_contract_kinds": sorted(set(materializer_contract_kinds)),
+            "operation_portability": "family_agnostic",
             "selected_unit_ids": selected_unit_ids,
             "selected_operations": selected_operations,
             "chosen_operation_sequence": [dict(item) for item in selected_operations],
@@ -301,6 +528,21 @@ def build_mlx_acquisition_batch_from_selection(
                 "resource_kinds": sorted(
                     {str(item.get("resource_kind") or "") for item in operation_sets}
                 ),
+                "source_families": sorted(
+                    {
+                        family
+                        for item in operation_sets
+                        for family in item.get("source_families", [])
+                    }
+                ),
+                "source_family_classes": sorted(
+                    {
+                        family_class
+                        for item in operation_sets
+                        for family_class in item.get("source_family_classes", [])
+                    }
+                ),
+                "operation_portability": "family_agnostic",
             },
         },
         "mlx_acquisition_batch_is_planning_only",
@@ -347,6 +589,7 @@ def validate_mlx_acquisition_batch(batch: Mapping[str, Any]) -> dict[str, Any]:
 
 __all__ = [
     "OPERATION_SET_SCHEMA",
+    "REPRESENTATION_CONTRACT_SCHEMA",
     "SCHEMA_VERSION",
     "TOOL_NAME",
     "MLXAcquisitionBatchError",

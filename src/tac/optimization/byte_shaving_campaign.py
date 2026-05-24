@@ -33,8 +33,29 @@ PLAN_SCHEMA = "byte_shaving_campaign_plan.v1"
 COUPLED_OPERATION_SET_SCHEMA = "byte_shaving_coupled_operation_set.v1"
 TOOL_NAME = "tools/plan_byte_shaving_campaign.py"
 INVERSE_ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
+BYTE_SHAVING_OPERATION_SET_PROVENANCE_SCHEMA = (
+    "inverse_steganalysis_byte_shaving_operation_set_provenance.v1"
+)
+MLX_ACQUISITION_BATCH_OPERATION_SET_PROVENANCE_SCHEMA = (
+    "inverse_steganalysis_mlx_acquisition_batch_operation_set_provenance.v1"
+)
 RATE_MULTIPLIER = 25.0
 ENGINEERED_CORRECTION_TARGETING_SCHEMA = "master_gradient_consumer_engineered_correction_targeting_v1"
+OPERATION_METADATA_KEYS: tuple[str, ...] = (
+    "source_family",
+    "source_families",
+    "source_family_classes",
+    "representation_family",
+    "representation_family_class",
+    "representation_contract",
+    "representation_contracts",
+    "bolt_on_families",
+    "receiver_contract_kind",
+    "receiver_contract_kinds",
+    "materializer_contract_kind",
+    "materializer_contract_kinds",
+    "operation_portability",
+)
 
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
@@ -302,6 +323,16 @@ def _operation_target_kind(operation: Mapping[str, Any]) -> str | None:
     return None
 
 
+def _operation_metadata(operation: Mapping[str, Any]) -> dict[str, Any]:
+    """Preserve family/receiver metadata through planning permutations."""
+
+    return {
+        key: operation[key]
+        for key in OPERATION_METADATA_KEYS
+        if key in operation and operation[key] is not None
+    }
+
+
 def _operation_candidates(unit: Mapping[str, Any], unit_saved_bytes: int) -> list[dict[str, Any]]:
     explicit_operations = [item for item in _as_list(unit.get("operations")) if isinstance(item, Mapping)]
     raw_operations: list[Mapping[str, Any]] = explicit_operations or [
@@ -345,6 +376,7 @@ def _operation_candidates(unit: Mapping[str, Any], unit_saved_bytes: int) -> lis
                 "materializer": operation.get("materializer"),
                 "target_kind": _operation_target_kind(operation),
                 "operation_params": dict(_mapping(operation.get("params"))),
+                "operation_metadata": _operation_metadata(operation),
                 "blockers": blockers,
             }
         )
@@ -450,6 +482,7 @@ def normalize_unit_signal(unit: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_operation_target_kind": best_operation["target_kind"],
         "recommended_operation_priority": best_operation["operation_priority"],
         "recommended_operation_params": best_operation["operation_params"],
+        "recommended_operation_metadata": best_operation["operation_metadata"],
         "operation_families": ordered_unique(str(row["operation_family"]) for row in operation_candidates),
         "operation_candidates": operation_candidates,
         "score_axis": unit.get("score_axis") or unit.get("dominant_axis"),
@@ -549,6 +582,7 @@ def _selection_from_unit(unit: Mapping[str, Any], operation: Mapping[str, Any]) 
         "materializer": operation.get("materializer"),
         "target_kind": operation.get("target_kind"),
         "params": operation.get("operation_params") or {},
+        "operation_metadata": dict(_mapping(operation.get("operation_metadata"))),
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
@@ -615,6 +649,7 @@ def _combo_row(
                 "materializer": selection.get("materializer"),
                 "target_kind": selection.get("target_kind"),
                 "params": selection.get("params") or {},
+                **dict(_mapping(selection.get("operation_metadata"))),
                 "blockers": _as_list(selection.get("blockers")),
                 **FALSE_AUTHORITY,
             }
@@ -690,6 +725,7 @@ def _operation_sequence_record(
             "order_priority": _operation_priority(operation, priors),
             "materializer": operation.get("materializer"),
             "target_kind": operation.get("target_kind"),
+            **_operation_metadata(operation),
         }
         for operation in operations
     ]
@@ -709,6 +745,9 @@ def _operation_sequence_hash(sequence: Sequence[Mapping[str, Any]]) -> str:
             "operation_id": str(operation.get("operation_id") or ""),
             "operation_family": str(operation.get("operation_family") or ""),
             "unit_kind": str(operation.get("unit_kind") or ""),
+            "materializer": operation.get("materializer"),
+            "target_kind": operation.get("target_kind"),
+            **_operation_metadata(operation),
         }
         for operation in sequence
     ]
@@ -1038,6 +1077,7 @@ def _prefix_rows(
                         "materializer": row.get("recommended_operation_materializer"),
                         "target_kind": row.get("recommended_operation_target_kind"),
                         "params": row.get("recommended_operation_params") or {},
+                        **dict(_mapping(row.get("recommended_operation_metadata"))),
                         "blockers": _as_list(row.get("blockers")),
                         **FALSE_AUTHORITY,
                     }
@@ -1708,6 +1748,16 @@ def build_signal_surface_from_inverse_action_functional(
         expected_gain = _finite_float(selected.get("expected_score_gain")) or 0.0
         if expected_gain <= 0.0:
             continue
+        provenance_units = _units_from_inverse_action_source_provenance(
+            atom_id=atom_id,
+            selected=selected,
+            full_cell=full_cell,
+            source_index=index,
+            expected_gain=expected_gain,
+        )
+        if provenance_units:
+            units.extend(provenance_units)
+            continue
         operation = {
             "operation_id": "materialize_inverse_scorer_cell_candidate",
             "operation_family": "materialize_inverse_scorer_cell_candidate",
@@ -1785,6 +1835,195 @@ def build_signal_surface_from_inverse_action_functional(
         "units": units,
         "blockers": _as_list(action_payload.get("dispatch_blockers")),
         **FALSE_AUTHORITY,
+    }
+
+
+def _units_from_inverse_action_source_provenance(
+    *,
+    atom_id: str,
+    selected: Mapping[str, Any],
+    full_cell: Mapping[str, Any],
+    source_index: int,
+    expected_gain: float,
+) -> list[dict[str, Any]]:
+    provenance = _mapping(full_cell.get("source_provenance"))
+    if provenance.get("schema") not in {
+        BYTE_SHAVING_OPERATION_SET_PROVENANCE_SCHEMA,
+        MLX_ACQUISITION_BATCH_OPERATION_SET_PROVENANCE_SCHEMA,
+    }:
+        return []
+    operations = [
+        dict(item)
+        for item in _as_list(provenance.get("selected_operations"))
+        if isinstance(item, Mapping)
+    ]
+    if not operations:
+        return []
+    total_saved = _finite_int(provenance.get("candidate_saved_bytes"))
+    if total_saved is None:
+        total_saved = _finite_int(selected.get("water_fill_cost_bytes")) or 0
+    unit_count = len(operations)
+    units: list[dict[str, Any]] = []
+    for op_index, operation in enumerate(operations):
+        units.append(
+            _unit_from_inverse_action_operation_provenance(
+                operation,
+                provenance=provenance,
+                atom_id=atom_id,
+                selected=selected,
+                source_index=source_index,
+                op_index=op_index,
+                operation_count=unit_count,
+                total_saved=max(0, total_saved),
+                expected_gain=expected_gain,
+            )
+        )
+    return units
+
+
+def _unit_kind_from_operation(operation: Mapping[str, Any]) -> str:
+    unit_kind = str(operation.get("unit_kind") or "").strip()
+    if unit_kind in UNIT_KINDS:
+        return unit_kind
+    return "scorer_response_row"
+
+
+def _distributed_saved_bytes(
+    operation: Mapping[str, Any],
+    *,
+    op_index: int,
+    operation_count: int,
+    total_saved: int,
+    unit_kind: str,
+) -> int:
+    saved = _finite_int(operation.get("candidate_saved_bytes"))
+    if saved is not None and saved >= 0:
+        return saved
+    base = total_saved // max(1, operation_count)
+    if op_index < total_saved % max(1, operation_count):
+        base += 1
+    if base > 0 or unit_kind in {"scorer_response_row", "scorer_inverse_surface_cell"}:
+        return base
+    return 1
+
+
+def _operation_quality_delta_from_provenance(
+    operation: Mapping[str, Any],
+    *,
+    expected_gain: float,
+    operation_count: int,
+) -> float:
+    for key in (
+        "predicted_quality_score_delta",
+        "quality_delta_score",
+        "predicted_non_rate_delta_score",
+        "quality_cost_score",
+        "predicted_quality_score_cost",
+    ):
+        value = _finite_float(operation.get(key))
+        if value is not None:
+            return value
+    return -expected_gain / float(max(1, operation_count))
+
+
+def _unit_from_inverse_action_operation_provenance(
+    operation: Mapping[str, Any],
+    *,
+    provenance: Mapping[str, Any],
+    atom_id: str,
+    selected: Mapping[str, Any],
+    source_index: int,
+    op_index: int,
+    operation_count: int,
+    total_saved: int,
+    expected_gain: float,
+) -> dict[str, Any]:
+    unit_kind = _unit_kind_from_operation(operation)
+    saved_bytes = _distributed_saved_bytes(
+        operation,
+        op_index=op_index,
+        operation_count=operation_count,
+        total_saved=total_saved,
+        unit_kind=unit_kind,
+    )
+    operation_family = str(
+        operation.get("operation_family")
+        or operation.get("family")
+        or "materialize_scorer_response_candidate"
+    )
+    source_unit_id = str(operation.get("unit_id") or f"op{op_index:04d}")
+    operation_id = str(operation.get("operation_id") or f"{operation_family}_{op_index}")
+    metadata = {
+        **_operation_metadata(provenance),
+        **_operation_metadata(operation),
+    }
+    params = {
+        **dict(_mapping(operation.get("params"))),
+        "inverse_action_atom_id": atom_id,
+        "inverse_action_source_schema": provenance.get("schema"),
+        "inverse_action_operation_set_id": provenance.get("operation_set_id"),
+        "water_fill_cost_bytes": selected.get("water_fill_cost_bytes"),
+        "water_fill_cost_bytes_semantics": (
+            "planner_budget_cost_not_serialized_savings"
+        ),
+    }
+    blockers = ordered_unique(
+        [
+            *[str(item) for item in _as_list(operation.get("blockers"))],
+            "inverse_action_rehydrated_operation_is_planning_only",
+            "requires_byte_closed_archive_before_dispatch",
+            "requires_runtime_consumption_proof_before_exact_eval",
+            "requires_exact_auth_eval_before_score_claim",
+        ]
+    )
+    surface_operation = {
+        "operation_id": operation_id,
+        "operation_family": operation_family,
+        "candidate_saved_bytes": saved_bytes,
+        "predicted_quality_score_delta": _operation_quality_delta_from_provenance(
+            operation,
+            expected_gain=expected_gain,
+            operation_count=operation_count,
+        ),
+        "materializer": operation.get("materializer"),
+        "target_kind": operation.get("target_kind"),
+        "params": params,
+        **metadata,
+        "blockers": blockers,
+    }
+    return {
+        "unit_id": f"inverse_action_{atom_id}_{source_unit_id}_{op_index:04d}",
+        "unit_kind": unit_kind,
+        "source_index": source_index,
+        "candidate_saved_bytes": saved_bytes,
+        "predicted_quality_score_delta": surface_operation[
+            "predicted_quality_score_delta"
+        ],
+        "confidence": 0.5,
+        "operation_families": [operation_family],
+        "operations": [surface_operation],
+        "score_axis": selected.get("component") or "inverse_action",
+        "evidence_grade": "[planning-only inverse-steganalysis action]",
+        "evidence_semantics": "rehydrated_action_source_provenance",
+        "source_candidate_id": selected.get("candidate_id"),
+        "atom_ids": [atom_id],
+        "source_provenance_schema": provenance.get("schema"),
+        **metadata,
+        "inverse_action_cell": {
+            "euler_lagrange_residual": selected.get("euler_lagrange_residual"),
+            "water_fill_cost_bytes": selected.get("water_fill_cost_bytes"),
+            "water_fill_cost_bytes_semantics": (
+                "planner_budget_cost_not_serialized_savings"
+            ),
+            "scope_axis": selected.get("scope_axis"),
+            "component": selected.get("component"),
+        },
+        "blockers": [
+            "inverse_action_unit_is_planning_only",
+            "inverse_action_source_operations_rehydrated_from_provenance",
+            "requires_byte_closed_archive_before_dispatch",
+            "requires_exact_auth_eval_before_score_claim",
+        ],
     }
 
 

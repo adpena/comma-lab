@@ -180,6 +180,66 @@ def _mlx_selection(path: Path) -> None:
     )
 
 
+def _mlx_family_mix_selection(path: Path) -> None:
+    _mlx_selection(path)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    base = payload["selected_rows"][0]
+    rows = []
+    family_specs = [
+        {
+            "row_id": "hnerv_lc_ac_row",
+            "family": "hnerv_lc_ac",
+            "candidate_id": "mlx_scorer_response:hnerv_lc_ac",
+            "representation_family": "hnerv",
+            "representation_variant": "lc_ac",
+            "normalized_full_video_scorer_gain_vs_baseline": 0.000020,
+        },
+        {
+            "row_id": "boostnerv_overlay_row",
+            "family": "boostnerv_overlay",
+            "candidate_id": "mlx_scorer_response:boostnerv_overlay",
+            "representation_family": "boostnerv",
+            "substrate_family": "nerv_family",
+            "bolt_on_families": ["boostnerv"],
+            "normalized_full_video_scorer_gain_vs_baseline": 0.000019,
+        },
+        {
+            "row_id": "e_nerv_row",
+            "family": "e_nerv_motion",
+            "candidate_id": "mlx_scorer_response:e_nerv_motion",
+            "representation_family": "e_nerv",
+            "substrate_family": "nerv_family",
+            "normalized_full_video_scorer_gain_vs_baseline": 0.000018,
+        },
+        {
+            "row_id": "non_nerv_implicit_row",
+            "family": "generic_non_nerv_codec",
+            "candidate_id": "mlx_scorer_response:generic_non_nerv_codec",
+            "representation_family": "non_nerv",
+            "normalized_full_video_scorer_gain_vs_baseline": 0.000017,
+        },
+    ]
+    for rank, spec in enumerate(family_specs, start=1):
+        row = {
+            **base,
+            **spec,
+            "rank": rank,
+            "pair_indices": [rank * 2, rank * 2 + 1],
+            "source_pair_window": [rank * 2, rank * 2 + 1],
+            "source_path": f"candidate_pair_{rank}.json",
+        }
+        rows.append(row)
+    payload["selected_rows"] = rows
+    payload["selection_policy"]["families"] = [row["family"] for row in rows]
+    payload["selection_policy"]["gate_spend_triage_allowed_families"] = [
+        row["family"] for row in rows
+    ]
+    payload["summary"]["dataset_row_count"] = len(rows)
+    payload["summary"]["eligible_row_count"] = len(rows)
+    payload["summary"]["selected_count"] = len(rows)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def _byte_shaving_signal_surface(path: Path) -> None:
     false_authority = _false_authority()
     path.write_text(
@@ -579,6 +639,90 @@ def test_cli_accepts_grouped_mlx_acquisition_batch(tmp_path: Path) -> None:
         assert cell[key] is value
         assert provenance[key] is value
         assert action[key] is value
+
+
+def test_grouped_mlx_batch_preserves_family_agnostic_representation_contracts(
+    tmp_path: Path,
+) -> None:
+    selection = tmp_path / "selection.json"
+    batch = tmp_path / "mlx_batch.json"
+    output = tmp_path / "action.json"
+    _mlx_family_mix_selection(selection)
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(BATCH_TOOL),
+            "--mlx-effective-spend-triage-selection",
+            str(selection),
+            "--output",
+            str(batch),
+            "--repo-root",
+            str(tmp_path),
+            "--set-size",
+            "4",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    batch_payload = json.loads(batch.read_text(encoding="utf-8"))
+    operation_set = batch_payload["operation_sets"][0]
+    family_classes = [
+        "boostnerv_bolton",
+        "hnerv_variant",
+        "nerv_family",
+        "non_nerv",
+    ]
+    assert operation_set["source_family_classes"] == family_classes
+    assert batch_payload["summary"]["source_family_classes"] == family_classes
+    contracts = operation_set["representation_contracts"]
+    assert {contract["representation_family_class"] for contract in contracts} == set(
+        family_classes
+    )
+    boost_contract = next(
+        contract
+        for contract in contracts
+        if contract["representation_family_class"] == "boostnerv_bolton"
+    )
+    assert boost_contract["bolt_on_families"] == ["boostnerv"]
+    assert operation_set["operation_portability"] == "family_agnostic"
+    assert all(
+        operation["representation_contract"]["schema"]
+        == "mlx_acquisition_representation_contract.v1"
+        for operation in operation_set["selected_operations"]
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--mlx-acquisition-batch",
+            str(batch),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(tmp_path),
+            "--total-byte-budget",
+            "256",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    action = json.loads(output.read_text(encoding="utf-8"))
+    provenance = action["cells"][0]["source_provenance"]
+    assert provenance["source_family_classes"] == family_classes
+    assert provenance["operation_portability"] == "family_agnostic"
+    assert provenance["representation_contracts"] == contracts
+    assert all(
+        kind.startswith("family_agnostic_")
+        for kind in provenance["receiver_contract_kinds"]
+    )
+    for key, value in PROXY_FALSE_AUTHORITY_FIELDS.items():
+        assert action[key] is value
+        assert provenance[key] is value
 
 
 def test_cli_accepts_byte_shaving_signal_surface_for_family_mix(

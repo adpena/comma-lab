@@ -29,7 +29,10 @@ from comma_lab.scheduler.byte_shaving_campaign_queue import (
 from comma_lab.scheduler.byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER,
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND,
     ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND,
+    ARCHIVE_SECTION_REORDER_MATERIALIZER,
+    ARCHIVE_SECTION_REORDER_TARGET_KIND,
     BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER,
     BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID,
     BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND,
@@ -46,10 +49,16 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     INVERSE_SCORER_CELL_RECEIVER_CONTRACT_ID,
     INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND,
     INVERSE_SCORER_CELL_TARGET_KIND,
+    PACKET_MEMBER_MERGE_MATERIALIZER,
+    PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+    PACKET_MEMBER_REORDER_TARGET_KIND,
+    PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     TENSOR_FACTORIZE_MATERIALIZER,
     TENSOR_FACTORIZE_TARGET_KIND,
+    TENSOR_PRUNE_MATERIALIZER,
+    TENSOR_PRUNE_TARGET_KIND,
     TENSOR_QUANTIZE_MATERIALIZER,
     TENSOR_QUANTIZE_TARGET_KIND,
     TENSOR_SHARED_CODEBOOK_TARGET_KIND,
@@ -329,13 +338,19 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
     assert manifest["schema"] == "byte_shaving_materializer_registry.v1"
     assert manifest["known_target_kinds"] == [
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND,
         ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND,
+        ARCHIVE_SECTION_REORDER_TARGET_KIND,
         BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
         DQS1_PAIRSET_TARGET_KIND,
         INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
         INVERSE_SCORER_CELL_TARGET_KIND,
+        PACKET_MEMBER_MERGE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        PACKET_MEMBER_REORDER_TARGET_KIND,
+        PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
         TENSOR_FACTORIZE_TARGET_KIND,
+        TENSOR_PRUNE_TARGET_KIND,
         TENSOR_QUANTIZE_TARGET_KIND,
         TENSOR_SHARED_CODEBOOK_TARGET_KIND,
     ]
@@ -608,6 +623,34 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
         ),
         (
             {
+                "unit_id": "boostnerv_inactive_tensor",
+                "operation_id": "prune_boostnerv_inactive_tensor",
+                "operation_family": "prune_tensor",
+                "target_kind": TENSOR_PRUNE_TARGET_KIND,
+            },
+            {
+                "unit_id": "boostnerv_inactive_tensor",
+                "unit_kind": "tensor",
+            },
+            TENSOR_PRUNE_MATERIALIZER,
+            "local_cpu",
+        ),
+        (
+            {
+                "unit_id": "hnerv_section_order",
+                "operation_id": "reorder_hnerv_sections",
+                "operation_family": "section_reorder",
+                "target_kind": ARCHIVE_SECTION_REORDER_TARGET_KIND,
+            },
+            {
+                "unit_id": "hnerv_section_order",
+                "unit_kind": "archive_section",
+            },
+            ARCHIVE_SECTION_REORDER_MATERIALIZER,
+            "local_cpu",
+        ),
+        (
+            {
                 "unit_id": "nerv_latent_tensor",
                 "operation_id": "quantize_nerv_latent_tensor",
                 "operation_family": "quantize_tensor",
@@ -632,6 +675,20 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
                 "unit_kind": "packet_member",
             },
             PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
+            "local_cpu",
+        ),
+        (
+            {
+                "unit_id": "bolton_side_member",
+                "operation_id": "merge_bolton_side_member",
+                "operation_family": "member_merge",
+                "target_kind": PACKET_MEMBER_MERGE_TARGET_KIND,
+            },
+            {
+                "unit_id": "bolton_side_member",
+                "unit_kind": "packet_member",
+            },
+            PACKET_MEMBER_MERGE_MATERIALIZER,
             "local_cpu",
         ),
     ]

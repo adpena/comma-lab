@@ -318,6 +318,39 @@ def test_materializer_campaign_runner_treats_mlx_acquisition_batch_as_action_sou
     assert str(mlx_batch) in command
 
 
+def test_materializer_campaign_runner_forwards_family_byte_shaving_sources(
+    tmp_path: Path,
+) -> None:
+    surface = tmp_path / "family_surface.json"
+    campaign_plan = tmp_path / "family_campaign_plan.json"
+    surface.write_text("{}", encoding="utf-8")
+    campaign_plan.write_text("{}", encoding="utf-8")
+    args = runner.parse_args(
+        [
+            "--byte-shaving-signal-surface",
+            str(surface),
+            "--byte-shaving-campaign-plan",
+            str(campaign_plan),
+            "--run-dir",
+            str(tmp_path / "campaign"),
+            "--campaign-id",
+            "family_mix_runner",
+        ]
+    )
+
+    command = runner._build_action_functional_command(
+        args,
+        run_dir=tmp_path / "campaign",
+    )
+
+    assert runner._action_source_count(args) == 2
+    assert "--byte-shaving-signal-surface" in command
+    assert str(surface) in command
+    assert "--byte-shaving-campaign-plan" in command
+    assert str(campaign_plan) in command
+    assert "--candidate-id" not in command
+
+
 def test_materializer_campaign_runner_builds_mlx_batch_from_selection_inline(
     tmp_path: Path,
 ) -> None:

@@ -2026,6 +2026,19 @@ def _mlx_acquisition_operation_set_provenance(
             "selected_unit_ids": _list_strings(operation_set.get("selected_unit_ids")),
             "operation_families": _list_strings(operation_set.get("operation_families")),
             "source_families": _list_strings(operation_set.get("source_families")),
+            "source_family_classes": _list_strings(
+                operation_set.get("source_family_classes")
+            ),
+            "representation_contracts": _sequence_of_mappings(
+                operation_set.get("representation_contracts")
+            ),
+            "receiver_contract_kinds": _list_strings(
+                operation_set.get("receiver_contract_kinds")
+            ),
+            "materializer_contract_kinds": _list_strings(
+                operation_set.get("materializer_contract_kinds")
+            ),
+            "operation_portability": operation_set.get("operation_portability"),
             "selected_operations": _sequence_of_mappings(
                 operation_set.get("selected_operations")
             ),

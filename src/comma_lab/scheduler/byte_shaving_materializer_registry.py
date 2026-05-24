@@ -43,16 +43,28 @@ INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_KIND = (
 )
 ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER = "archive_section_entropy_recode_adapter"
 ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND = "archive_section_entropy_recode_v1"
+ARCHIVE_SECTION_HEADER_ELIDE_MATERIALIZER = "archive_section_header_elide_adapter"
+ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND = "archive_section_header_elide_v1"
+ARCHIVE_SECTION_REORDER_MATERIALIZER = "archive_section_reorder_adapter"
+ARCHIVE_SECTION_REORDER_TARGET_KIND = "archive_section_reorder_v1"
 ARCHIVE_SECTION_PROCEDURALIZE_MATERIALIZER = "archive_section_proceduralize_adapter"
 ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND = "archive_section_proceduralize_v1"
 TENSOR_QUANTIZE_MATERIALIZER = "tensor_quantize_adapter"
 TENSOR_QUANTIZE_TARGET_KIND = "tensor_quantize_v1"
+TENSOR_PRUNE_MATERIALIZER = "tensor_prune_adapter"
+TENSOR_PRUNE_TARGET_KIND = "tensor_prune_v1"
 TENSOR_FACTORIZE_MATERIALIZER = "tensor_factorize_adapter"
 TENSOR_FACTORIZE_TARGET_KIND = "tensor_factorize_v1"
 TENSOR_SHARED_CODEBOOK_MATERIALIZER = "tensor_shared_codebook_adapter"
 TENSOR_SHARED_CODEBOOK_TARGET_KIND = "tensor_shared_codebook_v1"
+PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER = "packet_member_zip_header_elide_adapter"
+PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND = "packet_member_zip_header_elide_v1"
 PACKET_MEMBER_RECOMPRESS_MATERIALIZER = "packet_member_recompress_adapter"
 PACKET_MEMBER_RECOMPRESS_TARGET_KIND = "packet_member_recompress_v1"
+PACKET_MEMBER_REORDER_MATERIALIZER = "packet_member_reorder_adapter"
+PACKET_MEMBER_REORDER_TARGET_KIND = "packet_member_reorder_v1"
+PACKET_MEMBER_MERGE_MATERIALIZER = "packet_member_merge_adapter"
+PACKET_MEMBER_MERGE_TARGET_KIND = "packet_member_merge_v1"
 
 
 @dataclass(frozen=True)
@@ -241,6 +253,40 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         ),
     ),
     _non_executable_family_adapter(
+        materializer_id=ARCHIVE_SECTION_HEADER_ELIDE_MATERIALIZER,
+        unit_kind="archive_section",
+        operation_family="section_header_elide",
+        target_kind=ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND,
+        description=(
+            "Fail-closed contract for archive-section header elision across "
+            "HNeRV/BoostNeRV/NeRV and non-NeRV payload grammars."
+        ),
+        receiver_contract_kind="family_agnostic_archive_section_header_elide",
+        required_context_fields=(
+            "archive_path",
+            "section_manifest",
+            "header_elision_contract",
+            "runtime_consumption_proof",
+        ),
+    ),
+    _non_executable_family_adapter(
+        materializer_id=ARCHIVE_SECTION_REORDER_MATERIALIZER,
+        unit_kind="archive_section",
+        operation_family="section_reorder",
+        target_kind=ARCHIVE_SECTION_REORDER_TARGET_KIND,
+        description=(
+            "Fail-closed contract for deterministic archive-section reordering "
+            "when the receiver grammar proves order independence or remapping."
+        ),
+        receiver_contract_kind="family_agnostic_archive_section_reorder",
+        required_context_fields=(
+            "archive_path",
+            "section_manifest",
+            "section_order_contract",
+            "runtime_consumption_proof",
+        ),
+    ),
+    _non_executable_family_adapter(
         materializer_id=ARCHIVE_SECTION_PROCEDURALIZE_MATERIALIZER,
         unit_kind="archive_section",
         operation_family="section_proceduralize",
@@ -272,6 +318,23 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
             "archive_path",
             "tensor_manifest",
             "quantization_contract",
+            "runtime_consumption_proof",
+        ),
+    ),
+    _non_executable_family_adapter(
+        materializer_id=TENSOR_PRUNE_MATERIALIZER,
+        unit_kind="tensor",
+        operation_family="prune_tensor",
+        target_kind=TENSOR_PRUNE_TARGET_KIND,
+        description=(
+            "Fail-closed contract for pruning inactive representation tensors "
+            "across NeRV-family, BoostNeRV bolt-ons, and non-NeRV learned codecs."
+        ),
+        receiver_contract_kind="family_agnostic_tensor_prune",
+        required_context_fields=(
+            "archive_path",
+            "tensor_manifest",
+            "pruning_contract",
             "runtime_consumption_proof",
         ),
     ),
@@ -310,6 +373,23 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         ),
     ),
     _non_executable_family_adapter(
+        materializer_id=PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER,
+        unit_kind="packet_member",
+        operation_family="zip_header_elide",
+        target_kind=PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+        description=(
+            "Fail-closed contract for ZIP/member header elision when the "
+            "contest runtime can reconstruct deterministic header state."
+        ),
+        receiver_contract_kind="family_agnostic_packet_member_zip_header_elide",
+        required_context_fields=(
+            "archive_path",
+            "packet_member_manifest",
+            "zip_header_contract",
+            "runtime_consumption_proof",
+        ),
+    ),
+    _non_executable_family_adapter(
         materializer_id=PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
         unit_kind="packet_member",
         operation_family="member_recompress",
@@ -322,6 +402,40 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         required_context_fields=(
             "archive_path",
             "packet_member_manifest",
+            "runtime_consumption_proof",
+        ),
+    ),
+    _non_executable_family_adapter(
+        materializer_id=PACKET_MEMBER_REORDER_MATERIALIZER,
+        unit_kind="packet_member",
+        operation_family="member_reorder",
+        target_kind=PACKET_MEMBER_REORDER_TARGET_KIND,
+        description=(
+            "Fail-closed contract for packet-member ordering changes guarded by "
+            "receiver-side member lookup proof."
+        ),
+        receiver_contract_kind="family_agnostic_packet_member_reorder",
+        required_context_fields=(
+            "archive_path",
+            "packet_member_manifest",
+            "member_order_contract",
+            "runtime_consumption_proof",
+        ),
+    ),
+    _non_executable_family_adapter(
+        materializer_id=PACKET_MEMBER_MERGE_MATERIALIZER,
+        unit_kind="packet_member",
+        operation_family="member_merge",
+        target_kind=PACKET_MEMBER_MERGE_TARGET_KIND,
+        description=(
+            "Fail-closed contract for merging side members or bolted-on payload "
+            "members into a deterministic receiver-visible packet member."
+        ),
+        receiver_contract_kind="family_agnostic_packet_member_merge",
+        required_context_fields=(
+            "archive_path",
+            "packet_member_manifest",
+            "member_merge_contract",
             "runtime_consumption_proof",
         ),
     ),
@@ -554,8 +668,12 @@ def registry_manifest() -> dict[str, Any]:
 __all__ = [
     "ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER",
     "ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND",
+    "ARCHIVE_SECTION_HEADER_ELIDE_MATERIALIZER",
+    "ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND",
     "ARCHIVE_SECTION_PROCEDURALIZE_MATERIALIZER",
     "ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND",
+    "ARCHIVE_SECTION_REORDER_MATERIALIZER",
+    "ARCHIVE_SECTION_REORDER_TARGET_KIND",
     "BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER",
     "BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID",
     "BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND",
@@ -573,11 +691,19 @@ __all__ = [
     "INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND",
     "INVERSE_SCORER_CELL_TARGET_KIND",
     "KNOWN_OPERATION_FAMILIES",
+    "PACKET_MEMBER_MERGE_MATERIALIZER",
+    "PACKET_MEMBER_MERGE_TARGET_KIND",
     "PACKET_MEMBER_RECOMPRESS_MATERIALIZER",
     "PACKET_MEMBER_RECOMPRESS_TARGET_KIND",
+    "PACKET_MEMBER_REORDER_MATERIALIZER",
+    "PACKET_MEMBER_REORDER_TARGET_KIND",
+    "PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER",
+    "PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND",
     "REGISTRY_SCHEMA",
     "TENSOR_FACTORIZE_MATERIALIZER",
     "TENSOR_FACTORIZE_TARGET_KIND",
+    "TENSOR_PRUNE_MATERIALIZER",
+    "TENSOR_PRUNE_TARGET_KIND",
     "TENSOR_QUANTIZE_MATERIALIZER",
     "TENSOR_QUANTIZE_TARGET_KIND",
     "TENSOR_SHARED_CODEBOOK_MATERIALIZER",

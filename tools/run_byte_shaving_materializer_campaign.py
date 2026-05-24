@@ -190,6 +190,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--candidate-id", default=None)
     parser.add_argument("--scorer-response", action="append", default=[])
     parser.add_argument("--inverse-scorer-surface", action="append", default=[])
+    parser.add_argument("--byte-shaving-signal-surface", action="append", default=[])
+    parser.add_argument("--byte-shaving-campaign-plan", action="append", default=[])
     parser.add_argument("--mlx-acquisition-batch", action="append", default=[])
     parser.add_argument("--mlx-effective-spend-triage-selection", action="append", default=[])
     parser.add_argument(
@@ -333,6 +335,8 @@ def _action_source_count(args: argparse.Namespace) -> int:
         for name in (
             "scorer_response",
             "inverse_scorer_surface",
+            "byte_shaving_signal_surface",
+            "byte_shaving_campaign_plan",
             "mlx_acquisition_batch",
             "mlx_effective_spend_triage_selection",
             "atom",
@@ -350,6 +354,7 @@ def _require_plan_path(args: argparse.Namespace, plan_path: Path | None = None) 
         raise SystemExit(
             "provide --plan or high-level action sources such as "
             "--scorer-response, --inverse-scorer-surface, "
+            "--byte-shaving-signal-surface, --byte-shaving-campaign-plan, "
             "--mlx-acquisition-batch, --mlx-effective-spend-triage-selection, "
             "or --atom"
         )
@@ -417,6 +422,16 @@ def _build_action_functional_command(
     ]
     _append_path_args(command, "--scorer-response", args.scorer_response)
     _append_path_args(command, "--inverse-scorer-surface", args.inverse_scorer_surface)
+    _append_path_args(
+        command,
+        "--byte-shaving-signal-surface",
+        args.byte_shaving_signal_surface,
+    )
+    _append_path_args(
+        command,
+        "--byte-shaving-campaign-plan",
+        args.byte_shaving_campaign_plan,
+    )
     _append_path_args(command, "--mlx-acquisition-batch", args.mlx_acquisition_batch)
     _append_path_args(
         command,
@@ -751,6 +766,7 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(
             "provide --plan or high-level action sources such as "
             "--scorer-response, --inverse-scorer-surface, "
+            "--byte-shaving-signal-surface, --byte-shaving-campaign-plan, "
             "--mlx-acquisition-batch, --mlx-effective-spend-triage-selection, "
             "or --atom"
         )

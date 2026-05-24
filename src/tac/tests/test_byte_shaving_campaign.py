@@ -200,6 +200,29 @@ def test_plan_exposes_bounded_operation_permutation_ladder() -> None:
     )
 
 
+def test_operation_sequence_hash_includes_family_materializer_identity() -> None:
+    surface = _surface()
+    surface["units"][0]["operations"][0]["representation_family_class"] = (
+        "hnerv_variant"
+    )
+    first = build_byte_shaving_campaign_plan(surface, max_k=3)
+    first_set = first["operation_set_ladder"][0]
+
+    surface["units"][0]["operations"][0]["representation_family_class"] = "non_nerv"
+    second = build_byte_shaving_campaign_plan(surface, max_k=3)
+    second_set = second["operation_set_ladder"][0]
+
+    assert first_set["chosen_operation_sequence"][0][
+        "representation_family_class"
+    ] == "hnerv_variant"
+    assert second_set["chosen_operation_sequence"][0][
+        "representation_family_class"
+    ] == "non_nerv"
+    assert first_set["chosen_operation_sequence_sha256"] != second_set[
+        "chosen_operation_sequence_sha256"
+    ]
+
+
 def test_prefix_ladder_marks_conflicting_prefixes_and_does_not_recommend_them() -> None:
     plan = build_byte_shaving_campaign_plan(_surface(), max_k=3)
     conflicting = next(row for row in plan["sweep_ladder"] if row["sweep_id"] == "top_0003")
@@ -304,6 +327,89 @@ def test_inverse_action_functional_converts_to_plannable_surface() -> None:
     assert ranked["recommended_operation_target_kind"] == ("inverse_scorer_cell_candidate_v1")
     assert plan["recommended_prefix"]["selected_unit_ids"] == ["inverse_action_inverse_surface_pair0007"]
     assert plan["score_claim"] is False
+
+
+def test_inverse_action_functional_rehydrates_family_operations_from_provenance() -> None:
+    payload = _inverse_action_payload()
+    payload["cells"] = [
+        {
+            "atom_id": "mlx_family_opset",
+            "source_provenance": {
+                "schema": (
+                    "inverse_steganalysis_mlx_acquisition_batch_operation_set_provenance.v1"
+                ),
+                "operation_set_id": "mlx_family_set",
+                "candidate_saved_bytes": 900,
+                "source_family_classes": [
+                    "hnerv_variant",
+                    "boostnerv_bolton",
+                    "non_nerv",
+                ],
+                "receiver_contract_kinds": [
+                    "family_agnostic_hnerv_variant_mlx_candidate_receiver",
+                    "family_agnostic_boostnerv_bolton_mlx_candidate_receiver",
+                    "family_agnostic_non_nerv_mlx_candidate_receiver",
+                ],
+                "operation_portability": "family_agnostic",
+                "selected_operations": [
+                    {
+                        "unit_id": "hnerv_section",
+                        "unit_kind": "archive_section",
+                        "operation_id": "hnerv_recode",
+                        "operation_family": "section_entropy_recode",
+                        "target_kind": "archive_section_entropy_recode_v1",
+                        "candidate_saved_bytes": 300,
+                        "predicted_quality_score_delta": -0.00005,
+                        "representation_family_class": "hnerv_variant",
+                        "receiver_contract_kind": (
+                            "family_agnostic_hnerv_variant_mlx_candidate_receiver"
+                        ),
+                    },
+                    {
+                        "unit_id": "boost_tensor",
+                        "unit_kind": "tensor",
+                        "operation_id": "boost_factorize",
+                        "operation_family": "factorize_tensor",
+                        "target_kind": "tensor_factorize_v1",
+                        "candidate_saved_bytes": 300,
+                        "predicted_quality_score_delta": -0.00005,
+                        "representation_family_class": "boostnerv_bolton",
+                        "bolt_on_families": ["boostnerv"],
+                    },
+                    {
+                        "unit_id": "packet_member",
+                        "unit_kind": "packet_member",
+                        "operation_id": "packet_recompress",
+                        "operation_family": "member_recompress",
+                        "target_kind": "packet_member_recompress_v1",
+                        "candidate_saved_bytes": 300,
+                        "predicted_quality_score_delta": -0.00005,
+                        "representation_family_class": "non_nerv",
+                    },
+                ],
+            },
+        }
+    ]
+    payload["water_bucket"]["selected_cells"][0]["atom_id"] = "mlx_family_opset"
+
+    surface = build_signal_surface_from_inverse_action_functional(payload)
+    plan = build_byte_shaving_campaign_plan(surface, max_k=3)
+    op_set = plan["operation_set_ladder"][0]
+
+    assert [unit["unit_kind"] for unit in surface["units"]] == [
+        "archive_section",
+        "tensor",
+        "packet_member",
+    ]
+    assert {
+        operation["representation_family_class"]
+        for operation in op_set["selected_operations"]
+    } == {"hnerv_variant", "boostnerv_bolton", "non_nerv"}
+    assert "section_entropy_recode" in op_set["operation_families"]
+    assert "factorize_tensor" in op_set["operation_families"]
+    assert "member_recompress" in op_set["operation_families"]
+    assert op_set["score_claim"] is False
+    assert plan["ready_for_exact_eval_dispatch"] is False
 
 
 def test_inverse_action_units_compose_with_non_inverse_combination_ladder() -> None:
