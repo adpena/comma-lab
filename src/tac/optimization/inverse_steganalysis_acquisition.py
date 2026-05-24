@@ -233,6 +233,10 @@ def normalize_inverse_steganalysis_atom(row: Mapping[str, Any]) -> dict[str, Any
         "artifact_bytes": _int(row.get("artifact_bytes", row.get("source_artifact_bytes", 0)), "artifact_bytes", minimum=0),
         "resource_kind": _resource(row.get("resource_kind", "local_cpu")),
         "source_provenance": _optional_mapping(row.get("source_provenance"), "source_provenance"),
+        "operation_set_compiler": _optional_mapping(
+            row.get("operation_set_compiler"),
+            "operation_set_compiler",
+        ),
         "candidate_generation_only": True,
         "planning_only": True,
         "allowed_use": "planning_rank_for_candidate_generation_or_exact_eval_followup",
@@ -854,6 +858,7 @@ def build_discrete_scorer_action_functional(
                         else None
                     ),
                     "source_provenance": atom.get("source_provenance"),
+                    "operation_set_compiler": atom.get("operation_set_compiler"),
                     "priority": priority,
                 },
                 "inverse_steganalysis_action_cell_is_planning_only",

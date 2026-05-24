@@ -60,6 +60,27 @@ INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER = (
     "inverse_steganalysis_operation_set_compiler_required"
 )
 PACKET_IR_OPERATION_SCHEMA = "packet_ir_operation_v1"
+INVERSE_ACTION_COMPILED_OPERATION_SET_MODE = "compiled_operation_set"
+INVERSE_ACTION_COMPILER_TARGET_DEFAULTS: dict[str, dict[str, str]] = {
+    "archive_section_entropy_recode_v1": {
+        "unit_kind": "archive_section",
+        "operation_family": "section_entropy_recode",
+        "materializer": "archive_section_entropy_recode_adapter",
+        "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+    },
+    "packet_member_recompress_v1": {
+        "unit_kind": "packet_member",
+        "operation_family": "member_recompress",
+        "materializer": "packet_member_recompress_adapter",
+        "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+    },
+    "tensor_factorize_v1": {
+        "unit_kind": "tensor",
+        "operation_family": "factorize_tensor",
+        "materializer": "tensor_factorize_adapter",
+        "receiver_contract_kind": "family_agnostic_tensor_factorize",
+    },
+}
 RATE_MULTIPLIER = 25.0
 ENGINEERED_CORRECTION_TARGETING_SCHEMA = "master_gradient_consumer_engineered_correction_targeting_v1"
 OPERATION_METADATA_KEYS: tuple[str, ...] = (
@@ -1072,6 +1093,26 @@ def _packet_ir_lowered_operation(
     }
 
 
+def _packet_ir_operation_source(
+    chosen_sequence: Sequence[Mapping[str, Any]],
+    selected_operations: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    if not chosen_sequence:
+        return [dict(operation) for operation in selected_operations]
+    selected_by_key = {
+        _operation_sequence_key(operation): operation
+        for operation in selected_operations
+    }
+    out: list[dict[str, Any]] = []
+    for sequence_operation in chosen_sequence:
+        operation = dict(
+            selected_by_key.get(_operation_sequence_key(sequence_operation), {})
+        )
+        operation.update(dict(sequence_operation))
+        out.append(operation)
+    return out
+
+
 def _packet_ir_operation_set_from_coupled_set(
     operation_set: Mapping[str, Any],
     *,
@@ -1089,7 +1130,10 @@ def _packet_ir_operation_set_from_coupled_set(
         for item in _as_list(operation_set.get("selected_operations"))
         if isinstance(item, Mapping)
     ]
-    operation_source = chosen_sequence or selected_operations
+    operation_source = _packet_ir_operation_source(
+        chosen_sequence,
+        selected_operations,
+    )
     lowered_operations = [
         _packet_ir_lowered_operation(operation, order_index=index)
         for index, operation in enumerate(operation_source)
@@ -1527,7 +1571,11 @@ def _inverse_action_portfolio_row_links(
                 ],
                 "packet_ir_lowering_ready": bool(matched_packet_ir),
                 "queue_consumable": (
-                    actuation_mode == "source_provenance_operation_set"
+                    actuation_mode
+                    in {
+                        "source_provenance_operation_set",
+                        INVERSE_ACTION_COMPILED_OPERATION_SET_MODE,
+                    }
                     and bool(matched_packet_ir)
                 ),
                 "blockers": ordered_unique(blockers),
@@ -1622,6 +1670,10 @@ def build_inverse_action_materialization_bridge(
         "leaf_cell_candidate_explicit_opt_in",
         0,
     )
+    compiled_operation_set_count = actuation_mode_counts.get(
+        INVERSE_ACTION_COMPILED_OPERATION_SET_MODE,
+        0,
+    )
     dispatch_blockers = [
         *BASE_BLOCKERS,
         *[str(item) for item in _as_list(plan_payload.get("dispatch_blockers"))],
@@ -1673,6 +1725,7 @@ def build_inverse_action_materialization_bridge(
         },
         "high_level_operation_compiler_required_count": compiler_required_count,
         "source_provenance_operation_set_count": source_provenance_count,
+        "compiled_operation_set_count": compiled_operation_set_count,
         "leaf_cell_candidate_count": leaf_cell_count,
         "packet_ir_operation_set_count": len(packet_ir_operation_sets),
         "packet_ir_byte_closed_operation_count": sum(
@@ -2265,6 +2318,53 @@ def build_signal_surface_from_inverse_action_functional(
                 )
             )
             continue
+        compiled_provenance = _compile_inverse_action_operation_set_provenance(
+            atom_id=atom_id,
+            selected=selected,
+            full_cell=full_cell,
+            source_index=index,
+            expected_gain=expected_gain,
+        )
+        compiled_units = _units_from_inverse_action_provenance(
+            compiled_provenance,
+            atom_id=atom_id,
+            selected=selected,
+            source_index=index,
+            expected_gain=expected_gain,
+        )
+        if compiled_units:
+            units.extend(compiled_units)
+            portfolio_rows.append(
+                _inverse_action_portfolio_row(
+                    selected=selected,
+                    full_cell=full_cell,
+                    atom_id=atom_id,
+                    source_index=index,
+                    expected_gain=expected_gain,
+                    actuation_mode=INVERSE_ACTION_COMPILED_OPERATION_SET_MODE,
+                    unit_ids=[str(unit["unit_id"]) for unit in compiled_units],
+                    operation_families=[
+                        str(unit.get("operation_families", [""])[0])
+                        for unit in compiled_units
+                    ],
+                    target_kinds=[
+                        str(
+                            _as_list(unit.get("operations"))[0].get("target_kind")
+                        )
+                        for unit in compiled_units
+                        if _as_list(unit.get("operations"))
+                        and isinstance(_as_list(unit.get("operations"))[0], Mapping)
+                        and _as_list(unit.get("operations"))[0].get("target_kind")
+                    ],
+                    blockers=[
+                        "compiled_from_inverse_action_operation_set_compiler",
+                        "requires_materializer_queue_execution",
+                        "requires_runtime_consumption_proof_before_exact_eval",
+                        "requires_exact_auth_eval_before_score_claim",
+                    ],
+                )
+            )
+            continue
         if not allow_leaf_cell_candidates:
             units.append(
                 _high_level_operation_compiler_gap_unit(
@@ -2404,6 +2504,12 @@ def build_signal_surface_from_inverse_action_functional(
                     for row in portfolio_rows
                     if row["actuation_mode"] == "leaf_cell_candidate_explicit_opt_in"
                 ),
+                "compiled_operation_set_count": sum(
+                    1
+                    for row in portfolio_rows
+                    if row["actuation_mode"]
+                    == INVERSE_ACTION_COMPILED_OPERATION_SET_MODE
+                ),
                 **FALSE_AUTHORITY,
             }
         ],
@@ -2534,6 +2640,23 @@ def _units_from_inverse_action_source_provenance(
     expected_gain: float,
 ) -> list[dict[str, Any]]:
     provenance = _mapping(full_cell.get("source_provenance"))
+    return _units_from_inverse_action_provenance(
+        provenance,
+        atom_id=atom_id,
+        selected=selected,
+        source_index=source_index,
+        expected_gain=expected_gain,
+    )
+
+
+def _units_from_inverse_action_provenance(
+    provenance: Mapping[str, Any],
+    *,
+    atom_id: str,
+    selected: Mapping[str, Any],
+    source_index: int,
+    expected_gain: float,
+) -> list[dict[str, Any]]:
     if provenance.get("schema") not in {
         BYTE_SHAVING_OPERATION_SET_PROVENANCE_SCHEMA,
         MLX_ACQUISITION_BATCH_OPERATION_SET_PROVENANCE_SCHEMA,
@@ -2566,6 +2689,197 @@ def _units_from_inverse_action_source_provenance(
             )
         )
     return units
+
+
+def _compiler_mapping(
+    *,
+    selected: Mapping[str, Any],
+    full_cell: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    for key in (
+        "operation_set_compiler",
+        "operation_set_compiler_hint",
+        "compiler_hint",
+    ):
+        value = selected.get(key)
+        if isinstance(value, Mapping):
+            return value
+        value = full_cell.get(key)
+        if isinstance(value, Mapping):
+            return value
+    return {}
+
+
+def _compiler_target_defaults(target_kind: Any) -> Mapping[str, str]:
+    return INVERSE_ACTION_COMPILER_TARGET_DEFAULTS.get(str(target_kind or ""), {})
+
+
+def _compiler_target_kind(
+    raw_operation: Mapping[str, Any],
+    compiler: Mapping[str, Any],
+) -> str:
+    target_kind = str(
+        raw_operation.get("target_kind") or compiler.get("target_kind") or ""
+    ).strip()
+    if target_kind:
+        return target_kind
+    operation_family = str(
+        raw_operation.get("operation_family")
+        or compiler.get("operation_family")
+        or ""
+    ).strip()
+    unit_kind = str(
+        raw_operation.get("unit_kind") or compiler.get("unit_kind") or ""
+    ).strip()
+    for candidate_target, defaults in INVERSE_ACTION_COMPILER_TARGET_DEFAULTS.items():
+        if operation_family == defaults["operation_family"]:
+            return candidate_target
+        if unit_kind == defaults["unit_kind"]:
+            return candidate_target
+    return ""
+
+
+def _raw_compiler_operations(compiler: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    explicit = [
+        item
+        for item in _as_list(compiler.get("selected_operations"))
+        if isinstance(item, Mapping)
+    ]
+    if explicit:
+        return explicit
+    return [compiler]
+
+
+def _compile_inverse_action_operation_set_provenance(
+    *,
+    atom_id: str,
+    selected: Mapping[str, Any],
+    full_cell: Mapping[str, Any],
+    source_index: int,
+    expected_gain: float,
+) -> dict[str, Any]:
+    compiler = _compiler_mapping(selected=selected, full_cell=full_cell)
+    if not compiler:
+        return {}
+    operations: list[dict[str, Any]] = []
+    raw_operations = _raw_compiler_operations(compiler)
+    operation_count = len(raw_operations)
+    for op_index, raw_operation in enumerate(raw_operations):
+        target_kind = _compiler_target_kind(raw_operation, compiler)
+        defaults = _compiler_target_defaults(target_kind)
+        if not defaults:
+            return {}
+        operation_family = str(
+            raw_operation.get("operation_family")
+            or compiler.get("operation_family")
+            or defaults["operation_family"]
+        )
+        unit_kind = str(
+            raw_operation.get("unit_kind")
+            or compiler.get("unit_kind")
+            or defaults["unit_kind"]
+        )
+        params = {
+            **dict(_mapping(compiler.get("params"))),
+            **dict(_mapping(raw_operation.get("params"))),
+        }
+        for key in (
+            "archive_section",
+            "section_name",
+            "target_section",
+            "target_sections",
+            "packet_member",
+            "member_name",
+            "tensor_name",
+            "tensor_path",
+            "byte_range",
+            "frame_range",
+            "pair_indices",
+            "region_bbox",
+        ):
+            value = raw_operation.get(key, compiler.get(key))
+            if value is not None and key not in params:
+                params[key] = value
+        operations.append(
+            {
+                "unit_id": raw_operation.get("unit_id")
+                or compiler.get("unit_id")
+                or f"{atom_id}_compiled_{op_index:04d}",
+                "unit_kind": unit_kind,
+                "operation_id": raw_operation.get("operation_id")
+                or f"{operation_family}_{atom_id}_{op_index:04d}",
+                "operation_family": operation_family,
+                "target_kind": target_kind,
+                "materializer": raw_operation.get("materializer")
+                or compiler.get("materializer")
+                or defaults["materializer"],
+                "candidate_saved_bytes": raw_operation.get("candidate_saved_bytes")
+                or compiler.get("candidate_saved_bytes")
+                or selected.get("water_fill_cost_bytes")
+                or _mapping(full_cell.get("measure")).get("water_fill_cost_bytes")
+                or 0,
+                "predicted_quality_score_delta": raw_operation.get(
+                    "predicted_quality_score_delta"
+                )
+                or compiler.get("predicted_quality_score_delta")
+                or -expected_gain / float(max(1, operation_count)),
+                "params": params,
+                "receiver_contract_kind": raw_operation.get("receiver_contract_kind")
+                or compiler.get("receiver_contract_kind")
+                or defaults["receiver_contract_kind"],
+                "representation_family_class": raw_operation.get(
+                    "representation_family_class"
+                )
+                or compiler.get("representation_family_class")
+                or full_cell.get("coherence_group"),
+                "blockers": ordered_unique(
+                    [
+                        *[str(item) for item in _as_list(raw_operation.get("blockers"))],
+                        *[str(item) for item in _as_list(compiler.get("blockers"))],
+                        "compiled_from_inverse_action_operation_set_compiler",
+                        "requires_materializer_contexts",
+                        "requires_runtime_consumption_proof_before_exact_eval",
+                        "requires_exact_auth_eval_before_score_claim",
+                    ]
+                ),
+            }
+        )
+    total_saved = sum(
+        int(_finite_int(operation.get("candidate_saved_bytes")) or 0)
+        for operation in operations
+    )
+    return {
+        "schema": BYTE_SHAVING_OPERATION_SET_PROVENANCE_SCHEMA,
+        "source_schema": INVERSE_ACTION_FUNCTIONAL_SCHEMA,
+        "source_kind": "inverse_action_operation_set_compiler",
+        "compiler_schema": compiler.get(
+            "schema",
+            "inverse_action_operation_set_compiler_hint.v1",
+        ),
+        "source_index": source_index,
+        "operation_set_id": compiler.get("operation_set_id")
+        or f"compiled_inverse_action_{atom_id}",
+        "candidate_id": selected.get("candidate_id") or full_cell.get("candidate_id"),
+        "candidate_saved_bytes": compiler.get("candidate_saved_bytes") or total_saved,
+        "expected_score_gain": expected_gain,
+        "selected_operations": operations,
+        "operation_families": ordered_unique(
+            str(operation["operation_family"]) for operation in operations
+        ),
+        "source_family_classes": ordered_unique(
+            str(operation.get("representation_family_class") or "")
+            for operation in operations
+        ),
+        "receiver_contract_kinds": ordered_unique(
+            str(operation.get("receiver_contract_kind") or "")
+            for operation in operations
+        ),
+        "operation_portability": compiler.get("operation_portability")
+        or "family_agnostic",
+        "allowed_use": "inverse_action_compiler_planning_handoff_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        **FALSE_AUTHORITY,
+    }
 
 
 def _unit_kind_from_operation(operation: Mapping[str, Any]) -> str:

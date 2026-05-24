@@ -559,6 +559,109 @@ def test_inverse_action_functional_rehydrates_family_operations_from_provenance(
     assert bridge["ready_for_exact_eval_dispatch"] is False
 
 
+def test_inverse_action_compiler_hint_lowers_to_family_packet_ir() -> None:
+    payload = _inverse_action_payload()
+    payload["cells"] = [
+        {
+            "atom_id": "compiled_family_opset",
+            "operation_set_compiler": {
+                "schema": "inverse_action_operation_set_compiler_hint.v1",
+                "operation_set_id": "compiled_family_set",
+                "candidate_saved_bytes": 900,
+                "operation_portability": "family_agnostic",
+                "selected_operations": [
+                    {
+                        "unit_id": "compiled_hnerv_section",
+                        "target_kind": "archive_section_entropy_recode_v1",
+                        "archive_section": "decoder_blob",
+                        "candidate_saved_bytes": 300,
+                        "representation_family_class": "hnerv_variant",
+                    },
+                    {
+                        "unit_id": "compiled_boost_tensor",
+                        "target_kind": "tensor_factorize_v1",
+                        "tensor_name": "boost.overlay",
+                        "candidate_saved_bytes": 300,
+                        "representation_family_class": "boostnerv_bolton",
+                    },
+                    {
+                        "unit_id": "compiled_packet_member",
+                        "target_kind": "packet_member_recompress_v1",
+                        "member_name": "0.bin",
+                        "candidate_saved_bytes": 300,
+                        "representation_family_class": "non_nerv",
+                    },
+                ],
+            },
+        }
+    ]
+    payload["water_bucket"]["selected_cells"][0]["atom_id"] = "compiled_family_opset"
+
+    surface = build_signal_surface_from_inverse_action_functional(payload)
+    plan = build_byte_shaving_campaign_plan(surface, max_k=3)
+    packet_ir = plan["packet_ir_operation_sets"][0]
+    bridge = build_inverse_action_materialization_bridge(plan)
+
+    assert [unit["unit_kind"] for unit in surface["units"]] == [
+        "archive_section",
+        "tensor",
+        "packet_member",
+    ]
+    assert surface["water_bucket_materialization_portfolio"]["actuation_modes"] == [
+        "compiled_operation_set"
+    ]
+    assert surface["source_signal_refs"][0]["compiled_operation_set_count"] == 1
+    assert packet_ir["byte_closed_operation_count"] == 3
+    assert {
+        operation["target_kind"] for operation in packet_ir["operations"]
+    } == {
+        "archive_section_entropy_recode_v1",
+        "tensor_factorize_v1",
+        "packet_member_recompress_v1",
+    }
+    archive_operation = next(
+        operation
+        for operation in packet_ir["operations"]
+        if operation["target_kind"] == "archive_section_entropy_recode_v1"
+    )
+    assert archive_operation["params"]["archive_section"] == "decoder_blob"
+    assert bridge["compiled_operation_set_count"] == 1
+    assert bridge["high_level_operation_compiler_required_count"] == 0
+    assert bridge["queue_consumable_portfolio_row_count"] == 1
+    assert bridge["queue_consumable_packet_ir_operation_set_ids"] == [
+        packet_ir["operation_set_id"]
+    ]
+    assert bridge["score_claim"] is False
+    assert bridge["ready_for_exact_eval_dispatch"] is False
+
+
+def test_inverse_action_compiler_hint_unsupported_target_fails_closed() -> None:
+    payload = _inverse_action_payload()
+    payload["cells"] = [
+        {
+            "atom_id": "unsupported_compiler",
+            "operation_set_compiler": {
+                "schema": "inverse_action_operation_set_compiler_hint.v1",
+                "target_kind": "unsupported_family_operation_v1",
+            },
+        }
+    ]
+    payload["water_bucket"]["selected_cells"][0]["atom_id"] = "unsupported_compiler"
+
+    surface = build_signal_surface_from_inverse_action_functional(payload)
+    plan = build_byte_shaving_campaign_plan(surface)
+    bridge = build_inverse_action_materialization_bridge(plan)
+
+    assert surface["water_bucket_materialization_portfolio"]["actuation_modes"] == [
+        "high_level_operation_compiler_required"
+    ]
+    assert bridge["compiled_operation_set_count"] == 0
+    assert bridge["high_level_operation_compiler_required_count"] == 1
+    assert bridge["queue_consumption"]["next_gate"] == (
+        "inverse_action_operation_set_compiler"
+    )
+
+
 def test_inverse_action_units_compose_with_non_inverse_combination_ladder() -> None:
     surface = _surface()
     inverse_surface = build_signal_surface_from_inverse_action_functional(

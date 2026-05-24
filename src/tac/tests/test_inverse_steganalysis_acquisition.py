@@ -407,6 +407,30 @@ def test_atom_normalization_is_false_authority_only() -> None:
         normalize_inverse_steganalysis_atom(_atom(score_claim=True))
 
 
+def test_action_functional_preserves_operation_set_compiler_hint() -> None:
+    atom = normalize_inverse_steganalysis_atom(
+        _atom(
+            operation_set_compiler={
+                "schema": "inverse_action_operation_set_compiler_hint.v1",
+                "operation_set_id": "compiled_hint",
+                "target_kind": "archive_section_entropy_recode_v1",
+                "archive_section": "decoder_blob",
+            }
+        )
+    )
+    action = build_discrete_scorer_action_functional([atom])
+    cell = action["cells"][0]
+
+    assert cell["operation_set_compiler"]["operation_set_id"] == "compiled_hint"
+    assert cell["operation_set_compiler"]["target_kind"] == (
+        "archive_section_entropy_recode_v1"
+    )
+    assert action["water_bucket"]["selected_count"] == 1
+    assert "operation_set_compiler" not in action["water_bucket"]["selected_cells"][0]
+    assert cell["score_claim"] is False
+    assert action["score_claim"] is False
+
+
 def test_action_surface_terms_model_scope_interactions_and_fragility() -> None:
     atom = normalize_inverse_steganalysis_atom(
         _atom(
