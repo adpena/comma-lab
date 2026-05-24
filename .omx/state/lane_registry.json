@@ -53443,7 +53443,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "packet member ZIP-header elide materializer, CLI, queue wiring, context compiler, postconditions, telemetry, and tests landed"
+          "evidence": "src/tac/optimization/family_agnostic_materializers.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -53467,7 +53467,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_packet_member_zip_header_elide_materializer_20260524T225623Z_codex.md"
+          "evidence": ".omx/research/codex_findings_packet_member_zip_header_elide_materializer_20260524T225653Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -53484,5 +53484,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T22:56:52Z"
+  "updated_at": "2026-05-24T22:57:14Z"
 }
