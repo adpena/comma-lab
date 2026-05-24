@@ -69,6 +69,9 @@ QUEUE_FEEDBACK_REPLAN_REQUEST_SCHEMA = "byte_shaving_materializer_campaign_feedb
 QUEUE_FEEDBACK_REPLAN_EXPERIMENT_METADATA_SCHEMA = (
     "byte_shaving_materializer_campaign_feedback_replan_experiment_metadata.v1"
 )
+QUEUE_FEEDBACK_REPLAN_FOLLOWUP_EXECUTION_SCHEMA = (
+    "byte_shaving_materializer_campaign_feedback_replan_followup_execution.v1"
+)
 QUEUE_FEEDBACK_REPLAN_REQUIRED_FALSE_FIELDS = tuple(
     dict.fromkeys(
         (
@@ -633,6 +636,175 @@ def _queue_feedback_replan_followup_queue_payload(
     return queue, []
 
 
+def _execution_stdout_json(
+    result: CommandResult,
+    *,
+    label: str,
+    blockers: list[str],
+) -> dict[str, Any] | None:
+    payload = _json_from_stdout(result)
+    if payload is None:
+        blockers.append(f"{label}_stdout_not_json_object")
+    return payload
+
+
+def _queue_feedback_replan_followup_execution_payload(
+    args: argparse.Namespace,
+    *,
+    child_queue: Mapping[str, Any],
+    child_queue_path: Path,
+    run_dir: Path,
+) -> tuple[dict[str, Any], list[CommandResult], int]:
+    state_path = (
+        _resolve(args.queue_feedback_replan_followup_state)
+        if args.queue_feedback_replan_followup_state is not None
+        else run_dir / "queue_feedback_replan_followup.sqlite"
+    )
+    command_results: list[CommandResult] = []
+    blockers: list[str] = []
+    parsed: dict[str, Any] = {}
+
+    def run_step(label: str, subcommand: Sequence[str]) -> CommandResult:
+        result = _run(
+            _experiment_queue_command(
+                execution_queue=child_queue_path,
+                state_path=state_path,
+                subcommand=subcommand,
+            ),
+            check=False,
+        )
+        command_results.append(result)
+        if result.returncode != 0:
+            blockers.append(f"{label}_failed")
+        parsed[label] = _execution_stdout_json(
+            result,
+            label=label,
+            blockers=blockers,
+        )
+        return result
+
+    validate_result = run_step("validate", ["validate"])
+    init_result = run_step("init", ["init"]) if validate_result.returncode == 0 else None
+    if init_result is not None and init_result.returncode == 0:
+        control_reason = (
+            args.queue_feedback_replan_followup_activation_reason
+            or "materializer campaign explicit local-only feedback replan autorun"
+        )
+        control_result = run_step(
+            "control",
+            ["control", "running", "--reason", control_reason],
+        )
+    else:
+        control_result = None
+
+    worker_result: CommandResult | None = None
+    if control_result is not None and control_result.returncode == 0:
+        worker_command = [
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            str(args.queue_feedback_replan_followup_max_steps),
+            "--max-parallel",
+            str(args.queue_feedback_replan_followup_max_parallel),
+            "--idle-sleep-seconds",
+            str(args.queue_feedback_replan_followup_idle_sleep_seconds),
+            "--max-idle-cycles",
+            str(args.queue_feedback_replan_followup_max_idle_cycles),
+            "--noncanonical-state-rationale",
+            (
+                args.queue_feedback_replan_followup_state_rationale
+                or "run-scoped materializer feedback replan child queue state"
+            ),
+        ]
+        worker_result = run_step("worker", worker_command)
+
+    if init_result is not None and init_result.returncode == 0:
+        run_step(
+            "observation",
+            [
+                "observe",
+                "--tail-lines",
+                str(args.queue_feedback_replan_followup_tail_lines),
+                "--format",
+                "json",
+            ],
+        )
+        run_step("performance", ["performance"])
+
+    output_path = None
+    md_path = None
+    try:
+        step = child_queue["experiments"][0]["steps"][0]  # type: ignore[index]
+        command = [str(item) for item in step["command"]]
+        output_path = _command_path_arg(command, "--output")
+        md_path = _command_path_arg(command, "--md-out")
+    except (KeyError, IndexError, TypeError):
+        blockers.append("child_queue_command_unreadable")
+
+    worker_payload = parsed.get("worker")
+    if isinstance(worker_payload, dict):
+        if int(worker_payload.get("failure_count") or 0):
+            blockers.append("worker_reported_failures")
+        if int(worker_payload.get("success_count") or 0) < 1:
+            blockers.append("worker_did_not_complete_feedback_action_functional")
+    elif worker_result is not None and worker_result.returncode == 0:
+        blockers.append("worker_result_missing")
+
+    success = not blockers
+    payload = _false_authority_payload(
+        {
+            "schema": QUEUE_FEEDBACK_REPLAN_FOLLOWUP_EXECUTION_SCHEMA,
+            "enabled": True,
+            "success": success,
+            "blockers": list(dict.fromkeys(blockers)),
+            "queue_path": _display_path(child_queue_path),
+            "queue_id": child_queue.get("queue_id"),
+            "state_path": _display_path(state_path),
+            "action_functional_output_path": (
+                None if output_path is None else _display_path(output_path)
+            ),
+            "action_functional_md_path": None if md_path is None else _display_path(md_path),
+            "max_steps": args.queue_feedback_replan_followup_max_steps,
+            "max_parallel": args.queue_feedback_replan_followup_max_parallel,
+            "activation_policy": "explicit_local_only_runner_flag",
+            "allowed_use": "local_queue_feedback_replan_execution_only",
+            "forbidden_use": "score_claim_or_promotion_or_paid_dispatch_authority",
+            "validate": parsed.get("validate"),
+            "init": parsed.get("init"),
+            "control": parsed.get("control"),
+            "worker": parsed.get("worker"),
+            "observation": parsed.get("observation"),
+            "performance": parsed.get("performance"),
+            "commands": [result.to_dict() for result in command_results],
+        }
+    )
+    return payload, command_results, (0 if success else 2)
+
+
+def _queue_feedback_replan_followup_execution_refusal_payload(
+    *,
+    blockers: Sequence[str],
+    child_queue_path: Path,
+) -> dict[str, Any]:
+    return _false_authority_payload(
+        {
+            "schema": QUEUE_FEEDBACK_REPLAN_FOLLOWUP_EXECUTION_SCHEMA,
+            "enabled": True,
+            "success": False,
+            "blockers": list(dict.fromkeys(str(item) for item in blockers)),
+            "queue_path": _display_path(child_queue_path),
+            "queue_id": None,
+            "state_path": None,
+            "action_functional_output_path": None,
+            "action_functional_md_path": None,
+            "activation_policy": "explicit_local_only_runner_flag",
+            "allowed_use": "local_queue_feedback_replan_execution_only",
+            "forbidden_use": "score_claim_or_promotion_or_paid_dispatch_authority",
+            "commands": [],
+        }
+    )
+
+
 def _git_head_sha() -> str | None:
     result = subprocess.run(
         ["git", "rev-parse", "HEAD"],
@@ -1128,6 +1300,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--idle-sleep-seconds", type=float, default=0.0)
     parser.add_argument("--max-idle-cycles", type=int, default=1)
     parser.add_argument("--tail-lines", type=int, default=20)
+    parser.add_argument(
+        "--execute-queue-feedback-replan-followup",
+        action="store_true",
+        help=(
+            "after emitting the paused feedback child queue, explicitly resume "
+            "and run bounded local-only steps to build the next action functional"
+        ),
+    )
+    parser.add_argument("--queue-feedback-replan-followup-state", type=Path, default=None)
+    parser.add_argument(
+        "--queue-feedback-replan-followup-state-rationale",
+        default=None,
+        help="rationale used when the feedback child queue runs against a noncanonical state path",
+    )
+    parser.add_argument("--queue-feedback-replan-followup-activation-reason", default=None)
+    parser.add_argument("--queue-feedback-replan-followup-max-steps", type=int, default=1)
+    parser.add_argument("--queue-feedback-replan-followup-max-parallel", type=int, default=1)
+    parser.add_argument("--queue-feedback-replan-followup-idle-sleep-seconds", type=float, default=0.0)
+    parser.add_argument("--queue-feedback-replan-followup-max-idle-cycles", type=int, default=1)
+    parser.add_argument("--queue-feedback-replan-followup-tail-lines", type=int, default=20)
     parser.add_argument("--overwrite-output", action="store_true")
     parser.add_argument("--include-storage-preflight", action="store_true")
     parser.add_argument("--results-root", default="experiments/results")
@@ -2305,6 +2497,16 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--campaign-plan-max-k must be >= 1")
     if args.max_steps < 1:
         raise SystemExit("--max-steps must be >= 1")
+    if args.queue_feedback_replan_followup_max_steps < 1:
+        raise SystemExit("--queue-feedback-replan-followup-max-steps must be >= 1")
+    if args.queue_feedback_replan_followup_max_parallel < 1:
+        raise SystemExit("--queue-feedback-replan-followup-max-parallel must be >= 1")
+    if args.queue_feedback_replan_followup_max_idle_cycles < 1:
+        raise SystemExit("--queue-feedback-replan-followup-max-idle-cycles must be >= 1")
+    if args.queue_feedback_replan_followup_idle_sleep_seconds < 0:
+        raise SystemExit("--queue-feedback-replan-followup-idle-sleep-seconds must be non-negative")
+    if args.queue_feedback_replan_followup_tail_lines < 0:
+        raise SystemExit("--queue-feedback-replan-followup-tail-lines must be non-negative")
     if args.staircase_ssh_max_steps < 1:
         raise SystemExit("--staircase-ssh-max-steps must be >= 1")
     if args.staircase_ssh_execute and args.execute:
@@ -2343,6 +2545,15 @@ def main(argv: list[str] | None = None) -> int:
         )
     if args.execute and args.queue_state is not None and not args.queue_state_rationale:
         raise SystemExit("--queue-state requires --queue-state-rationale when executing the generated queue")
+    if (
+        args.execute_queue_feedback_replan_followup
+        and args.queue_feedback_replan_followup_state is not None
+        and not args.queue_feedback_replan_followup_state_rationale
+    ):
+        raise SystemExit(
+            "--queue-feedback-replan-followup-state requires "
+            "--queue-feedback-replan-followup-state-rationale when executing the feedback queue"
+        )
     run_dir = (
         _resolve(args.run_dir)
         if args.run_dir is not None
@@ -2577,6 +2788,8 @@ def main(argv: list[str] | None = None) -> int:
     generated_cache_identity_path = run_dir / "queue_performance_cache_identity.json"
     response_update_placeholder_path = run_dir / "canonical_response_update_placeholder.json"
     queue_feedback_replan_staircase_artifacts: dict[str, Any] | None = None
+    queue_feedback_replan_followup_execution: dict[str, Any] | None = None
+    queue_feedback_replan_followup_execution_returncode = 0
     queue_performance_summary = _queue_performance_summary_payload(
         performance_result,
         queue=queue,
@@ -2693,6 +2906,29 @@ def main(argv: list[str] | None = None) -> int:
                 ],
                 suffix=".with_feedback_child",
             )
+        if args.execute_queue_feedback_replan_followup:
+            (
+                queue_feedback_replan_followup_execution,
+                followup_execution_commands,
+                queue_feedback_replan_followup_execution_returncode,
+            ) = _queue_feedback_replan_followup_execution_payload(
+                args,
+                child_queue=queue_feedback_replan_followup_queue,
+                child_queue_path=queue_feedback_replan_followup_queue_path,
+                run_dir=run_dir,
+            )
+            commands.extend(followup_execution_commands)
+    elif args.execute_queue_feedback_replan_followup:
+        queue_feedback_replan_followup_execution_returncode = 2
+        queue_feedback_replan_followup_execution = (
+            _queue_feedback_replan_followup_execution_refusal_payload(
+                blockers=(
+                    queue_feedback_replan_followup_blockers
+                    or ["queue_feedback_replan_followup_queue_not_emitted"]
+                ),
+                child_queue_path=queue_feedback_replan_followup_queue_path,
+            )
+        )
     exact_readiness_handoffs = _exact_readiness_handoff_paths(
         run_dir=run_dir,
         queue=queue,
@@ -2755,6 +2991,25 @@ def main(argv: list[str] | None = None) -> int:
         ),
         "queue_feedback_replan_followup_queue_emitted": queue_feedback_replan_followup_queue is not None,
         "queue_feedback_replan_followup_queue_blockers": queue_feedback_replan_followup_blockers,
+        "queue_feedback_replan_followup_executed": bool(args.execute_queue_feedback_replan_followup),
+        "queue_feedback_replan_followup_execution_success": (
+            None
+            if queue_feedback_replan_followup_execution is None
+            else bool(queue_feedback_replan_followup_execution.get("success"))
+        ),
+        "queue_feedback_replan_followup_execution": queue_feedback_replan_followup_execution,
+        "queue_feedback_replan_followup_state_path": (
+            None
+            if queue_feedback_replan_followup_execution is None
+            else queue_feedback_replan_followup_execution.get("state_path")
+        ),
+        "queue_feedback_replan_followup_action_functional_path": (
+            None
+            if queue_feedback_replan_followup_execution is None
+            else queue_feedback_replan_followup_execution.get(
+                "action_functional_output_path"
+            )
+        ),
         "queue_feedback_replan_staircase_artifacts": queue_feedback_replan_staircase_artifacts,
         "queue_performance_runtime_identity_path": _display_path(runtime_identity_path),
         "queue_performance_cache_identity_path": _display_path(cache_identity_path),
@@ -2792,7 +3047,14 @@ def main(argv: list[str] | None = None) -> int:
     payload["summary_path"] = _display_path(summary_path)
     _json_print(payload)
     ssh_execute_returncode = ssh_execute_result.returncode if ssh_execute_result is not None else 0
-    return 2 if worker_result.returncode != 0 or observe_result.returncode != 0 or ssh_execute_returncode != 0 else 0
+    return (
+        2
+        if worker_result.returncode != 0
+        or observe_result.returncode != 0
+        or ssh_execute_returncode != 0
+        or queue_feedback_replan_followup_execution_returncode != 0
+        else 0
+    )
 
 
 if __name__ == "__main__":

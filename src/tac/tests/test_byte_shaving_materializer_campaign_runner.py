@@ -627,6 +627,7 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     inflate_runtime = tmp_path / "inflate_runtime"
     chain_output_dir = run_dir / "inverse_cell_chain"
     inflate_work_dir = tmp_path / "inflate_work"
+    feedback_followup_state = tmp_path / "feedback_followup_execution.sqlite"
 
     plan.write_text(json.dumps(_inverse_cell_candidate_plan()), encoding="utf-8")
     _write_inverse_action_functional(action)
@@ -678,6 +679,15 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
             "--max-idle-cycles",
             "1",
             "--execute",
+            "--execute-queue-feedback-replan-followup",
+            "--queue-feedback-replan-followup-state",
+            str(feedback_followup_state),
+            "--queue-feedback-replan-followup-state-rationale",
+            "isolated local feedback child queue state for materializer e2e",
+            "--queue-feedback-replan-followup-max-steps",
+            "1",
+            "--queue-feedback-replan-followup-max-parallel",
+            "1",
         ]
     )
 
@@ -704,6 +714,25 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     )
     assert summary["queue_feedback_replan_followup_queue_emitted"] is True
     assert summary["queue_feedback_replan_followup_queue_blockers"] == []
+    assert summary["queue_feedback_replan_followup_executed"] is True
+    assert summary["queue_feedback_replan_followup_execution_success"] is True
+    assert summary["queue_feedback_replan_followup_state_path"] == str(
+        feedback_followup_state
+    )
+    assert summary["queue_feedback_replan_followup_action_functional_path"] == str(
+        run_dir / "inverse_steganalysis_action_functional.feedback.json"
+    )
+    feedback_execution = summary["queue_feedback_replan_followup_execution"]
+    assert feedback_execution["schema"] == (
+        runner.QUEUE_FEEDBACK_REPLAN_FOLLOWUP_EXECUTION_SCHEMA
+    )
+    assert feedback_execution["success"] is True
+    assert feedback_execution["blockers"] == []
+    assert feedback_execution["score_claim"] is False
+    assert feedback_execution["ready_for_exact_eval_dispatch"] is False
+    assert feedback_execution["worker"]["schema"] == "experiment_queue_worker_result.v1"
+    assert feedback_execution["worker"]["success_count"] == 1
+    assert feedback_execution["worker"]["failure_count"] == 0
     feedback_staircase = summary["queue_feedback_replan_staircase_artifacts"]
     assert feedback_staircase["dependent_queue_ref_count"] == 1
     assert feedback_staircase["child_control_mode"] == "paused"
@@ -837,10 +866,18 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert "exact_cuda_auth_eval" in feedback_step["postconditions"][1]["false_or_missing"]
     assert "contest_cuda_auth_eval" in feedback_step["postconditions"][1]["false_or_missing"]
     assert "gpu_launched" in feedback_step["postconditions"][1]["false_or_missing"]
+    feedback_action = json.loads(
+        (
+            run_dir / "inverse_steganalysis_action_functional.feedback.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert feedback_action["schema"] == "inverse_steganalysis_discrete_action_functional.v1"
+    assert feedback_action["score_claim"] is False
+    assert feedback_action["ready_for_exact_eval_dispatch"] is False
     assert load_queue_definition(
         run_dir / "queue_feedback_replan_followup_queue.json"
     ) == feedback_queue
-    with connect_state(tmp_path / "feedback_followup.sqlite") as conn:
+    with connect_state(tmp_path / "feedback_followup_manual.sqlite") as conn:
         initialize_queue_state(conn, feedback_queue)
         assert ready_steps(conn, feedback_queue) == []
         set_control_mode(conn, feedback_queue["queue_id"], "running", reason="unit resume")
@@ -1180,6 +1217,24 @@ def test_materializer_campaign_feedback_followup_queue_fails_truthy_dispatch_ali
 
     assert result["succeeded"] is False
     assert result["failed_postconditions"][0]["type"] == "json_completion_contract"
+
+
+def test_materializer_campaign_feedback_followup_execution_requires_explicit_flag(
+    tmp_path: Path,
+) -> None:
+    args = runner.parse_args(["--plan", str(tmp_path / "plan.json")])
+    assert args.execute_queue_feedback_replan_followup is False
+
+    with pytest.raises(SystemExit, match="queue-feedback-replan-followup-state"):
+        runner.main(
+            [
+                "--plan",
+                str(tmp_path / "plan.json"),
+                "--execute-queue-feedback-replan-followup",
+                "--queue-feedback-replan-followup-state",
+                str(tmp_path / "feedback.sqlite"),
+            ]
+        )
 
 
 def test_materializer_campaign_feedback_followup_queue_blocks_non_action_command(
