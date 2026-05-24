@@ -42,6 +42,9 @@ from tac.optimization.byte_range_entropy_recode_chain import (
     CHAIN_MANIFEST_NAME,
     CHAIN_SCHEMA,
 )
+from tac.optimization.family_agnostic_materializers import (
+    PACKET_MEMBER_RECOMPRESS_SCHEMA,
+)
 from tac.optimization.proxy_candidate_contract import truthy_authority_field_violations
 from tac.optimization.serialized_archive_economics import (
     build_serialized_archive_delta_contract,
@@ -158,6 +161,41 @@ def _chain_manifest(
     if authority_overrides:
         payload.update(authority_overrides)
     return _write_json(external_root / CHAIN_MANIFEST_NAME, payload)
+
+
+def _family_agnostic_manifest(external_root: Path) -> Path:
+    source_archive = _write_bytes(
+        external_root / "source" / "archive.zip",
+        b"source archive bytes with extra padding",
+    )
+    candidate_archive = _write_bytes(
+        external_root / "candidate" / "archive.zip",
+        b"candidate archive bytes",
+    )
+    payload = {
+        "schema": PACKET_MEMBER_RECOMPRESS_SCHEMA,
+        "candidate_id": "family_agnostic_packet_member_candidate",
+        "lane_id": "fixture_family_agnostic_harvest",
+        "materializer_id": "packet_member_recompress_adapter",
+        "target_kind": "packet_member_recompress_v1",
+        "byte_closed_candidate_emitted": True,
+        "source_archive": source_archive,
+        "candidate_archive": candidate_archive,
+        "receiver_contract_satisfied": False,
+        "receiver_verification": {
+            "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+            "receiver_contract_satisfied": False,
+            "proof_present": False,
+            "proof_path": None,
+            "blockers": ["runtime_consumption_proof_missing"],
+        },
+        "readiness_blockers": [
+            "runtime_consumption_proof_missing",
+            "packet_member_recompress_receiver_contract_not_satisfied",
+        ],
+        **_false_authority(),
+    }
+    return _write_json(external_root / "family_candidate.json", payload)
 
 
 def _write_runtime_bound_pr101_proof(
@@ -419,6 +457,73 @@ def test_harvest_work_queue_chain_manifest_into_source_queue(
     assert row["ready_for_exact_eval_dispatch"] is False
     assert row["score_claim"] is False
     assert str(external) in row["candidate_archive_path"]
+
+
+def test_harvest_work_queue_family_agnostic_candidate_manifest(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    external = tmp_path / "VertigoDataTier"
+    manifest = _family_agnostic_manifest(external)
+    work_queue = _write_json(
+        repo / "materializer_work_queue.json",
+        {
+            "schema": MATERIALIZER_WORK_QUEUE_SCHEMA,
+            "tool": "fixture",
+            "row_count": 1,
+            "executable_row_count": 1,
+            "blocked_row_count": 0,
+            "rows": [
+                {
+                    "schema": "byte_shaving_materializer_work_row.v1",
+                    "work_id": "Family Agnostic Work Fixture",
+                    "work_rank": 1,
+                    "backlog_key": "family_fixture",
+                    "unit_kind": "packet_member",
+                    "operation_family": "member_recompress",
+                    "target_kind": "packet_member_recompress_v1",
+                    "resource_kind": "local_cpu",
+                    "executable": True,
+                    "postconditions": [
+                        {
+                            "type": "json_completion_contract",
+                            "path": str(manifest),
+                            "required_equals": {
+                                "schema": PACKET_MEMBER_RECOMPRESS_SCHEMA,
+                            },
+                            "required_true": ["byte_closed_candidate_emitted"],
+                        }
+                    ],
+                    **_false_authority(),
+                }
+            ],
+            **_false_authority(),
+        },
+    )
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        work_queue_path=work_queue,
+        require_succeeded_state=False,
+    )
+
+    report = result["report"]
+    queue = result["source_queue"]
+    row = queue["top_k"][0]
+    assert report["accepted_manifest_count"] == 1
+    assert report["rows"][0]["observed_schema"] == PACKET_MEMBER_RECOMPRESS_SCHEMA
+    assert row["candidate_id"] == "family_agnostic_packet_member_candidate"
+    assert row["candidate_family"] == "packet_member_recompress"
+    assert row["score_affecting_payload_changed"] is True
+    assert row["charged_bits_changed"] is True
+    assert row["serialized_archive_delta"]["status"] == "realized_saving"
+    assert "materializer_candidate_is_not_dispatch_authorization" in row[
+        "dispatch_blockers"
+    ]
+    assert "runtime_consumption_proof_missing" in row["dispatch_blockers"]
+    assert row["runtime_consumption_proof_status"] == "missing"
+    assert row["ready_for_exact_eval_dispatch"] is False
 
 
 def test_harvest_requires_succeeded_state_for_work_queue_rows(

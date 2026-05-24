@@ -22,16 +22,22 @@ from pathlib import Path
 import pytest
 
 import tac.packet_compiler.deterministic_compiler as compiler
+from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
 from tac.packet_compiler.deterministic_compiler import (
     COMPILER_MODES,
+    DETERMINISTIC_COMPILER_REQUIRED_ORDER,
     DETERMINISTIC_ZIP_DATE_TIME,
     MANIFEST_NAME,
     NO_OP_PROOF_NAME,
+    PACKET_IR_OPERATION_SET_BRIDGE_CONTRACT_SCHEMA,
+    PACKET_IR_OPERATION_SET_REQUIRED_PROOFS,
+    PACKET_IR_OPERATION_SET_SCHEMA,
     SCHEMA_VERSION,
     TARGET_PROFILES,
     DeterministicPacketCompilerError,
     compile_packet,
     inspect_packet_oracle,
+    packetir_operation_set_bridge_contract,
 )
 from tac.repo_io import sha256_file
 
@@ -734,3 +740,19 @@ def test_target_profiles_constant() -> None:
         "production_generalized",
         "production_edge_adaptive",
     )
+
+
+def test_packetir_operation_set_bridge_contract_is_fail_closed() -> None:
+    contract = packetir_operation_set_bridge_contract()
+
+    assert contract["schema"] == PACKET_IR_OPERATION_SET_BRIDGE_CONTRACT_SCHEMA
+    assert contract["canonical_packet_compiler_module"] == (
+        "tac.packet_compiler.deterministic_compiler"
+    )
+    assert contract["canonical_packet_compiler_schema"] == SCHEMA_VERSION
+    assert contract["recommended_ir_schema"] == PACKET_IR_OPERATION_SET_SCHEMA
+    assert contract["required_order"] == list(DETERMINISTIC_COMPILER_REQUIRED_ORDER)
+    assert contract["required_proofs"] == list(PACKET_IR_OPERATION_SET_REQUIRED_PROOFS)
+    assert "runtime_consumption_proof" in contract["required_proofs"]
+    for key, value in PROXY_FALSE_AUTHORITY_FIELDS.items():
+        assert contract[key] is value

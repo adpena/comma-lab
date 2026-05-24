@@ -11,6 +11,10 @@ import pytest
 from tac.archive_byte_profile import CONTEST_ORIGINAL_BYTES
 from tac.optimization.byte_shaving_campaign import (
     COUPLED_OPERATION_SET_SCHEMA,
+    INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
+    INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
+    INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
+    INVERSE_ACTION_WATER_BUCKET_PORTFOLIO_SCHEMA,
     SIGNAL_SURFACE_SCHEMA,
     ByteShavingCampaignError,
     build_byte_shaving_campaign_plan,
@@ -20,6 +24,7 @@ from tac.optimization.byte_shaving_campaign import (
     build_signal_surface_from_master_gradient_anchor,
     validate_signal_surface,
 )
+from tac.packet_compiler.deterministic_compiler import PACKET_IR_OPERATION_SET_SCHEMA
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = REPO_ROOT / "tools" / "plan_byte_shaving_campaign.py"
@@ -171,6 +176,29 @@ def test_plan_builds_combination_ladder_with_interactions_and_conflicts() -> Non
     assert len(operation_set["chosen_operation_sequence_sha256"]) == 64
     assert operation_set["partial_materialization_allowed"] is False
     assert operation_set["score_claim"] is False
+    packet_ir = plan["packet_ir_operation_sets"][0]
+    assert packet_ir["schema"] == PACKET_IR_OPERATION_SET_SCHEMA
+    assert packet_ir["candidate_id"] == "boostnerv_seed0"
+    assert packet_ir["lane_id"] == "boostnerv_post_train_shaving"
+    assert packet_ir["source_operation_set_id"] == operation_set["operation_set_id"]
+    assert packet_ir["compiler_contract"]["score_claim"] is False
+    assert packet_ir["requires_atomic_materialization"] is True
+    assert packet_ir["partial_materialization_allowed"] is False
+    assert packet_ir["chosen_operation_sequence_sha256"] == operation_set[
+        "chosen_operation_sequence_sha256"
+    ]
+    assert packet_ir["required_proofs_status"]["runtime_consumption_proof"] == (
+        "missing"
+    )
+    assert packet_ir["operations"][0]["schema"] == "packet_ir_operation_v1"
+    assert packet_ir["operations"][0]["compiler_phase"] == "pack"
+    assert "packetir_operation_not_byte_closed:pair" in packet_ir["operations"][0][
+        "blockers"
+    ]
+    assert "packetir_operation_set_requires_runtime_consumption_proof" in packet_ir[
+        "blockers"
+    ]
+    assert packet_ir["score_claim"] is False
 
 
 def test_plan_exposes_bounded_operation_permutation_ladder() -> None:
@@ -321,12 +349,50 @@ def test_inverse_action_functional_converts_to_plannable_surface() -> None:
 
     assert surface["units"][0]["unit_kind"] == "scorer_inverse_surface_cell"
     assert surface["units"][0]["candidate_saved_bytes"] == 0
+    assert surface["water_bucket_materialization_portfolio"]["schema"] == (
+        INVERSE_ACTION_WATER_BUCKET_PORTFOLIO_SCHEMA
+    )
+    assert surface["water_bucket_materialization_portfolio"]["rows"][0][
+        "actuation_mode"
+    ] == "high_level_operation_compiler_required"
     assert ranked["expected_delta_score"] == pytest.approx(-0.0004)
-    assert ranked["recommended_operation_family"] == ("materialize_inverse_scorer_cell_candidate")
-    assert ranked["recommended_operation_materializer"] == ("inverse_scorer_cell_candidate_adapter")
-    assert ranked["recommended_operation_target_kind"] == ("inverse_scorer_cell_candidate_v1")
+    assert ranked["recommended_operation_family"] == (
+        INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY
+    )
+    assert ranked["recommended_operation_materializer"] == (
+        INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER
+    )
+    assert ranked["recommended_operation_target_kind"] == (
+        INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND
+    )
+    assert plan["inverse_action_materialization_portfolios"][0]["actuation_modes"] == [
+        "high_level_operation_compiler_required"
+    ]
     assert plan["recommended_prefix"]["selected_unit_ids"] == ["inverse_action_inverse_surface_pair0007"]
+    assert plan["packet_ir_operation_sets"] == []
     assert plan["score_claim"] is False
+
+
+def test_inverse_action_functional_leaf_cells_are_explicit_opt_in() -> None:
+    surface = build_signal_surface_from_inverse_action_functional(
+        _inverse_action_payload(),
+        allow_leaf_cell_candidates=True,
+    )
+    plan = build_byte_shaving_campaign_plan(surface)
+    ranked = plan["ranked_units"][0]
+
+    assert surface["water_bucket_materialization_portfolio"]["rows"][0][
+        "actuation_mode"
+    ] == "leaf_cell_candidate_explicit_opt_in"
+    assert ranked["recommended_operation_family"] == (
+        "materialize_inverse_scorer_cell_candidate"
+    )
+    assert ranked["recommended_operation_materializer"] == (
+        "inverse_scorer_cell_candidate_adapter"
+    )
+    assert ranked["recommended_operation_target_kind"] == (
+        "inverse_scorer_cell_candidate_v1"
+    )
 
 
 def test_inverse_action_functional_rehydrates_family_operations_from_provenance() -> None:
@@ -395,6 +461,7 @@ def test_inverse_action_functional_rehydrates_family_operations_from_provenance(
     surface = build_signal_surface_from_inverse_action_functional(payload)
     plan = build_byte_shaving_campaign_plan(surface, max_k=3)
     op_set = plan["operation_set_ladder"][0]
+    packet_ir = plan["packet_ir_operation_sets"][0]
 
     assert [unit["unit_kind"] for unit in surface["units"]] == [
         "archive_section",
@@ -410,6 +477,27 @@ def test_inverse_action_functional_rehydrates_family_operations_from_provenance(
     assert "member_recompress" in op_set["operation_families"]
     assert op_set["score_claim"] is False
     assert plan["ready_for_exact_eval_dispatch"] is False
+    assert packet_ir["schema"] == PACKET_IR_OPERATION_SET_SCHEMA
+    assert packet_ir["source_portfolio_schema"] == (
+        INVERSE_ACTION_WATER_BUCKET_PORTFOLIO_SCHEMA
+    )
+    assert packet_ir["byte_closed_operation_count"] == 3
+    assert sorted(
+        operation["compiler_phase"]
+        for operation in packet_ir["operations"]
+    ) == ["arithmetic", "arithmetic", "representation"]
+    assert {
+        operation["representation_family_class"]
+        for operation in packet_ir["operations"]
+    } == {"hnerv_variant", "boostnerv_bolton", "non_nerv"}
+    assert all(
+        "packetir_operation_not_byte_closed" not in "\n".join(operation["blockers"])
+        for operation in packet_ir["operations"]
+    )
+    assert "packetir_operation_set_requires_materializer_contexts" in packet_ir[
+        "blockers"
+    ]
+    assert packet_ir["ready_for_exact_eval_dispatch"] is False
 
 
 def test_inverse_action_units_compose_with_non_inverse_combination_ladder() -> None:
@@ -530,7 +618,12 @@ def test_cli_can_plan_from_inverse_action_functional(tmp_path: Path) -> None:
 
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert payload["schema"] == "byte_shaving_campaign_plan.v1"
-    assert payload["ranked_units"][0]["recommended_operation_family"] == ("materialize_inverse_scorer_cell_candidate")
+    assert payload["ranked_units"][0]["recommended_operation_family"] == (
+        INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY
+    )
+    assert payload["inverse_action_materialization_portfolios"][0][
+        "actuation_modes"
+    ] == ["high_level_operation_compiler_required"]
     assert payload["score_claim"] is False
 
 

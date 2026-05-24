@@ -1,11 +1,13 @@
 # SPDX-License-Identifier: MIT
 """Native MLX reproduction primitives for the public PR95 HNeRV lane.
 
-This module is deliberately narrow: it ports the PR95 decoder topology and
-stage-8 optimizer partition into MLX so local Apple Silicon timing and parity
-work can become queueable evidence.  It does not claim score authority; archive
-smokes emitted from this lane remain byte-closed training artifacts until a
-runtime consumes them and exact CPU/CUDA auth eval anchors them.
+This module is deliberately narrow: it ports the PR95 decoder topology, archive
+grammar, and optimizer partition into MLX so local Apple Silicon timing and
+parity work can become queueable evidence. The current training loop is a
+synthetic timing smoke, not a source-faithful PR95 reproduction. It does not
+claim score authority; archive smokes emitted from this lane remain byte-closed
+training artifacts until the source loader/loss/export contract and exact
+CPU/CUDA auth eval anchor them.
 """
 
 from __future__ import annotations
@@ -66,6 +68,15 @@ PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS: dict[int, str] = {
     5: "pr95_stage5_adamw_baseline_mlx",
     8: "pr95_stage8_muon_adamw_mlx",
 }
+PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY = "implemented_mlx_synthetic_timing_only"
+PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY = "synthetic_timing_only"
+PR95_MLX_SOURCE_FAITHFUL_BLOCKERS: tuple[str, ...] = (
+    "pr95_source_video_loader_not_ported_to_mlx",
+    "pr95_eval_roundtrip_scorer_preprocess_loss_not_ported_to_mlx",
+    "pr95_stage_hparams_and_cosine_schedules_not_all_source_matched",
+    "pr95_qat_c1a_and_resume_semantics_not_ported_to_mlx",
+    "pr95_export_forward_parity_not_established",
+)
 
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
@@ -81,6 +92,8 @@ FALSE_AUTHORITY: dict[str, bool] = {
 
 EXACT_READINESS_REFUSAL_BLOCKERS: tuple[str, ...] = (
     "pr95_hnerv_mlx_timing_smoke_is_local_training_signal_not_score",
+    "pr95_hnerv_mlx_training_is_synthetic_timing_only_not_source_faithful",
+    *PR95_MLX_SOURCE_FAITHFUL_BLOCKERS,
     "synthetic_targets_do_not_establish_contest_quality",
     "byte_closed_smoke_archive_not_consumed_by_pr95_runtime",
     "runtime_consumption_proof_missing",
@@ -1120,7 +1133,7 @@ def _safe_descriptor_fragment(value: str) -> str:
 
 
 def pr95_default_optimizer_descriptor_id(stage_index: int) -> str:
-    """Return the executable source-faithful descriptor for a PR95 stage."""
+    """Return the default executable synthetic-timing descriptor for a PR95 stage."""
 
     try:
         return PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS[int(stage_index)]
@@ -1199,14 +1212,14 @@ def pr95_mlx_optimizer_config_from_descriptor(
     *,
     stage_index: int,
 ) -> Pr95MlxOptimizerConfig:
-    """Lower an executable PR95 descriptor into the MLX optimizer config."""
+    """Lower a PR95 MLX timing descriptor into the optimizer config."""
 
     descriptor = pr95_mlx_optimizer_descriptor_row(descriptor_id)
     training_config = descriptor.get("training_config")
     if not isinstance(training_config, Mapping):
         raise Pr95HNeRVMlxError(f"{descriptor_id}: descriptor missing training_config")
     backend_status = str(training_config.get("backend_status") or "")
-    if backend_status != "implemented_mlx_source_faithful":
+    if backend_status != PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY:
         raise Pr95HNeRVMlxError(
             f"{descriptor_id}: optimizer descriptor is not executable on MLX "
             f"(backend_status={backend_status or 'missing'})"
@@ -1279,7 +1292,7 @@ def stage_smoke_config(
     *,
     optimizer_descriptor_id: str | None = None,
 ) -> Pr95MlxStageSmokeConfig:
-    """Return a faithful optimizer switch for PR95 stages 1, 5, and 8."""
+    """Return the PR95-shaped optimizer switch for synthetic MLX timing stages."""
 
     if stage_index not in PR95_STAGE_MODULES:
         raise ValueError("supported PR95 MLX timing stages are 1, 5, and 8")
@@ -1341,7 +1354,7 @@ def apply_pr95_mlx_optimizer_step(
     config: Pr95MlxOptimizerConfig,
     parameter_group_fingerprint: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Apply one source-faithful PR95 optimizer step to an MLX module."""
+    """Apply one PR95-shaped optimizer step to an MLX module."""
 
     require_mlx()
     params_flat = dict(tree_flatten(module.parameters()))  # type: ignore[misc]
@@ -1538,6 +1551,9 @@ def run_pr95_mlx_synthetic_timing_smoke(
         "representation_family": "hnerv",
         "substrate_family": "nerv_family",
         "training_backend": "mlx",
+        "training_fidelity": PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY,
+        "source_faithful_training": False,
+        "source_faithfulness_blockers": list(PR95_MLX_SOURCE_FAITHFUL_BLOCKERS),
         "device": "mlx",
         "hardware_substrate": f"{platform.system()}_{platform.machine()}_mlx",
         "seed": seed,
@@ -1592,6 +1608,9 @@ def run_pr95_mlx_synthetic_timing_smoke(
         "representation_family": "hnerv",
         "substrate_family": "nerv_family",
         "training_backend": "mlx",
+        "training_fidelity": PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY,
+        "source_faithful_training": False,
+        "source_faithfulness_blockers": list(PR95_MLX_SOURCE_FAITHFUL_BLOCKERS),
         "evidence_grade": "[macOS-MLX research-signal]",
         "timing": {
             "elapsed_seconds": elapsed,
@@ -1606,6 +1625,9 @@ def run_pr95_mlx_synthetic_timing_smoke(
             "optimizer_descriptor_id": stage.optimizer_descriptor_id,
             "optimizer_config_sha256": stage.optimizer_config_sha256,
             "optimizer_backend_status": stage.optimizer_backend_status,
+            "training_fidelity": PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY,
+            "source_faithful_training": False,
+            "source_faithfulness_blockers": list(PR95_MLX_SOURCE_FAITHFUL_BLOCKERS),
             "parameter_group_lr_policy_id": stage.parameter_group_lr_policy_id,
             "parameter_group_lr_policy_sha256": stage.parameter_group_lr_policy_sha256,
             "parameter_group_fingerprint_sha256": parameter_group_fingerprint[
@@ -1729,6 +1751,9 @@ __all__ = [
     "LANE_ID",
     "PR95_ARCHIVE_EXPORT_SCHEMA",
     "PR95_ARCHIVE_N_QUANT",
+    "PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY",
+    "PR95_MLX_SOURCE_FAITHFUL_BLOCKERS",
+    "PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY",
     "PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS",
     "PR95_STAGE_MODULES",
     "PUBLIC_ARCHIVE_FORWARD_PARITY_SCHEMA",

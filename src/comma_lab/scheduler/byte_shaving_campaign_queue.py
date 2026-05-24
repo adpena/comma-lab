@@ -43,9 +43,12 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.packet_compiler.deterministic_compiler import (
+    PACKET_IR_OPERATION_SET_SCHEMA,
+    packetir_operation_set_bridge_contract,
+)
 
 from .byte_shaving_materializer_registry import (
-    ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER,
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
     DQS1_PAIRSET_TARGET_KIND,
     INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER,
@@ -100,6 +103,15 @@ MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA = (
 )
 MATERIALIZER_EXACT_EVAL_DISPATCH_PLAN_SCHEMA = "materializer_exact_eval_dispatch_plan.v1"
 OPTIMIZER_CANDIDATE_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
+HARVESTABLE_MATERIALIZER_MANIFEST_SCHEMAS = frozenset(
+    {
+        CHAIN_SCHEMA,
+        INVERSE_SCORER_CELL_CHAIN_SCHEMA,
+        ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+        PACKET_MEMBER_RECOMPRESS_SCHEMA,
+        TENSOR_FACTORIZE_SCHEMA,
+    }
+)
 OPERATION_SET_CLEARABLE_SOURCE_BLOCKERS = frozenset(
     {
         "operation_set_requires_atomic_materializer_or_explicit_partial_set_split",
@@ -304,6 +316,88 @@ def _units_by_id(source_units: Sequence[Mapping[str, Any]]) -> dict[str, Mapping
     }
 
 
+def _packet_ir_operation_set_for_row(
+    payload: Mapping[str, Any],
+    row: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    operation_set_id = str(row.get("operation_set_id") or "")
+    if not operation_set_id:
+        return None
+    for packet_ir_set in _as_list(payload.get("packet_ir_operation_sets")):
+        if not isinstance(packet_ir_set, Mapping):
+            continue
+        if str(packet_ir_set.get("source_operation_set_id") or "") == operation_set_id:
+            return packet_ir_set
+    return None
+
+
+def _packet_ir_operation_set_blockers(
+    row: Mapping[str, Any],
+    packet_ir: Mapping[str, Any] | None,
+) -> list[str]:
+    if packet_ir is None:
+        return ["operation_set_packet_ir_operation_set_missing"]
+
+    blockers: list[str] = []
+    contract = packetir_operation_set_bridge_contract()
+    operation_set_id = str(row.get("operation_set_id") or "")
+    if packet_ir.get("schema") != PACKET_IR_OPERATION_SET_SCHEMA:
+        blockers.append("operation_set_packet_ir_schema_mismatch")
+    if str(packet_ir.get("source_operation_set_id") or "") != operation_set_id:
+        blockers.append("operation_set_packet_ir_source_id_mismatch")
+    if packet_ir.get("chosen_operation_sequence_sha256") != row.get(
+        "chosen_operation_sequence_sha256"
+    ):
+        blockers.append("operation_set_packet_ir_sequence_hash_mismatch")
+    if packet_ir.get("chosen_operation_sequence_is_permutation") is not True:
+        blockers.append("operation_set_packet_ir_sequence_not_permutation")
+    if _as_list(packet_ir.get("required_order")) != list(contract["required_order"]):
+        blockers.append("operation_set_packet_ir_required_order_mismatch")
+    if _as_list(packet_ir.get("required_proofs")) != list(contract["required_proofs"]):
+        blockers.append("operation_set_packet_ir_required_proofs_mismatch")
+
+    compiler_contract = packet_ir.get("compiler_contract")
+    if not isinstance(compiler_contract, Mapping):
+        blockers.append("operation_set_packet_ir_compiler_contract_missing")
+    else:
+        for key in (
+            "schema",
+            "canonical_packet_compiler_module",
+            "canonical_packet_compiler_schema",
+            "recommended_ir_schema",
+        ):
+            if compiler_contract.get(key) != contract.get(key):
+                blockers.append(f"operation_set_packet_ir_compiler_contract_mismatch:{key}")
+        if _as_list(compiler_contract.get("required_order")) != list(
+            contract["required_order"]
+        ):
+            blockers.append(
+                "operation_set_packet_ir_compiler_contract_mismatch:required_order"
+            )
+        if _as_list(compiler_contract.get("required_proofs")) != list(
+            contract["required_proofs"]
+        ):
+            blockers.append(
+                "operation_set_packet_ir_compiler_contract_mismatch:required_proofs"
+            )
+
+    operations = [
+        operation
+        for operation in _as_list(packet_ir.get("operations"))
+        if isinstance(operation, Mapping)
+    ]
+    if not operations:
+        blockers.append("operation_set_packet_ir_operations_missing")
+    try:
+        require_no_truthy_authority_fields(
+            packet_ir,
+            context="packet_ir_operation_set",
+        )
+    except ValueError as exc:
+        blockers.append(f"operation_set_packet_ir_authority_violation:{exc}")
+    return ordered_unique(blockers)
+
+
 def _resolution_gap_class(resolution: Mapping[str, Any], blockers: Sequence[str]) -> str:
     joined = "\n".join(blockers)
     if "non_dqs1_target_requires_materializer_work_queue:" in joined:
@@ -390,6 +484,140 @@ def _receiver_contract_status(resolution: Mapping[str, Any], gap_class: str) -> 
     if gap_class in {"operation_family_missing", "unknown_operation_family"}:
         return "receiver_operation_contract_invalid"
     return "receiver_contract_blocked"
+
+
+def _packet_ir_compiled_row(packet_ir: Mapping[str, Any]) -> dict[str, Any]:
+    operations = [
+        operation
+        for operation in _as_list(packet_ir.get("operations"))
+        if isinstance(operation, Mapping)
+    ]
+    if not operations:
+        raise ExperimentQueueError("packet_ir_operation_set operations[] missing")
+    if packet_ir.get("chosen_operation_sequence_is_permutation") is False:
+        raise ExperimentQueueError(
+            "packet_ir_operation_set chosen sequence is not a permutation"
+        )
+    materializer_resolutions: list[dict[str, Any]] = []
+    source_units: list[dict[str, Any]] = []
+    known_target_kinds = known_materializer_target_kinds()
+    for operation in operations:
+        unit_id = str(operation.get("unit_id") or "")
+        unit = {
+            "unit_id": unit_id,
+            "unit_kind": operation.get("unit_kind"),
+            "candidate_saved_bytes": operation.get("candidate_saved_bytes"),
+            "blockers": [],
+        }
+        resolution = resolve_materializer(operation=operation, unit=unit)
+        resolution_blockers = ordered_unique(
+            [
+                *[str(item) for item in resolution.blockers],
+                *[
+                    f"selected_operation_blocker:{unit_id or '<missing>'}:{item}"
+                    for item in _as_list(operation.get("blockers"))
+                ],
+                *(
+                    [
+                        "non_dqs1_target_requires_materializer_work_queue:"
+                        f"{resolution.target_kind}"
+                    ]
+                    if resolution.target_kind
+                    and resolution.target_kind != DQS1_PAIRSET_TARGET_KIND
+                    and resolution.executable
+                    else []
+                ),
+                *(
+                    [
+                        "unsupported_materializer_target:"
+                        f"{resolution.target_kind}"
+                    ]
+                    if resolution.target_kind
+                    and resolution.target_kind not in known_target_kinds
+                    else []
+                ),
+                "packetir_operation_set_requires_materializer_contexts",
+            ]
+        )
+        materializer_resolutions.append(
+            {
+                "unit_id": resolution.unit_id,
+                "unit_kind": resolution.unit_kind,
+                "operation_id": resolution.operation_id,
+                "operation_family": resolution.operation_family,
+                "explicit_materializer": resolution.explicit_materializer,
+                "materializer_id": resolution.materializer_id,
+                "target_kind": resolution.target_kind,
+                "receiver_contract_id": resolution.receiver_contract_id,
+                "receiver_contract_kind": resolution.receiver_contract_kind,
+                "cooperative_receiver_required": resolution.cooperative_receiver_required,
+                "materialization_resource_kind": resolution.materialization_resource_kind,
+                "executable": resolution.executable,
+                "blockers": resolution_blockers,
+                "selected_operation_blockers": _as_list(operation.get("blockers")),
+            }
+        )
+        source_units.append(unit)
+    return {
+        "schema": "packet_ir_operation_set_materializer_backlog_source_row.v1",
+        "candidate_id": packet_ir.get("operation_set_id"),
+        "selection_id": packet_ir.get("operation_set_id"),
+        "selection_kind": "packet_ir_operation_set",
+        "operation_set_id": packet_ir.get("source_operation_set_id"),
+        "packet_ir_operation_set": dict(packet_ir),
+        "candidate_saved_bytes": packet_ir.get("candidate_saved_bytes"),
+        "expected_delta_score": packet_ir.get("expected_delta_score"),
+        "expected_score_gain": packet_ir.get("expected_score_gain"),
+        "source_units": source_units,
+        "materializer_resolutions": materializer_resolutions,
+        "executable": False,
+        "materialization_blockers": [
+            "packetir_operation_set_requires_materializer_contexts",
+            "packetir_operation_set_requires_runtime_consumption_proof",
+            "packetir_operation_set_requires_exact_readiness_handoff",
+        ],
+        **FALSE_AUTHORITY,
+    }
+
+
+def lower_packetir_operation_set_to_backlog_rows(
+    packet_ir: Mapping[str, Any],
+    source_backlog_row: Mapping[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Lower one PacketIR operation set into scheduler materializer backlog rows.
+
+    PacketIR remains a byte-grammar handoff, not execution authority. This
+    helper resolves each concrete operation through the scheduler materializer
+    registry, then returns the same backlog-row schema consumed by the existing
+    context/work-queue path.
+    """
+
+    if packet_ir.get("schema") != PACKET_IR_OPERATION_SET_SCHEMA:
+        raise ExperimentQueueError(f"expected schema {PACKET_IR_OPERATION_SET_SCHEMA}")
+    try:
+        require_no_truthy_authority_fields(
+            packet_ir,
+            context="packet_ir_operation_set",
+        )
+        if source_backlog_row is not None:
+            require_no_truthy_authority_fields(
+                source_backlog_row,
+                context="packet_ir_source_backlog_row",
+            )
+    except ValueError as exc:
+        raise ExperimentQueueError(str(exc)) from exc
+    backlog = build_materializer_backlog([_packet_ir_compiled_row(packet_ir)])
+    rows = [dict(row) for row in _as_list(backlog.get("rows")) if isinstance(row, Mapping)]
+    for row in rows:
+        row["source_packet_ir_schema"] = packet_ir.get("schema")
+        row["source_packet_ir_operation_set_id"] = packet_ir.get("operation_set_id")
+        row["source_packet_ir_source_operation_set_id"] = packet_ir.get(
+            "source_operation_set_id"
+        )
+        if source_backlog_row is not None:
+            row["source_backlog_key"] = source_backlog_row.get("backlog_key")
+        row.update(FALSE_AUTHORITY)
+    return rows
 
 
 def _backlog_row_sort_key(row: Mapping[str, Any]) -> tuple[float, int, int, str]:
@@ -975,6 +1203,34 @@ def _inverse_scorer_cell_candidate_command(
     manifest_out = _path_context_value(context, "manifest_out")
     if output_dir is None and manifest_out is None:
         blockers.append("materializer_context_missing:manifest_out")
+    source_inflate_output_dir = _path_context_value(context, "source_inflate_output_dir")
+    candidate_inflate_output_dir = _path_context_value(
+        context,
+        "candidate_inflate_output_dir",
+    )
+    inflate_runtime_dir = _path_context_value(context, "inflate_runtime_dir")
+    has_precomputed_parity_context = (
+        source_inflate_output_dir is not None
+        and candidate_inflate_output_dir is not None
+    )
+    has_partial_precomputed_parity_context = (
+        source_inflate_output_dir is None
+    ) != (candidate_inflate_output_dir is None)
+    has_runtime_parity_context = inflate_runtime_dir is not None
+    exact_chain_requires_inflate_parity = (
+        output_dir is not None and context.get("descriptor_probe_only") is not True
+    )
+    explicit_fail_if_parity_blocked = (
+        context.get("fail_if_inflate_parity_blocked") is True
+    )
+    if output_dir is not None and has_partial_precomputed_parity_context:
+        blockers.append(
+            "inverse_scorer_cell_inflate_parity_requires_source_and_candidate_output_dirs"
+        )
+    if (
+        exact_chain_requires_inflate_parity or explicit_fail_if_parity_blocked
+    ) and not (has_precomputed_parity_context or has_runtime_parity_context):
+        blockers.append("inverse_scorer_cell_exact_chain_requires_inflate_parity_context")
     if blockers:
         return [], blockers, {}
 
@@ -998,18 +1254,12 @@ def _inverse_scorer_cell_candidate_command(
         min_free_bytes = _finite_int(context.get("min_free_bytes"))
         if min_free_bytes is not None:
             command.extend(["--min-free-bytes", str(min_free_bytes)])
-        source_inflate_output_dir = _path_context_value(context, "source_inflate_output_dir")
         if source_inflate_output_dir is not None:
             command.extend(["--source-inflate-output-dir", source_inflate_output_dir])
             input_paths.append(source_inflate_output_dir)
-        candidate_inflate_output_dir = _path_context_value(
-            context,
-            "candidate_inflate_output_dir",
-        )
         if candidate_inflate_output_dir is not None:
             command.extend(["--candidate-inflate-output-dir", candidate_inflate_output_dir])
             input_paths.append(candidate_inflate_output_dir)
-        inflate_runtime_dir = _path_context_value(context, "inflate_runtime_dir")
         if inflate_runtime_dir is not None:
             command.extend(["--inflate-runtime-dir", inflate_runtime_dir])
             input_paths.append(inflate_runtime_dir)
@@ -1027,7 +1277,7 @@ def _inverse_scorer_cell_candidate_command(
             command.append("--keep-inflate-work-dir")
         if context.get("fail_if_receiver_blocked") is True:
             command.append("--fail-if-receiver-blocked")
-        if context.get("fail_if_inflate_parity_blocked") is True:
+        if exact_chain_requires_inflate_parity or explicit_fail_if_parity_blocked:
             command.append("--fail-if-inflate-parity-blocked")
     else:
         assert output_archive is not None
@@ -1085,9 +1335,10 @@ def _inverse_scorer_cell_candidate_command(
             "max_recursive_entries": 512,
             "include_postcondition_paths": True,
             "parity_probe_required": (
-                _path_context_value(context, "source_inflate_output_dir") is not None
-                or _path_context_value(context, "candidate_inflate_output_dir") is not None
-                or _path_context_value(context, "inflate_runtime_dir") is not None
+                exact_chain_requires_inflate_parity
+                or explicit_fail_if_parity_blocked
+                or has_precomputed_parity_context
+                or has_runtime_parity_context
             ),
         }
     return command, [], {
@@ -1258,7 +1509,6 @@ def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
             [
                 "archive_section_entropy_recode_requires_archive_preflight",
                 "archive_section_entropy_recode_requires_same_runtime_inflate_parity",
-                "archive_section_entropy_recode_exact_readiness_bridge_not_yet_wired",
             ]
         )
     if target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
@@ -1266,7 +1516,6 @@ def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
             [
                 "packet_member_recompress_requires_archive_preflight",
                 "packet_member_recompress_requires_runtime_consumption_proof",
-                "packet_member_recompress_exact_readiness_bridge_not_yet_wired",
             ]
         )
     if target_kind == TENSOR_FACTORIZE_TARGET_KIND:
@@ -1274,7 +1523,6 @@ def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
             [
                 "tensor_factorize_requires_cooperative_receiver",
                 "tensor_factorize_requires_runtime_consumption_proof",
-                "tensor_factorize_exact_readiness_bridge_not_yet_wired",
             ]
         )
     if target_kind == INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND:
@@ -1477,6 +1725,7 @@ def build_materializer_work_queue(
             context: Mapping[str, Any] = {}
         else:
             context = context_matches[0][1] if context_matches else {}
+        blockers.extend(_string_list_context_value(context, "context_blockers"))
         command: list[str] = []
         postconditions: list[dict[str, Any]] = []
         telemetry: dict[str, Any] = {}
@@ -1616,7 +1865,8 @@ def build_materializer_work_queue(
             manifest_out = _path_context_value(context, "manifest_out")
             if command and output_dir is not None:
                 require_inflate_parity = (
-                    _path_context_value(context, "source_inflate_output_dir") is not None
+                    context.get("descriptor_probe_only") is not True
+                    or _path_context_value(context, "source_inflate_output_dir") is not None
                     or _path_context_value(context, "candidate_inflate_output_dir") is not None
                     or _path_context_value(context, "inflate_runtime_dir") is not None
                     or context.get("fail_if_inflate_parity_blocked") is True
@@ -1777,9 +2027,23 @@ def _materializer_chain_manifest_path(
         path = condition.get("path")
         if isinstance(path, str) and path.strip():
             return path
+    for condition in postconditions:
+        if condition.get("type") != "json_completion_contract":
+            continue
+        required_equals = condition.get("required_equals")
+        schema = (
+            required_equals.get("schema")
+            if isinstance(required_equals, Mapping)
+            else condition.get("schema")
+        )
+        if schema not in HARVESTABLE_MATERIALIZER_MANIFEST_SCHEMAS:
+            continue
+        path = condition.get("path")
+        if isinstance(path, str) and path.strip():
+            return path
     raise ExperimentQueueError(
-        "include_exact_readiness_followup requires materializer_chain_complete "
-        f"postcondition for {row_id}"
+        "include_exact_readiness_followup requires a harvestable materializer "
+        f"manifest postcondition for {row_id}"
     )
 
 
@@ -1791,16 +2055,6 @@ def _planning_only_exact_readiness_skip_reason(row: Mapping[str, Any]) -> str | 
         or materializer_id == INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER
     ):
         return "planning_only_inverse_action_functional_not_candidate_archive"
-    if (
-        target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
-        or materializer_id == ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER
-    ):
-        return "archive_section_entropy_recode_exact_readiness_bridge_not_yet_wired"
-    if target_kind in {
-        PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
-        TENSOR_FACTORIZE_TARGET_KIND,
-    }:
-        return "family_agnostic_candidate_exact_readiness_bridge_not_yet_wired"
     return None
 
 
@@ -2497,6 +2751,11 @@ def _materialize_row(
     conflict_violations = _as_list(row.get("conflict_violations"))
     if conflict_violations:
         blockers.append("conflict_violations_present")
+    packet_ir_operation_set = _packet_ir_operation_set_for_row(payload, row)
+    if kind == "operation_set":
+        blockers.extend(
+            _packet_ir_operation_set_blockers(row, packet_ir_operation_set)
+        )
     blockers = ordered_unique(blockers)
     executable = not blockers
     candidate_id = (
@@ -2523,6 +2782,11 @@ def _materialize_row(
         "source_plan_schema": payload.get("schema"),
         "selected_operations": selected_operations,
         "operation_set_id": row.get("operation_set_id"),
+        "packet_ir_operation_set": (
+            dict(packet_ir_operation_set)
+            if packet_ir_operation_set is not None
+            else None
+        ),
         "chosen_operation_sequence": chosen_operation_sequence,
         "chosen_operation_sequence_sha256": row.get("chosen_operation_sequence_sha256"),
         "chosen_operation_sequence_source": row.get("chosen_operation_sequence_source"),
@@ -2547,6 +2811,11 @@ def _materialize_row(
             "selection_kind": kind,
             "selection_id": selection_id,
             "operation_set_id": row.get("operation_set_id"),
+            "packet_ir_operation_set": (
+                dict(packet_ir_operation_set)
+                if packet_ir_operation_set is not None
+                else None
+            ),
             "combo_id": row.get("combo_id"),
             "sweep_id": row.get("sweep_id"),
             "chosen_operation_sequence": chosen_operation_sequence,
@@ -2627,6 +2896,12 @@ def compile_dqs1_byte_shaving_campaign(
         executable_rows = executable_rows[:candidate_limit]
     blocked_rows = [row for row in compiled_rows if row["executable"] is not True]
     materializer_backlog = build_materializer_backlog(compiled_rows)
+    packet_ir_materializer_backlog_rows = [
+        backlog_row
+        for packet_ir in _as_list(payload.get("packet_ir_operation_sets"))
+        if isinstance(packet_ir, Mapping)
+        for backlog_row in lower_packetir_operation_set_to_backlog_rows(packet_ir)
+    ]
     materializer_backlog_summary = summarize_materializer_backlog(materializer_backlog)
     materializer_work_queue = build_materializer_work_queue(
         materializer_backlog,
@@ -2657,6 +2932,7 @@ def compile_dqs1_byte_shaving_campaign(
             "dropped_pair_indices": row["dropped_pair_indices"],
             "selected_operations": row["selected_operations"],
             "operation_set_id": row.get("operation_set_id"),
+            "packet_ir_operation_set": row.get("packet_ir_operation_set"),
             "chosen_operation_sequence": row.get("chosen_operation_sequence"),
             "chosen_operation_sequence_sha256": row.get(
                 "chosen_operation_sequence_sha256"
@@ -2791,6 +3067,10 @@ def compile_dqs1_byte_shaving_campaign(
             "partial_materialization_rationale": rationale or None,
             "partial_materialization_blockers": partial_materialization_blockers,
             "materializer_backlog": materializer_backlog,
+            "packet_ir_materializer_backlog_row_count": len(
+                packet_ir_materializer_backlog_rows
+            ),
+            "packet_ir_materializer_backlog_rows": packet_ir_materializer_backlog_rows,
             "materializer_backlog_summary": materializer_backlog_summary,
             "materializer_work_queue": materializer_work_queue,
             "executable_rows": executable_rows,
@@ -2821,6 +3101,7 @@ __all__ = [
     "build_materializer_execution_queue",
     "build_materializer_work_queue",
     "compile_dqs1_byte_shaving_campaign",
+    "lower_packetir_operation_set_to_backlog_rows",
     "materializer_contexts_from_payload",
     "summarize_materializer_backlog",
 ]

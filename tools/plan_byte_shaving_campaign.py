@@ -146,6 +146,16 @@ def main(argv: list[str] | None = None) -> int:
             "water buckets into a byte-shaving signal surface first"
         ),
     )
+    parser.add_argument(
+        "--allow-leaf-inverse-cell-candidates",
+        action="store_true",
+        help=(
+            "legacy/diagnostic mode: allow bare inverse-action cells to become "
+            "IAS1 descriptor candidates. By default, bare cells become a "
+            "high-level operation-compiler gap unless source operation-set "
+            "provenance can be rehydrated into real materializers."
+        ),
+    )
     parser.add_argument("--campaign-id", default="byte_shaving_campaign")
     parser.add_argument("--max-k", type=int, default=None)
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
@@ -208,6 +218,9 @@ def main(argv: list[str] | None = None) -> int:
             payload = build_signal_surface_from_inverse_action_functional(
                 payload,
                 campaign_id=args.campaign_id,
+                allow_leaf_cell_candidates=(
+                    args.allow_leaf_inverse_cell_candidates
+                ),
             )
         elif payload.get("schema") != SIGNAL_SURFACE_SCHEMA:
             raise SystemExit(f"{args.source}: expected schema {SIGNAL_SURFACE_SCHEMA}")

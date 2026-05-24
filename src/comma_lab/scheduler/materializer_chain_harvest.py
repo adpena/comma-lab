@@ -45,9 +45,9 @@ from tac.optimizer.exact_readiness import (
     json_dumps as exact_readiness_json_dumps,
 )
 from tac.optimizer.materializer_chain_harvest import (
-    SUPPORTED_CHAIN_SCHEMAS,
+    SUPPORTED_MATERIALIZER_MANIFEST_SCHEMAS,
     MaterializerChainHarvestError,
-    adapt_materializer_chain_manifest_to_candidate,
+    adapt_materializer_manifest_to_candidate,
 )
 
 from .byte_shaving_campaign_queue import (
@@ -66,6 +66,8 @@ MATERIALIZER_HARVEST_CLEARABLE_SOURCE_BLOCKERS = (
     "materializer_chain_is_not_dispatch_authorization",
     "materialized_archive_runtime_custody_required",
     "materializer_chain_harvest_candidate_pending_exact_readiness",
+    "materializer_candidate_is_not_dispatch_authorization",
+    "family_agnostic_materializer_candidate_pending_exact_readiness",
     "exact_readiness_promotion_required",
     "exact_auth_eval_result_required_before_score_claim",
     "byte_range_entropy_recode_chain_is_not_dispatch_authorization",
@@ -131,7 +133,7 @@ def harvest_materializer_chain_manifests(
             row["blockers"] = state_blockers
             inspected_rows.append(row)
             continue
-        blockers, observed_schema = _validate_chain_manifest(path, repo_root=repo)
+        blockers, observed_schema = _validate_materializer_manifest(path, repo_root=repo)
         row["observed_schema"] = observed_schema
         if blockers:
             row["blockers"] = blockers
@@ -457,17 +459,27 @@ def _work_queue_manifest_candidates(
         for condition in raw_row.get("postconditions") or []:
             if not isinstance(condition, Mapping):
                 continue
-            if condition.get("type") != "materializer_chain_complete":
+            condition_type = condition.get("type")
+            if condition_type == "materializer_chain_complete":
+                schema = str(condition.get("schema") or "")
+                path = condition.get("path")
+            elif condition_type == "json_completion_contract":
+                required_equals = condition.get("required_equals")
+                schema = str(
+                    required_equals.get("schema")
+                    if isinstance(required_equals, Mapping)
+                    else condition.get("schema") or ""
+                )
+                path = condition.get("path")
+            else:
                 continue
-            schema = str(condition.get("schema") or "")
-            path = condition.get("path")
-            if schema not in SUPPORTED_CHAIN_SCHEMAS:
+            if schema not in SUPPORTED_MATERIALIZER_MANIFEST_SCHEMAS:
                 continue
             if not isinstance(path, str) or not path.strip():
                 continue
             discoveries.append(
                 {
-                    "source": "materializer_work_queue_postcondition",
+                    "source": "materializer_work_queue_manifest_postcondition",
                     "work_queue_path": _repo_rel(work_queue_path, repo_root),
                     "path": path,
                     "schema": schema,
@@ -600,24 +612,24 @@ def _state_blockers(
     return []
 
 
-def _validate_chain_manifest(path: Path, *, repo_root: Path) -> tuple[list[str], str | None]:
+def _validate_materializer_manifest(path: Path, *, repo_root: Path) -> tuple[list[str], str | None]:
     if not path.is_file():
-        return [f"chain_manifest_missing:{path}"], None
+        return [f"materializer_manifest_missing:{path}"], None
     if path.is_symlink():
-        return [f"chain_manifest_is_symlink:{path}"], None
+        return [f"materializer_manifest_is_symlink:{path}"], None
     try:
         payload = _load_json(path)
     except (OSError, json.JSONDecodeError) as exc:
-        return [f"chain_manifest_json_invalid:{exc}"], None
+        return [f"materializer_manifest_json_invalid:{exc}"], None
     if not isinstance(payload, Mapping):
-        return ["chain_manifest_not_object"], None
+        return ["materializer_manifest_not_object"], None
     schema = str(payload.get("schema") or "")
-    if schema not in SUPPORTED_CHAIN_SCHEMAS:
-        return [f"unsupported_chain_schema:{schema!r}"], schema or None
+    if schema not in SUPPORTED_MATERIALIZER_MANIFEST_SCHEMAS:
+        return [f"unsupported_materializer_schema:{schema!r}"], schema or None
     if payload.get("status") == "failed":
-        return ["chain_manifest_status_failed"], schema
+        return ["materializer_manifest_status_failed"], schema
     try:
-        adapt_materializer_chain_manifest_to_candidate(
+        adapt_materializer_manifest_to_candidate(
             payload,
             source_path=path,
             repo_root=repo_root,

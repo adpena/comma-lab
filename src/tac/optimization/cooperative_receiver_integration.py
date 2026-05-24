@@ -33,6 +33,7 @@ from tac.packet_compiler.cooperative_receiver_grammars import compiler_hook_rows
 from tac.packet_compiler.deterministic_compiler import (
     COMPILER_MODES,
     TARGET_PROFILES,
+    packetir_operation_set_bridge_contract,
 )
 from tac.packet_compiler.deterministic_compiler import (
     SCHEMA_VERSION as DETERMINISTIC_COMPILER_SCHEMA,
@@ -223,20 +224,17 @@ def build_magic_codec_rows() -> list[dict[str, object]]:
 def build_packet_compiler_hook() -> dict[str, object]:
     """Return deterministic compiler policy threaded into the manifest."""
 
+    contract = packetir_operation_set_bridge_contract()
     return {
         "schema": DETERMINISTIC_COMPILER_SCHEMA,
         "canonical_module": "tac.packet_compiler.deterministic_compiler",
         "allowed_modes": list(COMPILER_MODES),
         "target_profiles": list(TARGET_PROFILES),
         "cooperative_receiver_packet_grammars": compiler_hook_rows(),
-        "required_order": [
-            "representation",
-            "prediction",
-            "quantization",
-            "hyperprior",
-            "arithmetic",
-            "pack",
-        ],
+        "packetir_operation_set_bridge_contract": contract,
+        "recommended_ir_schema": contract["recommended_ir_schema"],
+        "required_order": list(contract["required_order"]),
+        "required_proofs": list(contract["required_proofs"]),
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
     }
@@ -485,8 +483,8 @@ def weight_z4_loss_by_per_pair_fisher(
                 "[predicted; cooperative-receiver per-pair Fisher weighting v1]"
             ),
             "rationale": (
-                f"[predicted; cooperative-receiver per-pair Fisher weighting v1] "
-                f"per-pair Fisher unavailable; no weighting computed."
+                "[predicted; cooperative-receiver per-pair Fisher weighting v1] "
+                "per-pair Fisher unavailable; no weighting computed."
             ),
         }
 

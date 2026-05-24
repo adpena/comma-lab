@@ -238,12 +238,15 @@ def _inverse_action_functional_surface(
     *,
     campaign_id: str,
     index: int,
+    allow_leaf_cell_candidates: bool,
 ) -> tuple[list[dict[str, Any]], dict[str, Any], list[dict[str, Any]]]:
     payload = _load_json_object(path)
     surface = build_signal_surface_from_inverse_action_functional(
         payload,
         campaign_id=f"{campaign_id}_inverse_action_functional_{index}",
+        allow_leaf_cell_candidates=allow_leaf_cell_candidates,
     )
+    portfolio = _as_mapping(surface.get("water_bucket_materialization_portfolio"))
     ref = {
         **_json_payload_ref(
             path,
@@ -254,6 +257,13 @@ def _inverse_action_functional_surface(
         "cell_count": _as_mapping(payload.get("integral_totals")).get("cell_count"),
         "selected_count": _as_mapping(payload.get("water_bucket")).get("selected_count"),
         "surface_unit_count": len(_as_list(surface.get("units"))),
+        "water_bucket_materialization_portfolio_schema": portfolio.get("schema"),
+        "water_bucket_materialization_portfolio_row_count": portfolio.get(
+            "portfolio_row_count"
+        ),
+        "water_bucket_materialization_actuation_modes": _as_list(
+            portfolio.get("actuation_modes")
+        ),
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
@@ -724,6 +734,7 @@ def build_byte_shaving_signal_surface(
     engineered_correction_max_targets: int | None = None,
     engineered_correction_default_predicted_quality_score_delta: float = 0.0,
     inverse_action_functional_paths: Sequence[str | Path] = (),
+    allow_inverse_action_leaf_cell_candidates: bool = False,
     master_gradient_archive_sha256s: Sequence[str] = (),
     master_gradient_ledger_path: str | Path | None = None,
     master_gradient_axis: str | None = None,
@@ -762,6 +773,7 @@ def build_byte_shaving_signal_surface(
     inverse_scorer_surface_refs: list[dict[str, Any]] = []
     engineered_correction_refs: list[dict[str, Any]] = []
     inverse_action_functional_refs: list[dict[str, Any]] = []
+    inverse_action_materialization_portfolios: list[dict[str, Any]] = []
     surface_blockers: list[str] = []
 
     for index, raw_path in enumerate(candidate_queue_paths):
@@ -821,6 +833,7 @@ def build_byte_shaving_signal_surface(
             repo,
             campaign_id=campaign_id,
             index=index,
+            allow_leaf_cell_candidates=allow_inverse_action_leaf_cell_candidates,
         )
         for unit in ia_units:
             units.append(
@@ -832,6 +845,16 @@ def build_byte_shaving_signal_surface(
             )
         _extend_refs(source_signal_refs, _as_list(ia_surface.get("source_signal_refs")))
         _extend_refs(inverse_action_functional_refs, refs)
+        portfolio = ia_surface.get("water_bucket_materialization_portfolio")
+        if isinstance(portfolio, Mapping):
+            inverse_action_materialization_portfolios.append(
+                {
+                    **dict(portfolio),
+                    "source_path": _repo_rel(path, repo),
+                    "source_sha256": _file_sha256(path),
+                    "surface_campaign_id": ia_surface.get("campaign_id"),
+                }
+            )
         surface_blockers.extend(str(item) for item in _as_list(ia_surface.get("blockers")))
 
     for index, archive_sha256 in enumerate(master_gradient_archive_sha256s):
@@ -924,6 +947,9 @@ def build_byte_shaving_signal_surface(
         "inverse_scorer_surface_refs": inverse_scorer_surface_refs,
         "engineered_correction_refs": engineered_correction_refs,
         "inverse_action_functional_refs": inverse_action_functional_refs,
+        "inverse_action_materialization_portfolios": (
+            inverse_action_materialization_portfolios
+        ),
         "xray_refs": _xray_hook_refs(xray_hooks),
         "canonical_equation_refs": _canonical_equation_refs(
             repo_root=repo,

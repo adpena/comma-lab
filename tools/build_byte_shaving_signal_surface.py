@@ -38,6 +38,7 @@ def _render_markdown(surface: dict[str, Any]) -> str:
         f"- inverse_scorer_surface_refs: `{len(surface.get('inverse_scorer_surface_refs') or [])}`",
         f"- engineered_correction_refs: `{len(surface.get('engineered_correction_refs') or [])}`",
         f"- inverse_action_functional_refs: `{len(surface.get('inverse_action_functional_refs') or [])}`",
+        f"- inverse_action_materialization_portfolios: `{len(surface.get('inverse_action_materialization_portfolios') or [])}`",
         f"- xray_refs: `{len(surface.get('xray_refs') or [])}`",
         f"- canonical_equation_refs: `{len(surface.get('canonical_equation_refs') or [])}`",
         f"- atom_refs: `{len(surface.get('atom_refs') or [])}`",
@@ -76,6 +77,16 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument("--inverse-action-functional", action="append", default=[])
+    parser.add_argument(
+        "--allow-leaf-inverse-cell-candidates",
+        action="store_true",
+        help=(
+            "legacy/diagnostic mode: allow bare inverse-action cells to become "
+            "IAS1 descriptor candidates. By default, bare cells become a "
+            "high-level operation-compiler gap unless source operation-set "
+            "provenance can be rehydrated into real materializers."
+        ),
+    )
     parser.add_argument("--master-gradient-archive-sha", action="append", default=[])
     parser.add_argument("--master-gradient-ledger", type=Path, default=None)
     parser.add_argument("--master-gradient-axis", default=None)
@@ -121,6 +132,9 @@ def main(argv: list[str] | None = None) -> int:
                 args.engineered_correction_default_delta
             ),
             inverse_action_functional_paths=args.inverse_action_functional,
+            allow_inverse_action_leaf_cell_candidates=(
+                args.allow_leaf_inverse_cell_candidates
+            ),
             master_gradient_archive_sha256s=args.master_gradient_archive_sha,
             master_gradient_ledger_path=args.master_gradient_ledger,
             master_gradient_axis=args.master_gradient_axis,

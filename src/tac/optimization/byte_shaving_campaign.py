@@ -23,9 +23,14 @@ from typing import Any
 
 from tac.archive_byte_profile import CONTEST_ORIGINAL_BYTES
 from tac.optimization.proxy_candidate_contract import (
+    PROXY_FALSE_AUTHORITY_FIELDS,
     apply_proxy_evidence_boundary,
     ordered_unique,
     require_no_truthy_authority_fields,
+)
+from tac.packet_compiler.deterministic_compiler import (
+    PACKET_IR_OPERATION_SET_SCHEMA,
+    packetir_operation_set_bridge_contract,
 )
 
 SIGNAL_SURFACE_SCHEMA = "byte_shaving_signal_surface.v1"
@@ -39,6 +44,19 @@ BYTE_SHAVING_OPERATION_SET_PROVENANCE_SCHEMA = (
 MLX_ACQUISITION_BATCH_OPERATION_SET_PROVENANCE_SCHEMA = (
     "inverse_steganalysis_mlx_acquisition_batch_operation_set_provenance.v1"
 )
+INVERSE_ACTION_WATER_BUCKET_PORTFOLIO_SCHEMA = (
+    "inverse_steganalysis_water_bucket_materialization_portfolio.v1"
+)
+INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY = (
+    "compile_inverse_steganalysis_operation_set"
+)
+INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND = (
+    "inverse_steganalysis_high_level_operation_set_v1"
+)
+INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER = (
+    "inverse_steganalysis_operation_set_compiler_required"
+)
+PACKET_IR_OPERATION_SCHEMA = "packet_ir_operation_v1"
 RATE_MULTIPLIER = 25.0
 ENGINEERED_CORRECTION_TARGETING_SCHEMA = "master_gradient_consumer_engineered_correction_targeting_v1"
 OPERATION_METADATA_KEYS: tuple[str, ...] = (
@@ -58,12 +76,7 @@ OPERATION_METADATA_KEYS: tuple[str, ...] = (
 )
 
 FALSE_AUTHORITY: dict[str, bool] = {
-    "score_claim": False,
-    "score_claim_valid": False,
-    "promotion_eligible": False,
-    "rank_or_kill_eligible": False,
-    "ready_for_exact_eval_dispatch": False,
-    "promotable": False,
+    **PROXY_FALSE_AUTHORITY_FIELDS,
     "dispatch_attempted": False,
     "gpu_launched": False,
 }
@@ -132,6 +145,7 @@ DEFAULT_OPERATION_FAMILIES: dict[str, tuple[str, ...]] = {
         "probe_followup_neighbor",
     ),
     "scorer_inverse_surface_cell": (
+        "compile_inverse_steganalysis_operation_set",
         "probe_inverse_scorer_surface_cell",
         "materialize_inverse_scorer_cell_candidate",
     ),
@@ -143,6 +157,7 @@ DEFAULT_OPERATION_FAMILIES: dict[str, tuple[str, ...]] = {
 
 DEFAULT_OPERATION_ORDER_PRIORS: dict[str, int] = {
     "materialize_scorer_response_candidate": 0,
+    "compile_inverse_steganalysis_operation_set": 0,
     "probe_inverse_scorer_surface_cell": 0,
     "materialize_inverse_scorer_cell_candidate": 1,
     "probe_followup_neighbor": 1,
@@ -172,6 +187,35 @@ DEFAULT_OPERATION_ORDER_PRIORS: dict[str, int] = {
     "zip_header_elide": 50,
     "member_reorder": 50,
     "member_merge": 50,
+}
+
+PACKET_IR_BYTE_CLOSED_UNIT_KINDS = frozenset(
+    {
+        "archive_section",
+        "byte_range",
+        "packet_member",
+        "tensor",
+    }
+)
+
+PACKET_IR_OPERATION_PHASE_BY_FAMILY: dict[str, str] = {
+    "apply_engineered_correction": "representation",
+    "delta_encode": "arithmetic",
+    "entropy_recode": "arithmetic",
+    "factorize_tensor": "representation",
+    "literal_elide": "pack",
+    "member_merge": "pack",
+    "member_recompress": "arithmetic",
+    "member_reorder": "pack",
+    "null_remove_or_seed": "pack",
+    "prune_tensor": "representation",
+    "quantize_tensor": "quantization",
+    "section_entropy_recode": "arithmetic",
+    "section_header_elide": "pack",
+    "section_proceduralize": "prediction",
+    "section_reorder": "pack",
+    "shared_codebook_tensor": "quantization",
+    "zip_header_elide": "pack",
 }
 
 
@@ -958,6 +1002,188 @@ def _operation_set_ladder(
     return rows
 
 
+def _packet_ir_phase(operation: Mapping[str, Any]) -> str:
+    explicit = str(
+        operation.get("packet_ir_phase")
+        or operation.get("compiler_phase")
+        or ""
+    ).strip()
+    contract = packetir_operation_set_bridge_contract()
+    required_order = {
+        str(item) for item in _as_list(contract.get("required_order"))
+    }
+    if explicit in required_order:
+        return explicit
+    family = str(operation.get("operation_family") or "").strip()
+    return PACKET_IR_OPERATION_PHASE_BY_FAMILY.get(family, "pack")
+
+
+def _packet_ir_lowered_operation(
+    operation: Mapping[str, Any],
+    *,
+    order_index: int,
+) -> dict[str, Any]:
+    unit_kind = str(operation.get("unit_kind") or "").strip()
+    operation_family = str(operation.get("operation_family") or "").strip()
+    target_kind = str(operation.get("target_kind") or "").strip()
+    materializer = str(operation.get("materializer") or "").strip()
+    blockers = ordered_unique(
+        [
+            *[str(item) for item in _as_list(operation.get("blockers"))],
+            *(
+                []
+                if unit_kind in PACKET_IR_BYTE_CLOSED_UNIT_KINDS
+                else [f"packetir_operation_not_byte_closed:{unit_kind or '<missing>'}"]
+            ),
+            *(
+                []
+                if target_kind
+                else ["packetir_operation_target_kind_missing"]
+            ),
+            *(
+                []
+                if materializer
+                else ["packetir_operation_materializer_missing"]
+            ),
+        ]
+    )
+    metadata = _operation_metadata(operation)
+    return {
+        "schema": PACKET_IR_OPERATION_SCHEMA,
+        "order_index": order_index,
+        "compiler_phase": _packet_ir_phase(operation),
+        "unit_id": operation.get("unit_id"),
+        "unit_kind": unit_kind,
+        "operation_id": operation.get("operation_id"),
+        "operation_family": operation_family,
+        "target_kind": target_kind or None,
+        "materializer": materializer or None,
+        "params": dict(_mapping(operation.get("params"))),
+        "candidate_saved_bytes": operation.get("candidate_saved_bytes"),
+        "predicted_quality_score_delta": operation.get(
+            "predicted_quality_score_delta"
+        ),
+        **metadata,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _packet_ir_operation_set_from_coupled_set(
+    operation_set: Mapping[str, Any],
+    *,
+    source_payload: Mapping[str, Any],
+    source_paths: Sequence[str],
+) -> dict[str, Any]:
+    contract = packetir_operation_set_bridge_contract()
+    chosen_sequence = [
+        item
+        for item in _as_list(operation_set.get("chosen_operation_sequence"))
+        if isinstance(item, Mapping)
+    ]
+    selected_operations = [
+        item
+        for item in _as_list(operation_set.get("selected_operations"))
+        if isinstance(item, Mapping)
+    ]
+    operation_source = chosen_sequence or selected_operations
+    lowered_operations = [
+        _packet_ir_lowered_operation(operation, order_index=index)
+        for index, operation in enumerate(operation_source)
+    ]
+    operation_blockers = [
+        blocker
+        for operation in lowered_operations
+        for blocker in _as_list(operation.get("blockers"))
+    ]
+    source_blockers = [
+        str(item)
+        for item in _as_list(operation_set.get("dispatch_blockers"))
+        if str(item)
+    ]
+    blockers = ordered_unique(
+        [
+            *source_blockers,
+            *[str(item) for item in operation_blockers],
+            "packetir_operation_set_requires_materializer_contexts",
+            "packetir_operation_set_requires_runtime_consumption_proof",
+            "packetir_operation_set_requires_exact_readiness_handoff",
+        ]
+    )
+    byte_closed_count = sum(
+        1
+        for operation in lowered_operations
+        if not any(
+            str(blocker).startswith("packetir_operation_not_byte_closed")
+            for blocker in _as_list(operation.get("blockers"))
+        )
+    )
+    return {
+        "schema": PACKET_IR_OPERATION_SET_SCHEMA,
+        "source_schema": COUPLED_OPERATION_SET_SCHEMA,
+        "source_paths": list(source_paths),
+        "source_portfolio_schema": _mapping(
+            source_payload.get("water_bucket_materialization_portfolio")
+        ).get("schema"),
+        "candidate_id": source_payload.get("candidate_id"),
+        "lane_id": source_payload.get("lane_id"),
+        "source_operation_set_id": operation_set.get("operation_set_id"),
+        "operation_set_id": f"packetir_{operation_set.get('operation_set_id')}",
+        "compiler_contract": contract,
+        "source_combo_id": operation_set.get("combo_id"),
+        "operation_set_rank": operation_set.get("operation_set_rank"),
+        "selected_unit_ids": _as_list(operation_set.get("selected_unit_ids")),
+        "selected_operations": [dict(operation) for operation in selected_operations],
+        "chosen_operation_sequence": [
+            dict(operation) for operation in chosen_sequence
+        ],
+        "chosen_operation_sequence_sha256": operation_set.get(
+            "chosen_operation_sequence_sha256"
+        ),
+        "chosen_operation_sequence_source": operation_set.get(
+            "chosen_operation_sequence_source"
+        ),
+        "chosen_operation_sequence_is_permutation": operation_set.get(
+            "chosen_operation_sequence_is_permutation"
+        ),
+        "requires_atomic_materialization": True,
+        "partial_materialization_allowed": False,
+        "operation_count": len(lowered_operations),
+        "byte_closed_operation_count": byte_closed_count,
+        "operations": lowered_operations,
+        "active_interactions": _as_list(operation_set.get("active_interactions")),
+        "candidate_saved_bytes": operation_set.get("candidate_saved_bytes"),
+        "expected_delta_score": operation_set.get("expected_delta_score"),
+        "expected_score_gain": operation_set.get("expected_score_gain"),
+        "required_order": list(contract["required_order"]),
+        "required_proofs": list(contract["required_proofs"]),
+        "required_proofs_status": dict.fromkeys(
+            _as_list(contract.get("required_proofs")),
+            "missing",
+        ),
+        "lowering_status": "blocked_until_materializer_contexts_and_proofs",
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _packet_ir_operation_sets(
+    operation_set_rows: Sequence[Mapping[str, Any]],
+    *,
+    source_payload: Mapping[str, Any],
+    source_paths: Sequence[str],
+) -> list[dict[str, Any]]:
+    return [
+        _packet_ir_operation_set_from_coupled_set(
+            row,
+            source_payload=source_payload,
+            source_paths=source_paths,
+        )
+        for row in operation_set_rows
+        if row.get("schema") == COUPLED_OPERATION_SET_SCHEMA
+    ]
+
+
 def _combo_ladder(
     ranked_units: Sequence[Mapping[str, Any]],
     payload: Mapping[str, Any],
@@ -1164,6 +1390,9 @@ def build_byte_shaving_campaign_plan(
         "mlx_calibration_refs": _as_list(payload.get("mlx_calibration_refs")),
         "scorer_response_refs": _as_list(payload.get("scorer_response_refs")),
         "inverse_scorer_surface_refs": _as_list(payload.get("inverse_scorer_surface_refs")),
+        "inverse_action_materialization_portfolios": (
+            _inverse_action_materialization_portfolios(payload)
+        ),
         "frontier_axis": payload.get("frontier_axis") or "[planning-only]",
         "ranked_units": ranked,
         "sweep_ladder": prefix_rows,
@@ -1171,6 +1400,11 @@ def build_byte_shaving_campaign_plan(
         "combination_ladder": combo_rows,
         "permutation_ladder": permutation_rows,
         "operation_set_ladder": operation_set_rows,
+        "packet_ir_operation_sets": _packet_ir_operation_sets(
+            operation_set_rows,
+            source_payload=payload,
+            source_paths=source_paths,
+        ),
         "recommended_combination": dict(best_combo) if best_combo is not None else None,
         "recommended_operation_set": (
             dict(best_operation_set) if best_operation_set is not None else None
@@ -1227,6 +1461,19 @@ def build_byte_shaving_campaign_plan(
         **FALSE_AUTHORITY,
     }
     return apply_proxy_evidence_boundary(plan, dispatch_blockers=plan["dispatch_blockers"])
+
+
+def _inverse_action_materialization_portfolios(
+    payload: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    single = payload.get("water_bucket_materialization_portfolio")
+    if isinstance(single, Mapping):
+        out.append(dict(single))
+    for item in _as_list(payload.get("inverse_action_materialization_portfolios")):
+        if isinstance(item, Mapping):
+            out.append(dict(item))
+    return out
 
 
 def build_signal_surface_from_candidate_queue(
@@ -1722,6 +1969,7 @@ def build_signal_surface_from_inverse_action_functional(
     action_payload: Mapping[str, Any],
     *,
     campaign_id: str = "inverse_steganalysis_action_byte_shaving_surface",
+    allow_leaf_cell_candidates: bool = False,
 ) -> dict[str, Any]:
     """Bridge inverse-action water buckets into the byte-shaving planner."""
 
@@ -1742,6 +1990,7 @@ def build_signal_surface_from_inverse_action_functional(
         if isinstance(item, Mapping)
     }
     units: list[dict[str, Any]] = []
+    portfolio_rows: list[dict[str, Any]] = []
     for index, selected in enumerate(selected_cells):
         atom_id = str(selected.get("atom_id") or f"inverse_action_cell_{index}")
         full_cell = full_cells_by_atom.get(atom_id, {})
@@ -1757,6 +2006,65 @@ def build_signal_surface_from_inverse_action_functional(
         )
         if provenance_units:
             units.extend(provenance_units)
+            portfolio_rows.append(
+                _inverse_action_portfolio_row(
+                    selected=selected,
+                    full_cell=full_cell,
+                    atom_id=atom_id,
+                    source_index=index,
+                    expected_gain=expected_gain,
+                    actuation_mode="source_provenance_operation_set",
+                    unit_ids=[str(unit["unit_id"]) for unit in provenance_units],
+                    operation_families=[
+                        str(unit.get("operation_families", [""])[0])
+                        for unit in provenance_units
+                    ],
+                    target_kinds=[
+                        str(
+                            _as_list(unit.get("operations"))[0].get("target_kind")
+                        )
+                        for unit in provenance_units
+                        if _as_list(unit.get("operations"))
+                        and isinstance(_as_list(unit.get("operations"))[0], Mapping)
+                        and _as_list(unit.get("operations"))[0].get("target_kind")
+                    ],
+                    blockers=[
+                        "requires_materializer_queue_execution",
+                        "requires_runtime_consumption_proof_before_exact_eval",
+                        "requires_exact_auth_eval_before_score_claim",
+                    ],
+                )
+            )
+            continue
+        if not allow_leaf_cell_candidates:
+            units.append(
+                _high_level_operation_compiler_gap_unit(
+                    atom_id=atom_id,
+                    selected=selected,
+                    full_cell=full_cell,
+                    source_index=index,
+                    expected_gain=expected_gain,
+                )
+            )
+            portfolio_rows.append(
+                _inverse_action_portfolio_row(
+                    selected=selected,
+                    full_cell=full_cell,
+                    atom_id=atom_id,
+                    source_index=index,
+                    expected_gain=expected_gain,
+                    actuation_mode="high_level_operation_compiler_required",
+                    unit_ids=[f"inverse_action_{atom_id}"],
+                    operation_families=[INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY],
+                    target_kinds=[INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND],
+                    blockers=[
+                        "inverse_action_cell_lacks_source_operation_provenance",
+                        "requires_candidate_family_operation_compiler",
+                        "requires_archive_runtime_materializer_before_candidate",
+                        "requires_exact_auth_eval_before_score_claim",
+                    ],
+                )
+            )
             continue
         operation = {
             "operation_id": "materialize_inverse_scorer_cell_candidate",
@@ -1808,11 +2116,30 @@ def build_signal_surface_from_inverse_action_functional(
                 },
                 "blockers": [
                     "inverse_action_unit_is_planning_only",
+                    "inverse_action_leaf_cell_candidate_explicitly_enabled",
                     "requires_inverse_scorer_cell_materializer",
                     "requires_byte_closed_archive_before_dispatch",
                     "requires_exact_auth_eval_before_score_claim",
                 ],
             }
+        )
+        portfolio_rows.append(
+            _inverse_action_portfolio_row(
+                selected=selected,
+                full_cell=full_cell,
+                atom_id=atom_id,
+                source_index=index,
+                expected_gain=expected_gain,
+                actuation_mode="leaf_cell_candidate_explicit_opt_in",
+                unit_ids=[f"inverse_action_{atom_id}"],
+                operation_families=["materialize_inverse_scorer_cell_candidate"],
+                target_kinds=["inverse_scorer_cell_candidate_v1"],
+                blockers=[
+                    "leaf_cell_candidate_is_probe_not_portfolio_actuator",
+                    "requires_runtime_consumption_proof_before_exact_eval",
+                    "requires_exact_auth_eval_before_score_claim",
+                ],
+            )
         )
     if not units:
         raise ByteShavingCampaignError("inverse action functional produced no selected cells")
@@ -1826,15 +2153,146 @@ def build_signal_surface_from_inverse_action_functional(
             {
                 "kind": "inverse_steganalysis_action_functional",
                 "schema": action_payload.get("schema"),
+                "water_bucket_materialization_portfolio_schema": (
+                    INVERSE_ACTION_WATER_BUCKET_PORTFOLIO_SCHEMA
+                ),
                 "cell_count": _mapping(action_payload.get("integral_totals")).get("cell_count"),
                 "selected_count": water_bucket.get("selected_count"),
                 "selected_expected_score_gain": water_bucket.get("selected_expected_score_gain"),
+                "source_provenance_operation_set_count": sum(
+                    1
+                    for row in portfolio_rows
+                    if row["actuation_mode"] == "source_provenance_operation_set"
+                ),
+                "high_level_operation_compiler_required_count": sum(
+                    1
+                    for row in portfolio_rows
+                    if row["actuation_mode"]
+                    == "high_level_operation_compiler_required"
+                ),
+                "leaf_cell_candidate_count": sum(
+                    1
+                    for row in portfolio_rows
+                    if row["actuation_mode"] == "leaf_cell_candidate_explicit_opt_in"
+                ),
                 **FALSE_AUTHORITY,
             }
         ],
+        "water_bucket_materialization_portfolio": {
+            "schema": INVERSE_ACTION_WATER_BUCKET_PORTFOLIO_SCHEMA,
+            "selected_cell_count": len(selected_cells),
+            "portfolio_row_count": len(portfolio_rows),
+            "actuation_modes": ordered_unique(
+                str(row.get("actuation_mode")) for row in portfolio_rows
+            ),
+            "rows": portfolio_rows,
+            **FALSE_AUTHORITY,
+        },
         "units": units,
         "blockers": _as_list(action_payload.get("dispatch_blockers")),
         **FALSE_AUTHORITY,
+    }
+
+
+def _inverse_action_portfolio_row(
+    *,
+    selected: Mapping[str, Any],
+    full_cell: Mapping[str, Any],
+    atom_id: str,
+    source_index: int,
+    expected_gain: float,
+    actuation_mode: str,
+    unit_ids: Sequence[str],
+    operation_families: Sequence[str],
+    target_kinds: Sequence[str],
+    blockers: Sequence[str],
+) -> dict[str, Any]:
+    return {
+        "schema": "inverse_steganalysis_water_bucket_materialization_portfolio_row.v1",
+        "source_index": source_index,
+        "atom_id": atom_id,
+        "candidate_id": selected.get("candidate_id"),
+        "scope_axis": selected.get("scope_axis") or full_cell.get("scope_axis"),
+        "component": selected.get("component") or full_cell.get("component"),
+        "expected_score_gain": expected_gain,
+        "euler_lagrange_residual": selected.get("euler_lagrange_residual"),
+        "water_fill_cost_bytes": selected.get("water_fill_cost_bytes"),
+        "water_fill_cost_bytes_semantics": (
+            "planner_budget_cost_not_serialized_savings"
+        ),
+        "actuation_mode": actuation_mode,
+        "unit_ids": ordered_unique(str(item) for item in unit_ids),
+        "operation_families": ordered_unique(str(item) for item in operation_families),
+        "target_kinds": ordered_unique(str(item) for item in target_kinds),
+        "blockers": ordered_unique(str(item) for item in blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _high_level_operation_compiler_gap_unit(
+    *,
+    atom_id: str,
+    selected: Mapping[str, Any],
+    full_cell: Mapping[str, Any],
+    source_index: int,
+    expected_gain: float,
+) -> dict[str, Any]:
+    operation = {
+        "operation_id": INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
+        "operation_family": INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
+        "candidate_saved_bytes": 0,
+        "predicted_quality_score_delta": -expected_gain,
+        "materializer": INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
+        "target_kind": INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
+        "params": {
+            "atom_id": atom_id,
+            "candidate_id": selected.get("candidate_id"),
+            "scope_axis": selected.get("scope_axis") or full_cell.get("scope_axis"),
+            "component": selected.get("component") or full_cell.get("component"),
+            "euler_lagrange_residual": selected.get("euler_lagrange_residual"),
+            "water_fill_cost_bytes": selected.get("water_fill_cost_bytes"),
+            "water_fill_cost_bytes_semantics": (
+                "planner_budget_cost_not_serialized_savings"
+            ),
+        },
+        "blockers": [
+            "inverse_action_cell_lacks_source_operation_provenance",
+            "requires_candidate_family_operation_compiler",
+            "requires_archive_runtime_materializer_before_candidate",
+            "requires_exact_auth_eval_before_score_claim",
+        ],
+    }
+    return {
+        "unit_id": f"inverse_action_{atom_id}",
+        "unit_kind": "scorer_inverse_surface_cell",
+        "source_index": source_index,
+        "candidate_saved_bytes": 0,
+        "predicted_quality_score_delta": -expected_gain,
+        "confidence": 0.5,
+        "operation_families": [INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY],
+        "operations": [operation],
+        "score_axis": selected.get("component") or full_cell.get("component"),
+        "evidence_grade": "[planning-only inverse-steganalysis action]",
+        "evidence_semantics": "water_bucket_high_level_operation_compiler_gap",
+        "source_candidate_id": selected.get("candidate_id"),
+        "atom_ids": [atom_id],
+        "inverse_action_cell": {
+            "euler_lagrange_residual": selected.get("euler_lagrange_residual"),
+            "water_fill_cost_bytes": selected.get("water_fill_cost_bytes"),
+            "water_fill_cost_bytes_semantics": (
+                "planner_budget_cost_not_serialized_savings"
+            ),
+            "scope_axis": selected.get("scope_axis"),
+            "component": selected.get("component"),
+            "actuation_mode": "high_level_operation_compiler_required",
+        },
+        "blockers": [
+            "inverse_action_unit_is_planning_only",
+            "inverse_action_cell_lacks_source_operation_provenance",
+            "requires_candidate_family_operation_compiler",
+            "requires_byte_closed_archive_before_dispatch",
+            "requires_exact_auth_eval_before_score_claim",
+        ],
     }
 
 
@@ -2035,6 +2493,11 @@ __all__ = [
     "BASE_BLOCKERS",
     "COUPLED_OPERATION_SET_SCHEMA",
     "FALSE_AUTHORITY",
+    "INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER",
+    "INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY",
+    "INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND",
+    "INVERSE_ACTION_WATER_BUCKET_PORTFOLIO_SCHEMA",
+    "PACKET_IR_OPERATION_SCHEMA",
     "PLAN_SCHEMA",
     "SIGNAL_SURFACE_SCHEMA",
     "ByteShavingCampaignError",

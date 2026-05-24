@@ -438,8 +438,14 @@ def verify_runtime_consumption_proof(
             "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
             "receiver_contract_satisfied": False,
             "proof_present": False,
+            "proof_path": None,
             "blockers": ["runtime_consumption_proof_missing"],
         }
+    proof_path = (
+        _resolve_path(runtime_consumption_proof, repo=repo).as_posix()
+        if isinstance(runtime_consumption_proof, (str, Path))
+        else None
+    )
     proof = _require_mapping(runtime_consumption_proof, repo=repo)
     blockers: list[str] = []
     try:
@@ -470,6 +476,7 @@ def verify_runtime_consumption_proof(
         "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
         "receiver_contract_satisfied": not blockers,
         "proof_present": True,
+        "proof_path": proof_path,
         "proof_schema": proof.get("schema"),
         "candidate_archive_sha256": archive_sha,
         "candidate_member_sha256": member_sha,

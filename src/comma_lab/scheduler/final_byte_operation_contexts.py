@@ -15,6 +15,9 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.packet_compiler.deterministic_compiler import (
+    packetir_operation_set_bridge_contract,
+)
 
 from .byte_shaving_campaign_queue import (
     MATERIALIZER_BACKLOG_SCHEMA,
@@ -68,6 +71,17 @@ def _first_text(context: Mapping[str, Any], keys: Sequence[str]) -> str | None:
     return None
 
 
+def _first_text_with_key(
+    context: Mapping[str, Any],
+    keys: Sequence[str],
+) -> tuple[str | None, str | None]:
+    for key in keys:
+        value = _text(context.get(key))
+        if value is not None:
+            return key, value
+    return None, None
+
+
 def _require_no_truthy_authority_recursive(value: Any, *, context: str) -> None:
     if isinstance(value, Mapping):
         require_no_truthy_authority_fields(value, context=context)
@@ -82,6 +96,16 @@ def _require_no_truthy_authority_recursive(value: Any, *, context: str) -> None:
                 child,
                 context=f"{context}[{index}]",
             )
+
+
+def _packetir_operation_set_contract_context() -> dict[str, Any]:
+    contract = packetir_operation_set_bridge_contract()
+    return {
+        "packetir_operation_set_contract": contract,
+        "recommended_ir_schema": contract["recommended_ir_schema"],
+        "required_order": list(contract["required_order"]),
+        "required_proofs": list(contract["required_proofs"]),
+    }
 
 
 def _hint_mapping(artifact_map: Mapping[str, Any] | None) -> Mapping[str, Any]:
@@ -158,7 +182,14 @@ def _archive_section_context_row(
     context: dict[str, Any] = {}
     blockers: list[str] = []
     source_archive = _first_text(hints, ("source_archive", "archive_path"))
-    section_manifest = _first_text(hints, ("section_manifest", "parser_section_manifest"))
+    section_manifest_key, section_manifest = _first_text_with_key(
+        hints,
+        (
+            "section_manifest",
+            "parser_section_manifest",
+            "packet_ir_manifest",
+        ),
+    )
     target_sections = ordered_unique(
         [
             *_string_list(hints.get("target_sections")),
@@ -185,6 +216,7 @@ def _archive_section_context_row(
             or _safe_work_id(str(row.get("backlog_key") or "")),
             "target_sections": target_sections,
             "context_blockers": blockers,
+            **_packetir_operation_set_contract_context(),
             **FALSE_AUTHORITY,
         }
     )
@@ -193,6 +225,9 @@ def _archive_section_context_row(
         context["archive_path"] = source_archive
     if section_manifest is not None:
         context["section_manifest"] = section_manifest
+        context["section_manifest_source_key"] = section_manifest_key
+        if section_manifest_key != "section_manifest":
+            context[str(section_manifest_key)] = section_manifest
     if output_archive is not None:
         context["output_archive"] = output_archive
     if json_out is not None:
@@ -251,6 +286,7 @@ def _packet_member_context_row(
     context.update(
         {
             "context_blockers": blockers,
+            **_packetir_operation_set_contract_context(),
             **FALSE_AUTHORITY,
         }
     )
@@ -306,6 +342,7 @@ def _tensor_factorize_context_row(
     context.update(
         {
             "context_blockers": blockers,
+            **_packetir_operation_set_contract_context(),
             **FALSE_AUTHORITY,
         }
     )
@@ -342,6 +379,75 @@ def _context_row_payload(
         "context_keys": _context_keys(row),
         "context": dict(context),
         "context_blockers": list(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _unsupported_context_row(row: Mapping[str, Any], *, fallback_key: str) -> dict[str, Any]:
+    unit_kind = str(row.get("unit_kind") or "")
+    operation_family = str(row.get("operation_family") or "")
+    target_kind = str(row.get("target_kind") or "")
+    blockers = [
+        "final_byte_context_compiler_unsupported_backlog_row",
+        (
+            "materializer_context_compiler_missing:"
+            f"{unit_kind or '<unknown>'}:"
+            f"{operation_family or '<unknown>'}:"
+            f"{target_kind or '<target_tbd>'}"
+        ),
+    ]
+    return _context_row_payload(
+        row,
+        context={
+            "context_blockers": blockers,
+            "packetir_compiler_bridge": _packetir_compiler_bridge_hint(
+                row,
+                blockers=blockers,
+            ),
+            **FALSE_AUTHORITY,
+        },
+        blockers=blockers,
+    ) | {
+        "backlog_key": row.get("backlog_key") or fallback_key,
+        "unsupported": True,
+    }
+
+
+def _packetir_compiler_bridge_hint(
+    row: Mapping[str, Any],
+    *,
+    blockers: Sequence[str],
+) -> dict[str, Any]:
+    """Return a fail-closed PacketIR/compiler bridge hint for unsupported rows."""
+
+    contract_context = _packetir_operation_set_contract_context()
+    contract = contract_context["packetir_operation_set_contract"]
+    return {
+        "schema": "final_byte_packetir_compiler_bridge_hint.v1",
+        **contract_context,
+        "canonical_packet_compiler_module": contract[
+            "canonical_packet_compiler_module"
+        ],
+        "canonical_packet_compiler_schema": contract[
+            "canonical_packet_compiler_schema"
+        ],
+        "recommended_ir_schema": contract["recommended_ir_schema"],
+        "bridge_role": "candidate_family_operation_compiler",
+        "unit_kind": row.get("unit_kind"),
+        "operation_family": row.get("operation_family"),
+        "target_kind": row.get("target_kind"),
+        "materializer_id": row.get("materializer_id"),
+        "source_unit_ids": _as_list(row.get("source_unit_ids")),
+        "required_order": list(contract["required_order"]),
+        "required_proofs": list(contract["required_proofs"]),
+        "blockers": ordered_unique(
+            [
+                *[str(item) for item in blockers],
+                "packetir_bridge_requires_operation_set_ir",
+                "packetir_bridge_requires_runtime_consumption_proof",
+                "packetir_bridge_requires_exact_readiness_handoff",
+            ]
+        ),
         **FALSE_AUTHORITY,
     }
 
@@ -406,7 +512,9 @@ def build_final_byte_operation_contexts(
                 )
             )
         else:
-            unsupported_rows.append(str(row.get("backlog_key") or index))
+            fallback_key = str(index)
+            unsupported_rows.append(str(row.get("backlog_key") or fallback_key))
+            rows.append(_unsupported_context_row(row, fallback_key=fallback_key))
     blocked_context_count = sum(1 for row in rows if row["context_blockers"])
     return apply_proxy_evidence_boundary(
         {

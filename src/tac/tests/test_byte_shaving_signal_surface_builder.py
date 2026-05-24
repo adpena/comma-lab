@@ -342,6 +342,12 @@ def test_builder_merges_inverse_action_functional_into_mixed_signal_surface(
     assert "archive_section" in kinds
     assert surface["inverse_action_functional_refs"][0]["selected_count"] == 1
     assert surface["inverse_action_functional_refs"][0]["score_claim"] is False
+    assert surface["inverse_action_materialization_portfolios"][0][
+        "actuation_modes"
+    ] == ["high_level_operation_compiler_required"]
+    assert surface["inverse_action_materialization_portfolios"][0][
+        "source_path"
+    ] == "inverse_action.json"
     assert any(
         ref["kind"] == "inverse_steganalysis_action_functional"
         for ref in surface["source_signal_refs"]
@@ -595,7 +601,10 @@ def test_cli_writes_surface_and_markdown(tmp_path: Path) -> None:
     assert surface["units"][0]["unit_id"] == "drop_pair_0371"
     assert surface["engineered_correction_refs"][0]["surface_unit_count"] == 1
     assert surface["inverse_action_functional_refs"][0]["surface_unit_count"] == 1
-    assert "Authority Boundary" in md_out.read_text(encoding="utf-8")
+    assert len(surface["inverse_action_materialization_portfolios"]) == 1
+    md = md_out.read_text(encoding="utf-8")
+    assert "inverse_action_materialization_portfolios" in md
+    assert "Authority Boundary" in md
 
 
 def test_cli_can_build_surface_from_scorer_response_only(tmp_path: Path) -> None:

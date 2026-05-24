@@ -17,6 +17,9 @@ mx = pytest.importorskip("mlx.core")
 from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     EXACT_READINESS_REFUSAL_BLOCKERS,
     FALSE_AUTHORITY,
+    PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY,
+    PR95_MLX_SOURCE_FAITHFUL_BLOCKERS,
+    PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY,
     HNeRVDecoderMLX,
     HNeRVSyntheticTrainingBundleMLX,
     Pr95HNeRVMlxError,
@@ -410,7 +413,15 @@ def test_synthetic_timing_smoke_emits_runtime_profile_and_refusal() -> None:
 
     assert manifest["schema"] == "pr95_hnerv_mlx_timing_smoke_manifest_v1"
     assert manifest["stage_module"] == "stage8_muon_finetune"
+    assert manifest["training_fidelity"] == (
+        PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY
+    )
+    assert manifest["source_faithful_training"] is False
+    assert manifest["source_faithfulness_blockers"] == list(
+        PR95_MLX_SOURCE_FAITHFUL_BLOCKERS
+    )
     assert manifest["optimizer_recipe"]["stage_uses_muon"] is True
+    assert manifest["optimizer_recipe"]["source_faithful_training"] is False
     assert manifest["exact_readiness_refusal"]["ready"] is False
     assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in manifest[
         "exact_readiness_refusal"
@@ -430,7 +441,9 @@ def test_pr95_optimizer_descriptor_drives_stage8_partition() -> None:
     assert stage.optimizer.use_muon is True
     assert stage.optimizer_config_sha256
     assert stage.parameter_group_lr_policy_id == "embedding_theta1_hidden_muon_adamw"
-    assert stage.optimizer_backend_status == "implemented_mlx_source_faithful"
+    assert stage.optimizer_backend_status == (
+        PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY
+    )
 
     bundle = HNeRVSyntheticTrainingBundleMLX(
         latent_count=2,

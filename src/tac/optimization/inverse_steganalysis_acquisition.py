@@ -39,6 +39,10 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     truthy_authority_field_violations,
 )
+from tac.score_composition import (
+    CANONICAL_RATE_DENOM_BYTES,
+    CANONICAL_RATE_MULTIPLIER,
+)
 
 SCHEMA = "inverse_steganalysis_acquisition_plan.v1"
 ATOM_SCHEMA = "inverse_steganalysis_atom.v1"
@@ -68,7 +72,10 @@ MLX_ACQUISITION_BATCH_PROVENANCE_SCHEMA = (
     "inverse_steganalysis_mlx_acquisition_batch_operation_set_provenance.v1"
 )
 TOOL = "tac.optimization.inverse_steganalysis_acquisition"
-CONTEST_RATE_SCORE_PER_BYTE = 25.0 / 50_000_000.0
+CONTEST_RATE_DENOM_BYTES = CANONICAL_RATE_DENOM_BYTES
+CONTEST_RATE_SCORE_PER_BYTE = CANONICAL_RATE_MULTIPLIER / float(
+    CANONICAL_RATE_DENOM_BYTES
+)
 MLX_EVIDENCE_GRADE = "macOS-MLX-research-signal"
 MLX_EVIDENCE_TAG = "[macOS-MLX research-signal]"
 
@@ -3164,6 +3171,7 @@ __all__ = [
     "ACTION_FUNCTIONAL_SCHEMA",
     "ALLOWED_SCALES",
     "ATOM_SCHEMA",
+    "CONTEST_RATE_DENOM_BYTES",
     "CONTEST_RATE_SCORE_PER_BYTE",
     "INVERSE_SCORER_SURFACE_SCHEMA",
     "MLX_ACQUISITION_BATCH_PROVENANCE_SCHEMA",

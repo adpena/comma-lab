@@ -61,10 +61,8 @@ from tac.optimization.serialized_archive_economics import (
     serialized_archive_delta_blockers,
 )
 from tac.optimizer.materializer_chain_harvest import (
-    SUPPORTED_CHAIN_SCHEMAS as MATERIALIZER_CHAIN_SCHEMAS,
-)
-from tac.optimizer.materializer_chain_harvest import (
-    adapt_materializer_chain_manifest_to_candidate,
+    SUPPORTED_MATERIALIZER_MANIFEST_SCHEMAS,
+    adapt_materializer_manifest_to_candidate,
 )
 
 QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
@@ -1587,11 +1585,11 @@ def extract_candidates_from_source(path: Path, *, repo_root: Path) -> SourceExtr
                 repo_root=repo_root,
             ),
         )
-    if schema in MATERIALIZER_CHAIN_SCHEMAS:
+    if schema in SUPPORTED_MATERIALIZER_MANIFEST_SCHEMAS:
         return SourceExtraction(
             schema=schema,
             rows=[
-                adapt_materializer_chain_manifest_to_candidate(
+                adapt_materializer_manifest_to_candidate(
                     payload,
                     source_path=path,
                     repo_root=repo_root,

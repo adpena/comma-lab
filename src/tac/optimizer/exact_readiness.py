@@ -44,6 +44,12 @@ from tac.zipwire_archive import inspect_zip_headers
 QUEUE_SCHEMA = "optimizer_candidate_exact_eval_ready_queue_v1"
 TOOL_NAME = "tools/promote_optimizer_candidate_for_exact_eval.py"
 PR101_RUNTIME_CONSUMPTION_PROOF_SCHEMA = "pr101_kaggle_proxy_runtime_consumption_proof_v1"
+FAMILY_AGNOSTIC_RUNTIME_CONSUMPTION_PROOF_SCHEMAS = frozenset(
+    {
+        "family_agnostic_runtime_consumption_proof_v1",
+        "family_agnostic_runtime_consumption_proof_verification.v1",
+    }
+)
 # Backward-compatible name used by dispatch gates for score comparisons.
 # Score comparisons use the active promotable CUDA frontier. The lower
 # exact-CUDA reference is preserved above as non-promotional evidence and must
@@ -1236,6 +1242,25 @@ def _runtime_consumption_pr101_binding_blockers(
     return blockers, facts
 
 
+def _family_agnostic_runtime_proof_passed(proof: Mapping[str, Any]) -> bool:
+    if proof.get("receiver_contract_satisfied") is True:
+        return True
+    if proof.get("runtime_consumption_proof_passed") is True:
+        return True
+    if proof.get("passed") is True:
+        return True
+    probe = proof.get("runtime_consumption_probe")
+    return isinstance(probe, Mapping) and probe.get("passed") is True
+
+
+def _family_agnostic_runtime_proof_archive_sha(proof: Mapping[str, Any]) -> str | None:
+    candidate_archive = proof.get("candidate_archive")
+    if isinstance(candidate_archive, Mapping) and is_sha256(candidate_archive.get("sha256")):
+        return str(candidate_archive["sha256"]).lower()
+    value = proof.get("candidate_archive_sha256") or proof.get("archive_sha256")
+    return str(value).lower() if is_sha256(value) else None
+
+
 def validate_runtime_consumption_proof(
     row: Mapping[str, Any],
     *,
@@ -1288,7 +1313,8 @@ def validate_runtime_consumption_proof(
 
     facts["runtime_consumption_proof_schema"] = proof_raw.get("schema")
     facts["runtime_consumption_proof_sha256"] = sha256_file(proof_path)
-    if proof_raw.get("schema") == PR101_RUNTIME_CONSUMPTION_PROOF_SCHEMA:
+    proof_schema = proof_raw.get("schema")
+    if proof_schema == PR101_RUNTIME_CONSUMPTION_PROOF_SCHEMA:
         if proof_raw.get("runtime_consumption_proven_for_supported_bias_params") is not True:
             blockers.append("runtime_consumption_proof_not_proven")
         if proof_raw.get("inflate_sh_routes_to_packet_inflate_py") is not True:
@@ -1302,9 +1328,7 @@ def validate_runtime_consumption_proof(
         if archive_sha256 is not None and proof_archive_sha != archive_sha256:
             blockers.append("runtime_consumption_proof_archive_sha_mismatch")
         for false_authority_field in (
-            "score_claim",
-            "ready_for_exact_eval_dispatch",
-            "dispatch_attempted",
+            field for field in PROXY_FALSE_AUTHORITY_FIELDS if field in proof_raw
         ):
             if proof_raw.get(false_authority_field) is not False:
                 blockers.append(
@@ -1318,6 +1342,23 @@ def validate_runtime_consumption_proof(
         )
         blockers.extend(binding_blockers)
         facts.update(binding_facts)
+    elif proof_schema in FAMILY_AGNOSTIC_RUNTIME_CONSUMPTION_PROOF_SCHEMAS:
+        if not _family_agnostic_runtime_proof_passed(proof_raw):
+            blockers.append("runtime_consumption_proof_not_proven")
+        proof_archive_sha = _family_agnostic_runtime_proof_archive_sha(proof_raw)
+        facts["runtime_consumption_proof_archive_sha256"] = proof_archive_sha
+        if archive_sha256 is not None:
+            if proof_archive_sha is None:
+                blockers.append("runtime_consumption_proof_archive_sha_missing")
+            elif proof_archive_sha != archive_sha256:
+                blockers.append("runtime_consumption_proof_archive_sha_mismatch")
+        for false_authority_field in (
+            field for field in PROXY_FALSE_AUTHORITY_FIELDS if field in proof_raw
+        ):
+            if proof_raw.get(false_authority_field) is not False:
+                blockers.append(
+                    f"runtime_consumption_proof_false_authority_violation:{false_authority_field}"
+                )
     else:
         blockers.append("runtime_consumption_proof_schema_unsupported")
 
@@ -1711,6 +1752,9 @@ def promoted_row(
         "runtime_consumption_proof_schema": facts.get(
             "runtime_consumption_proof_schema"
         ),
+        "runtime_consumption_proof_archive_sha256": facts.get(
+            "runtime_consumption_proof_archive_sha256"
+        ),
         "cuda_component_risk_gate_required": bool(
             facts.get("hdm8_selector_cuda_component_gate_required")
         ),
@@ -1851,6 +1895,9 @@ def promote_candidate_for_exact_eval(
             ),
             "runtime_consumption_proof_sha256": facts.get(
                 "runtime_consumption_proof_sha256"
+            ),
+            "runtime_consumption_proof_archive_sha256": facts.get(
+                "runtime_consumption_proof_archive_sha256"
             ),
             "cuda_component_risk_gate_required": facts.get(
                 "hdm8_selector_cuda_component_gate_required"

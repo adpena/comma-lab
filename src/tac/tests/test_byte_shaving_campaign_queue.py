@@ -24,6 +24,7 @@ from comma_lab.scheduler.byte_shaving_campaign_queue import (
     build_materializer_execution_queue,
     build_materializer_work_queue,
     compile_dqs1_byte_shaving_campaign,
+    lower_packetir_operation_set_to_backlog_rows,
     materializer_contexts_from_payload,
 )
 from comma_lab.scheduler.byte_shaving_materializer_registry import (
@@ -41,6 +42,11 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     DQS1_PAIRSET_TARGET_KIND,
     DQS1_RECEIVER_CONTRACT_ID,
     DQS1_RECEIVER_CONTRACT_KIND,
+    INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
+    INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
+    INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_ID,
+    INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_KIND,
+    INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
     INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER,
     INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_ID,
     INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_KIND,
@@ -93,6 +99,7 @@ from tac.optimization.family_agnostic_materializers import (
 from tac.optimization.inverse_scorer_cell_chain import (
     CHAIN_MANIFEST_NAME as INVERSE_CELL_CHAIN_MANIFEST_NAME,
 )
+from tac.packet_compiler.deterministic_compiler import PACKET_IR_OPERATION_SET_SCHEMA
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = REPO_ROOT / "tools" / "build_byte_shaving_campaign_queue.py"
@@ -298,6 +305,49 @@ def _archive_section_entropy_plan() -> dict[str, object]:
     return build_byte_shaving_campaign_plan(surface, max_k=1)
 
 
+def _archive_section_entropy_pair_plan() -> dict[str, object]:
+    surface = {
+        "schema": SIGNAL_SURFACE_SCHEMA,
+        "campaign_id": "archive_section_entropy_pair_fixture",
+        "candidate_id": "fixture_seed",
+        "lane_id": "lane_archive_section_entropy_pair_fixture",
+        "combo_beam_width": 4,
+        "max_combo_count": 4,
+        "units": [
+            {
+                "unit_id": "pr106_decoder_packed_brotli",
+                "unit_kind": "archive_section",
+                "candidate_saved_bytes": 321,
+                "predicted_quality_score_cost": 0.0,
+                "confidence": 0.8,
+                "operations": [
+                    {
+                        "operation_id": "recode_pr106_decoder_packed_brotli",
+                        "operation_family": "section_entropy_recode",
+                        "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+                    }
+                ],
+            },
+            {
+                "unit_id": "pr106_latent_packed_brotli",
+                "unit_kind": "archive_section",
+                "candidate_saved_bytes": 123,
+                "predicted_quality_score_cost": 0.0,
+                "confidence": 0.7,
+                "operations": [
+                    {
+                        "operation_id": "recode_pr106_latent_packed_brotli",
+                        "operation_family": "section_entropy_recode",
+                        "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+                    }
+                ],
+            },
+        ],
+        **_false_authority(),
+    }
+    return build_byte_shaving_campaign_plan(surface, max_k=2)
+
+
 def _inverse_surface_plan() -> dict[str, object]:
     surface = {
         "schema": SIGNAL_SURFACE_SCHEMA,
@@ -379,6 +429,7 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
         DQS1_PAIRSET_TARGET_KIND,
         INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
         INVERSE_SCORER_CELL_TARGET_KIND,
+        INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
         PACKET_MEMBER_MERGE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
         PACKET_MEMBER_REORDER_TARGET_KIND,
@@ -438,11 +489,11 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
     }
     assert adapters[INVERSE_SCORER_CELL_MATERIALIZER] == {
         "description": (
-            "Fail-closed contract for inverse-scorer coordinate cells; requires "
-            "a deterministic pixel/byte materializer and runtime-consumption proof "
-            "before queue execution."
+            "Executable inverse-scorer coordinate-cell proof chain; exact-mode "
+            "queue execution requires inflate parity context before it can emit "
+            "a harvestable candidate chain."
         ),
-        "executable": False,
+        "executable": True,
         "emits_candidate_archive": True,
         "planning_only": False,
         "cooperative_receiver_required": True,
@@ -460,9 +511,8 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
             "raw_contest_video_digest",
             "candidate_archive_template",
             "inverse_action_functional",
-            "output_archive",
-            "manifest_out",
-            "runtime_consumption_proof",
+            "output_dir",
+            "inflate_runtime_dir_or_source_and_candidate_inflate_output_dirs",
         ],
         "target_kind": INVERSE_SCORER_CELL_TARGET_KIND,
         "unit_kind": "scorer_inverse_surface_cell",
@@ -492,6 +542,37 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
             "inverse_action_source_surface",
         ],
         "target_kind": INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
+        "unit_kind": "scorer_inverse_surface_cell",
+    }
+    assert adapters[INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER] == {
+        "description": (
+            "Fail-closed contract for promoting bare inverse-action cells into "
+            "portfolio-level archive/runtime operation sets. Bare cells are not "
+            "candidate archives until this compiler maps them to a concrete "
+            "family materializer with runtime-consumption proof."
+        ),
+        "executable": False,
+        "emits_candidate_archive": True,
+        "planning_only": False,
+        "cooperative_receiver_required": True,
+        "materializer_id": INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
+        "materialization_resource_kind": "local_mlx",
+        "implementation_module": "",
+        "plan_function": "",
+        "materialize_function": "",
+        "receiver_proof_function": "",
+        "receiver_verify_function": "",
+        "operation_family": INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
+        "receiver_contract_id": INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_ID,
+        "receiver_contract_kind": INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_KIND,
+        "required_context_fields": [
+            "candidate_family",
+            "archive_grammar",
+            "receiver_contract_kind",
+            "operation_set_compiler",
+            "runtime_consumption_proof",
+        ],
+        "target_kind": INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
         "unit_kind": "scorer_inverse_surface_cell",
     }
     grammar_registry = manifest["cooperative_receiver_grammar_registry"]
@@ -576,6 +657,33 @@ def test_byte_shaving_materializer_registry_allows_inverse_action_probe_target_k
     )
 
 
+def test_byte_shaving_materializer_registry_blocks_bare_inverse_cell_compiler_gap() -> None:
+    resolved = resolve_materializer(
+        operation={
+            "unit_id": "inverse_surface_pair_0007",
+            "operation_id": INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
+            "operation_family": INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
+            "materializer": INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
+            "target_kind": INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
+        },
+        unit={
+            "unit_id": "inverse_surface_pair_0007",
+            "unit_kind": "scorer_inverse_surface_cell",
+        },
+    )
+
+    assert resolved.executable is False
+    assert resolved.materializer_id == INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER
+    assert resolved.target_kind == INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND
+    assert resolved.receiver_contract_id == INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_ID
+    assert resolved.receiver_contract_kind == (
+        INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_KIND
+    )
+    assert resolved.blockers == (
+        f"materializer_not_executable:{INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER}",
+    )
+
+
 def test_byte_shaving_materializer_registry_registers_byte_range_entropy_fail_closed() -> None:
     resolved = resolve_materializer(
         operation={
@@ -602,7 +710,7 @@ def test_byte_shaving_materializer_registry_registers_byte_range_entropy_fail_cl
     assert [adapter.materializer_id for adapter in suggestions] == [BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER]
 
 
-def test_byte_shaving_materializer_registry_registers_inverse_scorer_fail_closed() -> None:
+def test_byte_shaving_materializer_registry_registers_inverse_scorer_exact_chain() -> None:
     resolved = resolve_materializer(
         operation={
             "unit_id": "inverse_surface_pair0007",
@@ -616,13 +724,13 @@ def test_byte_shaving_materializer_registry_registers_inverse_scorer_fail_closed
         },
     )
 
-    assert resolved.executable is False
+    assert resolved.executable is True
     assert resolved.materializer_id == INVERSE_SCORER_CELL_MATERIALIZER
     assert resolved.target_kind == INVERSE_SCORER_CELL_TARGET_KIND
     assert resolved.receiver_contract_id == INVERSE_SCORER_CELL_RECEIVER_CONTRACT_ID
     assert resolved.receiver_contract_kind == INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND
     assert resolved.materialization_resource_kind == "local_mlx"
-    assert resolved.blockers == (f"materializer_not_executable:{INVERSE_SCORER_CELL_MATERIALIZER}",)
+    assert resolved.blockers == ()
 
 
 def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None:
@@ -890,6 +998,14 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
     assert both["chosen_operation_sequence_is_permutation"] is True
     assert both["operation_set_materialization_mode"] == "ordered_dqs1_pairset_sequence"
     assert both["source_row"]["operation_set_id"] == both["operation_set_id"]
+    assert both["packet_ir_operation_set"]["schema"] == PACKET_IR_OPERATION_SET_SCHEMA
+    assert both["packet_ir_operation_set"]["source_operation_set_id"] == both[
+        "operation_set_id"
+    ]
+    assert both["source_row"]["packet_ir_operation_set"] == both[
+        "packet_ir_operation_set"
+    ]
+    assert both["packet_ir_operation_set"]["score_claim"] is False
     assert both["materialization_blockers"] == []
     assert {unit["unit_id"] for unit in both["source_units"]} == {"pair0320", "pair0371"}
     assert all(
@@ -908,6 +1024,9 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
     )
     assert portfolio_row["source_metadata"]["selected_pair_indices"] == [101, 501]
     assert portfolio_row["source_metadata"]["operation_set_id"] == both["operation_set_id"]
+    assert portfolio_row["source_metadata"]["packet_ir_operation_set"] == both[
+        "packet_ir_operation_set"
+    ]
     assert portfolio_row["source_metadata"]["chosen_operation_sequence"] == (
         both["chosen_operation_sequence"]
     )
@@ -925,6 +1044,142 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
         "pair0371",
     }
     assert portfolio_row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_packet_ir_operation_set_lowers_to_materializer_backlog_rows(
+    tmp_path: Path,
+) -> None:
+    plan = _archive_section_entropy_pair_plan()
+    packet_ir = plan["packet_ir_operation_sets"][0]
+
+    rows = lower_packetir_operation_set_to_backlog_rows(packet_ir)
+
+    assert rows
+    row = rows[0]
+    assert row["source_packet_ir_schema"] == PACKET_IR_OPERATION_SET_SCHEMA
+    assert row["source_packet_ir_operation_set_id"] == packet_ir["operation_set_id"]
+    assert row["target_kind"] == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
+    assert row["unit_kind"] == "archive_section"
+    assert row["operation_family"] == "section_entropy_recode"
+    assert row["score_claim"] is False
+    assert "packetir_operation_set_requires_materializer_contexts" in row[
+        "blocker_counts"
+    ]
+
+    compiled = compile_dqs1_byte_shaving_campaign(
+        plan,
+        repo_root=tmp_path,
+    )
+    assert compiled["packet_ir_materializer_backlog_row_count"] >= 1
+    assert compiled["packet_ir_materializer_backlog_rows"][0][
+        "source_packet_ir_operation_set_id"
+    ] == packet_ir["operation_set_id"]
+
+
+def test_operation_set_execution_requires_matching_packet_ir_handoff(
+    tmp_path: Path,
+) -> None:
+    plan = _pair_drop_plan()
+    operation_set = next(
+        row
+        for row in plan["operation_set_ladder"]
+        if set(row["selected_unit_ids"]) == {"pair0320", "pair0371"}
+    )
+    plan["packet_ir_operation_sets"] = []
+
+    compiled = compile_dqs1_byte_shaving_campaign(
+        plan,
+        repo_root=tmp_path,
+        base_pair_indices=[101, 320, 371, 501],
+        candidate_limit=8,
+        portfolio_json="portfolio.json",
+        allow_partial_materialization=True,
+        partial_materialization_rationale="unit-test missing packet-ir",
+    )
+
+    blocked = next(
+        row
+        for row in compiled["blocked_rows"]
+        if row["selection_kind"] == "operation_set"
+        and row["operation_set_id"] == operation_set["operation_set_id"]
+    )
+    assert blocked["packet_ir_operation_set"] is None
+    assert "operation_set_packet_ir_operation_set_missing" in blocked[
+        "materialization_blockers"
+    ]
+    assert blocked["executable"] is False
+
+
+def test_operation_set_execution_validates_packet_ir_contract(
+    tmp_path: Path,
+) -> None:
+    plan = _pair_drop_plan()
+    operation_set = next(
+        row
+        for row in plan["operation_set_ladder"]
+        if set(row["selected_unit_ids"]) == {"pair0320", "pair0371"}
+    )
+    packet_ir = next(
+        row
+        for row in plan["packet_ir_operation_sets"]
+        if row["source_operation_set_id"] == operation_set["operation_set_id"]
+    )
+    packet_ir["required_proofs"] = []
+    packet_ir["compiler_contract"]["required_order"] = []
+
+    compiled = compile_dqs1_byte_shaving_campaign(
+        plan,
+        repo_root=tmp_path,
+        base_pair_indices=[101, 320, 371, 501],
+        candidate_limit=8,
+        portfolio_json="portfolio.json",
+        allow_partial_materialization=True,
+        partial_materialization_rationale="unit-test packet-ir mismatch",
+    )
+
+    blocked = next(
+        row
+        for row in compiled["blocked_rows"]
+        if row["selection_kind"] == "operation_set"
+        and row["operation_set_id"] == operation_set["operation_set_id"]
+    )
+    assert "operation_set_packet_ir_required_proofs_mismatch" in blocked[
+        "materialization_blockers"
+    ]
+    assert (
+        "operation_set_packet_ir_compiler_contract_mismatch:required_order"
+        in blocked["materialization_blockers"]
+    )
+
+
+def test_packet_ir_operation_set_lowering_rejects_authority_and_bad_sequence() -> None:
+    plan = _archive_section_entropy_pair_plan()
+    packet_ir = copy.deepcopy(plan["packet_ir_operation_sets"][0])
+    packet_ir["operations"][0]["score_claim"] = True
+
+    with pytest.raises(ExperimentQueueError, match="score_claim"):
+        lower_packetir_operation_set_to_backlog_rows(packet_ir)
+
+    packet_ir = copy.deepcopy(plan["packet_ir_operation_sets"][0])
+    packet_ir["chosen_operation_sequence_is_permutation"] = False
+    with pytest.raises(ExperimentQueueError, match="not a permutation"):
+        lower_packetir_operation_set_to_backlog_rows(packet_ir)
+
+
+def test_packet_ir_operation_set_lowering_keeps_unknown_target_blocked() -> None:
+    plan = _archive_section_entropy_pair_plan()
+    packet_ir = copy.deepcopy(plan["packet_ir_operation_sets"][0])
+    packet_ir["operations"][0]["target_kind"] = "unknown_packetir_target_v1"
+
+    rows = lower_packetir_operation_set_to_backlog_rows(packet_ir)
+
+    assert any(
+        "unsupported_materializer_target:unknown_packetir_target_v1" in row[
+            "blocker_counts"
+        ]
+        for row in rows
+    )
+    assert all(row["ready_for_exact_eval_dispatch"] is False for row in rows)
 
 
 def test_compile_dqs1_byte_shaving_plan_blocks_operation_set_sequence_mismatch(
@@ -1893,6 +2148,7 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
     assert "--min-free-bytes" in row["command"]
     assert "--source-inflate-output-dir" in row["command"]
     assert "--candidate-inflate-output-dir" in row["command"]
+    assert "--fail-if-inflate-parity-blocked" in row["command"]
     assert row["telemetry"]["input_artifact_paths"] == [
         str(template),
         str(action),
@@ -1963,6 +2219,72 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
     assert task["telemetry"]["parity_probe_required"] is True
     assert task["experiment_metadata"]["score_claim"] is False
     assert task["experiment_metadata"]["ready_for_exact_eval_dispatch"] is False
+
+
+def test_inverse_action_chain_work_queue_requires_parity_context_for_exact_mode(
+    tmp_path: Path,
+) -> None:
+    action = tmp_path / "inverse_action.json"
+    template = tmp_path / "template.zip"
+    output_dir = tmp_path / "inverse_cell_chain"
+    action.write_text(
+        json.dumps(
+            {
+                "schema": "inverse_steganalysis_discrete_action_functional.v1",
+                "water_bucket": {
+                    "selected_cells": [
+                        {
+                            "atom_id": "inverse_surface_pair0007",
+                            "candidate_id": "candidate_pair0007",
+                            "scope_axis": "pairs",
+                            "component": "posenet",
+                            "water_fill_cost_bytes": 32,
+                            "expected_score_gain": 0.0001,
+                            "euler_lagrange_residual": 0.00009,
+                        }
+                    ]
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    template.write_bytes(b"not-a-real-zip-for-command-building")
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _inverse_cell_candidate_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+
+    work_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            INVERSE_SCORER_CELL_TARGET_KIND: {
+                "candidate_archive_template": str(template),
+                "inverse_action_functional": str(action),
+                "raw_contest_video_digest": "f" * 64,
+                "output_dir": str(output_dir),
+                "atom_ids": ["inverse_surface_pair0007"],
+                "selected_limit": 1,
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    assert work_queue["executable_row_count"] == 0
+    row = work_queue["rows"][0]
+    assert row["command"] == []
+    assert (
+        "inverse_scorer_cell_exact_chain_requires_inflate_parity_context"
+        in row["materialization_blockers"]
+    )
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
 
 
 def test_materializer_execution_queue_can_gate_work_on_storage_preflight(
@@ -2476,7 +2798,7 @@ def test_materializer_execution_queue_skips_exact_followup_for_planning_only_row
     )
 
 
-def test_materializer_execution_queue_skips_exact_followup_for_archive_section_candidate(
+def test_materializer_execution_queue_appends_exact_followup_for_archive_section_candidate(
     tmp_path: Path,
 ) -> None:
     compiled = compile_dqs1_byte_shaving_campaign(
@@ -2510,13 +2832,17 @@ def test_materializer_execution_queue_skips_exact_followup_for_archive_section_c
 
     experiment = execution_queue["experiments"][0]
     assert [step["id"] for step in experiment["steps"]] == [
-        MATERIALIZER_EXECUTION_STEP_ID
+        MATERIALIZER_EXECUTION_STEP_ID,
+        MATERIALIZER_HARVEST_STEP_ID,
+        MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     ]
     assert experiment["metadata"]["exact_readiness_followup_requested"] is True
-    assert experiment["metadata"]["exact_readiness_followup_enabled"] is False
-    assert experiment["metadata"]["exact_readiness_followup_skipped_reason"] == (
-        "archive_section_entropy_recode_exact_readiness_bridge_not_yet_wired"
-    )
+    assert experiment["metadata"]["exact_readiness_followup_enabled"] is True
+    assert experiment["metadata"]["exact_readiness_followup_skipped_reason"] is None
+    harvest_step = experiment["steps"][1]
+    assert "--chain-manifest" in harvest_step["command"]
+    assert "candidate.json" in harvest_step["command"]
+    assert "exact_eval_handoff/source_queue.json" in " ".join(harvest_step["command"])
 
 
 def test_materializer_execution_queue_followup_requires_chain_postcondition_for_candidates(
@@ -2544,7 +2870,7 @@ def test_materializer_execution_queue_followup_requires_chain_postcondition_for_
     )
     work_queue["rows"][0]["postconditions"] = []
 
-    with pytest.raises(ExperimentQueueError, match="materializer_chain_complete"):
+    with pytest.raises(ExperimentQueueError, match="harvestable materializer"):
         build_materializer_execution_queue(
             work_queue,
             queue_id="candidate_exec_fixture",

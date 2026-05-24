@@ -113,7 +113,7 @@ def test_pr95_manifest_adapter_preserves_optimizer_descriptor_identity(
         "id": "pr95_stage8_muon_adamw_mlx",
         "optimizer_descriptor_id": "pr95_stage8_muon_adamw_mlx",
         "optimizer_config_sha256": "a" * 64,
-        "optimizer_backend_status": "implemented_mlx_source_faithful",
+        "optimizer_backend_status": "implemented_mlx_synthetic_timing_only",
         "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
         "parameter_group_lr_policy_sha256": "b" * 64,
         "parameter_group_fingerprint_sha256": "c" * 64,
@@ -132,7 +132,7 @@ def test_pr95_manifest_adapter_preserves_optimizer_descriptor_identity(
     params = row["candidate_params"]
     assert params["optimizer_descriptor_id"] == "pr95_stage8_muon_adamw_mlx"
     assert params["optimizer_config_sha256"] == "a" * 64
-    assert params["optimizer_backend_status"] == "implemented_mlx_source_faithful"
+    assert params["optimizer_backend_status"] == "implemented_mlx_synthetic_timing_only"
     assert params["parameter_group_lr_policy_id"] == (
         "embedding_theta1_hidden_muon_adamw"
     )

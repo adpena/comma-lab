@@ -73,6 +73,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Literal
 
+from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
 from tac.repo_io import json_text, sha256_bytes, sha256_file
 from tac.submission_packet_compiler import (
     PacketCompilerError as _OraclePacketCompilerError,
@@ -101,6 +102,26 @@ TargetProfile = Literal[
     "production_generalized",
     "production_edge_adaptive",
 ]
+
+PACKET_IR_OPERATION_SET_SCHEMA = "packet_ir_operation_set_v1"
+PACKET_IR_OPERATION_SET_BRIDGE_CONTRACT_SCHEMA = (
+    "packet_ir_operation_set_bridge_contract.v1"
+)
+DETERMINISTIC_COMPILER_REQUIRED_ORDER: tuple[str, ...] = (
+    "representation",
+    "prediction",
+    "quantization",
+    "hyperprior",
+    "arithmetic",
+    "pack",
+)
+PACKET_IR_OPERATION_SET_REQUIRED_PROOFS: tuple[str, ...] = (
+    "byte_closed_archive",
+    "deterministic_packet_manifest",
+    "runtime_consumption_proof",
+    "same_runtime_full_frame_parity_or_rate_only_control",
+    "exact_auth_eval_axis_payload",
+)
 
 TARGET_PROFILE_POLICIES: dict[str, dict[str, Any]] = {
     "contest_one_video_replay": {
@@ -1104,14 +1125,37 @@ def inspect_packet_oracle(
     return base
 
 
+def packetir_operation_set_bridge_contract() -> dict[str, Any]:
+    """Return the canonical PacketIR operation-set lowering contract.
+
+    Queue/scheduler layers may wrap this with lane-specific context, but the
+    compiler order, IR schema, and required proof vocabulary live here so
+    materializer front ends do not grow duplicate mini-contracts.
+    """
+
+    return {
+        "schema": PACKET_IR_OPERATION_SET_BRIDGE_CONTRACT_SCHEMA,
+        "canonical_packet_compiler_module": TOOL_NAME,
+        "canonical_packet_compiler_schema": SCHEMA_VERSION,
+        "recommended_ir_schema": PACKET_IR_OPERATION_SET_SCHEMA,
+        "required_order": list(DETERMINISTIC_COMPILER_REQUIRED_ORDER),
+        "required_proofs": list(PACKET_IR_OPERATION_SET_REQUIRED_PROOFS),
+        **PROXY_FALSE_AUTHORITY_FIELDS,
+    }
+
+
 __all__ = [
     "COMPILER_MODES",
+    "DETERMINISTIC_COMPILER_REQUIRED_ORDER",
     "DETERMINISTIC_ZIP_DATE_TIME",
     "FORBIDDEN_EXTERNAL_STATE_PATTERNS",
     "FORBIDDEN_INFLATE_TOKENS",
     "FORBIDDEN_NETWORK_TOKENS",
     "MANIFEST_NAME",
     "NO_OP_PROOF_NAME",
+    "PACKET_IR_OPERATION_SET_BRIDGE_CONTRACT_SCHEMA",
+    "PACKET_IR_OPERATION_SET_REQUIRED_PROOFS",
+    "PACKET_IR_OPERATION_SET_SCHEMA",
     "SCHEMA_VERSION",
     "TARGET_PROFILES",
     "TARGET_PROFILE_POLICIES",
@@ -1123,4 +1167,5 @@ __all__ = [
     "TargetProfile",
     "compile_packet",
     "inspect_packet_oracle",
+    "packetir_operation_set_bridge_contract",
 ]

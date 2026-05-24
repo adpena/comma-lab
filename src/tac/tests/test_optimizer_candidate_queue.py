@@ -7,6 +7,9 @@ from pathlib import Path
 
 import pytest
 
+from tac.optimization.family_agnostic_materializers import (
+    PACKET_MEMBER_RECOMPRESS_SCHEMA,
+)
 from tac.optimization.local_cpu_contest_drift import EUREKA_FALSE_AUTHORITY_FIELDS
 from tac.optimization.optimizer_training_signal_bridge import (
     build_optimizer_training_signal_wire_in,
@@ -116,6 +119,45 @@ def _materializer_chain_manifest(
     if authority_overrides:
         payload.update(authority_overrides)
     return _write_json(repo / "outputs/chain_manifest.json", payload)
+
+
+def _family_agnostic_materializer_manifest(repo: Path) -> Path:
+    source_archive = _write_bytes(
+        repo,
+        repo / "inputs/source.zip",
+        b"source archive bytes with padding",
+    )
+    candidate_archive = _write_bytes(
+        repo,
+        repo / "outputs/archive.zip",
+        b"candidate archive bytes",
+    )
+    payload = {
+        "schema": PACKET_MEMBER_RECOMPRESS_SCHEMA,
+        "candidate_id": "fixture_family_materializer_candidate",
+        "lane_id": "fixture_family_materializer_lane",
+        "source_archive": source_archive,
+        "candidate_archive": candidate_archive,
+        "byte_closed_candidate_emitted": True,
+        "receiver_contract_satisfied": False,
+        "receiver_verification": {
+            "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+            "receiver_contract_satisfied": False,
+            "proof_present": False,
+            "proof_path": None,
+            "blockers": ["runtime_consumption_proof_missing"],
+        },
+        "readiness_blockers": ["runtime_consumption_proof_missing"],
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+    return _write_json(repo / "outputs/family_materializer.json", payload)
 
 
 def test_a1_rollup_merges_m5_ranking_without_dispatch_overclaim(tmp_path: Path) -> None:
@@ -371,6 +413,38 @@ def test_materializer_chain_manifest_becomes_custody_checked_planning_row(
     assert (
         "exact_auth_eval_result_required_before_score_claim" in row["dispatch_blockers"]
     )
+
+
+def test_family_agnostic_materializer_manifest_becomes_custody_checked_planning_row(
+    tmp_path: Path,
+) -> None:
+    manifest = _family_agnostic_materializer_manifest(tmp_path)
+
+    queue = build_candidate_queue([manifest], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert queue["n_candidates"] == 1
+    assert queue["dispatch_ready_count"] == 0
+    assert row["candidate_id"] == "fixture_family_materializer_candidate"
+    assert row["candidate_family"] == "packet_member_recompress"
+    assert row["archive_candidate_verified"] is True
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["score_affecting_payload_changed"] is True
+    assert row["charged_bits_changed"] is True
+    assert row["runtime_adapter_ready"] is False
+    assert row["receiver_contract_satisfied"] is False
+    assert row["candidate_runtime_adapter_blocker_cleared"] is False
+    assert row["serialized_archive_delta"]["status"] == "realized_saving"
+    assert row["score_affecting_change_proof"]["archive_changed"] is True
+    assert row["runtime_consumption_proof_status"] == "missing"
+    assert "materializer_candidate_is_not_dispatch_authorization" in row[
+        "dispatch_blockers"
+    ]
+    assert "runtime_consumption_proof_missing" in row["dispatch_blockers"]
+    assert "family_agnostic_receiver_contract_not_satisfied" in row[
+        "dispatch_blockers"
+    ]
 
 
 def test_materializer_chain_truthy_authority_fails_closed(tmp_path: Path) -> None:

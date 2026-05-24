@@ -14,10 +14,18 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.family_agnostic_materializers import (
+    ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+    PACKET_MEMBER_RECOMPRESS_SCHEMA,
+    TENSOR_FACTORIZE_SCHEMA,
+)
 from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
     ordered_unique,
     require_no_truthy_authority_fields,
+)
+from tac.optimization.serialized_archive_economics import (
+    build_serialized_archive_delta_contract,
 )
 from tac.optimizer.exact_readiness import validate_serialized_archive_delta_contract
 
@@ -26,6 +34,16 @@ SUPPORTED_CHAIN_SCHEMAS = frozenset(
         "byte_range_entropy_recode_chain_v1",
         "inverse_scorer_cell_candidate_chain_v1",
     }
+)
+SUPPORTED_FAMILY_AGNOSTIC_MATERIALIZER_SCHEMAS = frozenset(
+    {
+        ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+        PACKET_MEMBER_RECOMPRESS_SCHEMA,
+        TENSOR_FACTORIZE_SCHEMA,
+    }
+)
+SUPPORTED_MATERIALIZER_MANIFEST_SCHEMAS = (
+    SUPPORTED_CHAIN_SCHEMAS | SUPPORTED_FAMILY_AGNOSTIC_MATERIALIZER_SCHEMAS
 )
 TOOL_NAME = "tools/build_optimizer_candidate_queue.py"
 LOCAL_ADVISORY_AXIS_TOKENS = (
@@ -151,6 +169,146 @@ def adapt_materializer_chain_manifest_to_candidate(
     return out
 
 
+def adapt_materializer_manifest_to_candidate(
+    manifest: Mapping[str, Any],
+    *,
+    source_path: Path,
+    repo_root: Path,
+) -> dict[str, Any]:
+    """Return one non-authoritative optimizer row for any materializer manifest."""
+
+    schema = str(manifest.get("schema") or "")
+    if schema in SUPPORTED_CHAIN_SCHEMAS:
+        return adapt_materializer_chain_manifest_to_candidate(
+            manifest,
+            source_path=source_path,
+            repo_root=repo_root,
+        )
+    if schema in SUPPORTED_FAMILY_AGNOSTIC_MATERIALIZER_SCHEMAS:
+        return adapt_family_agnostic_materializer_manifest_to_candidate(
+            manifest,
+            source_path=source_path,
+            repo_root=repo_root,
+        )
+    raise MaterializerChainHarvestError(f"unsupported_materializer_schema:{schema!r}")
+
+
+def adapt_family_agnostic_materializer_manifest_to_candidate(
+    manifest: Mapping[str, Any],
+    *,
+    source_path: Path,
+    repo_root: Path,
+) -> dict[str, Any]:
+    """Adapt one family-agnostic byte-closed candidate manifest for readiness."""
+
+    schema = str(manifest.get("schema") or "")
+    if schema not in SUPPORTED_FAMILY_AGNOSTIC_MATERIALIZER_SCHEMAS:
+        raise MaterializerChainHarvestError(
+            f"unsupported_family_agnostic_materializer_schema:{schema!r}"
+        )
+    _require_false_authority(manifest, label="family_agnostic_materializer_manifest")
+    if manifest.get("byte_closed_candidate_emitted") is not True:
+        raise MaterializerChainHarvestError("byte_closed_candidate_emitted_not_true")
+
+    candidate_archive = _archive_record(manifest, "candidate_archive", repo_root=repo_root)
+    source_archive = _archive_record(manifest, "source_archive", repo_root=repo_root)
+    source_sha = _string_or_none(source_archive.get("sha256"))
+    source_bytes = _positive_int(source_archive.get("bytes"))
+    archive_changed = (
+        source_sha is not None and candidate_archive["sha256"] != source_sha
+    )
+    byte_changed = (
+        source_bytes is not None and candidate_archive["bytes"] != source_bytes
+    )
+    serialized_delta = build_serialized_archive_delta_contract(
+        source_archive=source_archive,
+        candidate_archive=candidate_archive,
+    )
+    receiver_verification = manifest.get("receiver_verification")
+    receiver_map = (
+        receiver_verification if isinstance(receiver_verification, Mapping) else {}
+    )
+    proof_present = receiver_map.get("proof_present") is True
+    receiver_satisfied = manifest.get("receiver_contract_satisfied") is True
+    raw_proof_path = (
+        receiver_map.get("proof_path") or manifest.get("runtime_consumption_proof_path")
+    )
+    proof_path = raw_proof_path.strip() if isinstance(raw_proof_path, str) else None
+    candidate_id = _candidate_id(
+        manifest,
+        schema=schema,
+        archive_sha=candidate_archive["sha256"],
+    )
+    row = {
+        "candidate_id": candidate_id,
+        "lane_id": str(manifest.get("lane_id") or f"materializer_harvest::{schema}"),
+        "lane_class": "family_agnostic_materializer_harvest",
+        "candidate_family": _candidate_family(schema),
+        "optimizer_tool": TOOL_NAME,
+        "schema": schema,
+        "source_manifest_path": _repo_rel(source_path, repo_root),
+        "source_paths": [_repo_rel(source_path, repo_root)],
+        "candidate_archive_path": candidate_archive["path"],
+        "archive_path": candidate_archive["path"],
+        "candidate_archive_sha256": candidate_archive["sha256"],
+        "archive_sha256": candidate_archive["sha256"],
+        "candidate_archive_bytes": candidate_archive["bytes"],
+        "archive_bytes": candidate_archive["bytes"],
+        "source_archive_sha256": source_sha,
+        "source_archive_bytes": source_bytes,
+        "source_archive_path": source_archive.get("path"),
+        "serialized_archive_delta": serialized_delta,
+        "score_affecting_payload_changed": archive_changed,
+        "charged_bits_changed": byte_changed,
+        "score_affecting_change_proof": _score_affecting_change_proof(
+            source_sha=source_sha,
+            source_bytes=source_bytes,
+            candidate_archive=candidate_archive,
+            archive_changed=archive_changed,
+            byte_changed=byte_changed,
+        ),
+        "byte_closed_candidate_emitted": True,
+        "runtime_adapter_ready": receiver_satisfied,
+        "receiver_contract_satisfied": receiver_satisfied,
+        "candidate_runtime_adapter_blocker_cleared": receiver_satisfied,
+        "readiness_blockers": _string_list(manifest.get("readiness_blockers")),
+        "runtime_consumption_proof_required": True,
+        "runtime_consumption_proof_status": "present" if proof_present else "missing",
+        "runtime_consumption_proof_path": proof_path,
+        "local_advisory_axes": _local_advisory_axes(manifest),
+        "local_advisory_axes_semantics": (
+            "non_authoritative_planning_signal_only_not_score_claim"
+        ),
+        "evidence_semantics": (
+            "family_agnostic_materializer_candidate_pending_exact_readiness"
+        ),
+        "evidence_grade": "[family-agnostic-materializer-no-score]",
+        "harvested_at_utc": _utc_now(),
+    }
+    out = apply_proxy_evidence_boundary(
+        row,
+        dispatch_blockers=[
+            "materializer_candidate_is_not_dispatch_authorization",
+            "materialized_archive_runtime_custody_required",
+            "exact_readiness_promotion_required",
+            "exact_auth_eval_result_required_before_score_claim",
+            *(
+                []
+                if receiver_satisfied
+                else ["family_agnostic_receiver_contract_not_satisfied"]
+            ),
+            *_string_list(manifest.get("readiness_blockers")),
+            *_string_list(manifest.get("dispatch_blockers")),
+        ],
+    )
+    out["score_affecting_payload_changed"] = archive_changed
+    out["charged_bits_changed"] = byte_changed
+    out["runtime_adapter_ready"] = receiver_satisfied
+    out["receiver_contract_satisfied"] = receiver_satisfied
+    out["candidate_runtime_adapter_blocker_cleared"] = receiver_satisfied
+    return out
+
+
 def _runtime_consumption_proof_fields(chain: Mapping[str, Any]) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for key in (
@@ -175,6 +333,12 @@ def _candidate_family(schema: str) -> str:
         return "byte_range_entropy_recode"
     if schema == "inverse_scorer_cell_candidate_chain_v1":
         return "inverse_scorer_cell"
+    if schema == ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA:
+        return "archive_section_entropy_recode"
+    if schema == PACKET_MEMBER_RECOMPRESS_SCHEMA:
+        return "packet_member_recompress"
+    if schema == TENSOR_FACTORIZE_SCHEMA:
+        return "tensor_factorize"
     return "materializer_chain"
 
 
@@ -438,6 +602,10 @@ def _utc_now() -> str:
 
 __all__ = [
     "SUPPORTED_CHAIN_SCHEMAS",
+    "SUPPORTED_FAMILY_AGNOSTIC_MATERIALIZER_SCHEMAS",
+    "SUPPORTED_MATERIALIZER_MANIFEST_SCHEMAS",
     "MaterializerChainHarvestError",
+    "adapt_family_agnostic_materializer_manifest_to_candidate",
     "adapt_materializer_chain_manifest_to_candidate",
+    "adapt_materializer_manifest_to_candidate",
 ]

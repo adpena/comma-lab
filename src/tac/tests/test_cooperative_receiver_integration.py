@@ -9,6 +9,9 @@ from tac.optimization.cooperative_receiver_integration import (
     write_integration_manifest,
 )
 from tac.optimization.proxy_candidate_contract import validate_proxy_candidate
+from tac.packet_compiler.deterministic_compiler import (
+    packetir_operation_set_bridge_contract,
+)
 
 
 def test_integration_manifest_threads_campaigns_into_solver_surfaces() -> None:
@@ -123,14 +126,11 @@ def test_integration_manifest_wires_xray_magic_codec_and_compiler_hooks() -> Non
     assert compiler["canonical_module"] == "tac.packet_compiler.deterministic_compiler"
     assert compiler["score_claim"] is False
     assert compiler["ready_for_exact_eval_dispatch"] is False
-    assert compiler["required_order"] == [
-        "representation",
-        "prediction",
-        "quantization",
-        "hyperprior",
-        "arithmetic",
-        "pack",
-    ]
+    contract = packetir_operation_set_bridge_contract()
+    assert compiler["packetir_operation_set_bridge_contract"] == contract
+    assert compiler["recommended_ir_schema"] == contract["recommended_ir_schema"]
+    assert compiler["required_order"] == list(contract["required_order"])
+    assert compiler["required_proofs"] == list(contract["required_proofs"])
 
 
 def test_integration_writer_and_markdown_are_deterministic(tmp_path) -> None:

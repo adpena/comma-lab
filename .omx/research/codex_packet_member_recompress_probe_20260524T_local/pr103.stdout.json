@@ -1,0 +1,111 @@
+{
+  "artifact_write": {
+    "allow_overwrite": true,
+    "bytes_written": 178278,
+    "free_bytes_before": 640889344000,
+    "path": "/Users/adpena/Projects/pact/.omx/research/codex_packet_member_recompress_probe_20260524T_local/pr103_recompress.zip",
+    "sha256": "c5f829ab1f51ef279186c7f9a5e3facbf8cfaaac474ce1b7468cfa56176361b5"
+  },
+  "byte_closed_candidate_emitted": true,
+  "candidate_archive": {
+    "bytes": 178278,
+    "path": "/Users/adpena/Projects/pact/.omx/research/codex_packet_member_recompress_probe_20260524T_local/pr103_recompress.zip",
+    "sha256": "c5f829ab1f51ef279186c7f9a5e3facbf8cfaaac474ce1b7468cfa56176361b5"
+  },
+  "candidate_member": {
+    "bytes": 178123,
+    "name": "x",
+    "sha256": "dd92b065b8fbd2bfe9de837eb110a971c2675ecca4247e2658b4628b464d72ec",
+    "zip_compressed_bytes": 178178,
+    "zip_compression_method": "deflated"
+  },
+  "candidate_trials": [
+    {
+      "archive_bytes": 178278,
+      "archive_sha256": "c5f829ab1f51ef279186c7f9a5e3facbf8cfaaac474ce1b7468cfa56176361b5",
+      "compression_method": "deflated",
+      "compresslevel": 9
+    }
+  ],
+  "dispatch_attempted": false,
+  "gpu_launched": false,
+  "materializer_id": "packet_member_recompress_adapter",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "readiness_blockers": [
+    "candidate_not_rate_positive",
+    "runtime_consumption_proof_missing",
+    "packet_member_recompress_receiver_contract_not_satisfied"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+  "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+  "receiver_contract_satisfied": false,
+  "receiver_verification": {
+    "blockers": [
+      "runtime_consumption_proof_missing"
+    ],
+    "proof_path": null,
+    "proof_present": false,
+    "receiver_contract_satisfied": false,
+    "schema": "family_agnostic_runtime_consumption_proof_verification.v1"
+  },
+  "schema": "packet_member_recompress_candidate.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "selected_compression": {
+    "candidate_archive_bytes": 178278,
+    "compression_method": "deflated",
+    "compresslevel": 9,
+    "saved_bytes": -55,
+    "source_archive_bytes": 178223
+  },
+  "selected_member_name": "x",
+  "source_archive": {
+    "bytes": 178223,
+    "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr103_intake_20260505_auto/archive.zip",
+    "sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30"
+  },
+  "source_member": {
+    "bytes": 178123,
+    "name": "x",
+    "sha256": "dd92b065b8fbd2bfe9de837eb110a971c2675ecca4247e2658b4628b464d72ec",
+    "zip_compressed_bytes": 178123,
+    "zip_compression_method": "stored"
+  },
+  "target_kind": "packet_member_recompress_v1",
+  "tool_run_manifest": {
+    "argv": [
+      "--target-kind",
+      "packet_member_recompress_v1",
+      "--archive-path",
+      "experiments/results/public_pr_archive_release_view/public_pr103_intake_20260505_auto/archive.zip",
+      "--output-archive",
+      ".omx/research/codex_packet_member_recompress_probe_20260524T_local/pr103_recompress.zip",
+      "--output-manifest",
+      ".omx/research/codex_packet_member_recompress_probe_20260524T_local/pr103_recompress.json",
+      "--zip-compression-method",
+      "stored",
+      "--zip-compression-method",
+      "deflated",
+      "--zip-compresslevel",
+      "9",
+      "--allow-overwrite"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "f6f74da84100713c5329dddc0860e30b2ee740b7e10008dbfcb3843dcfc2a2d7",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 178223,
+        "path": "experiments/results/public_pr_archive_release_view/public_pr103_intake_20260505_auto/archive.zip",
+        "sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30"
+      }
+    ],
+    "output_path": ".omx/research/codex_packet_member_recompress_probe_20260524T_local/pr103_recompress.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/run_family_agnostic_materializer.py"
+  }
+}

@@ -83,6 +83,15 @@ DEFAULT_PARETO_OBJECTIVES: tuple[str, ...] = (
     "seconds_per_candidate",
     "seconds_per_step",
 )
+PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY = "implemented_mlx_synthetic_timing_only"
+PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY = "synthetic_timing_only"
+PR95_MLX_SOURCE_FAITHFUL_BLOCKERS: tuple[str, ...] = (
+    "pr95_source_video_loader_not_ported_to_mlx",
+    "pr95_eval_roundtrip_scorer_preprocess_loss_not_ported_to_mlx",
+    "pr95_stage_hparams_and_cosine_schedules_not_all_source_matched",
+    "pr95_qat_c1a_and_resume_semantics_not_ported_to_mlx",
+    "pr95_export_forward_parity_not_established",
+)
 
 
 class OptimizerSchedulerRegistryError(ValueError):
@@ -567,7 +576,12 @@ def default_optimizer_scheduler_descriptors() -> tuple[OptimizerSchedulerDescrip
             },
             scheduler_config={"stage_indices": [1], "source_pr": 95},
             training_config={
-                "backend_status": "implemented_mlx_source_faithful",
+                "backend_status": PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY,
+                "training_fidelity": PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY,
+                "source_faithful_training": False,
+                "source_faithfulness_blockers": list(
+                    PR95_MLX_SOURCE_FAITHFUL_BLOCKERS
+                ),
                 "pr95_stage_indices": [1],
                 "stage_modules": ["stage1_v328_ce"],
                 "score_claim": False,
@@ -576,7 +590,7 @@ def default_optimizer_scheduler_descriptors() -> tuple[OptimizerSchedulerDescrip
                 "ready_for_exact_eval_dispatch": False,
             },
             parameter_group_lr_policy=EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY,
-            intended_use="pr95_hnerv_mlx_source_faithful_timing_smoke",
+            intended_use="pr95_hnerv_mlx_synthetic_timing_smoke",
         ),
         OptimizerSchedulerDescriptor(
             descriptor_id="pr95_stage5_adamw_baseline_mlx",
@@ -593,7 +607,12 @@ def default_optimizer_scheduler_descriptors() -> tuple[OptimizerSchedulerDescrip
             },
             scheduler_config={"stage_indices": [5], "source_pr": 95},
             training_config={
-                "backend_status": "implemented_mlx_source_faithful",
+                "backend_status": PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY,
+                "training_fidelity": PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY,
+                "source_faithful_training": False,
+                "source_faithfulness_blockers": list(
+                    PR95_MLX_SOURCE_FAITHFUL_BLOCKERS
+                ),
                 "pr95_stage_indices": [5],
                 "stage_modules": ["stage5_c1a_l7"],
                 "score_claim": False,
@@ -602,7 +621,7 @@ def default_optimizer_scheduler_descriptors() -> tuple[OptimizerSchedulerDescrip
                 "ready_for_exact_eval_dispatch": False,
             },
             parameter_group_lr_policy=EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY,
-            intended_use="pr95_hnerv_mlx_source_faithful_timing_smoke",
+            intended_use="pr95_hnerv_mlx_synthetic_timing_smoke",
         ),
         OptimizerSchedulerDescriptor(
             descriptor_id="pr95_stage8_muon_adamw_mlx",
@@ -625,7 +644,12 @@ def default_optimizer_scheduler_descriptors() -> tuple[OptimizerSchedulerDescrip
             },
             scheduler_config={"stage_indices": [8], "source_pr": 95},
             training_config={
-                "backend_status": "implemented_mlx_source_faithful",
+                "backend_status": PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY,
+                "training_fidelity": PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY,
+                "source_faithful_training": False,
+                "source_faithfulness_blockers": list(
+                    PR95_MLX_SOURCE_FAITHFUL_BLOCKERS
+                ),
                 "pr95_stage_indices": [8],
                 "stage_modules": ["stage8_muon_finetune"],
                 "muon_partition": (
@@ -638,7 +662,7 @@ def default_optimizer_scheduler_descriptors() -> tuple[OptimizerSchedulerDescrip
                 "ready_for_exact_eval_dispatch": False,
             },
             parameter_group_lr_policy=EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY,
-            intended_use="pr95_hnerv_mlx_source_faithful_timing_smoke",
+            intended_use="pr95_hnerv_mlx_synthetic_timing_smoke",
         ),
         OptimizerSchedulerDescriptor(
             descriptor_id="pr95_muon_all_stages_descriptor_only",

@@ -10,6 +10,7 @@ from tac.optimization.byte_shaving_campaign import (
 from tac.optimization.inverse_steganalysis_acquisition import (
     ACTION_FUNCTIONAL_SCHEMA,
     ATOM_SCHEMA,
+    CONTEST_RATE_DENOM_BYTES,
     CONTEST_RATE_SCORE_PER_BYTE,
     MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA,
     OBSERVATION_SCHEMA,
@@ -28,6 +29,7 @@ from tac.optimization.inverse_steganalysis_acquisition import (
     paired_exact_auth_calibration_observations_from_review_packets,
 )
 from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
+from tac.score_composition import CANONICAL_RATE_DENOM_BYTES
 
 
 def _planning_false_authority() -> dict[str, bool]:
@@ -1101,3 +1103,34 @@ def test_discrete_action_functional_water_fills_positive_euler_cells() -> None:
     )
     for key, value in PROXY_FALSE_AUTHORITY_FIELDS.items():
         assert functional[key] is value
+
+
+def test_discrete_action_functional_uses_canonical_contest_rate_denominator() -> None:
+    stale_fifty_million_lambda = 25.0 / 50_000_000.0
+    boundary_gain = stale_fifty_million_lambda * 100.0 * 1.05
+    atoms = [
+        _atom(
+            "boundary_candidate",
+            atom_id="boundary_atom",
+            byte_range=[0, 100],
+            predicted_score_gain=boundary_gain,
+            first_order_marginal_effect=boundary_gain,
+            second_order_interaction_effect=0.0,
+            uncertainty=0.0,
+            discontinuity_risk=0.0,
+        )
+    ]
+
+    canonical = build_discrete_scorer_action_functional(atoms)
+    stale = build_discrete_scorer_action_functional(
+        atoms,
+        lambda_rate=stale_fifty_million_lambda,
+    )
+
+    assert CONTEST_RATE_DENOM_BYTES == CANONICAL_RATE_DENOM_BYTES == 37_545_489
+    assert pytest.approx(25.0 / 37_545_489) == CONTEST_RATE_SCORE_PER_BYTE
+    assert canonical["math_model"]["lambda_rate"] == pytest.approx(
+        CONTEST_RATE_SCORE_PER_BYTE
+    )
+    assert canonical["water_bucket"]["selected_count"] == 0
+    assert stale["water_bucket"]["selected_count"] == 1

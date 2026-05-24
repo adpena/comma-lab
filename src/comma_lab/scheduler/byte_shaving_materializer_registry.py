@@ -12,7 +12,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from tac.optimization.byte_shaving_campaign import DEFAULT_OPERATION_FAMILIES
+from tac.optimization.byte_shaving_campaign import (
+    DEFAULT_OPERATION_FAMILIES,
+    INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
+    INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
+    INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
+)
 from tac.optimization.proxy_candidate_contract import ordered_unique
 from tac.packet_compiler.cooperative_receiver_grammars import compiler_hook_rows
 
@@ -40,6 +45,12 @@ INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_ID = (
 )
 INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_KIND = (
     "planning_only_inverse_scorer_action_functional"
+)
+INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_ID = (
+    "inverse_steganalysis_high_level_operation_set.receiver.v1"
+)
+INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_KIND = (
+    "portfolio_level_inverse_steganalysis_operation_set"
 )
 ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER = "archive_section_entropy_recode_adapter"
 ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND = "archive_section_entropy_recode_v1"
@@ -185,11 +196,11 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         unit_kind="scorer_inverse_surface_cell",
         operation_family="materialize_inverse_scorer_cell_candidate",
         target_kind=INVERSE_SCORER_CELL_TARGET_KIND,
-        executable=False,
+        executable=True,
         description=(
-            "Fail-closed contract for inverse-scorer coordinate cells; requires "
-            "a deterministic pixel/byte materializer and runtime-consumption proof "
-            "before queue execution."
+            "Executable inverse-scorer coordinate-cell proof chain; exact-mode "
+            "queue execution requires inflate parity context before it can emit "
+            "a harvestable candidate chain."
         ),
         receiver_contract_id=INVERSE_SCORER_CELL_RECEIVER_CONTRACT_ID,
         receiver_contract_kind=INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND,
@@ -199,9 +210,8 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
             "raw_contest_video_digest",
             "candidate_archive_template",
             "inverse_action_functional",
-            "output_archive",
-            "manifest_out",
-            "runtime_consumption_proof",
+            "output_dir",
+            "inflate_runtime_dir_or_source_and_candidate_inflate_output_dirs",
         ),
         implementation_module="tac.optimization.inverse_scorer_cell_materializer",
         plan_function="build_inverse_scorer_cell_candidate_plan",
@@ -234,6 +244,33 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         plan_function="build_inverse_steganalysis_action_functional",
         emits_candidate_archive=False,
         planning_only=True,
+    ),
+    MaterializerAdapter(
+        materializer_id=INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
+        unit_kind="scorer_inverse_surface_cell",
+        operation_family=INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
+        target_kind=INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
+        executable=False,
+        description=(
+            "Fail-closed contract for promoting bare inverse-action cells into "
+            "portfolio-level archive/runtime operation sets. Bare cells are not "
+            "candidate archives until this compiler maps them to a concrete "
+            "family materializer with runtime-consumption proof."
+        ),
+        receiver_contract_id=INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_ID,
+        receiver_contract_kind=INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_KIND,
+        cooperative_receiver_required=True,
+        materialization_resource_kind="local_mlx",
+        required_context_fields=(
+            "candidate_family",
+            "archive_grammar",
+            "receiver_contract_kind",
+            "operation_set_compiler",
+            "runtime_consumption_proof",
+        ),
+        implementation_module="",
+        emits_candidate_archive=True,
+        planning_only=False,
     ),
     MaterializerAdapter(
         materializer_id=ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER,
@@ -705,6 +742,11 @@ __all__ = [
     "DQS1_PAIRSET_TARGET_KIND",
     "DQS1_RECEIVER_CONTRACT_ID",
     "DQS1_RECEIVER_CONTRACT_KIND",
+    "INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER",
+    "INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY",
+    "INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_ID",
+    "INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_KIND",
+    "INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND",
     "INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER",
     "INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_ID",
     "INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_KIND",

@@ -38,7 +38,8 @@ def main(argv: list[str] | None = None) -> int:
             "manifests, trainer_runtime_profile_observation.v1, representation "
             "training manifests with runtime_profile/runtime_profiles, "
             "byte_shaving_campaign_plan.v1, byte/inverse materializer chain "
-            "manifests, and meta_lagrangian reports."
+            "manifests, family-agnostic materializer candidate manifests, and "
+            "meta_lagrangian reports."
         ),
     )
     parser.add_argument("--output", type=Path, required=True)

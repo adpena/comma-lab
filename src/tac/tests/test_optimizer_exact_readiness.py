@@ -9,8 +9,11 @@ import os
 import stat
 import sys
 import zipfile
+from collections.abc import Mapping
 from pathlib import Path
 from types import SimpleNamespace
+
+import pytest
 
 from tac.hdm8_selector_cuda_gate import (
     HDM8_SELECTOR_CUDA_COMPONENT_GATE_SCHEMA,
@@ -420,6 +423,31 @@ def _write_pr101_runtime_proof(
                 "inflate_py_sha256": inflate_py_sha,
             },
         },
+    )
+
+
+def _write_family_agnostic_runtime_proof(
+    submission: Path,
+    archive_sha: str | None,
+    *,
+    proven: bool = True,
+    extra_fields: Mapping[str, object] | None = None,
+) -> Path:
+    payload: dict[str, object] = {
+        "schema": "family_agnostic_runtime_consumption_proof_v1",
+        "proof_kind": "fixture_family_agnostic_receiver_proof",
+        "receiver_contract_satisfied": proven,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+    }
+    if archive_sha is not None:
+        payload["candidate_archive_sha256"] = archive_sha
+    if extra_fields:
+        payload.update(extra_fields)
+    return _write_json(
+        submission / "runtime_consumption_proof.json",
+        payload,
     )
 
 
@@ -1047,6 +1075,83 @@ def test_promotes_pr101_runtime_packet_with_runtime_consumption_proof(
     assert row["runtime_consumption_proof_path"] == proof_path.relative_to(tmp_path).as_posix()
     assert row["runtime_consumption_proof_sha256"]
     assert row["runtime_consumption_proof_schema"] == "pr101_kaggle_proxy_runtime_consumption_proof_v1"
+
+
+def test_promotes_family_agnostic_candidate_with_receiver_proof(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    proof_path = _write_family_agnostic_runtime_proof(submission, archive_sha)
+    _add_required_runtime_proof_fields(queue, submission, tmp_path, status="present")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is True
+    row = result["promoted_queue"]["dispatch_ready"][0]
+    assert row["runtime_consumption_proof_path"] == proof_path.relative_to(
+        tmp_path
+    ).as_posix()
+    assert (
+        row["runtime_consumption_proof_schema"]
+        == "family_agnostic_runtime_consumption_proof_v1"
+    )
+    assert row["runtime_consumption_proof_archive_sha256"] == archive_sha
+
+
+@pytest.mark.parametrize(
+    ("proof_kwargs", "expected_blocker"),
+    [
+        ({"proven": False}, "runtime_consumption_proof_not_proven"),
+        ({"archive_sha": None}, "runtime_consumption_proof_archive_sha_missing"),
+        ({"archive_sha": "1" * 64}, "runtime_consumption_proof_archive_sha_mismatch"),
+        (
+            {"extra_fields": {"score_claim": True}},
+            "runtime_consumption_proof_false_authority_violation:score_claim",
+        ),
+        (
+            {"extra_fields": {"ready_for_exact_eval_dispatch": True}},
+            "runtime_consumption_proof_false_authority_violation:ready_for_exact_eval_dispatch",
+        ),
+        (
+            {"extra_fields": {"dispatch_attempted": True}},
+            "runtime_consumption_proof_false_authority_violation:dispatch_attempted",
+        ),
+        (
+            {"extra_fields": {"promotable": True}},
+            "runtime_consumption_proof_false_authority_violation:promotable",
+        ),
+    ],
+)
+def test_family_agnostic_runtime_proof_fails_closed_on_invalid_evidence(
+    tmp_path: Path,
+    proof_kwargs: dict[str, object],
+    expected_blocker: str,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    proof_archive_sha = proof_kwargs.pop("archive_sha", archive_sha)
+    _write_family_agnostic_runtime_proof(
+        submission,
+        proof_archive_sha,  # type: ignore[arg-type]
+        **proof_kwargs,
+    )
+    _add_required_runtime_proof_fields(queue, submission, tmp_path, status="present")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert expected_blocker in result["report"]["blockers"]
 
 
 def test_promoted_queue_passes_existing_dispatcher_readiness_loader(tmp_path: Path) -> None:

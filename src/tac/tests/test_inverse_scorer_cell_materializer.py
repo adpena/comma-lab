@@ -1412,7 +1412,10 @@ def test_inverse_scorer_cell_chain_clears_receiver_blockers_only(
     assert chain["receiver_contract_satisfied"] is True
     assert chain["candidate_runtime_adapter_blocker_cleared"] is True
     assert chain["source_archive_bytes"] == template.stat().st_size
-    assert chain["candidate_archive_bytes"] > 0
+    assert chain["candidate_archive_bytes"] > chain["source_archive_bytes"]
+    assert chain["serialized_archive_delta"]["status"] == "realized_cost"
+    assert chain["serialized_archive_delta"]["archive_delta_bytes"] > 0
+    assert chain["serialized_archive_delta"]["realized_saved_bytes"] < 0
     assert chain["serialized_archive_delta"]["modeled_cost_bytes"] == 32
     assert chain["serialized_archive_delta"]["require_realized_saving"] is False
     assert chain["serialized_archive_delta"]["blockers"] == []
