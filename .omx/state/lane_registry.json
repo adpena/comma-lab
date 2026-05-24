@@ -50974,6 +50974,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "codex_exact_dispatch_plan_identity_dedupe_20260524",
+      "name": "Exact-ready handoff identity guards",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/comma_lab/scheduler/materializer_exact_eval_dispatch_plan.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_materializer_chain_harvest_scheduler.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "tools/review_tracker.py"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_exact_dispatch_plan_identity_dedupe_20260524T034000Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "docs/experiment_scheduler_design.md"
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -50983,5 +51024,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T03:04:55Z"
+  "updated_at": "2026-05-24T03:15:28Z"
 }

@@ -22,6 +22,10 @@ from comma_lab.scheduler.materializer_exact_eval_consumer import (  # noqa: E402
     build_materializer_exact_eval_consumer_queue,
     write_json,
 )
+from tac.optimizer.exact_readiness import (  # noqa: E402
+    ACTIVE_FLOOR_ARCHIVE_BYTES,
+    ACTIVE_FLOOR_SCORE,
+)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -51,20 +55,49 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--label-prefix", default="materializer_exact_eval_consumer")
     parser.add_argument("--agent", default="codex")
     parser.add_argument("--dispatch-claims-path", default=None)
-    parser.add_argument("--active-floor-archive-bytes", type=int, default=None)
-    parser.add_argument("--active-floor-score", type=float, default=None)
+    parser.add_argument(
+        "--active-floor-archive-bytes",
+        type=int,
+        default=ACTIVE_FLOOR_ARCHIVE_BYTES,
+    )
+    parser.add_argument(
+        "--active-floor-score",
+        type=float,
+        default=ACTIVE_FLOOR_SCORE,
+    )
+    parser.add_argument("--disable-active-floor-archive-bytes", action="store_true")
+    parser.add_argument("--disable-active-floor-score", action="store_true")
     parser.add_argument(
         "--allow-above-active-floor-dispatch",
         action="store_true",
         help="allow dispatch above active floor when paired with an operator override",
     )
     parser.add_argument("--operator-override-reason", default=None)
+    parser.add_argument(
+        "--require-authorized",
+        action="store_true",
+        help="Exit nonzero when no row is authorized into the paused queue.",
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if (
+        args.disable_active_floor_archive_bytes or args.disable_active_floor_score
+    ) and not args.operator_override_reason:
+        raise SystemExit(
+            "disabling active floors requires --operator-override-reason"
+        )
+    active_floor_archive_bytes = (
+        None
+        if args.disable_active_floor_archive_bytes
+        else args.active_floor_archive_bytes
+    )
+    active_floor_score = (
+        None if args.disable_active_floor_score else args.active_floor_score
+    )
     try:
         result = build_materializer_exact_eval_consumer_queue(
             repo_root=REPO_ROOT,
@@ -78,8 +111,8 @@ def main(argv: list[str] | None = None) -> int:
             label_prefix=args.label_prefix,
             agent=args.agent,
             dispatch_claims_path=args.dispatch_claims_path,
-            active_floor_archive_bytes=args.active_floor_archive_bytes,
-            active_floor_score=args.active_floor_score,
+            active_floor_archive_bytes=active_floor_archive_bytes,
+            active_floor_score=active_floor_score,
             allow_above_active_floor_dispatch=args.allow_above_active_floor_dispatch,
             operator_override_reason=args.operator_override_reason,
         )
@@ -116,6 +149,11 @@ def main(argv: list[str] | None = None) -> int:
                 allow_nan=False,
             )
         )
+        if args.require_authorized and (
+            int(result["report"]["authorized_candidate_count"]) < 1
+            or result["report"].get("hard_plan_blockers")
+        ):
+            return 2
         return 0
     except (ExperimentQueueError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)

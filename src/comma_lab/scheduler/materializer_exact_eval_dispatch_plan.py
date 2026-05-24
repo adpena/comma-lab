@@ -37,6 +37,14 @@ DISPATCH_STEP_ID = "dispatch_exact_eval"
 DRY_RUN_DISPATCH_STEP_ID = "dispatch_exact_eval_dry_run"
 SUPPORTED_DISPATCH_MODES = frozenset({"dry_run", "execute"})
 SUPPORTED_PROVIDERS = frozenset({"lightning", "vastai"})
+FALSE_AUTHORITY: dict[str, bool] = {
+    "score_claim": False,
+    "score_claim_valid": False,
+    "promotion_eligible": False,
+    "rank_or_kill_eligible": False,
+    "ready_for_exact_eval_dispatch": False,
+    "dispatch_attempted": False,
+}
 
 
 def build_materializer_exact_eval_dispatch_plan(
@@ -101,23 +109,73 @@ def build_materializer_exact_eval_dispatch_plan(
     rows: list[dict[str, Any]] = []
     experiments: list[dict[str, Any]] = []
     seen_candidate_ids: set[str] = set()
+    seen_stable_identity: set[str] = set()
     authorized_count = 0
     blocked_count = 0
+    duplicate_count = 0
     for queue_path in ready_queue_paths:
-        queue_row = _load_single_dispatch_ready_row(queue_path)
+        try:
+            queue_row = _load_single_dispatch_ready_row(queue_path)
+        except ExperimentQueueError as exc:
+            rows.append(
+                _blocked_plan_row(
+                    queue_path,
+                    repo,
+                    candidate_id=None,
+                    stable_identity=None,
+                    blockers=[str(exc)],
+                )
+            )
+            blocked_count += 1
+            continue
         candidate_id = str(queue_row.get("candidate_id") or "")
+        stable_identity, identity_blockers = _stable_candidate_identity(queue_row)
+        if identity_blockers:
+            rows.append(
+                _blocked_plan_row(
+                    queue_path,
+                    repo,
+                    candidate_id=candidate_id,
+                    stable_identity=stable_identity,
+                    blockers=identity_blockers,
+                    lane_id=_row_lane_id(queue_row),
+                    archive_sha256=_row_archive_sha(queue_row),
+                )
+            )
+            blocked_count += 1
+            continue
         if candidate_id in seen_candidate_ids:
             rows.append(
                 _blocked_plan_row(
                     queue_path,
                     repo,
                     candidate_id=candidate_id,
+                    stable_identity=stable_identity,
                     blockers=[f"duplicate_candidate_id:{candidate_id}"],
+                    lane_id=_row_lane_id(queue_row),
+                    archive_sha256=_row_archive_sha(queue_row),
                 )
             )
             blocked_count += 1
+            duplicate_count += 1
+            continue
+        if stable_identity in seen_stable_identity:
+            rows.append(
+                _blocked_plan_row(
+                    queue_path,
+                    repo,
+                    candidate_id=candidate_id,
+                    stable_identity=stable_identity,
+                    blockers=[f"duplicate_stable_identity:{stable_identity}"],
+                    lane_id=_row_lane_id(queue_row),
+                    archive_sha256=_row_archive_sha(queue_row),
+                )
+            )
+            blocked_count += 1
+            duplicate_count += 1
             continue
         seen_candidate_ids.add(candidate_id)
+        seen_stable_identity.add(stable_identity)
         blockers, facts = _exact_ready_queue_blockers(
             queue_path=queue_path,
             row=queue_row,
@@ -134,6 +192,7 @@ def build_materializer_exact_eval_dispatch_plan(
                     queue_path,
                     repo,
                     candidate_id=candidate_id,
+                    stable_identity=stable_identity,
                     blockers=blockers,
                     lane_id=_row_lane_id(queue_row),
                     archive_sha256=_row_archive_sha(queue_row),
@@ -178,6 +237,7 @@ def build_materializer_exact_eval_dispatch_plan(
                 dispatch_command=dispatch_command,
                 dispatch_mode=mode,
                 candidate_id=candidate_id,
+                stable_identity=stable_identity,
                 lane_id=lane_id,
                 queue_path=queue_path,
                 repo_root=repo,
@@ -186,8 +246,12 @@ def build_materializer_exact_eval_dispatch_plan(
         rows.append(
             {
                 "candidate_id": candidate_id,
+                "stable_identity": stable_identity,
                 "lane_id": lane_id,
                 "archive_sha256": archive_sha,
+                "runtime_tree_sha256": _row_runtime_tree_sha(queue_row),
+                "runtime_content_tree_sha256": _row_runtime_content_sha(queue_row),
+                "score_axis": _row_score_axis(queue_row),
                 "exact_ready_queue_path": _repo_rel(queue_path, repo),
                 "dispatch_job_id": job_id,
                 "dispatch_mode": mode,
@@ -201,6 +265,7 @@ def build_materializer_exact_eval_dispatch_plan(
                     "audit_stale_ready_row_count": facts.get("audit_stale_ready_row_count"),
                     "authority_source": facts.get("authority_source"),
                 },
+                **FALSE_AUTHORITY,
             }
         )
         authorized_count += 1
@@ -249,6 +314,11 @@ def build_materializer_exact_eval_dispatch_plan(
                             "resources": {"kind": "local_cpu"},
                         }
                     ],
+                    "metadata": {
+                        "dispatch_plan_schema": DISPATCH_PLAN_SCHEMA,
+                        "reason": hard_plan_blockers or "no_authorized_rows",
+                        **FALSE_AUTHORITY,
+                    },
                 }
             ],
         }
@@ -263,6 +333,7 @@ def build_materializer_exact_eval_dispatch_plan(
             "exact_ready_queue_count": len(ready_queue_paths),
             "authorized_candidate_count": authorized_count,
             "blocked_candidate_count": blocked_count,
+            "duplicate_candidate_count": duplicate_count,
             "dispatch_mode": mode,
             "provider": provider,
             "estimated_cost_per_dispatch": estimated_cost_per_dispatch,
@@ -275,10 +346,7 @@ def build_materializer_exact_eval_dispatch_plan(
             "plan_blockers": plan_blockers,
             "hard_plan_blockers": hard_plan_blockers,
             "rows": rows,
-            "score_claim": False,
-            "promotion_eligible": False,
-            "rank_or_kill_eligible": False,
-            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
         },
         dispatch_blockers=[
             "dispatch_plan_is_not_score_authority",
@@ -351,10 +419,71 @@ def _load_single_dispatch_ready_row(queue_path: Path) -> Mapping[str, Any]:
         raise ExperimentQueueError(
             f"exact_ready_queue_must_have_one_dispatch_ready_row:{queue_path}"
         )
+    queue_blockers = _exact_ready_queue_shape_blockers(payload, queue_path)
+    if queue_blockers:
+        raise ExperimentQueueError(",".join(queue_blockers))
     candidate_id = rows[0].get("candidate_id")
     if not isinstance(candidate_id, str) or not candidate_id.strip():
         raise ExperimentQueueError(f"dispatch_ready_row_candidate_id_missing:{queue_path}")
     return rows[0]
+
+
+def _exact_ready_queue_shape_blockers(
+    payload: Mapping[str, Any],
+    queue_path: Path,
+) -> list[str]:
+    blockers: list[str] = []
+    rows = payload.get("dispatch_ready")
+    dispatch_ready = rows if isinstance(rows, list) else []
+    dispatch_ready_count = payload.get("dispatch_ready_count")
+    if dispatch_ready_count != 1:
+        blockers.append(
+            f"exact_ready_queue_dispatch_ready_count_mismatch:{queue_path}:"
+            f"{dispatch_ready_count!r}!=1"
+        )
+    n_candidates = payload.get("n_candidates")
+    if n_candidates is not None and n_candidates != 1:
+        blockers.append(
+            f"exact_ready_queue_n_candidates_mismatch:{queue_path}:{n_candidates!r}!=1"
+        )
+    top_k = payload.get("top_k")
+    if not isinstance(top_k, list) or len(top_k) != 1 or not isinstance(top_k[0], Mapping):
+        blockers.append(f"exact_ready_queue_top_k_must_have_one_row:{queue_path}")
+        return blockers
+    top_k_count = payload.get("top_k_count")
+    if top_k_count is not None and top_k_count != 1:
+        blockers.append(
+            f"exact_ready_queue_top_k_count_mismatch:{queue_path}:{top_k_count!r}!=1"
+        )
+    if dispatch_ready and isinstance(dispatch_ready[0], Mapping) and dict(top_k[0]) != dict(dispatch_ready[0]):
+        blockers.append(f"exact_ready_queue_top_k_dispatch_ready_mismatch:{queue_path}")
+    return blockers
+
+
+def _stable_candidate_identity(row: Mapping[str, Any]) -> tuple[str, list[str]]:
+    """Return the score-affecting archive/runtime identity for dedupe."""
+
+    archive_sha = _row_archive_sha(row)
+    runtime_content_sha = _row_runtime_content_sha(row)
+    runtime_tree_sha = _row_runtime_tree_sha(row)
+    score_axis = _row_score_axis(row)
+    blockers: list[str] = []
+    blockers.extend(_archive_sha_alias_blockers(row))
+    if archive_sha is None:
+        blockers.append("stable_identity_archive_sha256_missing")
+    if runtime_content_sha is None:
+        blockers.append("stable_identity_runtime_content_tree_sha256_missing")
+    if runtime_tree_sha is None:
+        blockers.append("stable_identity_runtime_tree_sha256_missing")
+    if blockers:
+        fallback = str(row.get("candidate_id") or "").strip()
+        return (f"unstable:{fallback}" if fallback else "unstable:missing_candidate_id"), blockers
+    return (
+        "archive="
+        f"{archive_sha}:runtime_content={runtime_content_sha}:"
+        f"score_axis={score_axis}",
+        [],
+    )
 
 
 def _exact_ready_queue_blockers(
@@ -410,19 +539,22 @@ def _blocked_plan_row(
     queue_path: Path,
     repo_root: Path,
     *,
-    candidate_id: str,
+    candidate_id: str | None,
+    stable_identity: str | None = None,
     blockers: Sequence[str],
     lane_id: str | None = None,
     archive_sha256: str | None = None,
 ) -> dict[str, Any]:
     return {
         "candidate_id": candidate_id,
+        "stable_identity": stable_identity,
         "lane_id": lane_id,
         "archive_sha256": archive_sha256,
         "exact_ready_queue_path": _repo_rel(queue_path, repo_root),
         "authorized_for_dispatch_plan": False,
         "claim_required_before_dispatch": True,
         "blockers": list(blockers),
+        **FALSE_AUTHORITY,
     }
 
 
@@ -433,6 +565,7 @@ def _dispatch_experiment(
     dispatch_command: Sequence[str],
     dispatch_mode: str,
     candidate_id: str,
+    stable_identity: str,
     lane_id: str,
     queue_path: Path,
     repo_root: Path,
@@ -444,9 +577,11 @@ def _dispatch_experiment(
         "id": experiment_id,
         "metadata": {
             "candidate_id": candidate_id,
+            "stable_identity": stable_identity,
             "lane_id": lane_id,
             "exact_ready_queue_path": _repo_rel(queue_path, repo_root),
             "dispatch_mode": dispatch_mode,
+            **FALSE_AUTHORITY,
         },
         "steps": [
             {
@@ -565,10 +700,73 @@ def _row_lane_id(row: Mapping[str, Any]) -> str:
 
 
 def _row_archive_sha(row: Mapping[str, Any]) -> str | None:
-    for key in ("archive_sha256", "candidate_archive_sha256", "expected_archive_sha256"):
+    for key in ("candidate_archive_sha256", "archive_sha256", "expected_archive_sha256"):
+        value = _row_sha(row, key)
+        if value is not None:
+            return value
+    return None
+
+
+def _archive_sha_alias_blockers(row: Mapping[str, Any]) -> list[str]:
+    values: dict[str, str] = {}
+    blockers: list[str] = []
+    for key in ("candidate_archive_sha256", "archive_sha256", "expected_archive_sha256"):
+        raw = row.get(key)
+        if raw is None:
+            continue
+        value = _row_sha(row, key)
+        if value is None:
+            blockers.append(f"archive_sha_alias_invalid:{key}")
+            continue
+        values[key] = value
+    if len(set(values.values())) > 1:
+        summary = ":".join(f"{key}={value}" for key, value in sorted(values.items()))
+        blockers.append(f"archive_sha_alias_mismatch:{summary}")
+    return blockers
+
+
+def _row_runtime_content_sha(row: Mapping[str, Any]) -> str | None:
+    for key in ("runtime_content_tree_sha256", "candidate_runtime_content_tree_sha256"):
+        value = _row_sha(row, key)
+        if value is not None:
+            return value
+    runtime_manifest = row.get("runtime_manifest")
+    if isinstance(runtime_manifest, Mapping):
+        return _row_sha(runtime_manifest, "runtime_content_tree_sha256")
+    return None
+
+
+def _row_runtime_tree_sha(row: Mapping[str, Any]) -> str | None:
+    for key in ("runtime_tree_sha256", "candidate_runtime_tree_sha256"):
+        value = _row_sha(row, key)
+        if value is not None:
+            return value
+    runtime_manifest = row.get("runtime_manifest")
+    if isinstance(runtime_manifest, Mapping):
+        return _row_sha(runtime_manifest, "runtime_tree_sha256")
+    return None
+
+
+def _row_score_axis(row: Mapping[str, Any]) -> str:
+    for key in (
+        "score_axis",
+        "target_score_axis",
+        "target_auth_axis",
+        "auth_eval_axis",
+        "contest_axis",
+    ):
         value = row.get(key)
-        if isinstance(value, str) and len(value.strip()) == 64:
-            return value.strip().lower()
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return "contest_cuda"
+
+
+def _row_sha(row: Mapping[str, Any], key: str) -> str | None:
+    value = row.get(key)
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if len(text) == 64 and all(ch in "0123456789abcdef" for ch in text):
+            return text
     return None
 
 

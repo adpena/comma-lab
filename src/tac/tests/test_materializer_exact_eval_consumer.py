@@ -154,6 +154,88 @@ def test_consumer_builds_paused_dry_run_queue_from_bridge_and_dedupes_identity(
     assert blocked[0]["blockers"][0].startswith("duplicate_stable_identity:")
 
 
+def test_consumer_dedupes_same_runtime_content_with_different_runtime_tree(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    first = _exact_ready_queue(repo, "first.exact_ready_queue.json", candidate_id="first")
+    duplicate = _exact_ready_queue(
+        repo,
+        "same_consumed_runtime.exact_ready_queue.json",
+        candidate_id="same_consumed_runtime",
+        runtime_tree_sha="d" * 64,
+    )
+    _patch_authority(monkeypatch)
+
+    result = consumer.build_materializer_exact_eval_consumer_queue(
+        repo_root=repo,
+        exact_ready_queue_paths=[first, duplicate],
+        active_floor_archive_bytes=None,
+        active_floor_score=None,
+    )
+
+    report = result["report"]
+    assert report["authorized_candidate_count"] == 1
+    assert report["duplicate_candidate_count"] == 1
+    blocked = [row for row in report["rows"] if row["blockers"]]
+    assert blocked[0]["blockers"][0].startswith("duplicate_stable_identity:")
+    assert ":runtime_tree=" not in blocked[0]["stable_identity"]
+
+
+def test_consumer_blocks_archive_sha_alias_disagreement(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    ready_queue = _exact_ready_queue(repo, "stale_alias.exact_ready_queue.json")
+    payload = json.loads(ready_queue.read_text(encoding="utf-8"))
+    for key in ("dispatch_ready", "top_k"):
+        for row in payload[key]:
+            row["archive_sha256"] = "d" * 64
+    _write_json(ready_queue, payload)
+    _patch_authority(monkeypatch)
+
+    result = consumer.build_materializer_exact_eval_consumer_queue(
+        repo_root=repo,
+        exact_ready_queue_paths=[ready_queue],
+        active_floor_archive_bytes=None,
+        active_floor_score=None,
+    )
+
+    row = result["report"]["rows"][0]
+    assert result["report"]["authorized_candidate_count"] == 0
+    assert any(
+        blocker.startswith("archive_sha_alias_mismatch:")
+        for blocker in row["blockers"]
+    )
+    assert row["archive_sha256"] == ARCHIVE_SHA
+
+
+def test_consumer_blocks_exact_ready_queue_counter_mismatch(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    ready_queue = _exact_ready_queue(repo, "bad_count.exact_ready_queue.json")
+    payload = json.loads(ready_queue.read_text(encoding="utf-8"))
+    payload["dispatch_ready_count"] = 2
+    _write_json(ready_queue, payload)
+
+    result = consumer.build_materializer_exact_eval_consumer_queue(
+        repo_root=repo,
+        exact_ready_queue_paths=[ready_queue],
+        active_floor_archive_bytes=None,
+        active_floor_score=None,
+    )
+
+    row = result["report"]["rows"][0]
+    assert result["report"]["authorized_candidate_count"] == 0
+    assert row["blockers"][0].startswith(
+        "exact_ready_queue_dispatch_ready_count_mismatch:"
+    )
+
+
 def test_consumer_fails_closed_when_exact_dispatch_authority_blocks(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -264,3 +346,54 @@ def test_consumer_cli_writes_false_authority_outputs(tmp_path: Path) -> None:
     assert report["ready_for_exact_eval_dispatch"] is False
     assert queue["schema"] == "experiment_queue.v1"
     assert queue["controls"]["mode"] == "paused"
+
+
+def test_consumer_cli_disabling_active_floors_requires_override(
+    tmp_path: Path,
+) -> None:
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "build_materializer_exact_eval_consumer.py"),
+            "--disable-active-floor-score",
+            "--consumer-report-out",
+            str(tmp_path / "consumer_report.json"),
+            "--experiment-queue-out",
+            str(tmp_path / "consumer_queue.json"),
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode != 0
+    assert "disabling active floors requires --operator-override-reason" in proc.stderr
+
+
+def test_consumer_cli_require_authorized_exits_nonzero_on_no_authorized_rows(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    ready_queue = _exact_ready_queue(repo, "ready.exact_ready_queue.json")
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "build_materializer_exact_eval_consumer.py"),
+            "--exact-ready-queue",
+            str(ready_queue),
+            "--consumer-report-out",
+            str(tmp_path / "consumer_report.json"),
+            "--experiment-queue-out",
+            str(tmp_path / "consumer_queue.json"),
+            "--require-authorized",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 2

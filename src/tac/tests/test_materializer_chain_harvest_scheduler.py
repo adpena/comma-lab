@@ -582,6 +582,141 @@ def test_materializer_dispatch_plan_dry_run_does_not_write_claim(
     assert "--claim-policy" not in dispatch_command
 
 
+def test_materializer_dispatch_plan_dedupes_stable_archive_runtime_identity(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+    first_queue = repo / str(bridge["rows"][0]["exact_ready_queue_path"])
+    duplicate_payload = json.loads(first_queue.read_text(encoding="utf-8"))
+    for key in ("dispatch_ready", "top_k"):
+        rows = duplicate_payload.get(key) or []
+        for row in rows:
+            row["candidate_id"] = "renamed_exact_ready_materializer_candidate"
+    duplicate_queue = _write_json(
+        repo / "renamed_duplicate.exact_ready_queue.json",
+        duplicate_payload,
+    )
+
+    result = build_materializer_exact_eval_dispatch_plan(
+        repo_root=repo,
+        exact_ready_queue_paths=[first_queue, duplicate_queue],
+        active_floor_archive_bytes=None,
+    )
+
+    plan = result["plan"]
+    assert plan["authorized_candidate_count"] == 1
+    assert plan["blocked_candidate_count"] == 1
+    assert plan["duplicate_candidate_count"] == 1
+    blocked = [row for row in plan["rows"] if row["blockers"]]
+    assert blocked[0]["blockers"][0].startswith("duplicate_stable_identity:")
+    assert blocked[0]["stable_identity"].startswith("archive=")
+    assert ":runtime_tree=" not in blocked[0]["stable_identity"]
+    assert plan["rows"][0]["stable_identity"] == blocked[0]["stable_identity"]
+
+
+def test_materializer_dispatch_plan_blocks_archive_sha_alias_disagreement(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+    ready_queue = repo / str(bridge["rows"][0]["exact_ready_queue_path"])
+    payload = json.loads(ready_queue.read_text(encoding="utf-8"))
+    for key in ("dispatch_ready", "top_k"):
+        rows = payload.get(key) or []
+        for row in rows:
+            row["archive_sha256"] = "d" * 64
+    stale_queue = _write_json(repo / "stale_alias.exact_ready_queue.json", payload)
+
+    result = build_materializer_exact_eval_dispatch_plan(
+        repo_root=repo,
+        exact_ready_queue_paths=[stale_queue],
+        active_floor_archive_bytes=None,
+    )
+
+    plan = result["plan"]
+    assert plan["authorized_candidate_count"] == 0
+    row = plan["rows"][0]
+    assert any(
+        blocker.startswith("archive_sha_alias_mismatch:")
+        for blocker in row["blockers"]
+    )
+
+
+def test_materializer_dispatch_plan_requires_stable_archive_runtime_identity(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+    ready_queue = repo / str(bridge["rows"][0]["exact_ready_queue_path"])
+    payload = json.loads(ready_queue.read_text(encoding="utf-8"))
+    for key in ("dispatch_ready", "top_k"):
+        rows = payload.get(key) or []
+        for row in rows:
+            row.pop("runtime_content_tree_sha256", None)
+            runtime_manifest = row.get("runtime_manifest")
+            if isinstance(runtime_manifest, dict):
+                runtime_manifest.pop("runtime_content_tree_sha256", None)
+    broken_queue = _write_json(
+        repo / "broken_identity.exact_ready_queue.json",
+        payload,
+    )
+
+    result = build_materializer_exact_eval_dispatch_plan(
+        repo_root=repo,
+        exact_ready_queue_paths=[broken_queue],
+        active_floor_archive_bytes=None,
+    )
+
+    plan = result["plan"]
+    assert plan["authorized_candidate_count"] == 0
+    assert plan["blocked_candidate_count"] == 1
+    assert plan["rows"][0]["blockers"] == [
+        "stable_identity_runtime_content_tree_sha256_missing"
+    ]
+    assert plan["rows"][0]["score_claim_valid"] is False
+    assert result["experiment_queue"]["controls"]["mode"] == "paused"
+
+
 def test_materializer_dispatch_plan_execute_requires_active_claim_for_dispatch(
     tmp_path: Path,
 ) -> None:

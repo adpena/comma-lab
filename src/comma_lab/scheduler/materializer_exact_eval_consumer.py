@@ -223,6 +223,9 @@ def build_materializer_exact_eval_consumer_queue(
                 "stable_identity": stable_identity,
                 "lane_id": lane_id,
                 "archive_sha256": archive_sha,
+                "runtime_tree_sha256": _row_runtime_tree_sha(source_row),
+                "runtime_content_tree_sha256": _row_runtime_content_sha(source_row),
+                "score_axis": _row_score_axis(source_row),
                 "exact_ready_queue_path": _repo_rel(queue_path, repo),
                 "dispatch_job_id": job_id,
                 "provider": provider,
@@ -383,19 +386,56 @@ def load_single_dispatch_ready_row(queue_path: str | Path) -> Mapping[str, Any]:
         raise ExperimentQueueError(
             f"exact_ready_queue_must_have_one_dispatch_ready_row:{path}"
         )
+    queue_blockers = _exact_ready_queue_shape_blockers(payload, path)
+    if queue_blockers:
+        raise ExperimentQueueError(",".join(queue_blockers))
     candidate_id = rows[0].get("candidate_id")
     if not isinstance(candidate_id, str) or not candidate_id.strip():
         raise ExperimentQueueError(f"dispatch_ready_row_candidate_id_missing:{path}")
     return rows[0]
 
 
+def _exact_ready_queue_shape_blockers(
+    payload: Mapping[str, Any],
+    queue_path: Path,
+) -> list[str]:
+    blockers: list[str] = []
+    rows = payload.get("dispatch_ready")
+    dispatch_ready = rows if isinstance(rows, list) else []
+    dispatch_ready_count = payload.get("dispatch_ready_count")
+    if dispatch_ready_count != 1:
+        blockers.append(
+            f"exact_ready_queue_dispatch_ready_count_mismatch:{queue_path}:"
+            f"{dispatch_ready_count!r}!=1"
+        )
+    n_candidates = payload.get("n_candidates")
+    if n_candidates is not None and n_candidates != 1:
+        blockers.append(
+            f"exact_ready_queue_n_candidates_mismatch:{queue_path}:{n_candidates!r}!=1"
+        )
+    top_k = payload.get("top_k")
+    if not isinstance(top_k, list) or len(top_k) != 1 or not isinstance(top_k[0], Mapping):
+        blockers.append(f"exact_ready_queue_top_k_must_have_one_row:{queue_path}")
+        return blockers
+    top_k_count = payload.get("top_k_count")
+    if top_k_count is not None and top_k_count != 1:
+        blockers.append(
+            f"exact_ready_queue_top_k_count_mismatch:{queue_path}:{top_k_count!r}!=1"
+        )
+    if dispatch_ready and isinstance(dispatch_ready[0], Mapping) and dict(top_k[0]) != dict(dispatch_ready[0]):
+        blockers.append(f"exact_ready_queue_top_k_dispatch_ready_mismatch:{queue_path}")
+    return blockers
+
+
 def stable_candidate_identity(row: Mapping[str, Any]) -> tuple[str, list[str]]:
     """Return archive/runtime identity and fail-closed blockers."""
 
     archive_sha = _row_archive_sha(row)
-    runtime_content_sha = _row_sha(row, "runtime_content_tree_sha256")
-    runtime_tree_sha = _row_sha(row, "runtime_tree_sha256")
+    runtime_content_sha = _row_runtime_content_sha(row)
+    runtime_tree_sha = _row_runtime_tree_sha(row)
+    score_axis = _row_score_axis(row)
     blockers: list[str] = []
+    blockers.extend(_archive_sha_alias_blockers(row))
     if archive_sha is None:
         blockers.append("stable_identity_archive_sha256_missing")
     if runtime_content_sha is None:
@@ -407,7 +447,8 @@ def stable_candidate_identity(row: Mapping[str, Any]) -> tuple[str, list[str]]:
         return (f"unstable:{fallback}" if fallback else "unstable:missing_candidate_id"), blockers
     return (
         "archive="
-        f"{archive_sha}:runtime_content={runtime_content_sha}:runtime_tree={runtime_tree_sha}",
+        f"{archive_sha}:runtime_content={runtime_content_sha}:"
+        f"score_axis={score_axis}",
         [],
     )
 
@@ -612,11 +653,65 @@ def _row_lane_id(row: Mapping[str, Any]) -> str:
 
 
 def _row_archive_sha(row: Mapping[str, Any]) -> str | None:
-    for key in ("archive_sha256", "candidate_archive_sha256", "expected_archive_sha256"):
+    for key in ("candidate_archive_sha256", "archive_sha256", "expected_archive_sha256"):
         value = _row_sha(row, key)
         if value is not None:
             return value
     return None
+
+
+def _archive_sha_alias_blockers(row: Mapping[str, Any]) -> list[str]:
+    values: dict[str, str] = {}
+    blockers: list[str] = []
+    for key in ("candidate_archive_sha256", "archive_sha256", "expected_archive_sha256"):
+        raw = row.get(key)
+        if raw is None:
+            continue
+        value = _row_sha(row, key)
+        if value is None:
+            blockers.append(f"archive_sha_alias_invalid:{key}")
+            continue
+        values[key] = value
+    if len(set(values.values())) > 1:
+        summary = ":".join(f"{key}={value}" for key, value in sorted(values.items()))
+        blockers.append(f"archive_sha_alias_mismatch:{summary}")
+    return blockers
+
+
+def _row_runtime_content_sha(row: Mapping[str, Any]) -> str | None:
+    for key in ("runtime_content_tree_sha256", "candidate_runtime_content_tree_sha256"):
+        value = _row_sha(row, key)
+        if value is not None:
+            return value
+    runtime_manifest = row.get("runtime_manifest")
+    if isinstance(runtime_manifest, Mapping):
+        return _row_sha(runtime_manifest, "runtime_content_tree_sha256")
+    return None
+
+
+def _row_runtime_tree_sha(row: Mapping[str, Any]) -> str | None:
+    for key in ("runtime_tree_sha256", "candidate_runtime_tree_sha256"):
+        value = _row_sha(row, key)
+        if value is not None:
+            return value
+    runtime_manifest = row.get("runtime_manifest")
+    if isinstance(runtime_manifest, Mapping):
+        return _row_sha(runtime_manifest, "runtime_tree_sha256")
+    return None
+
+
+def _row_score_axis(row: Mapping[str, Any]) -> str:
+    for key in (
+        "score_axis",
+        "target_score_axis",
+        "target_auth_axis",
+        "auth_eval_axis",
+        "contest_axis",
+    ):
+        value = row.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return "contest_cuda"
 
 
 def _row_sha(row: Mapping[str, Any], key: str) -> str | None:
