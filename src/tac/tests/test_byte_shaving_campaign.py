@@ -600,7 +600,7 @@ def test_inverse_action_compiler_hint_lowers_to_family_packet_ir() -> None:
     surface = build_signal_surface_from_inverse_action_functional(payload)
     plan = build_byte_shaving_campaign_plan(surface, max_k=3)
     packet_ir = plan["packet_ir_operation_sets"][0]
-    bridge = build_inverse_action_materialization_bridge(plan)
+    bridge = plan["materialization_bridge"]
 
     assert [unit["unit_kind"] for unit in surface["units"]] == [
         "archive_section",
@@ -685,7 +685,7 @@ def test_mlx_placeholder_provenance_defers_to_compiler_hint() -> None:
 
     surface = build_signal_surface_from_inverse_action_functional(payload)
     plan = build_byte_shaving_campaign_plan(surface, max_k=2)
-    bridge = build_inverse_action_materialization_bridge(plan)
+    bridge = plan["materialization_bridge"]
 
     assert surface["water_bucket_materialization_portfolio"]["actuation_modes"] == [
         "compiled_operation_set"

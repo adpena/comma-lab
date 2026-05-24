@@ -128,6 +128,7 @@ def _run_materializer(
     proof_out_target_kinds = {
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        TENSOR_FACTORIZE_TARGET_KIND,
     }
     if (
         args.runtime_consumption_proof_out is not None
@@ -135,7 +136,8 @@ def _run_materializer(
     ):
         raise FamilyAgnosticMaterializerError(
             "--runtime-consumption-proof-out is currently supported only for "
-            "archive_section_entropy_recode_v1 and packet_member_recompress_v1"
+            "archive_section_entropy_recode_v1, packet_member_recompress_v1, "
+            "and tensor_factorize_v1"
         )
     common = {
         "archive_path": args.archive_path,
@@ -200,10 +202,19 @@ def _run_materializer(
         )
         if args.factorization_contract is not None:
             input_paths.append(args.factorization_contract)
+        runtime_proof_out = args.runtime_consumption_proof_out
+        if args.runtime_consumption_proof is None and runtime_proof_out is None:
+            runtime_proof_out = args.output_manifest.with_name(
+                f"{args.output_manifest.stem}.runtime_consumption_proof.json"
+            )
         return materialize_tensor_factorize_candidate(
             **common,
             tensor_manifest=args.tensor_manifest,
             factorization_contract=contract,
+            runtime_consumption_proof_out=runtime_proof_out,
+            expected_existing_runtime_consumption_proof_sha256=(
+                args.expected_existing_runtime_consumption_proof_sha256
+            ),
         )
     raise FamilyAgnosticMaterializerError(f"unsupported target kind: {args.target_kind}")
 

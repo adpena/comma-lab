@@ -1480,6 +1480,7 @@ def _family_agnostic_materializer_command(
     if runtime_proof is None and target_kind in {
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        TENSOR_FACTORIZE_TARGET_KIND,
     }:
         runtime_proof_out = _path_context_value(context, "runtime_consumption_proof_out")
         if runtime_proof_out is None:
@@ -1711,6 +1712,7 @@ def _materializer_candidate_postconditions(
     required_equals: dict[str, Any] = {"schema": schema}
     required_sha256 = ["candidate_archive.sha256"]
     required_positive_int = ["candidate_archive.bytes"]
+    required_nonempty: list[str] = []
     required_nonempty_unless_true: list[dict[str, str]] = []
     if target_kind in {
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
@@ -1727,12 +1729,8 @@ def _materializer_candidate_postconditions(
             }
         )
     if target_kind == TENSOR_FACTORIZE_TARGET_KIND:
-        required_nonempty_unless_true = []
         required_equals["receiver_contract_kind"] = "family_agnostic_tensor_factorize"
         required_positive_int.append("factorization.factor_payload_bytes")
-        required_nonempty = ["readiness_blockers"]
-    else:
-        required_nonempty = []
     return [
         {
             "type": "json_equals",

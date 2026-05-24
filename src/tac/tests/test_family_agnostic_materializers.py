@@ -445,6 +445,82 @@ def test_tensor_factorize_materializer_emits_cooperative_receiver_packet(
     )
 
 
+def test_tensor_factorize_materializer_emits_cooperative_receiver_proof(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    proof = tmp_path / "runtime_consumption_proof.json"
+    tensor_path = tmp_path / "tensor.npy"
+    vector_a = np.arange(256, dtype=np.float32)[:, None]
+    vector_b = np.linspace(0.25, 2.0, 256, dtype=np.float32)[None, :]
+    np.save(tensor_path, vector_a @ vector_b)
+    _write_zip(archive, {"weights.npy": tensor_path.read_bytes()})
+
+    result = materialize_tensor_factorize_candidate(
+        archive_path=archive,
+        tensor_manifest={"member_name": "weights.npy"},
+        factorization_contract={
+            "rank": 1,
+            "cooperative_receiver_id": "fixture_tensor_factorize_receiver",
+            "receiver_adapter_kind": "npz_svd_low_rank_v1",
+            "max_abs_error_tolerance": 1.0e-3,
+        },
+        output_archive=output,
+        runtime_consumption_proof_out=proof,
+        repo_root=tmp_path,
+    )
+
+    proof_payload = json.loads(proof.read_text(encoding="utf-8"))
+    assert proof_payload["schema"] == "family_agnostic_runtime_consumption_proof_v1"
+    assert proof_payload["proof_kind"] == (
+        "tensor_factorize_cooperative_receiver_reconstruction_proof.v1"
+    )
+    assert proof_payload["candidate_archive"]["sha256"] == result["candidate_archive"]["sha256"]
+    assert proof_payload["candidate_member"]["sha256"] == result["candidate_member"]["sha256"]
+    assert proof_payload["runtime_consumption_probe"]["passed"] is True
+    assert proof_payload["runtime_consumption_probe"]["max_abs_error"] <= 1.0e-3
+    assert proof_payload["cooperative_receiver"]["declared"] is True
+    assert result["receiver_contract_satisfied"] is True
+    assert result["runtime_consumption_proof_path"] == str(proof)
+    assert "tensor_factorized_payload_requires_cooperative_receiver" not in (
+        result["readiness_blockers"]
+    )
+    assert result["score_claim"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
+
+
+def test_tensor_factorize_materializer_proof_requires_declared_receiver(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    proof = tmp_path / "runtime_consumption_proof.json"
+    tensor_path = tmp_path / "tensor.npy"
+    vector_a = np.arange(64, dtype=np.float32)[:, None]
+    vector_b = np.linspace(0.25, 2.0, 64, dtype=np.float32)[None, :]
+    np.save(tensor_path, vector_a @ vector_b)
+    _write_zip(archive, {"weights.npy": tensor_path.read_bytes()})
+
+    result = materialize_tensor_factorize_candidate(
+        archive_path=archive,
+        tensor_manifest={"member_name": "weights.npy"},
+        factorization_contract={"rank": 1, "max_abs_error_tolerance": 1.0e-3},
+        output_archive=output,
+        runtime_consumption_proof_out=proof,
+        repo_root=tmp_path,
+    )
+
+    proof_payload = json.loads(proof.read_text(encoding="utf-8"))
+    assert proof_payload["runtime_consumption_probe"]["cooperative_receiver_declared"] is False
+    assert proof_payload["runtime_consumption_probe"]["passed"] is False
+    assert result["receiver_contract_satisfied"] is False
+    assert "runtime_consumption_proof_not_passed" in result["readiness_blockers"]
+    assert "tensor_factorized_payload_requires_cooperative_receiver" in (
+        result["readiness_blockers"]
+    )
+
+
 def test_family_agnostic_materializer_cli_writes_false_authority_manifest(
     tmp_path: Path,
 ) -> None:
@@ -554,5 +630,75 @@ def test_archive_section_materializer_cli_auto_writes_runtime_proof(
     assert "section_length_changed_requires_runtime_consumption_proof" in (
         payload["readiness_blockers"]
     )
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_tensor_factorize_materializer_cli_auto_writes_runtime_proof(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    manifest_path = tmp_path / "candidate.json"
+    proof = tmp_path / "candidate.runtime_consumption_proof.json"
+    tensor_manifest_path = tmp_path / "tensor_manifest.json"
+    contract_path = tmp_path / "factorization_contract.json"
+    tensor_path = tmp_path / "tensor.npy"
+    vector_a = np.arange(64, dtype=np.float32)[:, None]
+    vector_b = np.linspace(0.25, 2.0, 64, dtype=np.float32)[None, :]
+    np.save(tensor_path, vector_a @ vector_b)
+    _write_zip(archive, {"weights.npy": tensor_path.read_bytes()})
+    tensor_manifest_path.write_text(
+        json.dumps({"member_name": "weights.npy"}),
+        encoding="utf-8",
+    )
+    contract_path.write_text(
+        json.dumps(
+            {
+                "rank": 1,
+                "cooperative_receiver_id": "fixture_tensor_factorize_receiver",
+                "receiver_adapter_kind": "npz_svd_low_rank_v1",
+                "max_abs_error_tolerance": 1.0e-3,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_family_agnostic_materializer.py"),
+            "--target-kind",
+            "tensor_factorize_v1",
+            "--archive-path",
+            str(archive),
+            "--output-archive",
+            str(output),
+            "--output-manifest",
+            str(manifest_path),
+            "--tensor-manifest",
+            str(tensor_manifest_path),
+            "--factorization-contract",
+            str(contract_path),
+        ],
+        check=True,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    stdout_payload = json.loads(completed.stdout)
+    proof_payload = json.loads(proof.read_text(encoding="utf-8"))
+    assert payload["schema"] == TENSOR_FACTORIZE_SCHEMA
+    assert stdout_payload["schema"] == TENSOR_FACTORIZE_SCHEMA
+    assert proof.is_file()
+    assert payload["receiver_contract_satisfied"] is True
+    assert payload["receiver_verification"]["proof_present"] is True
+    assert payload["runtime_consumption_proof_path"] == str(proof)
+    assert proof_payload["proof_kind"] == (
+        "tensor_factorize_cooperative_receiver_reconstruction_proof.v1"
+    )
+    assert proof_payload["runtime_consumption_probe"]["passed"] is True
     assert payload["score_claim"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False

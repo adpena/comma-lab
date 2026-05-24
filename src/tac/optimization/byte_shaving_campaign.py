@@ -1511,6 +1511,8 @@ def build_byte_shaving_campaign_plan(
         },
         **FALSE_AUTHORITY,
     }
+    if plan["inverse_action_materialization_portfolios"]:
+        plan["materialization_bridge"] = build_inverse_action_materialization_bridge(plan)
     return apply_proxy_evidence_boundary(plan, dispatch_blockers=plan["dispatch_blockers"])
 
 

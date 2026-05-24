@@ -10,6 +10,7 @@ import zipfile
 from pathlib import Path
 
 import brotli
+import numpy as np
 import pytest
 
 import comma_lab.scheduler.materializer_exact_eval_dispatch_plan as dispatch_plan_module
@@ -45,8 +46,10 @@ from tac.optimization.byte_range_entropy_recode_chain import (
 )
 from tac.optimization.family_agnostic_materializers import (
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
+    TENSOR_FACTORIZE_SCHEMA,
     materialize_archive_section_entropy_recode_candidate,
     materialize_packet_member_recompress_candidate,
+    materialize_tensor_factorize_candidate,
 )
 from tac.optimization.proxy_candidate_contract import truthy_authority_field_violations
 from tac.optimization.serialized_archive_economics import (
@@ -664,6 +667,61 @@ def test_harvest_family_agnostic_archive_section_raw_identity_proof(
     assert row["runtime_consumption_proof_path"] == str(proof)
     assert row["runtime_adapter_ready"] is True
     assert row["receiver_contract_satisfied"] is True
+    assert "runtime_consumption_proof_missing" not in row["dispatch_blockers"]
+    assert "family_agnostic_receiver_contract_not_satisfied" not in (
+        row["dispatch_blockers"]
+    )
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_harvest_family_agnostic_tensor_factorize_receiver_proof(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    archive = repo / "source.zip"
+    output = repo / "candidate.zip"
+    proof = repo / "runtime_consumption_proof.json"
+    manifest_path = repo / "family_candidate.json"
+    tensor_path = repo / "weights.npy"
+    vector_a = np.arange(128, dtype=np.float32)[:, None]
+    vector_b = np.linspace(0.25, 2.0, 128, dtype=np.float32)[None, :]
+    np.save(tensor_path, vector_a @ vector_b)
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("weights.npy", tensor_path.read_bytes())
+    manifest = materialize_tensor_factorize_candidate(
+        archive_path=archive,
+        tensor_manifest={"member_name": "weights.npy"},
+        factorization_contract={
+            "rank": 1,
+            "cooperative_receiver_id": "fixture_tensor_factorize_receiver",
+            "receiver_adapter_kind": "npz_svd_low_rank_v1",
+            "max_abs_error_tolerance": 1.0e-3,
+        },
+        output_archive=output,
+        runtime_consumption_proof_out=proof,
+        repo_root=repo,
+    )
+    manifest["candidate_id"] = "family_agnostic_tensor_factorize_with_proof"
+    _write_json(manifest_path, manifest)
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[manifest_path],
+    )
+
+    row = result["source_queue"]["top_k"][0]
+    assert result["report"]["accepted_manifest_count"] == 1
+    assert row["candidate_id"] == "family_agnostic_tensor_factorize_with_proof"
+    assert row["candidate_family"] == "tensor_factorize"
+    assert row["schema"] == TENSOR_FACTORIZE_SCHEMA
+    assert row["candidate_member_name"] == "weights.npy"
+    assert row["runtime_consumption_proof_status"] == "present"
+    assert row["runtime_consumption_proof_path"] == str(proof)
+    assert row["runtime_adapter_ready"] is True
+    assert row["receiver_contract_satisfied"] is True
+    assert row["candidate_runtime_adapter_blocker_cleared"] is True
     assert "runtime_consumption_proof_missing" not in row["dispatch_blockers"]
     assert "family_agnostic_receiver_contract_not_satisfied" not in (
         row["dispatch_blockers"]

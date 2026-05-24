@@ -1745,6 +1745,9 @@ def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
     assert packet_row["score_claim"] is False
     assert packet_row["ready_for_exact_eval_dispatch"] is False
 
+    tensor_runtime_proof = tensor_out_manifest.with_name(
+        f"{tensor_out_manifest.stem}.runtime_consumption_proof.json"
+    )
     assert tensor_row["tool"] == "tools/run_family_agnostic_materializer.py"
     assert [
         "--target-kind",
@@ -1752,6 +1755,10 @@ def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
     ] in [tensor_row["command"][index : index + 2] for index in range(len(tensor_row["command"]) - 1)]
     assert ["--factorization-contract", str(factor_contract)] in [
         tensor_row["command"][index : index + 2] for index in range(len(tensor_row["command"]) - 1)
+    ]
+    assert ["--runtime-consumption-proof-out", str(tensor_runtime_proof)] in [
+        tensor_row["command"][index : index + 2]
+        for index in range(len(tensor_row["command"]) - 1)
     ]
     _assert_typed_postconditions(
         tensor_row["postconditions"],
@@ -1763,6 +1770,8 @@ def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
         str(tensor_manifest),
         str(factor_contract),
     ]
+    assert str(tensor_runtime_proof) in tensor_row["telemetry"]["artifact_paths"]
+    assert str(tensor_runtime_proof) in tensor_row["telemetry"]["pullback_artifact_paths"]
     assert "tensor_factorize_requires_cooperative_receiver" in tensor_row["dispatch_blockers"]
     assert tensor_row["score_claim"] is False
     assert tensor_row["ready_for_exact_eval_dispatch"] is False
