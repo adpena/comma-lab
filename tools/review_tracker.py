@@ -57,6 +57,14 @@ SCAN_PREFIXES = (
     "submissions/",
     "scripts/",
 )
+REQUIRED_SOURCE_SCAN_PREFIXES = (
+    "src/tac/",
+    "src/comma_lab/",
+)
+REQUIRED_SOURCE_SCAN_ROOTS = (
+    TAC_ROOT,
+    COMMA_LAB_ROOT,
+)
 SCAN_EXCLUDE_GLOBS = (
     "experiments/results/**",
     "experiments/tmp/**",
@@ -263,6 +271,47 @@ def _is_reviewable_python_path(rel_path: str) -> bool:
     return not any(fnmatch.fnmatch(rel, pat) for pat in SCAN_EXCLUDE_GLOBS)
 
 
+def review_tracker_scan_scope_blockers() -> list[str]:
+    """Return blockers when first-class source roots are not review-tracked."""
+
+    blockers: list[str] = []
+    for prefix in REQUIRED_SOURCE_SCAN_PREFIXES:
+        if prefix not in SCAN_PREFIXES:
+            blockers.append(f"missing_scan_prefix:{prefix}")
+    fallback_roots = {
+        root.resolve(strict=False).as_posix()
+        for root in _fallback_review_scan_roots()
+    }
+    for root in REQUIRED_SOURCE_SCAN_ROOTS:
+        if root.resolve(strict=False).as_posix() not in fallback_roots:
+            blockers.append(f"missing_fallback_root:{root.relative_to(REPO_ROOT).as_posix()}")
+    for prefix in REQUIRED_SOURCE_SCAN_PREFIXES:
+        probe = f"{prefix}review_tracker_required_root_probe.py"
+        if not _is_reviewable_python_path(probe):
+            blockers.append(f"required_prefix_not_reviewable:{prefix}")
+    return blockers
+
+
+def _require_review_tracker_scan_scope() -> None:
+    blockers = review_tracker_scan_scope_blockers()
+    if blockers:
+        raise RuntimeError(
+            "review tracker scan scope is missing required source roots: "
+            + ", ".join(blockers)
+        )
+
+
+def _fallback_review_scan_roots() -> tuple[Path, ...]:
+    return (
+        TAC_ROOT,
+        COMMA_LAB_ROOT,
+        EXPERIMENTS_ROOT,
+        REPO_ROOT / "tools",
+        REPO_ROOT / "submissions",
+        REPO_ROOT / "scripts",
+    )
+
+
 def _reviewable_python_paths_from_git_output(output: str) -> list[Path]:
     """Parse `git ls-files` output into deterministic repo-local paths."""
     rel_paths = sorted({
@@ -282,19 +331,13 @@ def _tracked_reviewable_python_files() -> list[Path]:
     source surface that can affect a commit while still including staged
     newly-added Python files.
     """
+    _require_review_tracker_scan_scope()
     out = _run_git("ls-files", "--cached", "--others", "--exclude-standard", "*.py", timeout=10)
     if out:
         return _reviewable_python_paths_from_git_output(out)
 
     candidates: list[Path] = []
-    for scan_dir in [
-        TAC_ROOT,
-        COMMA_LAB_ROOT,
-        EXPERIMENTS_ROOT,
-        REPO_ROOT / "tools",
-        REPO_ROOT / "submissions",
-        REPO_ROOT / "scripts",
-    ]:
+    for scan_dir in _fallback_review_scan_roots():
         if not scan_dir.exists():
             continue
         for py_file in scan_dir.rglob("*.py"):
@@ -1480,7 +1523,7 @@ def cmd_selftest() -> None:
     errors = []
 
     # Test 1: AST extraction on a synthetic file
-    print("  [1/7] AST extraction...")
+    print("  [1/8] AST extraction...")
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", dir=str(REPO_ROOT), delete=False) as f:
         f.write(textwrap.dedent("""\
             class Foo:
@@ -1513,7 +1556,7 @@ def cmd_selftest() -> None:
         tmp_path.unlink(missing_ok=True)
 
     # Test 2: DuckDB round-trip
-    print("  [2/7] DuckDB round-trip...")
+    print("  [2/8] DuckDB round-trip...")
     test_db = REPO_ROOT / ".omx" / "state" / "review_tracker_test.duckdb"
     try:
         import duckdb
@@ -1541,7 +1584,7 @@ def cmd_selftest() -> None:
         test_db.unlink(missing_ok=True)
 
     # Test 3: Git diff parsing
-    print("  [3/7] Git diff line parsing...")
+    print("  [3/8] Git diff line parsing...")
     try:
         test_diff = "@@ -10,5 +10,7 @@ def foo():\n+new line\n+another\n@@ -30,0 +32,3 @@\n+a\n+b\n+c"
         lines_found: set[int] = set()
@@ -1560,7 +1603,7 @@ def cmd_selftest() -> None:
         print(f"    FAIL: {e}")
 
     # Test 4: Complexity estimation
-    print("  [4/7] Complexity estimation...")
+    print("  [4/8] Complexity estimation...")
     try:
         code = "def f():\n  if a:\n    for x in y:\n      if b or c:\n        pass"
         tree = ast.parse(code)
@@ -1574,7 +1617,7 @@ def cmd_selftest() -> None:
         print(f"    FAIL: {e}")
 
     # Test 5: Status validation
-    print("  [5/7] Status validation...")
+    print("  [5/8] Status validation...")
     try:
         for s in VALID_STATUSES:
             assert isinstance(s, str) and len(s) > 0
@@ -1585,7 +1628,7 @@ def cmd_selftest() -> None:
         print(f"    FAIL: {e}")
 
     # Test 6: Greenup pattern matching
-    print("  [6/7] Greenup pattern matching...")
+    print("  [6/8] Greenup pattern matching...")
     try:
         test_content = "- src/tac/training.py — CLEAN\n- experiments/benchmark_int4.py — CLEAN\n- bad line"
         matches = [
@@ -1600,8 +1643,18 @@ def cmd_selftest() -> None:
         errors.append(f"Test 6 failed: {e}")
         print(f"    FAIL: {e}")
 
-    # Test 7: Entity qualified names are unique
-    print("  [7/7] Entity uniqueness...")
+    # Test 7: required source roots remain in review scope
+    print("  [7/8] Required source scan roots...")
+    try:
+        blockers = review_tracker_scan_scope_blockers()
+        assert blockers == [], f"Required scan scope blockers: {blockers}"
+        print(f"    PASS: required roots covered: {', '.join(REQUIRED_SOURCE_SCAN_PREFIXES)}")
+    except Exception as e:
+        errors.append(f"Test 7 failed: {e}")
+        print(f"    FAIL: {e}")
+
+    # Test 8: Entity qualified names are unique
+    print("  [8/8] Entity uniqueness...")
     try:
         entities = scan_all_modules()
         qnames = [e.qualified_name for e in entities]
@@ -1618,7 +1671,7 @@ def cmd_selftest() -> None:
         else:
             print(f"    PASS: {len(qnames)} unique entities")
     except Exception as e:
-        errors.append(f"Test 7 failed: {e}")
+        errors.append(f"Test 8 failed: {e}")
         print(f"    FAIL: {e}")
 
     print(f"\n{'=' * 40}")

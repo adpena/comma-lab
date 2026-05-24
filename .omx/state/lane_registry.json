@@ -50563,6 +50563,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "codex_review_tracker_required_roots_20260524",
+      "name": "Review tracker required root selftest",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/review_tracker.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_review_tracker_scan_scope.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_review_tracker_required_roots_20260524T011030Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "tools/review_tracker.py"
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -50572,5 +50613,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T01:06:12Z"
+  "updated_at": "2026-05-24T01:12:59Z"
 }

@@ -28,6 +28,14 @@ def test_review_tracker_scan_scope_excludes_custody_mirrors() -> None:
     assert not review_tracker._is_reviewable_python_path("tools/__init__.py")
 
 
+def test_review_tracker_required_source_roots_are_self_protected() -> None:
+    assert review_tracker.REQUIRED_SOURCE_SCAN_PREFIXES == (
+        "src/tac/",
+        "src/comma_lab/",
+    )
+    assert review_tracker.review_tracker_scan_scope_blockers() == []
+
+
 def test_git_ls_files_output_is_deduped_and_deterministic() -> None:
     paths = review_tracker._reviewable_python_paths_from_git_output(
         "\n".join(
