@@ -256,6 +256,7 @@ def test_observer_surfaces_read_only_performance_telemetry(
         tail_lines=1,
     )
     performance = observation["performance"]
+    runtime_policy = observation["runtime_policy"]
 
     assert performance["schema"] == "experiment_queue_performance_summary.v1"
     assert performance["telemetry_only"] is True
@@ -265,7 +266,13 @@ def test_observer_surfaces_read_only_performance_telemetry(
         performance["by_resource_kind"]["local_cpu"]["dominant_resource_kind"]
         == "local_cpu"
     )
+    assert runtime_policy["schema"] == "scheduler_runtime_policy.v1"
+    assert runtime_policy["advisory_only"] is True
+    assert runtime_policy["score_claim"] is False
+    assert runtime_policy["recommended_max_concurrency"]["local_cpu"] >= 1
+    assert runtime_policy["recommended_timeout_seconds_by_resource"]["local_cpu"] >= 30
     markdown = render_observation_markdown(observation)
     assert "performance" in markdown
+    assert "runtime_policy" in markdown
     assert "telemetry_only" in markdown
     assert "score_claim" in markdown

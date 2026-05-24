@@ -10,13 +10,16 @@ from pathlib import Path
 import pytest
 
 from src.comma_lab.scheduler.experiment_queue import (
+    SCHEDULER_RUNTIME_POLICY_SCHEMA,
     ExperimentQueueError,
     _condition_passes,
+    apply_scheduler_runtime_policy,
     assert_canonical_state_for_execution,
     assert_no_orphaned_steps_for_execution,
     claim_ready_step_for_execution,
     connect_state,
     default_state_path,
+    derive_scheduler_runtime_policy,
     finalize_claimed_step_execution,
     initialize_queue_state,
     normalize_queue_definition,
@@ -280,6 +283,156 @@ def test_experiment_queue_accepts_legacy_json_file_key_equals_postcondition(
     assert performance["by_source_selection_id"]["rank001_pair0371"][
         "source_unit_ids"
     ] == ["pair0371"]
+
+
+def test_scheduler_runtime_policy_derives_advisory_limits_and_timeouts(
+    tmp_path: Path,
+) -> None:
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "runtime_policy_queue",
+            "controls": {
+                "mode": "running",
+                "max_concurrency": {
+                    "local_cpu": 1,
+                    "local_io_heavy": 8,
+                    "local_mlx": 1,
+                    "cloud_cpu": 3,
+                },
+            },
+            "experiments": [
+                {
+                    "id": "cpu_exp",
+                    "priority": 1,
+                    "steps": [
+                        {
+                            "id": "cpu_step",
+                            "command": [sys.executable, "-c", "print('cpu')"],
+                            "resources": {"kind": "local_cpu"},
+                            "timeout_seconds": 12,
+                        }
+                    ],
+                },
+                {
+                    "id": "io_exp",
+                    "priority": 1,
+                    "steps": [
+                        {
+                            "id": "io_step",
+                            "command": [sys.executable, "-c", "print('io')"],
+                            "resources": {"kind": "local_io_heavy"},
+                            "timeout_seconds": 50,
+                        }
+                    ],
+                },
+                {
+                    "id": "mlx_exp",
+                    "priority": 1,
+                    "steps": [
+                        {
+                            "id": "mlx_step",
+                            "command": [sys.executable, "-c", "print('mlx')"],
+                            "resources": {"kind": "local_mlx"},
+                            "timeout_seconds": 30,
+                        }
+                    ],
+                },
+                {
+                    "id": "cloud_exp",
+                    "priority": 1,
+                    "steps": [
+                        {
+                            "id": "cloud_step",
+                            "command": [sys.executable, "-c", "print('cloud')"],
+                            "resources": {"kind": "cloud_cpu"},
+                            "timeout_seconds": 99,
+                        }
+                    ],
+                },
+            ],
+        }
+    )
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        for event_type, experiment_id, step_id, payload in (
+            (
+                "step_succeeded",
+                "cpu_exp",
+                "cpu_step",
+                {"resource_kind": "local_cpu", "elapsed_seconds": 4.0},
+            ),
+            (
+                "step_succeeded",
+                "cpu_exp",
+                "cpu_step",
+                {"resource_kind": "local_cpu", "elapsed_seconds": 8.0},
+            ),
+            (
+                "step_succeeded",
+                "io_exp",
+                "io_step",
+                {"resource_kind": "local_io_heavy", "elapsed_seconds": 7.0},
+            ),
+            (
+                "step_failed",
+                "mlx_exp",
+                "mlx_step",
+                {
+                    "resource_kind": "local_mlx",
+                    "elapsed_seconds": 31.0,
+                    "timed_out": True,
+                },
+            ),
+        ):
+            conn.execute(
+                """
+                INSERT INTO queue_events(
+                    ts_utc, queue_id, experiment_id, step_id, event_type, payload_json
+                )
+                VALUES ('2026-05-24T00:00:00Z', ?, ?, ?, ?, ?)
+                """,
+                (
+                    "runtime_policy_queue",
+                    experiment_id,
+                    step_id,
+                    event_type,
+                    json.dumps(payload),
+                ),
+            )
+        conn.commit()
+
+        policy = derive_scheduler_runtime_policy(
+            conn,
+            queue,
+            cpu_count=12,
+            timeout_multiplier=2.0,
+            min_timeout_seconds=10,
+            max_timeout_seconds=120,
+        )
+
+    assert policy["schema"] == SCHEDULER_RUNTIME_POLICY_SCHEMA
+    assert policy["telemetry_only"] is True
+    assert policy["score_claim"] is False
+    assert policy["promotion_eligible"] is False
+    assert policy["ready_for_exact_eval_dispatch"] is False
+    assert policy["recommended_max_concurrency"]["local_cpu"] == 12
+    assert policy["recommended_max_concurrency"]["local_io_heavy"] == 3
+    assert policy["recommended_max_concurrency"]["local_mlx"] == 1
+    assert policy["recommended_max_concurrency"]["cloud_cpu"] == 3
+    assert policy["recommended_timeout_seconds_by_resource"]["local_cpu"] == 16
+    assert policy["recommended_timeout_seconds_by_resource"]["local_io_heavy"] == 50
+    assert policy["recommended_timeout_seconds_by_resource"]["local_mlx"] == 62
+    assert policy["resource_policies"]["local_mlx"]["observed_timeout_count"] == 1
+
+    updated = apply_scheduler_runtime_policy(queue, policy)
+    assert updated["controls"]["max_concurrency"]["local_cpu"] == 12
+    assert updated["controls"]["max_concurrency"]["local_io_heavy"] == 3
+    assert updated["controls"]["max_concurrency"]["local_mlx"] == 1
+    assert updated["controls"]["max_concurrency"]["cloud_cpu"] == 3
+    assert updated["experiments"][0]["steps"][0]["timeout_seconds"] == 16
+    assert updated["experiments"][1]["steps"][0]["timeout_seconds"] == 50
+    assert updated["experiments"][2]["steps"][0]["timeout_seconds"] == 62
 
 
 def test_experiment_queue_reconciles_queued_steps_with_satisfied_postconditions(

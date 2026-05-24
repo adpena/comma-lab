@@ -15,6 +15,7 @@ from typing import Any
 
 QUEUE_SCHEMA = "experiment_queue.v1"
 STATE_SCHEMA = "experiment_queue_state.v1"
+SCHEDULER_RUNTIME_POLICY_SCHEMA = "scheduler_runtime_policy.v1"
 
 CONTROL_MODES = {"running", "paused", "frozen"}
 STEP_STATUSES = {"queued", "running", "succeeded", "failed", "blocked", "skipped"}
@@ -3816,6 +3817,306 @@ def queue_performance_summary(
     }
 
 
+def derive_scheduler_runtime_policy(
+    conn: sqlite3.Connection,
+    queue: Mapping[str, Any],
+    *,
+    cpu_count: int | None = None,
+    timeout_multiplier: float = 3.0,
+    min_timeout_seconds: int = 30,
+    max_timeout_seconds: int = 24 * 60 * 60,
+) -> dict[str, Any]:
+    """Build an advisory local runtime policy from queue telemetry.
+
+    The policy is an execution-control hint only. It may drive local worker
+    sizing and timeout envelopes, but it cannot claim score, promotion, ranking,
+    kill, or exact-dispatch authority.
+    """
+
+    if isinstance(cpu_count, bool):
+        raise ExperimentQueueError("cpu_count must be an integer or None")
+    if cpu_count is None:
+        cpu_count = os.cpu_count() or 1
+    if cpu_count < 1:
+        raise ExperimentQueueError("cpu_count must be positive")
+    if timeout_multiplier <= 0:
+        raise ExperimentQueueError("timeout_multiplier must be positive")
+    if min_timeout_seconds < 0:
+        raise ExperimentQueueError("min_timeout_seconds must be non-negative")
+    if max_timeout_seconds < 1:
+        raise ExperimentQueueError("max_timeout_seconds must be positive")
+    if min_timeout_seconds > max_timeout_seconds:
+        raise ExperimentQueueError("min_timeout_seconds must be <= max_timeout_seconds")
+
+    queue_id = str(queue["queue_id"])
+    controls = dict(queue.get("controls") or {})
+    current_concurrency: dict[str, int] = {}
+    for kind, limit in dict(controls.get("max_concurrency") or {}).items():
+        parsed_limit = _finite_int(limit)
+        if parsed_limit is not None and parsed_limit >= 0:
+            current_concurrency[str(kind)] = parsed_limit
+    performance = queue_performance_summary(conn, queue)
+    samples = _runtime_policy_event_samples(conn, queue)
+    resource_kinds = sorted(set(queue_resource_kinds(queue)) | set(samples))
+    resource_policies: dict[str, dict[str, Any]] = {}
+    recommended_concurrency: dict[str, int] = {}
+    recommended_timeouts: dict[str, int] = {}
+    for kind in resource_kinds:
+        current_limit = max(0, int(current_concurrency.get(kind, 1)))
+        sample_rows = samples.get(kind, [])
+        elapsed_values = [
+            value
+            for value in (_finite_float(row.get("elapsed_seconds")) for row in sample_rows)
+            if value is not None and value >= 0
+        ]
+        timeout_count = sum(1 for row in sample_rows if row.get("timed_out") is True)
+        failure_count = sum(1 for row in sample_rows if row.get("succeeded") is not True)
+        recommended_limit, concurrency_reason = _recommended_concurrency_for_resource(
+            kind,
+            current_limit=current_limit,
+            cpu_count=cpu_count,
+            timeout_count=timeout_count,
+            failure_count=failure_count,
+            run_count=len(sample_rows),
+        )
+        recommended_timeout = _recommended_timeout_for_resource(
+            elapsed_values,
+            timeout_count=timeout_count,
+            current_timeouts=_step_timeouts_for_resource(queue, kind),
+            timeout_multiplier=timeout_multiplier,
+            min_timeout_seconds=min_timeout_seconds,
+            max_timeout_seconds=max_timeout_seconds,
+        )
+        recommended_concurrency[kind] = recommended_limit
+        if recommended_timeout is not None:
+            recommended_timeouts[kind] = recommended_timeout
+        resource_policies[kind] = {
+            "resource_kind": kind,
+            "current_concurrency": current_limit,
+            "recommended_concurrency": recommended_limit,
+            "concurrency_reason": concurrency_reason,
+            "observed_run_count": len(sample_rows),
+            "observed_failure_count": failure_count,
+            "observed_timeout_count": timeout_count,
+            "elapsed_seconds_p50": _percentile(elapsed_values, 0.50),
+            "elapsed_seconds_p95": _percentile(elapsed_values, 0.95),
+            "recommended_timeout_seconds": recommended_timeout,
+            "timeout_multiplier": timeout_multiplier,
+            "current_timeout_seconds_max": _max_or_none(
+                _step_timeouts_for_resource(queue, kind)
+            ),
+            "advisory_only": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    return {
+        "schema": SCHEDULER_RUNTIME_POLICY_SCHEMA,
+        "queue_id": queue_id,
+        "telemetry_only": True,
+        "advisory_only": True,
+        "generated_from_schema": performance.get("schema"),
+        "input_event_count": performance.get("event_count", 0),
+        "machine_capacity": {
+            "local_cpu": cpu_count,
+            "local_io_heavy": _local_io_heavy_capacity(cpu_count),
+            "local_mlx": 1,
+            "local_mps": 1,
+        },
+        "current_max_concurrency": current_concurrency,
+        "recommended_max_concurrency": recommended_concurrency,
+        "recommended_timeout_seconds_by_resource": recommended_timeouts,
+        "resource_policies": resource_policies,
+        "backpressure": {
+            "local_io_heavy": {
+                "recommended_concurrency": recommended_concurrency.get(
+                    "local_io_heavy",
+                    _local_io_heavy_capacity(cpu_count),
+                ),
+                "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+            }
+        },
+        "apply_requires_explicit_call": True,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+
+
+def apply_scheduler_runtime_policy(
+    queue: Mapping[str, Any],
+    policy: Mapping[str, Any],
+    *,
+    apply_concurrency: bool = True,
+    apply_timeouts: bool = True,
+) -> dict[str, Any]:
+    """Return a queue definition with explicit advisory runtime policy applied."""
+
+    if policy.get("schema") != SCHEDULER_RUNTIME_POLICY_SCHEMA:
+        raise ExperimentQueueError(
+            f"runtime policy schema must be {SCHEDULER_RUNTIME_POLICY_SCHEMA}"
+        )
+    for field in (
+        "score_claim",
+        "promotion_eligible",
+        "rank_or_kill_eligible",
+        "ready_for_exact_eval_dispatch",
+    ):
+        if policy.get(field) is not False:
+            raise ExperimentQueueError(f"runtime policy must not set {field}=true")
+    updated = json.loads(json.dumps(queue))
+    controls = updated.setdefault("controls", {})
+    if apply_concurrency:
+        max_concurrency = dict(controls.get("max_concurrency") or {})
+        for kind, value in dict(policy.get("recommended_max_concurrency") or {}).items():
+            parsed = _finite_int(value)
+            if parsed is not None and parsed >= 0 and not _is_cloud_resource(str(kind)):
+                max_concurrency[str(kind)] = parsed
+        controls["max_concurrency"] = max_concurrency
+    if apply_timeouts:
+        timeout_by_resource = {
+            str(kind): int(value)
+            for kind, value in dict(
+                policy.get("recommended_timeout_seconds_by_resource") or {}
+            ).items()
+            if _finite_int(value) is not None and int(value) > 0
+        }
+        for experiment in updated.get("experiments", []):
+            if not isinstance(experiment, Mapping):
+                continue
+            for step in experiment.get("steps", []):
+                if not isinstance(step, dict):
+                    continue
+                kind = _resource_kind(step)
+                recommended = timeout_by_resource.get(kind)
+                if recommended is None:
+                    continue
+                current = _finite_int(step.get("timeout_seconds"))
+                if current is None or current == 0 or current < recommended:
+                    step["timeout_seconds"] = recommended
+    return normalize_queue_definition(updated)
+
+
+def _runtime_policy_event_samples(
+    conn: sqlite3.Connection,
+    queue: Mapping[str, Any],
+) -> dict[str, list[dict[str, Any]]]:
+    queue_id = str(queue["queue_id"])
+    rows = conn.execute(
+        """
+        SELECT event_type, payload_json
+        FROM queue_events
+        WHERE queue_id = ? AND event_type IN ('step_succeeded', 'step_failed')
+        ORDER BY id
+        """,
+        (queue_id,),
+    ).fetchall()
+    samples: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        try:
+            payload = json.loads(row["payload_json"])
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(payload, Mapping):
+            continue
+        kind = str(payload.get("resource_kind") or "local_cpu")
+        samples.setdefault(kind, []).append(
+            {
+                "elapsed_seconds": payload.get("elapsed_seconds"),
+                "timed_out": payload.get("timed_out") is True,
+                "succeeded": str(row["event_type"]) == "step_succeeded",
+            }
+        )
+    return samples
+
+
+def _step_timeouts_for_resource(queue: Mapping[str, Any], kind: str) -> list[int]:
+    out: list[int] = []
+    for experiment in queue.get("experiments", []):
+        if not isinstance(experiment, Mapping):
+            continue
+        for step in experiment.get("steps", []):
+            if not isinstance(step, Mapping) or _resource_kind(step) != kind:
+                continue
+            timeout = _finite_int(step.get("timeout_seconds"))
+            if timeout is not None and timeout > 0:
+                out.append(timeout)
+    return out
+
+
+def _recommended_concurrency_for_resource(
+    kind: str,
+    *,
+    current_limit: int,
+    cpu_count: int,
+    timeout_count: int,
+    failure_count: int,
+    run_count: int,
+) -> tuple[int, str]:
+    if current_limit == 0:
+        return 0, "resource_disabled_by_queue_control"
+    if _is_cloud_resource(kind):
+        return current_limit, "cloud_resource_not_locally_resized"
+    if timeout_count > 0 or (run_count >= 3 and failure_count / run_count > 0.25):
+        return max(1, min(current_limit, max(1, current_limit // 2))), "backoff_after_failures"
+    if kind == "local_cpu":
+        return max(current_limit, cpu_count), "use_detected_local_cpu_capacity"
+    if kind == "local_io_heavy":
+        return min(max(current_limit, 1), _local_io_heavy_capacity(cpu_count)), "cap_io_heavy_pressure"
+    if kind in {"local_mlx", "local_mps", "local_cuda"}:
+        return max(1, current_limit), "single_local_accelerator_default"
+    return max(1, current_limit), "preserve_existing_local_limit"
+
+
+def _recommended_timeout_for_resource(
+    elapsed_values: Sequence[float],
+    *,
+    timeout_count: int,
+    current_timeouts: Sequence[int],
+    timeout_multiplier: float,
+    min_timeout_seconds: int,
+    max_timeout_seconds: int,
+) -> int | None:
+    observed_p95 = _percentile(elapsed_values, 0.95)
+    current_max = _max_or_none(current_timeouts)
+    if observed_p95 is None and current_max is None:
+        return None
+    base = observed_p95 * timeout_multiplier if observed_p95 is not None else 0.0
+    if current_max is not None:
+        base = max(base, float(current_max))
+    if timeout_count and current_max is not None:
+        base = max(base, float(current_max) * 2.0)
+    recommended = int(base + 0.999999)
+    recommended = max(min_timeout_seconds, recommended)
+    return min(max_timeout_seconds, recommended)
+
+
+def _percentile(values: Sequence[float], q: float) -> float | None:
+    clean = sorted(float(value) for value in values if value >= 0)
+    if not clean:
+        return None
+    if len(clean) == 1:
+        return clean[0]
+    q = min(1.0, max(0.0, q))
+    index = int((len(clean) - 1) * q + 0.999999)
+    return clean[min(len(clean) - 1, index)]
+
+
+def _max_or_none(values: Sequence[int]) -> int | None:
+    return max(values) if values else None
+
+
+def _local_io_heavy_capacity(cpu_count: int) -> int:
+    return max(1, min(4, cpu_count // 4 or 1))
+
+
 def queue_definition_drift(conn: sqlite3.Connection, queue: Mapping[str, Any]) -> dict[str, Any]:
     """Return queue definition drift without mutating SQLite state."""
 
@@ -3887,13 +4188,16 @@ def queue_definition_drift(conn: sqlite3.Connection, queue: Mapping[str, Any]) -
 
 
 __all__ = [
+    "SCHEDULER_RUNTIME_POLICY_SCHEMA",
     "ExperimentQueueError",
     "ReadyStep",
+    "apply_scheduler_runtime_policy",
     "assert_canonical_state_for_execution",
     "assert_no_orphaned_steps_for_execution",
     "connect_state",
     "connect_state_readonly",
     "default_state_path",
+    "derive_scheduler_runtime_policy",
     "finalize_claimed_step_execution",
     "initialize_queue_state",
     "load_queue_definition",
