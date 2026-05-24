@@ -70,8 +70,18 @@ PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS: dict[int, str] = {
 }
 PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY = "implemented_mlx_synthetic_timing_only"
 PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY = "synthetic_timing_only"
+PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY = (
+    "source_video_rgb_timing_only"
+)
 PR95_MLX_SOURCE_FAITHFUL_BLOCKERS: tuple[str, ...] = (
     "pr95_source_video_loader_not_ported_to_mlx",
+    "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx",
+    "pr95_stage_hparams_and_cosine_schedules_not_all_source_matched",
+    "pr95_qat_c1a_and_resume_semantics_not_ported_to_mlx",
+    "pr95_export_forward_parity_not_established",
+)
+PR95_MLX_SOURCE_VIDEO_RGB_BLOCKERS: tuple[str, ...] = (
+    "pr95_source_video_rgb_targets_are_not_full_scorer_loss",
     "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx",
     "pr95_stage_hparams_and_cosine_schedules_not_all_source_matched",
     "pr95_qat_c1a_and_resume_semantics_not_ported_to_mlx",
@@ -1322,6 +1332,32 @@ def stage_smoke_config(
     )
 
 
+def _exact_readiness_blockers_for_timing_smoke(
+    *,
+    source_video_training: bool,
+    source_faithfulness_blockers: Sequence[str],
+) -> list[str]:
+    blockers = [
+        blocker
+        for blocker in EXACT_READINESS_REFUSAL_BLOCKERS
+        if blocker
+        not in {
+            "pr95_source_video_loader_not_ported_to_mlx",
+            *PR95_MLX_SOURCE_FAITHFUL_BLOCKERS,
+        }
+    ]
+    blockers.extend(str(blocker) for blocker in source_faithfulness_blockers)
+    if source_video_training:
+        blockers = [
+            blocker
+            for blocker in blockers
+            if blocker != "synthetic_targets_do_not_establish_contest_quality"
+        ]
+        blockers.append("source_video_rgb_targets_do_not_establish_full_scorer_quality")
+        blockers.append("source_video_rgb_timing_smoke_is_not_score_authority")
+    return list(dict.fromkeys(blockers))
+
+
 def _clip_flat_gradients(
     gradients: dict[str, Any],
     names: list[str],
@@ -1473,16 +1509,49 @@ def run_pr95_mlx_synthetic_timing_smoke(
     latent_dim: int = 28,
     optimizer_descriptor_id: str | None = None,
     pr95_public_archive_export_path: Path | None = None,
+    target_pairs_n2chw: Any | None = None,
+    target_source: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Run a local MLX timing smoke against synthetic targets."""
+    """Run a local MLX timing smoke against synthetic or supplied RGB targets."""
 
     require_mlx()
     if steps < 1:
         raise ValueError("steps must be positive")
     if batch_size < 1:
         raise ValueError("batch_size must be positive")
-    if synthetic_pairs < batch_size:
-        raise ValueError("synthetic_pairs must be >= batch_size")
+
+    source_video_training = target_pairs_n2chw is not None
+    target_source_payload = dict(target_source or {})
+    if source_video_training:
+        target_np = np.asarray(target_pairs_n2chw, dtype=np.float32)
+        if target_np.ndim != 5 or target_np.shape[1:] != (2, 3, 384, 512):
+            raise ValueError(
+                "target_pairs_n2chw must have shape (n_pairs, 2, 3, 384, 512); "
+                f"got {target_np.shape}"
+            )
+        training_pair_count = int(target_np.shape[0])
+        if training_pair_count < batch_size:
+            raise ValueError("source-video target pair count must be >= batch_size")
+        target_kind = str(
+            target_source_payload.get("kind") or "pr95_source_video_rgb_pairs"
+        )
+        training_fidelity = PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY
+        source_faithfulness_blockers = list(PR95_MLX_SOURCE_VIDEO_RGB_BLOCKERS)
+        target = mx.array(target_np)  # type: ignore[union-attr]
+    else:
+        if synthetic_pairs < batch_size:
+            raise ValueError("synthetic_pairs must be >= batch_size")
+        training_pair_count = synthetic_pairs
+        target_kind = "synthetic_rgb_pairs"
+        training_fidelity = PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY
+        source_faithfulness_blockers = list(PR95_MLX_SOURCE_FAITHFUL_BLOCKERS)
+        target_key = mx.random.key(seed + 1)  # type: ignore[union-attr]
+        target = mx.random.uniform(  # type: ignore[union-attr]
+            0,
+            255,
+            shape=(training_pair_count, 2, 3, 384, 512),
+            key=target_key,
+        )
 
     stage = stage_smoke_config(
         stage_index,
@@ -1490,18 +1559,11 @@ def run_pr95_mlx_synthetic_timing_smoke(
     )
     mx.random.seed(seed)  # type: ignore[union-attr]
     bundle = HNeRVSyntheticTrainingBundleMLX(
-        latent_count=synthetic_pairs,
+        latent_count=training_pair_count,
         latent_dim=latent_dim,
         base_channels=base_channels,
         seed=seed,
         output_layout="n2chw",
-    )
-    target_key = mx.random.key(seed + 1)  # type: ignore[union-attr]
-    target = mx.random.uniform(  # type: ignore[union-attr]
-        0,
-        255,
-        shape=(synthetic_pairs, 2, 3, 384, 512),
-        key=target_key,
     )
     optimizer_state = Pr95MlxOptimizerState()
     parameter_group_fingerprint = build_parameter_group_lr_policy_fingerprint(
@@ -1520,8 +1582,10 @@ def run_pr95_mlx_synthetic_timing_smoke(
     step_summaries: list[dict[str, Any]] = []
     started = time.perf_counter()
     for step in range(steps):
-        start = (step * batch_size) % synthetic_pairs
-        raw_indices = [(start + offset) % synthetic_pairs for offset in range(batch_size)]
+        start = (step * batch_size) % training_pair_count
+        raw_indices = [
+            (start + offset) % training_pair_count for offset in range(batch_size)
+        ]
         indices = mx.array(raw_indices, dtype=mx.uint32)  # type: ignore[union-attr]
         loss, grads = loss_and_grad(bundle, indices)
         step_summary = apply_pr95_mlx_optimizer_step(
@@ -1543,6 +1607,8 @@ def run_pr95_mlx_synthetic_timing_smoke(
         f"pr95_hnerv_mlx_stage{stage_index}_{descriptor_fragment}"
         f"_seed{seed}_steps{steps}_c{base_channels}"
     )
+    if source_video_training:
+        profile_id += "_source_video_rgb"
     runtime_profile = {
         "schema": "trainer_runtime_profile_observation.v1",
         "profile_id": profile_id,
@@ -1551,9 +1617,12 @@ def run_pr95_mlx_synthetic_timing_smoke(
         "representation_family": "hnerv",
         "substrate_family": "nerv_family",
         "training_backend": "mlx",
-        "training_fidelity": PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY,
+        "training_fidelity": training_fidelity,
         "source_faithful_training": False,
-        "source_faithfulness_blockers": list(PR95_MLX_SOURCE_FAITHFUL_BLOCKERS),
+        "source_video_training": source_video_training,
+        "source_faithfulness_blockers": source_faithfulness_blockers,
+        "target_source_kind": target_kind,
+        "target_source": target_source_payload,
         "device": "mlx",
         "hardware_substrate": f"{platform.system()}_{platform.machine()}_mlx",
         "seed": seed,
@@ -1603,14 +1672,18 @@ def run_pr95_mlx_synthetic_timing_smoke(
         "stage_module": stage.stage_module,
         "steps": steps,
         "batch_size": batch_size,
-        "synthetic_pairs": synthetic_pairs,
+        "synthetic_pairs": synthetic_pairs if not source_video_training else None,
+        "training_pair_count": training_pair_count,
         "seed": seed,
         "representation_family": "hnerv",
         "substrate_family": "nerv_family",
         "training_backend": "mlx",
-        "training_fidelity": PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY,
+        "training_fidelity": training_fidelity,
         "source_faithful_training": False,
-        "source_faithfulness_blockers": list(PR95_MLX_SOURCE_FAITHFUL_BLOCKERS),
+        "source_video_training": source_video_training,
+        "source_faithfulness_blockers": source_faithfulness_blockers,
+        "target_source_kind": target_kind,
+        "target_source": target_source_payload,
         "evidence_grade": "[macOS-MLX research-signal]",
         "timing": {
             "elapsed_seconds": elapsed,
@@ -1625,9 +1698,10 @@ def run_pr95_mlx_synthetic_timing_smoke(
             "optimizer_descriptor_id": stage.optimizer_descriptor_id,
             "optimizer_config_sha256": stage.optimizer_config_sha256,
             "optimizer_backend_status": stage.optimizer_backend_status,
-            "training_fidelity": PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY,
+            "training_fidelity": training_fidelity,
             "source_faithful_training": False,
-            "source_faithfulness_blockers": list(PR95_MLX_SOURCE_FAITHFUL_BLOCKERS),
+            "source_video_training": source_video_training,
+            "source_faithfulness_blockers": source_faithfulness_blockers,
             "parameter_group_lr_policy_id": stage.parameter_group_lr_policy_id,
             "parameter_group_lr_policy_sha256": stage.parameter_group_lr_policy_sha256,
             "parameter_group_fingerprint_sha256": parameter_group_fingerprint[
@@ -1653,7 +1727,10 @@ def run_pr95_mlx_synthetic_timing_smoke(
         "exact_readiness_refusal": {
             "schema": "exact_readiness_refusal.v1",
             "ready": False,
-            "blockers": list(EXACT_READINESS_REFUSAL_BLOCKERS),
+            "blockers": _exact_readiness_blockers_for_timing_smoke(
+                source_video_training=source_video_training,
+                source_faithfulness_blockers=source_faithfulness_blockers,
+            ),
         },
         "pytorch_export_parity": {
             "schema": "pr95_hnerv_pytorch_export_parity_status_v1",
@@ -1669,10 +1746,12 @@ def run_pr95_mlx_synthetic_timing_smoke(
             pytorch_state_dict_from_mlx(bundle.decoder),
             np.asarray(bundle.latents).astype(np.float32, copy=False),
             meta={
-                "n_pairs": synthetic_pairs,
+                "n_pairs": training_pair_count,
                 "latent_dim": latent_dim,
                 "base_channels": base_channels,
                 "eval_size": [384, 512],
+                "training_fidelity": training_fidelity,
+                "target_source_kind": target_kind,
             },
             output_zip_path=Path(pr95_public_archive_export_path),
         )
@@ -1753,6 +1832,8 @@ __all__ = [
     "PR95_ARCHIVE_N_QUANT",
     "PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY",
     "PR95_MLX_SOURCE_FAITHFUL_BLOCKERS",
+    "PR95_MLX_SOURCE_VIDEO_RGB_BLOCKERS",
+    "PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY",
     "PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY",
     "PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS",
     "PR95_STAGE_MODULES",

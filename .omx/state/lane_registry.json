@@ -52901,6 +52901,47 @@
         }
       },
       "notes": "Enable explicit local-only execution of generated inverse-steganalysis queue feedback follow-up; preserves false-authority and leaves PR95 MLX source-video worktree change untouched."
+    },
+    {
+      "id": "codex_pr95_mlx_source_video_training_targets_20260524",
+      "name": "PR95 MLX source-video training targets",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/local_acceleration/pr95_hnerv_mlx.py + tools/run_pr95_mlx_timing_smoke.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "ruff focused files; pytest PR95 MLX source-video target regressions: 21 passed"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "review_tracker policy-check clean for PR95 MLX source-video target files"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_pr95_mlx_source_video_training_targets_20260524T203054Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Wire decoded PR95 source-video RGB pairs into MLX timing-smoke training targets and optimizer-matrix queue commands; local MLX research-signal only, false-authority preserved."
     }
   ],
   "level_rules": {
@@ -52910,5 +52951,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T20:28:10Z"
+  "updated_at": "2026-05-24T20:32:33Z"
 }

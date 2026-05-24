@@ -10,7 +10,10 @@ import pytest
 
 pytest.importorskip("mlx.core")
 
-from tac.local_acceleration.pr95_hnerv_mlx import FALSE_AUTHORITY
+from tac.local_acceleration.pr95_hnerv_mlx import (
+    FALSE_AUTHORITY,
+    PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY,
+)
 from tac.optimization.representation_training_probe_integration import (
     adapt_representation_training_manifest_to_candidate,
     validate_representation_training_manifest,
@@ -53,6 +56,15 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
             "11,13",
             "--source-preprocess-gradient-shape",
             "1,2,8,10,3",
+            "--train-on-source-video-pairs",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-pair-index",
+            "0",
+            "--source-video-output-hw",
+            "384,512",
         ],
         cwd=REPO_ROOT,
         text=True,
@@ -94,6 +106,14 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     assert summary["source_faithful_preprocess_smoke"]["source_faithful_preprocess_ready"] is True
     assert preprocess_smoke["gradient_probe"]["gradient_reachable"] is True
     assert manifest["stage_module"] == "stage1_v328_ce"
+    assert manifest["training_fidelity"] == (
+        PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY
+    )
+    assert manifest["source_video_training"] is True
+    assert manifest["target_source"]["kind"] == "pr95_source_video_rgb_pairs"
+    assert manifest["target_source"]["target_shape_n2chw"] == [1, 2, 3, 384, 512]
+    assert manifest["synthetic_pairs"] is None
+    assert manifest["training_pair_count"] == 1
     assert manifest["source_preprocess_shape"] == "1,2,8,10,3"
     assert manifest["source_preprocess_camera_hw"] == "11,13"
     assert manifest["source_preprocess_gradient_shape"] == "1,2,8,10,3"
@@ -109,6 +129,12 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     assert "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx" in (
         manifest["exact_readiness_refusal"]["blockers"]
     )
+    assert "synthetic_targets_do_not_establish_contest_quality" not in (
+        manifest["exact_readiness_refusal"]["blockers"]
+    )
+    assert "source_video_rgb_targets_do_not_establish_full_scorer_quality" in (
+        manifest["exact_readiness_refusal"]["blockers"]
+    )
     assert manifest["pr95_public_archive_export"]["sha256"] == export_summary["sha256"]
     assert manifest["runtime_consumption_proof"]["raw_output_bytes"] == (
         runtime_proof["expected_raw_bytes"]
@@ -118,10 +144,17 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     )
     assert len(manifest["optimizer_recipe"]["parameter_group_fingerprint_sha256"]) == 64
     assert runtime_profile["training_backend"] == "mlx"
+    assert runtime_profile["source_video_training"] is True
+    assert runtime_profile["target_source_kind"] == "pr95_source_video_rgb_pairs"
     assert runtime_profile["optimizer_descriptor_id"] == (
         "pr95_stage1_adamw_baseline_mlx"
     )
     assert representation["training_recipe"]["quality_comparable"] is False
+    assert representation["training_recipe"]["source_video_training"] is True
+    assert representation["candidate_params"]["source_video_training"] is True
+    assert representation["candidate_params"]["target_source_kind"] == (
+        "pr95_source_video_rgb_pairs"
+    )
     assert representation["candidate_params"]["optimizer_descriptor_id"] == (
         "pr95_stage1_adamw_baseline_mlx"
     )
@@ -159,6 +192,12 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
         "dispatch_blockers"
     ]
     assert "pr95_training_loop_not_yet_source_faithful" in row["dispatch_blockers"]
+    assert "synthetic_targets_do_not_establish_contest_quality" not in row[
+        "dispatch_blockers"
+    ]
+    assert "source_video_rgb_targets_do_not_establish_full_scorer_quality" in row[
+        "dispatch_blockers"
+    ]
     preprocess_signal = row["consumer_payload"]["representation_training_probe"][
         "source_faithful_preprocess"
     ]

@@ -310,6 +310,15 @@ def test_pr95_mlx_optimizer_matrix_queue_executes_and_harvests_one_cell(
             "11,13",
             "--source-preprocess-gradient-shape",
             "1,2,8,10,3",
+            "--train-on-source-video-pairs",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-pair-index",
+            "0",
+            "--source-video-output-hw",
+            "384,512",
         ],
         cwd=REPO_ROOT,
         text=True,
@@ -399,12 +408,16 @@ def test_pr95_mlx_optimizer_matrix_queue_executes_and_harvests_one_cell(
     assert candidate_queue["rank_or_kill_eligible"] is False
     assert candidate_queue["ready_for_exact_eval_dispatch"] is False
     candidate = candidate_queue["top_k"][0]
-    assert candidate["candidate_id"].endswith("_seed29_steps1_c36")
+    assert candidate["candidate_id"].endswith("_seed29_steps1_c36_source_video_rgb")
     assert candidate["candidate_params"]["optimizer_descriptor_id"] == (
         "pr95_stage1_adamw_baseline_mlx"
     )
     assert candidate["candidate_params"]["stage_index"] == 1
     assert candidate["candidate_params"]["seed"] == 29
+    assert candidate["candidate_params"]["source_video_training"] is True
+    assert candidate["candidate_params"]["target_source_kind"] == (
+        "pr95_source_video_rgb_pairs"
+    )
     assert candidate["candidate_params"]["source_faithful_preprocess_smoke_present"] is True
     assert candidate["candidate_params"]["source_preprocess_camera_hw"] == "11,13"
     preprocess_signal = candidate["consumer_payload"]["representation_training_probe"][
@@ -414,6 +427,9 @@ def test_pr95_mlx_optimizer_matrix_queue_executes_and_harvests_one_cell(
     assert preprocess_signal["gradient_reachable"] is True
     assert "pr95_training_loop_not_yet_source_faithful" in (
         preprocess_signal["exact_readiness_blockers"]
+    )
+    assert "source_video_rgb_targets_do_not_establish_full_scorer_quality" in (
+        candidate["dispatch_blockers"]
     )
     assert candidate["ready_for_exact_eval_dispatch"] is False
 

@@ -19,6 +19,8 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     FALSE_AUTHORITY,
     PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY,
     PR95_MLX_SOURCE_FAITHFUL_BLOCKERS,
+    PR95_MLX_SOURCE_VIDEO_RGB_BLOCKERS,
+    PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY,
     PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY,
     HNeRVDecoderMLX,
     HNeRVSyntheticTrainingBundleMLX,
@@ -438,6 +440,50 @@ def test_synthetic_timing_smoke_emits_runtime_profile_and_refusal() -> None:
     )
     assert normalized["training_backend"] == "mlx"
     assert normalized["scheduler_resource_kind"] == "local_mlx"
+    _assert_false_authority(manifest)
+
+
+def test_source_video_rgb_target_timing_smoke_replaces_synthetic_target_blocker() -> None:
+    rng = np.random.default_rng(95)
+    targets = rng.uniform(0.0, 255.0, size=(1, 2, 3, 384, 512)).astype(np.float32)
+
+    manifest = run_pr95_mlx_synthetic_timing_smoke(
+        stage_index=1,
+        steps=1,
+        batch_size=1,
+        synthetic_pairs=1,
+        seed=6,
+        base_channels=4,
+        latent_dim=8,
+        target_pairs_n2chw=targets,
+        target_source={
+            "kind": "pr95_source_video_rgb_pairs",
+            "video_path": "upstream/videos/0.mkv",
+            "pair_indices": [0],
+            "frame_indices": [0, 1],
+        },
+    )
+
+    assert manifest["training_fidelity"] == (
+        PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY
+    )
+    assert manifest["source_video_training"] is True
+    assert manifest["source_faithful_training"] is False
+    assert manifest["source_faithfulness_blockers"] == list(
+        PR95_MLX_SOURCE_VIDEO_RGB_BLOCKERS
+    )
+    assert manifest["synthetic_pairs"] is None
+    assert manifest["training_pair_count"] == 1
+    assert manifest["target_source_kind"] == "pr95_source_video_rgb_pairs"
+    assert manifest["runtime_profile"]["source_video_training"] is True
+    assert manifest["runtime_profile"]["target_source"]["pair_indices"] == [0]
+    assert np.isfinite(manifest["last_loss"])
+    blockers = manifest["exact_readiness_refusal"]["blockers"]
+    assert "pr95_source_video_loader_not_ported_to_mlx" not in blockers
+    assert "synthetic_targets_do_not_establish_contest_quality" not in blockers
+    assert "source_video_rgb_targets_do_not_establish_full_scorer_quality" in blockers
+    assert "source_video_rgb_timing_smoke_is_not_score_authority" in blockers
+    assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in blockers
     _assert_false_authority(manifest)
 
 
