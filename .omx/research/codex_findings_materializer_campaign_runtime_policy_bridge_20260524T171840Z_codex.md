@@ -30,17 +30,34 @@ concurrency knobs.
 
 ## Verification
 
-- `.venv/bin/python -m ruff check tools/run_byte_shaving_materializer_campaign.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/comma_lab/scheduler/experiment_queue.py src/tac/tests/test_experiment_queue.py`
+- `.venv/bin/python -m ruff check tools/run_byte_shaving_materializer_campaign.py tools/experiment_queue.py src/comma_lab/scheduler/experiment_queue.py src/comma_lab/scheduler/__init__.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_experiment_queue.py`
   passed.
 - `.venv/bin/python -m pytest src/tac/tests/test_byte_shaving_materializer_campaign_runner.py -q`
   passed: 28 tests.
 - `.venv/bin/python -m pytest src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_experiment_queue.py src/tac/tests/test_experiment_queue_observer.py src/tac/tests/test_staircase_dag.py src/tac/tests/test_byte_shaving_campaign_queue.py src/tac/tests/test_materializer_chain_harvest_scheduler.py -q`
-  passed: 199 tests.
-- `.venv/bin/python -m pytest src/tac/tests/test_experiment_queue.py src/tac/tests/test_experiment_queue_observer.py src/tac/tests/test_staircase_dag.py src/tac/tests/test_scheduler_cli.py src/tac/tests/test_ssh_experiment_queue_executor.py src/tac/tests/test_byte_shaving_campaign.py src/tac/tests/test_byte_shaving_campaign_queue.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_materializer_chain_harvest_scheduler.py -q`
-  passed: 264 tests.
+  passed: 200 tests.
+- `.venv/bin/python -m pytest src/tac/tests/test_experiment_queue.py::test_scheduler_runtime_policy_derives_advisory_limits_and_timeouts src/tac/tests/test_experiment_queue.py::test_scheduler_runtime_policy_apply_rejects_nested_false_authority src/tac/tests/test_experiment_queue.py::test_experiment_queue_cli_runtime_policy_writes_guarded_artifacts -q`
+  passed: 3 tests.
+- `git diff --check` passed.
 
-## Remaining Work
+## Four-Week Aggressive Tranche
 
-Run the first real local campaign smoke using MLX/scorer-response artifacts plus
-a real template archive, with `--apply-runtime-policy` enabled and exact auth
-still blocked until local chain and readiness proofs clear.
+Week 1: run the first real local campaign smoke using MLX/scorer-response
+artifacts plus a real template archive, with `--apply-runtime-policy` enabled
+and exact auth still blocked until local chain, inflate parity, and readiness
+proofs clear.
+
+Week 2: implement
+`inverse_steganalysis_water_bucket_materialization_portfolio.v1`, preserving
+selected-cell provenance and compiling cells into PacketIR or family
+materializer rows instead of descriptor-only artifacts.
+
+Week 3: expand executable final-byte families around archive-section recoding,
+packet-member recompression, tensor factorization/quantization, and header or
+layout reductions. At least one non-descriptor materializer should emit a
+byte-closed archive with runtime-consumption proof and full-frame parity path.
+
+Week 4: wire MLX/Metal/Accelerate local acquisition telemetry into queue-owned
+campaigns: cold/warm timing, compile time, transfer bytes, memory pressure,
+batch invariance, CPU-vs-MLX calibration, runtime/cache identity, and
+exact-readiness dry-run queue generation.
