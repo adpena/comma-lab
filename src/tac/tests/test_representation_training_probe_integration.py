@@ -185,6 +185,39 @@ def test_generic_representation_training_manifest_carries_runtime_profile(
     assert validate_proxy_candidate(row) == []
 
 
+def test_generic_representation_training_manifest_ranks_runtime_only_signal(
+    tmp_path: Path,
+) -> None:
+    payload = _manifest()
+    payload["results"] = []
+    payload["runtime_profile"] = {
+        "schema": "trainer_runtime_profile_observation.v1",
+        "training_backend": "mlx",
+        "seconds_per_epoch": 4.25,
+        "peak_memory_bytes": 1_000_000,
+        "kernel_fusion_strategy_id": "measured_mlx_conv_profile",
+        "operator_mix": {"conv2d": 0.81, "gemm": 0.07},
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    row = adapt_representation_training_manifest_to_candidate(
+        payload,
+        source_path=tmp_path / "manifest.json",
+        repo_root=tmp_path,
+    )
+
+    assert row["rank_score"] == 4.25
+    assert row["rank_score_field"] == "seconds_per_epoch_cost_signal_not_score"
+    assert row["training_best_score"] is None
+    assert "representation_training_best_score_missing" in row["dispatch_blockers"]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert validate_proxy_candidate(row) == []
+
+
 def test_generic_representation_training_manifest_rejects_truthy_authority() -> None:
     payload = _manifest()
     payload["auth_eval_bridge"]["promotable"] = True  # type: ignore[index]

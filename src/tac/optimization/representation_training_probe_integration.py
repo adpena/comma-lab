@@ -311,14 +311,24 @@ def adapt_representation_training_manifest_to_candidate(
     rankable_auth_score = (
         auth_score if auth_score is not None and auth_bridge_score_rankable(bridge) else None
     )
-    rank_score = rankable_auth_score if rankable_auth_score is not None else best_score
-    rank_score_field = (
-        "contest_auth_eval_bridge_score_not_authority"
-        if rankable_auth_score is not None
-        else "training_best_score_proxy_not_authority"
-        if best_score is not None
-        else "no_rank_score_noncomparable_auth_bridge"
+    runtime_rank_score = _finite_float(
+        runtime_profile_summary.get("best_timing_value_seconds")
     )
+    if rankable_auth_score is not None:
+        rank_score = rankable_auth_score
+        rank_score_field = "contest_auth_eval_bridge_score_not_authority"
+    elif best_score is not None:
+        rank_score = best_score
+        rank_score_field = "training_best_score_proxy_not_authority"
+    elif runtime_rank_score is not None:
+        rank_score = runtime_rank_score
+        timing_field = str(
+            runtime_profile_summary.get("best_timing_field") or "runtime_seconds"
+        )
+        rank_score_field = f"{timing_field}_cost_signal_not_score"
+    else:
+        rank_score = None
+        rank_score_field = "no_rank_score_noncomparable_auth_bridge"
     optimizer_recipe = _mapping(payload.get("optimizer_recipe"))
     scheduler_recipe = _mapping(payload.get("scheduler_recipe"))
     training_recipe = _mapping(payload.get("training_recipe"))

@@ -67,6 +67,11 @@ from .experiment_queue_observer import (
     observe_experiment_queue,
     render_observation_markdown,
 )
+from .local_training_harvest import (
+    LOCAL_TRAINING_HARVEST_SCHEMA,
+    LocalTrainingHarvestError,
+    harvest_local_training_optimizer_candidates,
+)
 from .local_training_queue import (
     LOCAL_TRAINING_QUEUE_SCHEMA,
     build_local_training_execution_queue,
@@ -143,6 +148,7 @@ __all__ = [
     "INVERSE_SCORER_CELL_RECEIVER_CONTRACT_ID",
     "INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND",
     "INVERSE_SCORER_CELL_TARGET_KIND",
+    "LOCAL_TRAINING_HARVEST_SCHEMA",
     "LOCAL_TRAINING_QUEUE_SCHEMA",
     "MATERIALIZER_DISPATCH_PLAN_STEP_ID",
     "MATERIALIZER_EXACT_EVAL_CONSUMER_SCHEMA",
@@ -168,6 +174,7 @@ __all__ = [
     "BudgetUsage",
     "ExperimentQueueError",
     "ExperimentSpec",
+    "LocalTrainingHarvestError",
     "PlatformBudgetReport",
     "PlatformRegistry",
     "PlatformSpec",
@@ -190,6 +197,7 @@ __all__ = [
     "connect_state",
     "default_state_path",
     "finalize_claimed_step_execution",
+    "harvest_local_training_optimizer_candidates",
     "harvest_materializer_chain_manifests",
     "initialize_queue_state",
     "known_materializer_target_kinds",

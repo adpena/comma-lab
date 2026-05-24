@@ -184,6 +184,36 @@ def test_pr95_manifest_adapter_carries_local_runtime_profile(tmp_path: Path) -> 
     assert validate_proxy_candidate(row) == []
 
 
+def test_pr95_manifest_adapter_ranks_runtime_only_signal(tmp_path: Path) -> None:
+    manifest = _manifest()
+    manifest["results"] = []
+    manifest["runtime_profile"] = {
+        "schema": "trainer_runtime_profile_observation.v1",
+        "training_backend": "mlx",
+        "seconds_per_epoch": 3.75,
+        "peak_memory_bytes": 4_000_000,
+        "kernel_fusion_strategy_id": "pr95_mlx_stage8_profile",
+        "operator_mix": {"conv2d": 0.76, "gemm": 0.11, "norm": 0.02},
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    row = adapt_pr95_local_training_manifest_to_candidate(
+        manifest,
+        source_path=tmp_path / "manifest.json",
+        repo_root=tmp_path,
+    )
+
+    assert row["rank_score"] == 3.75
+    assert row["rank_score_field"] == "seconds_per_epoch_cost_signal_not_score"
+    assert "local_training_probe_best_score_missing" in row["dispatch_blockers"]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert validate_proxy_candidate(row) == []
+
+
 def test_candidate_queue_accepts_pr95_local_training_manifest_as_planning_only(
     tmp_path: Path,
 ) -> None:

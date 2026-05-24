@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -47,6 +48,246 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
     )
 
 
+def _candidate_id(*, stage: int, seed: int, base_channels: int) -> str:
+    return f"pr95_hnerv_mlx_stage{stage}_seed{seed}_c{base_channels}"
+
+
+def _stage_module(stage: int) -> str:
+    try:
+        return PR95_STAGE_MODULES[int(stage)]
+    except KeyError as exc:
+        raise ValueError(f"unsupported PR95 stage {stage!r}") from exc
+
+
+def _recommended_execution_command(
+    *,
+    stage: int,
+    steps: int,
+    batch_size: int,
+    synthetic_pairs: int,
+    seed: int,
+    base_channels: int,
+    latent_dim: int,
+    output_dir: Path,
+    write_byte_closed_smoke: bool,
+) -> list[str]:
+    command = [
+        ".venv/bin/python",
+        "tools/run_pr95_mlx_timing_smoke.py",
+        "--stage",
+        str(stage),
+        "--steps",
+        str(steps),
+        "--batch-size",
+        str(batch_size),
+        "--synthetic-pairs",
+        str(synthetic_pairs),
+        "--seed",
+        str(seed),
+        "--base-channels",
+        str(base_channels),
+        "--latent-dim",
+        str(latent_dim),
+        "--output-dir",
+        _rel(output_dir),
+        "--allow-existing-output-dir",
+    ]
+    if write_byte_closed_smoke:
+        command.append("--write-byte-closed-smoke")
+    return command
+
+
+def _build_representation_training_plan(
+    *,
+    stage: int,
+    steps: int,
+    batch_size: int,
+    synthetic_pairs: int,
+    seed: int,
+    base_channels: int,
+    latent_dim: int,
+    output_dir: Path,
+    write_byte_closed_smoke: bool,
+    recommended_execution: dict[str, Any],
+) -> dict[str, Any]:
+    stage_module = _stage_module(stage)
+    return write_representation_training_probe_manifest(
+        output_dir / "representation_training_plan.json",
+        schema="representation_training_probe_plan_v1",
+        candidate_id=_candidate_id(
+            stage=stage,
+            seed=seed,
+            base_channels=base_channels,
+        ),
+        lane_id=LANE_ID,
+        lane_class="pr95_hnerv_mlx_reproduction_local_training_proxy",
+        candidate_family="pr95_hnerv_mlx_reproduction_timing_smoke",
+        representation_family="hnerv",
+        substrate_family="nerv_family",
+        profile="pr95_hnerv_mlx_stage_timing_smoke",
+        param_schema="pr95_hnerv_mlx_timing_smoke_params_v1",
+        training_signal_kind="local_mlx_representation_training_runtime_probe",
+        seed=seed,
+        device_requested="mlx",
+        device_selected="mlx",
+        output_dir=_rel(output_dir),
+        stage_count=1,
+        stages=[{"index": stage, "module": stage_module}],
+        training_recipe={
+            "id": "pr95_hnerv_mlx_synthetic_stage_timing_smoke",
+            "source_pr": 95,
+            "stage_module": stage_module,
+            "steps": steps,
+            "batch_size": batch_size,
+            "synthetic_pairs": synthetic_pairs,
+            "quality_comparable": False,
+            "full_scorer_gradient_path": False,
+        },
+        optimizer_recipe={
+            "id": "pr95_hnerv_mlx_stage_optimizer",
+            "stage_module": stage_module,
+            "stage_uses_muon": stage == 8,
+            "hidden_2d_plus_weights": "Muon" if stage == 8 else "AdamW",
+            "bias_norm_scalar_stem_rgb_head": "AdamW",
+        },
+        scheduler_recipe={
+            "id": "single_process_mlx_local_smoke",
+            "resource_kind": "local_mlx",
+            "queue_authority": "experiment_queue.v1",
+        },
+        candidate_params={
+            "stage_index": stage,
+            "stage_module": stage_module,
+            "stage_count": 1,
+            "training_backend": "mlx",
+            "base_channels": base_channels,
+            "latent_dim": latent_dim,
+            "byte_closed_smoke_archive_requested": write_byte_closed_smoke,
+            "quality_comparable": False,
+            "score_claim": False,
+        },
+        dispatch_blockers=[
+            "pr95_hnerv_mlx_timing_smoke_is_proxy_signal",
+            *EXACT_READINESS_REFUSAL_BLOCKERS,
+        ],
+        evidence_grade="[macOS-MLX research-signal]",
+        source_anchor="PR95 HNeRV Muon native MLX timing smoke plan",
+        score_lowering_hypothesis=(
+            "Queue PR95/HNeRV decoder and optimizer timing on local MLX so "
+            "representation-training throughput can be measured before "
+            "byte-closed export and exact auth anchoring."
+        ),
+        variant_axes=[
+            "stage_curriculum",
+            "optimizer_recipe",
+            "training_backend",
+            "representation_family",
+            "byte_closed_archive_export",
+        ],
+        paired_modes=[
+            "stage1_adamw",
+            "stage5_adamw_qat_loss_path_future",
+            "stage8_muon_adamw_partition",
+        ],
+        extra_fields={
+            "source_schema": "pr95_hnerv_mlx_timing_smoke_plan.v1",
+            "representation_family_class": "hnerv_variant",
+            "recommended_execution": recommended_execution,
+            "authority_contract": {
+                "score_claim": False,
+                "quality_authority": False,
+                "promotion_authority": False,
+                "dispatch_authority": False,
+                "score_authority_requires": [
+                    "runtime_consumption_proof",
+                    "receiver_proof",
+                    "pytorch_export_forward_parity",
+                    "byte_closed_contest_archive_export",
+                    "exact_cpu_cuda_auth_eval",
+                ],
+            },
+            **FALSE_AUTHORITY,
+        },
+    )
+
+
+def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]:
+    stage = int(args.stage)
+    stage_module = _stage_module(stage)
+    recommended_execution = {
+        "schema": "local_training_recommended_execution.v1",
+        "tool": "tools/run_pr95_mlx_timing_smoke.py",
+        "training_backend": "mlx",
+        "device": "mlx",
+        "resource_kind": "local_mlx",
+        "output_manifest": _rel(output_dir / "manifest.json"),
+        "representation_manifest": _rel(
+            output_dir / "representation_training_manifest.json"
+        ),
+        "plan_manifest": _rel(output_dir / "plan.json"),
+        "python_command_args": _recommended_execution_command(
+            stage=stage,
+            steps=args.steps,
+            batch_size=args.batch_size,
+            synthetic_pairs=args.synthetic_pairs,
+            seed=args.seed,
+            base_channels=args.base_channels,
+            latent_dim=args.latent_dim,
+            output_dir=output_dir,
+            write_byte_closed_smoke=args.write_byte_closed_smoke,
+        ),
+        "candidate_generation_only": True,
+        **FALSE_AUTHORITY,
+    }
+    representation_plan = _build_representation_training_plan(
+        stage=stage,
+        steps=args.steps,
+        batch_size=args.batch_size,
+        synthetic_pairs=args.synthetic_pairs,
+        seed=args.seed,
+        base_channels=args.base_channels,
+        latent_dim=args.latent_dim,
+        output_dir=output_dir,
+        write_byte_closed_smoke=args.write_byte_closed_smoke,
+        recommended_execution=recommended_execution,
+    )
+    return {
+        "schema": "representation_training_probe_plan_v1",
+        "lane_id": LANE_ID,
+        "candidate_id": _candidate_id(
+            stage=stage,
+            seed=args.seed,
+            base_channels=args.base_channels,
+        ),
+        "candidate_family": "pr95_hnerv_mlx_reproduction_timing_smoke",
+        "representation_family": "hnerv",
+        "representation_family_class": "hnerv_variant",
+        "substrate_family": "nerv_family",
+        "generated_utc": datetime.now(UTC).isoformat(),
+        "stage_index": stage,
+        "stage_module": stage_module,
+        "stages": [{"index": stage, "module": stage_module}],
+        "stage_count": 1,
+        "training_backend": "mlx",
+        "device_requested": "mlx",
+        "device_selected": "mlx",
+        "seed": args.seed,
+        "output_dir": _rel(output_dir),
+        "write_byte_closed_smoke": bool(args.write_byte_closed_smoke),
+        "recommended_execution": recommended_execution,
+        "representation_training_plan": _rel(
+            output_dir / "representation_training_plan.json"
+        ),
+        "representation_training_plan_schema": representation_plan["schema"],
+        "dispatch_blockers": [
+            "pr95_hnerv_mlx_timing_smoke_plan_is_proxy_signal",
+            *EXACT_READINESS_REFUSAL_BLOCKERS,
+        ],
+        "evidence_grade": "[macOS-MLX research-signal]",
+        **FALSE_AUTHORITY,
+    }
+
+
 def _representation_manifest(
     *,
     manifest: dict[str, Any],
@@ -72,7 +313,7 @@ def _representation_manifest(
         device_requested="mlx",
         device_selected="mlx",
         output_dir=_rel(output_dir),
-        stage_count=stage_index,
+        stage_count=1,
         stages=[{"index": stage_index, "module": stage_module}],
         results=[
             {
@@ -105,6 +346,7 @@ def _representation_manifest(
         candidate_params={
             "stage_index": stage_index,
             "stage_module": stage_module,
+            "stage_count": 1,
             "training_backend": "mlx",
             "base_channels": manifest.get("architecture", {}).get("base_channels"),
             "latent_dim": manifest.get("architecture", {}).get("latent_dim"),
@@ -192,6 +434,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Allow writing into an existing output directory.",
     )
+    parser.add_argument(
+        "--plan-only",
+        action="store_true",
+        help=(
+            "Write plan.json and representation_training_plan.json for "
+            "experiment_queue execution without requiring MLX at planning time."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -204,6 +454,26 @@ def main(argv: list[str] | None = None) -> int:
             "(pass --allow-existing-output-dir to append/overwrite manifests)"
         )
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    if args.plan_only:
+        plan = _build_plan(args, output_dir=output_dir)
+        _write_json(output_dir / "plan.json", plan)
+        summary = {
+            "schema": "pr95_hnerv_mlx_timing_smoke_plan_summary_v1",
+            "ok": True,
+            "plan": _rel(output_dir / "plan.json"),
+            "representation_training_plan": _rel(
+                output_dir / "representation_training_plan.json"
+            ),
+            "candidate_id": plan["candidate_id"],
+            "stage_index": plan["stage_index"],
+            "stage_module": plan["stage_module"],
+            "queue_schema": "experiment_queue.v1",
+            **FALSE_AUTHORITY,
+        }
+        _write_json(output_dir / "plan_summary.json", summary)
+        print(json.dumps(summary, indent=2, sort_keys=True))
+        return 0
 
     manifest = run_pr95_mlx_synthetic_timing_smoke(
         stage_index=args.stage,

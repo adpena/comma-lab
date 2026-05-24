@@ -1,0 +1,106 @@
+# SPDX-License-Identifier: MIT
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+from comma_lab.scheduler.local_training_queue import build_local_training_execution_queue
+from tac.optimization.proxy_candidate_contract import validate_proxy_candidate
+from tac.optimization.representation_training_probe_integration import (
+    adapt_representation_training_manifest_to_candidate,
+)
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "pr95_mlx_stage8_plan"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_pr95_mlx_timing_smoke.py"),
+            "--stage",
+            "8",
+            "--steps",
+            "3",
+            "--batch-size",
+            "2",
+            "--synthetic-pairs",
+            "4",
+            "--seed",
+            "23",
+            "--base-channels",
+            "36",
+            "--output-dir",
+            str(output_dir),
+            "--write-byte-closed-smoke",
+            "--plan-only",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=120,
+    )
+
+    assert result.returncode == 0, result.stderr
+    summary = json.loads(result.stdout)
+    plan = json.loads((output_dir / "plan.json").read_text(encoding="utf-8"))
+    representation_plan = json.loads(
+        (output_dir / "representation_training_plan.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert summary["schema"] == "pr95_hnerv_mlx_timing_smoke_plan_summary_v1"
+    assert plan["schema"] == "representation_training_probe_plan_v1"
+    assert plan["representation_family_class"] == "hnerv_variant"
+    assert plan["stage_count"] == 1
+    assert plan["stage_index"] == 8
+    execution = plan["recommended_execution"]
+    assert execution["tool"] == "tools/run_pr95_mlx_timing_smoke.py"
+    assert execution["training_backend"] == "mlx"
+    assert execution["resource_kind"] == "local_mlx"
+    assert "--allow-existing-output-dir" in execution["python_command_args"]
+    assert "--write-byte-closed-smoke" in execution["python_command_args"]
+    assert representation_plan["schema"] == "representation_training_probe_plan_v1"
+    assert representation_plan["candidate_params"]["stage_module"] == (
+        "stage8_muon_finetune"
+    )
+    assert representation_plan["candidate_params"]["stage_count"] == 1
+    assert representation_plan["recommended_execution"] == execution
+
+    queue = build_local_training_execution_queue(
+        [plan],
+        queue_id="pr95_mlx_stage8_plan_fixture",
+        repo_root=REPO_ROOT,
+        local_mlx_concurrency=4,
+        timeout_seconds=0,
+    )
+
+    assert queue["schema"] == "experiment_queue.v1"
+    assert queue["controls"]["max_concurrency"]["local_mlx"] == 4
+    step = queue["experiments"][0]["steps"][0]
+    assert step["resources"]["kind"] == "local_mlx"
+    assert "tools/run_pr95_mlx_timing_smoke.py" in step["command"]
+    assert any(
+        condition["type"] == "json_equals"
+        and condition["path"].endswith("representation_training_manifest.json")
+        and condition["equals"] == "representation_training_probe_manifest_v1"
+        for condition in step["postconditions"]
+    )
+
+    row = adapt_representation_training_manifest_to_candidate(
+        representation_plan,
+        source_path=output_dir / "representation_training_plan.json",
+        repo_root=REPO_ROOT,
+    )
+    assert row["representation_family"] == "hnerv"
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert "runtime_consumption_proof_missing" in row["dispatch_blockers"]
+    assert "requires_lane_claim_before_dispatch" in row["dispatch_blockers"]
+    assert validate_proxy_candidate(row) == []
