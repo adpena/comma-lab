@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -32,6 +33,11 @@ from comma_lab.scheduler.final_byte_operation_contexts import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _write_single_member_zip(path: Path, *, payload: bytes = b"base-payload") -> None:
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as archive:
+        archive.writestr("x", payload)
 
 
 def _backlog() -> dict[str, object]:
@@ -171,6 +177,9 @@ def _artifact_map(tmp_path: Path) -> dict[str, object]:
                 "section_manifest": str(tmp_path / "sections.json"),
                 "target_sections": ["decoder_packed_brotli"],
                 "quality": [11],
+                "runtime_consumption_proof": str(tmp_path / "runtime_proof.json"),
+                "min_free_bytes": 512,
+                "allow_size_regression": True,
                 "jobs": 4,
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -194,6 +203,8 @@ def _mixed_artifact_map(tmp_path: Path) -> dict[str, object]:
         "packet_member_manifest": str(tmp_path / "members.json"),
         "member_name": "payload.bin",
         "zip_compresslevel": [9],
+        "runtime_consumption_proof": str(tmp_path / "packet_runtime_proof.json"),
+        "min_free_bytes": 256,
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
@@ -204,6 +215,8 @@ def _mixed_artifact_map(tmp_path: Path) -> dict[str, object]:
         "tensor_manifest": str(tmp_path / "tensor_manifest.json"),
         "factorization_contract": str(tmp_path / "factor_contract.json"),
         "rank": 1,
+        "runtime_consumption_proof": str(tmp_path / "tensor_runtime_proof.json"),
+        "allow_size_regression": True,
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
@@ -256,10 +269,11 @@ def test_final_byte_context_compiler_emits_consumable_materializer_contexts(
     assert context["archive_path"] == context["source_archive"]
     assert context["section_manifest"].endswith("sections.json")
     assert context["target_sections"] == ["decoder_packed_brotli"]
+    assert context["runtime_consumption_proof"].endswith("runtime_proof.json")
+    assert context["min_free_bytes"] == 512
+    assert context["allow_size_regression"] is True
     assert context["score_claim"] is False
-    assert context["packetir_operation_set_contract"]["schema"] == (
-        "packet_ir_operation_set_bridge_contract.v1"
-    )
+    assert context["packetir_operation_set_contract"]["schema"] == ("packet_ir_operation_set_bridge_contract.v1")
     assert context["recommended_ir_schema"] == "packet_ir_operation_set_v1"
     assert "runtime_consumption_proof" in context["required_proofs"]
     resolved = materializer_contexts_from_payload(payload)
@@ -311,9 +325,7 @@ def test_final_byte_context_compiler_normalizes_section_manifest_aliases(
     )
     command = work_queue["rows"][0]["command"]
     assert work_queue["executable_row_count"] == 1
-    assert ["--section-manifest", manifest_path] in [
-        command[index : index + 2] for index in range(len(command) - 1)
-    ]
+    assert ["--section-manifest", manifest_path] in [command[index : index + 2] for index in range(len(command) - 1)]
 
 
 def test_final_byte_context_compiler_covers_packet_member_and_tensor_families(
@@ -328,16 +340,12 @@ def test_final_byte_context_compiler_covers_packet_member_and_tensor_families(
 
     assert payload["row_count"] == 3
     assert payload["blocked_context_count"] == 0
-    contexts_by_target = {
-        row["target_kind"]: row["context"]
-        for row in payload["rows"]
-    }
-    assert contexts_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND][
-        "packetir_operation_set_contract"
-    ]["schema"] == "packet_ir_operation_set_bridge_contract.v1"
-    assert contexts_by_target[TENSOR_FACTORIZE_TARGET_KIND][
-        "recommended_ir_schema"
-    ] == "packet_ir_operation_set_v1"
+    contexts_by_target = {row["target_kind"]: row["context"] for row in payload["rows"]}
+    assert (
+        contexts_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["packetir_operation_set_contract"]["schema"]
+        == "packet_ir_operation_set_bridge_contract.v1"
+    )
+    assert contexts_by_target[TENSOR_FACTORIZE_TARGET_KIND]["recommended_ir_schema"] == "packet_ir_operation_set_v1"
     resolved = materializer_contexts_from_payload(payload)
     work_queue = build_materializer_work_queue(
         _mixed_backlog(),
@@ -346,25 +354,18 @@ def test_final_byte_context_compiler_covers_packet_member_and_tensor_families(
         source_plan_path="plan.json",
     )
     assert work_queue["executable_row_count"] == 3
-    rows_by_target = {
-        row["target_kind"]: row
-        for row in work_queue["rows"]
-    }
-    assert rows_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["tool"] == (
-        "tools/run_family_agnostic_materializer.py"
-    )
-    assert rows_by_target[TENSOR_FACTORIZE_TARGET_KIND]["tool"] == (
-        "tools/run_family_agnostic_materializer.py"
-    )
+    rows_by_target = {row["target_kind"]: row for row in work_queue["rows"]}
+    assert rows_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["tool"] == ("tools/run_family_agnostic_materializer.py")
+    assert rows_by_target[TENSOR_FACTORIZE_TARGET_KIND]["tool"] == ("tools/run_family_agnostic_materializer.py")
     assert [
         "--member-name",
         "payload.bin",
     ] in [
         rows_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["command"][index : index + 2]
-        for index in range(
-            len(rows_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["command"]) - 1
-        )
+        for index in range(len(rows_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["command"]) - 1)
     ]
+    assert "--runtime-consumption-proof" in rows_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["command"]
+    assert "--min-free-bytes" in rows_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["command"]
     assert [
         "--factorization-contract",
         str(tmp_path / "factor_contract.json"),
@@ -372,6 +373,7 @@ def test_final_byte_context_compiler_covers_packet_member_and_tensor_families(
         rows_by_target[TENSOR_FACTORIZE_TARGET_KIND]["command"][index : index + 2]
         for index in range(len(rows_by_target[TENSOR_FACTORIZE_TARGET_KIND]["command"]) - 1)
     ]
+    assert "--allow-size-regression" in rows_by_target[TENSOR_FACTORIZE_TARGET_KIND]["command"]
     assert work_queue["score_claim"] is False
     assert work_queue["ready_for_exact_eval_dispatch"] is False
 
@@ -379,6 +381,7 @@ def test_final_byte_context_compiler_covers_packet_member_and_tensor_families(
 def test_final_byte_context_compiler_covers_inverse_scorer_cell_candidate(
     tmp_path: Path,
 ) -> None:
+    _write_single_member_zip(tmp_path / "template.zip")
     backlog = _inverse_scorer_cell_backlog()
     rows = backlog["rows"]
     assert isinstance(rows, list)
@@ -474,9 +477,7 @@ def test_final_byte_context_compiler_rejects_truthy_authority(
     tmp_path: Path,
 ) -> None:
     artifact_map = _artifact_map(tmp_path)
-    artifact_map["artifacts"][ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND][
-        "score_claim"
-    ] = True
+    artifact_map["artifacts"][ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND]["score_claim"] = True
 
     with pytest.raises(ValueError, match="score_claim"):
         build_final_byte_operation_contexts(
@@ -491,9 +492,7 @@ def test_final_byte_context_compiler_carries_missing_artifact_blockers(
     tmp_path: Path,
 ) -> None:
     artifact_map = _artifact_map(tmp_path)
-    del artifact_map["artifacts"][ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND][
-        "section_manifest"
-    ]
+    del artifact_map["artifacts"][ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND]["section_manifest"]
 
     payload = build_final_byte_operation_contexts(
         _backlog(),
@@ -520,34 +519,25 @@ def test_final_byte_context_compiler_turns_unsupported_rows_into_blocked_context
     )
 
     assert payload["blocked_context_count"] == 1
-    assert payload["unsupported_backlog_keys"] == [
-        "inverse_action_inverse_surface_pair0007"
-    ]
+    assert payload["unsupported_backlog_keys"] == ["inverse_action_inverse_surface_pair0007"]
     row = payload["rows"][0]
     assert row["unsupported"] is True
-    assert "final_byte_context_compiler_unsupported_backlog_row" in row[
-        "context_blockers"
-    ]
+    assert "final_byte_context_compiler_unsupported_backlog_row" in row["context_blockers"]
     bridge = row["context"]["packetir_compiler_bridge"]
     assert bridge["schema"] == "final_byte_packetir_compiler_bridge_hint.v1"
-    assert bridge["canonical_packet_compiler_module"] == (
-        "tac.packet_compiler.deterministic_compiler"
-    )
-    assert bridge["packetir_operation_set_contract"]["schema"] == (
-        "packet_ir_operation_set_bridge_contract.v1"
-    )
+    assert bridge["canonical_packet_compiler_module"] == ("tac.packet_compiler.deterministic_compiler")
+    assert bridge["packetir_operation_set_contract"]["schema"] == ("packet_ir_operation_set_bridge_contract.v1")
     assert bridge["packetir_operation_set_contract"]["score_claim"] is False
-    assert bridge["packetir_operation_set_contract"][
-        "ready_for_exact_eval_dispatch"
-    ] is False
+    assert bridge["packetir_operation_set_contract"]["ready_for_exact_eval_dispatch"] is False
     assert bridge["recommended_ir_schema"] == "packet_ir_operation_set_v1"
     assert "runtime_consumption_proof" in bridge["required_proofs"]
     assert "packetir_bridge_requires_operation_set_ir" in bridge["blockers"]
     assert bridge["score_claim"] is False
     resolved = materializer_contexts_from_payload(payload)
-    assert resolved["inverse_action_inverse_surface_pair0007"][
-        "packetir_compiler_bridge"
-    ]["recommended_ir_schema"] == "packet_ir_operation_set_v1"
+    assert (
+        resolved["inverse_action_inverse_surface_pair0007"]["packetir_compiler_bridge"]["recommended_ir_schema"]
+        == "packet_ir_operation_set_v1"
+    )
     work_queue = build_materializer_work_queue(
         _unsupported_high_level_backlog(),
         repo_root=tmp_path,
@@ -556,9 +546,7 @@ def test_final_byte_context_compiler_turns_unsupported_rows_into_blocked_context
     )
     work_row = work_queue["rows"][0]
     assert work_queue["executable_row_count"] == 0
-    assert "final_byte_context_compiler_unsupported_backlog_row" in work_row[
-        "materialization_blockers"
-    ]
+    assert "final_byte_context_compiler_unsupported_backlog_row" in work_row["materialization_blockers"]
     assert any(
         blocker.startswith("materializer_work_queue_adapter_missing:")
         for blocker in work_row["materialization_blockers"]

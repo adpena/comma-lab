@@ -106,6 +106,11 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = REPO_ROOT / "tools" / "build_byte_shaving_campaign_queue.py"
 
 
+def _write_single_member_zip(path: Path, *, payload: bytes = b"base-payload") -> None:
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as archive:
+        archive.writestr("x", payload)
+
+
 def _load_queue_builder_tool_module():
     spec = importlib.util.spec_from_file_location(
         "build_byte_shaving_campaign_queue_tool",
@@ -191,13 +196,13 @@ def _write_constant_inflate_runtime(path: Path) -> None:
             [
                 "#!/usr/bin/env bash",
                 "set -euo pipefail",
-                "data_dir=\"$1\"",
-                "out_dir=\"$2\"",
-                "file_list=\"$3\"",
-                "test -f \"$data_dir/x\"",
-                "test -s \"$file_list\"",
-                "mkdir -p \"$out_dir/frames\"",
-                "printf frame-bytes > \"$out_dir/frames/000000.raw\"",
+                'data_dir="$1"',
+                'out_dir="$2"',
+                'file_list="$3"',
+                'test -f "$data_dir/x"',
+                'test -s "$file_list"',
+                'mkdir -p "$out_dir/frames"',
+                'printf frame-bytes > "$out_dir/frames/000000.raw"',
                 "",
             ]
         ),
@@ -700,9 +705,7 @@ def test_byte_shaving_materializer_registry_blocks_bare_inverse_cell_compiler_ga
     assert resolved.materializer_id == INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER
     assert resolved.target_kind == INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND
     assert resolved.receiver_contract_id == INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_ID
-    assert resolved.receiver_contract_kind == (
-        INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_KIND
-    )
+    assert resolved.receiver_contract_kind == (INVERSE_ACTION_HIGH_LEVEL_RECEIVER_CONTRACT_KIND)
     assert resolved.blockers == (
         f"materializer_not_executable:{INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER}",
         f"planning_only_materializer_not_candidate_archive:{INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER}",
@@ -777,14 +780,8 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
     assert archive_resolved.materialization_resource_kind == "local_cpu"
     assert archive_resolved.blockers == ()
     assert archive_resolved.adapter is not None
-    assert (
-        archive_resolved.adapter.implementation_module
-        == "tac.optimization.family_agnostic_materializers"
-    )
-    assert (
-        archive_resolved.adapter.materialize_function
-        == "materialize_archive_section_entropy_recode_candidate"
-    )
+    assert archive_resolved.adapter.implementation_module == "tac.optimization.family_agnostic_materializers"
+    assert archive_resolved.adapter.materialize_function == "materialize_archive_section_entropy_recode_candidate"
 
     executable_cases = [
         (
@@ -825,10 +822,7 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
         assert resolved.materialization_resource_kind == resource_kind
         assert resolved.blockers == ()
         assert resolved.adapter is not None
-        assert (
-            resolved.adapter.implementation_module
-            == "tac.optimization.family_agnostic_materializers"
-        )
+        assert resolved.adapter.implementation_module == "tac.optimization.family_agnostic_materializers"
         assert resolved.adapter.materialize_function
 
     fail_closed_cases = [
@@ -908,9 +902,7 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
         unit_kind="tensor",
         operation_family="factorize_tensor",
     )
-    assert [adapter.materializer_id for adapter in suggestions] == [
-        TENSOR_FACTORIZE_MATERIALIZER
-    ]
+    assert [adapter.materializer_id for adapter in suggestions] == [TENSOR_FACTORIZE_MATERIALIZER]
 
 
 def test_compile_dqs1_byte_shaving_plan_preserves_explicit_target_kind(
@@ -1024,12 +1016,8 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
     assert both["operation_set_materialization_mode"] == "ordered_dqs1_pairset_sequence"
     assert both["source_row"]["operation_set_id"] == both["operation_set_id"]
     assert both["packet_ir_operation_set"]["schema"] == PACKET_IR_OPERATION_SET_SCHEMA
-    assert both["packet_ir_operation_set"]["source_operation_set_id"] == both[
-        "operation_set_id"
-    ]
-    assert both["source_row"]["packet_ir_operation_set"] == both[
-        "packet_ir_operation_set"
-    ]
+    assert both["packet_ir_operation_set"]["source_operation_set_id"] == both["operation_set_id"]
+    assert both["source_row"]["packet_ir_operation_set"] == both["packet_ir_operation_set"]
     assert both["packet_ir_operation_set"]["score_claim"] is False
     assert both["materialization_blockers"] == []
     assert {unit["unit_id"] for unit in both["source_units"]} == {"pair0320", "pair0371"}
@@ -1049,18 +1037,13 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
     )
     assert portfolio_row["source_metadata"]["selected_pair_indices"] == [101, 501]
     assert portfolio_row["source_metadata"]["operation_set_id"] == both["operation_set_id"]
-    assert portfolio_row["source_metadata"]["packet_ir_operation_set"] == both[
-        "packet_ir_operation_set"
-    ]
-    assert portfolio_row["source_metadata"]["chosen_operation_sequence"] == (
-        both["chosen_operation_sequence"]
+    assert portfolio_row["source_metadata"]["packet_ir_operation_set"] == both["packet_ir_operation_set"]
+    assert portfolio_row["source_metadata"]["chosen_operation_sequence"] == (both["chosen_operation_sequence"])
+    assert (
+        portfolio_row["source_metadata"]["chosen_operation_sequence_sha256"]
+        == (both["chosen_operation_sequence_sha256"])
     )
-    assert portfolio_row["source_metadata"]["chosen_operation_sequence_sha256"] == (
-        both["chosen_operation_sequence_sha256"]
-    )
-    assert portfolio_row["source_metadata"]["operation_set_materialization_mode"] == (
-        "ordered_dqs1_pairset_sequence"
-    )
+    assert portfolio_row["source_metadata"]["operation_set_materialization_mode"] == ("ordered_dqs1_pairset_sequence")
     assert portfolio_row["source_metadata"]["materializer_resolutions"] == both["materializer_resolutions"]
     assert portfolio_row["source_metadata"]["receiver_contracts"] == [DQS1_RECEIVER_CONTRACT_ID]
     assert portfolio_row["source_metadata"]["cooperative_receiver_required"] is True
@@ -1087,31 +1070,25 @@ def test_packet_ir_operation_set_lowers_to_materializer_backlog_rows(
     assert row["unit_kind"] == "archive_section"
     assert row["operation_family"] == "section_entropy_recode"
     assert row["score_claim"] is False
-    assert "packetir_operation_set_requires_materializer_contexts" in row[
-        "blocker_counts"
-    ]
+    assert "packetir_operation_set_requires_materializer_contexts" in row["blocker_counts"]
 
     compiled = compile_dqs1_byte_shaving_campaign(
         plan,
         repo_root=tmp_path,
     )
     assert compiled["packet_ir_materializer_backlog_row_count"] >= 1
-    assert compiled["packet_ir_materializer_backlog_rows"][0][
-        "source_packet_ir_operation_set_id"
-    ] == packet_ir["operation_set_id"]
+    assert (
+        compiled["packet_ir_materializer_backlog_rows"][0]["source_packet_ir_operation_set_id"]
+        == packet_ir["operation_set_id"]
+    )
     merged_row = next(
         row
         for row in compiled["materializer_backlog"]["rows"]
-        if row["target_kind"] == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
-        and row["unit_kind"] == "archive_section"
+        if row["target_kind"] == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND and row["unit_kind"] == "archive_section"
     )
     assert merged_row["packet_ir_lowered_row_count"] >= 1
-    assert packet_ir["operation_set_id"] in merged_row[
-        "source_packet_ir_operation_set_ids"
-    ]
-    assert "packetir_operation_set_requires_materializer_contexts" in merged_row[
-        "packet_ir_blocker_counts"
-    ]
+    assert packet_ir["operation_set_id"] in merged_row["source_packet_ir_operation_set_ids"]
+    assert "packetir_operation_set_requires_materializer_contexts" in merged_row["packet_ir_blocker_counts"]
 
     packet_only_plan = copy.deepcopy(plan)
     packet_only_plan["operation_set_ladder"] = []
@@ -1127,12 +1104,8 @@ def test_packet_ir_operation_set_lowers_to_materializer_backlog_rows(
     assert packet_only["materializer_work_queue"]["row_count"] >= 1
     assert packet_only["materializer_work_queue"]["blocked_row_count"] >= 1
     work_row = packet_only["materializer_work_queue"]["rows"][0]
-    assert packet_ir["operation_set_id"] in work_row[
-        "source_packet_ir_operation_set_ids"
-    ]
-    assert "packetir_operation_set_requires_materializer_contexts" in work_row[
-        "packet_ir_blocker_counts"
-    ]
+    assert packet_ir["operation_set_id"] in work_row["source_packet_ir_operation_set_ids"]
+    assert "packetir_operation_set_requires_materializer_contexts" in work_row["packet_ir_blocker_counts"]
 
 
 def test_operation_set_execution_requires_matching_packet_ir_handoff(
@@ -1140,9 +1113,7 @@ def test_operation_set_execution_requires_matching_packet_ir_handoff(
 ) -> None:
     plan = _pair_drop_plan()
     operation_set = next(
-        row
-        for row in plan["operation_set_ladder"]
-        if set(row["selected_unit_ids"]) == {"pair0320", "pair0371"}
+        row for row in plan["operation_set_ladder"] if set(row["selected_unit_ids"]) == {"pair0320", "pair0371"}
     )
     plan["packet_ir_operation_sets"] = []
 
@@ -1159,13 +1130,10 @@ def test_operation_set_execution_requires_matching_packet_ir_handoff(
     blocked = next(
         row
         for row in compiled["blocked_rows"]
-        if row["selection_kind"] == "operation_set"
-        and row["operation_set_id"] == operation_set["operation_set_id"]
+        if row["selection_kind"] == "operation_set" and row["operation_set_id"] == operation_set["operation_set_id"]
     )
     assert blocked["packet_ir_operation_set"] is None
-    assert "operation_set_packet_ir_operation_set_missing" in blocked[
-        "materialization_blockers"
-    ]
+    assert "operation_set_packet_ir_operation_set_missing" in blocked["materialization_blockers"]
     assert blocked["executable"] is False
 
 
@@ -1174,9 +1142,7 @@ def test_operation_set_execution_validates_packet_ir_contract(
 ) -> None:
     plan = _pair_drop_plan()
     operation_set = next(
-        row
-        for row in plan["operation_set_ladder"]
-        if set(row["selected_unit_ids"]) == {"pair0320", "pair0371"}
+        row for row in plan["operation_set_ladder"] if set(row["selected_unit_ids"]) == {"pair0320", "pair0371"}
     )
     packet_ir = next(
         row
@@ -1199,16 +1165,10 @@ def test_operation_set_execution_validates_packet_ir_contract(
     blocked = next(
         row
         for row in compiled["blocked_rows"]
-        if row["selection_kind"] == "operation_set"
-        and row["operation_set_id"] == operation_set["operation_set_id"]
+        if row["selection_kind"] == "operation_set" and row["operation_set_id"] == operation_set["operation_set_id"]
     )
-    assert "operation_set_packet_ir_required_proofs_mismatch" in blocked[
-        "materialization_blockers"
-    ]
-    assert (
-        "operation_set_packet_ir_compiler_contract_mismatch:required_order"
-        in blocked["materialization_blockers"]
-    )
+    assert "operation_set_packet_ir_required_proofs_mismatch" in blocked["materialization_blockers"]
+    assert "operation_set_packet_ir_compiler_contract_mismatch:required_order" in blocked["materialization_blockers"]
 
 
 def test_packet_ir_operation_set_lowering_rejects_authority_and_bad_sequence() -> None:
@@ -1232,12 +1192,7 @@ def test_packet_ir_operation_set_lowering_keeps_unknown_target_blocked() -> None
 
     rows = lower_packetir_operation_set_to_backlog_rows(packet_ir)
 
-    assert any(
-        "unsupported_materializer_target:unknown_packetir_target_v1" in row[
-            "blocker_counts"
-        ]
-        for row in rows
-    )
+    assert any("unsupported_materializer_target:unknown_packetir_target_v1" in row["blocker_counts"] for row in rows)
     assert all(row["ready_for_exact_eval_dispatch"] is False for row in rows)
 
 
@@ -1246,13 +1201,9 @@ def test_compile_dqs1_byte_shaving_plan_blocks_operation_set_sequence_mismatch(
 ) -> None:
     plan = copy.deepcopy(_pair_drop_plan())
     operation_set = next(
-        row
-        for row in plan["operation_set_ladder"]
-        if set(row["selected_unit_ids"]) == {"pair0320", "pair0371"}
+        row for row in plan["operation_set_ladder"] if set(row["selected_unit_ids"]) == {"pair0320", "pair0371"}
     )
-    operation_set["chosen_operation_sequence"] = (
-        operation_set["chosen_operation_sequence"][:-1]
-    )
+    operation_set["chosen_operation_sequence"] = operation_set["chosen_operation_sequence"][:-1]
 
     compiled = compile_dqs1_byte_shaving_campaign(
         plan,
@@ -1265,18 +1216,11 @@ def test_compile_dqs1_byte_shaving_plan_blocks_operation_set_sequence_mismatch(
     )
 
     blocked = next(
-        row
-        for row in compiled["blocked_rows"]
-        if row.get("operation_set_id") == operation_set["operation_set_id"]
+        row for row in compiled["blocked_rows"] if row.get("operation_set_id") == operation_set["operation_set_id"]
     )
     assert blocked["chosen_operation_sequence_is_permutation"] is False
-    assert (
-        "operation_set_sequence_not_permutation_of_selected_operations"
-        in blocked["materialization_blockers"]
-    )
-    assert blocked["operation_set_materialization_mode"] == (
-        "blocked_or_requires_atomic_materializer"
-    )
+    assert "operation_set_sequence_not_permutation_of_selected_operations" in blocked["materialization_blockers"]
+    assert blocked["operation_set_materialization_mode"] == ("blocked_or_requires_atomic_materializer")
 
 
 def test_compile_dqs1_byte_shaving_plan_suggests_registered_byte_range_contract(
@@ -1631,8 +1575,7 @@ def test_materializer_work_queue_wraps_archive_section_entropy_recode_adapter(
         str(source_archive),
     ]
     assert ["--section-manifest", str(section_manifest)] in [
-        row["command"][index : index + 2]
-        for index in range(len(row["command"]) - 1)
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
     ]
     assert row["command"].count("--section-name") == 2
     assert row["command"][-2:] == ["--brotli-quality", "11"]
@@ -1643,7 +1586,20 @@ def test_materializer_work_queue_wraps_archive_section_entropy_recode_adapter(
     )
     completion_contract = row["postconditions"][1]
     assert completion_contract["required_true"] == ["byte_closed_candidate_emitted"]
-    assert completion_contract["required_positive_int"] == ["candidate_archive.bytes"]
+    assert completion_contract["required_positive_int"] == [
+        "candidate_archive.bytes",
+        "candidate_member.bytes",
+    ]
+    assert completion_contract["required_sha256"] == [
+        "candidate_archive.sha256",
+        "candidate_member.sha256",
+    ]
+    assert completion_contract["required_nonempty_unless_true"] == [
+        {
+            "key": "readiness_blockers",
+            "unless_true": "receiver_contract_satisfied",
+        }
+    ]
     assert row["telemetry"]["artifact_paths"] == [
         str(output_archive),
         str(manifest),
@@ -1655,10 +1611,7 @@ def test_materializer_work_queue_wraps_archive_section_entropy_recode_adapter(
     assert row["telemetry"]["family_agnostic_materializer_contract"]["target_kind"] == (
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
     )
-    assert (
-        "archive_section_entropy_recode_requires_same_runtime_inflate_parity"
-        in row["dispatch_blockers"]
-    )
+    assert "archive_section_entropy_recode_requires_same_runtime_inflate_parity" in row["dispatch_blockers"]
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
 
@@ -1754,13 +1707,9 @@ def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
     assert [
         "--target-kind",
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
-    ] in [
-        packet_row["command"][index : index + 2]
-        for index in range(len(packet_row["command"]) - 1)
-    ]
+    ] in [packet_row["command"][index : index + 2] for index in range(len(packet_row["command"]) - 1)]
     assert ["--member-name", "payload.bin"] in [
-        packet_row["command"][index : index + 2]
-        for index in range(len(packet_row["command"]) - 1)
+        packet_row["command"][index : index + 2] for index in range(len(packet_row["command"]) - 1)
     ]
     _assert_typed_postconditions(
         packet_row["postconditions"],
@@ -1771,9 +1720,7 @@ def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
         str(archive),
         str(packet_manifest),
     ]
-    assert "packet_member_recompress_requires_runtime_consumption_proof" in (
-        packet_row["dispatch_blockers"]
-    )
+    assert "packet_member_recompress_requires_runtime_consumption_proof" in (packet_row["dispatch_blockers"])
     assert packet_row["score_claim"] is False
     assert packet_row["ready_for_exact_eval_dispatch"] is False
 
@@ -1781,13 +1728,9 @@ def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
     assert [
         "--target-kind",
         TENSOR_FACTORIZE_TARGET_KIND,
-    ] in [
-        tensor_row["command"][index : index + 2]
-        for index in range(len(tensor_row["command"]) - 1)
-    ]
+    ] in [tensor_row["command"][index : index + 2] for index in range(len(tensor_row["command"]) - 1)]
     assert ["--factorization-contract", str(factor_contract)] in [
-        tensor_row["command"][index : index + 2]
-        for index in range(len(tensor_row["command"]) - 1)
+        tensor_row["command"][index : index + 2] for index in range(len(tensor_row["command"]) - 1)
     ]
     _assert_typed_postconditions(
         tensor_row["postconditions"],
@@ -1802,6 +1745,74 @@ def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
     assert "tensor_factorize_requires_cooperative_receiver" in tensor_row["dispatch_blockers"]
     assert tensor_row["score_claim"] is False
     assert tensor_row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_family_agnostic_candidate_postconditions_reject_weak_receiver_manifest(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    packet_manifest = tmp_path / "packet_members.json"
+    output = tmp_path / "packet_candidate.zip"
+    out_manifest = tmp_path / "packet_candidate.json"
+    candidate_archive = _write_artifact(output, b"candidate-archive")
+    member_sha = hashlib.sha256(b"payload").hexdigest()
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "backlog_key": "packet_member_recompress_fixture",
+                "unit_kind": "packet_member",
+                "operation_family": "member_recompress",
+                "target_kind": PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                "materializer_id": PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
+            },
+        ],
+    }
+    queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts={
+            "packet_member_recompress_fixture": {
+                "archive_path": str(archive),
+                "packet_member_manifest": str(packet_manifest),
+                "member_name": "payload.bin",
+                "output_archive": str(output),
+                "output_manifest": str(out_manifest),
+            },
+        },
+        source_plan_path="plan.json",
+    )
+    completion_contract = next(
+        condition for condition in queue["rows"][0]["postconditions"] if condition["type"] == "json_completion_contract"
+    )
+
+    weak_manifest = {
+        "schema": PACKET_MEMBER_RECOMPRESS_SCHEMA,
+        "byte_closed_candidate_emitted": True,
+        "candidate_archive": candidate_archive,
+        "candidate_member": {
+            "name": "payload.bin",
+            "bytes": len(b"payload"),
+            "sha256": member_sha,
+        },
+        "receiver_verification": {
+            "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+            "receiver_contract_satisfied": False,
+        },
+        "receiver_contract_satisfied": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+    out_manifest.write_text(json.dumps(weak_manifest), encoding="utf-8")
+    assert not _condition_passes(completion_contract, repo_root=tmp_path)
+
+    weak_manifest["readiness_blockers"] = ["runtime_consumption_proof_missing"]
+    out_manifest.write_text(json.dumps(weak_manifest), encoding="utf-8")
+    assert _condition_passes(completion_contract, repo_root=tmp_path)
 
 
 def test_materializer_chain_completion_contract_rejects_schema_only_and_failure(
@@ -1994,9 +2005,7 @@ def test_inverse_surface_cells_compile_to_action_functional_work_queue(
         "--byte-shaving-campaign-plan",
         str(byte_shaving_plan),
     ] == byte_shaving_row["command"][4:6]
-    assert byte_shaving_row["telemetry"]["input_artifact_paths"] == [
-        str(byte_shaving_plan)
-    ]
+    assert byte_shaving_row["telemetry"]["input_artifact_paths"] == [str(byte_shaving_plan)]
 
 
 def test_non_dqs1_executable_materializers_do_not_emit_dqs1_portfolio_rows(
@@ -2040,9 +2049,7 @@ def test_non_dqs1_executable_materializers_do_not_emit_dqs1_portfolio_rows(
     backlog_row = compiled["materializer_backlog"]["rows"][0]
     assert backlog_row["gap_class"] == "materializer_work_queue_required"
     assert backlog_row["target_kind"] == INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND
-    assert backlog_row["receiver_contract_status"] == (
-        "receiver_contract_registered_for_materializer_work_queue"
-    )
+    assert backlog_row["receiver_contract_status"] == ("receiver_contract_registered_for_materializer_work_queue")
     work_row = compiled["materializer_work_queue"]["rows"][0]
     assert work_row["executable"] is True
     assert work_row["tool"] == "tools/build_inverse_steganalysis_action_functional.py"
@@ -2081,7 +2088,7 @@ def test_inverse_action_cells_compile_to_candidate_materializer_work_queue(
         ),
         encoding="utf-8",
     )
-    template.write_bytes(b"not-a-real-zip-for-command-building")
+    _write_single_member_zip(template)
     compiled = compile_dqs1_byte_shaving_campaign(
         _inverse_cell_candidate_plan(),
         repo_root=tmp_path,
@@ -2135,6 +2142,74 @@ def test_inverse_action_cells_compile_to_candidate_materializer_work_queue(
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_inverse_action_cells_refuse_invalid_candidate_archive_template(
+    tmp_path: Path,
+) -> None:
+    action = tmp_path / "inverse_action.json"
+    template = tmp_path / "template.zip"
+    candidate = tmp_path / "candidate.zip"
+    manifest = tmp_path / "candidate_manifest.json"
+    action.write_text(
+        json.dumps(
+            {
+                "schema": "inverse_steganalysis_discrete_action_functional.v1",
+                "water_bucket": {
+                    "selected_cells": [
+                        {
+                            "atom_id": "inverse_surface_pair0007",
+                            "candidate_id": "candidate_pair0007",
+                            "scope_axis": "pairs",
+                            "component": "posenet",
+                            "water_fill_cost_bytes": 32,
+                            "expected_score_gain": 0.0001,
+                            "euler_lagrange_residual": 0.00009,
+                        }
+                    ]
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    template.write_bytes(b"not-a-real-zip-for-command-building")
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _inverse_cell_candidate_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+
+    work_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            INVERSE_SCORER_CELL_TARGET_KIND: {
+                "candidate_archive_template": str(template),
+                "inverse_action_functional": str(action),
+                "raw_contest_video_digest": "f" * 64,
+                "output_archive": str(candidate),
+                "manifest_out": str(manifest),
+                "atom_ids": ["inverse_surface_pair0007"],
+                "selected_limit": 1,
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    assert work_queue["executable_row_count"] == 0
+    row = work_queue["rows"][0]
+    assert row["command"] == []
+    assert any(
+        blocker.startswith("candidate_archive_template_invalid_strict_single_member_zip")
+        for blocker in row["materialization_blockers"]
+    )
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
 def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
     tmp_path: Path,
 ) -> None:
@@ -2168,7 +2243,7 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
         ),
         encoding="utf-8",
     )
-    template.write_bytes(b"not-a-real-zip-for-command-building")
+    _write_single_member_zip(template)
     compiled = compile_dqs1_byte_shaving_campaign(
         _inverse_cell_candidate_plan(),
         repo_root=tmp_path,
@@ -2222,9 +2297,7 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
     )
     completion_contract = row["postconditions"][1]
     chain_contract = row["postconditions"][2]
-    assert completion_contract.get("required_equals") == {
-        "schema": "inverse_scorer_cell_candidate_chain_v1"
-    }
+    assert completion_contract.get("required_equals") == {"schema": "inverse_scorer_cell_candidate_chain_v1"}
     assert "inflate_parity_satisfied" in completion_contract.get("required_true", [])
     assert completion_contract.get("required_less_than") == []
     assert chain_contract.get("required_serialized_archive_saving") in (None, False)
@@ -2262,9 +2335,7 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
         "tools/run_inverse_scorer_cell_candidate_chain.py",
     ]
     assert task["target_kind"] == INVERSE_SCORER_CELL_TARGET_KIND
-    assert step["telemetry"]["input_artifact_paths"] == row["telemetry"][
-        "input_artifact_paths"
-    ]
+    assert step["telemetry"]["input_artifact_paths"] == row["telemetry"]["input_artifact_paths"]
     assert execution_queue["controls"]["max_concurrency"]["local_mlx"] == 3
     assert task["materializer_id"] == INVERSE_SCORER_CELL_MATERIALIZER
     assert task["receiver_contract_id"] == INVERSE_SCORER_CELL_RECEIVER_CONTRACT_ID
@@ -2311,7 +2382,7 @@ def test_inverse_action_chain_work_queue_requires_parity_context_for_exact_mode(
         ),
         encoding="utf-8",
     )
-    template.write_bytes(b"not-a-real-zip-for-command-building")
+    _write_single_member_zip(template)
     compiled = compile_dqs1_byte_shaving_campaign(
         _inverse_cell_candidate_plan(),
         repo_root=tmp_path,
@@ -2338,10 +2409,7 @@ def test_inverse_action_chain_work_queue_requires_parity_context_for_exact_mode(
     assert work_queue["executable_row_count"] == 0
     row = work_queue["rows"][0]
     assert row["command"] == []
-    assert (
-        "inverse_scorer_cell_exact_chain_requires_inflate_parity_context"
-        in row["materialization_blockers"]
-    )
+    assert "inverse_scorer_cell_exact_chain_requires_inflate_parity_context" in row["materialization_blockers"]
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
 
@@ -2419,21 +2487,15 @@ def test_materializer_execution_queue_can_gate_work_on_storage_preflight(
     assert "experiments/results" in cleanup_step["command"]
     assert "--execute" in cleanup_step["command"]
     materializer_step = execution_queue["experiments"][1]["steps"][0]
-    assert materializer_step["requires"] == [
-        f"{MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup"
-    ]
+    assert materializer_step["requires"] == [f"{MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup"]
 
     dag = build_staircase_dag_from_experiment_queue(
         execution_queue,
         dag_id="materializer_storage_preflight_dag_fixture",
     )
-    materializer_node_id = (
-        f"{execution_queue['experiments'][1]['id']}.{MATERIALIZER_EXECUTION_STEP_ID}"
-    )
+    materializer_node_id = f"{execution_queue['experiments'][1]['id']}.{MATERIALIZER_EXECUTION_STEP_ID}"
     by_node_id = {node["node_id"]: node for node in dag["nodes"]}
-    storage_dependency = by_node_id[materializer_node_id]["metadata"][
-        "storage_preflight_dependency"
-    ]
+    storage_dependency = by_node_id[materializer_node_id]["metadata"]["storage_preflight_dependency"]
     assert storage_dependency["schema"] == STORAGE_PREFLIGHT_DEPENDENCY_SCHEMA
     assert storage_dependency["dependency_node_id"] == (
         f"{MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup"
@@ -2441,14 +2503,8 @@ def test_materializer_execution_queue_can_gate_work_on_storage_preflight(
     assert storage_dependency["storage_plan_node_id"] == (
         f"{MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.storage_tier_plan"
     )
-    assert (
-        storage_dependency["storage_plan_artifact_path"]
-        == storage_step["postconditions"][0]["path"]
-    )
-    assert (
-        storage_dependency["cleanup_plan_artifact_path"]
-        == cleanup_step["postconditions"][0]["path"]
-    )
+    assert storage_dependency["storage_plan_artifact_path"] == storage_step["postconditions"][0]["path"]
+    assert storage_dependency["cleanup_plan_artifact_path"] == cleanup_step["postconditions"][0]["path"]
     assert storage_dependency["artifact_paths"] == [
         storage_step["postconditions"][0]["path"],
         cleanup_step["postconditions"][0]["path"],
@@ -2457,10 +2513,7 @@ def test_materializer_execution_queue_can_gate_work_on_storage_preflight(
     assert storage_dependency["promotion_eligible"] is False
     assert storage_dependency["rank_or_kill_eligible"] is False
     assert storage_dependency["ready_for_exact_eval_dispatch"] is False
-    assert (
-        "storage_preflight_dependency_is_advisory_only"
-        in storage_dependency["dispatch_blockers"]
-    )
+    assert "storage_preflight_dependency_is_advisory_only" in storage_dependency["dispatch_blockers"]
     monkeypatch.chdir(tmp_path)
     storage_artifact = Path(storage_dependency["storage_plan_artifact_path"])
     cleanup_artifact = Path(storage_dependency["cleanup_plan_artifact_path"])
@@ -2531,10 +2584,7 @@ def test_materializer_execution_queue_move_preflight_uses_policy_cold_store_defa
                 "schema_manifest": "schema.json",
                 "beam_probe_reports": ["beam_a.json"],
                 "source_runtime_dir": "runtime",
-                "output_dir": (
-                    "/Volumes/VertigoDataTier/pact/materializer_results/"
-                    "materializer_out"
-                ),
+                "output_dir": ("/Volumes/VertigoDataTier/pact/materializer_results/materializer_out"),
             }
         },
         source_plan_path="plan.json",
@@ -2546,9 +2596,7 @@ def test_materializer_execution_queue_move_preflight_uses_policy_cold_store_defa
         repo_root=tmp_path,
         include_scheduler_preflight=True,
         scheduler_results_root="/Volumes/VertigoDataTier/pact/materializer_results",
-        scheduler_storage_expected_workload_root=(
-            "/Volumes/VertigoDataTier/pact/materializer_results"
-        ),
+        scheduler_storage_expected_workload_root=("/Volumes/VertigoDataTier/pact/materializer_results"),
         scheduler_proactive_cleanup_execute=True,
         scheduler_proactive_cleanup_action="move",
     )
@@ -2792,30 +2840,26 @@ def test_materializer_execution_queue_can_append_exact_readiness_followups(
     assert "--chain-manifest" in harvest_step["command"]
     assert "--allow-unfinished-state" not in harvest_step["command"]
     assert f"chain_out/{CHAIN_MANIFEST_NAME}" in harvest_step["command"]
-    assert "chain_out/exact_eval_handoff/source_queue.json" in (
-        harvest_step["command"]
-    )
+    assert "chain_out/exact_eval_handoff/source_queue.json" in (harvest_step["command"])
     assert dispatch_step["command"][:2] == [
         ".venv/bin/python",
         "tools/build_materializer_exact_eval_dispatch_plan.py",
     ]
     assert "--dispatch-mode" not in dispatch_step["command"]
     assert "--allow-paid-dispatch-queue" not in dispatch_step["command"]
-    assert "chain_out/exact_eval_handoff/dispatch_queue.json" in (
-        dispatch_step["command"]
-    )
+    assert "chain_out/exact_eval_handoff/dispatch_queue.json" in (dispatch_step["command"])
 
     dag = build_staircase_dag_from_experiment_queue(
         execution_queue,
         dag_id="materializer_followup_dag_fixture",
     )
     by_node_id = {node["node_id"]: node for node in dag["nodes"]}
-    assert by_node_id[
+    assert by_node_id[f"{experiment['id']}.{MATERIALIZER_HARVEST_STEP_ID}"]["dependencies"] == [
+        f"{experiment['id']}.{MATERIALIZER_EXECUTION_STEP_ID}"
+    ]
+    assert by_node_id[f"{experiment['id']}.{MATERIALIZER_DISPATCH_PLAN_STEP_ID}"]["dependencies"] == [
         f"{experiment['id']}.{MATERIALIZER_HARVEST_STEP_ID}"
-    ]["dependencies"] == [f"{experiment['id']}.{MATERIALIZER_EXECUTION_STEP_ID}"]
-    assert by_node_id[
-        f"{experiment['id']}.{MATERIALIZER_DISPATCH_PLAN_STEP_ID}"
-    ]["dependencies"] == [f"{experiment['id']}.{MATERIALIZER_HARVEST_STEP_ID}"]
+    ]
 
 
 def test_materializer_execution_queue_skips_exact_followup_for_planning_only_rows(
@@ -2847,13 +2891,82 @@ def test_materializer_execution_queue_skips_exact_followup_for_planning_only_row
     )
 
     experiment = execution_queue["experiments"][0]
-    assert [step["id"] for step in experiment["steps"]] == [
-        MATERIALIZER_EXECUTION_STEP_ID
-    ]
+    assert [step["id"] for step in experiment["steps"]] == [MATERIALIZER_EXECUTION_STEP_ID]
     assert experiment["metadata"]["exact_readiness_followup_requested"] is True
     assert experiment["metadata"]["exact_readiness_followup_enabled"] is False
     assert experiment["metadata"]["exact_readiness_followup_skipped_reason"] == (
         "planning_only_inverse_action_functional_not_candidate_archive"
+    )
+
+
+def test_materializer_execution_queue_skips_exact_followup_for_nonharvestable_manifest(
+    tmp_path: Path,
+) -> None:
+    action = tmp_path / "inverse_action.json"
+    template = tmp_path / "template.zip"
+    candidate = tmp_path / "candidate.zip"
+    manifest = tmp_path / "candidate_manifest.json"
+    action.write_text(
+        json.dumps(
+            {
+                "schema": "inverse_steganalysis_discrete_action_functional.v1",
+                "water_bucket": {
+                    "selected_cells": [
+                        {
+                            "atom_id": "inverse_surface_pair0007",
+                            "candidate_id": "candidate_pair0007",
+                            "scope_axis": "pairs",
+                            "component": "posenet",
+                            "water_fill_cost_bytes": 32,
+                            "expected_score_gain": 0.0001,
+                            "euler_lagrange_residual": 0.00009,
+                        }
+                    ]
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write_single_member_zip(template)
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _inverse_cell_candidate_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+    work_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            INVERSE_SCORER_CELL_TARGET_KIND: {
+                "candidate_archive_template": str(template),
+                "inverse_action_functional": str(action),
+                "raw_contest_video_digest": "f" * 64,
+                "output_archive": str(candidate),
+                "manifest_out": str(manifest),
+                "selected_limit": 1,
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    execution_queue = build_materializer_execution_queue(
+        work_queue,
+        queue_id="inverse_cell_candidate_exec_fixture",
+        repo_root=tmp_path,
+        include_exact_readiness_followup=True,
+    )
+
+    experiment = execution_queue["experiments"][0]
+    assert [step["id"] for step in experiment["steps"]] == [MATERIALIZER_EXECUTION_STEP_ID]
+    assert experiment["metadata"]["exact_readiness_followup_requested"] is True
+    assert experiment["metadata"]["exact_readiness_followup_enabled"] is False
+    assert experiment["metadata"]["exact_readiness_followup_skipped_reason"] == (
+        "materializer_manifest_not_harvestable_for_exact_readiness"
     )
 
 
@@ -3380,13 +3493,9 @@ def test_byte_shaving_campaign_queue_cli_writes_dqs1_queue(tmp_path: Path) -> No
         "tools/plan_experiment_storage.py",
     ]
     assert "--storage-tier" in preflight["steps"][0]["command"]
+    assert all(experiment["id"].startswith("pairset_byte_shave_") for experiment in loaded["experiments"][1:])
     assert all(
-        experiment["id"].startswith("pairset_byte_shave_")
-        for experiment in loaded["experiments"][1:]
-    )
-    assert all(
-        experiment["steps"][0]["requires"]
-        == [f"{DEFAULT_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup"]
+        experiment["steps"][0]["requires"] == [f"{DEFAULT_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup"]
         for experiment in loaded["experiments"][1:]
     )
     assert all(
@@ -3509,9 +3618,7 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
     assert experiment["metadata"]["schema"] == MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA
     step = experiment["steps"][0]
     assert step["id"] == MATERIALIZER_EXECUTION_STEP_ID
-    assert step["requires"] == [
-        f"{MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup"
-    ]
+    assert step["requires"] == [f"{MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup"]
     assert step["timeout_seconds"] == 600
     assert step["telemetry"]["artifact_paths"] == [str(output_dir)]
     assert step["telemetry"]["input_artifact_paths"] == [
@@ -3604,9 +3711,7 @@ def test_byte_shaving_campaign_queue_cli_generates_materializer_contexts_from_ar
     assert stdout["materializer_work_queue_executable_row_count"] == 1
     contexts = json.loads(contexts_path.read_text(encoding="utf-8"))
     assert contexts["schema"] == MATERIALIZER_CONTEXTS_SCHEMA
-    assert contexts["rows"][0]["context"]["output_archive"].startswith(
-        str(output_root)
-    )
+    assert contexts["rows"][0]["context"]["output_archive"].startswith(str(output_root))
     work = json.loads(work_queue.read_text(encoding="utf-8"))
     assert work["schema"] == MATERIALIZER_WORK_QUEUE_SCHEMA
     row = work["rows"][0]
@@ -3912,13 +4017,9 @@ def test_byte_shaving_campaign_queue_cli_generates_inverse_scorer_chain_context_
     assert chain["ready_for_exact_eval_dispatch"] is False
     assert "candidate_inflate_output_parity_missing" not in chain["readiness_blockers"]
     assert "exact_auth_eval_required_before_score_claim" in chain["readiness_blockers"]
-    assert chain["artifacts"]["inflate_parity_probe"]["path"].endswith(
-        "inflate_parity_probe.json"
-    )
+    assert chain["artifacts"]["inflate_parity_probe"]["path"].endswith("inflate_parity_probe.json")
     assert not inflate_work_dir.exists()
-    manifest = json.loads(
-        (output_dir / INVERSE_CELL_CHAIN_MANIFEST_NAME).read_text(encoding="utf-8")
-    )
+    manifest = json.loads((output_dir / INVERSE_CELL_CHAIN_MANIFEST_NAME).read_text(encoding="utf-8"))
     assert manifest["schema"] == "inverse_scorer_cell_candidate_chain_v1"
     assert manifest["inflate_parity_satisfied"] is True
     assert (output_dir / "candidate_archive.zip").is_file()

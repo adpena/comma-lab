@@ -77,13 +77,13 @@ def _write_constant_inflate_runtime(path: Path) -> None:
             [
                 "#!/usr/bin/env bash",
                 "set -euo pipefail",
-                "data_dir=\"$1\"",
-                "out_dir=\"$2\"",
-                "file_list=\"$3\"",
-                "test -f \"$data_dir/x\"",
-                "test -s \"$file_list\"",
-                "mkdir -p \"$out_dir/frames\"",
-                "printf frame-bytes > \"$out_dir/frames/000000.raw\"",
+                'data_dir="$1"',
+                'out_dir="$2"',
+                'file_list="$3"',
+                'test -f "$data_dir/x"',
+                'test -s "$file_list"',
+                'mkdir -p "$out_dir/frames"',
+                'printf frame-bytes > "$out_dir/frames/000000.raw"',
                 "",
             ]
         ),
@@ -203,6 +203,63 @@ def test_materializer_campaign_runner_can_auto_generate_contexts_from_artifact_m
     assert str(tmp_path / "campaign" / "materializer_outputs") in command
     assert "--materializer-contexts-fail-if-blocked" in command
     assert "--materializer-contexts" not in command
+
+
+def test_materializer_campaign_runner_places_generated_context_outputs_under_workload_root(
+    tmp_path: Path,
+) -> None:
+    artifact_map = tmp_path / "artifact_map.json"
+    run_dir = tmp_path / "campaign"
+    expected_workload_root = run_dir / "work"
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--materializer-artifact-map",
+            str(artifact_map),
+            "--run-dir",
+            str(run_dir),
+            "--include-storage-preflight",
+            "--storage-expected-workload-root",
+            str(expected_workload_root),
+            "--storage-workload-subdir",
+            "work",
+        ]
+    )
+
+    command = runner._build_queue_command(args, run_dir=run_dir)
+
+    assert "--materializer-context-default-output-root" in command
+    index = command.index("--materializer-context-default-output-root")
+    assert command[index + 1] == str(expected_workload_root / "materializer_outputs")
+
+
+def test_materializer_campaign_runner_keeps_context_outputs_per_run_inside_workload_root(
+    tmp_path: Path,
+) -> None:
+    artifact_map = tmp_path / "artifact_map.json"
+    expected_workload_root = tmp_path / "work"
+    run_dir = expected_workload_root / "campaign"
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--materializer-artifact-map",
+            str(artifact_map),
+            "--run-dir",
+            str(run_dir),
+            "--include-storage-preflight",
+            "--storage-expected-workload-root",
+            str(expected_workload_root),
+            "--storage-workload-subdir",
+            "work",
+        ]
+    )
+
+    command = runner._build_queue_command(args, run_dir=run_dir)
+
+    index = command.index("--materializer-context-default-output-root")
+    assert command[index + 1] == str(run_dir / "materializer_outputs")
 
 
 def test_materializer_campaign_runner_builds_stateful_experiment_queue_command(
@@ -381,6 +438,105 @@ def test_materializer_campaign_runner_generated_artifact_map_uses_generated_acti
     assert context["raw_contest_video_digest"] == "a" * 64
 
 
+def test_materializer_campaign_runner_can_generate_family_artifact_map(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    run_dir.mkdir()
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--archive-section-archive-path",
+            str(tmp_path / "archive_source.zip"),
+            "--archive-section-manifest",
+            str(tmp_path / "sections.json"),
+            "--archive-section-name",
+            "decoder_packed_brotli",
+            "--archive-section-brotli-quality",
+            "11",
+            "--archive-section-runtime-consumption-proof",
+            str(tmp_path / "archive_runtime_proof.json"),
+            "--archive-section-min-free-bytes",
+            "1024",
+            "--archive-section-allow-size-regression",
+            "--packet-member-archive-path",
+            str(tmp_path / "packet_source.zip"),
+            "--packet-member-manifest",
+            str(tmp_path / "members.json"),
+            "--packet-member-name",
+            "payload.bin",
+            "--packet-member-zip-compression-method",
+            "deflated",
+            "--packet-member-zip-compresslevel",
+            "9",
+            "--packet-member-runtime-consumption-proof",
+            str(tmp_path / "packet_runtime_proof.json"),
+            "--packet-member-min-free-bytes",
+            "2048",
+            "--tensor-factorize-archive-path",
+            str(tmp_path / "tensor_source.zip"),
+            "--tensor-factorize-manifest",
+            str(tmp_path / "tensor_manifest.json"),
+            "--tensor-factorize-contract",
+            str(tmp_path / "factor_contract.json"),
+            "--tensor-factorize-rank",
+            "2",
+            "--tensor-factorize-runtime-consumption-proof",
+            str(tmp_path / "tensor_runtime_proof.json"),
+            "--tensor-factorize-allow-size-regression",
+            "--run-dir",
+            str(run_dir),
+        ]
+    )
+
+    generated = runner._write_generated_materializer_artifact_map(
+        args,
+        run_dir=run_dir,
+        generated_action_functional_path=None,
+    )
+
+    assert generated == run_dir / "materializer_artifact_map.json"
+    payload = json.loads(generated.read_text(encoding="utf-8"))
+    assert set(payload["artifacts"]) == {
+        runner.ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        runner.PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        runner.TENSOR_FACTORIZE_TARGET_KIND,
+    }
+    archive = payload["artifacts"][runner.ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND]
+    packet = payload["artifacts"][runner.PACKET_MEMBER_RECOMPRESS_TARGET_KIND]
+    tensor = payload["artifacts"][runner.TENSOR_FACTORIZE_TARGET_KIND]
+    assert archive["archive_path"] == str(tmp_path / "archive_source.zip")
+    assert archive["section_manifest"] == str(tmp_path / "sections.json")
+    assert archive["target_sections"] == ["decoder_packed_brotli"]
+    assert archive["brotli_quality"] == ["11"]
+    assert archive["runtime_consumption_proof"] == str(tmp_path / "archive_runtime_proof.json")
+    assert archive["min_free_bytes"] == 1024
+    assert archive["allow_size_regression"] is True
+    assert packet["archive_path"] == str(tmp_path / "packet_source.zip")
+    assert packet["packet_member_manifest"] == str(tmp_path / "members.json")
+    assert packet["member_name"] == "payload.bin"
+    assert packet["zip_compression_method"] == ["deflated"]
+    assert packet["zip_compresslevel"] == ["9"]
+    assert packet["min_free_bytes"] == 2048
+    assert tensor["archive_path"] == str(tmp_path / "tensor_source.zip")
+    assert tensor["tensor_manifest"] == str(tmp_path / "tensor_manifest.json")
+    assert tensor["factorization_contract"] == str(tmp_path / "factor_contract.json")
+    assert tensor["rank"] == 2
+    assert tensor["allow_size_regression"] is True
+    assert payload["score_claim"] is False
+
+    command = runner._build_queue_command(
+        args,
+        run_dir=run_dir,
+        plan_path=tmp_path / "plan.json",
+        generated_materializer_artifact_map=generated,
+    )
+    assert "--materializer-artifact-map" in command
+    assert str(generated) in command
+    assert "--materializer-contexts-out" in command
+
+
 def test_materializer_campaign_runner_rejects_auto_artifact_map_with_contexts(
     tmp_path: Path,
 ) -> None:
@@ -465,9 +621,7 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     )
 
     assert result == 0
-    summary = json.loads(
-        (run_dir / "materializer_campaign_run.json").read_text(encoding="utf-8")
-    )
+    summary = json.loads((run_dir / "materializer_campaign_run.json").read_text(encoding="utf-8"))
     assert summary["schema"] == runner.RUN_SCHEMA
     assert summary["execute"] is True
     assert summary["score_claim"] is False
@@ -477,18 +631,14 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert summary["runtime_policy_applied_queue_path"] == str(
         run_dir / "materializer_execution_queue.runtime_policy.json"
     )
-    assert summary["queue_path"] == str(
-        run_dir / "materializer_execution_queue.runtime_policy.json"
-    )
+    assert summary["queue_path"] == str(run_dir / "materializer_execution_queue.runtime_policy.json")
     assert summary["runtime_policy"]["schema"] == "scheduler_runtime_policy.v1"
     assert summary["runtime_policy"]["score_claim"] is False
     assert summary["worker"]["schema"] == "experiment_queue_worker_result.v1"
     assert summary["worker"]["success_count"] == 3
     assert summary["worker"]["failure_count"] == 0
 
-    contexts = json.loads(
-        (run_dir / "materializer_contexts.json").read_text(encoding="utf-8")
-    )
+    contexts = json.loads((run_dir / "materializer_contexts.json").read_text(encoding="utf-8"))
     assert summary["build"]["materializer_contexts_blocked_count"] == 0
     assert contexts["blocked_context_count"] == 0
     context = contexts["rows"][0]["context"]
@@ -496,11 +646,7 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert context["inflate_runtime_dir"] == str(inflate_runtime)
     assert context["source_archive_for_parity"] == str(template)
 
-    chain = json.loads(
-        (chain_output_dir / INVERSE_CELL_CHAIN_MANIFEST_NAME).read_text(
-            encoding="utf-8"
-        )
-    )
+    chain = json.loads((chain_output_dir / INVERSE_CELL_CHAIN_MANIFEST_NAME).read_text(encoding="utf-8"))
     assert chain["schema"] == "inverse_scorer_cell_candidate_chain_v1"
     assert chain["byte_closed_candidate_emitted"] is True
     assert chain["receiver_contract_satisfied"] is True
@@ -511,14 +657,8 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
 
     handoff_dir = chain_output_dir / "exact_eval_handoff"
     harvest = json.loads((handoff_dir / "harvest_report.json").read_text(encoding="utf-8"))
-    bridge = json.loads(
-        (handoff_dir / "exact_readiness_bridge_report.json").read_text(
-            encoding="utf-8"
-        )
-    )
-    dispatch_plan = json.loads(
-        (handoff_dir / "dispatch_plan.json").read_text(encoding="utf-8")
-    )
+    bridge = json.loads((handoff_dir / "exact_readiness_bridge_report.json").read_text(encoding="utf-8"))
+    dispatch_plan = json.loads((handoff_dir / "dispatch_plan.json").read_text(encoding="utf-8"))
     assert harvest["accepted_manifest_count"] == 1
     assert harvest["source_queue_dispatch_ready_count"] == 0
     assert bridge["candidate_count"] == 1
@@ -566,9 +706,7 @@ def test_materializer_campaign_runner_emits_staircase_artifacts(tmp_path: Path) 
                             "id": "materialize",
                             "command": ["python", "-c", "print('ok')"],
                             "resources": {"kind": "local_cpu"},
-                            "postconditions": [
-                                {"type": "path_exists", "path": str(tmp_path / "done.json")}
-                            ],
+                            "postconditions": [{"type": "path_exists", "path": str(tmp_path / "done.json")}],
                         }
                     ],
                 }
@@ -886,10 +1024,13 @@ def test_materializer_campaign_runner_can_preserve_direct_mlx_selection_mode(
         ]
     )
 
-    assert runner._build_mlx_acquisition_batch_commands(
-        args,
-        run_dir=tmp_path / "campaign",
-    ) == []
+    assert (
+        runner._build_mlx_acquisition_batch_commands(
+            args,
+            run_dir=tmp_path / "campaign",
+        )
+        == []
+    )
     command = runner._build_action_functional_command(
         args,
         run_dir=tmp_path / "campaign",

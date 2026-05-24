@@ -1520,6 +1520,34 @@ def test_inverse_scorer_cell_chain_writes_failure_manifest_on_partial_failure(
     assert failure["score_claim"] is False
 
 
+def test_inverse_scorer_cell_chain_writes_failure_manifest_for_invalid_template_zip(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "template.zip"
+    action = tmp_path / "action.json"
+    output_dir = tmp_path / "chain_invalid_template"
+    template.write_bytes(b"not-a-real-zip-for-command-building")
+    write_json(action, _action_functional())
+
+    with pytest.raises(ValueError, match="invalid ZIP archive"):
+        build_inverse_scorer_cell_candidate_chain(
+            raw_contest_video_digest="a" * 64,
+            candidate_archive_template=template,
+            inverse_action_functional=action,
+            output_dir=output_dir,
+            selected_limit=1,
+            repo_root=tmp_path,
+        )
+
+    failure = json.loads((output_dir / "inverse_scorer_cell_candidate_chain_manifest.json").read_text(encoding="utf-8"))
+    assert failure["schema"] == CHAIN_SCHEMA
+    assert failure["status"] == "failed"
+    assert failure["error_type"] == "InverseScorerCellMaterializerError"
+    assert "invalid ZIP archive" in failure["error"]
+    assert "inverse_scorer_cell_candidate_chain_failed" in failure["readiness_blockers"]
+    assert failure["score_claim"] is False
+
+
 def test_inverse_scorer_cell_chain_cli_writes_tool_manifest(
     tmp_path: Path,
 ) -> None:

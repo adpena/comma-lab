@@ -31,7 +31,10 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from comma_lab.scheduler.byte_shaving_materializer_registry import (  # noqa: E402
+    ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
     INVERSE_SCORER_CELL_TARGET_KIND,
+    PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+    TENSOR_FACTORIZE_TARGET_KIND,
 )
 from comma_lab.scheduler.experiment_queue import default_state_path, load_queue_definition  # noqa: E402
 from comma_lab.scheduler.staircase_dag import (  # noqa: E402
@@ -80,6 +83,14 @@ def _display_path(path: str | Path) -> str:
         return value.as_posix()
 
 
+def _path_under_root(path: Path, root: Path) -> bool:
+    try:
+        path.resolve(strict=False).relative_to(root.resolve(strict=False))
+    except ValueError:
+        return False
+    return True
+
+
 def _json_print(payload: object) -> None:
     print(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False))
 
@@ -114,11 +125,7 @@ def _normalize_config_defaults(
     *,
     config_path: Path,
 ) -> dict[str, Any]:
-    actions = {
-        action.dest: action
-        for action in parser._actions
-        if action.dest and action.dest != "help"
-    }
+    actions = {action.dest: action for action in parser._actions if action.dest and action.dest != "help"}
     defaults: dict[str, Any] = {}
     for raw_key, raw_value in config.items():
         key = str(raw_key).strip().replace("-", "_")
@@ -163,9 +170,7 @@ def _run(command: list[str], *, check: bool = True) -> CommandResult:
         elapsed_seconds=time.monotonic() - started,
     )
     if check and proc.returncode != 0:
-        raise SystemExit(
-            f"command failed ({proc.returncode}): {' '.join(command)}\n{proc.stderr}"
-        )
+        raise SystemExit(f"command failed ({proc.returncode}): {' '.join(command)}\n{proc.stderr}")
     return result
 
 
@@ -187,9 +192,7 @@ def _require_json_stdout(
     allow_nonzero: bool = False,
 ) -> dict[str, Any]:
     if result.returncode != 0 and not allow_nonzero:
-        raise SystemExit(
-            f"{label} failed ({result.returncode}): {result.stderr or result.stdout}"
-        )
+        raise SystemExit(f"{label} failed ({result.returncode}): {result.stderr or result.stdout}")
     payload = _json_from_stdout(result)
     if payload is None:
         raise SystemExit(f"{label} did not emit a JSON object")
@@ -214,13 +217,9 @@ def _parse_resource_concurrency(values: list[str]) -> list[str]:
         try:
             limit = int(value)
         except ValueError as exc:
-            raise SystemExit(
-                f"--materializer-resource-concurrency has non-integer limit: {raw!r}"
-            ) from exc
+            raise SystemExit(f"--materializer-resource-concurrency has non-integer limit: {raw!r}") from exc
         if limit < 1:
-            raise SystemExit(
-                f"--materializer-resource-concurrency limit must be >= 1: {raw!r}"
-            )
+            raise SystemExit(f"--materializer-resource-concurrency limit must be >= 1: {raw!r}")
         out.extend(["--materializer-resource-concurrency", f"{key.strip()}={limit}"])
     return out
 
@@ -316,19 +315,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--materializer-artifact-map",
         type=Path,
         default=None,
-        help=(
-            "artifact/custody hints used to auto-generate materializer contexts "
-            "inside the campaign run directory"
-        ),
+        help=("artifact/custody hints used to auto-generate materializer contexts inside the campaign run directory"),
     )
     parser.add_argument(
         "--materializer-context-default-output-root",
         type=Path,
         default=None,
-        help=(
-            "default output root for generated materializer contexts; defaults "
-            "to RUN_DIR/materializer_outputs"
-        ),
+        help=("default output root for generated materializer contexts; defaults to RUN_DIR/materializer_outputs"),
     )
     parser.add_argument("--materializer-contexts-fail-if-blocked", action="store_true")
     parser.add_argument(
@@ -346,18 +339,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--inverse-scorer-candidate-archive-template",
         type=Path,
         default=None,
-        help=(
-            "candidate archive template used to auto-generate an inverse-scorer "
-            "materializer artifact map"
-        ),
+        help=("candidate archive template used to auto-generate an inverse-scorer materializer artifact map"),
     )
     parser.add_argument(
         "--inverse-scorer-raw-contest-video-digest",
         default=None,
-        help=(
-            "raw contest video digest recorded in generated inverse-scorer "
-            "materializer contexts"
-        ),
+        help=("raw contest video digest recorded in generated inverse-scorer materializer contexts"),
     )
     parser.add_argument("--inverse-scorer-atom-id", action="append", default=[])
     parser.add_argument("--inverse-scorer-selected-limit", type=int, default=None)
@@ -374,6 +361,37 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--inverse-scorer-fail-if-receiver-blocked", action="store_true")
     parser.add_argument("--inverse-scorer-fail-if-inflate-parity-blocked", action="store_true")
     parser.add_argument("--inverse-scorer-keep-inflate-work-dir", action="store_true")
+    parser.add_argument("--archive-section-archive-path", type=Path, default=None)
+    parser.add_argument("--archive-section-manifest", type=Path, default=None)
+    parser.add_argument("--archive-section-name", action="append", default=[])
+    parser.add_argument("--archive-section-output-archive", type=Path, default=None)
+    parser.add_argument("--archive-section-output-manifest", type=Path, default=None)
+    parser.add_argument("--archive-section-brotli-quality", action="append", default=[])
+    parser.add_argument("--archive-section-runtime-consumption-proof", type=Path, default=None)
+    parser.add_argument("--archive-section-min-free-bytes", type=int, default=None)
+    parser.add_argument("--archive-section-allow-size-regression", action="store_true")
+    parser.add_argument("--archive-section-allow-overwrite", action="store_true")
+    parser.add_argument("--packet-member-archive-path", type=Path, default=None)
+    parser.add_argument("--packet-member-manifest", type=Path, default=None)
+    parser.add_argument("--packet-member-name", default=None)
+    parser.add_argument("--packet-member-output-archive", type=Path, default=None)
+    parser.add_argument("--packet-member-output-manifest", type=Path, default=None)
+    parser.add_argument("--packet-member-zip-compression-method", action="append", default=[])
+    parser.add_argument("--packet-member-zip-compresslevel", action="append", default=[])
+    parser.add_argument("--packet-member-runtime-consumption-proof", type=Path, default=None)
+    parser.add_argument("--packet-member-min-free-bytes", type=int, default=None)
+    parser.add_argument("--packet-member-allow-size-regression", action="store_true")
+    parser.add_argument("--packet-member-allow-overwrite", action="store_true")
+    parser.add_argument("--tensor-factorize-archive-path", type=Path, default=None)
+    parser.add_argument("--tensor-factorize-manifest", type=Path, default=None)
+    parser.add_argument("--tensor-factorize-contract", type=Path, default=None)
+    parser.add_argument("--tensor-factorize-rank", type=int, default=None)
+    parser.add_argument("--tensor-factorize-output-archive", type=Path, default=None)
+    parser.add_argument("--tensor-factorize-output-manifest", type=Path, default=None)
+    parser.add_argument("--tensor-factorize-runtime-consumption-proof", type=Path, default=None)
+    parser.add_argument("--tensor-factorize-min-free-bytes", type=int, default=None)
+    parser.add_argument("--tensor-factorize-allow-size-regression", action="store_true")
+    parser.add_argument("--tensor-factorize-allow-overwrite", action="store_true")
     parser.add_argument(
         "--run-dir",
         type=Path,
@@ -405,10 +423,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--apply-runtime-policy",
         action="store_true",
-        help=(
-            "derive scheduler_runtime_policy.v1 and run the local worker against "
-            "a policy-applied queue definition"
-        ),
+        help=("derive scheduler_runtime_policy.v1 and run the local worker against a policy-applied queue definition"),
     )
     parser.add_argument("--runtime-policy-output", type=Path, default=None)
     parser.add_argument("--runtime-policy-applied-queue-output", type=Path, default=None)
@@ -429,8 +444,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--runtime-policy-apply-timeouts",
         action="store_true",
         help=(
-            "also apply timeout recommendations; off by default to avoid "
-            "definition-hash churn in existing queue state"
+            "also apply timeout recommendations; off by default to avoid definition-hash churn in existing queue state"
         ),
     )
     parser.add_argument("--queue-id", default="byte_shaving_materializer_local_proof_chain")
@@ -664,25 +678,33 @@ def _build_action_functional_command(
     if args.candidate_id:
         command.extend(["--candidate-id", str(args.candidate_id)])
     if args.exact_auth_calibration_candidate_id:
-        command.extend([
-            "--exact-auth-calibration-candidate-id",
-            str(args.exact_auth_calibration_candidate_id),
-        ])
+        command.extend(
+            [
+                "--exact-auth-calibration-candidate-id",
+                str(args.exact_auth_calibration_candidate_id),
+            ]
+        )
     if args.queue_performance_runtime_identity is not None:
-        command.extend([
-            "--queue-performance-runtime-identity",
-            _display_path(_resolve(args.queue_performance_runtime_identity)),
-        ])
+        command.extend(
+            [
+                "--queue-performance-runtime-identity",
+                _display_path(_resolve(args.queue_performance_runtime_identity)),
+            ]
+        )
     if args.queue_performance_cache_identity is not None:
-        command.extend([
-            "--queue-performance-cache-identity",
-            _display_path(_resolve(args.queue_performance_cache_identity)),
-        ])
+        command.extend(
+            [
+                "--queue-performance-cache-identity",
+                _display_path(_resolve(args.queue_performance_cache_identity)),
+            ]
+        )
     if args.queue_performance_candidate_map is not None:
-        command.extend([
-            "--queue-performance-candidate-map",
-            _display_path(_resolve(args.queue_performance_candidate_map)),
-        ])
+        command.extend(
+            [
+                "--queue-performance-candidate-map",
+                _display_path(_resolve(args.queue_performance_candidate_map)),
+            ]
+        )
     if args.queue_performance_axis:
         command.extend(["--queue-performance-axis", str(args.queue_performance_axis)])
     if args.elapsed_seconds is not None:
@@ -693,14 +715,16 @@ def _build_action_functional_command(
         command.extend(["--total-byte-budget", str(args.total_byte_budget)])
     if args.lambda_rate is not None:
         command.extend(["--lambda-rate", str(args.lambda_rate)])
-    command.extend([
-        "--inverse-scorer-max-units",
-        str(args.inverse_scorer_max_units),
-        "--inverse-scorer-null-delta-epsilon",
-        str(args.inverse_scorer_null_delta_epsilon),
-        "--inverse-scorer-fragile-delta-threshold",
-        str(args.inverse_scorer_fragile_delta_threshold),
-    ])
+    command.extend(
+        [
+            "--inverse-scorer-max-units",
+            str(args.inverse_scorer_max_units),
+            "--inverse-scorer-null-delta-epsilon",
+            str(args.inverse_scorer_null_delta_epsilon),
+            "--inverse-scorer-fragile-delta-threshold",
+            str(args.inverse_scorer_fragile_delta_threshold),
+        ]
+    )
     if args.inverse_scorer_allow_native_mlx_window_objective:
         command.append("--inverse-scorer-allow-native-mlx-window-objective")
     return command
@@ -746,9 +770,7 @@ def _build_queue_command(
             validate_scheduler_storage_preflight_config(
                 proactive_cleanup_execute=True,
                 proactive_cleanup_action=args.proactive_cleanup_action,
-                proactive_cleanup_cold_store_roots=tuple(
-                    args.proactive_cleanup_cold_store_root
-                ),
+                proactive_cleanup_cold_store_roots=tuple(args.proactive_cleanup_cold_store_root),
             )
         except ValueError as exc:
             raise SystemExit(str(exc)) from exc
@@ -803,18 +825,27 @@ def _build_queue_command(
     if args.materializer_contexts is not None:
         command.extend(["--materializer-contexts", _display_path(_resolve(args.materializer_contexts))])
     if artifact_map is not None:
-        command.extend([
-            "--materializer-artifact-map",
-            _display_path(artifact_map),
-            "--materializer-contexts-out",
-            _display_path(run_dir / "materializer_contexts.json"),
-            "--materializer-context-default-output-root",
-            _display_path(
-                _resolve(args.materializer_context_default_output_root)
-                if args.materializer_context_default_output_root is not None
-                else run_dir / "materializer_outputs"
-            ),
-        ])
+        if args.materializer_context_default_output_root is not None:
+            default_context_output_root = _resolve(args.materializer_context_default_output_root)
+        elif args.include_storage_preflight and args.storage_expected_workload_root:
+            expected_workload_root = _resolve(args.storage_expected_workload_root)
+            default_context_output_root = (
+                run_dir / "materializer_outputs"
+                if _path_under_root(run_dir, expected_workload_root)
+                else expected_workload_root / "materializer_outputs"
+            )
+        else:
+            default_context_output_root = run_dir / "materializer_outputs"
+        command.extend(
+            [
+                "--materializer-artifact-map",
+                _display_path(artifact_map),
+                "--materializer-contexts-out",
+                _display_path(run_dir / "materializer_contexts.json"),
+                "--materializer-context-default-output-root",
+                _display_path(default_context_output_root),
+            ]
+        )
         if args.materializer_contexts_fail_if_blocked:
             command.append("--materializer-contexts-fail-if-blocked")
     if args.lane_id:
@@ -822,10 +853,12 @@ def _build_queue_command(
     if args.materializer_execution_limit is not None:
         command.extend(["--materializer-execution-limit", str(args.materializer_execution_limit)])
     if args.materializer_execution_timeout_seconds:
-        command.extend([
-            "--materializer-execution-timeout-seconds",
-            str(args.materializer_execution_timeout_seconds),
-        ])
+        command.extend(
+            [
+                "--materializer-execution-timeout-seconds",
+                str(args.materializer_execution_timeout_seconds),
+            ]
+        )
     command.extend(_parse_resource_concurrency(args.materializer_resource_concurrency))
     if args.overwrite_output:
         command.append("--overwrite-output")
@@ -839,18 +872,22 @@ def _build_queue_command(
         command.extend(["--materializer-scheduler-storage-expected-bytes", str(args.storage_expected_bytes)])
         command.extend(["--materializer-scheduler-proactive-cleanup-action", args.proactive_cleanup_action])
         command.extend(["--materializer-scheduler-proactive-cleanup-min-bytes", str(args.proactive_cleanup_min_bytes)])
-        command.extend([
-            "--materializer-scheduler-proactive-cleanup-cold-store-reserve-gb",
-            str(args.proactive_cleanup_cold_store_reserve_gb),
-        ])
+        command.extend(
+            [
+                "--materializer-scheduler-proactive-cleanup-cold-store-reserve-gb",
+                str(args.proactive_cleanup_cold_store_reserve_gb),
+            ]
+        )
         command.append("--materializer-scheduler-proactive-cleanup-execute")
         if args.storage_workload_subdir:
             command.extend(["--materializer-scheduler-storage-workload-subdir", args.storage_workload_subdir])
         if args.storage_expected_workload_root:
-            command.extend([
-                "--materializer-scheduler-storage-expected-workload-root",
-                args.storage_expected_workload_root,
-            ])
+            command.extend(
+                [
+                    "--materializer-scheduler-storage-expected-workload-root",
+                    args.storage_expected_workload_root,
+                ]
+            )
         for tier in args.storage_tier:
             command.extend(["--materializer-scheduler-storage-tier", tier])
         for root in args.proactive_cleanup_root:
@@ -884,8 +921,10 @@ def _runtime_policy_command(
     state_path: Path,
     run_dir: Path,
 ) -> tuple[Path, Path | None, list[str]]:
-    policy_output = _resolve(args.runtime_policy_output) if args.runtime_policy_output else (
-        run_dir / "scheduler_runtime_policy.json"
+    policy_output = (
+        _resolve(args.runtime_policy_output)
+        if args.runtime_policy_output
+        else (run_dir / "scheduler_runtime_policy.json")
     )
     applied_queue_output = (
         _resolve(args.runtime_policy_applied_queue_output)
@@ -945,6 +984,69 @@ def _inverse_scorer_auto_artifact_map_requested(args: argparse.Namespace) -> boo
     )
 
 
+def _archive_section_auto_artifact_map_requested(args: argparse.Namespace) -> bool:
+    return any(
+        (
+            args.archive_section_archive_path is not None,
+            args.archive_section_manifest is not None,
+            bool(args.archive_section_name),
+            args.archive_section_output_archive is not None,
+            args.archive_section_output_manifest is not None,
+            bool(args.archive_section_brotli_quality),
+            args.archive_section_runtime_consumption_proof is not None,
+            args.archive_section_min_free_bytes is not None,
+            args.archive_section_allow_size_regression,
+            args.archive_section_allow_overwrite,
+        )
+    )
+
+
+def _packet_member_auto_artifact_map_requested(args: argparse.Namespace) -> bool:
+    return any(
+        (
+            args.packet_member_archive_path is not None,
+            args.packet_member_manifest is not None,
+            bool(str(args.packet_member_name or "").strip()),
+            args.packet_member_output_archive is not None,
+            args.packet_member_output_manifest is not None,
+            bool(args.packet_member_zip_compression_method),
+            bool(args.packet_member_zip_compresslevel),
+            args.packet_member_runtime_consumption_proof is not None,
+            args.packet_member_min_free_bytes is not None,
+            args.packet_member_allow_size_regression,
+            args.packet_member_allow_overwrite,
+        )
+    )
+
+
+def _tensor_factorize_auto_artifact_map_requested(args: argparse.Namespace) -> bool:
+    return any(
+        (
+            args.tensor_factorize_archive_path is not None,
+            args.tensor_factorize_manifest is not None,
+            args.tensor_factorize_contract is not None,
+            args.tensor_factorize_rank is not None,
+            args.tensor_factorize_output_archive is not None,
+            args.tensor_factorize_output_manifest is not None,
+            args.tensor_factorize_runtime_consumption_proof is not None,
+            args.tensor_factorize_min_free_bytes is not None,
+            args.tensor_factorize_allow_size_regression,
+            args.tensor_factorize_allow_overwrite,
+        )
+    )
+
+
+def _auto_artifact_map_requested(args: argparse.Namespace) -> bool:
+    return any(
+        (
+            _inverse_scorer_auto_artifact_map_requested(args),
+            _archive_section_auto_artifact_map_requested(args),
+            _packet_member_auto_artifact_map_requested(args),
+            _tensor_factorize_auto_artifact_map_requested(args),
+        )
+    )
+
+
 def _positive_optional_int(value: int | None, *, flag: str) -> int | None:
     if value is None:
         return None
@@ -959,10 +1061,38 @@ def _path_value(path: Path | None) -> str | None:
     return _display_path(_resolve(path))
 
 
-def _build_generated_materializer_artifact_map_payload(
+def _add_path_context_value(context: dict[str, Any], key: str, path: Path | None) -> None:
+    value = _path_value(path)
+    if value is not None:
+        context[key] = value
+
+
+def _add_positive_int_context_value(
+    context: dict[str, Any],
+    key: str,
+    value: int | None,
+    *,
+    flag: str,
+) -> None:
+    parsed = _positive_optional_int(value, flag=flag)
+    if parsed is not None:
+        context[key] = parsed
+
+
+def _add_string_list_context_value(
+    context: dict[str, Any],
+    key: str,
+    values: Sequence[Any],
+) -> None:
+    parsed = [str(value).strip() for value in values if str(value).strip()]
+    if parsed:
+        context[key] = parsed
+
+
+def _build_inverse_scorer_artifact_context(
     args: argparse.Namespace,
     *,
-    action_functional_path: Path,
+    action_functional_path: Path | None,
 ) -> dict[str, Any]:
     template = _path_value(args.inverse_scorer_candidate_archive_template)
     raw_digest = str(args.inverse_scorer_raw_contest_video_digest or "").strip()
@@ -975,6 +1105,11 @@ def _build_generated_materializer_artifact_map_payload(
         raise SystemExit(
             "--inverse-scorer-raw-contest-video-digest is required to "
             "auto-generate inverse-scorer materializer contexts"
+        )
+    if action_functional_path is None:
+        raise SystemExit(
+            "--inverse-scorer-action-functional is required with --plan when "
+            "auto-generating inverse-scorer materializer contexts"
         )
 
     context: dict[str, Any] = {
@@ -1008,11 +1143,7 @@ def _build_generated_materializer_artifact_map_payload(
         if value is not None:
             context[key] = value
     if args.inverse_scorer_atom_id:
-        context["atom_ids"] = [
-            str(atom_id).strip()
-            for atom_id in args.inverse_scorer_atom_id
-            if str(atom_id).strip()
-        ]
+        context["atom_ids"] = [str(atom_id).strip() for atom_id in args.inverse_scorer_atom_id if str(atom_id).strip()]
     for key, value, flag in (
         ("selected_limit", args.inverse_scorer_selected_limit, "--inverse-scorer-selected-limit"),
         ("min_free_bytes", args.inverse_scorer_min_free_bytes, "--inverse-scorer-min-free-bytes"),
@@ -1036,11 +1167,176 @@ def _build_generated_materializer_artifact_map_payload(
     ):
         if enabled:
             context[key] = True
+    return context
+
+
+def _build_archive_section_artifact_context(args: argparse.Namespace) -> dict[str, Any]:
+    archive_path = _path_value(args.archive_section_archive_path)
+    section_manifest = _path_value(args.archive_section_manifest)
+    if archive_path is None:
+        raise SystemExit(
+            "--archive-section-archive-path is required to auto-generate archive-section materializer contexts"
+        )
+    if section_manifest is None:
+        raise SystemExit(
+            "--archive-section-manifest is required to auto-generate archive-section materializer contexts"
+        )
+    context: dict[str, Any] = {
+        "archive_path": archive_path,
+        "source_archive": archive_path,
+        "section_manifest": section_manifest,
+        **FALSE_AUTHORITY,
+    }
+    _add_path_context_value(context, "output_archive", args.archive_section_output_archive)
+    _add_path_context_value(context, "json_out", args.archive_section_output_manifest)
+    _add_path_context_value(
+        context,
+        "runtime_consumption_proof",
+        args.archive_section_runtime_consumption_proof,
+    )
+    _add_string_list_context_value(
+        context,
+        "target_sections",
+        args.archive_section_name,
+    )
+    _add_string_list_context_value(
+        context,
+        "brotli_quality",
+        args.archive_section_brotli_quality,
+    )
+    _add_positive_int_context_value(
+        context,
+        "min_free_bytes",
+        args.archive_section_min_free_bytes,
+        flag="--archive-section-min-free-bytes",
+    )
+    if args.archive_section_allow_size_regression:
+        context["allow_size_regression"] = True
+    if args.archive_section_allow_overwrite:
+        context["allow_overwrite"] = True
+    return context
+
+
+def _build_packet_member_artifact_context(args: argparse.Namespace) -> dict[str, Any]:
+    archive_path = _path_value(args.packet_member_archive_path)
+    if archive_path is None:
+        raise SystemExit(
+            "--packet-member-archive-path is required to auto-generate packet-member materializer contexts"
+        )
+    context: dict[str, Any] = {
+        "archive_path": archive_path,
+        "source_archive": archive_path,
+        **FALSE_AUTHORITY,
+    }
+    _add_path_context_value(context, "packet_member_manifest", args.packet_member_manifest)
+    member_name = str(args.packet_member_name or "").strip()
+    if member_name:
+        context["member_name"] = member_name
+    _add_path_context_value(context, "output_archive", args.packet_member_output_archive)
+    _add_path_context_value(context, "json_out", args.packet_member_output_manifest)
+    _add_path_context_value(
+        context,
+        "runtime_consumption_proof",
+        args.packet_member_runtime_consumption_proof,
+    )
+    _add_string_list_context_value(
+        context,
+        "zip_compression_method",
+        args.packet_member_zip_compression_method,
+    )
+    _add_string_list_context_value(
+        context,
+        "zip_compresslevel",
+        args.packet_member_zip_compresslevel,
+    )
+    _add_positive_int_context_value(
+        context,
+        "min_free_bytes",
+        args.packet_member_min_free_bytes,
+        flag="--packet-member-min-free-bytes",
+    )
+    if args.packet_member_allow_size_regression:
+        context["allow_size_regression"] = True
+    if args.packet_member_allow_overwrite:
+        context["allow_overwrite"] = True
+    return context
+
+
+def _build_tensor_factorize_artifact_context(args: argparse.Namespace) -> dict[str, Any]:
+    archive_path = _path_value(args.tensor_factorize_archive_path)
+    tensor_manifest = _path_value(args.tensor_factorize_manifest)
+    if archive_path is None:
+        raise SystemExit(
+            "--tensor-factorize-archive-path is required to auto-generate tensor-factorize materializer contexts"
+        )
+    if tensor_manifest is None:
+        raise SystemExit(
+            "--tensor-factorize-manifest is required to auto-generate tensor-factorize materializer contexts"
+        )
+    if args.tensor_factorize_contract is None and args.tensor_factorize_rank is None:
+        raise SystemExit(
+            "--tensor-factorize-contract or --tensor-factorize-rank is required "
+            "to auto-generate tensor-factorize materializer contexts"
+        )
+    context: dict[str, Any] = {
+        "archive_path": archive_path,
+        "source_archive": archive_path,
+        "tensor_manifest": tensor_manifest,
+        **FALSE_AUTHORITY,
+    }
+    _add_path_context_value(
+        context,
+        "factorization_contract",
+        args.tensor_factorize_contract,
+    )
+    _add_positive_int_context_value(
+        context,
+        "rank",
+        args.tensor_factorize_rank,
+        flag="--tensor-factorize-rank",
+    )
+    _add_path_context_value(context, "output_archive", args.tensor_factorize_output_archive)
+    _add_path_context_value(context, "json_out", args.tensor_factorize_output_manifest)
+    _add_path_context_value(
+        context,
+        "runtime_consumption_proof",
+        args.tensor_factorize_runtime_consumption_proof,
+    )
+    _add_positive_int_context_value(
+        context,
+        "min_free_bytes",
+        args.tensor_factorize_min_free_bytes,
+        flag="--tensor-factorize-min-free-bytes",
+    )
+    if args.tensor_factorize_allow_size_regression:
+        context["allow_size_regression"] = True
+    if args.tensor_factorize_allow_overwrite:
+        context["allow_overwrite"] = True
+    return context
+
+
+def _build_generated_materializer_artifact_map_payload(
+    args: argparse.Namespace,
+    *,
+    action_functional_path: Path | None,
+) -> dict[str, Any]:
+    artifacts: dict[str, Any] = {}
+    if _inverse_scorer_auto_artifact_map_requested(args):
+        artifacts[INVERSE_SCORER_CELL_TARGET_KIND] = _build_inverse_scorer_artifact_context(
+            args,
+            action_functional_path=action_functional_path,
+        )
+    if _archive_section_auto_artifact_map_requested(args):
+        artifacts[ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND] = _build_archive_section_artifact_context(args)
+    if _packet_member_auto_artifact_map_requested(args):
+        artifacts[PACKET_MEMBER_RECOMPRESS_TARGET_KIND] = _build_packet_member_artifact_context(args)
+    if _tensor_factorize_auto_artifact_map_requested(args):
+        artifacts[TENSOR_FACTORIZE_TARGET_KIND] = _build_tensor_factorize_artifact_context(args)
     return {
         "schema": "final_byte_artifact_map.generated.v1",
         "generated_by": "tools/run_byte_shaving_materializer_campaign.py",
         "generated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "artifacts": {INVERSE_SCORER_CELL_TARGET_KIND: context},
+        "artifacts": artifacts,
         **FALSE_AUTHORITY,
     }
 
@@ -1053,18 +1349,13 @@ def _write_generated_materializer_artifact_map(
 ) -> Path | None:
     if args.materializer_artifact_map is not None or args.materializer_contexts is not None:
         return None
-    if not _inverse_scorer_auto_artifact_map_requested(args):
+    if not _auto_artifact_map_requested(args):
         return None
     action_functional_path = (
         _resolve(args.inverse_scorer_action_functional)
         if args.inverse_scorer_action_functional is not None
         else generated_action_functional_path
     )
-    if action_functional_path is None:
-        raise SystemExit(
-            "--inverse-scorer-action-functional is required with --plan when "
-            "auto-generating inverse-scorer materializer contexts"
-        )
     output = run_dir / "materializer_artifact_map.json"
     _write_json(
         output,
@@ -1084,10 +1375,7 @@ def _build_staircase_artifacts(
     state_path: Path,
     queue: dict[str, Any],
 ) -> dict[str, Any]:
-    resource_pools = [
-        parse_resource_pool_spec(spec)
-        for spec in args.staircase_resource_pool
-    ] or None
+    resource_pools = [parse_resource_pool_spec(spec) for spec in args.staircase_resource_pool] or None
     status_map = experiment_queue_status_map(
         queue_path=execution_queue,
         repo_root=REPO_ROOT,
@@ -1144,12 +1432,7 @@ def _ssh_executor_command(
         _display_path(state_path),
         "--output",
         _display_path(
-            run_dir
-            / (
-                "staircase_ssh_executor_execute.json"
-                if execute
-                else "staircase_ssh_executor_dry_run.json"
-            )
+            run_dir / ("staircase_ssh_executor_execute.json" if execute else "staircase_ssh_executor_dry_run.json")
         ),
     ]
     if execute:
@@ -1162,24 +1445,30 @@ def _ssh_executor_command(
     if args.staircase_ssh_allow_dirty_remote_git:
         command.append("--allow-dirty-remote-git")
     if args.staircase_ssh_dirty_remote_git_rationale:
-        command.extend([
-            "--dirty-remote-git-rationale",
-            str(args.staircase_ssh_dirty_remote_git_rationale),
-        ])
+        command.extend(
+            [
+                "--dirty-remote-git-rationale",
+                str(args.staircase_ssh_dirty_remote_git_rationale),
+            ]
+        )
     command.extend(_parse_remote_repo_roots(args.staircase_ssh_remote_repo_root))
     if execute or args.staircase_ssh_require_artifact_mobility:
         command.append("--require-artifact-mobility")
     command.extend(_parse_artifact_path_maps(args.staircase_ssh_artifact_path_map))
     if args.staircase_ssh_artifact_shared_path_rationale:
-        command.extend([
-            "--artifact-shared-path-rationale",
-            str(args.staircase_ssh_artifact_shared_path_rationale),
-        ])
+        command.extend(
+            [
+                "--artifact-shared-path-rationale",
+                str(args.staircase_ssh_artifact_shared_path_rationale),
+            ]
+        )
     command.extend(["--rsync-binary", str(args.staircase_ssh_rsync_binary)])
-    command.extend([
-        "--artifact-pull-timeout-seconds",
-        str(args.staircase_ssh_artifact_pull_timeout_seconds),
-    ])
+    command.extend(
+        [
+            "--artifact-pull-timeout-seconds",
+            str(args.staircase_ssh_artifact_pull_timeout_seconds),
+        ]
+    )
     return command
 
 
@@ -1214,19 +1503,15 @@ def main(argv: list[str] | None = None) -> int:
         )
     if args.plan is not None and action_source_count:
         raise SystemExit(
-            "--plan is mutually exclusive with high-level action sources; "
-            "start from one authority surface per run"
+            "--plan is mutually exclusive with high-level action sources; start from one authority surface per run"
         )
     if args.materializer_contexts is not None and args.materializer_artifact_map is not None:
-        raise SystemExit(
-            "--materializer-contexts and --materializer-artifact-map are mutually exclusive"
-        )
-    if _inverse_scorer_auto_artifact_map_requested(args) and (
+        raise SystemExit("--materializer-contexts and --materializer-artifact-map are mutually exclusive")
+    if _auto_artifact_map_requested(args) and (
         args.materializer_contexts is not None or args.materializer_artifact_map is not None
     ):
         raise SystemExit(
-            "inverse-scorer auto artifact-map flags cannot be combined with "
-            "--materializer-contexts or --materializer-artifact-map"
+            "auto artifact-map flags cannot be combined with --materializer-contexts or --materializer-artifact-map"
         )
     if args.candidate_limit < 1:
         raise SystemExit("--candidate-limit must be >= 1")
@@ -1241,9 +1526,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.staircase_ssh_max_steps < 1:
         raise SystemExit("--staircase-ssh-max-steps must be >= 1")
     if args.staircase_ssh_execute and args.execute:
-        raise SystemExit(
-            "--staircase-ssh-execute and top-level --execute cannot target the same queue run"
-        )
+        raise SystemExit("--staircase-ssh-execute and top-level --execute cannot target the same queue run")
     if args.staircase_ssh_artifact_pull_timeout_seconds < 1:
         raise SystemExit("--staircase-ssh-artifact-pull-timeout-seconds must be >= 1")
     if args.runtime_policy_timeout_multiplier <= 0:
@@ -1253,26 +1536,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.runtime_policy_max_timeout_seconds < 1:
         raise SystemExit("--runtime-policy-max-timeout-seconds must be positive")
     if args.runtime_policy_min_timeout_seconds > args.runtime_policy_max_timeout_seconds:
-        raise SystemExit(
-            "--runtime-policy-min-timeout-seconds must be <= "
-            "--runtime-policy-max-timeout-seconds"
-        )
+        raise SystemExit("--runtime-policy-min-timeout-seconds must be <= --runtime-policy-max-timeout-seconds")
     if args.runtime_policy_cpu_count is not None and args.runtime_policy_cpu_count < 1:
         raise SystemExit("--runtime-policy-cpu-count must be >= 1")
-    if args.apply_runtime_policy and args.runtime_policy_no_apply_concurrency and not (
-        args.runtime_policy_apply_timeouts
+    if (
+        args.apply_runtime_policy
+        and args.runtime_policy_no_apply_concurrency
+        and not (args.runtime_policy_apply_timeouts)
     ):
-        raise SystemExit(
-            "--apply-runtime-policy would apply neither concurrency nor timeouts"
-        )
+        raise SystemExit("--apply-runtime-policy would apply neither concurrency nor timeouts")
     if args.staircase_ssh_dirty_remote_git_rationale and not args.staircase_ssh_allow_dirty_remote_git:
-        raise SystemExit(
-            "--staircase-ssh-dirty-remote-git-rationale requires "
-            "--staircase-ssh-allow-dirty-remote-git"
-        )
+        raise SystemExit("--staircase-ssh-dirty-remote-git-rationale requires --staircase-ssh-allow-dirty-remote-git")
     if args.staircase_ssh_execute and not (
-        args.staircase_ssh_artifact_path_map
-        or args.staircase_ssh_artifact_shared_path_rationale
+        args.staircase_ssh_artifact_path_map or args.staircase_ssh_artifact_shared_path_rationale
     ):
         raise SystemExit(
             "--staircase-ssh-execute requires --staircase-ssh-artifact-path-map "
@@ -1284,12 +1560,11 @@ def main(argv: list[str] | None = None) -> int:
             "--staircase-ssh-artifact-shared-path-rationale are mutually exclusive"
         )
     if args.execute and args.queue_state is not None and not args.queue_state_rationale:
-        raise SystemExit(
-            "--queue-state requires --queue-state-rationale when executing "
-            "the generated queue"
-        )
-    run_dir = _resolve(args.run_dir) if args.run_dir is not None else (
-        REPO_ROOT / ".omx" / "research" / f"byte_shaving_materializer_campaign_{_utc_stamp()}"
+        raise SystemExit("--queue-state requires --queue-state-rationale when executing the generated queue")
+    run_dir = (
+        _resolve(args.run_dir)
+        if args.run_dir is not None
+        else (REPO_ROOT / ".omx" / "research" / f"byte_shaving_materializer_campaign_{_utc_stamp()}")
     )
     run_dir.mkdir(parents=True, exist_ok=True)
     execution_queue = run_dir / "materializer_execution_queue.json"
@@ -1359,9 +1634,7 @@ def main(argv: list[str] | None = None) -> int:
     commands.append(build_result)
     queue = load_queue_definition(execution_queue)
     state_path = (
-        _resolve(args.queue_state)
-        if args.queue_state is not None
-        else default_state_path(REPO_ROOT, queue["queue_id"])
+        _resolve(args.queue_state) if args.queue_state is not None else default_state_path(REPO_ROOT, queue["queue_id"])
     )
 
     for command in (
@@ -1519,14 +1792,10 @@ def main(argv: list[str] | None = None) -> int:
         "run_config": run_config_record,
         "plan": _display_path(plan_path),
         "generated_action_functional_path": (
-            None
-            if generated_action_functional_path is None
-            else _display_path(generated_action_functional_path)
+            None if generated_action_functional_path is None else _display_path(generated_action_functional_path)
         ),
         "generated_campaign_plan_path": (
-            None
-            if generated_campaign_plan_path is None
-            else _display_path(generated_campaign_plan_path)
+            None if generated_campaign_plan_path is None else _display_path(generated_campaign_plan_path)
         ),
         "generated_mlx_acquisition_batch_paths": [
             _display_path(path) for path in generated_mlx_acquisition_batch_paths
@@ -1540,14 +1809,10 @@ def main(argv: list[str] | None = None) -> int:
         "queue_path": _display_path(execution_queue),
         "state_path": _display_path(state_path),
         "runtime_policy_path": (
-            None
-            if runtime_policy_output_path is None
-            else _display_path(runtime_policy_output_path)
+            None if runtime_policy_output_path is None else _display_path(runtime_policy_output_path)
         ),
         "runtime_policy_applied_queue_path": (
-            None
-            if runtime_policy_applied_queue_path is None
-            else _display_path(runtime_policy_applied_queue_path)
+            None if runtime_policy_applied_queue_path is None else _display_path(runtime_policy_applied_queue_path)
         ),
         "execute": bool(args.execute),
         "staircase_ssh_execute": bool(args.staircase_ssh_execute),

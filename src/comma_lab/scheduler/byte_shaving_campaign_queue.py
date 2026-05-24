@@ -7,6 +7,7 @@ resolution happens through ``byte_shaving_materializer_registry`` so DQS1
 archive, scorer-response, and future substrate operations fail closed with
 typed missing-materializer blockers.
 """
+
 from __future__ import annotations
 
 import re
@@ -17,6 +18,10 @@ from math import isfinite
 from pathlib import Path
 from typing import Any
 
+from tac.hnerv_lowlevel_packer import (
+    HnervLowlevelPackError,
+    read_strict_single_member_zip,
+)
 from tac.optimization.byte_range_entropy_recode_chain import (
     CHAIN_MANIFEST_NAME,
     CHAIN_SCHEMA,
@@ -77,9 +82,7 @@ MATERIALIZATION_SCHEMA = "byte_shaving_campaign_materialization.v1"
 MATERIALIZER_BACKLOG_SCHEMA = "byte_shaving_materializer_backlog.v1"
 MATERIALIZER_CONTEXTS_SCHEMA = "byte_shaving_materializer_contexts.v1"
 MATERIALIZER_WORK_QUEUE_SCHEMA = "byte_shaving_materializer_work_queue.v1"
-MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA = (
-    "byte_shaving_materializer_execution_experiment_metadata.v1"
-)
+MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA = "byte_shaving_materializer_execution_experiment_metadata.v1"
 MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID = "materializer_scheduler_preflight"
 ACTION_SUMMARY_SCHEMA = "cross_family_candidate_portfolio_action_summary.v1"
 PORTFOLIO_SCHEMA = "byte_shaving_campaign_dqs1_operator_portfolio.v1"
@@ -98,9 +101,7 @@ MATERIALIZER_EXECUTION_STEP_ID = "materialize_local_proof_chain"
 MATERIALIZER_HARVEST_STEP_ID = "harvest_materializer_chains"
 MATERIALIZER_DISPATCH_PLAN_STEP_ID = "build_exact_eval_dispatch_plan"
 MATERIALIZER_HARVEST_REPORT_SCHEMA = "materializer_chain_harvest_report.v1"
-MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA = (
-    "materializer_chain_exact_readiness_bridge_report.v1"
-)
+MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA = "materializer_chain_exact_readiness_bridge_report.v1"
 MATERIALIZER_EXACT_EVAL_DISPATCH_PLAN_SCHEMA = "materializer_exact_eval_dispatch_plan.v1"
 OPTIMIZER_CANDIDATE_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
 HARVESTABLE_MATERIALIZER_MANIFEST_SCHEMAS = frozenset(
@@ -209,9 +210,7 @@ def _validate_pair_indices(values: Sequence[int], *, label: str) -> tuple[int, .
         raise ExperimentQueueError(f"{label}: pair indices must be sorted ascending")
     bad = [pair for pair in pairs if not 0 <= pair < FEC6_PAIR_COUNT]
     if bad:
-        raise ExperimentQueueError(
-            f"{label}: pair indices out of range 0..{FEC6_PAIR_COUNT - 1}: {bad}"
-        )
+        raise ExperimentQueueError(f"{label}: pair indices out of range 0..{FEC6_PAIR_COUNT - 1}: {bad}")
     return pairs
 
 
@@ -265,12 +264,7 @@ def _candidate_id(kind: str, selection_id: str, dropped_pairs: Sequence[int]) ->
 
 
 def _selection_id(kind: str, row: Mapping[str, Any]) -> str:
-    value = (
-        row.get("operation_set_id")
-        or row.get("combo_id")
-        or row.get("sweep_id")
-        or row.get("selection_id")
-    )
+    value = row.get("operation_set_id") or row.get("combo_id") or row.get("sweep_id") or row.get("selection_id")
     if isinstance(value, str) and value.strip():
         return value
     return kind
@@ -278,19 +272,11 @@ def _selection_id(kind: str, row: Mapping[str, Any]) -> str:
 
 def _iter_plan_rows(payload: Mapping[str, Any]) -> list[tuple[str, Mapping[str, Any]]]:
     rows: list[tuple[str, Mapping[str, Any]]] = []
-    operation_sets = [
-        row
-        for row in _as_list(payload.get("operation_set_ladder"))
-        if isinstance(row, Mapping)
-    ]
+    operation_sets = [row for row in _as_list(payload.get("operation_set_ladder")) if isinstance(row, Mapping)]
     if operation_sets:
         rows.extend(("operation_set", row) for row in operation_sets)
     else:
-        rows.extend(
-            ("combo", row)
-            for row in _as_list(payload.get("combination_ladder"))
-            if isinstance(row, Mapping)
-        )
+        rows.extend(("combo", row) for row in _as_list(payload.get("combination_ladder")) if isinstance(row, Mapping))
     for kind, key in (("prefix", "sweep_ladder"),):
         for row in _as_list(payload.get(key)):
             if isinstance(row, Mapping):
@@ -309,11 +295,7 @@ def _unit_blockers_by_id(source_units: Sequence[Mapping[str, Any]]) -> dict[str,
 
 
 def _units_by_id(source_units: Sequence[Mapping[str, Any]]) -> dict[str, Mapping[str, Any]]:
-    return {
-        str(unit.get("unit_id") or ""): unit
-        for unit in source_units
-        if str(unit.get("unit_id") or "")
-    }
+    return {str(unit.get("unit_id") or ""): unit for unit in source_units if str(unit.get("unit_id") or "")}
 
 
 def _packet_ir_operation_set_for_row(
@@ -345,9 +327,7 @@ def _packet_ir_operation_set_blockers(
         blockers.append("operation_set_packet_ir_schema_mismatch")
     if str(packet_ir.get("source_operation_set_id") or "") != operation_set_id:
         blockers.append("operation_set_packet_ir_source_id_mismatch")
-    if packet_ir.get("chosen_operation_sequence_sha256") != row.get(
-        "chosen_operation_sequence_sha256"
-    ):
+    if packet_ir.get("chosen_operation_sequence_sha256") != row.get("chosen_operation_sequence_sha256"):
         blockers.append("operation_set_packet_ir_sequence_hash_mismatch")
     if packet_ir.get("chosen_operation_sequence_is_permutation") is not True:
         blockers.append("operation_set_packet_ir_sequence_not_permutation")
@@ -368,24 +348,12 @@ def _packet_ir_operation_set_blockers(
         ):
             if compiler_contract.get(key) != contract.get(key):
                 blockers.append(f"operation_set_packet_ir_compiler_contract_mismatch:{key}")
-        if _as_list(compiler_contract.get("required_order")) != list(
-            contract["required_order"]
-        ):
-            blockers.append(
-                "operation_set_packet_ir_compiler_contract_mismatch:required_order"
-            )
-        if _as_list(compiler_contract.get("required_proofs")) != list(
-            contract["required_proofs"]
-        ):
-            blockers.append(
-                "operation_set_packet_ir_compiler_contract_mismatch:required_proofs"
-            )
+        if _as_list(compiler_contract.get("required_order")) != list(contract["required_order"]):
+            blockers.append("operation_set_packet_ir_compiler_contract_mismatch:required_order")
+        if _as_list(compiler_contract.get("required_proofs")) != list(contract["required_proofs"]):
+            blockers.append("operation_set_packet_ir_compiler_contract_mismatch:required_proofs")
 
-    operations = [
-        operation
-        for operation in _as_list(packet_ir.get("operations"))
-        if isinstance(operation, Mapping)
-    ]
+    operations = [operation for operation in _as_list(packet_ir.get("operations")) if isinstance(operation, Mapping)]
     if not operations:
         blockers.append("operation_set_packet_ir_operations_missing")
     try:
@@ -487,17 +455,11 @@ def _receiver_contract_status(resolution: Mapping[str, Any], gap_class: str) -> 
 
 
 def _packet_ir_compiled_row(packet_ir: Mapping[str, Any]) -> dict[str, Any]:
-    operations = [
-        operation
-        for operation in _as_list(packet_ir.get("operations"))
-        if isinstance(operation, Mapping)
-    ]
+    operations = [operation for operation in _as_list(packet_ir.get("operations")) if isinstance(operation, Mapping)]
     if not operations:
         raise ExperimentQueueError("packet_ir_operation_set operations[] missing")
     if packet_ir.get("chosen_operation_sequence_is_permutation") is False:
-        raise ExperimentQueueError(
-            "packet_ir_operation_set chosen sequence is not a permutation"
-        )
+        raise ExperimentQueueError("packet_ir_operation_set chosen sequence is not a permutation")
     materializer_resolutions: list[dict[str, Any]] = []
     source_units: list[dict[str, Any]] = []
     known_target_kinds = known_materializer_target_kinds()
@@ -512,9 +474,7 @@ def _packet_ir_compiled_row(packet_ir: Mapping[str, Any]) -> dict[str, Any]:
         resolution = resolve_materializer(operation=operation, unit=unit)
         packet_ir_context_blockers = (
             []
-            if resolution.target_kind == DQS1_PAIRSET_TARGET_KIND
-            and resolution.executable
-            and not resolution.blockers
+            if resolution.target_kind == DQS1_PAIRSET_TARGET_KIND and resolution.executable and not resolution.blockers
             else ["packetir_operation_set_requires_materializer_contexts"]
         )
         resolution_blockers = ordered_unique(
@@ -525,22 +485,15 @@ def _packet_ir_compiled_row(packet_ir: Mapping[str, Any]) -> dict[str, Any]:
                     for item in _as_list(operation.get("blockers"))
                 ],
                 *(
-                    [
-                        "non_dqs1_target_requires_materializer_work_queue:"
-                        f"{resolution.target_kind}"
-                    ]
+                    [f"non_dqs1_target_requires_materializer_work_queue:{resolution.target_kind}"]
                     if resolution.target_kind
                     and resolution.target_kind != DQS1_PAIRSET_TARGET_KIND
                     and resolution.executable
                     else []
                 ),
                 *(
-                    [
-                        "unsupported_materializer_target:"
-                        f"{resolution.target_kind}"
-                    ]
-                    if resolution.target_kind
-                    and resolution.target_kind not in known_target_kinds
+                    [f"unsupported_materializer_target:{resolution.target_kind}"]
+                    if resolution.target_kind and resolution.target_kind not in known_target_kinds
                     else []
                 ),
                 *packet_ir_context_blockers,
@@ -618,9 +571,7 @@ def lower_packetir_operation_set_to_backlog_rows(
     for row in rows:
         row["source_packet_ir_schema"] = packet_ir.get("schema")
         row["source_packet_ir_operation_set_id"] = packet_ir.get("operation_set_id")
-        row["source_packet_ir_source_operation_set_id"] = packet_ir.get(
-            "source_operation_set_id"
-        )
+        row["source_packet_ir_source_operation_set_id"] = packet_ir.get("source_operation_set_id")
         if source_backlog_row is not None:
             row["source_backlog_key"] = source_backlog_row.get("backlog_key")
         row.update(FALSE_AUTHORITY)
@@ -666,9 +617,7 @@ def _merge_packet_ir_materializer_backlog_rows(
         if current is None:
             current = dict(packet_row)
             rows_by_key[key] = current
-        current["packet_ir_lowered_row_count"] = int(
-            current.get("packet_ir_lowered_row_count") or 0
-        ) + 1
+        current["packet_ir_lowered_row_count"] = int(current.get("packet_ir_lowered_row_count") or 0) + 1
         current["source_packet_ir_schemas"] = ordered_unique(
             [
                 *_as_list(current.get("source_packet_ir_schemas")),
@@ -699,9 +648,7 @@ def _merge_packet_ir_materializer_backlog_rows(
                 *_as_list(packet_row.get("source_selection_ids")),
             ]
         )
-        packet_blocker_counts = Counter(
-            _counter_dict(current.get("packet_ir_blocker_counts"))
-        )
+        packet_blocker_counts = Counter(_counter_dict(current.get("packet_ir_blocker_counts")))
         packet_blocker_counts.update(_counter_dict(packet_row.get("blocker_counts")))
         current["packet_ir_blocker_counts"] = dict(sorted(packet_blocker_counts.items()))
         current.update(FALSE_AUTHORITY)
@@ -756,21 +703,15 @@ def build_materializer_backlog(compiled_rows: Sequence[Mapping[str, Any]]) -> di
         row_saved_bytes = _finite_int(row.get("candidate_saved_bytes")) or 0
         row_expected_gain = _finite_float(row.get("expected_score_gain")) or 0.0
         expected_delta = _finite_float(row.get("expected_delta_score"))
-        source_units = [
-            unit for unit in _as_list(row.get("source_units")) if isinstance(unit, Mapping)
-        ]
+        source_units = [unit for unit in _as_list(row.get("source_units")) if isinstance(unit, Mapping)]
         unit_blockers = _unit_blockers_by_id(source_units)
         source_units_by_id = _units_by_id(source_units)
-        resolutions = [
-            item for item in _as_list(row.get("materializer_resolutions")) if isinstance(item, Mapping)
-        ]
+        resolutions = [item for item in _as_list(row.get("materializer_resolutions")) if isinstance(item, Mapping)]
         gain_share = row_expected_gain / float(max(1, len(resolutions)))
         saved_share = row_saved_bytes // max(1, len(resolutions))
         for resolution in resolutions:
             unit_id = str(resolution.get("unit_id") or "")
-            unit_saved_bytes = _finite_int(
-                source_units_by_id.get(unit_id, {}).get("candidate_saved_bytes")
-            )
+            unit_saved_bytes = _finite_int(source_units_by_id.get(unit_id, {}).get("candidate_saved_bytes"))
             saved_bytes = unit_saved_bytes if unit_saved_bytes is not None else saved_share
             resolution_blockers = ordered_unique(
                 [
@@ -802,12 +743,8 @@ def build_materializer_backlog(compiled_rows: Sequence[Mapping[str, Any]]) -> di
                     "receiver_contract_id": resolution.get("receiver_contract_id"),
                     "receiver_contract_kind": resolution.get("receiver_contract_kind"),
                     "receiver_contract_status": receiver_contract_status,
-                    "cooperative_receiver_required": bool(
-                        resolution.get("cooperative_receiver_required")
-                    ),
-                    "materialization_resource_kind": resolution.get(
-                        "materialization_resource_kind"
-                    ),
+                    "cooperative_receiver_required": bool(resolution.get("cooperative_receiver_required")),
+                    "materialization_resource_kind": resolution.get("materialization_resource_kind"),
                     "suggested_materializer_count": len(suggested_materializers),
                     "suggested_materializers": suggested_materializers,
                     "unit_kind": resolution.get("unit_kind"),
@@ -830,9 +767,7 @@ def build_materializer_backlog(compiled_rows: Sequence[Mapping[str, Any]]) -> di
                 rows[key] = current
                 seen_selection_by_key[key] = set()
                 seen_unit_by_key[key] = set()
-            current["blocked_resolution_count"] = (
-                int(current["blocked_resolution_count"]) + 1
-            )
+            current["blocked_resolution_count"] = int(current["blocked_resolution_count"]) + 1
             current["selected_operation_count"] = int(current["selected_operation_count"]) + 1
             current["candidate_saved_bytes_sum"] = int(current["candidate_saved_bytes_sum"]) + saved_bytes
             current["expected_score_gain_sum"] = float(current["expected_score_gain_sum"]) + gain_share
@@ -909,29 +844,17 @@ def summarize_materializer_backlog(backlog: Mapping[str, Any], *, limit: int = 8
                     "receiver_contract_id": row.get("receiver_contract_id"),
                     "receiver_contract_kind": row.get("receiver_contract_kind"),
                     "receiver_contract_status": row.get("receiver_contract_status"),
-                    "cooperative_receiver_required": row.get(
-                        "cooperative_receiver_required"
-                    ),
-                    "materialization_resource_kind": row.get(
-                        "materialization_resource_kind"
-                    ),
-                    "suggested_materializer_count": row.get(
-                        "suggested_materializer_count"
-                    ),
+                    "cooperative_receiver_required": row.get("cooperative_receiver_required"),
+                    "materialization_resource_kind": row.get("materialization_resource_kind"),
+                    "suggested_materializer_count": row.get("suggested_materializer_count"),
                     "suggested_materializers": row.get("suggested_materializers"),
                     "blocked_row_count": row.get("blocked_row_count"),
                     "blocked_resolution_count": row.get("blocked_resolution_count"),
                     "selected_operation_count": row.get("selected_operation_count"),
                     "affected_unit_count": row.get("affected_unit_count"),
-                    "packet_ir_lowered_row_count": row.get(
-                        "packet_ir_lowered_row_count"
-                    ),
-                    "source_packet_ir_operation_set_ids": row.get(
-                        "source_packet_ir_operation_set_ids"
-                    ),
-                    "source_packet_ir_source_operation_set_ids": row.get(
-                        "source_packet_ir_source_operation_set_ids"
-                    ),
+                    "packet_ir_lowered_row_count": row.get("packet_ir_lowered_row_count"),
+                    "source_packet_ir_operation_set_ids": row.get("source_packet_ir_operation_set_ids"),
+                    "source_packet_ir_source_operation_set_ids": row.get("source_packet_ir_source_operation_set_ids"),
                     "packet_ir_blocker_counts": row.get("packet_ir_blocker_counts"),
                     "candidate_saved_bytes_sum": row.get("candidate_saved_bytes_sum"),
                     "expected_score_gain_sum": row.get("expected_score_gain_sum"),
@@ -951,9 +874,7 @@ def _materializer_work_id(backlog_key: str) -> str:
 
 
 def _first_suggested_materializer(row: Mapping[str, Any]) -> Mapping[str, Any]:
-    suggestions = [
-        item for item in _as_list(row.get("suggested_materializers")) if isinstance(item, Mapping)
-    ]
+    suggestions = [item for item in _as_list(row.get("suggested_materializers")) if isinstance(item, Mapping)]
     return suggestions[0] if suggestions else {}
 
 
@@ -1112,9 +1033,7 @@ def materializer_contexts_from_payload(
             raise ExperimentQueueError(f"materializer context row {index} must be an object")
         context = row.get("context")
         if not isinstance(context, Mapping):
-            raise ExperimentQueueError(
-                f"materializer context row {index} must include object field 'context'"
-            )
+            raise ExperimentQueueError(f"materializer context row {index} must include object field 'context'")
         try:
             require_no_truthy_authority_fields(
                 context,
@@ -1124,9 +1043,7 @@ def materializer_contexts_from_payload(
             raise ExperimentQueueError(str(exc)) from exc
         keys = _context_keys_from_row(row)
         if not keys:
-            raise ExperimentQueueError(
-                f"materializer context row {index} must declare at least one key"
-            )
+            raise ExperimentQueueError(f"materializer context row {index} must declare at least one key")
         for key in keys:
             contexts[key] = dict(context)
 
@@ -1204,20 +1121,14 @@ def _inverse_scorer_action_functional_command(
         context,
         "byte_shaving_signal_surface",
     )
-    byte_shaving_surfaces.extend(
-        _path_list_context_value(context, "byte_shaving_signal_surfaces")
-    )
+    byte_shaving_surfaces.extend(_path_list_context_value(context, "byte_shaving_signal_surfaces"))
     byte_shaving_plans = _path_list_context_value(
         context,
         "byte_shaving_campaign_plan",
     )
-    byte_shaving_plans.extend(
-        _path_list_context_value(context, "byte_shaving_campaign_plans")
-    )
+    byte_shaving_plans.extend(_path_list_context_value(context, "byte_shaving_campaign_plans"))
     if not scorer_responses and not inverse_surfaces and not byte_shaving_surfaces and not byte_shaving_plans:
-        blockers.append(
-            "materializer_context_missing:inverse_action_source_surface"
-        )
+        blockers.append("materializer_context_missing:inverse_action_source_surface")
     if blockers:
         return [], blockers, {}
 
@@ -1297,21 +1208,29 @@ def _inverse_scorer_action_functional_command(
     md_out = _path_context_value(context, "md_out")
     if md_out is not None:
         telemetry_paths.append(md_out)
-    return command, [], {
-        "artifact_paths": telemetry_paths,
-        "input_artifact_paths": input_paths,
-        "pullback_artifact_paths": telemetry_paths,
-        "include_postcondition_paths": True,
-    }
+    return (
+        command,
+        [],
+        {
+            "artifact_paths": telemetry_paths,
+            "input_artifact_paths": input_paths,
+            "pullback_artifact_paths": telemetry_paths,
+            "include_postcondition_paths": True,
+        },
+    )
 
 
 def _inverse_scorer_cell_candidate_command(
     context: Mapping[str, Any],
+    *,
+    repo_root: Path,
 ) -> tuple[list[str], list[str], dict[str, Any]]:
     blockers: list[str] = []
     template = _path_context_value(context, "candidate_archive_template")
     if template is None:
         blockers.append("materializer_context_missing:candidate_archive_template")
+    else:
+        blockers.extend(_strict_single_member_zip_blockers(template, repo=repo_root))
     action_functional = _path_context_value(context, "inverse_action_functional")
     if action_functional is None:
         blockers.append("materializer_context_missing:inverse_action_functional")
@@ -1333,27 +1252,18 @@ def _inverse_scorer_cell_candidate_command(
         "candidate_inflate_output_dir",
     )
     inflate_runtime_dir = _path_context_value(context, "inflate_runtime_dir")
-    has_precomputed_parity_context = (
-        source_inflate_output_dir is not None
-        and candidate_inflate_output_dir is not None
+    has_precomputed_parity_context = source_inflate_output_dir is not None and candidate_inflate_output_dir is not None
+    has_partial_precomputed_parity_context = (source_inflate_output_dir is None) != (
+        candidate_inflate_output_dir is None
     )
-    has_partial_precomputed_parity_context = (
-        source_inflate_output_dir is None
-    ) != (candidate_inflate_output_dir is None)
     has_runtime_parity_context = inflate_runtime_dir is not None
-    exact_chain_requires_inflate_parity = (
-        output_dir is not None and context.get("descriptor_probe_only") is not True
-    )
-    explicit_fail_if_parity_blocked = (
-        context.get("fail_if_inflate_parity_blocked") is True
-    )
+    exact_chain_requires_inflate_parity = output_dir is not None and context.get("descriptor_probe_only") is not True
+    explicit_fail_if_parity_blocked = context.get("fail_if_inflate_parity_blocked") is True
     if output_dir is not None and has_partial_precomputed_parity_context:
-        blockers.append(
-            "inverse_scorer_cell_inflate_parity_requires_source_and_candidate_output_dirs"
-        )
-    if (
-        exact_chain_requires_inflate_parity or explicit_fail_if_parity_blocked
-    ) and not (has_precomputed_parity_context or has_runtime_parity_context):
+        blockers.append("inverse_scorer_cell_inflate_parity_requires_source_and_candidate_output_dirs")
+    if (exact_chain_requires_inflate_parity or explicit_fail_if_parity_blocked) and not (
+        has_precomputed_parity_context or has_runtime_parity_context
+    ):
         blockers.append("inverse_scorer_cell_exact_chain_requires_inflate_parity_context")
     if blockers:
         return [], blockers, {}
@@ -1449,28 +1359,51 @@ def _inverse_scorer_cell_candidate_command(
         ):
             if optional_path is not None:
                 artifact_paths.append(optional_path)
-        return command, [], {
-            "artifact_paths": artifact_paths,
+        return (
+            command,
+            [],
+            {
+                "artifact_paths": artifact_paths,
+                "input_artifact_paths": input_paths,
+                "pullback_artifact_paths": [output_dir],
+                "pullback_recursive": True,
+                "pullback_max_recursive_entries": 512,
+                "recursive": True,
+                "max_recursive_entries": 512,
+                "include_postcondition_paths": True,
+                "parity_probe_required": (
+                    exact_chain_requires_inflate_parity
+                    or explicit_fail_if_parity_blocked
+                    or has_precomputed_parity_context
+                    or has_runtime_parity_context
+                ),
+            },
+        )
+    return (
+        command,
+        [],
+        {
+            "artifact_paths": [output_archive, manifest_out],
             "input_artifact_paths": input_paths,
-            "pullback_artifact_paths": [output_dir],
-            "pullback_recursive": True,
-            "pullback_max_recursive_entries": 512,
-            "recursive": True,
-            "max_recursive_entries": 512,
+            "pullback_artifact_paths": [output_archive, manifest_out],
             "include_postcondition_paths": True,
-            "parity_probe_required": (
-                exact_chain_requires_inflate_parity
-                or explicit_fail_if_parity_blocked
-                or has_precomputed_parity_context
-                or has_runtime_parity_context
-            ),
-        }
-    return command, [], {
-        "artifact_paths": [output_archive, manifest_out],
-        "input_artifact_paths": input_paths,
-        "pullback_artifact_paths": [output_archive, manifest_out],
-        "include_postcondition_paths": True,
-    }
+        },
+    )
+
+
+def _strict_single_member_zip_blockers(path: str, *, repo: Path) -> list[str]:
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        candidate = repo / candidate
+    if not candidate.exists():
+        return ["candidate_archive_template_missing"]
+    if candidate.is_symlink():
+        return ["candidate_archive_template_is_symlink"]
+    try:
+        read_strict_single_member_zip(candidate)
+    except (HnervLowlevelPackError, OSError) as exc:
+        return [f"candidate_archive_template_invalid_strict_single_member_zip:{exc}"]
+    return []
 
 
 def _family_agnostic_materializer_command(
@@ -1610,20 +1543,24 @@ def _family_agnostic_materializer_command(
         if rank is not None:
             command.extend(["--rank", str(rank)])
 
-    return command, [], {
-        "artifact_paths": [output_archive, output_manifest],
-        "input_artifact_paths": ordered_unique(input_paths),
-        "pullback_artifact_paths": [output_archive, output_manifest],
-        "include_postcondition_paths": True,
-        "family_agnostic_materializer_contract": {
-            "schema": "family_agnostic_materializer_command_contract.v1",
-            "target_kind": target_kind,
-            "score_claim": False,
-            "promotion_eligible": False,
-            "rank_or_kill_eligible": False,
-            "ready_for_exact_eval_dispatch": False,
+    return (
+        command,
+        [],
+        {
+            "artifact_paths": [output_archive, output_manifest],
+            "input_artifact_paths": ordered_unique(input_paths),
+            "pullback_artifact_paths": [output_archive, output_manifest],
+            "include_postcondition_paths": True,
+            "family_agnostic_materializer_contract": {
+                "schema": "family_agnostic_materializer_command_contract.v1",
+                "target_kind": target_kind,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
         },
-    }
+    )
 
 
 def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
@@ -1686,9 +1623,7 @@ def _materializer_chain_postconditions(
     ]
     if require_serialized_archive_saving:
         required_positive_int.append("source_archive_bytes")
-        required_less_than.append(
-            {"left": "candidate_archive_bytes", "right": "source_archive_bytes"}
-        )
+        required_less_than.append({"left": "candidate_archive_bytes", "right": "source_archive_bytes"})
         required_equals["serialized_archive_delta.status"] = "realized_saving"
     if require_inflate_parity:
         required_true.append("inflate_parity_satisfied")
@@ -1737,7 +1672,33 @@ def _materializer_candidate_postconditions(
     *,
     manifest_path: str,
     schema: str,
+    target_kind: str | None = None,
 ) -> list[dict[str, Any]]:
+    required_equals: dict[str, Any] = {"schema": schema}
+    required_sha256 = ["candidate_archive.sha256"]
+    required_positive_int = ["candidate_archive.bytes"]
+    required_nonempty_unless_true: list[dict[str, str]] = []
+    if target_kind in {
+        ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        TENSOR_FACTORIZE_TARGET_KIND,
+    }:
+        required_equals["receiver_verification.schema"] = "family_agnostic_runtime_consumption_proof_verification.v1"
+        required_sha256.append("candidate_member.sha256")
+        required_positive_int.append("candidate_member.bytes")
+        required_nonempty_unless_true.append(
+            {
+                "key": "readiness_blockers",
+                "unless_true": "receiver_contract_satisfied",
+            }
+        )
+    if target_kind == TENSOR_FACTORIZE_TARGET_KIND:
+        required_nonempty_unless_true = []
+        required_equals["receiver_contract_kind"] = "family_agnostic_tensor_factorize"
+        required_positive_int.append("factorization.factor_payload_bytes")
+        required_nonempty = ["readiness_blockers"]
+    else:
+        required_nonempty = []
     return [
         {
             "type": "json_equals",
@@ -1748,7 +1709,7 @@ def _materializer_candidate_postconditions(
         {
             "type": "json_completion_contract",
             "path": manifest_path,
-            "required_equals": {"schema": schema},
+            "required_equals": required_equals,
             "required_true": ["byte_closed_candidate_emitted"],
             "required_false": [
                 "score_claim",
@@ -1760,8 +1721,10 @@ def _materializer_candidate_postconditions(
                 "dispatch_attempted",
                 "gpu_launched",
             ],
-            "required_sha256": ["candidate_archive.sha256"],
-            "required_positive_int": ["candidate_archive.bytes"],
+            "required_nonempty": required_nonempty,
+            "required_nonempty_unless_true": required_nonempty_unless_true,
+            "required_sha256": required_sha256,
+            "required_positive_int": required_positive_int,
             "required_artifact_records": ["candidate_archive"],
             "forbidden_statuses": ["failed"],
         },
@@ -1842,10 +1805,7 @@ def build_materializer_work_queue(
         )
         blockers: list[str] = []
         if len(context_matches) > 1:
-            blockers.append(
-                "materializer_context_ambiguous:"
-                + ",".join(key for key, _context in context_matches)
-            )
+            blockers.append("materializer_context_ambiguous:" + ",".join(key for key, _context in context_matches))
             context: Mapping[str, Any] = {}
         else:
             context = context_matches[0][1] if context_matches else {}
@@ -1872,9 +1832,7 @@ def build_materializer_work_queue(
                     },
                 )
                 postconditions = _materializer_chain_postconditions(
-                    manifest_path=str(
-                        Path(context["output_dir"]) / BYTE_RANGE_CHAIN_MANIFEST
-                    ),
+                    manifest_path=str(Path(context["output_dir"]) / BYTE_RANGE_CHAIN_MANIFEST),
                     schema=CHAIN_SCHEMA,
                     require_serialized_archive_saving=True,
                 )
@@ -1893,11 +1851,9 @@ def build_materializer_work_queue(
             and operation_family == "section_entropy_recode"
             and target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
         ):
-            command, command_blockers, telemetry = (
-                _family_agnostic_materializer_command(
-                    context,
-                    target_kind=ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
-                )
+            command, command_blockers, telemetry = _family_agnostic_materializer_command(
+                context,
+                target_kind=ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
             )
             blockers.extend(command_blockers)
             manifest_out = _path_context_value(context, "output_manifest")
@@ -1912,17 +1868,16 @@ def build_materializer_work_queue(
                 postconditions = _materializer_candidate_postconditions(
                     manifest_path=manifest_out,
                     schema=ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+                    target_kind=ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
                 )
         elif (
             unit_kind == "packet_member"
             and operation_family == "member_recompress"
             and target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND
         ):
-            command, command_blockers, telemetry = (
-                _family_agnostic_materializer_command(
-                    context,
-                    target_kind=PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
-                )
+            command, command_blockers, telemetry = _family_agnostic_materializer_command(
+                context,
+                target_kind=PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
             )
             blockers.extend(command_blockers)
             manifest_out = _path_context_value(context, "output_manifest")
@@ -1935,17 +1890,16 @@ def build_materializer_work_queue(
                 postconditions = _materializer_candidate_postconditions(
                     manifest_path=manifest_out,
                     schema=PACKET_MEMBER_RECOMPRESS_SCHEMA,
+                    target_kind=PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
                 )
         elif (
             unit_kind == "tensor"
             and operation_family == "factorize_tensor"
             and target_kind == TENSOR_FACTORIZE_TARGET_KIND
         ):
-            command, command_blockers, telemetry = (
-                _family_agnostic_materializer_command(
-                    context,
-                    target_kind=TENSOR_FACTORIZE_TARGET_KIND,
-                )
+            command, command_blockers, telemetry = _family_agnostic_materializer_command(
+                context,
+                target_kind=TENSOR_FACTORIZE_TARGET_KIND,
             )
             blockers.extend(command_blockers)
             manifest_out = _path_context_value(context, "output_manifest")
@@ -1958,15 +1912,14 @@ def build_materializer_work_queue(
                 postconditions = _materializer_candidate_postconditions(
                     manifest_path=manifest_out,
                     schema=TENSOR_FACTORIZE_SCHEMA,
+                    target_kind=TENSOR_FACTORIZE_TARGET_KIND,
                 )
         elif (
             unit_kind == "scorer_inverse_surface_cell"
             and operation_family == "probe_inverse_scorer_surface_cell"
             and target_kind == INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND
         ):
-            command, command_blockers, telemetry = (
-                _inverse_scorer_action_functional_command(context)
-            )
+            command, command_blockers, telemetry = _inverse_scorer_action_functional_command(context)
             blockers.extend(command_blockers)
             output = _path_context_value(context, "output")
             if command and output is not None:
@@ -1980,7 +1933,8 @@ def build_materializer_work_queue(
             and target_kind == INVERSE_SCORER_CELL_TARGET_KIND
         ):
             command, command_blockers, telemetry = _inverse_scorer_cell_candidate_command(
-                context
+                context,
+                repo_root=repo,
             )
             blockers.extend(command_blockers)
             output_dir = _path_context_value(context, "chain_output_dir")
@@ -2027,13 +1981,9 @@ def build_materializer_work_queue(
                     "operation_family": operation_family,
                     "target_kind": target_kind or None,
                     "materializer_id": materializer_id or None,
-                    "receiver_contract_id": (
-                        row.get("receiver_contract_id")
-                        or suggestion.get("receiver_contract_id")
-                    ),
+                    "receiver_contract_id": (row.get("receiver_contract_id") or suggestion.get("receiver_contract_id")),
                     "receiver_contract_kind": (
-                        row.get("receiver_contract_kind")
-                        or suggestion.get("receiver_contract_kind")
+                        row.get("receiver_contract_kind") or suggestion.get("receiver_contract_kind")
                     ),
                     "tool": command[1] if command else None,
                     "command": command,
@@ -2044,29 +1994,19 @@ def build_materializer_work_queue(
                     or "local_cpu",
                     "source_unit_ids": _as_list(row.get("source_unit_ids")),
                     "source_selection_ids": _as_list(row.get("source_selection_ids")),
-                    "packet_ir_lowered_row_count": row.get(
-                        "packet_ir_lowered_row_count"
-                    ),
-                    "source_packet_ir_operation_set_ids": _as_list(
-                        row.get("source_packet_ir_operation_set_ids")
-                    ),
+                    "packet_ir_lowered_row_count": row.get("packet_ir_lowered_row_count"),
+                    "source_packet_ir_operation_set_ids": _as_list(row.get("source_packet_ir_operation_set_ids")),
                     "source_packet_ir_source_operation_set_ids": _as_list(
                         row.get("source_packet_ir_source_operation_set_ids")
                     ),
-                    "packet_ir_blocker_counts": _counter_dict(
-                        row.get("packet_ir_blocker_counts")
-                    ),
+                    "packet_ir_blocker_counts": _counter_dict(row.get("packet_ir_blocker_counts")),
                     "candidate_saved_bytes_sum": row.get("candidate_saved_bytes_sum"),
                     "expected_score_gain_sum": row.get("expected_score_gain_sum"),
                     "executable": executable,
                     "materialization_blockers": blockers,
                     **FALSE_AUTHORITY,
                 },
-                dispatch_blockers=(
-                    _materializer_work_dispatch_blockers(target_kind)
-                    if executable
-                    else blockers
-                ),
+                dispatch_blockers=(_materializer_work_dispatch_blockers(target_kind) if executable else blockers),
             )
         )
     executable_rows = [row for row in work_rows if row["executable"] is True]
@@ -2084,11 +2024,7 @@ def build_materializer_work_queue(
             "rows": work_rows,
             **FALSE_AUTHORITY,
         },
-        dispatch_blockers=(
-            []
-            if executable_rows
-            else ("materializer_work_queue_has_no_executable_rows",)
-        ),
+        dispatch_blockers=([] if executable_rows else ("materializer_work_queue_has_no_executable_rows",)),
     )
 
 
@@ -2100,16 +2036,12 @@ def _normalize_materializer_queue_postconditions(
     postconditions: list[dict[str, Any]] = []
     for index, raw_condition in enumerate(value):
         if not isinstance(raw_condition, Mapping):
-            raise ExperimentQueueError(
-                f"materializer work row postconditions[{index}] must be an object"
-            )
+            raise ExperimentQueueError(f"materializer work row postconditions[{index}] must be an object")
         condition = dict(raw_condition)
         condition_type = str(condition.get("type") or "")
         if condition_type == "json_file_key_equals":
             if "value" not in condition:
-                raise ExperimentQueueError(
-                    "json_file_key_equals postcondition must include value"
-                )
+                raise ExperimentQueueError("json_file_key_equals postcondition must include value")
             condition = {
                 "type": "json_equals",
                 "path": condition.get("path"),
@@ -2157,30 +2089,37 @@ def _materializer_chain_manifest_path(
     *,
     row_id: str,
 ) -> str:
+    path, _saw_manifest_postcondition = _harvestable_materializer_manifest_path(postconditions)
+    if path is not None:
+        return path
+    raise ExperimentQueueError(
+        f"include_exact_readiness_followup requires a harvestable materializer manifest postcondition for {row_id}"
+    )
+
+
+def _harvestable_materializer_manifest_path(
+    postconditions: Sequence[Mapping[str, Any]],
+) -> tuple[str | None, bool]:
+    saw_manifest_postcondition = False
     for condition in postconditions:
         if condition.get("type") != "materializer_chain_complete":
             continue
         path = condition.get("path")
         if isinstance(path, str) and path.strip():
-            return path
+            return path, True
     for condition in postconditions:
         if condition.get("type") != "json_completion_contract":
             continue
-        required_equals = condition.get("required_equals")
-        schema = (
-            required_equals.get("schema")
-            if isinstance(required_equals, Mapping)
-            else condition.get("schema")
-        )
-        if schema not in HARVESTABLE_MATERIALIZER_MANIFEST_SCHEMAS:
-            continue
         path = condition.get("path")
         if isinstance(path, str) and path.strip():
-            return path
-    raise ExperimentQueueError(
-        "include_exact_readiness_followup requires a harvestable materializer "
-        f"manifest postcondition for {row_id}"
-    )
+            saw_manifest_postcondition = True
+        required_equals = condition.get("required_equals")
+        schema = required_equals.get("schema") if isinstance(required_equals, Mapping) else condition.get("schema")
+        if schema not in HARVESTABLE_MATERIALIZER_MANIFEST_SCHEMAS:
+            continue
+        if isinstance(path, str) and path.strip():
+            return path, saw_manifest_postcondition
+    return None, saw_manifest_postcondition
 
 
 def _planning_only_exact_readiness_skip_reason(row: Mapping[str, Any]) -> str | None:
@@ -2191,6 +2130,19 @@ def _planning_only_exact_readiness_skip_reason(row: Mapping[str, Any]) -> str | 
         or materializer_id == INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER
     ):
         return "planning_only_inverse_action_functional_not_candidate_archive"
+    return None
+
+
+def _materializer_exact_readiness_skip_reason(
+    row: Mapping[str, Any],
+    postconditions: Sequence[Mapping[str, Any]],
+) -> str | None:
+    planning_reason = _planning_only_exact_readiness_skip_reason(row)
+    if planning_reason is not None:
+        return planning_reason
+    path, saw_manifest_postcondition = _harvestable_materializer_manifest_path(postconditions)
+    if path is None and saw_manifest_postcondition:
+        return "materializer_manifest_not_harvestable_for_exact_readiness"
     return None
 
 
@@ -2385,9 +2337,7 @@ def build_materializer_execution_queue(
             validate_scheduler_storage_preflight_config(
                 proactive_cleanup_execute=scheduler_proactive_cleanup_execute,
                 proactive_cleanup_action=scheduler_proactive_cleanup_action,
-                proactive_cleanup_cold_store_roots=tuple(
-                    scheduler_proactive_cleanup_cold_store_roots
-                ),
+                proactive_cleanup_cold_store_roots=tuple(scheduler_proactive_cleanup_cold_store_roots),
             )
         except ValueError as exc:
             raise ExperimentQueueError(str(exc)) from exc
@@ -2396,13 +2346,10 @@ def build_materializer_execution_queue(
     if exact_eval_dispatch_max_total_cost <= 0:
         raise ExperimentQueueError("exact_eval_dispatch_max_total_cost must be > 0")
     if exact_eval_dispatch_estimated_cost_per_dispatch <= 0:
-        raise ExperimentQueueError(
-            "exact_eval_dispatch_estimated_cost_per_dispatch must be > 0"
-        )
+        raise ExperimentQueueError("exact_eval_dispatch_estimated_cost_per_dispatch must be > 0")
     if include_scheduler_preflight and not scheduler_proactive_cleanup_execute:
         raise ExperimentQueueError(
-            "scheduler_proactive_cleanup_execute must be true when "
-            "scheduler preflight gates materializer execution"
+            "scheduler_proactive_cleanup_execute must be true when scheduler preflight gates materializer execution"
         )
 
     queue_id = str(queue_id or "").strip()
@@ -2448,13 +2395,10 @@ def build_materializer_execution_queue(
     if expected_output_root is not None:
         for index, row in enumerate(executable_rows, start=1):
             telemetry = row.get("telemetry")
-            artifact_paths = (
-                telemetry.get("artifact_paths") if isinstance(telemetry, Mapping) else None
-            )
+            artifact_paths = telemetry.get("artifact_paths") if isinstance(telemetry, Mapping) else None
             if not isinstance(artifact_paths, list) or not artifact_paths:
                 raise ExperimentQueueError(
-                    "materializer work row "
-                    f"{index} has no telemetry artifact_paths for storage preflight"
+                    f"materializer work row {index} has no telemetry artifact_paths for storage preflight"
                 )
             for raw_path in artifact_paths:
                 path = _resolve_output_path(raw_path, repo_root=repo)
@@ -2466,11 +2410,9 @@ def build_materializer_execution_queue(
                     )
     if include_exact_readiness_followup and expected_output_root is not None:
         for index, row in enumerate(executable_rows, start=1):
-            if _planning_only_exact_readiness_skip_reason(row) is not None:
+            postconditions = _normalize_materializer_queue_postconditions(row.get("postconditions"))
+            if _materializer_exact_readiness_skip_reason(row, postconditions) is not None:
                 continue
-            postconditions = _normalize_materializer_queue_postconditions(
-                row.get("postconditions")
-            )
             chain_manifest_path = _resolve_repo_path(
                 _materializer_chain_manifest_path(
                     postconditions,
@@ -2496,9 +2438,7 @@ def build_materializer_execution_queue(
     experiments: list[dict[str, Any]] = []
     seen_experiments: set[str] = set()
     preflight_dependency = (
-        f"{MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup"
-        if include_scheduler_preflight
-        else None
+        f"{MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup" if include_scheduler_preflight else None
     )
     for rank, row in enumerate(executable_rows, start=1):
         command = row.get("command")
@@ -2507,28 +2447,20 @@ def build_materializer_execution_queue(
         command_items = [str(item) for item in command]
         resource_kind = str(row.get("resource_kind") or "local_cpu")
         if not resource_kind.startswith("local"):
-            raise ExperimentQueueError(
-                f"materializer work row {rank} uses non-local resource {resource_kind!r}"
-            )
+            raise ExperimentQueueError(f"materializer work row {rank} uses non-local resource {resource_kind!r}")
         used_resource_kinds.add(resource_kind)
-        exact_readiness_skip_reason = (
-            _planning_only_exact_readiness_skip_reason(row)
-            if include_exact_readiness_followup
-            else None
-        )
-        exact_readiness_followup_enabled = (
-            include_exact_readiness_followup and exact_readiness_skip_reason is None
-        )
-        if exact_readiness_followup_enabled:
-            used_resource_kinds.add("local_cpu")
         experiment_id = _materializer_execution_experiment_id(
             row,
             rank,
             seen_experiments,
         )
-        postconditions = _normalize_materializer_queue_postconditions(
-            row.get("postconditions")
+        postconditions = _normalize_materializer_queue_postconditions(row.get("postconditions"))
+        exact_readiness_skip_reason = (
+            _materializer_exact_readiness_skip_reason(row, postconditions) if include_exact_readiness_followup else None
         )
+        exact_readiness_followup_enabled = include_exact_readiness_followup and exact_readiness_skip_reason is None
+        if exact_readiness_followup_enabled:
+            used_resource_kinds.add("local_cpu")
         steps = [
             {
                 "id": MATERIALIZER_EXECUTION_STEP_ID,
@@ -2562,9 +2494,7 @@ def build_materializer_execution_queue(
                     dispatch_provider=exact_eval_dispatch_provider,
                     dispatch_label_prefix=exact_eval_dispatch_label_prefix,
                     dispatch_max_total_cost=exact_eval_dispatch_max_total_cost,
-                    dispatch_estimated_cost_per_dispatch=(
-                        exact_eval_dispatch_estimated_cost_per_dispatch
-                    ),
+                    dispatch_estimated_cost_per_dispatch=(exact_eval_dispatch_estimated_cost_per_dispatch),
                 )
             )
         metadata = apply_proxy_evidence_boundary(
@@ -2585,12 +2515,8 @@ def build_materializer_execution_queue(
                 "receiver_contract_kind": row.get("receiver_contract_kind"),
                 "source_unit_ids": _as_list(row.get("source_unit_ids")),
                 "source_selection_ids": _as_list(row.get("source_selection_ids")),
-                "exact_readiness_followup_requested": bool(
-                    include_exact_readiness_followup
-                ),
-                "exact_readiness_followup_enabled": bool(
-                    exact_readiness_followup_enabled
-                ),
+                "exact_readiness_followup_requested": bool(include_exact_readiness_followup),
+                "exact_readiness_followup_enabled": bool(exact_readiness_followup_enabled),
                 "exact_readiness_followup_skipped_reason": exact_readiness_skip_reason,
                 "candidate_saved_bytes_sum": row.get("candidate_saved_bytes_sum"),
                 "expected_score_gain_sum": row.get("expected_score_gain_sum"),
@@ -2651,12 +2577,8 @@ def build_materializer_execution_queue(
                 proactive_cleanup_execute=scheduler_proactive_cleanup_execute,
                 proactive_cleanup_action=scheduler_proactive_cleanup_action,
                 proactive_cleanup_min_bytes=scheduler_proactive_cleanup_min_bytes,
-                proactive_cleanup_cold_store_roots=tuple(
-                    scheduler_proactive_cleanup_cold_store_roots
-                ),
-                proactive_cleanup_cold_store_reserve_gb=(
-                    scheduler_proactive_cleanup_cold_store_reserve_gb
-                ),
+                proactive_cleanup_cold_store_roots=tuple(scheduler_proactive_cleanup_cold_store_roots),
+                proactive_cleanup_cold_store_reserve_gb=(scheduler_proactive_cleanup_cold_store_reserve_gb),
             ),
             *experiments,
         ]
@@ -2689,17 +2611,11 @@ def _materialize_row(
     except ValueError as exc:
         raise ExperimentQueueError(str(exc)) from exc
 
-    selected_operations = [
-        item for item in _as_list(row.get("selected_operations")) if isinstance(item, Mapping)
-    ]
+    selected_operations = [item for item in _as_list(row.get("selected_operations")) if isinstance(item, Mapping)]
     chosen_operation_sequence = [
-        item
-        for item in _as_list(row.get("chosen_operation_sequence"))
-        if isinstance(item, Mapping)
+        item for item in _as_list(row.get("chosen_operation_sequence")) if isinstance(item, Mapping)
     ]
-    source_dispatch_blockers = [
-        str(item) for item in _as_list(row.get("dispatch_blockers")) if str(item)
-    ]
+    source_dispatch_blockers = [str(item) for item in _as_list(row.get("dispatch_blockers")) if str(item)]
     blockers: list[str] = []
     if not selected_operations:
         blockers.append("selected_operations_missing")
@@ -2711,24 +2627,15 @@ def _materialize_row(
         if not chosen_operation_sequence:
             blockers.append("operation_set_chosen_sequence_missing")
         else:
-            selected_keys = [
-                _operation_sequence_key(operation) for operation in selected_operations
-            ]
-            chosen_keys = [
-                _operation_sequence_key(operation)
-                for operation in chosen_operation_sequence
-            ]
+            selected_keys = [_operation_sequence_key(operation) for operation in selected_operations]
+            chosen_keys = [_operation_sequence_key(operation) for operation in chosen_operation_sequence]
             operation_set_sequence_valid = Counter(selected_keys) == Counter(chosen_keys)
             if not operation_set_sequence_valid:
-                blockers.append(
-                    "operation_set_sequence_not_permutation_of_selected_operations"
-                )
+                blockers.append("operation_set_sequence_not_permutation_of_selected_operations")
             else:
                 selected_by_key: dict[tuple[str, str], list[Mapping[str, Any]]] = {}
                 for operation in selected_operations:
-                    selected_by_key.setdefault(
-                        _operation_sequence_key(operation), []
-                    ).append(operation)
+                    selected_by_key.setdefault(_operation_sequence_key(operation), []).append(operation)
                 ordered_operations: list[Mapping[str, Any]] = []
                 for key in chosen_keys:
                     ordered_operations.append(selected_by_key[key].pop(0))
@@ -2741,24 +2648,14 @@ def _materialize_row(
     for operation in operations_for_materialization:
         unit_id = str(operation.get("unit_id") or "")
         unit = units_by_id.get(unit_id)
-        operation_blockers = ordered_unique(
-            str(item) for item in _as_list(operation.get("blockers"))
-        )
+        operation_blockers = ordered_unique(str(item) for item in _as_list(operation.get("blockers")))
         blockers.extend(
-            f"selected_operation_blocker:{unit_id or '<missing>'}:{blocker}"
-            for blocker in operation_blockers
+            f"selected_operation_blocker:{unit_id or '<missing>'}:{blocker}" for blocker in operation_blockers
         )
         resolution = resolve_materializer(operation=operation, unit=unit)
         resolution_blockers = list(resolution.blockers)
-        if (
-            resolution.target_kind
-            and resolution.target_kind != DQS1_PAIRSET_TARGET_KIND
-            and resolution.executable
-        ):
-            resolution_blockers.append(
-                "non_dqs1_target_requires_materializer_work_queue:"
-                f"{resolution.target_kind}"
-            )
+        if resolution.target_kind and resolution.target_kind != DQS1_PAIRSET_TARGET_KIND and resolution.executable:
+            resolution_blockers.append(f"non_dqs1_target_requires_materializer_work_queue:{resolution.target_kind}")
         blockers.extend(resolution_blockers)
         materializer_resolutions.append(
             {
@@ -2785,20 +2682,11 @@ def _materialize_row(
             unit_blockers = ordered_unique(
                 [
                     *[str(item) for item in _as_list(unit.get("blockers"))],
-                    *[
-                        str(item)
-                        for item in _as_list(unit.get("materialization_blockers"))
-                    ],
-                    *[
-                        str(item)
-                        for item in _as_list(unit.get("candidate_trust_region_blockers"))
-                    ],
+                    *[str(item) for item in _as_list(unit.get("materialization_blockers"))],
+                    *[str(item) for item in _as_list(unit.get("candidate_trust_region_blockers"))],
                 ]
             )
-            blockers.extend(
-                f"selected_unit_blocker:{unit_id}:{blocker}"
-                for blocker in unit_blockers
-            )
+            blockers.extend(f"selected_unit_blocker:{unit_id}:{blocker}" for blocker in unit_blockers)
             source_units.append(
                 {
                     "unit_id": unit_id,
@@ -2809,9 +2697,7 @@ def _materialize_row(
                     "source_candidate_id": unit.get("source_candidate_id"),
                     "candidate_archive_sha256": unit.get("candidate_archive_sha256"),
                     "candidate_archive_bytes": unit.get("candidate_archive_bytes"),
-                    "candidate_trust_region_blockers": unit.get(
-                        "candidate_trust_region_blockers"
-                    ),
+                    "candidate_trust_region_blockers": unit.get("candidate_trust_region_blockers"),
                     "blockers": unit_blockers,
                 }
             )
@@ -2827,14 +2713,10 @@ def _materialize_row(
             continue
         dropped_pairs.append(pair_index)
     target_kinds = ordered_unique(
-        resolution["target_kind"]
-        for resolution in materializer_resolutions
-        if resolution["target_kind"]
+        resolution["target_kind"] for resolution in materializer_resolutions if resolution["target_kind"]
     )
     known_target_kinds = known_materializer_target_kinds()
-    unsupported_targets = [
-        target for target in target_kinds if target not in known_target_kinds
-    ]
+    unsupported_targets = [target for target in target_kinds if target not in known_target_kinds]
     if unsupported_targets:
         blockers.append("unsupported_materializer_target:" + ",".join(unsupported_targets))
     operation_set_materialization_mode: str | None = None
@@ -2843,8 +2725,7 @@ def _materialize_row(
             operation_set_sequence_valid is True
             and bool(materializer_resolutions)
             and all(
-                resolution["target_kind"] == DQS1_PAIRSET_TARGET_KIND
-                and resolution["executable"] is True
+                resolution["target_kind"] == DQS1_PAIRSET_TARGET_KIND and resolution["executable"] is True
                 for resolution in materializer_resolutions
             )
         )
@@ -2857,18 +2738,11 @@ def _materialize_row(
                 and blocker not in OPERATION_SET_CLEARABLE_SOURCE_BLOCKERS
             ]
         else:
-            operation_set_materialization_mode = (
-                "blocked_or_requires_atomic_materializer"
-            )
+            operation_set_materialization_mode = "blocked_or_requires_atomic_materializer"
             enforced_source_blockers = [
-                blocker
-                for blocker in source_dispatch_blockers
-                if blocker in OPERATION_SET_ENFORCED_SOURCE_BLOCKERS
+                blocker for blocker in source_dispatch_blockers if blocker in OPERATION_SET_ENFORCED_SOURCE_BLOCKERS
             ]
-        blockers.extend(
-            f"source_dispatch_blocker:{blocker}"
-            for blocker in enforced_source_blockers
-        )
+        blockers.extend(f"source_dispatch_blocker:{blocker}" for blocker in enforced_source_blockers)
     if dqs1_operation_count and base_pairs is None:
         blockers.append("dqs1_base_pair_indices_required")
     dropped_pairs = sorted(set(dropped_pairs))
@@ -2889,15 +2763,11 @@ def _materialize_row(
         blockers.append("conflict_violations_present")
     packet_ir_operation_set = _packet_ir_operation_set_for_row(payload, row)
     if kind == "operation_set":
-        blockers.extend(
-            _packet_ir_operation_set_blockers(row, packet_ir_operation_set)
-        )
+        blockers.extend(_packet_ir_operation_set_blockers(row, packet_ir_operation_set))
     blockers = ordered_unique(blockers)
     executable = not blockers
     candidate_id = (
-        _candidate_id(kind, selection_id, dropped_pairs)
-        if dropped_pairs
-        else f"pairset_byte_shave_{kind}_{rank:04d}"
+        _candidate_id(kind, selection_id, dropped_pairs) if dropped_pairs else f"pairset_byte_shave_{kind}_{rank:04d}"
     )
     try:
         slug = candidate_slug(candidate_id)
@@ -2918,11 +2788,7 @@ def _materialize_row(
         "source_plan_schema": payload.get("schema"),
         "selected_operations": selected_operations,
         "operation_set_id": row.get("operation_set_id"),
-        "packet_ir_operation_set": (
-            dict(packet_ir_operation_set)
-            if packet_ir_operation_set is not None
-            else None
-        ),
+        "packet_ir_operation_set": (dict(packet_ir_operation_set) if packet_ir_operation_set is not None else None),
         "chosen_operation_sequence": chosen_operation_sequence,
         "chosen_operation_sequence_sha256": row.get("chosen_operation_sequence_sha256"),
         "chosen_operation_sequence_source": row.get("chosen_operation_sequence_source"),
@@ -2947,17 +2813,11 @@ def _materialize_row(
             "selection_kind": kind,
             "selection_id": selection_id,
             "operation_set_id": row.get("operation_set_id"),
-            "packet_ir_operation_set": (
-                dict(packet_ir_operation_set)
-                if packet_ir_operation_set is not None
-                else None
-            ),
+            "packet_ir_operation_set": (dict(packet_ir_operation_set) if packet_ir_operation_set is not None else None),
             "combo_id": row.get("combo_id"),
             "sweep_id": row.get("sweep_id"),
             "chosen_operation_sequence": chosen_operation_sequence,
-            "chosen_operation_sequence_sha256": row.get(
-                "chosen_operation_sequence_sha256"
-            ),
+            "chosen_operation_sequence_sha256": row.get("chosen_operation_sequence_sha256"),
             "chosen_operation_sequence_source": row.get("chosen_operation_sequence_source"),
             "chosen_operation_sequence_is_permutation": operation_set_sequence_valid,
             "operation_set_materialization_mode": operation_set_materialization_mode,
@@ -2993,9 +2853,7 @@ def compile_dqs1_byte_shaving_campaign(
         require_no_truthy_authority_fields(payload, context="byte_shaving_campaign_plan")
     except ValueError as exc:
         raise ExperimentQueueError(str(exc)) from exc
-    if candidate_limit is not None and (
-        isinstance(candidate_limit, bool) or candidate_limit < 1
-    ):
+    if candidate_limit is not None and (isinstance(candidate_limit, bool) or candidate_limit < 1):
         raise ExperimentQueueError("candidate_limit must be >= 1 when provided")
     rationale = str(partial_materialization_rationale or "").strip()
     if allow_partial_materialization and not rationale:
@@ -3009,11 +2867,7 @@ def compile_dqs1_byte_shaving_campaign(
         for unit in _as_list(payload.get("ranked_units"))
         if isinstance(unit, Mapping) and str(unit.get("unit_id") or "")
     }
-    plan_ref = (
-        _repo_rel(Path(plan_path), repo)
-        if plan_path is not None
-        else None
-    )
+    plan_ref = _repo_rel(Path(plan_path), repo) if plan_path is not None else None
     compiled_rows: list[dict[str, Any]] = []
     for rank, (kind, row) in enumerate(_iter_plan_rows(payload), start=1):
         compiled_rows.append(
@@ -3051,14 +2905,8 @@ def compile_dqs1_byte_shaving_campaign(
     )
     partial_materialization_blockers: list[str] = []
     if blocked_rows and executable_rows and not allow_partial_materialization:
-        partial_materialization_blockers.append(
-            "partial_materialization_requires_explicit_allow"
-        )
-    queueable_rows = (
-        executable_rows
-        if allow_partial_materialization or not partial_materialization_blockers
-        else []
-    )
+        partial_materialization_blockers.append("partial_materialization_requires_explicit_allow")
+    queueable_rows = executable_rows if allow_partial_materialization or not partial_materialization_blockers else []
 
     portfolio_rows = []
     top_actions = []
@@ -3074,18 +2922,10 @@ def compile_dqs1_byte_shaving_campaign(
             "operation_set_id": row.get("operation_set_id"),
             "packet_ir_operation_set": row.get("packet_ir_operation_set"),
             "chosen_operation_sequence": row.get("chosen_operation_sequence"),
-            "chosen_operation_sequence_sha256": row.get(
-                "chosen_operation_sequence_sha256"
-            ),
-            "chosen_operation_sequence_source": row.get(
-                "chosen_operation_sequence_source"
-            ),
-            "chosen_operation_sequence_is_permutation": row.get(
-                "chosen_operation_sequence_is_permutation"
-            ),
-            "operation_set_materialization_mode": row.get(
-                "operation_set_materialization_mode"
-            ),
+            "chosen_operation_sequence_sha256": row.get("chosen_operation_sequence_sha256"),
+            "chosen_operation_sequence_source": row.get("chosen_operation_sequence_source"),
+            "chosen_operation_sequence_is_permutation": row.get("chosen_operation_sequence_is_permutation"),
+            "operation_set_materialization_mode": row.get("operation_set_materialization_mode"),
             "active_interactions": row.get("active_interactions"),
             "materializer_resolutions": row["materializer_resolutions"],
             "source_units": row["source_units"],
@@ -3100,8 +2940,7 @@ def compile_dqs1_byte_shaving_campaign(
                 if resolution.get("receiver_contract_id")
             ),
             "cooperative_receiver_required": any(
-                bool(resolution.get("cooperative_receiver_required"))
-                for resolution in row["materializer_resolutions"]
+                bool(resolution.get("cooperative_receiver_required")) for resolution in row["materializer_resolutions"]
             ),
             "allowed_use": "dqs1_local_first_materialization_only",
             **FALSE_AUTHORITY,
@@ -3160,10 +2999,7 @@ def compile_dqs1_byte_shaving_campaign(
             "materializer_work_queue": materializer_work_queue,
             **FALSE_AUTHORITY,
         },
-        dispatch_blockers=(
-            partial_materialization_blockers
-            or ["exact_auth_eval_required_before_score_claim"]
-        ),
+        dispatch_blockers=(partial_materialization_blockers or ["exact_auth_eval_required_before_score_claim"]),
     )
     action_summary = apply_proxy_evidence_boundary(
         {
@@ -3185,10 +3021,7 @@ def compile_dqs1_byte_shaving_campaign(
             "materializer_work_queue": materializer_work_queue,
             **FALSE_AUTHORITY,
         },
-        dispatch_blockers=(
-            partial_materialization_blockers
-            or ["exact_auth_eval_required_before_score_claim"]
-        ),
+        dispatch_blockers=(partial_materialization_blockers or ["exact_auth_eval_required_before_score_claim"]),
     )
     return apply_proxy_evidence_boundary(
         {
@@ -3207,9 +3040,7 @@ def compile_dqs1_byte_shaving_campaign(
             "partial_materialization_rationale": rationale or None,
             "partial_materialization_blockers": partial_materialization_blockers,
             "materializer_backlog": materializer_backlog,
-            "packet_ir_materializer_backlog_row_count": len(
-                packet_ir_materializer_backlog_rows
-            ),
+            "packet_ir_materializer_backlog_row_count": len(packet_ir_materializer_backlog_rows),
             "packet_ir_materializer_backlog_rows": packet_ir_materializer_backlog_rows,
             "materializer_backlog_summary": materializer_backlog_summary,
             "materializer_work_queue": materializer_work_queue,
@@ -3219,10 +3050,7 @@ def compile_dqs1_byte_shaving_campaign(
             "action_summary": action_summary,
             **FALSE_AUTHORITY,
         },
-        dispatch_blockers=(
-            partial_materialization_blockers
-            or ["exact_auth_eval_required_before_score_claim"]
-        ),
+        dispatch_blockers=(partial_materialization_blockers or ["exact_auth_eval_required_before_score_claim"]),
     )
 
 

@@ -1291,6 +1291,30 @@ def _json_completion_contract(
             return False
         if not _nonempty_value(value):
             return False
+    for index, raw_item in enumerate(condition.get("required_nonempty_unless_true", []) or []):
+        if not isinstance(raw_item, Mapping):
+            raise ExperimentQueueError(
+                f"postcondition.required_nonempty_unless_true[{index}] must be an object"
+            )
+        key = _require_text(
+            raw_item.get("key"),
+            f"postcondition.required_nonempty_unless_true[{index}].key",
+        )
+        unless_true = _require_text(
+            raw_item.get("unless_true"),
+            f"postcondition.required_nonempty_unless_true[{index}].unless_true",
+        )
+        try:
+            if _json_pointer(payload, unless_true) is True:
+                continue
+        except ExperimentQueueError:
+            pass
+        try:
+            value = _json_pointer(payload, key)
+        except ExperimentQueueError:
+            return False
+        if not _nonempty_value(value):
+            return False
     for key in _string_list(
         condition.get("required_positive_int"),
         "postcondition.required_positive_int",

@@ -201,18 +201,21 @@ def read_strict_single_member_zip(path: str | Path) -> SingleMemberArchive:
     """Read a one-member ZIP archive without assuming the member name."""
 
     archive = Path(path)
-    with zipfile.ZipFile(archive, "r") as zf:
-        infos = zf.infolist()
-        if len(infos) != 1:
-            raise HnervLowlevelPackError(f"expected exactly one ZIP entry, got {len(infos)}")
-        info = infos[0]
-        if info.is_dir():
-            raise HnervLowlevelPackError(f"single ZIP entry must be a file, got directory {info.filename!r}")
-        _validate_member_name(info.filename)
-        bad = zf.testzip()
-        if bad is not None:
-            raise HnervLowlevelPackError(f"ZIP CRC validation failed for member {bad!r}")
-        payload = zf.read(info.filename)
+    try:
+        with zipfile.ZipFile(archive, "r") as zf:
+            infos = zf.infolist()
+            if len(infos) != 1:
+                raise HnervLowlevelPackError(f"expected exactly one ZIP entry, got {len(infos)}")
+            info = infos[0]
+            if info.is_dir():
+                raise HnervLowlevelPackError(f"single ZIP entry must be a file, got directory {info.filename!r}")
+            _validate_member_name(info.filename)
+            bad = zf.testzip()
+            if bad is not None:
+                raise HnervLowlevelPackError(f"ZIP CRC validation failed for member {bad!r}")
+            payload = zf.read(info.filename)
+    except zipfile.BadZipFile as exc:
+        raise HnervLowlevelPackError(f"invalid ZIP archive: {archive}") from exc
     return SingleMemberArchive(
         member_name=info.filename,
         payload=payload,

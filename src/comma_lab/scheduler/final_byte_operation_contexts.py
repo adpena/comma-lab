@@ -189,6 +189,36 @@ def _output_paths(
     return output_path.as_posix(), manifest_path.as_posix()
 
 
+def _copy_common_materializer_controls(
+    context: dict[str, Any],
+    hints: Mapping[str, Any],
+) -> None:
+    """Carry controls consumed by the family materializer command builder."""
+
+    for key, value in (
+        ("runtime_consumption_proof", _first_text(hints, ("runtime_consumption_proof",))),
+        ("expected_output_sha256", _first_text(hints, ("expected_output_sha256",))),
+        ("expected_manifest_sha256", _first_text(hints, ("expected_manifest_sha256",))),
+        (
+            "expected_existing_output_sha256",
+            _first_text(hints, ("expected_existing_output_sha256",)),
+        ),
+        (
+            "expected_existing_manifest_sha256",
+            _first_text(hints, ("expected_existing_manifest_sha256",)),
+        ),
+    ):
+        if value is not None:
+            context[key] = value
+    for key in ("min_free_bytes",):
+        value = hints.get(key)
+        if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+            context[key] = value
+    for key in ("allow_size_regression", "allow_rate_regression", "allow_overwrite"):
+        if hints.get(key) is True:
+            context[key] = True
+
+
 def _archive_section_context_row(
     row: Mapping[str, Any],
     *,
@@ -229,8 +259,7 @@ def _archive_section_context_row(
         blockers.append("materializer_context_missing:section_manifest")
     context.update(
         {
-            "label": _first_text(hints, ("label", "candidate_id"))
-            or _safe_work_id(str(row.get("backlog_key") or "")),
+            "label": _first_text(hints, ("label", "candidate_id")) or _safe_work_id(str(row.get("backlog_key") or "")),
             "target_sections": target_sections,
             "context_blockers": blockers,
             **_packetir_operation_set_contract_context(),
@@ -254,8 +283,7 @@ def _archive_section_context_row(
         values = _string_list(hints.get(key))
         if values:
             context[key] = values
-    if hints.get("allow_rate_regression") is True:
-        context["allow_rate_regression"] = True
+    _copy_common_materializer_controls(context, hints)
     return _context_row_payload(row, context=context, blockers=blockers)
 
 
@@ -308,6 +336,7 @@ def _packet_member_context_row(
         values = _string_list(hints.get(key))
         if values:
             context[key] = values
+    _copy_common_materializer_controls(context, hints)
     return _context_row_payload(row, context=context, blockers=blockers)
 
 
@@ -337,9 +366,7 @@ def _tensor_factorize_context_row(
         blockers.append("materializer_context_missing:archive_path")
     if tensor_manifest is None:
         blockers.append("materializer_context_missing:tensor_manifest")
-    if factorization_contract is None and not (
-        isinstance(rank, int) and not isinstance(rank, bool) and rank > 0
-    ):
+    if factorization_contract is None and not (isinstance(rank, int) and not isinstance(rank, bool) and rank > 0):
         blockers.append("materializer_context_missing:factorization_contract_or_rank")
     if output_archive is None:
         blockers.append("materializer_context_missing:output_archive")
@@ -362,6 +389,7 @@ def _tensor_factorize_context_row(
         context["output_archive"] = output_archive
     if json_out is not None:
         context["output_manifest"] = json_out
+    _copy_common_materializer_controls(context, hints)
     return _context_row_payload(row, context=context, blockers=blockers)
 
 
@@ -425,20 +453,13 @@ def _inverse_scorer_cell_context_row(
     descriptor_probe_only = hints.get("descriptor_probe_only") is True
     has_partial_parity_dirs = (source_inflate is None) != (candidate_inflate is None)
     if output_dir is not None and has_partial_parity_dirs:
-        blockers.append(
-            "materializer_context_missing:inverse_scorer_cell_complete_inflate_parity_dirs"
-        )
+        blockers.append("materializer_context_missing:inverse_scorer_cell_complete_inflate_parity_dirs")
     if (
         output_dir is not None
         and not descriptor_probe_only
-        and not (
-            (source_inflate is not None and candidate_inflate is not None)
-            or inflate_runtime is not None
-        )
+        and not ((source_inflate is not None and candidate_inflate is not None) or inflate_runtime is not None)
     ):
-        blockers.append(
-            "materializer_context_missing:inverse_scorer_cell_inflate_parity_context"
-        )
+        blockers.append("materializer_context_missing:inverse_scorer_cell_inflate_parity_context")
 
     context.update(
         {
@@ -523,12 +544,8 @@ def _context_row_payload(
         "operation_family": row.get("operation_family"),
         "source_unit_ids": _as_list(row.get("source_unit_ids")),
         "source_packet_ir_schemas": _as_list(row.get("source_packet_ir_schemas")),
-        "source_packet_ir_operation_set_ids": _as_list(
-            row.get("source_packet_ir_operation_set_ids")
-        ),
-        "source_packet_ir_source_operation_set_ids": _as_list(
-            row.get("source_packet_ir_source_operation_set_ids")
-        ),
+        "source_packet_ir_operation_set_ids": _as_list(row.get("source_packet_ir_operation_set_ids")),
+        "source_packet_ir_source_operation_set_ids": _as_list(row.get("source_packet_ir_source_operation_set_ids")),
         "packet_ir_blocker_counts": packet_ir_blocker_counts,
         "context_keys": _context_keys(row),
         "context": context_payload,
@@ -579,12 +596,8 @@ def _packetir_compiler_bridge_hint(
     return {
         "schema": "final_byte_packetir_compiler_bridge_hint.v1",
         **contract_context,
-        "canonical_packet_compiler_module": contract[
-            "canonical_packet_compiler_module"
-        ],
-        "canonical_packet_compiler_schema": contract[
-            "canonical_packet_compiler_schema"
-        ],
+        "canonical_packet_compiler_module": contract["canonical_packet_compiler_module"],
+        "canonical_packet_compiler_schema": contract["canonical_packet_compiler_schema"],
         "recommended_ir_schema": contract["recommended_ir_schema"],
         "bridge_role": "candidate_family_operation_compiler",
         "unit_kind": row.get("unit_kind"),
@@ -667,8 +680,7 @@ def build_final_byte_operation_contexts(
             )
         elif (
             row.get("unit_kind") == "scorer_inverse_surface_cell"
-            and row.get("operation_family")
-            == "materialize_inverse_scorer_cell_candidate"
+            and row.get("operation_family") == "materialize_inverse_scorer_cell_candidate"
             and row.get("target_kind") == INVERSE_SCORER_CELL_TARGET_KIND
         ):
             rows.append(
