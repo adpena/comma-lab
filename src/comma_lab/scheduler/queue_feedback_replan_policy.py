@@ -16,13 +16,24 @@ from .experiment_queue import (
     DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
     DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
     QUEUE_SCHEMA,
+    normalize_queue_definition,
 )
 
 QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA = "queue_feedback_replan_policy.v1"
 QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA = (
     "queue_feedback_replan_child_queue_validation.v1"
 )
+QUEUE_FEEDBACK_REPLAN_CONTINUATION_METADATA_SCHEMA = (
+    "queue_feedback_replan_continuation_metadata.v1"
+)
 MATERIALIZER_CAMPAIGN_RUN_SCHEMA = "byte_shaving_materializer_campaign_run.v1"
+QUEUE_FEEDBACK_REPLAN_CONTINUATION_EXPERIMENT_ID = (
+    "queue_feedback_replan_next_materializer_iteration"
+)
+QUEUE_FEEDBACK_REPLAN_CONTINUATION_STEP_ID = "run_next_materializer_campaign_iteration"
+QUEUE_FEEDBACK_REPLAN_MATERIALIZER_CAMPAIGN_TOOL = (
+    "tools/run_byte_shaving_materializer_campaign.py"
+)
 QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL = (
     "tools/build_inverse_steganalysis_action_functional.py"
 )
@@ -348,7 +359,7 @@ def _campaign_iteration_command(
         return None
     return [
         sys.executable,
-        "tools/run_byte_shaving_materializer_campaign.py",
+        QUEUE_FEEDBACK_REPLAN_MATERIALIZER_CAMPAIGN_TOOL,
         "--plan",
         plan,
         "--inverse-scorer-action-functional",
@@ -358,6 +369,173 @@ def _campaign_iteration_command(
         "--queue-feedback-replan-policy-max-iterations",
         str(max_iterations),
     ]
+
+
+def _validate_next_iteration_command(
+    policy: Mapping[str, Any],
+    command_items: Sequence[str],
+) -> list[str]:
+    blockers: list[str] = []
+    if len(command_items) < 2:
+        return ["queue_feedback_replan_continuation_command_too_short"]
+    command0_name = posixpath.basename(command_items[0])
+    if command0_name in QUEUE_FEEDBACK_REPLAN_FORBIDDEN_COMMAND_WRAPPERS:
+        blockers.append(
+            f"queue_feedback_replan_continuation_command_shell_or_remote_wrapper:{command0_name}"
+        )
+    if not _is_local_python_command(command_items[0]):
+        blockers.append("queue_feedback_replan_continuation_command_not_local_python")
+    if command_items[1] != QUEUE_FEEDBACK_REPLAN_MATERIALIZER_CAMPAIGN_TOOL:
+        blockers.append("queue_feedback_replan_continuation_command_not_campaign_tool")
+    blockers.extend(
+        f"queue_feedback_replan_continuation_command_forbidden_flag:{flag}"
+        for flag in _forbidden_command_flag_uses(command_items)
+    )
+
+    expected_plan = _nonempty_str(policy.get("plan_path"))
+    expected_action = _nonempty_str(policy.get("feedback_action_functional_path"))
+    expected_iteration = str(_safe_int(policy.get("next_iteration_index")))
+    expected_max = str(_safe_int(policy.get("max_iterations")))
+    if _command_arg(command_items, "--plan") != expected_plan:
+        blockers.append("queue_feedback_replan_continuation_command_plan_mismatch")
+    if _command_arg(command_items, "--inverse-scorer-action-functional") != expected_action:
+        blockers.append(
+            "queue_feedback_replan_continuation_command_action_functional_mismatch"
+        )
+    if _command_arg(command_items, "--queue-feedback-replan-policy-iteration") != expected_iteration:
+        blockers.append("queue_feedback_replan_continuation_command_iteration_mismatch")
+    if _command_arg(command_items, "--queue-feedback-replan-policy-max-iterations") != expected_max:
+        blockers.append(
+            "queue_feedback_replan_continuation_command_max_iterations_mismatch"
+        )
+    return list(dict.fromkeys(blockers))
+
+
+def build_queue_feedback_replan_continuation_queue(
+    policy: Mapping[str, Any],
+    *,
+    lane_id: str,
+    queue_id: str | None = None,
+    source_policy_path: str | None = None,
+) -> tuple[dict[str, Any] | None, list[str]]:
+    """Return a paused local queue for the next materializer iteration."""
+
+    blockers: list[str] = []
+    lane = _nonempty_str(lane_id)
+    if lane is None:
+        blockers.append("queue_feedback_replan_continuation_lane_id_missing")
+    if policy.get("schema") != QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA:
+        blockers.append("queue_feedback_replan_continuation_policy_schema_invalid")
+    if policy.get("decision") != ACTION_RUN_NEXT_ITERATION:
+        blockers.append("queue_feedback_replan_continuation_policy_not_next_iteration")
+    if policy.get("should_continue_feedback_loop") is not True:
+        blockers.append("queue_feedback_replan_continuation_policy_not_continuable")
+    policy_blockers = _string_list(policy.get("blockers"))
+    blockers.extend(
+        f"queue_feedback_replan_continuation_policy_blocker:{item}"
+        for item in policy_blockers
+    )
+    for violation in truthy_authority_field_violations(
+        policy,
+        fields=FORBIDDEN_TRUE_AUTHORITY_FIELDS,
+    ):
+        blockers.append(
+            f"queue_feedback_replan_continuation_policy_truthy_authority_field:{violation}"
+        )
+
+    command = policy.get("next_iteration_command_template")
+    if not isinstance(command, list) or not command:
+        blockers.append("queue_feedback_replan_continuation_command_missing")
+        command_items: list[str] = []
+    else:
+        command_items = [str(item) for item in command]
+        blockers.extend(_validate_next_iteration_command(policy, command_items))
+
+    if blockers:
+        return None, list(dict.fromkeys(blockers))
+
+    source_queue_id = _nonempty_str(policy.get("queue_id")) or "materializer_campaign"
+    next_iteration = _safe_int(policy.get("next_iteration_index"))
+    effective_queue_id = queue_id or f"{source_queue_id}_feedback_continue_{next_iteration}"
+    input_artifacts = [
+        source_policy_path,
+        policy.get("source_run_path"),
+        policy.get("plan_path"),
+        policy.get("feedback_action_functional_path"),
+        policy.get("queue_performance_summary_path"),
+        policy.get("feedback_followup_queue_path"),
+    ]
+    metadata = _false_authority_payload(
+        {
+            "schema": QUEUE_FEEDBACK_REPLAN_CONTINUATION_METADATA_SCHEMA,
+            "source_policy_path": source_policy_path,
+            "source_policy_sha256": _stable_json_sha256(policy),
+            "source_run_path": policy.get("source_run_path"),
+            "source_queue_id": policy.get("queue_id"),
+            "source_queue_path": policy.get("queue_path"),
+            "source_queue_state_path": policy.get("queue_state_path"),
+            "policy_decision": policy.get("decision"),
+            "iteration_index": policy.get("iteration_index"),
+            "next_iteration_index": next_iteration,
+            "max_iterations": policy.get("max_iterations"),
+            "action": ACTION_RUN_NEXT_ITERATION,
+            "allowed_use": "paused_local_materializer_feedback_continuation_only",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+            "dispatch_blockers": [
+                "paused_continuation_queue_requires_explicit_operator_or_autopilot_resume",
+                "exact_auth_eval_required_before_score_claim",
+                "lane_dispatch_claim_required_before_paid_or_remote_eval",
+            ],
+        }
+    )
+    queue = normalize_queue_definition(
+        {
+            "schema": QUEUE_SCHEMA,
+            "queue_id": effective_queue_id,
+            "controls": {
+                "mode": "paused",
+                "local_first": True,
+                "max_concurrency": {"local_cpu": 1},
+            },
+            "experiments": [
+                {
+                    "id": QUEUE_FEEDBACK_REPLAN_CONTINUATION_EXPERIMENT_ID,
+                    "lane_id": lane,
+                    "priority": 80,
+                    "status": "queued",
+                    "tags": [
+                        "byte-shaving",
+                        "inverse-steganalysis",
+                        "queue-feedback",
+                        "continuation",
+                        "paused-followup",
+                        "no-score-authority",
+                    ],
+                    "metadata": metadata,
+                    "steps": [
+                        {
+                            "id": QUEUE_FEEDBACK_REPLAN_CONTINUATION_STEP_ID,
+                            "kind": "command",
+                            "command": command_items,
+                            "requires": [],
+                            "resources": {"kind": "local_cpu"},
+                            "timeout_seconds": 0,
+                            "telemetry": {
+                                "artifact_paths": [],
+                                "input_artifact_paths": [
+                                    str(item) for item in input_artifacts if item
+                                ],
+                                "recursive": False,
+                            },
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    return queue, []
 
 
 def build_queue_feedback_replan_policy(
@@ -618,8 +796,13 @@ __all__ = [
     "MATERIALIZER_CAMPAIGN_RUN_SCHEMA",
     "QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL",
     "QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA",
+    "QUEUE_FEEDBACK_REPLAN_CONTINUATION_EXPERIMENT_ID",
+    "QUEUE_FEEDBACK_REPLAN_CONTINUATION_METADATA_SCHEMA",
+    "QUEUE_FEEDBACK_REPLAN_CONTINUATION_STEP_ID",
     "QUEUE_FEEDBACK_REPLAN_FORBIDDEN_COMMAND_FLAGS",
+    "QUEUE_FEEDBACK_REPLAN_MATERIALIZER_CAMPAIGN_TOOL",
     "QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA",
+    "build_queue_feedback_replan_continuation_queue",
     "build_queue_feedback_replan_policy",
     "validate_feedback_followup_queue",
 ]

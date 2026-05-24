@@ -124,7 +124,9 @@ from .models import (
 )
 from .queue_feedback_replan_policy import (
     QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA,
+    QUEUE_FEEDBACK_REPLAN_CONTINUATION_METADATA_SCHEMA,
     QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA,
+    build_queue_feedback_replan_continuation_queue,
     build_queue_feedback_replan_policy,
     validate_feedback_followup_queue,
 )
@@ -179,6 +181,7 @@ __all__ = [
     "PACKET_MEMBER_RECOMPRESS_MATERIALIZER",
     "PACKET_MEMBER_RECOMPRESS_TARGET_KIND",
     "QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA",
+    "QUEUE_FEEDBACK_REPLAN_CONTINUATION_METADATA_SCHEMA",
     "QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA",
     "REGISTRY_SCHEMA",
     "SCHEDULER_RUNTIME_POLICY_SCHEMA",
@@ -214,6 +217,7 @@ __all__ = [
     "build_mlx_learned_sweep_autopilot_batch_queue",
     "build_mlx_learned_sweep_autopilot_queue",
     "build_mlx_scorer_response_execution_queue",
+    "build_queue_feedback_replan_continuation_queue",
     "build_queue_feedback_replan_policy",
     "build_remote_git_preflight_command",
     "build_remote_shell_command",

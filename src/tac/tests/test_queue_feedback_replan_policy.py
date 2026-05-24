@@ -14,7 +14,12 @@ from comma_lab.scheduler.queue_feedback_replan_policy import (
     ACTION_STOP_MAX_ITERATIONS,
     QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL,
     QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA,
+    QUEUE_FEEDBACK_REPLAN_CONTINUATION_EXPERIMENT_ID,
+    QUEUE_FEEDBACK_REPLAN_CONTINUATION_METADATA_SCHEMA,
+    QUEUE_FEEDBACK_REPLAN_CONTINUATION_STEP_ID,
+    QUEUE_FEEDBACK_REPLAN_MATERIALIZER_CAMPAIGN_TOOL,
     QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA,
+    build_queue_feedback_replan_continuation_queue,
     build_queue_feedback_replan_policy,
     validate_feedback_followup_queue,
 )
@@ -143,7 +148,7 @@ def test_feedback_replan_policy_builds_next_iteration_command_after_success() ->
     assert policy["next_iteration_index"] == 2
     assert policy["next_iteration_command_template"] == [
         sys.executable,
-        "tools/run_byte_shaving_materializer_campaign.py",
+        QUEUE_FEEDBACK_REPLAN_MATERIALIZER_CAMPAIGN_TOOL,
         "--plan",
         ".omx/research/campaign/plan.json",
         "--inverse-scorer-action-functional",
@@ -154,6 +159,96 @@ def test_feedback_replan_policy_builds_next_iteration_command_after_success() ->
         "3",
     ]
     assert policy["recommended_actions"][-1]["requires_materializer_context_or_artifact_map"] is True
+
+
+def test_feedback_replan_policy_builds_paused_next_iteration_queue() -> None:
+    action_path = ".omx/research/campaign/inverse_steganalysis_action_functional.feedback.json"
+    policy = build_queue_feedback_replan_policy(
+        _run_summary(
+            queue_feedback_replan_followup_executed=True,
+            queue_feedback_replan_followup_execution_success=True,
+            queue_feedback_replan_followup_action_functional_path=action_path,
+        ),
+        feedback_followup_queue=_child_queue(),
+        iteration_index=1,
+        max_iterations=3,
+    )
+
+    queue, blockers = build_queue_feedback_replan_continuation_queue(
+        policy,
+        lane_id="feedback_lane",
+        source_policy_path=".omx/research/campaign/queue_feedback_replan_policy.json",
+    )
+
+    assert blockers == []
+    assert queue is not None
+    assert queue["schema"] == "experiment_queue.v1"
+    assert queue["queue_id"] == "campaign_queue_feedback_continue_2"
+    assert queue["controls"] == {
+        "mode": "paused",
+        "local_first": True,
+        "max_concurrency": {"local_cpu": 1},
+    }
+    experiment = queue["experiments"][0]
+    assert experiment["id"] == QUEUE_FEEDBACK_REPLAN_CONTINUATION_EXPERIMENT_ID
+    assert experiment["lane_id"] == "feedback_lane"
+    metadata = experiment["metadata"]
+    assert metadata["schema"] == QUEUE_FEEDBACK_REPLAN_CONTINUATION_METADATA_SCHEMA
+    assert metadata["source_policy_path"] == (
+        ".omx/research/campaign/queue_feedback_replan_policy.json"
+    )
+    assert metadata["source_policy_sha256"]
+    assert metadata["score_claim"] is False
+    assert metadata["ready_for_exact_eval_dispatch"] is False
+    assert (
+        "exact_auth_eval_required_before_score_claim"
+        in metadata["dispatch_blockers"]
+    )
+    step = experiment["steps"][0]
+    assert step["id"] == QUEUE_FEEDBACK_REPLAN_CONTINUATION_STEP_ID
+    assert step["resources"] == {"kind": "local_cpu"}
+    assert step["command"] == policy["next_iteration_command_template"]
+
+
+def test_feedback_replan_continuation_queue_refuses_unsafe_policy_command() -> None:
+    action_path = ".omx/research/campaign/inverse_steganalysis_action_functional.feedback.json"
+    policy = build_queue_feedback_replan_policy(
+        _run_summary(
+            queue_feedback_replan_followup_executed=True,
+            queue_feedback_replan_followup_execution_success=True,
+            queue_feedback_replan_followup_action_functional_path=action_path,
+        ),
+        feedback_followup_queue=_child_queue(),
+        iteration_index=1,
+        max_iterations=3,
+    )
+    policy = {
+        **policy,
+        "next_iteration_command_template": [
+            sys.executable,
+            QUEUE_FEEDBACK_REPLAN_MATERIALIZER_CAMPAIGN_TOOL,
+            "--plan",
+            ".omx/research/campaign/plan.json",
+            "--inverse-scorer-action-functional",
+            action_path,
+            "--queue-feedback-replan-policy-iteration",
+            "2",
+            "--queue-feedback-replan-policy-max-iterations",
+            "3",
+            "--provider=modal",
+        ],
+    }
+
+    queue, blockers = build_queue_feedback_replan_continuation_queue(
+        policy,
+        lane_id="feedback_lane",
+    )
+
+    assert queue is None
+    assert (
+        "queue_feedback_replan_continuation_command_forbidden_flag:--provider=modal"
+        in blockers
+    )
 
 
 def test_feedback_replan_policy_refuses_truthy_authority() -> None:

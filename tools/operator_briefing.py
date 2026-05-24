@@ -1742,6 +1742,20 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
             if isinstance(feedback_policy.get("blockers"), list)
             else []
         ),
+        "queue_feedback_replan_continuation_queue_path": str(
+            payload.get("queue_feedback_replan_continuation_queue_path") or ""
+        ),
+        "queue_feedback_replan_continuation_queue_emitted": (
+            payload.get("queue_feedback_replan_continuation_queue_emitted") is True
+        ),
+        "queue_feedback_replan_continuation_queue_blocker_count": len(
+            payload.get("queue_feedback_replan_continuation_queue_blockers")
+            if isinstance(
+                payload.get("queue_feedback_replan_continuation_queue_blockers"),
+                list,
+            )
+            else []
+        ),
         "local_cpu_concurrency": _safe_int(build.get("local_cpu_concurrency")),
         "worker_max_parallel": _safe_int(worker.get("max_parallel")),
         "worker_execute": worker.get("execute") is True,
@@ -1858,6 +1872,11 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
             for row in rows
             if row.get("queue_feedback_replan_policy_should_continue") is True
         ),
+        "queue_feedback_continuation_queue_count": sum(
+            1
+            for row in rows
+            if row.get("queue_feedback_replan_continuation_queue_emitted") is True
+        ),
         "overall_executable_conversion_rate": total_executable / total_work
         if total_work
         else 0.0,
@@ -1901,6 +1920,8 @@ def _format_byte_shaving_acquisition_summary() -> str:
             "feedback_success="
             f"{payload['queue_feedback_followup_execution_success_count']} "
             f"feedback_continue={payload['queue_feedback_policy_continue_count']} "
+            "feedback_continuation_queued="
+            f"{payload['queue_feedback_continuation_queue_count']} "
             f"local_mlx_ready_steps={payload['local_mlx_ready_step_count']}"
         ),
         f"score_claim: {payload['score_claim']}",
@@ -1945,6 +1966,8 @@ def _format_byte_shaving_acquisition_summary() -> str:
                 f"{row.get('queue_feedback_replan_policy_decision') or '<none>'} "
                 "feedback_continue="
                 f"{row.get('queue_feedback_replan_policy_should_continue') is True} "
+                "feedback_continuation_queued="
+                f"{row.get('queue_feedback_replan_continuation_queue_emitted') is True} "
                 f"ready_steps={row.get('ready_step_count', 0)} "
                 f"local_mlx_ready={row.get('local_mlx_ready_step_count', 0)}"
             )

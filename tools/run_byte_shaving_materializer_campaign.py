@@ -47,6 +47,7 @@ from comma_lab.scheduler.experiment_queue import (  # noqa: E402
 from comma_lab.scheduler.queue_feedback_replan_policy import (  # noqa: E402
     QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL,
     QUEUE_FEEDBACK_REPLAN_FORBIDDEN_COMMAND_FLAGS,
+    build_queue_feedback_replan_continuation_queue,
     build_queue_feedback_replan_policy,
     validate_feedback_followup_queue,
 )
@@ -274,6 +275,30 @@ def _false_authority_payload(row: Mapping[str, Any]) -> dict[str, Any]:
 
 def _as_sequence(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
+
+
+def _queue_feedback_replan_continuation_lane_id(
+    queue: Mapping[str, Any],
+    *,
+    plan_path: Path | None = None,
+) -> str:
+    if plan_path is not None:
+        try:
+            plan_payload = json.loads(plan_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            plan_payload = None
+        if isinstance(plan_payload, Mapping):
+            lane_id = str(plan_payload.get("lane_id") or "").strip()
+            if lane_id:
+                return lane_id
+    for experiment in _as_sequence(queue.get("experiments")):
+        if not isinstance(experiment, Mapping):
+            continue
+        lane_id = str(experiment.get("lane_id") or "").strip()
+        if lane_id:
+            return lane_id
+    queue_id = str(queue.get("queue_id") or "materializer_campaign").strip()
+    return f"{queue_id or 'materializer_campaign'}_feedback_replan"
 
 
 def _text_excerpt(text: str, *, limit: int = 4096) -> str:
@@ -2380,6 +2405,7 @@ def _build_queue_feedback_staircase_artifacts(
     parent_state_path: Path,
     child_queue: Mapping[str, Any],
     child_queue_path: Path,
+    artifact_stem: str = "queue_feedback_replan",
 ) -> dict[str, Any]:
     resource_pools = [parse_resource_pool_spec(spec) for spec in args.staircase_resource_pool] or None
     child_dag = build_staircase_dag_from_experiment_queue(
@@ -2394,8 +2420,8 @@ def _build_queue_feedback_staircase_artifacts(
         allow_cloud=args.staircase_allow_cloud,
         diversity_bucket_limit=args.staircase_diversity_bucket_limit,
     )
-    child_dag_path = run_dir / "queue_feedback_replan_staircase_dag.json"
-    child_plan_path = run_dir / "queue_feedback_replan_staircase_dispatch_plan.json"
+    child_dag_path = run_dir / f"{artifact_stem}_staircase_dag.json"
+    child_plan_path = run_dir / f"{artifact_stem}_staircase_dispatch_plan.json"
     _write_json(child_dag_path, child_dag)
     _write_json(child_plan_path, child_plan)
     dependent_ref = _queue_feedback_dependent_queue_ref_payload(
@@ -2409,7 +2435,7 @@ def _build_queue_feedback_staircase_artifacts(
         child_dag=child_dag,
         child_plan=child_plan,
     )
-    dependent_refs_path = run_dir / "queue_feedback_replan_dependent_queue_refs.json"
+    dependent_refs_path = run_dir / f"{artifact_stem}_dependent_queue_refs.json"
     _write_json(
         dependent_refs_path,
         _false_authority_payload(
@@ -2845,10 +2871,16 @@ def main(argv: list[str] | None = None) -> int:
     queue_feedback_replan_request_path = run_dir / "queue_feedback_replan_request.json"
     queue_feedback_replan_followup_queue_path = run_dir / "queue_feedback_replan_followup_queue.json"
     queue_feedback_replan_policy_path = run_dir / "queue_feedback_replan_policy.json"
+    queue_feedback_replan_continuation_queue_path = (
+        run_dir / "queue_feedback_replan_continuation_queue.json"
+    )
     generated_runtime_identity_path = run_dir / "queue_performance_runtime_identity.json"
     generated_cache_identity_path = run_dir / "queue_performance_cache_identity.json"
     response_update_placeholder_path = run_dir / "canonical_response_update_placeholder.json"
     queue_feedback_replan_staircase_artifacts: dict[str, Any] | None = None
+    queue_feedback_replan_continuation_staircase_artifacts: dict[str, Any] | None = None
+    queue_feedback_replan_continuation_queue: dict[str, Any] | None = None
+    queue_feedback_replan_continuation_queue_blockers: list[str] = []
     queue_feedback_replan_followup_execution: dict[str, Any] | None = None
     queue_feedback_replan_followup_execution_returncode = 0
     queue_feedback_replan_followup_policy = _queue_feedback_replan_followup_activation_policy(args)
@@ -3166,6 +3198,36 @@ def main(argv: list[str] | None = None) -> int:
         max_iterations=args.queue_feedback_replan_policy_max_iterations,
     )
     _write_json(queue_feedback_replan_policy_path, queue_feedback_replan_policy)
+    (
+        queue_feedback_replan_continuation_queue,
+        queue_feedback_replan_continuation_queue_blockers,
+    ) = build_queue_feedback_replan_continuation_queue(
+        queue_feedback_replan_policy,
+        lane_id=args.lane_id
+        or _queue_feedback_replan_continuation_lane_id(queue, plan_path=plan_path),
+        source_policy_path=_display_path(queue_feedback_replan_policy_path),
+    )
+    if queue_feedback_replan_continuation_queue is not None:
+        _write_json(
+            queue_feedback_replan_continuation_queue_path,
+            queue_feedback_replan_continuation_queue,
+        )
+        queue_feedback_replan_continuation_staircase_artifacts = (
+            _build_queue_feedback_staircase_artifacts(
+                args,
+                run_dir=run_dir,
+                parent_queue=queue,
+                parent_queue_path=execution_queue,
+                parent_state_path=state_path,
+                child_queue=queue_feedback_replan_continuation_queue,
+                child_queue_path=queue_feedback_replan_continuation_queue_path,
+                artifact_stem="queue_feedback_replan_continuation",
+            )
+        )
+        if staircase_artifacts is not None:
+            staircase_artifacts["feedback_continuation_child"] = (
+                queue_feedback_replan_continuation_staircase_artifacts
+            )
     payload["queue_feedback_replan_policy_path"] = _display_path(
         queue_feedback_replan_policy_path
     )
@@ -3175,6 +3237,20 @@ def main(argv: list[str] | None = None) -> int:
     ]
     payload["queue_feedback_replan_policy_should_continue"] = (
         queue_feedback_replan_policy["should_continue_feedback_loop"]
+    )
+    payload["queue_feedback_replan_continuation_queue_path"] = (
+        _display_path(queue_feedback_replan_continuation_queue_path)
+        if queue_feedback_replan_continuation_queue is not None
+        else None
+    )
+    payload["queue_feedback_replan_continuation_queue_emitted"] = (
+        queue_feedback_replan_continuation_queue is not None
+    )
+    payload["queue_feedback_replan_continuation_queue_blockers"] = (
+        queue_feedback_replan_continuation_queue_blockers
+    )
+    payload["queue_feedback_replan_continuation_staircase_artifacts"] = (
+        queue_feedback_replan_continuation_staircase_artifacts
     )
     _write_json(summary_path, payload)
     payload["summary_path"] = _display_path(summary_path)

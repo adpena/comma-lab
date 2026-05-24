@@ -741,6 +741,32 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert feedback_policy["feedback_followup_queue_validation"]["queue_sha256"]
     assert feedback_policy["score_claim"] is False
     assert feedback_policy["ready_for_exact_eval_dispatch"] is False
+    assert summary["queue_feedback_replan_continuation_queue_path"] == str(
+        run_dir / "queue_feedback_replan_continuation_queue.json"
+    )
+    assert summary["queue_feedback_replan_continuation_queue_emitted"] is True
+    assert summary["queue_feedback_replan_continuation_queue_blockers"] == []
+    continuation_queue = json.loads(
+        (run_dir / "queue_feedback_replan_continuation_queue.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert continuation_queue["schema"] == "experiment_queue.v1"
+    assert continuation_queue["controls"]["mode"] == "paused"
+    assert continuation_queue["controls"]["max_concurrency"] == {"local_cpu": 1}
+    assert continuation_queue["experiments"][0]["lane_id"] == (
+        "lane_inverse_cell_candidate_runner_fixture"
+    )
+    continuation_step = continuation_queue["experiments"][0]["steps"][0]
+    assert continuation_step["resources"] == {"kind": "local_cpu"}
+    assert continuation_step["command"] == feedback_policy["next_iteration_command_template"]
+    continuation_metadata = continuation_queue["experiments"][0]["metadata"]
+    assert continuation_metadata["schema"] == "queue_feedback_replan_continuation_metadata.v1"
+    assert continuation_metadata["score_claim"] is False
+    assert continuation_metadata["ready_for_exact_eval_dispatch"] is False
+    assert summary["queue_feedback_replan_continuation_staircase_artifacts"][
+        "dependent_queue_ref_count"
+    ] == 1
     feedback_execution = summary["queue_feedback_replan_followup_execution"]
     assert feedback_execution["schema"] == (
         runner.QUEUE_FEEDBACK_REPLAN_FOLLOWUP_EXECUTION_SCHEMA
