@@ -17,6 +17,7 @@ from typing import Any
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.local_acceleration.mlx_profile_stability import SCHEMA_VERSION as STABILITY_SCHEMA
 from tac.local_acceleration.mlx_scorer_response import BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER
+from tac.repo_io import write_json_artifact
 
 SCHEMA_VERSION = "mlx_scorer_response_execution_plan.v1"
 PRODUCER = "tac.local_acceleration.mlx_execution_plan"
@@ -42,10 +43,19 @@ def load_json_object(path: str | Path) -> dict[str, Any]:
     return payload
 
 
-def write_execution_plan(plan: dict[str, Any], path: str | Path) -> None:
-    out = Path(path)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(plan, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+def write_execution_plan(
+    plan: dict[str, Any],
+    path: str | Path,
+    *,
+    allow_overwrite: bool = False,
+    expected_existing_sha256: str | None = None,
+) -> None:
+    write_json_artifact(
+        path,
+        plan,
+        allow_overwrite=allow_overwrite,
+        expected_existing_sha256=expected_existing_sha256,
+    )
 
 
 def build_mlx_scorer_response_execution_plan(

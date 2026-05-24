@@ -28,6 +28,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--response-output", type=Path)
     parser.add_argument("--components-dir", type=Path)
     parser.add_argument("--progress-every", type=int, default=0)
+    parser.add_argument("--allow-overwrite", action="store_true")
+    parser.add_argument("--expected-output-sha256", default=None)
     parser.add_argument(
         "--allow-gpu-research-signal",
         action="store_true",
@@ -64,7 +66,12 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError, MLXExecutionPlanError) as exc:
         print(f"FATAL: {exc}", file=sys.stderr)
         return 2
-    write_execution_plan(plan, args.output)
+    write_execution_plan(
+        plan,
+        args.output,
+        allow_overwrite=args.allow_overwrite,
+        expected_existing_sha256=args.expected_output_sha256,
+    )
     if args.md_out is not None:
         args.md_out.parent.mkdir(parents=True, exist_ok=True)
         args.md_out.write_text(render_execution_plan_markdown(plan), encoding="utf-8")

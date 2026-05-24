@@ -41,6 +41,18 @@ INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_ID = (
 INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_KIND = (
     "planning_only_inverse_scorer_action_functional"
 )
+ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER = "archive_section_entropy_recode_adapter"
+ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND = "archive_section_entropy_recode_v1"
+ARCHIVE_SECTION_PROCEDURALIZE_MATERIALIZER = "archive_section_proceduralize_adapter"
+ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND = "archive_section_proceduralize_v1"
+TENSOR_QUANTIZE_MATERIALIZER = "tensor_quantize_adapter"
+TENSOR_QUANTIZE_TARGET_KIND = "tensor_quantize_v1"
+TENSOR_FACTORIZE_MATERIALIZER = "tensor_factorize_adapter"
+TENSOR_FACTORIZE_TARGET_KIND = "tensor_factorize_v1"
+TENSOR_SHARED_CODEBOOK_MATERIALIZER = "tensor_shared_codebook_adapter"
+TENSOR_SHARED_CODEBOOK_TARGET_KIND = "tensor_shared_codebook_v1"
+PACKET_MEMBER_RECOMPRESS_MATERIALIZER = "packet_member_recompress_adapter"
+PACKET_MEMBER_RECOMPRESS_TARGET_KIND = "packet_member_recompress_v1"
 
 
 @dataclass(frozen=True)
@@ -85,6 +97,31 @@ class MaterializerResolution:
     executable: bool
     blockers: tuple[str, ...]
     adapter: MaterializerAdapter | None = None
+
+
+def _non_executable_family_adapter(
+    *,
+    materializer_id: str,
+    unit_kind: str,
+    operation_family: str,
+    target_kind: str,
+    description: str,
+    receiver_contract_kind: str,
+    required_context_fields: tuple[str, ...],
+) -> MaterializerAdapter:
+    return MaterializerAdapter(
+        materializer_id=materializer_id,
+        unit_kind=unit_kind,
+        operation_family=operation_family,
+        target_kind=target_kind,
+        executable=False,
+        description=description,
+        receiver_contract_id=f"{target_kind}.receiver.v1",
+        receiver_contract_kind=receiver_contract_kind,
+        cooperative_receiver_required=True,
+        materialization_resource_kind="local_cpu",
+        required_context_fields=required_context_fields,
+    )
 
 
 _ADAPTERS: tuple[MaterializerAdapter, ...] = (
@@ -185,6 +222,108 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         plan_function="build_inverse_steganalysis_action_functional",
         emits_candidate_archive=False,
         planning_only=True,
+    ),
+    _non_executable_family_adapter(
+        materializer_id=ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER,
+        unit_kind="archive_section",
+        operation_family="section_entropy_recode",
+        target_kind=ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        description=(
+            "Fail-closed contract for HNeRV/BoostNeRV/non-NeRV archive-section "
+            "entropy recode candidates; requires section grammar, archive "
+            "custody, and runtime-consumption proof before execution."
+        ),
+        receiver_contract_kind="family_agnostic_archive_section_entropy_recode",
+        required_context_fields=(
+            "archive_path",
+            "section_manifest",
+            "runtime_consumption_proof",
+        ),
+    ),
+    _non_executable_family_adapter(
+        materializer_id=ARCHIVE_SECTION_PROCEDURALIZE_MATERIALIZER,
+        unit_kind="archive_section",
+        operation_family="section_proceduralize",
+        target_kind=ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND,
+        description=(
+            "Fail-closed contract for replacing reusable archive sections with "
+            "deterministic receiver-side procedures across NeRV-family and "
+            "non-NeRV payload grammars."
+        ),
+        receiver_contract_kind="family_agnostic_archive_section_proceduralize",
+        required_context_fields=(
+            "archive_path",
+            "section_manifest",
+            "procedural_receiver_spec",
+            "runtime_consumption_proof",
+        ),
+    ),
+    _non_executable_family_adapter(
+        materializer_id=TENSOR_QUANTIZE_MATERIALIZER,
+        unit_kind="tensor",
+        operation_family="quantize_tensor",
+        target_kind=TENSOR_QUANTIZE_TARGET_KIND,
+        description=(
+            "Fail-closed contract for representation tensor quantization in "
+            "HNeRV, BoostNeRV, broader NeRV-family, and non-NeRV learned codecs."
+        ),
+        receiver_contract_kind="family_agnostic_tensor_quantize",
+        required_context_fields=(
+            "archive_path",
+            "tensor_manifest",
+            "quantization_contract",
+            "runtime_consumption_proof",
+        ),
+    ),
+    _non_executable_family_adapter(
+        materializer_id=TENSOR_FACTORIZE_MATERIALIZER,
+        unit_kind="tensor",
+        operation_family="factorize_tensor",
+        target_kind=TENSOR_FACTORIZE_TARGET_KIND,
+        description=(
+            "Fail-closed contract for tensor factorization candidates, including "
+            "BoostNeRV bolt-on weights and generic representation tensors."
+        ),
+        receiver_contract_kind="family_agnostic_tensor_factorize",
+        required_context_fields=(
+            "archive_path",
+            "tensor_manifest",
+            "factorization_contract",
+            "runtime_consumption_proof",
+        ),
+    ),
+    _non_executable_family_adapter(
+        materializer_id=TENSOR_SHARED_CODEBOOK_MATERIALIZER,
+        unit_kind="tensor",
+        operation_family="shared_codebook_tensor",
+        target_kind=TENSOR_SHARED_CODEBOOK_TARGET_KIND,
+        description=(
+            "Fail-closed contract for shared-codebook tensor payload rewrites "
+            "across representation families."
+        ),
+        receiver_contract_kind="family_agnostic_tensor_shared_codebook",
+        required_context_fields=(
+            "archive_path",
+            "tensor_manifest",
+            "codebook_contract",
+            "runtime_consumption_proof",
+        ),
+    ),
+    _non_executable_family_adapter(
+        materializer_id=PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
+        unit_kind="packet_member",
+        operation_family="member_recompress",
+        target_kind=PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        description=(
+            "Fail-closed contract for generic packet-member recompression "
+            "candidates, including non-NeRV archives and bolted-on side members."
+        ),
+        receiver_contract_kind="family_agnostic_packet_member_recompress",
+        required_context_fields=(
+            "archive_path",
+            "packet_member_manifest",
+            "runtime_consumption_proof",
+        ),
     ),
 )
 
@@ -413,6 +552,10 @@ def registry_manifest() -> dict[str, Any]:
 
 
 __all__ = [
+    "ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER",
+    "ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND",
+    "ARCHIVE_SECTION_PROCEDURALIZE_MATERIALIZER",
+    "ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND",
     "BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER",
     "BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID",
     "BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND",
@@ -430,7 +573,15 @@ __all__ = [
     "INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND",
     "INVERSE_SCORER_CELL_TARGET_KIND",
     "KNOWN_OPERATION_FAMILIES",
+    "PACKET_MEMBER_RECOMPRESS_MATERIALIZER",
+    "PACKET_MEMBER_RECOMPRESS_TARGET_KIND",
     "REGISTRY_SCHEMA",
+    "TENSOR_FACTORIZE_MATERIALIZER",
+    "TENSOR_FACTORIZE_TARGET_KIND",
+    "TENSOR_QUANTIZE_MATERIALIZER",
+    "TENSOR_QUANTIZE_TARGET_KIND",
+    "TENSOR_SHARED_CODEBOOK_MATERIALIZER",
+    "TENSOR_SHARED_CODEBOOK_TARGET_KIND",
     "MaterializerAdapter",
     "MaterializerResolution",
     "known_materializer_target_kinds",

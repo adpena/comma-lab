@@ -8,10 +8,21 @@ from pathlib import Path
 
 import pytest
 
+from comma_lab.scheduler import (
+    LOCAL_TRAINING_QUEUE_SCHEMA,
+)
+from comma_lab.scheduler import (
+    build_local_training_execution_queue as package_build_local_training_execution_queue,
+)
 from comma_lab.scheduler.experiment_queue import ExperimentQueueError
 from comma_lab.scheduler.local_training_queue import build_local_training_execution_queue
 
 REPO = Path(__file__).resolve().parents[3]
+
+
+def test_local_training_queue_is_exported_from_scheduler_package() -> None:
+    assert LOCAL_TRAINING_QUEUE_SCHEMA == "local_training_execution_queue_plan.v1"
+    assert package_build_local_training_execution_queue is build_local_training_execution_queue
 
 
 def _plan(tmp_path: Path, *, backend: str = "mlx", device: str = "gpu") -> dict:
@@ -37,6 +48,8 @@ def _plan(tmp_path: Path, *, backend: str = "mlx", device: str = "gpu") -> dict:
                 "tools/run_local_training_plan.py",
                 "--output",
                 str(tmp_path / "manifest.json"),
+                "--representation-manifest",
+                str(tmp_path / "representation_manifest.json"),
             ],
             "score_claim": False,
             "promotion_eligible": False,
@@ -125,6 +138,49 @@ def test_local_training_queue_rejects_truthy_authority(tmp_path: Path) -> None:
         )
 
 
+def test_local_training_queue_rejects_command_output_manifest_mismatch(
+    tmp_path: Path,
+) -> None:
+    plan = _plan(tmp_path)
+    command = plan["recommended_execution"]["python_command_args"]
+    command[command.index("--output") + 1] = str(tmp_path / "other_manifest.json")
+
+    with pytest.raises(ExperimentQueueError, match=r"output.*does not match"):
+        build_local_training_execution_queue(
+            [plan],
+            queue_id="local_training_fixture",
+            repo_root=tmp_path,
+        )
+
+
+def test_local_training_queue_accepts_output_dir_for_pr95_style_manifest(
+    tmp_path: Path,
+) -> None:
+    plan = _plan(tmp_path)
+    output_dir = tmp_path / "pr95_smoke"
+    plan["recommended_execution"]["output_manifest"] = str(output_dir / "manifest.json")
+    plan["recommended_execution"]["representation_manifest"] = str(
+        output_dir / "representation_training_manifest.json"
+    )
+    plan["recommended_execution"]["tool"] = "tools/run_pr95_local_training_probe.py"
+    plan["recommended_execution"]["python_command_args"] = [
+        ".venv/bin/python",
+        "tools/run_pr95_local_training_probe.py",
+        "--output-dir",
+        str(output_dir),
+    ]
+
+    queue = build_local_training_execution_queue(
+        [plan],
+        queue_id="local_training_fixture",
+        repo_root=tmp_path,
+    )
+
+    assert queue["experiments"][0]["steps"][0]["postconditions"][0]["path"] == (
+        "pr95_smoke/manifest.json"
+    )
+
+
 def test_build_local_training_execution_queue_cli(tmp_path: Path) -> None:
     plan_path = tmp_path / "plan.json"
     queue_path = tmp_path / "queue.json"
@@ -160,3 +216,37 @@ def test_build_local_training_execution_queue_cli(tmp_path: Path) -> None:
     assert queue["controls"]["max_concurrency"]["local_mlx"] == 2
     summary = json.loads(result.stdout)
     assert summary["score_claim"] is False
+
+
+def test_build_local_training_execution_queue_cli_refuses_clobber(
+    tmp_path: Path,
+) -> None:
+    plan_path = tmp_path / "plan.json"
+    queue_path = tmp_path / "queue.json"
+    plan_path.write_text(
+        json.dumps(_plan(tmp_path), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    queue_path.write_text("existing\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools/build_local_training_execution_queue.py"),
+            "--plan",
+            str(plan_path),
+            "--output",
+            str(queue_path),
+            "--queue-id",
+            "local_training_cli_fixture",
+            "--repo-root",
+            str(tmp_path),
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "refusing to overwrite" in result.stderr

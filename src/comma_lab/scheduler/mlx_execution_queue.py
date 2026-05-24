@@ -27,6 +27,13 @@ FALSE_AUTHORITY: dict[str, bool] = {
 
 MLX_EXECUTION_QUEUE_SCHEMA = "mlx_scorer_response_execution_queue_plan.v1"
 TOOL_NAME = "comma_lab.scheduler.mlx_execution_queue"
+MLX_ACQUISITION_FOLLOWUP_SCHEMA = "mlx_scorer_response_acquisition_followup.v1"
+MLX_ACQUISITION_FOLLOWUP_TOOL = "tools/run_byte_shaving_materializer_campaign.py"
+MLX_WINDOW_RESPONSE_DATASET_TOOL = "tools/build_mlx_window_response_dataset.py"
+SCORER_RESPONSE_DATASET_SCHEMA = "scorer_response_dataset.v1"
+BYTE_SHAVING_CAMPAIGN_PLAN_SCHEMA = "byte_shaving_campaign_plan.v1"
+BYTE_SHAVING_MATERIALIZER_RUN_SCHEMA = "byte_shaving_materializer_campaign_run.v1"
+INVERSE_ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
 
 
 def _utc_now() -> str:
@@ -47,6 +54,11 @@ def _safe_id(value: str) -> str:
 def _resolve_output_path(value: Any, *, repo_root: Path) -> Path:
     if not isinstance(value, str) or not value.strip() or value.startswith("<"):
         raise ExperimentQueueError("mlx execution plan requires concrete response_output")
+    path = Path(value).expanduser()
+    return path if path.is_absolute() else repo_root / path
+
+
+def _resolve_root_path(value: str | Path, *, repo_root: Path) -> Path:
     path = Path(value).expanduser()
     return path if path.is_absolute() else repo_root / path
 
@@ -167,6 +179,93 @@ def _command_args(plan: Mapping[str, Any], execution: Mapping[str, Any]) -> list
     return parsed
 
 
+def _append_optional_int_flag(
+    command: list[str],
+    flag: str,
+    value: int | None,
+) -> None:
+    if value is not None:
+        command.extend([flag, str(value)])
+
+
+def _acquisition_followup_command(
+    *,
+    response_path: Path,
+    acquisition_run_dir: Path,
+    repo_root: Path,
+    campaign_id: str,
+    candidate_id: str,
+    lane_id: str,
+    resource_kind: str,
+    candidate_limit: int,
+    campaign_plan_max_k: int | None,
+    total_byte_budget: int | None,
+    materializer_execution_limit: int | None,
+    max_steps: int,
+    emit_staircase_plan: bool,
+) -> list[str]:
+    command = [
+        ".venv/bin/python",
+        MLX_ACQUISITION_FOLLOWUP_TOOL,
+        "--scorer-response",
+        _repo_rel(response_path, repo_root),
+        "--run-dir",
+        _repo_rel(acquisition_run_dir, repo_root),
+        "--campaign-id",
+        campaign_id,
+        "--candidate-id",
+        candidate_id,
+        "--lane-id",
+        lane_id,
+        "--resource-kind",
+        resource_kind,
+        "--inverse-scorer-allow-native-mlx-window-objective",
+        "--candidate-limit",
+        str(candidate_limit),
+        "--max-steps",
+        str(max_steps),
+        "--max-idle-cycles",
+        "1",
+    ]
+    _append_optional_int_flag(command, "--campaign-plan-max-k", campaign_plan_max_k)
+    _append_optional_int_flag(command, "--total-byte-budget", total_byte_budget)
+    _append_optional_int_flag(
+        command,
+        "--materializer-execution-limit",
+        materializer_execution_limit,
+    )
+    if emit_staircase_plan:
+        command.append("--emit-staircase-plan")
+    return command
+
+
+def _window_dataset_command(
+    *,
+    response_path: Path,
+    baseline_response_paths: Sequence[Path],
+    dataset_path: Path,
+    dataset_md_path: Path,
+    repo_root: Path,
+    require_auth_audited_windows: bool,
+) -> list[str]:
+    command = [
+        ".venv/bin/python",
+        MLX_WINDOW_RESPONSE_DATASET_TOOL,
+        "--candidate-response",
+        _repo_rel(response_path, repo_root),
+        "--json-out",
+        _repo_rel(dataset_path, repo_root),
+        "--md-out",
+        _repo_rel(dataset_md_path, repo_root),
+        "--require-no-skipped",
+    ]
+    for baseline_path in baseline_response_paths:
+        command.extend(["--baseline-response", _repo_rel(baseline_path, repo_root)])
+    if not require_auth_audited_windows:
+        command.append("--allow-unaudited-mlx-debug-dataset")
+    return command
+
+
 def _validate_plan(plan: Mapping[str, Any], *, index: int) -> Mapping[str, Any]:
     label = f"mlx_execution_plan[{index}]"
     if plan.get("schema_version") != MLX_EXECUTION_PLAN_SCHEMA:
@@ -185,6 +284,18 @@ def _validate_plan(plan: Mapping[str, Any], *, index: int) -> Mapping[str, Any]:
     execution = plan.get("recommended_execution")
     if not isinstance(execution, Mapping):
         raise ExperimentQueueError(f"{label}: recommended_execution must be an object")
+    try:
+        require_no_truthy_authority_fields(
+            execution,
+            context=f"{label}.recommended_execution",
+        )
+    except ValueError as exc:
+        raise ExperimentQueueError(str(exc)) from exc
+    for key, expected in FALSE_AUTHORITY.items():
+        if key in execution and execution.get(key) is not expected:
+            raise ExperimentQueueError(
+                f"{label}.recommended_execution.{key} must be false"
+            )
     if execution.get("device") not in {"cpu", "gpu"}:
         raise ExperimentQueueError(f"{label}: recommended_execution.device must be cpu or gpu")
     return execution
@@ -200,8 +311,26 @@ def build_mlx_scorer_response_execution_queue(
     local_mlx_concurrency: int = 1,
     timeout_seconds: int = 0,
     limit: int | None = None,
+    include_acquisition_followup: bool = False,
+    acquisition_baseline_response_paths: Sequence[str | Path] = (),
+    acquisition_run_root: str | Path = ".omx/research/mlx_acquisition_batches",
+    acquisition_campaign_id: str | None = None,
+    acquisition_candidate_limit: int = 32,
+    acquisition_campaign_plan_max_k: int | None = None,
+    acquisition_total_byte_budget: int | None = None,
+    acquisition_materializer_execution_limit: int | None = None,
+    acquisition_max_steps: int = 1,
+    emit_acquisition_staircase_plan: bool = False,
 ) -> dict[str, Any]:
-    """Return ``experiment_queue.v1`` work for concrete MLX execution plans."""
+    """Return ``experiment_queue.v1`` work for concrete MLX execution plans.
+
+    When ``include_acquisition_followup`` is true, each MLX scorer-response
+    experiment immediately appends the high-level inverse/action/materializer
+    campaign builder as a local CPU follow-up.  That keeps the MLX acquisition
+    loop queue-owned: response generation, inverse water-fill planning,
+    byte-shaving campaign planning, materializer queue emission, and optional
+    staircase artifacts all stay connected to the same experiment identity.
+    """
 
     if not plans:
         raise ExperimentQueueError("at least one MLX execution plan is required")
@@ -213,8 +342,43 @@ def build_mlx_scorer_response_execution_queue(
         raise ExperimentQueueError("timeout_seconds must be non-negative")
     if limit is not None and (isinstance(limit, bool) or limit < 1):
         raise ExperimentQueueError("limit must be >= 1 when provided")
+    if (
+        isinstance(acquisition_candidate_limit, bool)
+        or acquisition_candidate_limit < 1
+    ):
+        raise ExperimentQueueError("acquisition_candidate_limit must be >= 1")
+    if acquisition_campaign_plan_max_k is not None and (
+        isinstance(acquisition_campaign_plan_max_k, bool)
+        or acquisition_campaign_plan_max_k < 1
+    ):
+        raise ExperimentQueueError("acquisition_campaign_plan_max_k must be >= 1")
+    if acquisition_total_byte_budget is not None and (
+        isinstance(acquisition_total_byte_budget, bool)
+        or acquisition_total_byte_budget < 1
+    ):
+        raise ExperimentQueueError("acquisition_total_byte_budget must be >= 1")
+    if acquisition_materializer_execution_limit is not None and (
+        isinstance(acquisition_materializer_execution_limit, bool)
+        or acquisition_materializer_execution_limit < 1
+    ):
+        raise ExperimentQueueError(
+            "acquisition_materializer_execution_limit must be >= 1"
+        )
+    if isinstance(acquisition_max_steps, bool) or acquisition_max_steps < 1:
+        raise ExperimentQueueError("acquisition_max_steps must be >= 1")
 
     repo = Path(repo_root)
+    acquisition_root = _resolve_root_path(acquisition_run_root, repo_root=repo)
+    baseline_response_paths = [
+        _resolve_root_path(path, repo_root=repo)
+        for path in acquisition_baseline_response_paths
+    ]
+    if include_acquisition_followup and not baseline_response_paths:
+        raise ExperimentQueueError(
+            "include_acquisition_followup requires at least one "
+            "acquisition_baseline_response_path so MLX response rows are "
+            "normalized against same-window baselines"
+        )
     selected = list(plans[:limit] if limit is not None else plans)
     queue_metadata = {
         "schema": MLX_EXECUTION_QUEUE_SCHEMA,
@@ -234,7 +398,7 @@ def build_mlx_scorer_response_execution_queue(
         device = str(execution["device"])
         resource_kind = "local_mlx" if device == "gpu" else "local_cpu"
         experiment_id = f"mlx_response_{index:04d}_{_safe_id(source_run_id)}"
-        step = {
+        response_step = {
             "id": "run_mlx_scorer_response",
             "kind": "command",
             "command": _command_args(plan, execution),
@@ -272,10 +436,154 @@ def build_mlx_scorer_response_execution_queue(
         }
         components_dir = execution.get("components_dir")
         if isinstance(components_dir, str) and components_dir:
-            step["telemetry"]["artifact_paths"].append(
+            response_step["telemetry"]["artifact_paths"].append(
                 _repo_rel(_resolve_output_path(components_dir, repo_root=repo), repo)
             )
-            step["telemetry"]["recursive"] = True
+            response_step["telemetry"]["recursive"] = True
+        steps: list[dict[str, Any]] = [response_step]
+        acquisition_metadata: dict[str, Any] = {
+            "include_acquisition_followup": False,
+        }
+        if include_acquisition_followup:
+            campaign_prefix = acquisition_campaign_id or queue_id
+            safe_source = _safe_id(source_run_id)
+            run_dir = acquisition_root / experiment_id
+            dataset_path = run_dir / "scorer_response_dataset.json"
+            dataset_md_path = run_dir / "scorer_response_dataset.md"
+            summary_path = run_dir / "materializer_campaign_run.json"
+            action_path = run_dir / "inverse_steganalysis_action_functional.json"
+            campaign_plan_path = run_dir / "byte_shaving_campaign_plan.json"
+            materializer_queue_path = run_dir / "materializer_execution_queue.json"
+            dataset_step = {
+                "id": "build_mlx_window_response_dataset",
+                "kind": "command",
+                "requires": ["run_mlx_scorer_response"],
+                "command": _window_dataset_command(
+                    response_path=output_path,
+                    baseline_response_paths=baseline_response_paths,
+                    dataset_path=dataset_path,
+                    dataset_md_path=dataset_md_path,
+                    repo_root=repo,
+                    require_auth_audited_windows=True,
+                ),
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 0,
+                "postconditions": [
+                    {
+                        "type": "path_exists",
+                        "path": _repo_rel(dataset_path, repo),
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(dataset_path, repo),
+                        "key": "schema",
+                        "equals": SCORER_RESPONSE_DATASET_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": _repo_rel(dataset_path, repo),
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [_repo_rel(dataset_path, repo)],
+                    "input_artifact_paths": [
+                        _repo_rel(output_path, repo),
+                        *[_repo_rel(path, repo) for path in baseline_response_paths],
+                    ],
+                    "recursive": False,
+                    "schema": "mlx_window_response_dataset_followup.v1",
+                },
+            }
+            acquisition_step = {
+                "id": "build_mlx_acquisition_batch",
+                "kind": "command",
+                "requires": ["build_mlx_window_response_dataset"],
+                "command": _acquisition_followup_command(
+                    response_path=dataset_path,
+                    acquisition_run_dir=run_dir,
+                    repo_root=repo,
+                    campaign_id=f"{_safe_id(campaign_prefix)}_{safe_source}",
+                    candidate_id=source_run_id,
+                    lane_id=lane_id,
+                    resource_kind=resource_kind,
+                    candidate_limit=acquisition_candidate_limit,
+                    campaign_plan_max_k=acquisition_campaign_plan_max_k,
+                    total_byte_budget=acquisition_total_byte_budget,
+                    materializer_execution_limit=acquisition_materializer_execution_limit,
+                    max_steps=acquisition_max_steps,
+                    emit_staircase_plan=emit_acquisition_staircase_plan,
+                ),
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 0,
+                "postconditions": [
+                    {
+                        "type": "path_exists",
+                        "path": _repo_rel(summary_path, repo),
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(summary_path, repo),
+                        "key": "schema",
+                        "equals": BYTE_SHAVING_MATERIALIZER_RUN_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": _repo_rel(summary_path, repo),
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(action_path, repo),
+                        "key": "schema",
+                        "equals": INVERSE_ACTION_FUNCTIONAL_SCHEMA,
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(campaign_plan_path, repo),
+                        "key": "schema",
+                        "equals": BYTE_SHAVING_CAMPAIGN_PLAN_SCHEMA,
+                    },
+                    {
+                        "type": "path_exists",
+                        "path": _repo_rel(materializer_queue_path, repo),
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [_repo_rel(run_dir, repo)],
+                    "input_artifact_paths": [_repo_rel(dataset_path, repo)],
+                    "recursive": True,
+                    "schema": MLX_ACQUISITION_FOLLOWUP_SCHEMA,
+                },
+            }
+            steps.extend([dataset_step, acquisition_step])
+            acquisition_metadata = {
+                "include_acquisition_followup": True,
+                "acquisition_followup_schema": MLX_ACQUISITION_FOLLOWUP_SCHEMA,
+                "acquisition_requires_window_baseline": True,
+                "acquisition_baseline_response_paths": [
+                    _repo_rel(path, repo) for path in baseline_response_paths
+                ],
+                "acquisition_run_dir": _repo_rel(run_dir, repo),
+                "acquisition_scorer_response_dataset_path": _repo_rel(
+                    dataset_path,
+                    repo,
+                ),
+                "acquisition_summary_path": _repo_rel(summary_path, repo),
+                "acquisition_campaign_plan_path": _repo_rel(campaign_plan_path, repo),
+                "acquisition_action_functional_path": _repo_rel(action_path, repo),
+                "acquisition_materializer_queue_path": _repo_rel(
+                    materializer_queue_path,
+                    repo,
+                ),
+                "acquisition_candidate_limit": acquisition_candidate_limit,
+                "acquisition_campaign_plan_max_k": acquisition_campaign_plan_max_k,
+                "acquisition_total_byte_budget": acquisition_total_byte_budget,
+                "acquisition_materializer_execution_limit": (
+                    acquisition_materializer_execution_limit
+                ),
+                "acquisition_max_steps": acquisition_max_steps,
+                "emit_acquisition_staircase_plan": emit_acquisition_staircase_plan,
+                **FALSE_AUTHORITY,
+            }
         experiments.append(
             {
                 "id": experiment_id,
@@ -292,9 +600,10 @@ def build_mlx_scorer_response_execution_queue(
                     "pair_window": execution.get("pair_window"),
                     "candidate_generation_only": True,
                     "requires_exact_eval_before_promotion": True,
+                    **acquisition_metadata,
                     **FALSE_AUTHORITY,
                 },
-                "steps": [step],
+                "steps": steps,
             }
         )
 
@@ -316,6 +625,7 @@ def build_mlx_scorer_response_execution_queue(
 
 
 __all__ = [
+    "MLX_ACQUISITION_FOLLOWUP_SCHEMA",
     "MLX_EXECUTION_QUEUE_SCHEMA",
     "build_mlx_scorer_response_execution_queue",
 ]

@@ -6,6 +6,10 @@ from .byte_shaving_campaign_queue import (
     build_materializer_execution_queue,
 )
 from .byte_shaving_materializer_registry import (
+    ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER,
+    ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    ARCHIVE_SECTION_PROCEDURALIZE_MATERIALIZER,
+    ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND,
     BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER,
     BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID,
     BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND,
@@ -22,7 +26,15 @@ from .byte_shaving_materializer_registry import (
     INVERSE_SCORER_CELL_RECEIVER_CONTRACT_ID,
     INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND,
     INVERSE_SCORER_CELL_TARGET_KIND,
+    PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
+    PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     REGISTRY_SCHEMA,
+    TENSOR_FACTORIZE_MATERIALIZER,
+    TENSOR_FACTORIZE_TARGET_KIND,
+    TENSOR_QUANTIZE_MATERIALIZER,
+    TENSOR_QUANTIZE_TARGET_KIND,
+    TENSOR_SHARED_CODEBOOK_MATERIALIZER,
+    TENSOR_SHARED_CODEBOOK_TARGET_KIND,
     known_materializer_target_kinds,
     registry_manifest,
     resolve_materializer,
@@ -55,6 +67,10 @@ from .experiment_queue_observer import (
     observe_experiment_queue,
     render_observation_markdown,
 )
+from .local_training_queue import (
+    LOCAL_TRAINING_QUEUE_SCHEMA,
+    build_local_training_execution_queue,
+)
 from .materializer_chain_harvest import (
     EXACT_READINESS_BRIDGE_SCHEMA,
     HARVEST_SCHEMA,
@@ -73,6 +89,11 @@ from .materializer_exact_eval_consumer import (
 from .materializer_exact_eval_dispatch_plan import (
     DISPATCH_PLAN_SCHEMA,
     build_materializer_exact_eval_dispatch_plan,
+)
+from .mlx_execution_queue import (
+    MLX_ACQUISITION_FOLLOWUP_SCHEMA,
+    MLX_EXECUTION_QUEUE_SCHEMA,
+    build_mlx_scorer_response_execution_queue,
 )
 from .models import (
     BudgetReport,
@@ -99,6 +120,10 @@ from .ssh_experiment_queue_executor import (
 )
 
 __all__ = [
+    "ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER",
+    "ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND",
+    "ARCHIVE_SECTION_PROCEDURALIZE_MATERIALIZER",
+    "ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND",
     "BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER",
     "BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID",
     "BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND",
@@ -118,15 +143,26 @@ __all__ = [
     "INVERSE_SCORER_CELL_RECEIVER_CONTRACT_ID",
     "INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND",
     "INVERSE_SCORER_CELL_TARGET_KIND",
+    "LOCAL_TRAINING_QUEUE_SCHEMA",
     "MATERIALIZER_DISPATCH_PLAN_STEP_ID",
     "MATERIALIZER_EXACT_EVAL_CONSUMER_SCHEMA",
     "MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA",
     "MATERIALIZER_EXECUTION_STEP_ID",
     "MATERIALIZER_HARVEST_STEP_ID",
+    "MLX_ACQUISITION_FOLLOWUP_SCHEMA",
+    "MLX_EXECUTION_QUEUE_SCHEMA",
+    "PACKET_MEMBER_RECOMPRESS_MATERIALIZER",
+    "PACKET_MEMBER_RECOMPRESS_TARGET_KIND",
     "REGISTRY_SCHEMA",
     "SSH_ARTIFACT_MOBILITY_SCHEMA",
     "SSH_EXECUTION_RESULT_SCHEMA",
     "SSH_INPUT_MOBILITY_SCHEMA",
+    "TENSOR_FACTORIZE_MATERIALIZER",
+    "TENSOR_FACTORIZE_TARGET_KIND",
+    "TENSOR_QUANTIZE_MATERIALIZER",
+    "TENSOR_QUANTIZE_TARGET_KIND",
+    "TENSOR_SHARED_CODEBOOK_MATERIALIZER",
+    "TENSOR_SHARED_CODEBOOK_TARGET_KIND",
     "BudgetReport",
     "BudgetSpec",
     "BudgetUsage",
@@ -141,9 +177,11 @@ __all__ = [
     "TrackStatus",
     "assert_canonical_state_for_execution",
     "assert_no_orphaned_steps_for_execution",
+    "build_local_training_execution_queue",
     "build_materializer_exact_eval_consumer_queue",
     "build_materializer_exact_eval_dispatch_plan",
     "build_materializer_execution_queue",
+    "build_mlx_scorer_response_execution_queue",
     "build_remote_git_preflight_command",
     "build_remote_shell_command",
     "build_rsync_pull_command",

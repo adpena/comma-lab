@@ -8,6 +8,13 @@ from pathlib import Path
 
 import pytest
 
+from comma_lab.scheduler import (
+    MLX_ACQUISITION_FOLLOWUP_SCHEMA,
+    MLX_EXECUTION_QUEUE_SCHEMA,
+)
+from comma_lab.scheduler import (
+    build_mlx_scorer_response_execution_queue as package_build_mlx_scorer_response_execution_queue,
+)
 from comma_lab.scheduler.experiment_queue import ExperimentQueueError
 from comma_lab.scheduler.mlx_execution_queue import (
     build_mlx_scorer_response_execution_queue,
@@ -19,6 +26,15 @@ from tac.local_acceleration.mlx_execution_plan import (
 from tac.local_acceleration.mlx_profile_stability import build_profile_stability_manifest
 
 REPO = Path(__file__).resolve().parents[3]
+
+
+def test_mlx_execution_queue_is_exported_from_scheduler_package() -> None:
+    assert MLX_EXECUTION_QUEUE_SCHEMA == "mlx_scorer_response_execution_queue_plan.v1"
+    assert MLX_ACQUISITION_FOLLOWUP_SCHEMA == "mlx_scorer_response_acquisition_followup.v1"
+    assert (
+        package_build_mlx_scorer_response_execution_queue
+        is build_mlx_scorer_response_execution_queue
+    )
 
 
 def _profile(device: str = "cpu") -> dict:
@@ -98,6 +114,84 @@ def test_mlx_execution_queue_compiles_cpu_and_gpu_plans(tmp_path: Path) -> None:
     assert queue["experiments"][1]["metadata"]["plan_count"] == 2
 
 
+def test_mlx_execution_queue_can_append_acquisition_followup(tmp_path: Path) -> None:
+    queue = build_mlx_scorer_response_execution_queue(
+        [_plan(tmp_path, device="gpu", name="gpu_response")],
+        queue_id="mlx_queue_fixture",
+        repo_root=tmp_path,
+        lane_id="lane_mlx_batch_fixture",
+        include_acquisition_followup=True,
+        acquisition_baseline_response_paths=[tmp_path / "baseline_response.json"],
+        acquisition_run_root=tmp_path / "acquisition_runs",
+        acquisition_campaign_id="batch_fixture",
+        acquisition_candidate_limit=7,
+        acquisition_campaign_plan_max_k=3,
+        acquisition_total_byte_budget=1234,
+        acquisition_materializer_execution_limit=2,
+        acquisition_max_steps=1,
+        emit_acquisition_staircase_plan=True,
+    )
+
+    experiment = queue["experiments"][0]
+    assert experiment["metadata"]["include_acquisition_followup"] is True
+    assert experiment["metadata"]["acquisition_followup_schema"] == MLX_ACQUISITION_FOLLOWUP_SCHEMA
+    assert experiment["metadata"]["acquisition_requires_window_baseline"] is True
+    assert experiment["metadata"]["score_claim"] is False
+    assert len(experiment["steps"]) == 3
+    response_step, dataset_step, followup_step = experiment["steps"]
+    assert response_step["resources"]["kind"] == "local_mlx"
+    assert dataset_step["id"] == "build_mlx_window_response_dataset"
+    assert dataset_step["requires"] == ["run_mlx_scorer_response"]
+    assert "tools/build_mlx_window_response_dataset.py" in dataset_step["command"]
+    assert "--baseline-response" in dataset_step["command"]
+    assert followup_step["id"] == "build_mlx_acquisition_batch"
+    assert followup_step["requires"] == ["build_mlx_window_response_dataset"]
+    assert followup_step["resources"]["kind"] == "local_cpu"
+    assert followup_step["telemetry"]["schema"] == MLX_ACQUISITION_FOLLOWUP_SCHEMA
+    command = followup_step["command"]
+    assert command[:2] == [".venv/bin/python", "tools/run_byte_shaving_materializer_campaign.py"]
+    assert "--scorer-response" in command
+    assert "--inverse-scorer-allow-native-mlx-window-objective" in command
+    assert command[command.index("--candidate-limit") + 1] == "7"
+    assert command[command.index("--campaign-plan-max-k") + 1] == "3"
+    assert command[command.index("--total-byte-budget") + 1] == "1234"
+    assert command[command.index("--materializer-execution-limit") + 1] == "2"
+    assert "--emit-staircase-plan" in command
+    assert any(
+        condition["type"] == "json_equals"
+        and condition["equals"] == "scorer_response_dataset.v1"
+        for condition in dataset_step["postconditions"]
+    )
+    assert any(
+        condition["type"] == "json_equals"
+        and condition["key"] == "schema"
+        and condition["equals"] == "byte_shaving_materializer_campaign_run.v1"
+        for condition in followup_step["postconditions"]
+    )
+    assert any(
+        condition["type"] == "json_equals"
+        and condition["equals"] == "inverse_steganalysis_discrete_action_functional.v1"
+        for condition in followup_step["postconditions"]
+    )
+    assert any(
+        condition["type"] == "json_equals"
+        and condition["equals"] == "byte_shaving_campaign_plan.v1"
+        for condition in followup_step["postconditions"]
+    )
+
+
+def test_mlx_execution_queue_requires_baseline_for_acquisition_followup(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(ExperimentQueueError, match="baseline"):
+        build_mlx_scorer_response_execution_queue(
+            [_plan(tmp_path, device="gpu", name="gpu_response")],
+            queue_id="mlx_queue_fixture",
+            repo_root=tmp_path,
+            include_acquisition_followup=True,
+        )
+
+
 def test_mlx_execution_queue_rejects_placeholder_output(tmp_path: Path) -> None:
     plan = _plan(tmp_path)
     plan["recommended_execution"]["response_output"] = None
@@ -115,6 +209,18 @@ def test_mlx_execution_queue_rejects_truthy_authority(tmp_path: Path) -> None:
     plan["score_claim"] = True
 
     with pytest.raises(ExperimentQueueError, match="score_claim"):
+        build_mlx_scorer_response_execution_queue(
+            [plan],
+            queue_id="mlx_queue_fixture",
+            repo_root=tmp_path,
+        )
+
+
+def test_mlx_execution_queue_rejects_nested_truthy_authority(tmp_path: Path) -> None:
+    plan = _plan(tmp_path)
+    plan["recommended_execution"]["ready_for_exact_eval_dispatch"] = True
+
+    with pytest.raises(ExperimentQueueError, match="recommended_execution"):
         build_mlx_scorer_response_execution_queue(
             [plan],
             queue_id="mlx_queue_fixture",
@@ -197,3 +303,45 @@ def test_build_mlx_execution_queue_cli(tmp_path: Path) -> None:
     assert payload["controls"]["max_concurrency"]["local_cpu"] == 4
     summary = json.loads(result.stdout)
     assert summary["score_claim"] is False
+
+
+def test_build_mlx_execution_queue_cli_with_acquisition_followup(tmp_path: Path) -> None:
+    plan_path = tmp_path / "plan.json"
+    queue_path = tmp_path / "queue.json"
+    plan_path.write_text(json.dumps(_plan(tmp_path), sort_keys=True), encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools/build_mlx_scorer_response_execution_queue.py"),
+            "--plan",
+            str(plan_path),
+            "--output",
+            str(queue_path),
+            "--queue-id",
+            "mlx_cli_fixture",
+            "--repo-root",
+            str(tmp_path),
+            "--include-acquisition-followup",
+            "--acquisition-baseline-response",
+            str(tmp_path / "baseline_response.json"),
+            "--acquisition-run-root",
+            str(tmp_path / "acquisition_runs"),
+            "--acquisition-candidate-limit",
+            "5",
+            "--acquisition-max-steps",
+            "1",
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(queue_path.read_text(encoding="utf-8"))
+    assert len(payload["experiments"][0]["steps"]) == 3
+    assert (
+        payload["experiments"][0]["metadata"]["acquisition_followup_schema"]
+        == MLX_ACQUISITION_FOLLOWUP_SCHEMA
+    )

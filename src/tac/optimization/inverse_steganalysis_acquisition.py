@@ -14,6 +14,9 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from tac.local_acceleration.mlx_acquisition_batch import (
+    validate_mlx_acquisition_batch,
+)
 from tac.optimization.byte_shaving_campaign import (
     COUPLED_OPERATION_SET_SCHEMA as BYTE_SHAVING_OPERATION_SET_SCHEMA,
 )
@@ -60,6 +63,9 @@ MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_ROW_SCHEMA = (
 )
 MLX_EFFECTIVE_SPEND_TRIAGE_PROVENANCE_SCHEMA = (
     "inverse_steganalysis_mlx_effective_spend_triage_row_provenance.v1"
+)
+MLX_ACQUISITION_BATCH_PROVENANCE_SCHEMA = (
+    "inverse_steganalysis_mlx_acquisition_batch_operation_set_provenance.v1"
 )
 TOOL = "tac.optimization.inverse_steganalysis_acquisition"
 CONTEST_RATE_SCORE_PER_BYTE = 25.0 / 50_000_000.0
@@ -747,6 +753,7 @@ def build_discrete_scorer_action_functional(
     observations: Iterable[Mapping[str, Any]] = (),
     total_byte_budget: int | None = None,
     lambda_rate: float = CONTEST_RATE_SCORE_PER_BYTE,
+    max_cells: int | None = None,
 ) -> dict[str, Any]:
     """Approximate hydrated auth eval as a coupled discrete action surface.
 
@@ -761,6 +768,8 @@ def build_discrete_scorer_action_functional(
         raise InverseSteganalysisAcquisitionError("lambda_rate must be finite and non-negative")
     if total_byte_budget is not None and total_byte_budget < 1:
         raise InverseSteganalysisAcquisitionError("total_byte_budget must be positive")
+    if max_cells is not None and max_cells < 1:
+        raise InverseSteganalysisAcquisitionError("max_cells must be positive")
 
     obs_rows = [normalize_inverse_steganalysis_observation(row) for row in observations]
     by_candidate: dict[str, list[dict[str, Any]]] = {}
@@ -776,6 +785,10 @@ def build_discrete_scorer_action_functional(
     total_expected_gain = 0.0
     blocked_cells = 0
     for index, raw_atom in enumerate(atoms):
+        if max_cells is not None and index >= max_cells:
+            raise InverseSteganalysisAcquisitionError(
+                f"inverse action functional cell count exceeds max_cells={max_cells}"
+            )
         atom = normalize_inverse_steganalysis_atom(raw_atom)
         best_obs = _best_observation(atom, by_candidate.get(str(atom["candidate_id"]), []))
         priority = compute_acquisition_priority(atom, best_obs)
@@ -1095,6 +1108,52 @@ def inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection(
                     selection=selection,
                     index=index,
                     source_path=source_path,
+                    elapsed_seconds=elapsed_seconds,
+                    artifact_bytes=artifact_bytes,
+                    resource_kind=resource_kind,
+                )
+            )
+        )
+    return atoms
+
+
+def action_atoms_from_mlx_acquisition_batch(
+    batch: Mapping[str, Any],
+    *,
+    source_path: str | None = None,
+    candidate_id: str | None = None,
+    elapsed_seconds: float | None = None,
+    artifact_bytes: int | None = None,
+    resource_kind: str | None = None,
+) -> list[dict[str, Any]]:
+    """Convert grouped local MLX acquisition operation sets into action atoms."""
+
+    _reject_truthy_authority(batch, label="MLX acquisition batch")
+    try:
+        normalized_batch = validate_mlx_acquisition_batch(batch)
+    except ValueError as exc:
+        raise InverseSteganalysisAcquisitionError(str(exc)) from exc
+    if elapsed_seconds is not None:
+        elapsed_seconds = _float(
+            elapsed_seconds,
+            "elapsed_seconds",
+            minimum=0.0,
+            exclusive=True,
+        )
+    if artifact_bytes is not None:
+        artifact_bytes = _int(artifact_bytes, "artifact_bytes", minimum=0)
+    atoms: list[dict[str, Any]] = []
+    for index, operation_set in enumerate(
+        _sequence_of_mappings(normalized_batch.get("operation_sets"))
+    ):
+        atoms.append(
+            normalize_inverse_steganalysis_atom(
+                _action_atom_from_mlx_acquisition_operation_set(
+                    operation_set,
+                    batch=normalized_batch,
+                    index=index,
+                    source_path=source_path,
+                    default_candidate_id=candidate_id,
                     elapsed_seconds=elapsed_seconds,
                     artifact_bytes=artifact_bytes,
                     resource_kind=resource_kind,
@@ -1693,6 +1752,106 @@ def _action_atom_from_byte_shaving_operation_set(
     }
 
 
+def _action_atom_from_mlx_acquisition_operation_set(
+    operation_set: Mapping[str, Any],
+    *,
+    batch: Mapping[str, Any],
+    index: int,
+    source_path: str | None,
+    default_candidate_id: str | None,
+    elapsed_seconds: float | None,
+    artifact_bytes: int | None,
+    resource_kind: str | None,
+) -> dict[str, Any]:
+    operation_set_id = _text(
+        operation_set.get("operation_set_id"),
+        "mlx_operation_set.operation_set_id",
+    )
+    candidate_id = (
+        default_candidate_id
+        or _optional_text(operation_set.get("candidate_id"))
+        or f"mlx_acquisition_{_slug(operation_set_id)}"
+    )
+    selected_operations = _sequence_of_mappings(operation_set.get("selected_operations"))
+    unit_kinds = ordered_unique(
+        str(operation.get("unit_kind") or "scorer_response_row")
+        for operation in selected_operations
+    )
+    pair_indices = _byte_shaving_pair_indices(operation_set)
+    saved_bytes = _int(
+        _first(operation_set.get("candidate_saved_bytes"), 0),
+        "mlx_operation_set.candidate_saved_bytes",
+        minimum=0,
+    )
+    expected_gain = _expected_score_gain(operation_set, "mlx_operation_set")
+    second_order = _byte_shaving_second_order_gain(operation_set)
+    first_order = expected_gain - second_order
+    active_interactions = _sequence_of_mappings(operation_set.get("active_interactions"))
+    blockers = ordered_unique(
+        str(item)
+        for item in (
+            *(_list_strings(operation_set.get("dispatch_blockers"))),
+            *(_list_strings(operation_set.get("blockers"))),
+        )
+    )
+    risk = _byte_shaving_discontinuity_risk(
+        blockers=blockers,
+        active_interactions=active_interactions,
+        unit_kinds=unit_kinds,
+    )
+    uncertainty = max(
+        abs(second_order),
+        float(operation_set.get("uncertainty", 0.0) or 0.0),
+        float(operation_set.get("quality_cost_score", 0.0) or 0.0) * 0.25,
+    )
+    row_artifact_bytes = artifact_bytes
+    if row_artifact_bytes is None:
+        row_artifact_bytes = max(1, saved_bytes, len(selected_operations))
+    return {
+        "atom_id": f"mlx_acquisition_opset_{_slug(operation_set_id)}_{index:04d}",
+        "candidate_id": str(candidate_id),
+        "scale": "pair" if pair_indices else _byte_shaving_scale(unit_kinds),
+        "scope_axis": "pairs" if pair_indices else _byte_shaving_scope_axis(unit_kinds),
+        "parent_unit_id": f"mlx_acquisition_operation_set:{operation_set_id}",
+        "pair_indices": pair_indices,
+        "component": str(operation_set.get("component") or "scorer"),
+        "frequency_band": _byte_shaving_frequency_band(operation_set),
+        "byte_range": _byte_shaving_byte_range(operation_set),
+        "coherence_group": ":".join(
+            item
+            for item in (
+                str(batch.get("source_schema") or "mlx_acquisition"),
+                str(operation_set_id),
+            )
+            if item
+        ),
+        "sparsity_prior": _byte_shaving_sparsity_prior(unit_kinds),
+        "predicted_segnet_gain": 0.0,
+        "predicted_posenet_gain": 0.0,
+        "predicted_rate_gain": CONTEST_RATE_SCORE_PER_BYTE * float(saved_bytes),
+        "predicted_rate_cost": 0.0,
+        "predicted_score_gain": max(0.0, expected_gain),
+        "first_order_marginal_effect": first_order,
+        "second_order_interaction_effect": second_order,
+        "discontinuity_risk": risk,
+        "discontinuity_threshold": 0.75,
+        "uncertainty": uncertainty,
+        "calibration_error": uncertainty * 0.25,
+        "elapsed_seconds": elapsed_seconds,
+        "artifact_bytes": row_artifact_bytes,
+        "resource_kind": resource_kind
+        or str(operation_set.get("resource_kind") or "local_mlx"),
+        "source_provenance": _mlx_acquisition_operation_set_provenance(
+            operation_set,
+            batch=batch,
+            source_path=source_path,
+            expected_gain=expected_gain,
+            first_order=first_order,
+            second_order=second_order,
+        ),
+    }
+
+
 def _action_atom_from_byte_shaving_ranked_unit(
     unit: Mapping[str, Any],
     *,
@@ -1840,6 +1999,56 @@ def _byte_shaving_operation_set_provenance(
             "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
         },
         "byte_shaving_operation_set_provenance_is_planning_only",
+    )
+
+
+def _mlx_acquisition_operation_set_provenance(
+    operation_set: Mapping[str, Any],
+    *,
+    batch: Mapping[str, Any],
+    source_path: str | None,
+    expected_gain: float,
+    first_order: float,
+    second_order: float,
+) -> dict[str, Any]:
+    return _false_authority(
+        {
+            "schema": MLX_ACQUISITION_BATCH_PROVENANCE_SCHEMA,
+            "source_path": source_path or batch.get("source_path"),
+            "source_batch_schema": batch.get("schema"),
+            "source_batch_tool": batch.get("tool"),
+            "source_schema": batch.get("source_schema"),
+            "operation_set_schema": operation_set.get("schema"),
+            "operation_set_id": operation_set.get("operation_set_id"),
+            "operation_set_rank": operation_set.get("operation_set_rank"),
+            "candidate_id": operation_set.get("candidate_id"),
+            "resource_kind": operation_set.get("resource_kind"),
+            "selected_unit_ids": _list_strings(operation_set.get("selected_unit_ids")),
+            "operation_families": _list_strings(operation_set.get("operation_families")),
+            "source_families": _list_strings(operation_set.get("source_families")),
+            "selected_operations": _sequence_of_mappings(
+                operation_set.get("selected_operations")
+            ),
+            "chosen_operation_sequence": _sequence_of_mappings(
+                operation_set.get("chosen_operation_sequence")
+            ),
+            "chosen_operation_sequence_source": operation_set.get(
+                "chosen_operation_sequence_source"
+            ),
+            "active_interactions": _sequence_of_mappings(
+                operation_set.get("active_interactions")
+            ),
+            "row_refs": _sequence_of_mappings(operation_set.get("row_refs")),
+            "pair_indices": _int_list(operation_set.get("pair_indices"), "pair_indices"),
+            "candidate_saved_bytes": operation_set.get("candidate_saved_bytes"),
+            "expected_delta_score": operation_set.get("expected_delta_score"),
+            "expected_score_gain": expected_gain,
+            "first_order_marginal_effect": first_order,
+            "second_order_interaction_effect": second_order,
+            "allowed_use": "inverse_steganalysis_mlx_operation_set_rank_only",
+            "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        },
+        "mlx_acquisition_operation_set_provenance_is_planning_only",
     )
 
 
@@ -2944,6 +3153,7 @@ __all__ = [
     "ATOM_SCHEMA",
     "CONTEST_RATE_SCORE_PER_BYTE",
     "INVERSE_SCORER_SURFACE_SCHEMA",
+    "MLX_ACQUISITION_BATCH_PROVENANCE_SCHEMA",
     "MLX_EFFECTIVE_SPEND_TRIAGE_PROVENANCE_SCHEMA",
     "MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_ROW_SCHEMA",
     "MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA",
@@ -2959,6 +3169,7 @@ __all__ = [
     "action_atoms_from_byte_shaving_campaign_plan",
     "action_atoms_from_byte_shaving_signal_surface",
     "action_atoms_from_inverse_scorer_surface",
+    "action_atoms_from_mlx_acquisition_batch",
     "action_surface_terms",
     "build_discrete_scorer_action_functional",
     "build_inverse_steganalysis_acquisition_plan",

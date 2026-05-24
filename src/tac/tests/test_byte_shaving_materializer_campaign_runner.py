@@ -228,13 +228,17 @@ def test_materializer_campaign_runner_generates_plan_from_high_level_sources(
     tmp_path: Path,
 ) -> None:
     scorer = tmp_path / "scorer_response.json"
+    mlx_batch = tmp_path / "mlx_acquisition_batch.json"
     action_path = tmp_path / "campaign" / "inverse_steganalysis_action_functional.json"
     plan_path = tmp_path / "campaign" / "byte_shaving_campaign_plan.json"
     scorer.write_text("{}", encoding="utf-8")
+    mlx_batch.write_text("{}", encoding="utf-8")
     args = runner.parse_args(
         [
             "--scorer-response",
             str(scorer),
+            "--mlx-acquisition-batch",
+            str(mlx_batch),
             "--run-dir",
             str(tmp_path / "campaign"),
             "--campaign-id",
@@ -271,6 +275,8 @@ def test_materializer_campaign_runner_generates_plan_from_high_level_sources(
     ]
     assert "--scorer-response" in action_command
     assert str(scorer) in action_command
+    assert "--mlx-acquisition-batch" in action_command
+    assert str(mlx_batch) in action_command
     assert "--total-byte-budget" in action_command
     assert "64" in action_command
     assert "--candidate-id" in action_command
@@ -286,6 +292,107 @@ def test_materializer_campaign_runner_generates_plan_from_high_level_sources(
     assert "3" in plan_command
     assert "--plan" in queue_command
     assert str(plan_path) in queue_command
+
+
+def test_materializer_campaign_runner_treats_mlx_acquisition_batch_as_action_source(
+    tmp_path: Path,
+) -> None:
+    mlx_batch = tmp_path / "mlx_acquisition_batch.json"
+    mlx_batch.write_text("{}", encoding="utf-8")
+    args = runner.parse_args(
+        [
+            "--mlx-acquisition-batch",
+            str(mlx_batch),
+            "--run-dir",
+            str(tmp_path / "campaign"),
+        ]
+    )
+
+    assert runner._action_source_count(args) == 1
+    command = runner._build_action_functional_command(
+        args,
+        run_dir=tmp_path / "campaign",
+    )
+
+    assert "--mlx-acquisition-batch" in command
+    assert str(mlx_batch) in command
+
+
+def test_materializer_campaign_runner_builds_mlx_batch_from_selection_inline(
+    tmp_path: Path,
+) -> None:
+    selection = tmp_path / "mlx_selection.json"
+    selection.write_text("{}", encoding="utf-8")
+    run_dir = tmp_path / "campaign"
+    args = runner.parse_args(
+        [
+            "--mlx-effective-spend-triage-selection",
+            str(selection),
+            "--run-dir",
+            str(run_dir),
+            "--mlx-acquisition-set-size",
+            "4",
+            "--mlx-acquisition-limit",
+            "8",
+            "--overwrite-output",
+        ]
+    )
+
+    batch_commands = runner._build_mlx_acquisition_batch_commands(
+        args,
+        run_dir=run_dir,
+    )
+    assert len(batch_commands) == 1
+    batch_path, batch_command = batch_commands[0]
+    assert batch_path == run_dir / "mlx_acquisition_batch_0000.json"
+    assert batch_command[:2] == [
+        runner.sys.executable,
+        "tools/build_mlx_acquisition_batch.py",
+    ]
+    assert "--mlx-effective-spend-triage-selection" in batch_command
+    assert str(selection) in batch_command
+    assert "--set-size" in batch_command
+    assert "4" in batch_command
+    assert "--limit" in batch_command
+    assert "8" in batch_command
+    assert "--allow-overwrite" in batch_command
+
+    action_command = runner._build_action_functional_command(
+        args,
+        run_dir=run_dir,
+        generated_mlx_acquisition_batches=[batch_path],
+    )
+    assert "--mlx-acquisition-batch" in action_command
+    assert str(batch_path) in action_command
+    assert "--mlx-effective-spend-triage-selection" not in action_command
+
+
+def test_materializer_campaign_runner_can_preserve_direct_mlx_selection_mode(
+    tmp_path: Path,
+) -> None:
+    selection = tmp_path / "mlx_selection.json"
+    selection.write_text("{}", encoding="utf-8")
+    args = runner.parse_args(
+        [
+            "--mlx-effective-spend-triage-selection",
+            str(selection),
+            "--mlx-effective-spend-triage-selection-mode",
+            "direct",
+            "--run-dir",
+            str(tmp_path / "campaign"),
+        ]
+    )
+
+    assert runner._build_mlx_acquisition_batch_commands(
+        args,
+        run_dir=tmp_path / "campaign",
+    ) == []
+    command = runner._build_action_functional_command(
+        args,
+        run_dir=tmp_path / "campaign",
+    )
+    assert "--mlx-effective-spend-triage-selection" in command
+    assert str(selection) in command
 
 
 def test_materializer_campaign_runner_rejects_missing_plan_and_sources(

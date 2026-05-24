@@ -21,6 +21,7 @@ from tac.optimization.scorer_inverse_decision_surface import (
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = REPO_ROOT / "tools" / "build_inverse_steganalysis_action_functional.py"
+BATCH_TOOL = REPO_ROOT / "tools" / "build_mlx_acquisition_batch.py"
 
 
 def _false_authority() -> dict[str, bool]:
@@ -511,6 +512,75 @@ def test_cli_accepts_mlx_effective_spend_triage_selection(tmp_path: Path) -> Non
         assert action[key] is value
 
 
+def test_cli_accepts_grouped_mlx_acquisition_batch(tmp_path: Path) -> None:
+    selection = tmp_path / "selection.json"
+    batch = tmp_path / "mlx_batch.json"
+    output = tmp_path / "action.json"
+    _mlx_selection(selection)
+
+    build_result = subprocess.run(
+        [
+            sys.executable,
+            str(BATCH_TOOL),
+            "--mlx-effective-spend-triage-selection",
+            str(selection),
+            "--output",
+            str(batch),
+            "--repo-root",
+            str(tmp_path),
+            "--set-size",
+            "1",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    build_summary = json.loads(build_result.stdout)
+    assert build_summary["operation_set_count"] == 1
+    assert build_summary["score_claim"] is False
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--mlx-acquisition-batch",
+            str(batch),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(tmp_path),
+            "--total-byte-budget",
+            "64",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    action = json.loads(output.read_text(encoding="utf-8"))
+    cell = action["cells"][0]
+    provenance = cell["source_provenance"]
+    assert "score_claim=false" in result.stdout
+    assert action["schema"] == ACTION_FUNCTIONAL_SCHEMA
+    assert action["integral_totals"]["cell_count"] == 1
+    assert action["water_bucket"]["selected_count"] == 1
+    assert provenance["schema"] == (
+        "inverse_steganalysis_mlx_acquisition_batch_operation_set_provenance.v1"
+    )
+    assert provenance["source_path"] == "mlx_batch.json"
+    assert provenance["source_batch_schema"] == "mlx_acquisition_batch.v1"
+    assert provenance["operation_families"] == [
+        "materialize_scorer_response_candidate"
+    ]
+    assert cell["measure"]["pair_count"] == 2
+    assert provenance["pair_indices"] == [10, 11]
+    assert cell["candidate_generation_only"] is True
+    for key, value in PROXY_FALSE_AUTHORITY_FIELDS.items():
+        assert cell[key] is value
+        assert provenance[key] is value
+        assert action[key] is value
+
+
 def test_cli_accepts_byte_shaving_signal_surface_for_family_mix(
     tmp_path: Path,
 ) -> None:
@@ -557,6 +627,34 @@ def test_cli_accepts_byte_shaving_signal_surface_for_family_mix(
         assert cell[key] is value
         assert provenance[key] is value
         assert action[key] is value
+
+
+def test_cli_rejects_action_functional_above_max_cells(tmp_path: Path) -> None:
+    surface = tmp_path / "family_surface.json"
+    output = tmp_path / "action.json"
+    _byte_shaving_signal_surface(surface)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--byte-shaving-signal-surface",
+            str(surface),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(tmp_path),
+            "--max-cells",
+            "1",
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 2
+    assert "max_cells=1" in result.stderr
+    assert not output.exists()
 
 
 def test_cli_rejects_malformed_mlx_effective_spend_triage_selection(

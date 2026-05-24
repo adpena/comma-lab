@@ -27,6 +27,9 @@ from comma_lab.scheduler.byte_shaving_campaign_queue import (
     materializer_contexts_from_payload,
 )
 from comma_lab.scheduler.byte_shaving_materializer_registry import (
+    ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER,
+    ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND,
     BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER,
     BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID,
     BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND,
@@ -43,6 +46,13 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     INVERSE_SCORER_CELL_RECEIVER_CONTRACT_ID,
     INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND,
     INVERSE_SCORER_CELL_TARGET_KIND,
+    PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
+    PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+    TENSOR_FACTORIZE_MATERIALIZER,
+    TENSOR_FACTORIZE_TARGET_KIND,
+    TENSOR_QUANTIZE_MATERIALIZER,
+    TENSOR_QUANTIZE_TARGET_KIND,
+    TENSOR_SHARED_CODEBOOK_TARGET_KIND,
     registry_manifest,
     resolve_materializer,
     suggest_materializer_adapters,
@@ -318,10 +328,16 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
 
     assert manifest["schema"] == "byte_shaving_materializer_registry.v1"
     assert manifest["known_target_kinds"] == [
+        ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND,
         BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
         DQS1_PAIRSET_TARGET_KIND,
         INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
         INVERSE_SCORER_CELL_TARGET_KIND,
+        PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        TENSOR_FACTORIZE_TARGET_KIND,
+        TENSOR_QUANTIZE_TARGET_KIND,
+        TENSOR_SHARED_CODEBOOK_TARGET_KIND,
     ]
     adapters = {row["materializer_id"]: row for row in manifest["adapters"]}
     assert adapters[DQS1_DROP_PAIR_MATERIALIZER] == {
@@ -558,6 +574,89 @@ def test_byte_shaving_materializer_registry_registers_inverse_scorer_fail_closed
     assert resolved.receiver_contract_kind == INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND
     assert resolved.materialization_resource_kind == "local_mlx"
     assert resolved.blockers == (f"materializer_not_executable:{INVERSE_SCORER_CELL_MATERIALIZER}",)
+
+
+def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None:
+    cases = [
+        (
+            {
+                "unit_id": "hnerv_decoder_section",
+                "operation_id": "recode_hnerv_decoder",
+                "operation_family": "section_entropy_recode",
+                "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+            },
+            {
+                "unit_id": "hnerv_decoder_section",
+                "unit_kind": "archive_section",
+            },
+            ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER,
+            "local_cpu",
+        ),
+        (
+            {
+                "unit_id": "boostnerv_boost_weight_tensor",
+                "operation_id": "factorize_boost_weight_tensor",
+                "operation_family": "factorize_tensor",
+                "target_kind": TENSOR_FACTORIZE_TARGET_KIND,
+            },
+            {
+                "unit_id": "boostnerv_boost_weight_tensor",
+                "unit_kind": "tensor",
+            },
+            TENSOR_FACTORIZE_MATERIALIZER,
+            "local_cpu",
+        ),
+        (
+            {
+                "unit_id": "nerv_latent_tensor",
+                "operation_id": "quantize_nerv_latent_tensor",
+                "operation_family": "quantize_tensor",
+                "target_kind": TENSOR_QUANTIZE_TARGET_KIND,
+            },
+            {
+                "unit_id": "nerv_latent_tensor",
+                "unit_kind": "tensor",
+            },
+            TENSOR_QUANTIZE_MATERIALIZER,
+            "local_cpu",
+        ),
+        (
+            {
+                "unit_id": "non_nerv_payload_member",
+                "operation_id": "recompress_payload_member",
+                "operation_family": "member_recompress",
+                "target_kind": PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+            },
+            {
+                "unit_id": "non_nerv_payload_member",
+                "unit_kind": "packet_member",
+            },
+            PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
+            "local_cpu",
+        ),
+    ]
+
+    for operation, unit, materializer_id, resource_kind in cases:
+        resolved = resolve_materializer(operation=operation, unit=unit)
+        assert resolved.executable is False
+        assert resolved.materializer_id == materializer_id
+        assert resolved.cooperative_receiver_required is True
+        assert resolved.materialization_resource_kind == resource_kind
+        assert resolved.blockers == (f"materializer_not_executable:{materializer_id}",)
+        assert resolved.adapter is not None
+        assert resolved.adapter.implementation_module == ""
+        assert resolved.adapter.plan_function == ""
+        assert resolved.adapter.materialize_function == ""
+        assert resolved.adapter.receiver_proof_function == ""
+        assert resolved.adapter.receiver_verify_function == ""
+
+    suggestions = suggest_materializer_adapters(
+        unit_kind="tensor",
+        operation_family="factorize_tensor",
+    )
+    assert [adapter.materializer_id for adapter in suggestions] == [
+        TENSOR_FACTORIZE_MATERIALIZER
+    ]
 
 
 def test_compile_dqs1_byte_shaving_plan_preserves_explicit_target_kind(

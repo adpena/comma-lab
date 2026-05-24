@@ -24,6 +24,7 @@ from tac.optimization.inverse_steganalysis_acquisition import (  # noqa: E402
     action_atoms_from_byte_shaving_campaign_plan,
     action_atoms_from_byte_shaving_signal_surface,
     action_atoms_from_inverse_scorer_surface,
+    action_atoms_from_mlx_acquisition_batch,
     build_discrete_scorer_action_functional,
     inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection,
     observations_from_queue_performance_summary,
@@ -34,6 +35,11 @@ from tac.optimization.scorer_inverse_decision_surface import (  # noqa: E402
 )
 from tac.optimization.scorer_response_dataset import (  # noqa: E402
     ScorerResponseDatasetError,
+)
+from tac.repo_io import (  # noqa: E402
+    ArtifactWriteError,
+    write_json_artifact,
+    write_text_artifact,
 )
 
 
@@ -124,6 +130,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--inverse-scorer-surface", action="append", default=[])
     parser.add_argument("--byte-shaving-signal-surface", action="append", default=[])
     parser.add_argument("--byte-shaving-campaign-plan", action="append", default=[])
+    parser.add_argument("--mlx-acquisition-batch", action="append", default=[])
     parser.add_argument("--mlx-effective-spend-triage-selection", action="append", default=[])
     parser.add_argument("--atom", action="append", default=[])
     parser.add_argument("--observation", action="append", default=[])
@@ -143,6 +150,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--artifact-bytes", type=int, default=None)
     parser.add_argument("--total-byte-budget", type=int, default=None)
     parser.add_argument("--lambda-rate", type=float, default=CONTEST_RATE_SCORE_PER_BYTE)
+    parser.add_argument(
+        "--max-cells",
+        type=int,
+        default=4096,
+        help="fail closed before writing if the action surface would exceed this many cells",
+    )
+    parser.add_argument("--allow-overwrite", action="store_true")
+    parser.add_argument("--expected-output-sha256", default=None)
+    parser.add_argument("--expected-md-sha256", default=None)
     parser.add_argument("--inverse-scorer-max-units", type=int, default=32)
     parser.add_argument("--inverse-scorer-null-delta-epsilon", type=float, default=1e-6)
     parser.add_argument("--inverse-scorer-fragile-delta-threshold", type=float, default=0.0)
@@ -223,6 +239,18 @@ def main(argv: list[str] | None = None) -> int:
                     resource_kind=args.resource_kind,
                 )
             )
+        for raw_path in args.mlx_acquisition_batch:
+            path = Path(raw_path)
+            atoms.extend(
+                action_atoms_from_mlx_acquisition_batch(
+                    _load_mapping(path, label="MLX acquisition batch"),
+                    source_path=_repo_rel(path, args.repo_root),
+                    candidate_id=args.candidate_id,
+                    elapsed_seconds=args.elapsed_seconds,
+                    artifact_bytes=args.artifact_bytes,
+                    resource_kind=args.resource_kind,
+                )
+            )
         for raw_path in args.atom:
             path = Path(raw_path)
             atoms.extend(_as_rows(_load_json(path), path=path, key="atoms"))
@@ -295,19 +323,29 @@ def main(argv: list[str] | None = None) -> int:
             observations=observations,
             total_byte_budget=args.total_byte_budget,
             lambda_rate=args.lambda_rate,
+            max_cells=args.max_cells,
         )
     except (InverseSteganalysisAcquisitionError, ScorerResponseDatasetError) as exc:
         print(str(exc), file=sys.stderr)
         return 2
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(
-        json.dumps(action, indent=2, sort_keys=True, allow_nan=False) + "\n",
-        encoding="utf-8",
-    )
-    if args.md_out is not None:
-        args.md_out.parent.mkdir(parents=True, exist_ok=True)
-        args.md_out.write_text(_render_markdown(action), encoding="utf-8")
+    try:
+        write_json_artifact(
+            args.output,
+            action,
+            allow_overwrite=args.allow_overwrite,
+            expected_existing_sha256=args.expected_output_sha256,
+        )
+        if args.md_out is not None:
+            write_text_artifact(
+                args.md_out,
+                _render_markdown(action),
+                allow_overwrite=args.allow_overwrite,
+                expected_existing_sha256=args.expected_md_sha256,
+            )
+    except ArtifactWriteError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
     print(
         f"wrote {args.output} "
         f"(cells={action['integral_totals']['cell_count']}, "

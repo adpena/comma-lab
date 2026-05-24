@@ -106,7 +106,101 @@ def _command_args(execution: Mapping[str, Any]) -> list[str]:
     return list(command)
 
 
-def _validate_plan(plan: Mapping[str, Any], *, index: int) -> Mapping[str, Any]:
+def _flag_values(command: Sequence[str], flag: str) -> list[str]:
+    values: list[str] = []
+    for index, item in enumerate(command):
+        if item != flag:
+            continue
+        if index + 1 >= len(command) or command[index + 1].startswith("--"):
+            raise ExperimentQueueError(f"local training command flag {flag} requires a value")
+        values.append(command[index + 1])
+    return values
+
+
+def _flag_value(command: Sequence[str], flag: str) -> str | None:
+    values = _flag_values(command, flag)
+    if len(values) > 1:
+        raise ExperimentQueueError(f"local training command flag {flag} appears multiple times")
+    return values[0] if values else None
+
+
+def _same_path(left: Path, right: Path) -> bool:
+    return left.expanduser().resolve(strict=False) == right.expanduser().resolve(strict=False)
+
+
+def _resolve_command_path(value: str, *, repo_root: Path) -> Path:
+    path = Path(value).expanduser()
+    return path if path.is_absolute() else repo_root / path
+
+
+def _validate_command_writes_declared_outputs(
+    command: Sequence[str],
+    execution: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    label: str,
+) -> None:
+    """Fail closed when command outputs can drift from watched postconditions."""
+
+    output_manifest = _resolve_output_path(execution.get("output_manifest"), repo_root=repo_root)
+    output_dir_value = _flag_value(command, "--output-dir")
+    matching_output = False
+    for flag in ("--output-manifest", "--manifest-out", "--output"):
+        value = _flag_value(command, flag)
+        if value is None:
+            continue
+        candidate = _resolve_command_path(value, repo_root=repo_root)
+        if not _same_path(candidate, output_manifest):
+            raise ExperimentQueueError(
+                f"{label}: local training command {flag}={value!r} does not match "
+                f"recommended_execution.output_manifest {execution.get('output_manifest')!r}"
+            )
+        matching_output = True
+    if output_dir_value is not None:
+        output_dir = _resolve_command_path(output_dir_value, repo_root=repo_root)
+        if not _same_path(output_dir / "manifest.json", output_manifest):
+            raise ExperimentQueueError(
+                f"{label}: local training command --output-dir={output_dir_value!r} "
+                "does not contain recommended_execution.output_manifest"
+            )
+        matching_output = True
+    if not matching_output:
+        raise ExperimentQueueError(
+            f"{label}: local training command must declare --output, "
+            "--output-manifest, --manifest-out, or --output-dir matching "
+            "recommended_execution.output_manifest"
+        )
+
+    representation_manifest = execution.get("representation_manifest")
+    if isinstance(representation_manifest, str) and representation_manifest.strip():
+        representation_path = _resolve_output_path(representation_manifest, repo_root=repo_root)
+        value = _flag_value(command, "--representation-manifest")
+        if value is not None:
+            candidate = _resolve_command_path(value, repo_root=repo_root)
+            if not _same_path(candidate, representation_path):
+                raise ExperimentQueueError(
+                    f"{label}: local training command --representation-manifest={value!r} "
+                    "does not match recommended_execution.representation_manifest"
+                )
+            return
+        if output_dir_value is None or not _same_path(
+            _resolve_command_path(output_dir_value, repo_root=repo_root)
+            / "representation_training_manifest.json",
+            representation_path,
+        ):
+            raise ExperimentQueueError(
+                f"{label}: local training command must declare "
+                "--representation-manifest or --output-dir matching "
+                "recommended_execution.representation_manifest"
+            )
+
+
+def _validate_plan(
+    plan: Mapping[str, Any],
+    *,
+    index: int,
+    repo_root: Path,
+) -> Mapping[str, Any]:
     label = f"local_training_plan[{index}]"
     schema = str(plan.get("schema") or "")
     if schema not in SUPPORTED_PLAN_SCHEMAS:
@@ -123,8 +217,13 @@ def _validate_plan(plan: Mapping[str, Any], *, index: int) -> Mapping[str, Any]:
     for key, expected in FALSE_AUTHORITY.items():
         if key in execution and execution.get(key) is not expected:
             raise ExperimentQueueError(f"{label}.recommended_execution.{key} must be false")
-    _command_args(execution)
-    _resolve_output_path(execution.get("output_manifest"), repo_root=Path("."))
+    command = _command_args(execution)
+    _validate_command_writes_declared_outputs(
+        command,
+        execution,
+        repo_root=repo_root,
+        label=label,
+    )
     return execution
 
 
@@ -163,7 +262,7 @@ def build_local_training_execution_queue(
     generated_at = _utc_now()
     experiments: list[dict[str, Any]] = []
     for index, plan in enumerate(selected):
-        execution = _validate_plan(plan, index=index)
+        execution = _validate_plan(plan, index=index, repo_root=repo)
         output_path = _resolve_output_path(execution.get("output_manifest"), repo_root=repo)
         output_rel = _repo_rel(output_path, repo)
         representation_manifest = execution.get("representation_manifest")

@@ -190,7 +190,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--candidate-id", default=None)
     parser.add_argument("--scorer-response", action="append", default=[])
     parser.add_argument("--inverse-scorer-surface", action="append", default=[])
+    parser.add_argument("--mlx-acquisition-batch", action="append", default=[])
     parser.add_argument("--mlx-effective-spend-triage-selection", action="append", default=[])
+    parser.add_argument(
+        "--mlx-effective-spend-triage-selection-mode",
+        choices=("batch", "direct"),
+        default="batch",
+        help=(
+            "batch builds mlx_acquisition_batch.v1 artifacts inside this run "
+            "before action-functional construction; direct preserves the older "
+            "row-level bridge"
+        ),
+    )
+    parser.add_argument("--mlx-acquisition-set-size", type=int, default=1)
+    parser.add_argument("--mlx-acquisition-limit", type=int, default=None)
     parser.add_argument("--atom", action="append", default=[])
     parser.add_argument("--observation", action="append", default=[])
     parser.add_argument("--exact-auth-calibration-packet", action="append", default=[])
@@ -320,6 +333,7 @@ def _action_source_count(args: argparse.Namespace) -> int:
         for name in (
             "scorer_response",
             "inverse_scorer_surface",
+            "mlx_acquisition_batch",
             "mlx_effective_spend_triage_selection",
             "atom",
             "observation",
@@ -336,7 +350,8 @@ def _require_plan_path(args: argparse.Namespace, plan_path: Path | None = None) 
         raise SystemExit(
             "provide --plan or high-level action sources such as "
             "--scorer-response, --inverse-scorer-surface, "
-            "--mlx-effective-spend-triage-selection, or --atom"
+            "--mlx-acquisition-batch, --mlx-effective-spend-triage-selection, "
+            "or --atom"
         )
     return _resolve(args.plan)
 
@@ -346,10 +361,45 @@ def _append_path_args(command: list[str], flag: str, values: list[str | Path]) -
         command.extend([flag, _display_path(_resolve(raw))])
 
 
+def _mlx_acquisition_batch_path(run_dir: Path, index: int) -> Path:
+    return run_dir / f"mlx_acquisition_batch_{index:04d}.json"
+
+
+def _build_mlx_acquisition_batch_commands(
+    args: argparse.Namespace,
+    *,
+    run_dir: Path,
+) -> list[tuple[Path, list[str]]]:
+    commands: list[tuple[Path, list[str]]] = []
+    if args.mlx_effective_spend_triage_selection_mode != "batch":
+        return commands
+    for index, raw_path in enumerate(args.mlx_effective_spend_triage_selection):
+        output = _mlx_acquisition_batch_path(run_dir, index)
+        command = [
+            sys.executable,
+            "tools/build_mlx_acquisition_batch.py",
+            "--mlx-effective-spend-triage-selection",
+            _display_path(_resolve(raw_path)),
+            "--output",
+            _display_path(output),
+            "--repo-root",
+            REPO_ROOT.as_posix(),
+            "--set-size",
+            str(args.mlx_acquisition_set_size),
+        ]
+        if args.mlx_acquisition_limit is not None:
+            command.extend(["--limit", str(args.mlx_acquisition_limit)])
+        if args.overwrite_output:
+            command.append("--allow-overwrite")
+        commands.append((output, command))
+    return commands
+
+
 def _build_action_functional_command(
     args: argparse.Namespace,
     *,
     run_dir: Path,
+    generated_mlx_acquisition_batches: list[Path] | None = None,
 ) -> list[str]:
     action_path = run_dir / "inverse_steganalysis_action_functional.json"
     md_path = run_dir / "inverse_steganalysis_action_functional.md"
@@ -367,11 +417,18 @@ def _build_action_functional_command(
     ]
     _append_path_args(command, "--scorer-response", args.scorer_response)
     _append_path_args(command, "--inverse-scorer-surface", args.inverse_scorer_surface)
+    _append_path_args(command, "--mlx-acquisition-batch", args.mlx_acquisition_batch)
     _append_path_args(
         command,
-        "--mlx-effective-spend-triage-selection",
-        args.mlx_effective_spend_triage_selection,
+        "--mlx-acquisition-batch",
+        list(generated_mlx_acquisition_batches or []),
     )
+    if args.mlx_effective_spend_triage_selection_mode == "direct":
+        _append_path_args(
+            command,
+            "--mlx-effective-spend-triage-selection",
+            args.mlx_effective_spend_triage_selection,
+        )
     _append_path_args(command, "--atom", args.atom)
     _append_path_args(command, "--observation", args.observation)
     _append_path_args(
@@ -694,7 +751,8 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(
             "provide --plan or high-level action sources such as "
             "--scorer-response, --inverse-scorer-surface, "
-            "--mlx-effective-spend-triage-selection, or --atom"
+            "--mlx-acquisition-batch, --mlx-effective-spend-triage-selection, "
+            "or --atom"
         )
     if args.plan is not None and action_source_count:
         raise SystemExit(
@@ -703,6 +761,10 @@ def main(argv: list[str] | None = None) -> int:
         )
     if args.candidate_limit < 1:
         raise SystemExit("--candidate-limit must be >= 1")
+    if args.mlx_acquisition_set_size < 1:
+        raise SystemExit("--mlx-acquisition-set-size must be >= 1")
+    if args.mlx_acquisition_limit is not None and args.mlx_acquisition_limit < 1:
+        raise SystemExit("--mlx-acquisition-limit must be >= 1")
     if args.campaign_plan_max_k is not None and args.campaign_plan_max_k < 1:
         raise SystemExit("--campaign-plan-max-k must be >= 1")
     if args.max_steps < 1:
@@ -742,11 +804,24 @@ def main(argv: list[str] | None = None) -> int:
     commands: list[CommandResult] = []
     generated_action_functional_path: Path | None = None
     generated_campaign_plan_path: Path | None = None
+    generated_mlx_acquisition_batch_paths: list[Path] = []
     plan_path = _resolve(args.plan) if args.plan is not None else None
     if plan_path is None:
         generated_action_functional_path = run_dir / "inverse_steganalysis_action_functional.json"
         generated_campaign_plan_path = run_dir / "byte_shaving_campaign_plan.json"
-        action_result = _run(_build_action_functional_command(args, run_dir=run_dir))
+        for output_path, command in _build_mlx_acquisition_batch_commands(
+            args,
+            run_dir=run_dir,
+        ):
+            commands.append(_run(command))
+            generated_mlx_acquisition_batch_paths.append(output_path)
+        action_result = _run(
+            _build_action_functional_command(
+                args,
+                run_dir=run_dir,
+                generated_mlx_acquisition_batches=generated_mlx_acquisition_batch_paths,
+            )
+        )
         commands.append(action_result)
         plan_result = _run(
             _build_campaign_plan_command(
@@ -873,6 +948,9 @@ def main(argv: list[str] | None = None) -> int:
             if generated_campaign_plan_path is None
             else _display_path(generated_campaign_plan_path)
         ),
+        "generated_mlx_acquisition_batch_paths": [
+            _display_path(path) for path in generated_mlx_acquisition_batch_paths
+        ],
         "high_level_action_source_count": action_source_count,
         "queue_path": _display_path(execution_queue),
         "state_path": _display_path(state_path),

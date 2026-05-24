@@ -219,6 +219,18 @@ bounded byte-shaving campaign plan, then the queue/DAG/SSH artifacts. This keeps
 inverse-cell materialization as one actuator underneath the planner instead of
 making it the planning surface.
 
+For local MLX acquisition, `tools/build_mlx_scorer_response_execution_queue.py`
+can append that same runner as a follow-up step with
+`--include-acquisition-followup` plus at least one
+`--acquisition-baseline-response`. Each experiment then runs MLX scorer response
+first, normalizes the fresh response against same-window MLX baseline responses
+as `scorer_response_dataset.v1`, and only then builds the inverse action
+functional, byte-shaving campaign plan, materializer execution queue, and
+optional staircase plan under `.omx/research/mlx_acquisition_batches/`. This is
+the queue-owned path for broad MLX acquisition batches: MLX remains local
+research signal, the follow-up artifacts stay false-authority, and exact
+contest CPU/CUDA remains the only score/promotion authority.
+
 ## Exact-ready consumer
 
 `tools/build_materializer_exact_eval_consumer.py` bridges materializer exact

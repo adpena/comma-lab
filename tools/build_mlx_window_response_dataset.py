@@ -23,6 +23,7 @@ from tac.optimization.scorer_response_dataset import (  # noqa: E402
     build_windowed_mlx_response_dataset,
     render_markdown,
 )
+from tac.repo_io import ArtifactWriteError, write_json_artifact, write_text_artifact  # noqa: E402
 
 
 def _expand_inputs(values: list[str]) -> list[Path]:
@@ -93,6 +94,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Rows remain non-authoritative and are not spend-triage or promotion inputs."
         ),
     )
+    parser.add_argument("--allow-overwrite", action="store_true")
+    parser.add_argument("--expected-output-sha256", default=None)
+    parser.add_argument("--expected-md-sha256", default=None)
     return parser.parse_args(argv)
 
 
@@ -131,11 +135,23 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
-    args.json_out.parent.mkdir(parents=True, exist_ok=True)
-    args.json_out.write_text(json.dumps(dataset, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    if args.md_out is not None:
-        args.md_out.parent.mkdir(parents=True, exist_ok=True)
-        args.md_out.write_text(render_markdown(dataset), encoding="utf-8")
+    try:
+        write_json_artifact(
+            args.json_out,
+            dataset,
+            allow_overwrite=args.allow_overwrite,
+            expected_existing_sha256=args.expected_output_sha256,
+        )
+        if args.md_out is not None:
+            write_text_artifact(
+                args.md_out,
+                render_markdown(dataset),
+                allow_overwrite=args.allow_overwrite,
+                expected_existing_sha256=args.expected_md_sha256,
+            )
+    except ArtifactWriteError as exc:
+        print(f"FATAL: {exc}", file=sys.stderr)
+        return 2
     print(
         json.dumps(
             {

@@ -238,6 +238,10 @@ src/tac.egg-info/
 .omx/research/*_proactive_cleanup_*.json.journal.jsonl
 .omx/research/*_artifact_retention_*.json
 .omx/research/*_artifact_retention_*.json.journal.jsonl
+.omx/research/local_training_execution_queue*.json
+.omx/research/local_training_execution_plan*.json
+.omx/research/inverse_steganalysis_action_functional*.json
+.omx/research/inverse_steganalysis_action_functional*.md
 # Generated materializer harvest/exact-readiness/dispatch handoff JSON is
 # queue-owned local custody. Promote durable conclusions into dated memos
 # instead of accidentally tracking per-run handoff packets.
@@ -252,6 +256,7 @@ src/tac.egg-info/
 .omx/research/materializer_exact_eval_consumer_queue_*.json
 .omx/research/materializer_exact_eval_consumer_experiment_queue_*.json
 .omx/research/byte_shaving_materializer_campaign_*/
+.omx/research/mlx_acquisition_batches/
 #
 # PR110 evidence packs are useful local custody bundles, but the hosted archive
 # and runtime snapshot are rebuildable/raw public artifacts. Keep their compact

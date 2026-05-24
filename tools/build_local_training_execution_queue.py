@@ -19,6 +19,7 @@ from comma_lab.scheduler.experiment_queue import ExperimentQueueError  # noqa: E
 from comma_lab.scheduler.local_training_queue import (  # noqa: E402
     build_local_training_execution_queue,
 )
+from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 
 def _load_plan(path: Path) -> dict[str, Any]:
@@ -41,6 +42,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--local-mps-concurrency", type=int, default=1)
     parser.add_argument("--timeout-seconds", type=int, default=0)
     parser.add_argument("--limit", type=int)
+    parser.add_argument("--allow-overwrite", action="store_true")
+    parser.add_argument("--expected-output-sha256", default=None)
     return parser.parse_args(argv)
 
 
@@ -58,11 +61,15 @@ def main(argv: list[str] | None = None) -> int:
         timeout_seconds=args.timeout_seconds,
         limit=args.limit,
     )
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(
-        json.dumps(queue, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    try:
+        write_json_artifact(
+            args.output,
+            queue,
+            allow_overwrite=args.allow_overwrite,
+            expected_existing_sha256=args.expected_output_sha256,
+        )
+    except ArtifactWriteError as exc:
+        raise SystemExit(str(exc)) from exc
     print(
         json.dumps(
             {

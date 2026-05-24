@@ -51343,6 +51343,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_codex_mlx_acquisition_batch_autopilot_20260524",
+      "name": "Codex MLX acquisition batch autopilot bridge",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/local_acceleration/mlx_acquisition_batch.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_byte_shaving_materializer_campaign_runner.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_mlx_acquisition_batch_runner_integration_20260524T075104Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "family_agnostic_materializer_contracts_20260524",
+      "name": "Family-agnostic materializer contracts",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/comma_lab/scheduler/byte_shaving_materializer_registry.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_byte_shaving_campaign_queue.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_family_agnostic_materializer_contracts_20260524T073805Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -51352,5 +51434,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T07:27:55Z"
+  "updated_at": "2026-05-24T07:51:59Z"
 }
