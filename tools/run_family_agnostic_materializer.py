@@ -58,6 +58,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--brotli-quality", action="append", type=int, default=[])
     parser.add_argument("--packet-member-manifest", type=Path)
     parser.add_argument("--member-name")
+    parser.add_argument("--member-names", action="append", default=[])
+    parser.add_argument("--all-members", action="store_true")
     parser.add_argument("--header-elision-contract", type=Path)
     parser.add_argument("--zip-compression-method", action="append", default=[])
     parser.add_argument("--zip-compresslevel", action="append", type=int, default=[])
@@ -206,6 +208,8 @@ def _run_materializer(
             **common,
             packet_member_manifest=args.packet_member_manifest,
             member_name=args.member_name,
+            member_names=tuple(args.member_names),
+            all_members=args.all_members,
             header_elision_contract=args.header_elision_contract,
             runtime_consumption_proof_out=runtime_proof_out,
             expected_existing_runtime_consumption_proof_sha256=(

@@ -345,6 +345,21 @@ def _packet_member_context_row(
         context["packet_member_manifest"] = packet_member_manifest
     if member_name is not None:
         context["member_name"] = member_name
+    member_names = _string_list(
+        hints.get("member_names")
+        or hints.get("archive_member_names")
+        or hints.get("packet_member_names")
+    )
+    if member_names:
+        context["member_names"] = member_names
+    member_selection = _first_text(
+        hints,
+        ("member_selection", "zip_member_selection", "packet_member_selection"),
+    )
+    if member_selection is not None:
+        context["member_selection"] = member_selection
+    if any(hints.get(key) is True for key in ("all_members", "select_all_members")):
+        context["all_members"] = True
     header_elision_contract = _first_text(
         hints,
         (

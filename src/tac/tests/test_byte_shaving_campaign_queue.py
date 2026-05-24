@@ -1967,6 +1967,8 @@ def test_materializer_work_queue_wraps_packet_member_zip_header_elide(
                 "archive_path": str(archive),
                 "packet_member_manifest": str(packet_manifest),
                 "member_name": "payload.bin",
+                "member_names": ["payload.bin", "weights.bin"],
+                "all_members": True,
                 "header_elision_contract": str(header_contract),
                 "output_archive": str(output),
                 "output_manifest": str(out_manifest),
@@ -1986,6 +1988,13 @@ def test_materializer_work_queue_wraps_packet_member_zip_header_elide(
         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     ] in [row["command"][index : index + 2] for index in range(len(row["command"]) - 1)]
     assert ["--member-name", "payload.bin"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert "--all-members" in row["command"]
+    assert ["--member-names", "payload.bin"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--member-names", "weights.bin"] in [
         row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
     ]
     assert ["--header-elision-contract", str(header_contract)] in [

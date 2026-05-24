@@ -80,6 +80,14 @@ QUEUE_FEEDBACK_REPLAN_EXPERIMENT_METADATA_SCHEMA = (
 QUEUE_FEEDBACK_REPLAN_FOLLOWUP_EXECUTION_SCHEMA = (
     "byte_shaving_materializer_campaign_feedback_replan_followup_execution.v1"
 )
+FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA = (
+    "family_agnostic_materializer_empirical_observation.v1"
+)
+FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA = (
+    "family_agnostic_materializer_empirical_sweep.v1"
+)
+MAX_AUTO_DISCOVERED_FEEDBACK_OBSERVATIONS = 128
+MAX_AUTO_DISCOVERED_FEEDBACK_OBSERVATION_BYTES = 8 * 1024 * 1024
 QUEUE_FEEDBACK_REPLAN_REQUIRED_FALSE_FIELDS = tuple(
     dict.fromkeys(
         (
@@ -280,6 +288,78 @@ def _as_sequence(value: Any) -> list[Any]:
 
 def _display_path_list(paths: Sequence[str | Path]) -> list[str]:
     return [_display_path(_resolve(path)) for path in paths]
+
+
+def _feedback_observation_paths(args: argparse.Namespace, *, run_dir: Path) -> list[str]:
+    explicit = _display_path_list(args.observation)
+    discovered = [
+        _display_path(path)
+        for path in _discover_feedback_observation_paths(run_dir)
+        if _display_path(path) not in explicit
+    ]
+    return list(dict.fromkeys([*explicit, *discovered]))
+
+
+def _discover_feedback_observation_paths(run_dir: Path) -> list[Path]:
+    root = run_dir.resolve(strict=False)
+    paths: list[Path] = []
+    if not root.exists():
+        return paths
+    for path in sorted(root.rglob("*")):
+        if len(paths) >= MAX_AUTO_DISCOVERED_FEEDBACK_OBSERVATIONS:
+            break
+        if not path.is_file() or path.suffix not in {".json", ".jsonl"}:
+            continue
+        if not _path_under_root(path, root):
+            continue
+        try:
+            if path.stat().st_size > MAX_AUTO_DISCOVERED_FEEDBACK_OBSERVATION_BYTES:
+                continue
+        except OSError:
+            continue
+        if _path_has_family_agnostic_materializer_observation(path):
+            paths.append(path)
+    return paths
+
+
+def _path_has_family_agnostic_materializer_observation(path: Path) -> bool:
+    if path.suffix == ".jsonl":
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                for index, raw_line in enumerate(handle, start=1):
+                    if index > 256:
+                        break
+                    line = raw_line.strip()
+                    if not line:
+                        continue
+                    try:
+                        payload = json.loads(line)
+                    except json.JSONDecodeError:
+                        return False
+                    if (
+                        isinstance(payload, Mapping)
+                        and payload.get("schema")
+                        == FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA
+                    ):
+                        return True
+        except OSError:
+            return False
+        return False
+    payload = _load_json_object_if_present(path)
+    if payload is None:
+        return False
+    if payload.get("schema") == FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA:
+        return True
+    if payload.get("schema") == FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA:
+        return True
+    observations = payload.get("observations")
+    if isinstance(observations, Sequence) and not isinstance(observations, (bytes, bytearray, str)):
+        return any(
+            isinstance(row, Mapping)
+            and row.get("schema") == FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA
+            for row in observations
+        )
+    return False
 
 
 def _load_json_object_if_present(path: Path) -> dict[str, Any] | None:
@@ -687,6 +767,7 @@ def _feedback_action_functional_command_hint(
     queue_performance_summary_path: Path,
     runtime_identity_path: Path | None,
     cache_identity_path: Path | None,
+    feedback_observation_paths: Sequence[str | Path] = (),
     exact_auth_calibration_inputs: Mapping[str, Any] | None = None,
 ) -> list[str]:
     command = [
@@ -728,7 +809,7 @@ def _feedback_action_functional_command_hint(
                 _display_path(_resolve(args.queue_performance_candidate_map)),
             ]
         )
-    _append_path_args(command, "--observation", args.observation)
+    _append_path_args(command, "--observation", list(feedback_observation_paths))
     calibration_inputs = (
         exact_auth_calibration_inputs
         if exact_auth_calibration_inputs is not None
@@ -773,6 +854,7 @@ def _queue_feedback_replan_request_payload(
         args,
         run_dir=run_dir,
     )
+    feedback_observation_paths = _feedback_observation_paths(args, run_dir=run_dir)
     blockers = _queue_performance_replan_blockers(
         args,
         queue_performance_summary=queue_performance_summary,
@@ -787,6 +869,7 @@ def _queue_feedback_replan_request_payload(
         queue_performance_summary_path=queue_performance_summary_path,
         runtime_identity_path=runtime_identity_path,
         cache_identity_path=cache_identity_path,
+        feedback_observation_paths=feedback_observation_paths,
         exact_auth_calibration_inputs=exact_auth_calibration_inputs,
     )
     return _false_authority_payload(
@@ -806,7 +889,9 @@ def _queue_feedback_replan_request_payload(
             ),
             "queue_performance_runtime_identity_generated": generated_runtime_identity,
             "queue_performance_cache_identity_generated": generated_cache_identity,
-            "feedback_observation_paths": _display_path_list(args.observation),
+            "feedback_observation_paths": feedback_observation_paths,
+            "feedback_observation_auto_discovery_root": _display_path(run_dir),
+            "feedback_observation_auto_discovery_enabled": True,
             "exact_auth_calibration_packet_paths": exact_auth_calibration_inputs[
                 "packet_paths"
             ],

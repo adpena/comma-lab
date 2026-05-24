@@ -53521,15 +53521,15 @@
       "id": "codex_packet_header_elide_all_members_feedback_20260524",
       "name": "Packet header elide all-member feedback",
       "phase": 2.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/optimization/family_agnostic_materializers.py"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/results/packet_header_elide_all_members_20260524T232046Z/sweep.json"
         },
         "contest_cuda": {
           "status": false,
@@ -53540,16 +53540,16 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "ruff targeted all-member/feedback surfaces; pytest 191 family materializer, queue/context, campaign runner, action CLI, inverse acquisition tests"
         },
         "three_clean_review": {
           "status": false,
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/codex_findings_packet_header_elide_all_members_feedback_20260524T231855Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -53557,6 +53557,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "codex_packet_header_elide_all_members_20260524",
+      "name": "Packet header elide all-members executable sweep",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "all-member packet_member_zip_header_elide_v1 materializer, CLI, sweep, queue/context feedback wiring"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/packet_header_elide_all_members_sweep_20260524T2344Z/sweep.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "ruff targeted all-member materializer/queue/campaign/action surfaces; pytest 98 queue/materializer/context/sweep tests plus 2 feedback tests"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_packet_header_elide_all_members_20260524T231851Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Generalize packet_member_zip_header_elide_v1 from singleton to selected/all-member ZIP header elision, preserve compressed streams, and feed all-member materializer observations into queue feedback."
     }
   ],
   "level_rules": {
@@ -53566,5 +53607,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T23:09:43Z"
+  "updated_at": "2026-05-24T23:21:02Z"
 }

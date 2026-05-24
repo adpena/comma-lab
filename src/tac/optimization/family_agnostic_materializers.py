@@ -283,6 +283,8 @@ def materialize_packet_member_zip_header_elide_candidate(
     output_archive: str | Path,
     packet_member_manifest: str | Path | Mapping[str, Any] | None = None,
     member_name: str | None = None,
+    member_names: Sequence[str] = (),
+    all_members: bool = False,
     header_elision_contract: str | Path | Mapping[str, Any] | None = None,
     runtime_consumption_proof: str | Path | Mapping[str, Any] | None = None,
     runtime_consumption_proof_out: str | Path | None = None,
@@ -309,23 +311,33 @@ def materialize_packet_member_zip_header_elide_candidate(
     )
     manifest = _load_mapping(packet_member_manifest, repo=repo)
     contract = _load_mapping(header_elision_contract, repo=repo)
-    target_member = _select_member_name(
+    target_members = _select_member_names(
         archive,
         explicit=member_name,
+        explicit_many=member_names,
         manifest=manifest,
+        contract=contract,
+        all_members=all_members,
     )
-    source_member_bytes = _zip_member_bytes(archive, target_member)
+    primary_member = target_members[0]
+    source_member_bytes = _zip_member_bytes(archive, primary_member)
     source_record = _archive_record(archive)
+    source_member_records = [
+        _member_record(archive, target_member)
+        for target_member in target_members
+    ]
     source_member_record = _member_record(
         archive,
-        target_member,
+        primary_member,
         payload=source_member_bytes,
     )
-    source_header = _zip_header_record(archive, target_member)
+    source_headers = [_zip_header_record(archive, target_member) for target_member in target_members]
+    source_header = _zip_header_record(archive, primary_member)
+    source_header_summary = _zip_header_summary(archive, target_members)
     elision_options = _zip_header_elision_options(contract)
     payload = _zip_archive_bytes_with_header_elision(
         archive,
-        member_name=target_member,
+        member_names=target_members,
         strip_member_extra=elision_options["strip_member_extra"],
         strip_member_comment=elision_options["strip_member_comment"],
         strip_archive_comment=elision_options["strip_archive_comment"],
@@ -342,19 +354,32 @@ def materialize_packet_member_zip_header_elide_candidate(
         min_free_bytes=min_free_bytes,
     )
     candidate_record = _archive_record(output)
-    candidate_member_record = _member_record(output, target_member)
-    candidate_header = _zip_header_record(output, target_member)
+    candidate_member_records = [
+        _member_record(output, target_member)
+        for target_member in target_members
+    ]
+    candidate_member_record = _member_record(output, primary_member)
+    candidate_headers = [_zip_header_record(output, target_member) for target_member in target_members]
+    candidate_header = _zip_header_record(output, primary_member)
+    candidate_header_summary = _zip_header_summary(output, target_members)
     proof_write_result = None
     runtime_proof_ref: str | Path | Mapping[str, Any] | None = runtime_consumption_proof
     if proof_out is not None:
         runtime_proof_payload = _packet_member_zip_header_elide_runtime_consumption_proof(
             source_archive=source_record,
             source_member=source_member_record,
+            source_members=source_member_records,
             source_header=source_header,
+            source_headers=source_headers,
+            source_header_summary=source_header_summary,
             candidate_archive=candidate_record,
             candidate_member=candidate_member_record,
+            candidate_members=candidate_member_records,
             candidate_header=candidate_header,
-            selected_member_name=target_member,
+            candidate_headers=candidate_headers,
+            candidate_header_summary=candidate_header_summary,
+            selected_member_name=primary_member,
+            selected_member_names=target_members,
             selected_elision={
                 **elision_options,
                 "source_archive_bytes": source_record["bytes"],
@@ -374,7 +399,13 @@ def materialize_packet_member_zip_header_elide_candidate(
     receiver_verification = verify_runtime_consumption_proof(
         runtime_consumption_proof=runtime_proof_ref,
         required_candidate_archive_sha256=candidate_record["sha256"],
-        required_candidate_member_sha256=source_member_record["sha256"],
+        required_candidate_member_sha256=(
+            source_member_record["sha256"] if len(target_members) == 1 else None
+        ),
+        required_candidate_member_sha256s={
+            str(row["name"]): str(row["sha256"])
+            for row in source_member_records
+        },
         repo_root=repo,
     )
     readiness_blockers = _readiness_blockers(
@@ -391,19 +422,30 @@ def materialize_packet_member_zip_header_elide_candidate(
         "byte_closed_candidate_emitted": True,
         "source_archive": source_record,
         "source_member": source_member_record,
+        "source_members": source_member_records,
         "source_zip_header": source_header,
+        "source_zip_headers": source_headers,
+        "source_zip_header_summary": source_header_summary,
         "candidate_archive": candidate_record,
         "candidate_member": candidate_member_record,
+        "candidate_members": candidate_member_records,
         "candidate_zip_header": candidate_header,
-        "selected_member_name": target_member,
+        "candidate_zip_headers": candidate_headers,
+        "candidate_zip_header_summary": candidate_header_summary,
+        "selected_member_name": primary_member,
+        "selected_member_names": target_members,
+        "selection_scope": "all_members" if all_members else (
+            "multi_member" if len(target_members) > 1 else "single_member"
+        ),
         "selected_elision": {
             **elision_options,
+            "selected_member_names": target_members,
             "source_archive_bytes": source_record["bytes"],
             "candidate_archive_bytes": candidate_record["bytes"],
             "saved_bytes": saved_bytes,
             "elided_header_bytes": (
-                int(source_header["total_elidable_header_bytes"])
-                - int(candidate_header["total_elidable_header_bytes"])
+                int(source_header_summary["total_elidable_header_bytes"])
+                - int(candidate_header_summary["total_elidable_header_bytes"])
             ),
         },
         "receiver_verification": receiver_verification,
@@ -426,11 +468,18 @@ def _packet_member_zip_header_elide_runtime_consumption_proof(
     *,
     source_archive: Mapping[str, Any],
     source_member: Mapping[str, Any],
+    source_members: Sequence[Mapping[str, Any]],
     source_header: Mapping[str, Any],
+    source_headers: Sequence[Mapping[str, Any]],
+    source_header_summary: Mapping[str, Any],
     candidate_archive: Mapping[str, Any],
     candidate_member: Mapping[str, Any],
+    candidate_members: Sequence[Mapping[str, Any]],
     candidate_header: Mapping[str, Any],
+    candidate_headers: Sequence[Mapping[str, Any]],
+    candidate_header_summary: Mapping[str, Any],
     selected_member_name: str,
+    selected_member_names: Sequence[str],
     selected_elision: Mapping[str, Any],
     contract: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -439,11 +488,64 @@ def _packet_member_zip_header_elide_runtime_consumption_proof(
     member_payload_identical = (
         source_member_sha is not None and candidate_member_sha == source_member_sha
     )
+    source_by_name = {str(row.get("name")): row for row in source_members}
+    candidate_by_name = {str(row.get("name")): row for row in candidate_members}
+    member_proofs: list[dict[str, Any]] = []
+    all_member_payloads_identical = bool(selected_member_names)
+    all_member_compressed_streams_identical = bool(selected_member_names)
+    for name in selected_member_names:
+        source_row = source_by_name.get(str(name), {})
+        candidate_row = candidate_by_name.get(str(name), {})
+        source_sha = _clean_str(source_row.get("sha256"))
+        candidate_sha = _clean_str(candidate_row.get("sha256"))
+        source_compressed_bytes = source_row.get("zip_compressed_bytes")
+        candidate_compressed_bytes = candidate_row.get("zip_compressed_bytes")
+        source_compressed_sha = _clean_str(source_row.get("zip_compressed_sha256"))
+        candidate_compressed_sha = _clean_str(candidate_row.get("zip_compressed_sha256"))
+        payload_identical = source_sha is not None and candidate_sha == source_sha
+        compressed_stream_identical = (
+            source_compressed_sha is not None
+            and candidate_compressed_sha == source_compressed_sha
+        )
+        all_member_payloads_identical = all_member_payloads_identical and payload_identical
+        all_member_compressed_streams_identical = (
+            all_member_compressed_streams_identical and compressed_stream_identical
+        )
+        member_proofs.append(
+            {
+                "member_name": str(name),
+                "source_member_sha256": source_sha,
+                "candidate_member_sha256": candidate_sha,
+                "member_sha256": candidate_sha,
+                "candidate_member_payload_identical_to_source": payload_identical,
+                "source_zip_compressed_bytes": source_compressed_bytes,
+                "candidate_zip_compressed_bytes": candidate_compressed_bytes,
+                "candidate_zip_compressed_sha256": candidate_compressed_sha,
+                "source_zip_compressed_sha256": source_compressed_sha,
+                "candidate_compressed_stream_identical_to_source": (
+                    compressed_stream_identical
+                ),
+                "candidate_compressed_stream_length_identical_to_source": (
+                    source_compressed_bytes is not None
+                    and candidate_compressed_bytes == source_compressed_bytes
+                ),
+                "passed": payload_identical and compressed_stream_identical,
+            }
+        )
     elided_header_bytes = (
-        int(source_header.get("total_elidable_header_bytes", 0))
-        - int(candidate_header.get("total_elidable_header_bytes", 0))
+        int(source_header_summary.get("total_elidable_header_bytes", 0))
+        - int(candidate_header_summary.get("total_elidable_header_bytes", 0))
     )
-    passed = member_payload_identical and elided_header_bytes >= 0
+    passed = (
+        all_member_payloads_identical
+        and all_member_compressed_streams_identical
+        and elided_header_bytes >= 0
+    )
+    candidate_member_sha256s = {
+        str(row.get("name")): row.get("sha256")
+        for row in candidate_members
+        if _clean_str(row.get("name")) and _clean_str(row.get("sha256"))
+    }
     return {
         "schema": "family_agnostic_runtime_consumption_proof_v1",
         "proof_kind": "packet_member_zip_header_elide_payload_identity_receiver_proof.v1",
@@ -453,17 +555,32 @@ def _packet_member_zip_header_elide_runtime_consumption_proof(
         "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
         "receiver_contract_id": f"{PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND}.receiver.v1",
         "selected_member_name": selected_member_name,
+        "selected_member_names": list(selected_member_names),
         "source_archive": dict(source_archive),
         "source_member": dict(source_member),
+        "source_members": [dict(row) for row in source_members],
         "source_zip_header": dict(source_header),
+        "source_zip_headers": [dict(row) for row in source_headers],
+        "source_zip_header_summary": dict(source_header_summary),
         "candidate_archive": dict(candidate_archive),
         "candidate_member": dict(candidate_member),
+        "candidate_members": [dict(row) for row in candidate_members],
         "candidate_zip_header": dict(candidate_header),
+        "candidate_zip_headers": [dict(row) for row in candidate_headers],
+        "candidate_zip_header_summary": dict(candidate_header_summary),
         "candidate_archive_sha256": candidate_archive.get("sha256"),
         "candidate_member_sha256": candidate_member_sha,
+        "candidate_member_sha256s": candidate_member_sha256s,
         "member_sha256": candidate_member_sha,
         "source_member_sha256": source_member_sha,
         "candidate_member_payload_identical_to_source": member_payload_identical,
+        "all_member_payloads_identical_to_source": all_member_payloads_identical,
+        "all_member_compressed_streams_identical_to_source": (
+            all_member_compressed_streams_identical
+        ),
+        "all_member_compressed_stream_lengths_identical_to_source": (
+            all_member_compressed_streams_identical
+        ),
         "selected_elision": dict(selected_elision),
         "header_elision_contract": dict(contract),
         "runtime_consumption_probe": {
@@ -475,7 +592,14 @@ def _packet_member_zip_header_elide_runtime_consumption_proof(
             "source_member_bytes": source_member.get("bytes"),
             "source_elidable_header_bytes": source_header.get("total_elidable_header_bytes"),
             "candidate_elidable_header_bytes": candidate_header.get("total_elidable_header_bytes"),
+            "source_total_elidable_header_bytes": (
+                source_header_summary.get("total_elidable_header_bytes")
+            ),
+            "candidate_total_elidable_header_bytes": (
+                candidate_header_summary.get("total_elidable_header_bytes")
+            ),
             "elided_header_bytes": elided_header_bytes,
+            "member_proofs": member_proofs,
         },
         "receiver_contract_satisfied": passed,
         "runtime_consumption_proof_passed": passed,
@@ -1070,6 +1194,7 @@ def verify_runtime_consumption_proof(
     runtime_consumption_proof: str | Path | Mapping[str, Any] | None,
     required_candidate_archive_sha256: str | None = None,
     required_candidate_member_sha256: str | None = None,
+    required_candidate_member_sha256s: Mapping[str, str] | None = None,
     repo_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Validate the generic receiver/runtime proof used by these materializers."""
@@ -1114,6 +1239,18 @@ def verify_runtime_consumption_proof(
             blockers.append("runtime_consumption_proof_candidate_member_sha_missing")
         elif member_sha != required_candidate_member_sha256:
             blockers.append("runtime_consumption_proof_candidate_member_sha_mismatch")
+    member_sha_map = _proof_candidate_member_sha256s(proof)
+    if required_candidate_member_sha256s:
+        for name, required_sha in required_candidate_member_sha256s.items():
+            candidate_sha = member_sha_map.get(str(name))
+            if not candidate_sha:
+                blockers.append(
+                    f"runtime_consumption_proof_candidate_member_sha_missing:{name}"
+                )
+            elif candidate_sha != str(required_sha):
+                blockers.append(
+                    f"runtime_consumption_proof_candidate_member_sha_mismatch:{name}"
+                )
     return {
         "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
         "receiver_contract_satisfied": not blockers,
@@ -1122,8 +1259,39 @@ def verify_runtime_consumption_proof(
         "proof_schema": proof.get("schema"),
         "candidate_archive_sha256": archive_sha,
         "candidate_member_sha256": member_sha,
+        "candidate_member_sha256s": member_sha_map,
         "blockers": ordered_unique(blockers),
     }
+
+
+def _proof_candidate_member_sha256s(proof: Mapping[str, Any]) -> dict[str, str]:
+    out: dict[str, str] = {}
+    raw_map = proof.get("candidate_member_sha256s")
+    if isinstance(raw_map, Mapping):
+        for name, value in raw_map.items():
+            sha = _clean_str(value)
+            if sha:
+                out[str(name)] = sha
+    rows = proof.get("candidate_members")
+    if isinstance(rows, Sequence) and not isinstance(rows, (bytes, bytearray, str)):
+        for row in rows:
+            if not isinstance(row, Mapping):
+                continue
+            name = _clean_str(row.get("name"))
+            sha = _clean_str(row.get("sha256"))
+            if name and sha:
+                out[name] = sha
+    probe = proof.get("runtime_consumption_probe")
+    member_proofs = probe.get("member_proofs") if isinstance(probe, Mapping) else None
+    if isinstance(member_proofs, Sequence) and not isinstance(member_proofs, (bytes, bytearray, str)):
+        for row in member_proofs:
+            if not isinstance(row, Mapping):
+                continue
+            name = _clean_str(row.get("member_name"))
+            sha = _clean_str(row.get("candidate_member_sha256"))
+            if name and sha:
+                out[name] = sha
+    return out
 
 
 def _mapping_string_any(mapping: Mapping[str, Any], keys: Sequence[str]) -> str | None:
@@ -1226,6 +1394,96 @@ def _select_member_name(
     return members[0]
 
 
+def _select_member_names(
+    archive: Path,
+    *,
+    explicit: str | None,
+    explicit_many: Sequence[str],
+    manifest: Mapping[str, Any],
+    contract: Mapping[str, Any],
+    all_members: bool,
+) -> list[str]:
+    members = _zip_member_names(archive)
+    if not members:
+        raise FamilyAgnosticMaterializerError("archive contains no non-directory members")
+    if all_members or _contract_selects_all_members(contract) or _manifest_selects_all_members(manifest):
+        return _require_unique_existing_member_names(archive, members)
+    explicit_names = _string_items(explicit_many)
+    if _clean_str(explicit):
+        explicit_names.insert(0, str(explicit).strip())
+    if explicit_names:
+        return _require_unique_existing_member_names(archive, explicit_names)
+    manifest_names = _manifest_member_names(manifest)
+    if manifest_names:
+        return _require_unique_existing_member_names(archive, manifest_names)
+    return [_select_member_name(archive, explicit=None, manifest=manifest)]
+
+
+def _contract_selects_all_members(contract: Mapping[str, Any]) -> bool:
+    for key in ("all_members", "select_all_members", "zip_header_elide_all_members"):
+        if contract.get(key) is True:
+            return True
+    selection = _clean_str(contract.get("member_selection"))
+    return selection in {"all", "*", "all_members"}
+
+
+def _manifest_selects_all_members(manifest: Mapping[str, Any]) -> bool:
+    for key in ("all_members", "select_all_members", "zip_header_elide_all_members"):
+        if manifest.get(key) is True:
+            return True
+    selection = _clean_str(manifest.get("member_selection"))
+    return selection in {"all", "*", "all_members"}
+
+
+def _manifest_member_names(manifest: Mapping[str, Any]) -> list[str]:
+    names: list[str] = []
+    for key in ("member_names", "archive_member_names", "packet_member_names"):
+        names.extend(_string_items(manifest.get(key)))
+    members = manifest.get("members")
+    if isinstance(members, Sequence) and not isinstance(members, (bytes, bytearray, str)):
+        for row in members:
+            if isinstance(row, Mapping):
+                name = _clean_str(row.get("name"))
+                if name:
+                    names.append(name)
+            else:
+                names.extend(_string_items(row))
+    return ordered_unique(names)
+
+
+def _string_items(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, (str, int)):
+        text = str(value).strip()
+        return [text] if text else []
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray, str)):
+        return ordered_unique(str(item).strip() for item in value if str(item).strip())
+    return []
+
+
+def _require_unique_existing_member_names(archive: Path, names: Sequence[str]) -> list[str]:
+    requested = ordered_unique(str(name).strip() for name in names if str(name).strip())
+    if not requested:
+        raise FamilyAgnosticMaterializerError("at least one ZIP member must be selected")
+    available = _zip_member_names(archive)
+    counts: dict[str, int] = {}
+    for name in available:
+        counts[name] = counts.get(name, 0) + 1
+    missing = [name for name in requested if name not in counts]
+    if missing:
+        raise FamilyAgnosticMaterializerError(
+            "selected ZIP member not found: " + ", ".join(missing)
+        )
+    duplicate_selected = [name for name in requested if counts.get(name, 0) != 1]
+    if duplicate_selected:
+        raise FamilyAgnosticMaterializerError(
+            "zip header elision requires selected member names to be unique: "
+            + ", ".join(duplicate_selected)
+        )
+    return list(requested)
+
+
 def _zip_member_names(archive: Path) -> list[str]:
     with zipfile.ZipFile(archive, "r") as zf:
         return [info.filename for info in zf.infolist() if not info.is_dir()]
@@ -1274,7 +1532,7 @@ def _zip_archive_bytes_with_replacement(
 def _zip_archive_bytes_with_header_elision(
     archive: Path,
     *,
-    member_name: str,
+    member_names: Sequence[str],
     strip_member_extra: bool,
     strip_member_comment: bool,
     strip_archive_comment: bool,
@@ -1282,10 +1540,7 @@ def _zip_archive_bytes_with_header_elision(
     raw = archive.read_bytes()
     with zipfile.ZipFile(archive, "r") as source:
         infos = source.infolist()
-        if sum(1 for info in infos if info.filename == member_name) != 1:
-            raise FamilyAgnosticMaterializerError(
-                f"zip header elision requires exactly one selected member: {member_name}"
-            )
+        selected_names = set(_require_unique_existing_member_names(archive, member_names))
         archive_comment = b"" if strip_archive_comment else (source.comment or b"")
 
     if len(infos) > 0xFFFF:
@@ -1295,7 +1550,7 @@ def _zip_archive_bytes_with_header_elision(
     central_chunks: list[bytes] = []
     cursor = 0
     for info in infos:
-        selected = info.filename == member_name
+        selected = info.filename in selected_names
         parts = _raw_zip_member_parts(raw, info)
         local_extra = (
             b""
@@ -1497,13 +1752,26 @@ def _member_record(archive: Path, member_name: str, *, payload: bytes | None = N
         info = zf.getinfo(member_name)
         compress_type = info.compress_type
         compress_size = info.compress_size
+    compressed_payload_sha256 = _zip_member_compressed_payload_sha256(archive, member_name)
     return {
         "name": member_name,
         "bytes": len(member_payload),
         "sha256": sha256_bytes(member_payload),
         "zip_compression_method": _compression_method_name(compress_type),
         "zip_compressed_bytes": compress_size,
+        "zip_compressed_sha256": compressed_payload_sha256,
+        "zip_compressed_payload_sha256": compressed_payload_sha256,
     }
+
+
+def _zip_member_compressed_payload_sha256(archive: Path, member_name: str) -> str | None:
+    try:
+        raw = archive.read_bytes()
+        with zipfile.ZipFile(archive, "r") as zf:
+            info = zf.getinfo(member_name)
+        return sha256_bytes(_raw_zip_member_parts(raw, info)["compressed_payload"])
+    except (OSError, KeyError, FamilyAgnosticMaterializerError, struct.error):
+        return None
 
 
 def _zip_header_record(archive: Path, member_name: str) -> dict[str, Any]:
@@ -1529,6 +1797,25 @@ def _zip_header_record(archive: Path, member_name: str) -> dict[str, Any]:
             "zip_compression_method": _compression_method_name(info.compress_type),
             "zip_compressed_bytes": info.compress_size,
         }
+
+
+def _zip_header_summary(archive: Path, member_names: Sequence[str]) -> dict[str, Any]:
+    selected = _require_unique_existing_member_names(archive, member_names)
+    headers = [_zip_header_record(archive, name) for name in selected]
+    with zipfile.ZipFile(archive, "r") as zf:
+        archive_comment_bytes = len(zf.comment or b"")
+    member_extra_bytes = sum(int(row["member_extra_bytes"]) for row in headers)
+    member_comment_bytes = sum(int(row["member_comment_bytes"]) for row in headers)
+    return {
+        "member_count": len(selected),
+        "member_names": selected,
+        "member_extra_bytes": member_extra_bytes,
+        "member_comment_bytes": member_comment_bytes,
+        "archive_comment_bytes": archive_comment_bytes,
+        "total_elidable_header_bytes": (
+            member_extra_bytes + member_comment_bytes + archive_comment_bytes
+        ),
+    }
 
 
 def _zip_header_elision_options(contract: Mapping[str, Any]) -> dict[str, bool]:

@@ -417,6 +417,8 @@ def test_final_byte_context_compiler_covers_packet_member_zip_header_elide(
                 "archive_path": str(tmp_path / "packet_source.zip"),
                 "packet_member_manifest": str(tmp_path / "members.json"),
                 "zip_header_contract": str(tmp_path / "zip_header_contract.json"),
+                "member_names": ["payload.bin", "weights.bin"],
+                "member_selection": "all",
                 "min_free_bytes": 128,
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -440,6 +442,8 @@ def test_final_byte_context_compiler_covers_packet_member_zip_header_elide(
     assert payload["blocked_context_count"] == 0
     context = payload["rows"][0]["context"]
     assert context["member_name"] == "payload.bin"
+    assert context["member_names"] == ["payload.bin", "weights.bin"]
+    assert context["member_selection"] == "all"
     assert context["header_elision_contract"].endswith("zip_header_contract.json")
     resolved = materializer_contexts_from_payload(payload)
     work_queue = build_materializer_work_queue(
@@ -459,6 +463,13 @@ def test_final_byte_context_compiler_covers_packet_member_zip_header_elide(
         "--header-elision-contract",
         str(tmp_path / "zip_header_contract.json"),
     ] in [row["command"][index : index + 2] for index in range(len(row["command"]) - 1)]
+    assert "--all-members" in row["command"]
+    assert ["--member-names", "payload.bin"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--member-names", "weights.bin"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
     assert "--runtime-consumption-proof-out" in row["command"]
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False

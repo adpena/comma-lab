@@ -28,6 +28,20 @@ def _write_zip(path: Path, *, payload: bytes, header_overhead: bool) -> None:
         zf.writestr(info, payload)
 
 
+def _write_multi_member_zip(path: Path) -> None:
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.comment = b"archive comment"
+        for name, payload in {
+            "renderer.bin": b"A" * 256,
+            "weights.bin": b"B" * 256,
+        }.items():
+            info = zipfile.ZipInfo(name)
+            info.compress_type = zipfile.ZIP_STORED
+            info.extra = b"\x7f\x7f\x04\x00abcd"
+            info.comment = f"{name} comment".encode()
+            zf.writestr(info, payload)
+
+
 def test_materializer_empirical_sweep_summarizes_rate_positive_and_zero(
     tmp_path: Path,
 ) -> None:
@@ -68,6 +82,28 @@ def test_materializer_empirical_sweep_summarizes_rate_positive_and_zero(
         "demote_matching_archive_class_for_header_elide"
     )
     assert all(row["score_claim"] is False for row in rows.values())
+
+
+def test_materializer_empirical_sweep_can_record_all_member_header_elide(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "multi.zip"
+    _write_multi_member_zip(archive)
+
+    payload = build_materializer_empirical_sweep(
+        target_kind="packet_member_zip_header_elide_v1",
+        archives=[f"multi={archive}"],
+        output_dir=tmp_path / "sweep",
+        all_members=True,
+    )
+
+    row = payload["observations"][0]
+    assert row["rate_positive"] is True
+    assert row["selected_member_names"] == ["renderer.bin", "weights.bin"]
+    assert row["selection_scope"] == "all_members"
+    assert row["selected_elision"]["elided_header_bytes"] > 0
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
 
 
 def test_materializer_empirical_sweep_cli_writes_json_and_jsonl(

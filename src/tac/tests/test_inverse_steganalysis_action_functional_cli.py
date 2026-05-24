@@ -535,6 +535,69 @@ def test_cli_builds_inverse_action_functional_from_scorer_response(
     assert "Selected Water Buckets" in md_out.read_text(encoding="utf-8")
 
 
+def test_cli_reads_materializer_observation_jsonl(tmp_path: Path) -> None:
+    scorer = tmp_path / "scorer.json"
+    observations = tmp_path / "observations.jsonl"
+    output = tmp_path / "action.json"
+    _scorer_response_dataset(scorer)
+    observations.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_materializer_empirical_observation.v1",
+                "observation_kind": "family_agnostic_materializer_empirical_observation",
+                "observation_id": "obs_inverse_row_a_header_elide",
+                "candidate_id": "inverse-row-a",
+                "axis": "[local-materializer-proof]",
+                "runtime_identity": {
+                    "runtime_contract_sha256": "a" * 64,
+                    "scorer_version": "family_agnostic_materializer_empirical_sweep.v1",
+                },
+                "cache_identity": {"cache_sha256": "b" * 64},
+                "target_kind": "packet_member_zip_header_elide_v1",
+                "materializer_id": "packet_member_zip_header_elide_adapter",
+                "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+                "saved_bytes": 52,
+                "observed_rate_gain": CONTEST_RATE_SCORE_PER_BYTE * 52,
+                "observed_score_gain": CONTEST_RATE_SCORE_PER_BYTE * 52,
+                "artifact_bytes": 345_750,
+                "receiver_contract_satisfied": True,
+                **_false_authority(),
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--scorer-response",
+            str(scorer),
+            "--observation",
+            str(observations),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(tmp_path),
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    action = json.loads(output.read_text(encoding="utf-8"))
+    assert action["cells"][0]["best_observation_id"] == (
+        "obs_inverse_row_a_header_elide"
+    )
+    assert action["cells"][0]["best_observation_kind"] == (
+        "family_agnostic_materializer_empirical_observation"
+    )
+    assert action["cells"][0]["priority"]["expected_score_gain"] > 0.0
+    assert action["score_claim"] is False
+    assert action["ready_for_exact_eval_dispatch"] is False
+
+
 def test_cli_accepts_mlx_effective_spend_triage_selection(tmp_path: Path) -> None:
     selection = tmp_path / "selection.json"
     output = tmp_path / "action.json"

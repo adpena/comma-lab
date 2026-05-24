@@ -74,6 +74,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-json", type=Path)
     parser.add_argument("--observation-jsonl", type=Path)
     parser.add_argument("--member-name")
+    parser.add_argument("--member-names", action="append", default=[])
+    parser.add_argument("--all-members", action="store_true")
     parser.add_argument("--packet-member-manifest", type=Path)
     parser.add_argument("--header-elision-contract", type=Path)
     parser.add_argument("--min-free-bytes", type=int, default=0)
@@ -93,8 +95,10 @@ def main(argv: list[str] | None = None) -> int:
             archives=args.archive,
             output_dir=args.output_dir,
             member_name=args.member_name,
+            member_names=tuple(args.member_names),
             packet_member_manifest=args.packet_member_manifest,
             header_elision_contract=args.header_elision_contract,
+            all_members=args.all_members,
             min_free_bytes=args.min_free_bytes,
             allow_overwrite=args.allow_overwrite,
         )
@@ -126,6 +130,8 @@ def build_materializer_empirical_sweep(
     archives: Sequence[str],
     output_dir: str | Path,
     member_name: str | None = None,
+    member_names: Sequence[str] = (),
+    all_members: bool = False,
     packet_member_manifest: str | Path | Mapping[str, Any] | None = None,
     header_elision_contract: str | Path | Mapping[str, Any] | None = None,
     min_free_bytes: int = 0,
@@ -151,6 +157,8 @@ def build_materializer_empirical_sweep(
             output_archive=candidate_path,
             packet_member_manifest=packet_member_manifest,
             member_name=member_name,
+            member_names=member_names,
+            all_members=all_members,
             header_elision_contract=header_elision_contract,
             runtime_consumption_proof_out=proof_path,
             repo_root=REPO_ROOT,
@@ -260,6 +268,9 @@ def _observation_from_manifest(
         "runtime_consumption_proof_path": result.get("runtime_consumption_proof_path"),
         "manifest_path": manifest_path.as_posix(),
         "candidate_archive_path": candidate_archive.get("path"),
+        "selected_member_name": result.get("selected_member_name"),
+        "selected_member_names": result.get("selected_member_names") or [],
+        "selection_scope": result.get("selection_scope"),
         "selected_elision": dict(selected),
         "recommended_planner_action": (
             "keep_rate_positive_candidate_for_inflate_parity_gate"

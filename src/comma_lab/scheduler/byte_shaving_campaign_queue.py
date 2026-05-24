@@ -1656,12 +1656,27 @@ def _family_agnostic_materializer_command(
         header_elision_contract = _path_context_value(context, "header_elision_contract")
         if header_elision_contract is not None:
             command.extend(["--header-elision-contract", header_elision_contract])
+        member_selection = _context_string_any(
+            context,
+            ("member_selection", "zip_member_selection", "packet_member_selection"),
+        )
+        if context.get("all_members") is True or member_selection in {
+            "all",
+            "*",
+            "all_members",
+        }:
+            command.append("--all-members")
         member_name = _context_string_any(
             context,
             ("member_name", "archive_member_name", "packet_member_name"),
         )
         if member_name is not None:
             command.extend(["--member-name", member_name])
+        member_names = _string_list_context_value(context, "member_names")
+        member_names.extend(_string_list_context_value(context, "archive_member_names"))
+        member_names.extend(_string_list_context_value(context, "packet_member_names"))
+        for selected_member_name in ordered_unique(member_names):
+            command.extend(["--member-names", selected_member_name])
     elif target_kind == TENSOR_FACTORIZE_TARGET_KIND:
         tensor_manifest = _path_context_value(context, "tensor_manifest")
         assert tensor_manifest is not None

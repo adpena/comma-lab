@@ -70,6 +70,28 @@ def _as_rows(payload: Any, *, path: Path, key: str) -> list[dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
+def _load_observation_rows(path: Path) -> list[dict[str, Any]]:
+    if path.suffix == ".jsonl":
+        rows: list[dict[str, Any]] = []
+        for index, raw_line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            line = raw_line.strip()
+            if not line:
+                continue
+            payload = json.loads(line)
+            if not isinstance(payload, dict):
+                raise SystemExit(f"{path}:{index}: expected observation object")
+            rows.append(dict(payload))
+        return rows
+    payload = _load_json(path)
+    if (
+        isinstance(payload, dict)
+        and "observations" not in payload
+        and any(key in payload for key in ("observation_id", "observation_kind", "schema"))
+    ):
+        return [dict(payload)]
+    return _as_rows(payload, path=path, key="observations")
+
+
 def _render_markdown(payload: dict[str, Any]) -> str:
     bucket = payload.get("water_bucket") or {}
     totals = payload.get("integral_totals") or {}
@@ -256,7 +278,7 @@ def main(argv: list[str] | None = None) -> int:
             atoms.extend(_as_rows(_load_json(path), path=path, key="atoms"))
         for raw_path in args.observation:
             path = Path(raw_path)
-            observations.extend(_as_rows(_load_json(path), path=path, key="observations"))
+            observations.extend(_load_observation_rows(path))
         if args.exact_auth_calibration_packet:
             calibration_candidate_id = (
                 args.exact_auth_calibration_candidate_id or args.candidate_id

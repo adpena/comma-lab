@@ -257,11 +257,76 @@ def test_packet_member_zip_header_elide_materializer_preserves_payload(
     assert result["candidate_member"]["zip_compressed_bytes"] == (
         result["source_member"]["zip_compressed_bytes"]
     )
+    assert result["candidate_member"]["zip_compressed_sha256"] == (
+        result["source_member"]["zip_compressed_sha256"]
+    )
     assert result["candidate_archive"]["bytes"] < result["source_archive"]["bytes"]
     assert result["selected_elision"]["saved_bytes"] > 0
     assert result["selected_elision"]["elided_header_bytes"] > 0
     assert result["candidate_zip_header"]["total_elidable_header_bytes"] == 0
     assert "runtime_consumption_proof_missing" in result["readiness_blockers"]
+    assert result["score_claim"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
+
+
+def test_packet_member_zip_header_elide_materializer_can_elide_all_members(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    payloads = {
+        "renderer.bin": b"renderer-payload" * 64,
+        "weights.bin": b"weights-payload" * 64,
+    }
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.comment = b"archive comment"
+        for name, payload in payloads.items():
+            info = zipfile.ZipInfo(name)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.extra = b"\x7f\x7f\x04\x00abcd"
+            info.comment = f"{name} comment".encode()
+            zf.writestr(info, payload)
+
+    result = materialize_packet_member_zip_header_elide_candidate(
+        archive_path=archive,
+        output_archive=output,
+        all_members=True,
+        runtime_consumption_proof_out=tmp_path / "runtime_consumption_proof.json",
+        repo_root=tmp_path,
+    )
+
+    assert result["schema"] == PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA
+    assert result["selection_scope"] == "all_members"
+    assert result["selected_member_names"] == ["renderer.bin", "weights.bin"]
+    assert result["source_zip_header_summary"]["member_count"] == 2
+    assert result["candidate_zip_header_summary"]["total_elidable_header_bytes"] == 0
+    assert result["selected_elision"]["saved_bytes"] > 0
+    assert result["selected_elision"]["elided_header_bytes"] > (
+        result["source_zip_header"]["total_elidable_header_bytes"]
+    )
+    source_by_name = {row["name"]: row for row in result["source_members"]}
+    candidate_by_name = {row["name"]: row for row in result["candidate_members"]}
+    for name, payload in payloads.items():
+        assert source_by_name[name]["sha256"] == sha256_bytes(payload)
+        assert candidate_by_name[name]["sha256"] == sha256_bytes(payload)
+        assert candidate_by_name[name]["zip_compressed_bytes"] == (
+            source_by_name[name]["zip_compressed_bytes"]
+        )
+        assert candidate_by_name[name]["zip_compressed_sha256"] == (
+            source_by_name[name]["zip_compressed_sha256"]
+        )
+        assert candidate_by_name[name]["zip_compressed_payload_sha256"] == (
+            source_by_name[name]["zip_compressed_payload_sha256"]
+        )
+    assert result["receiver_contract_satisfied"] is True
+    proof_payload = json.loads(
+        Path(result["runtime_consumption_proof_path"]).read_text(encoding="utf-8")
+    )
+    assert proof_payload["all_member_compressed_streams_identical_to_source"] is True
+    assert result["receiver_verification"]["candidate_member_sha256s"] == {
+        name: sha256_bytes(payload)
+        for name, payload in payloads.items()
+    }
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
 
@@ -698,6 +763,49 @@ def test_packet_member_zip_header_elide_materializer_cli_auto_writes_runtime_pro
     assert payload["tool_run_manifest"]["tool"] == "tools/run_family_agnostic_materializer.py"
     assert payload["score_claim"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_packet_member_zip_header_elide_cli_can_elide_all_members(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    manifest = tmp_path / "candidate.json"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.comment = b"archive comment"
+        for name in ("renderer.bin", "weights.bin"):
+            info = zipfile.ZipInfo(name)
+            info.compress_type = zipfile.ZIP_STORED
+            info.extra = b"\x7f\x7f\x04\x00abcd"
+            info.comment = f"{name} comment".encode()
+            zf.writestr(info, name.encode() * 128)
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_family_agnostic_materializer.py"),
+            "--target-kind",
+            "packet_member_zip_header_elide_v1",
+            "--archive-path",
+            str(archive),
+            "--output-archive",
+            str(output),
+            "--output-manifest",
+            str(manifest),
+            "--all-members",
+        ],
+        check=True,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    assert payload["selection_scope"] == "all_members"
+    assert payload["selected_member_names"] == ["renderer.bin", "weights.bin"]
+    assert payload["receiver_contract_satisfied"] is True
+    assert payload["selected_elision"]["saved_bytes"] > 0
+    assert payload["score_claim"] is False
 
 
 def test_archive_section_materializer_cli_auto_writes_runtime_proof(

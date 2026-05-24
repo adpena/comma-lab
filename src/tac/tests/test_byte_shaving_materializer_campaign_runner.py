@@ -1192,6 +1192,77 @@ def test_materializer_campaign_feedback_replan_preserves_calibration_inputs(
     assert metadata["ready_for_exact_eval_dispatch"] is False
 
 
+def test_materializer_campaign_runner_auto_discovers_materializer_observations(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    plan = tmp_path / "plan.json"
+    queue = tmp_path / "materializer_execution_queue.json"
+    state = tmp_path / "materializer_execution_queue.sqlite"
+    performance = run_dir / "queue_performance_summary.json"
+    runtime_identity = run_dir / "queue_performance_runtime_identity.json"
+    cache_identity = run_dir / "queue_performance_cache_identity.json"
+    observations = run_dir / "observations.jsonl"
+    for path in (plan, queue, state, performance, runtime_identity, cache_identity):
+        path.write_text("{}", encoding="utf-8")
+    observations.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_materializer_empirical_observation.v1",
+                "observation_id": "obs_packet_header_elide",
+                "candidate_id": "packet_member_zip_header_elide_v1",
+                "axis": "[local-materializer-proof]",
+                "target_kind": "packet_member_zip_header_elide_v1",
+                "materializer_id": "packet_member_zip_header_elide_adapter",
+                "saved_bytes": 52,
+                **_false_authority(),
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(plan),
+            "--materializer-contexts",
+            str(tmp_path / "contexts.json"),
+        ]
+    )
+    performance_payload = {
+        "schema": runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA,
+        "event_count": 1,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    request = runner._queue_feedback_replan_request_payload(
+        args,
+        summary_path=run_dir / "materializer_campaign_run.json",
+        plan_path=plan,
+        queue_performance_summary_path=performance,
+        queue_performance_summary=performance_payload,
+        runtime_identity_path=runtime_identity,
+        cache_identity_path=cache_identity,
+        generated_runtime_identity=False,
+        generated_cache_identity=False,
+        run_dir=run_dir,
+        execution_queue=queue,
+        state_path=state,
+    )
+
+    assert request["ready_for_action_functional_feedback"] is True
+    assert request["feedback_observation_paths"] == [str(observations)]
+    assert request["feedback_observation_auto_discovery_enabled"] is True
+    command = request["command_template"]
+    assert [
+        command[index + 1]
+        for index, item in enumerate(command[:-1])
+        if item == "--observation"
+    ] == [str(observations)]
+
+
 def test_materializer_campaign_feedback_replan_discovers_calibration_packet_pair(
     tmp_path: Path,
 ) -> None:
