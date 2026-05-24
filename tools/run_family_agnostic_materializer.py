@@ -125,13 +125,17 @@ def _run_materializer(
     *,
     input_paths: list[Path],
 ) -> dict:
+    proof_out_target_kinds = {
+        ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+    }
     if (
         args.runtime_consumption_proof_out is not None
-        and args.target_kind != PACKET_MEMBER_RECOMPRESS_TARGET_KIND
+        and args.target_kind not in proof_out_target_kinds
     ):
         raise FamilyAgnosticMaterializerError(
             "--runtime-consumption-proof-out is currently supported only for "
-            "packet_member_recompress_v1"
+            "archive_section_entropy_recode_v1 and packet_member_recompress_v1"
         )
     common = {
         "archive_path": args.archive_path,
@@ -147,11 +151,20 @@ def _run_materializer(
         if args.section_manifest is None:
             raise FamilyAgnosticMaterializerError("--section-manifest is required")
         input_paths.append(args.section_manifest)
+        runtime_proof_out = args.runtime_consumption_proof_out
+        if args.runtime_consumption_proof is None and runtime_proof_out is None:
+            runtime_proof_out = args.output_manifest.with_name(
+                f"{args.output_manifest.stem}.runtime_consumption_proof.json"
+            )
         return materialize_archive_section_entropy_recode_candidate(
             **common,
             section_manifest=args.section_manifest,
             section_names=args.section_name,
             brotli_qualities=tuple(args.brotli_quality or [9, 10, 11]),
+            runtime_consumption_proof_out=runtime_proof_out,
+            expected_existing_runtime_consumption_proof_sha256=(
+                args.expected_existing_runtime_consumption_proof_sha256
+            ),
         )
     if args.target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
         if args.packet_member_manifest is not None:

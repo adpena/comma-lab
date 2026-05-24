@@ -265,6 +265,118 @@ def test_archive_section_entropy_recode_materializer_uses_section_manifest(
     assert "runtime_consumption_proof_missing" in result["readiness_blockers"]
 
 
+def test_archive_section_entropy_recode_materializer_emits_raw_identity_proof(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    proof = tmp_path / "runtime_consumption_proof.json"
+    raw_a = b"A" * 4096
+    raw_b = b"B" * 4096
+    section_a = brotli.compress(raw_a, quality=0)
+    section_b = brotli.compress(raw_b, quality=0)
+    member_payload = section_a + section_b
+    _write_zip(archive, {"0.raw": member_payload})
+    manifest = {
+        "schema": "fixture_section_manifest.v1",
+        "member": {"name": "0.raw"},
+        "sections": [
+            {
+                "name": "section_a",
+                "index": 0,
+                "offset": 0,
+                "length": len(section_a),
+                "sha256": sha256_bytes(section_a),
+            },
+            {
+                "name": "section_b",
+                "index": 1,
+                "offset": len(section_a),
+                "length": len(section_b),
+                "sha256": sha256_bytes(section_b),
+            },
+        ],
+    }
+
+    result = materialize_archive_section_entropy_recode_candidate(
+        archive_path=archive,
+        section_manifest=manifest,
+        output_archive=output,
+        section_names=("section_a",),
+        brotli_qualities=(11,),
+        runtime_consumption_proof_out=proof,
+        repo_root=tmp_path,
+    )
+
+    proof_payload = json.loads(proof.read_text(encoding="utf-8"))
+    assert proof_payload["schema"] == "family_agnostic_runtime_consumption_proof_v1"
+    assert proof_payload["proof_kind"] == (
+        "archive_section_entropy_recode_raw_payload_identity_receiver_proof.v1"
+    )
+    assert proof_payload["candidate_archive"]["sha256"] == result["candidate_archive"]["sha256"]
+    assert proof_payload["candidate_member"]["sha256"] == result["candidate_member"]["sha256"]
+    assert proof_payload["section_proofs"][0]["source_raw_payload_sha256"] == sha256_bytes(raw_a)
+    assert proof_payload["section_proofs"][0]["candidate_raw_payload_sha256"] == sha256_bytes(raw_a)
+    assert proof_payload["all_selected_sections_raw_payload_identical"] is True
+    assert proof_payload["all_selected_section_lengths_preserved"] is False
+    assert result["receiver_contract_satisfied"] is False
+    assert result["receiver_verification"]["proof_present"] is True
+    assert result["receiver_verification"]["candidate_member_sha256"] == (
+        result["candidate_member"]["sha256"]
+    )
+    assert "runtime_consumption_proof_missing" not in result["readiness_blockers"]
+    assert "section_length_changed_requires_runtime_consumption_proof" in (
+        result["readiness_blockers"]
+    )
+    assert result["score_claim"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
+
+
+def test_archive_section_entropy_recode_materializer_accepts_length_preserved_proof(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    proof = tmp_path / "runtime_consumption_proof.json"
+    raw = b"already-quality-zero" * 256
+    section = brotli.compress(raw, quality=0)
+    _write_zip(archive, {"0.raw": section})
+    manifest = {
+        "schema": "fixture_section_manifest.v1",
+        "member": {"name": "0.raw"},
+        "sections": [
+            {
+                "name": "section_a",
+                "index": 0,
+                "offset": 0,
+                "length": len(section),
+                "sha256": sha256_bytes(section),
+            }
+        ],
+    }
+
+    result = materialize_archive_section_entropy_recode_candidate(
+        archive_path=archive,
+        section_manifest=manifest,
+        output_archive=output,
+        section_names=("section_a",),
+        brotli_qualities=(0,),
+        runtime_consumption_proof_out=proof,
+        allow_size_regression=True,
+        repo_root=tmp_path,
+    )
+
+    proof_payload = json.loads(proof.read_text(encoding="utf-8"))
+    assert proof_payload["all_selected_sections_raw_payload_identical"] is True
+    assert proof_payload["all_selected_section_lengths_preserved"] is True
+    assert result["receiver_contract_satisfied"] is True
+    assert "archive_section_entropy_recode_receiver_contract_not_satisfied" not in (
+        result["readiness_blockers"]
+    )
+    assert result["score_claim"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
+
+
 def test_archive_section_entropy_recode_materializer_preserves_brotli_quality_zero(
     tmp_path: Path,
 ) -> None:
@@ -372,5 +484,75 @@ def test_family_agnostic_materializer_cli_writes_false_authority_manifest(
     assert payload["receiver_verification"]["proof_present"] is True
     assert payload["runtime_consumption_proof_path"] == str(proof)
     assert payload["tool_run_manifest"]["tool"] == "tools/run_family_agnostic_materializer.py"
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_archive_section_materializer_cli_auto_writes_runtime_proof(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    manifest_path = tmp_path / "candidate.json"
+    proof = tmp_path / "candidate.runtime_consumption_proof.json"
+    raw = b"section-raw" * 512
+    section = brotli.compress(raw, quality=0)
+    section_manifest_path = tmp_path / "sections.json"
+    _write_zip(archive, {"0.raw": section})
+    section_manifest_path.write_text(
+        json.dumps(
+            {
+                "schema": "fixture_section_manifest.v1",
+                "member": {"name": "0.raw"},
+                "sections": [
+                    {
+                        "name": "section_a",
+                        "index": 0,
+                        "offset": 0,
+                        "length": len(section),
+                        "sha256": sha256_bytes(section),
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_family_agnostic_materializer.py"),
+            "--target-kind",
+            "archive_section_entropy_recode_v1",
+            "--archive-path",
+            str(archive),
+            "--output-archive",
+            str(output),
+            "--output-manifest",
+            str(manifest_path),
+            "--section-manifest",
+            str(section_manifest_path),
+            "--section-name",
+            "section_a",
+            "--brotli-quality",
+            "11",
+        ],
+        check=True,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    stdout_payload = json.loads(completed.stdout)
+    assert payload["schema"] == ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA
+    assert stdout_payload["schema"] == ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA
+    assert proof.is_file()
+    assert payload["receiver_contract_satisfied"] is False
+    assert payload["receiver_verification"]["proof_present"] is True
+    assert payload["runtime_consumption_proof_path"] == str(proof)
+    assert "section_length_changed_requires_runtime_consumption_proof" in (
+        payload["readiness_blockers"]
+    )
     assert payload["score_claim"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False

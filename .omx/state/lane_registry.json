@@ -52578,11 +52578,11 @@
       "id": "codex_archive_section_runtime_proof_20260524",
       "name": "Archive section runtime proof",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "archive-section runtime proof output, CLI auto proof, queue artifact pullback, harvest proof/status custody, conservative length-change blocking"
         },
         "real_archive_empirical": {
           "status": false,
@@ -52597,16 +52597,16 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "pytest 197 materializer/harvest/exact-readiness tests; targeted archive proof 5 tests; ruff modified surfaces; git diff --check; lane_maturity validate; review_tracker policy-check clean"
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "codex two-pass review_tracker marks plus adversarial length-changing proof refusal and length-preserved proof acceptance"
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/codex_findings_archive_section_runtime_proof_20260524T191021Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -52623,5 +52623,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T19:06:56Z"
+  "updated_at": "2026-05-24T19:13:19Z"
 }

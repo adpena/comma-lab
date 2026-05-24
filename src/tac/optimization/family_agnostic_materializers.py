@@ -280,17 +280,28 @@ def materialize_archive_section_entropy_recode_candidate(
     section_names: Sequence[str] = (),
     brotli_qualities: Sequence[int] = (9, 10, 11),
     runtime_consumption_proof: str | Path | Mapping[str, Any] | None = None,
+    runtime_consumption_proof_out: str | Path | None = None,
     repo_root: str | Path | None = None,
     allow_size_regression: bool = False,
     allow_overwrite: bool = False,
     expected_existing_output_sha256: str | None = None,
+    expected_existing_runtime_consumption_proof_sha256: str | None = None,
     min_free_bytes: int = 0,
 ) -> dict[str, Any]:
     """Recode Brotli-decodable sections from a parser-section manifest."""
 
     repo = _repo(repo_root)
+    if runtime_consumption_proof is not None and runtime_consumption_proof_out is not None:
+        raise FamilyAgnosticMaterializerError(
+            "runtime_consumption_proof and runtime_consumption_proof_out are mutually exclusive"
+        )
     archive = _resolve_path(archive_path, repo=repo)
     output = _resolve_path(output_archive, repo=repo)
+    proof_out = (
+        _resolve_path(runtime_consumption_proof_out, repo=repo)
+        if runtime_consumption_proof_out is not None
+        else None
+    )
     manifest = _require_mapping(section_manifest, repo=repo)
     target_member = _select_member_name(archive, explicit=None, manifest=manifest)
     member_payload = _zip_member_bytes(archive, target_member)
@@ -367,8 +378,6 @@ def materialize_archive_section_entropy_recode_candidate(
         for row in section_outputs
         if row.get("changed") is True and row.get("candidate_length") != row.get("length")
     ]
-    if changed_lengths:
-        blockers.append("section_length_changed_requires_runtime_consumption_proof")
     write_result = write_bytes_artifact(
         output,
         archive_payload,
@@ -378,12 +387,39 @@ def materialize_archive_section_entropy_recode_candidate(
     )
     candidate_record = _archive_record(output)
     candidate_member = _member_record(output, target_member)
+    source_member = _member_record(archive, target_member)
+    proof_write_result = None
+    runtime_proof_ref: str | Path | Mapping[str, Any] | None = runtime_consumption_proof
+    if proof_out is not None:
+        runtime_proof_payload = _archive_section_entropy_recode_runtime_consumption_proof(
+            source_archive=source_record,
+            source_member=source_member,
+            candidate_archive=candidate_record,
+            candidate_member=candidate_member,
+            selected_member_name=target_member,
+            source_member_payload=member_payload,
+            candidate_member_payload=candidate_member_payload,
+            section_outputs=section_outputs,
+        )
+        proof_write_result = write_json_artifact(
+            proof_out,
+            runtime_proof_payload,
+            allow_overwrite=allow_overwrite,
+            expected_existing_sha256=expected_existing_runtime_consumption_proof_sha256,
+            min_free_bytes=min_free_bytes,
+        )
+        runtime_proof_ref = proof_out
     receiver_verification = verify_runtime_consumption_proof(
-        runtime_consumption_proof=runtime_consumption_proof,
+        runtime_consumption_proof=runtime_proof_ref,
         required_candidate_archive_sha256=candidate_record["sha256"],
         required_candidate_member_sha256=candidate_member["sha256"],
         repo_root=repo,
     )
+    if (
+        changed_lengths
+        and receiver_verification.get("receiver_contract_satisfied") is not True
+    ):
+        blockers.append("section_length_changed_requires_runtime_consumption_proof")
     readiness_blockers = _readiness_blockers(
         blockers,
         receiver_verification,
@@ -397,7 +433,7 @@ def materialize_archive_section_entropy_recode_candidate(
         "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
         "byte_closed_candidate_emitted": True,
         "source_archive": source_record,
-        "source_member": _member_record(archive, target_member),
+        "source_member": source_member,
         "candidate_archive": candidate_record,
         "candidate_member": candidate_member,
         "selected_member_name": target_member,
@@ -415,9 +451,119 @@ def materialize_archive_section_entropy_recode_candidate(
         "receiver_contract_satisfied": (
             receiver_verification["receiver_contract_satisfied"] is True
         ),
+        "runtime_consumption_proof_path": (
+            proof_out.as_posix() if proof_out is not None else receiver_verification.get("proof_path")
+        ),
+        "runtime_consumption_proof_write": (
+            proof_write_result.__dict__ if proof_write_result is not None else None
+        ),
         "readiness_blockers": readiness_blockers,
         "artifact_write": write_result.__dict__,
         **FALSE_AUTHORITY,
+    }
+
+
+def _archive_section_entropy_recode_runtime_consumption_proof(
+    *,
+    source_archive: Mapping[str, Any],
+    source_member: Mapping[str, Any],
+    candidate_archive: Mapping[str, Any],
+    candidate_member: Mapping[str, Any],
+    selected_member_name: str,
+    source_member_payload: bytes,
+    candidate_member_payload: bytes,
+    section_outputs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    section_proofs = []
+    cumulative_delta = 0
+    passed = True
+    for section in sorted(section_outputs, key=lambda row: int(row.get("offset", 0))):
+        if section.get("selected") is not True:
+            continue
+        source_offset = int(section["offset"])
+        source_length = int(section["length"])
+        candidate_length = int(section.get("candidate_length", source_length))
+        candidate_offset = source_offset + cumulative_delta
+        source_payload = source_member_payload[source_offset:source_offset + source_length]
+        candidate_payload = candidate_member_payload[
+            candidate_offset: candidate_offset + candidate_length
+        ]
+        source_sha = sha256_bytes(source_payload)
+        candidate_sha = sha256_bytes(candidate_payload)
+        source_raw_sha = _brotli_raw_sha256(source_payload)
+        candidate_raw_sha = _brotli_raw_sha256(candidate_payload)
+        expected_source_sha = _clean_str(section.get("sha256"))
+        expected_candidate_sha = _clean_str(section.get("candidate_sha256"))
+        expected_raw_sha = _clean_str(section.get("raw_payload_sha256"))
+        length_preserved = candidate_length == source_length
+        section_passed = (
+            source_raw_sha is not None
+            and candidate_raw_sha is not None
+            and source_raw_sha == candidate_raw_sha
+            and length_preserved
+            and (expected_source_sha is None or source_sha == expected_source_sha)
+            and (expected_candidate_sha is None or candidate_sha == expected_candidate_sha)
+            and (expected_raw_sha is None or candidate_raw_sha == expected_raw_sha)
+        )
+        passed = passed and section_passed
+        section_proofs.append(
+            {
+                "name": section.get("name"),
+                "index": section.get("index"),
+                "source_offset": source_offset,
+                "source_length": source_length,
+                "candidate_offset": candidate_offset,
+                "candidate_length": candidate_length,
+                "source_section_sha256": source_sha,
+                "candidate_section_sha256": candidate_sha,
+                "source_raw_payload_sha256": source_raw_sha,
+                "candidate_raw_payload_sha256": candidate_raw_sha,
+                "raw_payload_identical": source_raw_sha == candidate_raw_sha,
+                "section_length_preserved": length_preserved,
+                "passed": section_passed,
+            }
+        )
+        cumulative_delta += candidate_length - source_length
+    if not section_proofs:
+        passed = False
+    return {
+        "schema": "family_agnostic_runtime_consumption_proof_v1",
+        "proof_kind": "archive_section_entropy_recode_raw_payload_identity_receiver_proof.v1",
+        "proof_scope": "brotli_section_raw_payload_identity_after_entropy_recode",
+        "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        "materializer_id": ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID,
+        "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+        "receiver_contract_id": f"{ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND}.receiver.v1",
+        "selected_member_name": selected_member_name,
+        "source_archive": dict(source_archive),
+        "source_member": dict(source_member),
+        "candidate_archive": dict(candidate_archive),
+        "candidate_member": dict(candidate_member),
+        "candidate_archive_sha256": candidate_archive.get("sha256"),
+        "candidate_member_sha256": candidate_member.get("sha256"),
+        "member_sha256": candidate_member.get("sha256"),
+        "source_member_sha256": source_member.get("sha256"),
+        "section_proofs": section_proofs,
+        "section_count": len(section_proofs),
+        "all_selected_sections_raw_payload_identical": all(
+            proof["raw_payload_identical"] is True for proof in section_proofs
+        ),
+        "all_selected_section_lengths_preserved": all(
+            proof["section_length_preserved"] is True for proof in section_proofs
+        ),
+        "receiver_contract_satisfied": passed,
+        "runtime_consumption_proof_passed": passed,
+        "passed": passed,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+        "exact_cuda_auth_eval": False,
+        "contest_cuda_auth_eval": False,
     }
 
 
@@ -634,6 +780,13 @@ def _proof_passed(proof: Mapping[str, Any]) -> bool:
         return True
     probe = proof.get("runtime_consumption_probe")
     return isinstance(probe, Mapping) and probe.get("passed") is True
+
+
+def _brotli_raw_sha256(payload: bytes) -> str | None:
+    try:
+        return sha256_bytes(brotli.decompress(payload))
+    except brotli.error:
+        return None
 
 
 def _readiness_blockers(

@@ -1477,7 +1477,10 @@ def _family_agnostic_materializer_command(
         command.extend(["--runtime-consumption-proof", runtime_proof])
         input_paths.append(runtime_proof)
     runtime_proof_out: str | None = None
-    if runtime_proof is None and target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
+    if runtime_proof is None and target_kind in {
+        ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+    }:
         runtime_proof_out = _path_context_value(context, "runtime_consumption_proof_out")
         if runtime_proof_out is None:
             runtime_proof_out = _path_context_value(

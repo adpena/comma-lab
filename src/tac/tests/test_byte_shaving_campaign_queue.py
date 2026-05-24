@@ -1542,6 +1542,9 @@ def test_materializer_work_queue_wraps_archive_section_entropy_recode_adapter(
     section_manifest = tmp_path / "sections.json"
     output_archive = tmp_path / "candidate.zip"
     manifest = tmp_path / "candidate.json"
+    runtime_proof = manifest.with_name(
+        f"{manifest.stem}.runtime_consumption_proof.json"
+    )
     queue = build_materializer_work_queue(
         compiled["materializer_backlog"],
         repo_root=tmp_path,
@@ -1578,6 +1581,9 @@ def test_materializer_work_queue_wraps_archive_section_entropy_recode_adapter(
         row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
     ]
     assert row["command"].count("--section-name") == 2
+    assert ["--runtime-consumption-proof-out", str(runtime_proof)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
     assert row["command"][-2:] == ["--brotli-quality", "11"]
     _assert_typed_postconditions(
         row["postconditions"],
@@ -1603,6 +1609,7 @@ def test_materializer_work_queue_wraps_archive_section_entropy_recode_adapter(
     assert row["telemetry"]["artifact_paths"] == [
         str(output_archive),
         str(manifest),
+        str(runtime_proof),
     ]
     assert row["telemetry"]["input_artifact_paths"] == [
         str(source_archive),
@@ -1611,6 +1618,11 @@ def test_materializer_work_queue_wraps_archive_section_entropy_recode_adapter(
     assert row["telemetry"]["family_agnostic_materializer_contract"]["target_kind"] == (
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
     )
+    assert row["telemetry"]["pullback_artifact_paths"] == [
+        str(output_archive),
+        str(manifest),
+        str(runtime_proof),
+    ]
     assert "archive_section_entropy_recode_requires_same_runtime_inflate_parity" in row["dispatch_blockers"]
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False

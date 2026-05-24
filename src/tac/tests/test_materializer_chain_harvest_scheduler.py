@@ -9,6 +9,7 @@ import sys
 import zipfile
 from pathlib import Path
 
+import brotli
 import pytest
 
 import comma_lab.scheduler.materializer_exact_eval_dispatch_plan as dispatch_plan_module
@@ -44,6 +45,7 @@ from tac.optimization.byte_range_entropy_recode_chain import (
 )
 from tac.optimization.family_agnostic_materializers import (
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
+    materialize_archive_section_entropy_recode_candidate,
     materialize_packet_member_recompress_candidate,
 )
 from tac.optimization.proxy_candidate_contract import truthy_authority_field_violations
@@ -609,6 +611,65 @@ def test_harvest_family_agnostic_packet_recompress_accepts_empty_member(
     assert row["source_member_bytes"] == 0
     assert row["runtime_consumption_proof_status"] == "present"
     assert row["receiver_contract_satisfied"] is True
+
+
+def test_harvest_family_agnostic_archive_section_raw_identity_proof(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    archive = repo / "source.zip"
+    output = repo / "candidate.zip"
+    proof = repo / "runtime_consumption_proof.json"
+    manifest_path = repo / "family_candidate.json"
+    raw = b"section-raw" * 512
+    section = brotli.compress(raw, quality=0)
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("0.raw", section)
+    manifest = materialize_archive_section_entropy_recode_candidate(
+        archive_path=archive,
+        section_manifest={
+            "schema": "fixture_section_manifest.v1",
+            "member": {"name": "0.raw"},
+            "sections": [
+                {
+                    "name": "section_a",
+                    "index": 0,
+                    "offset": 0,
+                    "length": len(section),
+                    "sha256": hashlib.sha256(section).hexdigest(),
+                }
+            ],
+        },
+        output_archive=output,
+        section_names=("section_a",),
+        brotli_qualities=(0,),
+        runtime_consumption_proof_out=proof,
+        allow_size_regression=True,
+        repo_root=repo,
+    )
+    manifest["candidate_id"] = "family_agnostic_archive_section_with_proof"
+    _write_json(manifest_path, manifest)
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[manifest_path],
+    )
+
+    row = result["source_queue"]["top_k"][0]
+    assert row["candidate_id"] == "family_agnostic_archive_section_with_proof"
+    assert row["candidate_family"] == "archive_section_entropy_recode"
+    assert row["candidate_member_name"] == "0.raw"
+    assert row["runtime_consumption_proof_status"] == "present"
+    assert row["runtime_consumption_proof_path"] == str(proof)
+    assert row["runtime_adapter_ready"] is True
+    assert row["receiver_contract_satisfied"] is True
+    assert "runtime_consumption_proof_missing" not in row["dispatch_blockers"]
+    assert "family_agnostic_receiver_contract_not_satisfied" not in (
+        row["dispatch_blockers"]
+    )
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
 
 
 def test_harvest_requires_succeeded_state_for_work_queue_rows(
