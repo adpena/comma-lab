@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import time
 from collections.abc import Callable, Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -494,6 +495,51 @@ def _artifact_pullbacks_for_step(
     return pullbacks
 
 
+def _paths_overlap(left: str, right: str) -> bool:
+    left_path = Path(left).resolve(strict=False)
+    right_path = Path(right).resolve(strict=False)
+    return left_path == right_path or left_path in right_path.parents or right_path in left_path.parents
+
+
+def _duplicate_pullback_blockers(
+    selections: Sequence[SshTaskSelection],
+    *,
+    queue: Mapping[str, Any],
+    repo_root: Path,
+    path_maps: Sequence[tuple[Path, str]],
+) -> dict[int, tuple[str, ...]]:
+    owners: list[tuple[int, str]] = []
+    for index, selection in enumerate(selections):
+        ready = selection.ready_step
+        if ready is None:
+            continue
+        step = _lookup_step(queue, ready.experiment_id, ready.step_id)
+        paths = [
+            str(pullback["local_path"])
+            for pullback in _artifact_pullbacks_for_step(
+                step,
+                repo_root=repo_root,
+                path_maps=path_maps,
+            )
+        ]
+        owners.extend((index, path) for path in paths)
+
+    blockers: dict[int, set[str]] = {}
+    for left_pos, (left_index, left_path) in enumerate(owners):
+        for right_index, right_path in owners[left_pos + 1 :]:
+            if left_index == right_index:
+                continue
+            if not _paths_overlap(left_path, right_path):
+                continue
+            blockers.setdefault(left_index, set()).add(
+                f"duplicate_pullback_destination:{left_path}"
+            )
+            blockers.setdefault(right_index, set()).add(
+                f"duplicate_pullback_destination:{right_path}"
+            )
+    return {index: tuple(sorted(values)) for index, values in blockers.items()}
+
+
 def _run_artifact_pullbacks(
     *,
     runner: Runner,
@@ -913,6 +959,171 @@ def _record_blocked_task(
     }
 
 
+def _execute_selected_task(
+    selection: SshTaskSelection,
+    *,
+    queue: Mapping[str, Any],
+    state: Path,
+    repo: Path,
+    local_head: str,
+    remote_repo_roots: Mapping[str, str] | None,
+    require_clean_remote_git: bool,
+    dirty_remote_git_rationale: str | None,
+    ssh_binary: str,
+    ssh_connect_timeout_seconds: int,
+    remote_preflight_timeout_seconds: int,
+    log_root: str | Path | None,
+    normalized_artifact_path_maps: Sequence[tuple[Path, str]],
+    require_artifact_mobility: bool,
+    artifact_shared_path_rationale: str | None,
+    rsync_binary: str,
+    artifact_pull_timeout_seconds: int,
+    runner: Runner,
+) -> dict[str, Any]:
+    ready_step = selection.ready_step
+    if ready_step is None:
+        return _record_blocked_task(selection, blockers=["ready_step_missing"])
+    machine = _machine_for_task(selection.task)
+    machine_id_value = _require_text(
+        machine.get("id") or selection.task.get("machine_hint"),
+        "machine.id",
+    )
+    ssh_target = _require_text(machine.get("ssh_target"), "machine.ssh_target")
+    remote_repo_root = _require_text(
+        (remote_repo_roots or {}).get(machine_id_value) or machine.get("remote_repo_root"),
+        "machine.remote_repo_root",
+    )
+    remote_root_blockers = _remote_repo_root_blockers(remote_repo_root)
+    if remote_root_blockers:
+        return _record_blocked_task(selection, blockers=remote_root_blockers)
+    preflight = _run_remote_preflight(
+        runner=runner,
+        ssh_binary=ssh_binary,
+        ssh_target=ssh_target,
+        connect_timeout_seconds=ssh_connect_timeout_seconds,
+        remote_repo_root=remote_repo_root,
+        expected_head=local_head,
+        require_clean_remote_git=require_clean_remote_git,
+        dirty_remote_git_rationale=dirty_remote_git_rationale,
+        timeout_seconds=remote_preflight_timeout_seconds,
+    )
+    if not preflight["passed"]:
+        return _record_blocked_task(
+            selection,
+            blockers=[f"remote_git_preflight_failed:{preflight['returncode']}"],
+        ) | {"remote_preflight": preflight}
+
+    step = _lookup_step(queue, ready_step.experiment_id, ready_step.step_id)
+    worker_run_id = _make_worker_run_id(
+        ready_step,
+        machine_id=machine_id_value,
+        ssh_target=ssh_target,
+    )
+    log_path = _log_path(
+        repo_root=repo,
+        log_root=log_root,
+        ready=ready_step,
+        worker_run_id=worker_run_id,
+    )
+    running_event = {
+        "schema": SSH_EXECUTOR_EVENT_SCHEMA,
+        "command": list(ready_step.command),
+        "log_path": str(log_path),
+        "resource_kind": ready_step.resource_kind,
+        "worker_run_id": worker_run_id,
+        "parent_pid": os.getpid(),
+        "executor": "ssh_experiment_queue",
+        "machine": dict(machine),
+        "ssh_target": ssh_target,
+        "remote_repo_root": remote_repo_root,
+        "remote_preflight": preflight,
+        "dirty_remote_git_rationale": dirty_remote_git_rationale,
+        "require_artifact_mobility": require_artifact_mobility,
+        "artifact_shared_path_rationale": artifact_shared_path_rationale,
+        "timeout_seconds": int(step.get("timeout_seconds") or 0),
+    }
+    with connect_state(state) as conn:
+        claim_refused_reason = claim_ready_step_for_execution(
+            conn,
+            queue,
+            ready_step,
+            event=running_event,
+        )
+    if claim_refused_reason:
+        return {
+            "executed": False,
+            "succeeded": False,
+            "claim_refused": True,
+            "claim_refused_reason": claim_refused_reason,
+            "task": selection.to_dict(),
+            **running_event,
+        }
+
+    remote_plus_pullback_started = time.monotonic()
+    remote_result = _execute_remote_step(
+        runner=runner,
+        ssh_binary=ssh_binary,
+        ssh_target=ssh_target,
+        connect_timeout_seconds=ssh_connect_timeout_seconds,
+        remote_repo_root=remote_repo_root,
+        expected_head=local_head,
+        require_clean_remote_git=require_clean_remote_git,
+        ready=ready_step,
+        step=step,
+        log_path=log_path,
+    )
+    terminal_returncode = int(remote_result["returncode"])
+    terminal_timed_out = bool(remote_result["timed_out"])
+    terminal_error = remote_result["execution_error"]
+    if terminal_returncode == 0 and not terminal_timed_out and terminal_error is None:
+        pullbacks = _artifact_pullbacks_for_step(
+            step,
+            repo_root=repo,
+            path_maps=normalized_artifact_path_maps,
+        )
+        artifact_mobility = _run_artifact_pullbacks(
+            runner=runner,
+            rsync_binary=rsync_binary,
+            ssh_binary=ssh_binary,
+            ssh_target=ssh_target,
+            pullbacks=pullbacks,
+            timeout_seconds=artifact_pull_timeout_seconds,
+            connect_timeout_seconds=ssh_connect_timeout_seconds,
+        )
+    else:
+        artifact_mobility = _skipped_artifact_mobility(
+            mode="skipped_remote_execution_failed",
+            reason="remote_command_failed_before_artifact_pullback",
+        )
+    if not artifact_mobility["succeeded"]:
+        terminal_returncode = int(artifact_mobility["returncode"])
+        terminal_timed_out = bool(artifact_mobility["timed_out"])
+        terminal_error = artifact_mobility["execution_error"] or "artifact_mobility_failed"
+    with connect_state(state) as conn:
+        terminal_result = finalize_claimed_step_execution(
+            conn,
+            queue,
+            ready_step,
+            repo_root=repo,
+            log_path=log_path,
+            returncode=terminal_returncode,
+            timed_out=terminal_timed_out,
+            execution_error=terminal_error,
+            elapsed_seconds=time.monotonic() - remote_plus_pullback_started,
+            event={
+                **running_event,
+                **remote_result,
+                "remote_elapsed_seconds": float(remote_result["elapsed_seconds"]),
+                "artifact_mobility": artifact_mobility,
+            },
+        )
+    return {
+        "executed": True,
+        "task": selection.to_dict(),
+        **terminal_result,
+    }
+
+
 def run_staircase_ssh_executor(
     plan: Mapping[str, Any],
     queue: Mapping[str, Any],
@@ -1047,167 +1258,72 @@ def run_staircase_ssh_executor(
         )
         selected = [selection for selection in selections if not selection.blockers]
         blocked = [selection for selection in selections if selection.blockers]
-        for selection in blocked:
-            task_results.append(_record_blocked_task(selection))
-        for selection in selected:
-            if max_steps and executed_count >= max_steps:
-                break
-            ready_step = selection.ready_step
-            if ready_step is None:
-                task_results.append(_record_blocked_task(selection, blockers=["ready_step_missing"]))
-                continue
-            machine = _machine_for_task(selection.task)
-            machine_id_value = _require_text(
-                machine.get("id") or selection.task.get("machine_hint"),
-                "machine.id",
-            )
-            ssh_target = _require_text(machine.get("ssh_target"), "machine.ssh_target")
-            remote_repo_root = _require_text(
-                (remote_repo_roots or {}).get(machine_id_value) or machine.get("remote_repo_root"),
-                "machine.remote_repo_root",
-            )
-            remote_root_blockers = _remote_repo_root_blockers(remote_repo_root)
-            if remote_root_blockers:
-                task_results.append(_record_blocked_task(selection, blockers=remote_root_blockers))
-                continue
-            preflight = _run_remote_preflight(
-                runner=runner,
-                ssh_binary=ssh_binary,
-                ssh_target=ssh_target,
-                connect_timeout_seconds=ssh_connect_timeout_seconds,
-                remote_repo_root=remote_repo_root,
-                expected_head=local_head,
-                require_clean_remote_git=require_clean_remote_git,
-                dirty_remote_git_rationale=dirty_remote_git_rationale,
-                timeout_seconds=remote_preflight_timeout_seconds,
-            )
-            if not preflight["passed"]:
+    task_results.extend(_record_blocked_task(selection) for selection in blocked)
+    selected_to_run = selected[: max_steps or None]
+    duplicate_pullback_blockers = _duplicate_pullback_blockers(
+        selected_to_run,
+        queue=queue,
+        repo_root=repo,
+        path_maps=normalized_artifact_path_maps,
+    )
+    if duplicate_pullback_blockers:
+        runnable_selected: list[SshTaskSelection] = []
+        for index, selection in enumerate(selected_to_run):
+            blockers_for_selection = duplicate_pullback_blockers.get(index)
+            if blockers_for_selection:
                 task_results.append(
                     _record_blocked_task(
-                        selection,
-                        blockers=[f"remote_git_preflight_failed:{preflight['returncode']}"],
+                        SshTaskSelection(
+                            task=selection.task,
+                            ready_step=selection.ready_step,
+                            blockers=blockers_for_selection,
+                        )
                     )
-                    | {"remote_preflight": preflight}
                 )
-                continue
-
-            step = _lookup_step(queue, ready_step.experiment_id, ready_step.step_id)
-            worker_run_id = _make_worker_run_id(
-                ready_step,
-                machine_id=machine_id_value,
-                ssh_target=ssh_target,
-            )
-            log_path = _log_path(
-                repo_root=repo,
-                log_root=log_root,
-                ready=ready_step,
-                worker_run_id=worker_run_id,
-            )
-            running_event = {
-                "schema": SSH_EXECUTOR_EVENT_SCHEMA,
-                "command": list(ready_step.command),
-                "log_path": str(log_path),
-                "resource_kind": ready_step.resource_kind,
-                "worker_run_id": worker_run_id,
-                "executor": "ssh_experiment_queue",
-                "machine": dict(machine),
-                "ssh_target": ssh_target,
-                "remote_repo_root": remote_repo_root,
-                "remote_preflight": preflight,
-                "dirty_remote_git_rationale": dirty_remote_git_rationale,
-                "require_artifact_mobility": require_artifact_mobility,
-                "artifact_shared_path_rationale": artifact_shared_path_rationale,
-                "timeout_seconds": int(step.get("timeout_seconds") or 0),
-            }
-            claim_refused_reason = claim_ready_step_for_execution(
-                conn,
-                queue,
-                ready_step,
-                event=running_event,
-            )
-            if claim_refused_reason:
-                claim_refused_count += 1
-                task_results.append(
-                    {
-                        "executed": False,
-                        "succeeded": False,
-                        "claim_refused": True,
-                        "claim_refused_reason": claim_refused_reason,
-                        "task": selection.to_dict(),
-                        **running_event,
-                    }
-                )
-                continue
-
-            executed_count += 1
-            remote_plus_pullback_started = time.monotonic()
-            remote_result = _execute_remote_step(
-                runner=runner,
-                ssh_binary=ssh_binary,
-                ssh_target=ssh_target,
-                connect_timeout_seconds=ssh_connect_timeout_seconds,
-                remote_repo_root=remote_repo_root,
-                expected_head=local_head,
-                require_clean_remote_git=require_clean_remote_git,
-                ready=ready_step,
-                step=step,
-                log_path=log_path,
-            )
-            terminal_returncode = int(remote_result["returncode"])
-            terminal_timed_out = bool(remote_result["timed_out"])
-            terminal_error = remote_result["execution_error"]
-            if terminal_returncode == 0 and not terminal_timed_out and terminal_error is None:
-                pullbacks = _artifact_pullbacks_for_step(
-                    step,
-                    repo_root=repo,
-                    path_maps=normalized_artifact_path_maps,
-                )
-                artifact_mobility = _run_artifact_pullbacks(
-                    runner=runner,
-                    rsync_binary=rsync_binary,
+            else:
+                runnable_selected.append(selection)
+        selected_to_run = runnable_selected
+    if selected_to_run:
+        max_workers = len(selected_to_run)
+        results_by_index: dict[int, dict[str, Any]] = {}
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(
+                    _execute_selected_task,
+                    selection,
+                    queue=queue,
+                    state=state,
+                    repo=repo,
+                    local_head=local_head,
+                    remote_repo_roots=remote_repo_roots,
+                    require_clean_remote_git=require_clean_remote_git,
+                    dirty_remote_git_rationale=dirty_remote_git_rationale,
                     ssh_binary=ssh_binary,
-                    ssh_target=ssh_target,
-                    pullbacks=pullbacks,
-                    timeout_seconds=artifact_pull_timeout_seconds,
-                    connect_timeout_seconds=ssh_connect_timeout_seconds,
-                )
-            else:
-                artifact_mobility = _skipped_artifact_mobility(
-                    mode="skipped_remote_execution_failed",
-                    reason="remote_command_failed_before_artifact_pullback",
-                )
-            if not artifact_mobility["succeeded"]:
-                terminal_returncode = int(artifact_mobility["returncode"])
-                terminal_timed_out = bool(artifact_mobility["timed_out"])
-                terminal_error = artifact_mobility["execution_error"] or "artifact_mobility_failed"
-            terminal_result = finalize_claimed_step_execution(
-                conn,
-                queue,
-                ready_step,
-                repo_root=repo,
-                log_path=log_path,
-                returncode=terminal_returncode,
-                timed_out=terminal_timed_out,
-                execution_error=terminal_error,
-                elapsed_seconds=time.monotonic() - remote_plus_pullback_started,
-                event={
-                    **running_event,
-                    **remote_result,
-                    "remote_elapsed_seconds": float(remote_result["elapsed_seconds"]),
-                    "artifact_mobility": artifact_mobility,
-                },
-            )
-            if terminal_result.get("succeeded"):
-                success_count += 1
-            else:
-                failure_count += 1
-            task_results.append(
-                {
-                    "executed": True,
-                    "task": selection.to_dict(),
-                    **terminal_result,
-                }
-            )
+                    ssh_connect_timeout_seconds=ssh_connect_timeout_seconds,
+                    remote_preflight_timeout_seconds=remote_preflight_timeout_seconds,
+                    log_root=log_root,
+                    normalized_artifact_path_maps=normalized_artifact_path_maps,
+                    require_artifact_mobility=require_artifact_mobility,
+                    artifact_shared_path_rationale=artifact_shared_path_rationale,
+                    rsync_binary=rsync_binary,
+                    artifact_pull_timeout_seconds=artifact_pull_timeout_seconds,
+                    runner=runner,
+                ): index
+                for index, selection in enumerate(selected_to_run)
+            }
+            for future in as_completed(futures):
+                results_by_index[futures[future]] = future.result()
+        for index in range(len(selected_to_run)):
+            result = results_by_index[index]
+            if result.get("executed") is True:
+                executed_count += 1
+                if result.get("succeeded"):
+                    success_count += 1
+                else:
+                    failure_count += 1
+            elif result.get("claim_refused") is True:
+                claim_refused_count += 1
+            task_results.append(result)
 
     return apply_proxy_evidence_boundary(
         {
@@ -1215,7 +1331,8 @@ def run_staircase_ssh_executor(
             "queue_id": queue_id,
             "state_path": str(state),
             "execute": execute,
-            "execution_mode": "serial_ssh_executor",
+            "execution_mode": "bounded_parallel_ssh_executor",
+            "max_workers": len(selected_to_run),
             "allow_noncanonical_state": allow_noncanonical_state,
             "allow_orphaned_state": allow_orphaned_state,
             "require_clean_remote_git": require_clean_remote_git,

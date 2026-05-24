@@ -17,6 +17,12 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from comma_lab.operator_storage_waterfall import (  # noqa: E402
+    POLICY_ID,
+    POLICY_SCHEMA,
+    operator_storage_policy_payload,
+    storage_preflight_artifact_catalog_metadata,
+)
 from comma_lab.storage_tiers import (  # noqa: E402
     DEFAULT_RESERVE_FREE_GB,
     DEFAULT_WORKLOAD_SUBDIR,
@@ -51,6 +57,21 @@ def build_payload(args: argparse.Namespace) -> tuple[dict[str, Any], bool]:
         create=args.create,
     )
     payload = plan.to_dict()
+    storage_plan_path = args.storage_plan_path or args.output
+    payload["operator_storage_policy"] = operator_storage_policy_payload(
+        storage_tier_overrides=tuple(args.storage_tier),
+        allow_local_disk=bool(args.allow_local_storage_tier),
+        policy_id=args.policy_id,
+        policy_schema=args.policy_schema,
+    )
+    payload["artifact_catalog_metadata"] = storage_preflight_artifact_catalog_metadata(
+        policy_id=args.policy_id,
+        policy_schema=args.policy_schema,
+        storage_plan_path=storage_plan_path,
+        cleanup_plan_path=args.cleanup_plan_path,
+        journal_path=args.journal_path,
+        lifecycle_kind=args.lifecycle_kind,
+    )
     expected = _resolve_expected(args.expected_workload_root)
     selected = payload.get("selected_workload_root")
     if isinstance(selected, str):
@@ -86,6 +107,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--requested-bytes", type=int, default=0)
     parser.add_argument("--min-free-bytes", type=int, default=0)
     parser.add_argument("--expected-workload-root", default=None)
+    parser.add_argument("--policy-id", default=POLICY_ID)
+    parser.add_argument("--policy-schema", default=POLICY_SCHEMA)
+    parser.add_argument("--storage-plan-path", default=None)
+    parser.add_argument("--cleanup-plan-path", default=None)
+    parser.add_argument("--journal-path", default=None)
+    parser.add_argument("--lifecycle-kind", default="HISTORICAL_PROVENANCE")
     parser.add_argument("--create", action="store_true", help="create selected workload directories if possible")
     parser.add_argument(
         "--allow-local-storage-tier",

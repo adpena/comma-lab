@@ -59,7 +59,7 @@ def test_materializer_campaign_runner_builds_queue_owned_followup_command(
     assert "--allow-paid-dispatch-queue" not in command
 
 
-def test_materializer_campaign_runner_requires_cold_store_for_move_preflight(
+def test_materializer_campaign_runner_uses_policy_cold_store_default_for_move_preflight(
     tmp_path: Path,
 ) -> None:
     args = runner.parse_args(
@@ -74,8 +74,11 @@ def test_materializer_campaign_runner_requires_cold_store_for_move_preflight(
         ]
     )
 
-    with pytest.raises(SystemExit, match="cold_store_roots is required"):
-        runner._build_queue_command(args, run_dir=tmp_path / "campaign")
+    command = runner._build_queue_command(args, run_dir=tmp_path / "campaign")
+
+    assert "--include-materializer-scheduler-preflight" in command
+    assert "--materializer-scheduler-proactive-cleanup-execute" in command
+    assert "--materializer-scheduler-proactive-cleanup-cold-store-root" not in command
 
 
 def test_materializer_campaign_runner_emits_staircase_artifacts(tmp_path: Path) -> None:

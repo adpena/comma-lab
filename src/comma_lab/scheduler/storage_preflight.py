@@ -6,7 +6,19 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from comma_lab.operator_storage_waterfall import (
+    DEFAULT_COLD_STORE_SUBDIR,
+    FALSE_AUTHORITY_FIELDS,
+    POLICY_ID,
+    POLICY_SCHEMA,
+    operator_cold_store_roots,
+    operator_storage_policy_payload,
+    operator_storage_tier_cli_specs,
+    storage_preflight_artifact_catalog_metadata,
+)
 from comma_lab.storage_tiers import DEFAULT_RESERVE_FREE_GB, DEFAULT_TIERS
+
+PREFLIGHT_METADATA_SCHEMA = "comma_lab.scheduler.storage_preflight_metadata.v1"
 
 
 def validate_scheduler_storage_preflight_config(
@@ -14,15 +26,20 @@ def validate_scheduler_storage_preflight_config(
     proactive_cleanup_execute: bool,
     proactive_cleanup_action: str,
     proactive_cleanup_cold_store_roots: tuple[str, ...],
+    storage_tiers: tuple[str, ...] = (),
 ) -> None:
     """Fail closed before emitting an impossible cleanup step."""
 
     if proactive_cleanup_action not in {"move", "delete"}:
         raise ValueError("proactive_cleanup_action must be move or delete")
+    effective_cold_roots = operator_cold_store_roots(
+        storage_tier_overrides=storage_tiers,
+        cold_store_root_overrides=proactive_cleanup_cold_store_roots,
+    )
     if (
         proactive_cleanup_execute
         and proactive_cleanup_action == "move"
-        and not proactive_cleanup_cold_store_roots
+        and not effective_cold_roots
     ):
         raise ValueError(
             "proactive_cleanup_cold_store_roots is required when "
@@ -85,6 +102,8 @@ def build_scheduler_storage_preflight_experiment(
     proactive_cleanup_min_bytes: str = "1",
     proactive_cleanup_cold_store_roots: tuple[str, ...] = (),
     proactive_cleanup_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
+    cold_store_subdir: str = DEFAULT_COLD_STORE_SUBDIR,
+    lifecycle_kind: str = "HISTORICAL_PROVENANCE",
 ) -> dict[str, Any]:
     """Return a queue experiment that gates work on storage and cleanup.
 
@@ -97,9 +116,30 @@ def build_scheduler_storage_preflight_experiment(
         proactive_cleanup_execute=proactive_cleanup_execute,
         proactive_cleanup_action=proactive_cleanup_action,
         proactive_cleanup_cold_store_roots=proactive_cleanup_cold_store_roots,
+        storage_tiers=storage_tiers,
     )
     storage_plan = f".omx/research/{artifact_prefix}_storage_plan_{date}.json"
     cleanup_plan = f".omx/research/{artifact_prefix}_proactive_cleanup_{date}.json"
+    journal_path = f"{cleanup_plan}.journal.jsonl"
+    effective_storage_tiers = operator_storage_tier_cli_specs(storage_tiers)
+    effective_cold_store_roots = operator_cold_store_roots(
+        storage_tier_overrides=storage_tiers,
+        cold_store_root_overrides=proactive_cleanup_cold_store_roots,
+        cold_store_subdir=cold_store_subdir,
+    )
+    policy_payload = operator_storage_policy_payload(
+        storage_tier_overrides=storage_tiers,
+        cold_store_root_overrides=proactive_cleanup_cold_store_roots,
+        cold_store_subdir=cold_store_subdir,
+    )
+    artifact_metadata = storage_preflight_artifact_catalog_metadata(
+        policy_id=POLICY_ID,
+        policy_schema=POLICY_SCHEMA,
+        storage_plan_path=storage_plan,
+        cleanup_plan_path=cleanup_plan,
+        journal_path=journal_path,
+        lifecycle_kind=lifecycle_kind,
+    )
     workload_subdir = _results_root_storage_workload_subdir(
         results_root,
         storage_workload_subdir,
@@ -125,10 +165,22 @@ def build_scheduler_storage_preflight_experiment(
         "--requested-bytes",
         str(storage_expected_bytes),
         "--create",
+        "--policy-id",
+        POLICY_ID,
+        "--policy-schema",
+        POLICY_SCHEMA,
+        "--storage-plan-path",
+        storage_plan,
+        "--cleanup-plan-path",
+        cleanup_plan,
+        "--journal-path",
+        journal_path,
+        "--lifecycle-kind",
+        lifecycle_kind,
     ]
     if expected_root is not None:
         storage_command.extend(["--expected-workload-root", expected_root])
-    for spec in storage_tiers:
+    for spec in effective_storage_tiers:
         storage_command.extend(["--storage-tier", spec])
 
     cleanup_roots = proactive_cleanup_roots or (
@@ -144,13 +196,25 @@ def build_scheduler_storage_preflight_experiment(
         str(proactive_cleanup_min_bytes),
         "--json-output",
         cleanup_plan,
+        "--journal-output",
+        journal_path,
+        "--policy-id",
+        POLICY_ID,
+        "--policy-schema",
+        POLICY_SCHEMA,
+        "--storage-plan-path",
+        storage_plan,
+        "--cleanup-plan-path",
+        cleanup_plan,
+        "--lifecycle-kind",
+        lifecycle_kind,
     ]
     if proactive_cleanup_execute:
         cleanup_command.extend(["--execute", "--action", proactive_cleanup_action])
         cleanup_command.extend(
             ["--cold-store-reserve-gb", str(proactive_cleanup_cold_store_reserve_gb)]
         )
-        for cold_store_root in proactive_cleanup_cold_store_roots:
+        for cold_store_root in effective_cold_store_roots:
             cleanup_command.extend(["--cold-store-root", cold_store_root])
 
     return {
@@ -158,12 +222,25 @@ def build_scheduler_storage_preflight_experiment(
         "priority": 0,
         "lane_id": lane_id,
         "tags": tags,
+        "metadata": {
+            "schema": PREFLIGHT_METADATA_SCHEMA,
+            "operator_storage_policy": policy_payload,
+            "artifact_catalog_metadata": artifact_metadata,
+            **FALSE_AUTHORITY_FIELDS,
+        },
         "steps": [
             {
                 "id": "storage_tier_plan",
                 "timeout_seconds": 120,
                 "command": storage_command,
                 "resources": {"kind": "local_cpu"},
+                "telemetry": {
+                    "artifact_paths": [storage_plan],
+                    "artifact_catalog_metadata": artifact_metadata,
+                    "operator_storage_policy": policy_payload,
+                    "lifecycle_kind": lifecycle_kind,
+                    "artifact_role": "storage_plan",
+                },
                 "postconditions": [
                     {
                         "type": "json_equals",
@@ -180,6 +257,13 @@ def build_scheduler_storage_preflight_experiment(
                 "timeout_seconds": 1200,
                 "command": cleanup_command,
                 "resources": {"kind": "local_io_heavy"},
+                "telemetry": {
+                    "artifact_paths": [cleanup_plan, journal_path],
+                    "artifact_catalog_metadata": artifact_metadata,
+                    "operator_storage_policy": policy_payload,
+                    "lifecycle_kind": lifecycle_kind,
+                    "artifact_role": "cleanup_plan",
+                },
                 "postconditions": [
                     {
                         "type": "json_false_authority",

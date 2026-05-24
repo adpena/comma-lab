@@ -5,6 +5,8 @@ import hashlib
 import json
 import sqlite3
 import subprocess
+import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +18,7 @@ from comma_lab.scheduler.experiment_queue import (
     initialize_queue_state,
     normalize_queue_definition,
     ready_steps,
+    reconcile_stale_running_steps,
 )
 from comma_lab.scheduler.ssh_experiment_queue_executor import (
     build_remote_git_preflight_command,
@@ -105,12 +108,85 @@ def _queue(artifact: Path, *, artifact_mobility: dict[str, Any] | None = None) -
     })
 
 
+def _parallel_queue(
+    tmp_path: Path,
+    *,
+    max_concurrency: int = 2,
+    artifact_mobility: bool = False,
+    duplicate_artifact: bool = False,
+) -> tuple[dict[str, Any], list[Path]]:
+    artifacts = [
+        tmp_path / "out" / ("shared.json" if duplicate_artifact else f"done_{index}.json")
+        for index in range(2)
+    ]
+    mobility = (
+        {
+            "schema": "experiment_queue_artifact_mobility.v1",
+            "mode": "pullback",
+            "required": True,
+        }
+        if artifact_mobility
+        else {}
+    )
+    return (
+        normalize_queue_definition(
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "ssh_executor_fixture",
+                "controls": {"mode": "running", "max_concurrency": {"local_cpu": max_concurrency}},
+                "experiments": [
+                    {
+                        "id": f"candidate_{index}",
+                        "status": "queued",
+                        "priority": 1,
+                        "steps": [
+                            {
+                                "id": "materialize",
+                                "kind": "command",
+                                "command": [
+                                    "python",
+                                    "-c",
+                                    (
+                                        "import json, pathlib; "
+                                        f"pathlib.Path({str(artifact)!r}).write_text("
+                                        "json.dumps({'score_claim': False, "
+                                        "'promotion_eligible': False, "
+                                        "'rank_or_kill_eligible': False, "
+                                        "'ready_for_exact_eval_dispatch': False}))"
+                                    ),
+                                ],
+                                "resources": {"kind": "local_cpu"},
+                                "postconditions": [
+                                    {"type": "path_exists", "path": str(artifact)},
+                                    {
+                                        "type": "json_false_authority",
+                                        "path": str(artifact),
+                                    },
+                                ],
+                                "artifact_mobility": dict(mobility),
+                            }
+                        ],
+                    }
+                    for index, artifact in enumerate(artifacts)
+                ],
+            }
+        ),
+        artifacts,
+    )
+
+
 def _sha256_json(payload: object) -> str:
     text = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def _plan(queue: dict[str, Any], *, executor: str = "ssh_experiment_queue") -> dict[str, Any]:
+def _plan(
+    queue: dict[str, Any],
+    *,
+    executor: str = "ssh_experiment_queue",
+    slots: int = 1,
+    max_nodes: int = 1,
+) -> dict[str, Any]:
     dag = build_staircase_dag_from_experiment_queue(
         queue,
         dag_id="ssh_executor_fixture_dag",
@@ -118,7 +194,7 @@ def _plan(queue: dict[str, Any], *, executor: str = "ssh_experiment_queue") -> d
             {
                 "id": "sshbox",
                 "label": "SSH test worker",
-                "slots": {"local_cpu": 1},
+                "slots": {"local_cpu": slots},
                 "memory_gb": 16,
                 "disk_gb": 8,
                 "tags": ["ssh", "test"],
@@ -128,7 +204,7 @@ def _plan(queue: dict[str, Any], *, executor: str = "ssh_experiment_queue") -> d
             }
         ],
     )
-    return plan_staircase_dispatch(dag, max_nodes=1)
+    return plan_staircase_dispatch(dag, max_nodes=max_nodes)
 
 
 def _step_row(state: Path) -> sqlite3.Row:
@@ -142,6 +218,18 @@ def _step_row(state: Path) -> sqlite3.Row:
               AND step_id = 'materialize'
             """
         ).fetchone()
+
+
+def _step_rows(state: Path) -> list[sqlite3.Row]:
+    with connect_state(state) as conn:
+        return conn.execute(
+            """
+            SELECT experiment_id, step_id, status, attempts, last_event_json
+            FROM step_state
+            WHERE queue_id = 'ssh_executor_fixture'
+            ORDER BY experiment_id, step_id
+            """
+        ).fetchall()
 
 
 def test_remote_shell_command_uses_queue_argv_shape() -> None:
@@ -309,6 +397,7 @@ def test_ssh_executor_blocks_remote_step_without_local_visible_postcondition(
         state_path=state,
         repo_root=REPO_ROOT,
         execute=True,
+        max_steps=2,
         allow_noncanonical_state=True,
         runner=runner,
     )
@@ -355,6 +444,7 @@ def test_ssh_executor_pulls_back_artifacts_before_local_postconditions(
         state_path=state,
         repo_root=REPO_ROOT,
         execute=True,
+        max_steps=2,
         allow_noncanonical_state=True,
         artifact_path_maps={tmp_path.as_posix(): "/remote/tmp"},
         require_artifact_mobility=True,
@@ -429,6 +519,257 @@ def test_ssh_executor_pulls_back_mapped_telemetry_artifacts(
         pullback["local_path"]
         for pullback in last_event["artifact_mobility"]["pullbacks"]
     } == {artifact.as_posix(), telemetry_artifact.as_posix()}
+
+
+def test_parallel_ssh_executor_claims_steps_before_remote_commands_and_preserves_order(
+    tmp_path: Path,
+) -> None:
+    queue, artifacts = _parallel_queue(tmp_path)
+    plan = _plan(queue, slots=2, max_nodes=2)
+    state = tmp_path / "queue.sqlite"
+    active = 0
+    max_active = 0
+    remote_started = threading.Event()
+    lock = threading.Lock()
+    observed_statuses: list[str] = []
+    remote_scripts: list[str] = []
+
+    def runner(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        nonlocal active, max_active
+        remote_script = str(argv[-1])
+        if _is_preflight_only(remote_script):
+            return subprocess.CompletedProcess(argv, 0, stdout="preflight ok\n")
+        with lock:
+            remote_scripts.append(remote_script)
+            experiment_id = "candidate_0" if str(artifacts[0]) in remote_script else "candidate_1"
+            with connect_state(state) as conn:
+                row = conn.execute(
+                    """
+                    SELECT status
+                    FROM step_state
+                    WHERE queue_id = 'ssh_executor_fixture'
+                      AND experiment_id = ?
+                      AND step_id = 'materialize'
+                    """,
+                    (experiment_id,),
+                ).fetchone()
+            observed_statuses.append(str(row["status"]))
+            active += 1
+            max_active = max(max_active, active)
+            if active == 2:
+                remote_started.set()
+        remote_started.wait(timeout=1.0)
+        target = artifacts[0] if str(artifacts[0]) in remote_script else artifacts[1]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(
+            json.dumps(
+                {
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+        time.sleep(0.02 if target == artifacts[0] else 0.0)
+        with lock:
+            active -= 1
+        return subprocess.CompletedProcess(argv, 0, stdout="remote ok\n")
+
+    result = run_staircase_ssh_executor(
+        plan,
+        queue,
+        state_path=state,
+        repo_root=REPO_ROOT,
+        execute=True,
+        max_steps=2,
+        allow_noncanonical_state=True,
+        runner=runner,
+    )
+
+    assert result["execution_mode"] == "bounded_parallel_ssh_executor"
+    assert result["max_workers"] == 2
+    assert result["success_count"] == 2
+    assert result["executed_count"] == 2
+    assert max_active == 2
+    assert observed_statuses == ["running", "running"]
+    assert len(remote_scripts) == 2
+    assert [
+        row["experiment_id"]
+        for row in (item["task"]["ready_step"] for item in result["task_results"])
+    ] == ["candidate_0", "candidate_1"]
+    assert {row["status"] for row in _step_rows(state)} == {"succeeded"}
+
+
+def test_parallel_ssh_executor_does_not_duplicate_remote_command_across_instances(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "done.json"
+    queue = _queue(artifact)
+    plan = _plan(queue)
+    state = tmp_path / "queue.sqlite"
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+    command_started = threading.Event()
+    release_command = threading.Event()
+    lock = threading.Lock()
+    remote_command_count = 0
+
+    def runner(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        nonlocal remote_command_count
+        remote_script = str(argv[-1])
+        if _is_preflight_only(remote_script):
+            return subprocess.CompletedProcess(argv, 0, stdout="preflight ok\n")
+        with lock:
+            remote_command_count += 1
+            command_started.set()
+        release_command.wait(timeout=1.0)
+        artifact.write_text(
+            json.dumps(
+                {
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+        return subprocess.CompletedProcess(argv, 0, stdout="remote ok\n")
+
+    results: list[dict[str, Any]] = []
+
+    def execute_once() -> None:
+        results.append(
+            run_staircase_ssh_executor(
+                plan,
+                queue,
+                state_path=state,
+                repo_root=REPO_ROOT,
+                execute=True,
+                allow_noncanonical_state=True,
+                runner=runner,
+            )
+        )
+
+    first = threading.Thread(target=execute_once)
+    second = threading.Thread(target=execute_once)
+    first.start()
+    assert command_started.wait(timeout=1.0)
+    second.start()
+    release_command.set()
+    first.join(timeout=2.0)
+    second.join(timeout=2.0)
+
+    assert not first.is_alive()
+    assert not second.is_alive()
+    assert remote_command_count == 1
+    assert sum(result["success_count"] for result in results) == 1
+    assert _step_row(state)["status"] == "succeeded"
+
+
+def test_parallel_ssh_executor_blocks_duplicate_pullback_destinations(
+    tmp_path: Path,
+) -> None:
+    queue, _artifacts = _parallel_queue(
+        tmp_path,
+        artifact_mobility=True,
+        duplicate_artifact=True,
+    )
+    plan = _plan(queue, slots=2, max_nodes=2)
+    state = tmp_path / "queue.sqlite"
+    calls: list[list[str]] = []
+
+    def runner(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        calls.append(list(argv))
+        return subprocess.CompletedProcess(argv, 0, stdout="should not run\n")
+
+    result = run_staircase_ssh_executor(
+        plan,
+        queue,
+        state_path=state,
+        repo_root=REPO_ROOT,
+        execute=True,
+        max_steps=2,
+        allow_noncanonical_state=True,
+        artifact_path_maps={tmp_path.as_posix(): "/remote/tmp"},
+        require_artifact_mobility=True,
+        runner=runner,
+    )
+
+    assert calls == []
+    assert result["blocked_count"] == 2
+    assert all(
+        any(
+            blocker.startswith("duplicate_pullback_destination:")
+            for blocker in row["blockers"]
+        )
+        for row in result["task_results"]
+    )
+    assert {row["status"] for row in _step_rows(state)} == {"queued"}
+
+
+def test_parallel_ssh_executor_records_parent_pid_for_stale_recovery(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "done.json"
+    queue = _queue(artifact)
+    plan = _plan(queue)
+    state = tmp_path / "queue.sqlite"
+    remote_running = threading.Event()
+    release_remote = threading.Event()
+    recovery_result: dict[str, Any] = {}
+
+    def runner(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        remote_script = str(argv[-1])
+        if _is_preflight_only(remote_script):
+            return subprocess.CompletedProcess(argv, 0, stdout="preflight ok\n")
+        remote_running.set()
+        release_remote.wait(timeout=1.0)
+        artifact.write_text(
+            json.dumps(
+                {
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+        return subprocess.CompletedProcess(argv, 0, stdout="remote ok\n")
+
+    def execute_once() -> None:
+        run_staircase_ssh_executor(
+            plan,
+            queue,
+            state_path=state,
+            repo_root=REPO_ROOT,
+            execute=True,
+            allow_noncanonical_state=True,
+            runner=runner,
+        )
+
+    worker = threading.Thread(target=execute_once)
+    worker.start()
+    assert remote_running.wait(timeout=1.0)
+    with connect_state(state) as conn:
+        recovery_result.update(
+            reconcile_stale_running_steps(
+                conn,
+                queue,
+                repo_root=REPO_ROOT,
+                stale_after_seconds=0,
+            )
+        )
+    release_remote.set()
+    worker.join(timeout=2.0)
+
+    assert not worker.is_alive()
+    assert recovery_result["reconciled_step_count"] == 0
+    assert recovery_result["skipped_steps"][0]["reason"] == "worker_parent_alive"
+    assert _step_row(state)["status"] == "succeeded"
 
 
 def test_ssh_executor_does_not_pull_recursive_telemetry_without_explicit_pullback(

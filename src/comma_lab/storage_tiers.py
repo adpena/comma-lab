@@ -16,13 +16,15 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from comma_lab.operator_storage_waterfall import (
+    DEFAULT_WORK_TIER_ORDER,
+    FALSE_AUTHORITY_FIELDS,
+)
+
 SCHEMA = "comma_lab.experiment_storage_tier_plan.v1"
 DEFAULT_WORKLOAD_SUBDIR = "experiments/results"
 DEFAULT_RESERVE_FREE_GB = 40.0
-DEFAULT_TIERS = (
-    ("vertigo", "/Volumes/VertigoDataTier/pact"),
-    ("apdatastore", "/Volumes/APDataStore/pact"),
-)
+DEFAULT_TIERS = DEFAULT_WORK_TIER_ORDER
 
 
 class StorageTierError(ValueError):
@@ -98,10 +100,7 @@ class ExperimentStoragePlan:
             "selected_root": self.selected_root,
             "selected_workload_root": self.selected_workload_root,
             "tiers": [tier.to_dict() for tier in self.tiers],
-            "score_claim": False,
-            "promotion_eligible": False,
-            "rank_or_kill_eligible": False,
-            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY_FIELDS,
         }
 
 

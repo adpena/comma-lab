@@ -407,6 +407,20 @@ def _storage_preflight_dependencies_from_queue(queue: Mapping[str, Any]) -> dict
                 "storage_preflight_does_not_grant_score_authority",
             ],
         )
+        metadata = experiment.get("metadata")
+        if isinstance(metadata, Mapping):
+            artifact_metadata = metadata.get("artifact_catalog_metadata")
+            policy_payload = metadata.get("operator_storage_policy")
+            if isinstance(artifact_metadata, Mapping):
+                payload["artifact_catalog_metadata"] = dict(artifact_metadata)
+                policy_id = artifact_metadata.get("policy_id")
+                policy_schema = artifact_metadata.get("policy_schema")
+                if isinstance(policy_id, str):
+                    payload["policy_id"] = policy_id
+                if isinstance(policy_schema, str):
+                    payload["policy_schema"] = policy_schema
+            if isinstance(policy_payload, Mapping):
+                payload["operator_storage_policy"] = dict(policy_payload)
         preflights[cleanup_node_id] = payload
     return preflights
 

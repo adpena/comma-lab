@@ -2068,6 +2068,75 @@ def finalize_claimed_step_execution(
     """
 
     step = _lookup_step(queue, ready.experiment_id, ready.step_id)
+    step_hashes = _step_hashes(
+        step,
+        experiment_metadata=dict(
+            _lookup_step_with_experiment_metadata(
+                queue,
+                ready.experiment_id,
+                ready.step_id,
+            )[1]
+        ),
+    )
+    terminal_event_base = dict(event)
+    worker_run_id = terminal_event_base.get("worker_run_id")
+    if not isinstance(worker_run_id, str) or not worker_run_id.strip():
+        raise ExperimentQueueError("finalize event must carry worker_run_id")
+    if not conn.in_transaction:
+        conn.execute("BEGIN IMMEDIATE")
+    row = conn.execute(
+        """
+        SELECT status, definition_hash, command_hash, postcondition_hash,
+               resource_kind, last_event_json
+        FROM step_state
+        WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+        """,
+        (ready.queue_id, ready.experiment_id, ready.step_id),
+    ).fetchone()
+    current_event = _last_event(row) if row is not None else {}
+    current_worker_run_id = current_event.get("worker_run_id")
+    stale_reasons: list[str] = []
+    if row is None:
+        stale_reasons.append("step_state_missing")
+    else:
+        if row["status"] != "running":
+            stale_reasons.append(f"status_not_running:{row['status']}")
+        if row["definition_hash"] != step_hashes["definition_hash"]:
+            stale_reasons.append("definition_hash_mismatch")
+        if row["command_hash"] != step_hashes["command_hash"]:
+            stale_reasons.append("command_hash_mismatch")
+        if row["postcondition_hash"] != step_hashes["postcondition_hash"]:
+            stale_reasons.append("postcondition_hash_mismatch")
+        if row["resource_kind"] != _resource_kind(step):
+            stale_reasons.append("resource_kind_mismatch")
+        if current_worker_run_id != worker_run_id:
+            stale_reasons.append("worker_run_id_mismatch")
+    if stale_reasons:
+        refusal_event = {
+            **terminal_event_base,
+            "returncode": int(returncode),
+            "timed_out": timed_out,
+            "execution_error": execution_error,
+            "elapsed_seconds": float(elapsed_seconds),
+            "finalize_refused": True,
+            "finalize_refusal_reasons": stale_reasons,
+            "current_status": str(row["status"]) if row is not None else None,
+            "current_worker_run_id": current_worker_run_id,
+        }
+        append_event(
+            conn,
+            queue_id=ready.queue_id,
+            experiment_id=ready.experiment_id,
+            step_id=ready.step_id,
+            event_type="step_finalize_refused",
+            payload=refusal_event,
+        )
+        conn.commit()
+        return {
+            "executed": True,
+            "succeeded": False,
+            **refusal_event,
+        }
     failed_conditions, postcondition_errors = _evaluate_postconditions(
         step,
         repo=Path(repo_root),

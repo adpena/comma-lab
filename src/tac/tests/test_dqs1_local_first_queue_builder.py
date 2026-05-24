@@ -565,21 +565,26 @@ def test_dqs1_queue_builder_rejects_dry_run_scheduler_preflight_cleanup(
         )
 
 
-def test_dqs1_scheduler_preflight_move_cleanup_requires_cold_store_root(
+def test_dqs1_scheduler_preflight_move_cleanup_uses_policy_cold_store_default(
     tmp_path: Path,
 ) -> None:
     summary = _write_summary(tmp_path)
 
-    with pytest.raises(ExperimentQueueError, match="cold_store_roots is required"):
-        build_queue_from_action_summary(
-            summary,
-            repo_root=tmp_path,
-            results_root=str(tmp_path / "dqs1_local_first"),
-            include_scheduler_preflight=True,
-            scheduler_storage_expected_workload_root=str(tmp_path / "dqs1_local_first"),
-            scheduler_proactive_cleanup_execute=True,
-            scheduler_proactive_cleanup_action="move",
-        )
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first",
+        include_scheduler_preflight=True,
+        scheduler_storage_expected_workload_root=(
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first"
+        ),
+        scheduler_proactive_cleanup_execute=True,
+        scheduler_proactive_cleanup_action="move",
+    )
+
+    cleanup_command = result.queue["experiments"][0]["steps"][1]["command"]
+    assert "/Volumes/VertigoDataTier/pact/cold_store" in cleanup_command
+    assert "/Volumes/APDataStore/pact/cold_store" in cleanup_command
 
 
 def test_dqs1_queue_builder_rejects_preflight_outputs_outside_workload_root(

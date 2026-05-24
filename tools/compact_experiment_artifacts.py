@@ -19,6 +19,12 @@ from comma_lab.artifact_retention import (  # noqa: E402
     dumps_json,
     execute_retention_plan,
 )
+from comma_lab.operator_storage_waterfall import (  # noqa: E402
+    POLICY_ID,
+    POLICY_SCHEMA,
+    operator_storage_policy_payload,
+    storage_preflight_artifact_catalog_metadata,
+)
 
 
 def _parse_bytes(value: str) -> int:
@@ -82,6 +88,11 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         default=0.0,
         help="free GiB to preserve on each cold-store tier after planned moves",
     )
+    parser.add_argument("--policy-id", default=POLICY_ID)
+    parser.add_argument("--policy-schema", default=POLICY_SCHEMA)
+    parser.add_argument("--storage-plan-path", default=None)
+    parser.add_argument("--cleanup-plan-path", default=None)
+    parser.add_argument("--lifecycle-kind", default="HISTORICAL_PROVENANCE")
     return parser.parse_args(argv)
 
 
@@ -110,12 +121,30 @@ def main(argv: list[str] | None = None) -> int:
         min_bytes=args.min_bytes,
         exclude_paths=args.exclude,
     )
+    cleanup_plan_path = args.cleanup_plan_path or args.json_output
+    journal_path = (
+        _default_execution_journal_path(args)
+        if args.execute or args.journal_output is not None
+        else None
+    )
     payload = {
         "plan": plan.to_dict(),
         "execution": None,
+        "operator_storage_policy": operator_storage_policy_payload(
+            cold_store_root_overrides=tuple(str(root) for root in args.cold_store_root),
+            policy_id=args.policy_id,
+            policy_schema=args.policy_schema,
+        ),
+        "artifact_catalog_metadata": storage_preflight_artifact_catalog_metadata(
+            policy_id=args.policy_id,
+            policy_schema=args.policy_schema,
+            storage_plan_path=args.storage_plan_path,
+            cleanup_plan_path=cleanup_plan_path,
+            journal_path=journal_path,
+            lifecycle_kind=args.lifecycle_kind,
+        ),
     }
     if args.execute:
-        journal_path = _default_execution_journal_path(args)
         payload["execution"] = execute_retention_plan(
             plan,
             action=args.action,

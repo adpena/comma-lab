@@ -17,6 +17,7 @@ from src.comma_lab.scheduler.experiment_queue import (
     claim_ready_step_for_execution,
     connect_state,
     default_state_path,
+    finalize_claimed_step_execution,
     initialize_queue_state,
     normalize_queue_definition,
     queue_definition_drift,
@@ -889,6 +890,114 @@ def test_experiment_queue_atomic_claim_refuses_stale_resource_capacity(
             ).fetchall()
         ]
         assert "step_claim_refused_resource_limit_reached" in events
+
+
+def test_finalize_claimed_step_refuses_stale_terminal_state(
+    tmp_path: Path,
+) -> None:
+    marker = tmp_path / "materialized.json"
+    marker.write_text(json.dumps({"ok": True}), encoding="utf-8")
+    queue = _queue(tmp_path)
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        ready = ready_steps(conn, queue)[0]
+        event = {
+            "command": list(ready.command),
+            "worker_run_id": "worker-a",
+            "test": "running_claim",
+        }
+        assert claim_ready_step_for_execution(conn, queue, ready, event=event) is None
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'failed',
+                last_event_json = ?
+            WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+            """,
+            (
+                json.dumps({"worker_run_id": "recovery-worker"}),
+                ready.queue_id,
+                ready.experiment_id,
+                ready.step_id,
+            ),
+        )
+        conn.commit()
+
+        result = finalize_claimed_step_execution(
+            conn,
+            queue,
+            ready,
+            repo_root=tmp_path,
+            log_path=tmp_path / "worker.log",
+            returncode=0,
+            timed_out=False,
+            execution_error=None,
+            elapsed_seconds=1.0,
+            event=event,
+        )
+
+        row = conn.execute(
+            """
+            SELECT status, last_event_json
+            FROM step_state
+            WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+            """,
+            (ready.queue_id, ready.experiment_id, ready.step_id),
+        ).fetchone()
+        events = [
+            row["event_type"]
+            for row in conn.execute("SELECT event_type FROM queue_events ORDER BY id").fetchall()
+        ]
+
+    assert result["succeeded"] is False
+    assert result["finalize_refused"] is True
+    assert "status_not_running:failed" in result["finalize_refusal_reasons"]
+    assert "worker_run_id_mismatch" in result["finalize_refusal_reasons"]
+    assert row["status"] == "failed"
+    assert json.loads(row["last_event_json"]) == {"worker_run_id": "recovery-worker"}
+    assert "step_finalize_refused" in events
+
+
+def test_finalize_claimed_step_requires_matching_worker_run_id(
+    tmp_path: Path,
+) -> None:
+    marker = tmp_path / "materialized.json"
+    marker.write_text(json.dumps({"ok": True}), encoding="utf-8")
+    queue = _queue(tmp_path)
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        ready = ready_steps(conn, queue)[0]
+        claim_event = {
+            "command": list(ready.command),
+            "worker_run_id": "worker-a",
+            "test": "running_claim",
+        }
+        assert claim_ready_step_for_execution(conn, queue, ready, event=claim_event) is None
+        result = finalize_claimed_step_execution(
+            conn,
+            queue,
+            ready,
+            repo_root=tmp_path,
+            log_path=tmp_path / "worker.log",
+            returncode=0,
+            timed_out=False,
+            execution_error=None,
+            elapsed_seconds=1.0,
+            event={**claim_event, "worker_run_id": "worker-b"},
+        )
+        row = conn.execute(
+            """
+            SELECT status
+            FROM step_state
+            WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+            """,
+            (ready.queue_id, ready.experiment_id, ready.step_id),
+        ).fetchone()
+
+    assert result["succeeded"] is False
+    assert result["finalize_refused"] is True
+    assert result["finalize_refusal_reasons"] == ["worker_run_id_mismatch"]
+    assert row["status"] == "running"
 
 
 def test_reconcile_stale_running_step_recovers_when_postconditions_pass(

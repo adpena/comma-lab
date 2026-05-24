@@ -1593,7 +1593,7 @@ def test_materializer_execution_queue_can_gate_work_on_storage_preflight(
     assert task["experiment_metadata"]["ready_for_exact_eval_dispatch"] is False
 
 
-def test_materializer_execution_queue_move_preflight_requires_cold_store_root(
+def test_materializer_execution_queue_move_preflight_uses_policy_cold_store_default(
     tmp_path: Path,
 ) -> None:
     compiled = compile_dqs1_byte_shaving_campaign(
@@ -1610,24 +1610,31 @@ def test_materializer_execution_queue_move_preflight_requires_cold_store_root(
                 "schema_manifest": "schema.json",
                 "beam_probe_reports": ["beam_a.json"],
                 "source_runtime_dir": "runtime",
-                "output_dir": str(tmp_path / "materializer_results" / "materializer_out"),
+                "output_dir": (
+                    "/Volumes/VertigoDataTier/pact/materializer_results/"
+                    "materializer_out"
+                ),
             }
         },
         source_plan_path="plan.json",
     )
 
-    with pytest.raises(ExperimentQueueError, match="cold_store_roots is required"):
-        build_materializer_execution_queue(
-            work_queue,
-            queue_id="materializer_storage_preflight_fixture",
-            repo_root=tmp_path,
-            include_scheduler_preflight=True,
-            scheduler_results_root=str(tmp_path / "materializer_results"),
-            scheduler_storage_workload_subdir="materializer_results",
-            scheduler_storage_expected_workload_root=str(tmp_path / "materializer_results"),
-            scheduler_proactive_cleanup_execute=True,
-            scheduler_proactive_cleanup_action="move",
-        )
+    execution_queue = build_materializer_execution_queue(
+        work_queue,
+        queue_id="materializer_storage_preflight_fixture",
+        repo_root=tmp_path,
+        include_scheduler_preflight=True,
+        scheduler_results_root="/Volumes/VertigoDataTier/pact/materializer_results",
+        scheduler_storage_expected_workload_root=(
+            "/Volumes/VertigoDataTier/pact/materializer_results"
+        ),
+        scheduler_proactive_cleanup_execute=True,
+        scheduler_proactive_cleanup_action="move",
+    )
+
+    cleanup_command = execution_queue["experiments"][0]["steps"][1]["command"]
+    assert "/Volumes/VertigoDataTier/pact/cold_store" in cleanup_command
+    assert "/Volumes/APDataStore/pact/cold_store" in cleanup_command
 
 
 def test_materializer_execution_queue_blocks_outputs_outside_storage_root(
