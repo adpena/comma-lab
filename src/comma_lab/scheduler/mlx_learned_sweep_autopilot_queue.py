@@ -10,6 +10,11 @@ from pathlib import Path
 from typing import Any
 
 from tac.optimization.mlx_dynamic_learned_sweep import FALSE_AUTHORITY
+from tac.optimization.mlx_dynamic_learned_sweep_local_actuator import (
+    SUPPORTED_SWEEP_CONFIG_ID,
+    SUPPORTED_SWEEP_CONFIG_IDS,
+    SWEEP_CONFIG_ID_MACOS_CPU_ADVISORY,
+)
 from tac.optimization.mlx_dynamic_learned_sweep_local_autopilot import (
     SCHEMA as MLX_LEARNED_SWEEP_AUTOPILOT_SUMMARY_SCHEMA,
 )
@@ -31,6 +36,22 @@ AUTOPILOT_TOOL = "tools/run_mlx_dynamic_learned_sweep_autopilot.py"
 LEARNED_SWEEP_PLAN_SCHEMA = "mlx_dynamic_learned_sweep_plan.v1"
 EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA = (
     "mlx_effective_spend_triage_candidate_selection.v1"
+)
+_MACOS_CPU_ADVISORY_SOURCE_KEYS = (
+    "local_cpu_advisory_source_path",
+    "macos_cpu_advisory_source_path",
+    "local_cpu_advisory_path",
+    "macos_cpu_advisory_path",
+    "advisory_eval_path",
+)
+_MACOS_CPU_ADVISORY_BASELINE_KEYS = (
+    "window_baseline_local_cpu_advisory_source_path",
+    "window_baseline_macos_cpu_advisory_source_path",
+    "window_baseline_local_cpu_advisory_path",
+    "window_baseline_macos_cpu_advisory_path",
+    "baseline_local_cpu_advisory_path",
+    "baseline_macos_cpu_advisory_path",
+    "baseline_advisory_eval_path",
 )
 
 
@@ -141,6 +162,7 @@ def _validate_plan(
     path: Path,
     *,
     repo_root: Path,
+    sweep_config_id: str,
     optimization_pass_id: str | None,
     candidate_ids: Sequence[str] | None,
     queue_candidate_ids: Sequence[str] | None,
@@ -153,6 +175,7 @@ def _validate_plan(
     _require_false_authority(payload, label="plan")
     _require_ready_local_mlx_rows(
         payload,
+        sweep_config_id=sweep_config_id,
         optimization_pass_id=optimization_pass_id,
         candidate_ids=candidate_ids,
         queue_candidate_ids=queue_candidate_ids,
@@ -163,6 +186,7 @@ def _validate_plan(
 def _require_ready_local_mlx_rows(
     plan: Mapping[str, Any],
     *,
+    sweep_config_id: str,
     optimization_pass_id: str | None,
     candidate_ids: Sequence[str] | None,
     queue_candidate_ids: Sequence[str] | None,
@@ -170,39 +194,22 @@ def _require_ready_local_mlx_rows(
     rows = plan.get("ranked_sweep_rows")
     if not isinstance(rows, list):
         raise ExperimentQueueError("plan ranked_sweep_rows must be a list")
-    candidate_filter = set(candidate_ids or [])
     queue_candidate_filter = set(queue_candidate_ids or [])
-    ready_count = 0
     queue_candidate_match_counts = dict.fromkeys(queue_candidate_filter, 0)
-    for index, row in enumerate(rows):
-        if not isinstance(row, Mapping):
-            raise ExperimentQueueError(f"plan ranked_sweep_rows[{index}] must be an object")
-        if row.get("schema") != "mlx_dynamic_learned_sweep_row.v1":
-            continue
-        if row.get("ready_for_local_sweep") is not True:
-            continue
-        if row.get("sweep_config_id") != "mlx_local_response":
-            continue
-        if row.get("exact_eval_candidate") is True:
-            raise ExperimentQueueError(
-                "plan has exact-eval candidate marked ready for local MLX sweep"
-            )
-        if optimization_pass_id is not None and row.get("optimization_pass_id") != optimization_pass_id:
-            continue
-        if candidate_filter and str(row.get("candidate_id") or "") not in candidate_filter:
-            continue
-        if (
-            queue_candidate_filter
-            and str(row.get("queue_candidate_id") or "") not in queue_candidate_filter
-        ):
-            continue
+    ready_rows = _matching_ready_plan_rows(
+        plan,
+        sweep_config_id=sweep_config_id,
+        optimization_pass_id=optimization_pass_id,
+        candidate_ids=candidate_ids,
+        queue_candidate_ids=queue_candidate_ids,
+    )
+    for row in ready_rows:
         if queue_candidate_filter:
             queue_candidate_id = str(row.get("queue_candidate_id") or "")
             queue_candidate_match_counts[queue_candidate_id] += 1
-        ready_count += 1
-    if ready_count < 1:
+    if not ready_rows:
         raise ExperimentQueueError(
-            "plan has no ready mlx_local_response rows for the requested autopilot filters"
+            f"plan has no ready {sweep_config_id} rows for the requested autopilot filters"
         )
     missing_queue_candidate_ids = sorted(
         queue_candidate_id
@@ -226,6 +233,51 @@ def _require_ready_local_mlx_rows(
         )
 
 
+def _matching_ready_plan_rows(
+    plan: Mapping[str, Any],
+    *,
+    sweep_config_id: str,
+    optimization_pass_id: str | None,
+    candidate_ids: Sequence[str] | None,
+    queue_candidate_ids: Sequence[str] | None,
+) -> list[Mapping[str, Any]]:
+    rows = plan.get("ranked_sweep_rows")
+    if not isinstance(rows, list):
+        raise ExperimentQueueError("plan ranked_sweep_rows must be a list")
+    candidate_filter = set(candidate_ids or [])
+    queue_candidate_filter = set(queue_candidate_ids or [])
+    out: list[Mapping[str, Any]] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, Mapping):
+            raise ExperimentQueueError(
+                f"plan ranked_sweep_rows[{index}] must be an object"
+            )
+        if row.get("schema") != "mlx_dynamic_learned_sweep_row.v1":
+            continue
+        if row.get("ready_for_local_sweep") is not True:
+            continue
+        if row.get("sweep_config_id") != sweep_config_id:
+            continue
+        if row.get("exact_eval_candidate") is True:
+            raise ExperimentQueueError(
+                "plan has exact-eval candidate marked ready for local sweep"
+            )
+        if (
+            optimization_pass_id is not None
+            and row.get("optimization_pass_id") != optimization_pass_id
+        ):
+            continue
+        if candidate_filter and str(row.get("candidate_id") or "") not in candidate_filter:
+            continue
+        if (
+            queue_candidate_filter
+            and str(row.get("queue_candidate_id") or "") not in queue_candidate_filter
+        ):
+            continue
+        out.append(row)
+    return out
+
+
 def _validate_selection(path: Path, *, repo_root: Path) -> dict[str, Any]:
     payload = _load_json_object(path, label="selection")
     if payload.get("schema") != EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA:
@@ -234,6 +286,102 @@ def _validate_selection(path: Path, *, repo_root: Path) -> dict[str, Any]:
         )
     _require_false_authority(payload, label="selection")
     return _file_record(path, repo_root=repo_root)
+
+
+def _validate_macos_cpu_advisory_selection_paths(
+    *,
+    plan_path: Path,
+    selection_path: Path,
+    source_artifact_root: Path,
+    sweep_config_id: str,
+    optimization_pass_id: str | None,
+    candidate_ids: Sequence[str],
+    queue_candidate_ids: Sequence[str],
+) -> dict[str, Any] | None:
+    if sweep_config_id != SWEEP_CONFIG_ID_MACOS_CPU_ADVISORY:
+        return None
+    plan = _load_json_object(plan_path, label="plan")
+    selection = _load_json_object(selection_path, label="selection")
+    ready_rows = _matching_ready_plan_rows(
+        plan,
+        sweep_config_id=sweep_config_id,
+        optimization_pass_id=optimization_pass_id,
+        candidate_ids=candidate_ids,
+        queue_candidate_ids=queue_candidate_ids,
+    )
+    selected_rows = selection.get("selected_rows")
+    if not isinstance(selected_rows, list):
+        raise ExperimentQueueError("selection selected_rows must be a list")
+    selection_by_candidate: dict[str, Mapping[str, Any]] = {}
+    for index, row in enumerate(selected_rows):
+        if not isinstance(row, Mapping):
+            raise ExperimentQueueError(
+                f"selection selected_rows[{index}] must be an object"
+            )
+        candidate_id = str(row.get("candidate_id") or "").strip()
+        if candidate_id:
+            selection_by_candidate[candidate_id] = row
+
+    validated: list[dict[str, Any]] = []
+    for row in ready_rows:
+        candidate_id = _required_text(row.get("candidate_id"), label="candidate_id")
+        queue_candidate_id = _required_text(
+            row.get("queue_candidate_id"),
+            label="queue_candidate_id",
+        )
+        selection_row = selection_by_candidate.get(candidate_id)
+        if selection_row is None:
+            raise ExperimentQueueError(
+                f"{queue_candidate_id}: missing source selection row"
+            )
+        candidate_path = _resolve_existing_path_from_any_key(
+            selection_row,
+            keys=_MACOS_CPU_ADVISORY_SOURCE_KEYS,
+            source_artifact_root=source_artifact_root,
+            label=f"{queue_candidate_id} candidate macOS-CPU advisory path",
+        )
+        baseline_path = _resolve_existing_path_from_any_key(
+            selection_row,
+            keys=_MACOS_CPU_ADVISORY_BASELINE_KEYS,
+            source_artifact_root=source_artifact_root,
+            label=f"{queue_candidate_id} baseline macOS-CPU advisory path",
+        )
+        validated.append(
+            {
+                "queue_candidate_id": queue_candidate_id,
+                "candidate_id": candidate_id,
+                "candidate_advisory_path": str(candidate_path),
+                "baseline_advisory_path": str(baseline_path),
+            }
+        )
+    return {
+        "schema": "mlx_learned_sweep_macos_cpu_advisory_selection_path_preflight.v1",
+        "sweep_config_id": sweep_config_id,
+        "validated_row_count": len(validated),
+        "validated_rows": validated,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _resolve_existing_path_from_any_key(
+    row: Mapping[str, Any],
+    *,
+    keys: Sequence[str],
+    source_artifact_root: Path,
+    label: str,
+) -> Path:
+    for key in keys:
+        value = row.get(key)
+        if isinstance(value, str) and value.strip():
+            path = Path(value).expanduser()
+            resolved = path if path.is_absolute() else source_artifact_root / path
+            if not resolved.is_file():
+                raise ExperimentQueueError(f"{label} does not exist: {resolved}")
+            return resolved
+    raise ExperimentQueueError(f"{label} is required")
 
 
 def _validate_candidate_payloads(
@@ -337,6 +485,7 @@ def _autopilot_command(
     max_iterations: int,
     max_new_observations: int,
     rows_per_replan: int,
+    sweep_config_id: str,
     optimization_pass_id: str | None,
     candidate_ids: Sequence[str] | None,
     queue_candidate_ids: Sequence[str] | None,
@@ -376,7 +525,7 @@ def _autopilot_command(
             "--rows-per-replan",
             str(rows_per_replan),
             "--sweep-config-id",
-            "mlx_local_response",
+            sweep_config_id,
             "--source-artifact-root",
             _repo_rel(source_artifact_root, repo_root),
             "--device",
@@ -423,12 +572,13 @@ def _step_postconditions(
     observation_path: Path,
     repo: Path,
     include_replan_path: bool,
+    sweep_config_id: str,
     candidate_ids: Sequence[str],
     queue_candidate_ids: Sequence[str],
 ) -> list[dict[str, Any]]:
     required_equals: dict[str, Any] = {
         "schema": MLX_LEARNED_SWEEP_AUTOPILOT_SUMMARY_SCHEMA,
-        "sweep_config_id": "mlx_local_response",
+        "sweep_config_id": sweep_config_id,
         "executed_filter_match": True,
     }
     if len(candidate_ids) == 1:
@@ -521,6 +671,7 @@ def build_mlx_learned_sweep_autopilot_queue(
     max_new_observations: int = 1,
     rows_per_replan: int = 1,
     chain_steps: int = 1,
+    sweep_config_id: str = SUPPORTED_SWEEP_CONFIG_ID,
     optimization_pass_id: str | None = None,
     candidate_ids: Sequence[str] | None = None,
     queue_candidate_ids: Sequence[str] | None = None,
@@ -537,8 +688,20 @@ def build_mlx_learned_sweep_autopilot_queue(
     """Return queue-owned work for one bounded local learned-sweep autopilot run."""
 
     repo = Path(repo_root)
+    if sweep_config_id not in SUPPORTED_SWEEP_CONFIG_IDS:
+        raise ExperimentQueueError(
+            f"sweep_config_id must be one of {', '.join(sorted(SUPPORTED_SWEEP_CONFIG_IDS))}"
+        )
     if device not in {"cpu", "gpu"}:
         raise ExperimentQueueError("device must be cpu or gpu")
+    if sweep_config_id == SWEEP_CONFIG_ID_MACOS_CPU_ADVISORY and device != "cpu":
+        raise ExperimentQueueError(
+            "macos_cpu_advisory sweep queues must use device=cpu"
+        )
+    if sweep_config_id == SWEEP_CONFIG_ID_MACOS_CPU_ADVISORY and allow_gpu_research_signal:
+        raise ExperimentQueueError(
+            "macos_cpu_advisory sweep queues cannot allow GPU research signal"
+        )
     if device == "cpu" and allow_gpu_research_signal:
         raise ExperimentQueueError(
             "allow_gpu_research_signal must be false for cpu autopilot queues"
@@ -602,11 +765,21 @@ def build_mlx_learned_sweep_autopilot_queue(
     observation_path = _resolve_path(observation_jsonl, repo_root=repo)
     source_root = _resolve_path(source_artifact_root or repo, repo_root=repo)
     runtime_policy = _runtime_telemetry_policy(runtime_telemetry_policy)
+    macos_cpu_advisory_preflight = _validate_macos_cpu_advisory_selection_paths(
+        plan_path=plan,
+        selection_path=selection,
+        source_artifact_root=source_root,
+        sweep_config_id=sweep_config_id,
+        optimization_pass_id=optimization_pass_id,
+        candidate_ids=candidate_id_filters,
+        queue_candidate_ids=queue_candidate_id_filters,
+    )
 
     source_records = {
         "plan": _validate_plan(
             plan,
             repo_root=repo,
+            sweep_config_id=sweep_config_id,
             optimization_pass_id=optimization_pass_id,
             candidate_ids=candidate_id_filters,
             queue_candidate_ids=queue_candidate_id_filters,
@@ -625,6 +798,10 @@ def build_mlx_learned_sweep_autopilot_queue(
         if not observation_path.exists()
         else _file_record(observation_path, repo_root=repo),
     }
+    if macos_cpu_advisory_preflight is not None:
+        source_records["macos_cpu_advisory_selection_path_preflight"] = (
+            macos_cpu_advisory_preflight
+        )
     resource_kind = "local_mlx" if device == "gpu" else "local_cpu"
     experiment_id = f"mlx_learned_sweep_autopilot_{_safe_id(queue_id)}"
     queue_metadata = {
@@ -639,6 +816,7 @@ def build_mlx_learned_sweep_autopilot_queue(
         "max_iterations_per_step": max_iterations,
         "max_new_observations_per_step": max_new_observations,
         "rows_per_replan": rows_per_replan,
+        "sweep_config_id": sweep_config_id,
         "optimization_pass_id_filter": optimization_pass_id,
         "candidate_id_filters": candidate_id_filters,
         "queue_candidate_id_filters": queue_candidate_id_filters,
@@ -667,6 +845,7 @@ def build_mlx_learned_sweep_autopilot_queue(
             max_iterations=max_iterations,
             max_new_observations=max_new_observations,
             rows_per_replan=rows_per_replan,
+            sweep_config_id=sweep_config_id,
             optimization_pass_id=optimization_pass_id,
             candidate_ids=candidate_id_filters,
             queue_candidate_ids=queue_candidate_id_filters,
@@ -693,6 +872,7 @@ def build_mlx_learned_sweep_autopilot_queue(
                 observation_path=observation_path,
                 repo=repo,
                 include_replan_path=chain_steps > 1,
+                sweep_config_id=sweep_config_id,
                 candidate_ids=candidate_id_filters,
                 queue_candidate_ids=queue_candidate_id_filters,
             ),
@@ -776,6 +956,7 @@ def build_mlx_learned_sweep_autopilot_batch_queue(
     max_new_observations: int = 1,
     rows_per_replan: int = 1,
     chain_steps: int = 1,
+    sweep_config_id: str = SUPPORTED_SWEEP_CONFIG_ID,
     optimization_pass_id: str | None = None,
     candidate_ids: Sequence[str] | None = None,
     queue_candidate_ids: Sequence[str] | None = None,
@@ -839,6 +1020,9 @@ def build_mlx_learned_sweep_autopilot_batch_queue(
             ),
             rows_per_replan=int(_spec_value(raw_spec, "rows_per_replan", rows_per_replan)),
             chain_steps=int(_spec_value(raw_spec, "chain_steps", chain_steps)),
+            sweep_config_id=str(
+                _spec_value(raw_spec, "sweep_config_id", sweep_config_id)
+            ),
             optimization_pass_id=_optional_text(
                 _spec_value(raw_spec, "optimization_pass_id", optimization_pass_id),
                 label=f"run_specs[{index - 1}].optimization_pass_id",

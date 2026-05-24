@@ -140,6 +140,18 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "tac.optimization.mlx_learned_sweep_batch_roots",
         "build_mlx_learned_sweep_autopilot_batch_root_plan",
     ),
+    "build_mlx_learned_sweep_next_surface_report": (
+        "tac.optimization.mlx_learned_sweep_next_surface",
+        "build_mlx_learned_sweep_next_surface_report",
+    ),
+    "stamp_macos_cpu_advisory_paths": (
+        "tac.optimization.mlx_learned_sweep_advisory_handoff",
+        "stamp_macos_cpu_advisory_paths",
+    ),
+    "render_mlx_learned_sweep_next_surface_markdown": (
+        "tac.optimization.mlx_learned_sweep_next_surface",
+        "render_mlx_learned_sweep_next_surface_markdown",
+    ),
     "build_optimizer_scheduler_telemetry_from_harvest_queue": (
         "tac.optimization.local_training_harvest_intelligence",
         "build_optimizer_scheduler_telemetry_from_harvest_queue",

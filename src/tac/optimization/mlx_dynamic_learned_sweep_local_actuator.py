@@ -15,6 +15,12 @@ from tac.local_acceleration.mlx_scorer_response import (
     build_mlx_scorer_response_payload,
     write_mlx_scorer_response_payload,
 )
+from tac.optimization.macos_cpu_advisory_signal import (
+    EVIDENCE_GRADE as EVIDENCE_GRADE_MACOS_CPU,
+)
+from tac.optimization.macos_cpu_advisory_signal import (
+    EVIDENCE_TAG as EVIDENCE_TAG_MACOS_CPU,
+)
 from tac.optimization.mlx_dynamic_learned_sweep import (
     FALSE_AUTHORITY,
     render_mlx_dynamic_learned_sweep_markdown,
@@ -40,7 +46,17 @@ from tac.repo_io import sha256_bytes, sha256_file
 
 SCHEMA = "mlx_dynamic_learned_sweep_local_actuation.v1"
 TOOL = "tac.optimization.mlx_dynamic_learned_sweep_local_actuator"
-SUPPORTED_SWEEP_CONFIG_ID = "mlx_local_response"
+SWEEP_CONFIG_ID_MLX_LOCAL_RESPONSE = "mlx_local_response"
+SWEEP_CONFIG_ID_MACOS_CPU_ADVISORY = "macos_cpu_advisory"
+SUPPORTED_SWEEP_CONFIG_ID = SWEEP_CONFIG_ID_MLX_LOCAL_RESPONSE
+SUPPORTED_SWEEP_CONFIG_IDS = frozenset(
+    {SWEEP_CONFIG_ID_MLX_LOCAL_RESPONSE, SWEEP_CONFIG_ID_MACOS_CPU_ADVISORY}
+)
+LOCAL_MLX_ALLOWED_USE = "local_mlx_learned_sweep_actuation_feedback_only"
+MACOS_CPU_ALLOWED_USE = "local_cpu_advisory_artifact_harvest_feedback_only"
+MACOS_CPU_ADVISORY_SCORE_AXIS = "macos_cpu_advisory"
+MACOS_CPU_ADVISORY_PAYLOAD_SCORE_AXIS = "cpu_advisory"
+MACOS_CPU_ADVISORY_EVIDENCE_SEMANTICS = "non_contest_cpu_auth_eval_advisory"
 
 ResponseBuilder = Callable[..., dict[str, Any]]
 
@@ -91,10 +107,11 @@ def execute_local_mlx_sweep_rows(
     _require_false_authority(selection, label="selection")
     if max_rows <= 0:
         raise MLXDynamicLearnedSweepLocalActuatorError("max_rows must be positive")
-    if sweep_config_id != SUPPORTED_SWEEP_CONFIG_ID:
+    if sweep_config_id not in SUPPORTED_SWEEP_CONFIG_IDS:
         raise MLXDynamicLearnedSweepLocalActuatorError(
             f"unsupported sweep_config_id {sweep_config_id!r}; "
-            f"only {SUPPORTED_SWEEP_CONFIG_ID!r} has a local MLX executor"
+            "supported local learned-sweep configs are: "
+            + ", ".join(sorted(SUPPORTED_SWEEP_CONFIG_IDS))
         )
     if batch_pairs <= 0:
         raise MLXDynamicLearnedSweepLocalActuatorError("batch_pairs must be positive")
@@ -158,6 +175,7 @@ def execute_local_mlx_sweep_rows(
 
     filter_summary = _executed_filter_summary(
         executed,
+        sweep_config_id=sweep_config_id,
         optimization_pass_id=optimization_pass_id,
         candidate_ids=candidate_id_filters,
         queue_candidate_ids=queue_candidate_id_filters,
@@ -170,9 +188,17 @@ def execute_local_mlx_sweep_rows(
         "observation_only": True,
         "dispatch_attempted": False,
         "gpu_launched": False,
-        "local_mlx_device_used": device_type == "gpu",
-        "allowed_use": "local_mlx_learned_sweep_actuation_feedback_only",
+        "local_mlx_device_used": (
+            sweep_config_id == SWEEP_CONFIG_ID_MLX_LOCAL_RESPONSE
+            and device_type == "gpu"
+        ),
+        "local_cpu_advisory_artifact_used": (
+            sweep_config_id == SWEEP_CONFIG_ID_MACOS_CPU_ADVISORY
+        ),
+        "allowed_use": _allowed_use_for_sweep_config(sweep_config_id),
         "supported_sweep_config_id": SUPPORTED_SWEEP_CONFIG_ID,
+        "supported_sweep_config_ids": sorted(SUPPORTED_SWEEP_CONFIG_IDS),
+        "sweep_config_id": sweep_config_id,
         "device_type": device_type,
         "allow_gpu_research_signal": bool(allow_gpu_research_signal),
         "batch_pairs": int(batch_pairs),
@@ -259,9 +285,18 @@ def _execute_one_row(
     _require_false_authority(row, label="plan row")
     if row.get("ready_for_local_sweep") is not True:
         raise MLXDynamicLearnedSweepLocalActuatorError("plan row is not local-ready")
-    if row.get("sweep_config_id") != SUPPORTED_SWEEP_CONFIG_ID:
+    sweep_config_id = _required_text(row, "sweep_config_id")
+    if sweep_config_id not in SUPPORTED_SWEEP_CONFIG_IDS:
         raise MLXDynamicLearnedSweepLocalActuatorError(
-            f"row sweep_config_id must be {SUPPORTED_SWEEP_CONFIG_ID}"
+            "row sweep_config_id must be one of "
+            + ", ".join(sorted(SUPPORTED_SWEEP_CONFIG_IDS))
+        )
+    if sweep_config_id == SWEEP_CONFIG_ID_MACOS_CPU_ADVISORY:
+        return _execute_one_macos_cpu_advisory_row(
+            row,
+            source_row,
+            output_dir=output_dir,
+            source_artifact_root=source_artifact_root,
         )
     candidate_source_path = _resolve_existing_path(
         source_row.get("source_path"),
@@ -347,6 +382,96 @@ def _execute_one_row(
         "candidate_response_sha256": sha256_file(candidate_response_path),
         "baseline_response_path": str(baseline_response_path),
         "baseline_response_sha256": sha256_file(baseline_response_path),
+    }
+    return executed_row, observation
+
+
+def _execute_one_macos_cpu_advisory_row(
+    row: Mapping[str, Any],
+    source_row: Mapping[str, Any],
+    *,
+    output_dir: Path,
+    source_artifact_root: str | Path | None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    candidate_advisory_path = _resolve_existing_path_from_keys(
+        source_row,
+        keys=(
+            "local_cpu_advisory_source_path",
+            "macos_cpu_advisory_source_path",
+            "local_cpu_advisory_path",
+            "macos_cpu_advisory_path",
+            "advisory_eval_path",
+        ),
+        source_artifact_root=source_artifact_root,
+        label="candidate macOS-CPU advisory path",
+    )
+    baseline_advisory_path = _resolve_existing_path_from_keys(
+        source_row,
+        keys=(
+            "window_baseline_local_cpu_advisory_source_path",
+            "window_baseline_macos_cpu_advisory_source_path",
+            "window_baseline_local_cpu_advisory_path",
+            "window_baseline_macos_cpu_advisory_path",
+            "baseline_local_cpu_advisory_path",
+            "baseline_macos_cpu_advisory_path",
+            "baseline_advisory_eval_path",
+        ),
+        source_artifact_root=source_artifact_root,
+        label="baseline macOS-CPU advisory path",
+    )
+    candidate_advisory = load_json_object(candidate_advisory_path)
+    baseline_advisory = load_json_object(baseline_advisory_path)
+    _require_macos_cpu_advisory(candidate_advisory, label=str(candidate_advisory_path))
+    _require_macos_cpu_advisory(baseline_advisory, label=str(baseline_advisory_path))
+
+    safe_id = _safe_id(_required_text(row, "queue_candidate_id"))
+    row_dir = output_dir / safe_id
+    row_dir.mkdir(parents=True, exist_ok=True)
+    candidate_record_path = row_dir / "candidate_local_cpu_advisory_record.json"
+    baseline_record_path = row_dir / "baseline_local_cpu_advisory_record.json"
+    candidate_record = _local_cpu_advisory_record(
+        candidate_advisory,
+        source_path=candidate_advisory_path,
+    )
+    baseline_record = _local_cpu_advisory_record(
+        baseline_advisory,
+        source_path=baseline_advisory_path,
+    )
+    candidate_record_path.write_text(
+        json.dumps(candidate_record, indent=2, sort_keys=True, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+    baseline_record_path.write_text(
+        json.dumps(baseline_record, indent=2, sort_keys=True, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+    observation = _observation_from_macos_cpu_advisories(
+        row,
+        source_row,
+        candidate_advisory=candidate_advisory,
+        baseline_advisory=baseline_advisory,
+        candidate_advisory_path=candidate_advisory_path,
+        baseline_advisory_path=baseline_advisory_path,
+    )
+    executed_row = {
+        "schema": "mlx_dynamic_learned_sweep_local_cpu_advisory_actuation_row.v1",
+        **FALSE_AUTHORITY,
+        "candidate_generation_only": True,
+        "observation_only": True,
+        "candidate_id": row.get("candidate_id"),
+        "queue_candidate_id": row.get("queue_candidate_id"),
+        "sweep_config_id": row.get("sweep_config_id"),
+        "optimization_pass_id": row.get("optimization_pass_id"),
+        "family": row.get("family"),
+        "sample_budget": row.get("sample_budget"),
+        "candidate_advisory_path": str(candidate_advisory_path),
+        "candidate_advisory_sha256": sha256_file(candidate_advisory_path),
+        "baseline_advisory_path": str(baseline_advisory_path),
+        "baseline_advisory_sha256": sha256_file(baseline_advisory_path),
+        "candidate_record_path": str(candidate_record_path),
+        "candidate_record_sha256": sha256_file(candidate_record_path),
+        "baseline_record_path": str(baseline_record_path),
+        "baseline_record_sha256": sha256_file(baseline_record_path),
     }
     return executed_row, observation
 
@@ -474,6 +599,106 @@ def _observation_from_responses(
     )
 
 
+def _observation_from_macos_cpu_advisories(
+    row: Mapping[str, Any],
+    source_row: Mapping[str, Any],
+    *,
+    candidate_advisory: Mapping[str, Any],
+    baseline_advisory: Mapping[str, Any],
+    candidate_advisory_path: Path,
+    baseline_advisory_path: Path,
+) -> dict[str, Any]:
+    candidate_components = _advisory_score_components(
+        candidate_advisory,
+        label=str(candidate_advisory_path),
+    )
+    baseline_components = _advisory_score_components(
+        baseline_advisory,
+        label=str(baseline_advisory_path),
+    )
+    component_deltas = {
+        "segnet_delta": candidate_components["segnet"]
+        - baseline_components["segnet"],
+        "posenet_delta": candidate_components["posenet"]
+        - baseline_components["posenet"],
+        "rate_delta": candidate_components["rate"] - baseline_components["rate"],
+        "scorer_delta": (
+            candidate_components["segnet"]
+            + candidate_components["posenet"]
+            - baseline_components["segnet"]
+            - baseline_components["posenet"]
+        ),
+    }
+    observed_score = _advisory_score(candidate_advisory, label=str(candidate_advisory_path))
+    baseline_score = _advisory_score(baseline_advisory, label=str(baseline_advisory_path))
+    return build_observation_row(
+        candidate_id=_required_text(row, "candidate_id"),
+        sweep_config_id=_required_text(row, "sweep_config_id"),
+        optimization_pass_id=_required_text(row, "optimization_pass_id"),
+        family=_required_text(row, "family"),
+        observed_axis=MACOS_CPU_ADVISORY_SCORE_AXIS,
+        evidence_tag=str(
+            candidate_advisory.get("lane_tag")
+            or candidate_advisory.get("evidence_tag")
+            or EVIDENCE_TAG_MACOS_CPU
+        ),
+        observed_score_or_delta=observed_score,
+        archive_sha256=_advisory_archive_sha256(
+            candidate_advisory,
+            label=str(candidate_advisory_path),
+        ),
+        runtime_sha256=_advisory_runtime_sha256(
+            candidate_advisory,
+            label=str(candidate_advisory_path),
+        ),
+        raw_output_or_cache_sha256=_advisory_inflated_aggregate_sha256(
+            candidate_advisory,
+            label=str(candidate_advisory_path),
+        ),
+        component_deltas=component_deltas,
+        source_artifact_path=str(candidate_advisory_path),
+        source_artifact_sha256=sha256_file(candidate_advisory_path),
+        extra={
+            "evidence_grade": str(
+                candidate_advisory.get("evidence_grade") or EVIDENCE_GRADE_MACOS_CPU
+            ),
+            "selected_pair_indices": row.get("selected_pair_indices"),
+            "selected_pair_count": row.get("selected_pair_count"),
+            "source_schema": "mlx_dynamic_learned_sweep_local_cpu_advisory_actuation_row.v1",
+            "source_row": {
+                "candidate_id": row.get("candidate_id"),
+                "queue_candidate_id": row.get("queue_candidate_id"),
+                "sweep_config_id": row.get("sweep_config_id"),
+                "optimization_pass_id": row.get("optimization_pass_id"),
+                **FALSE_AUTHORITY,
+            },
+            "baseline_artifact_path": str(baseline_advisory_path),
+            "baseline_artifact_sha256": sha256_file(baseline_advisory_path),
+            "baseline_score": baseline_score,
+            "baseline_archive_size_bytes": int(baseline_components["archive_size_bytes"]),
+            "component_delta_baseline_policy": (
+                "macos_cpu_advisory_candidate_minus_baseline_full_video_components"
+            ),
+            "score_delta_vs_baseline": observed_score - baseline_score,
+            "archive_byte_delta_vs_baseline": (
+                int(candidate_components["archive_size_bytes"])
+                - int(baseline_components["archive_size_bytes"])
+            ),
+            "source_selection_row": {
+                "candidate_id": source_row.get("candidate_id"),
+                "row_id": source_row.get("row_id"),
+                "source_path": source_row.get("source_path"),
+                **FALSE_AUTHORITY,
+            },
+            "notes": (
+                "Harvested from explicit macOS-CPU advisory auth-eval artifacts; "
+                "observation is replanning-only and carries no score, rank, "
+                "promotion, or dispatch authority."
+            ),
+        },
+    )
+
+
 def _select_ready_rows(
     plan: Mapping[str, Any],
     *,
@@ -533,6 +758,7 @@ def _select_ready_rows(
 def _executed_filter_summary(
     executed: Sequence[Mapping[str, Any]],
     *,
+    sweep_config_id: str,
     optimization_pass_id: str | None,
     candidate_ids: Sequence[str],
     queue_candidate_ids: Sequence[str],
@@ -570,7 +796,7 @@ def _executed_filter_summary(
     return {
         "requested_filter": {
             "schema": "local_sweep_filter.v1",
-            "sweep_config_id": SUPPORTED_SWEEP_CONFIG_ID,
+            "sweep_config_id": sweep_config_id,
             "optimization_pass_id": optimization_pass_id,
             "candidate_ids": list(candidate_ids),
             "queue_candidate_ids": list(queue_candidate_ids),
@@ -717,6 +943,162 @@ def _resolve_existing_path(
     raise MLXDynamicLearnedSweepLocalActuatorError(f"{label} does not exist: {path}")
 
 
+def _resolve_existing_path_from_keys(
+    row: Mapping[str, Any],
+    *,
+    keys: Sequence[str],
+    source_artifact_root: str | Path | None,
+    label: str,
+) -> Path:
+    for key in keys:
+        value = row.get(key)
+        if value is None:
+            continue
+        return _resolve_existing_path(
+            value,
+            source_artifact_root=source_artifact_root,
+            label=f"{label} ({key})",
+        )
+    raise MLXDynamicLearnedSweepLocalActuatorError(
+        f"{label} is required; checked keys: {', '.join(keys)}"
+    )
+
+
+def _require_macos_cpu_advisory(payload: Mapping[str, Any], *, label: str) -> None:
+    _require_false_authority(payload, label=label)
+    for key in ("score_claim_eligible", "score_claim_valid"):
+        if key in payload and payload.get(key) is not False:
+            raise MLXDynamicLearnedSweepLocalActuatorError(
+                f"{label} {key} must be false"
+            )
+    if payload.get("score_axis") != MACOS_CPU_ADVISORY_PAYLOAD_SCORE_AXIS:
+        raise MLXDynamicLearnedSweepLocalActuatorError(
+            f"{label} score_axis must be {MACOS_CPU_ADVISORY_PAYLOAD_SCORE_AXIS}"
+        )
+    if payload.get("evidence_semantics") != MACOS_CPU_ADVISORY_EVIDENCE_SEMANTICS:
+        raise MLXDynamicLearnedSweepLocalActuatorError(
+            f"{label} evidence_semantics must be {MACOS_CPU_ADVISORY_EVIDENCE_SEMANTICS}"
+        )
+
+
+def _advisory_provenance(payload: Mapping[str, Any], *, label: str) -> Mapping[str, Any]:
+    provenance = payload.get("provenance")
+    if not isinstance(provenance, Mapping):
+        raise MLXDynamicLearnedSweepLocalActuatorError(
+            f"{label} provenance must be an object"
+        )
+    return provenance
+
+
+def _advisory_archive_sha256(payload: Mapping[str, Any], *, label: str) -> str:
+    provenance = payload.get("provenance")
+    value = payload.get("archive_sha256")
+    if value is None and isinstance(provenance, Mapping):
+        value = provenance.get("archive_sha256")
+    return _required_sha({"archive_sha256": value}, "archive_sha256")
+
+
+def _advisory_runtime_sha256(payload: Mapping[str, Any], *, label: str) -> str:
+    provenance = _advisory_provenance(payload, label=label)
+    manifest = provenance.get("inflate_runtime_manifest")
+    value = manifest.get("runtime_tree_sha256") if isinstance(manifest, Mapping) else None
+    return _required_sha({"runtime_tree_sha256": value}, "runtime_tree_sha256")
+
+
+def _advisory_inflated_aggregate_sha256(
+    payload: Mapping[str, Any],
+    *,
+    label: str,
+) -> str:
+    provenance = _advisory_provenance(payload, label=label)
+    manifest = provenance.get("inflated_output_manifest")
+    manifest_payload = manifest.get("payload") if isinstance(manifest, Mapping) else None
+    value = (
+        manifest_payload.get("aggregate_sha256")
+        if isinstance(manifest_payload, Mapping)
+        else payload.get("inflated_outputs_aggregate_sha256")
+    )
+    return _required_sha({"aggregate_sha256": value}, "aggregate_sha256")
+
+
+def _advisory_archive_size_bytes(payload: Mapping[str, Any], *, label: str) -> int:
+    value = payload.get("archive_size_bytes")
+    if value is None:
+        provenance = payload.get("provenance")
+        if isinstance(provenance, Mapping):
+            value = provenance.get("archive_size_bytes")
+    archive_size = int(_required_float({"archive_size_bytes": value}, "archive_size_bytes"))
+    if archive_size <= 0:
+        raise MLXDynamicLearnedSweepLocalActuatorError(
+            f"{label} archive_size_bytes must be positive"
+        )
+    return archive_size
+
+
+def _advisory_score_components(
+    payload: Mapping[str, Any],
+    *,
+    label: str,
+) -> dict[str, float]:
+    archive_size = _advisory_archive_size_bytes(payload, label=label)
+    return {
+        "archive_size_bytes": float(archive_size),
+        "segnet": _required_float(payload, "score_seg_contribution"),
+        "posenet": _required_float(payload, "score_pose_contribution"),
+        "rate": _required_float(payload, "score_rate_contribution"),
+    }
+
+
+def _advisory_score(payload: Mapping[str, Any], *, label: str) -> float:
+    for key in ("canonical_score", "score_recomputed_from_components", "final_score"):
+        if payload.get(key) is not None:
+            return _required_float(payload, key)
+    components = _advisory_score_components(payload, label=label)
+    return components["segnet"] + components["posenet"] + components["rate"]
+
+
+def _local_cpu_advisory_record(
+    advisory: Mapping[str, Any],
+    *,
+    source_path: Path,
+) -> dict[str, Any]:
+    return {
+        "schema": "mlx_dynamic_learned_sweep_local_cpu_advisory_source_record.v1",
+        **FALSE_AUTHORITY,
+        "candidate_generation_only": True,
+        "observation_only": True,
+        "source_path": str(source_path),
+        "source_sha256": sha256_file(source_path),
+        "score_axis": advisory.get("score_axis"),
+        "evidence_grade": advisory.get("evidence_grade"),
+        "evidence_semantics": advisory.get("evidence_semantics"),
+        "archive_sha256": _advisory_archive_sha256(
+            advisory,
+            label=str(source_path),
+        ),
+        "runtime_sha256": _advisory_runtime_sha256(
+            advisory,
+            label=str(source_path),
+        ),
+        "raw_output_or_cache_sha256": _advisory_inflated_aggregate_sha256(
+            advisory,
+            label=str(source_path),
+        ),
+        "score": _advisory_score(advisory, label=str(source_path)),
+        "archive_size_bytes": _advisory_archive_size_bytes(
+            advisory,
+            label=str(source_path),
+        ),
+        "allowed_use": MACOS_CPU_ALLOWED_USE,
+    }
+
+
+def _allowed_use_for_sweep_config(sweep_config_id: str) -> str:
+    if sweep_config_id == SWEEP_CONFIG_ID_MACOS_CPU_ADVISORY:
+        return MACOS_CPU_ALLOWED_USE
+    return LOCAL_MLX_ALLOWED_USE
+
+
 def _mapping(value: Any, *, label: str) -> Mapping[str, Any]:
     if not isinstance(value, Mapping):
         raise MLXDynamicLearnedSweepLocalActuatorError(f"{label} must be an object")
@@ -793,8 +1175,12 @@ def _require_false_authority(payload: Mapping[str, Any], *, label: str) -> None:
 
 
 __all__ = [
+    "MACOS_CPU_ADVISORY_SCORE_AXIS",
     "SCHEMA",
     "SUPPORTED_SWEEP_CONFIG_ID",
+    "SUPPORTED_SWEEP_CONFIG_IDS",
+    "SWEEP_CONFIG_ID_MACOS_CPU_ADVISORY",
+    "SWEEP_CONFIG_ID_MLX_LOCAL_RESPONSE",
     "TOOL",
     "MLXDynamicLearnedSweepLocalActuatorError",
     "execute_local_mlx_sweep_rows",

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Row-level batch-root planning for local MLX learned sweeps."""
+"""Row-level batch-root planning for local learned sweeps."""
 
 from __future__ import annotations
 
@@ -572,7 +572,7 @@ def build_mlx_learned_sweep_autopilot_batch_root_plan(
     batch_pairs: int | None = None,
     runtime_telemetry_payloads: Sequence[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """Select queue-candidate-specific local MLX roots and return run specs."""
+    """Select queue-candidate-specific local roots and return run specs."""
 
     requested_roots = _as_positive_int(root_count, label="root_count")
     if chain_steps is not None and int(chain_steps) != 1:
@@ -797,6 +797,7 @@ def build_mlx_learned_sweep_autopilot_batch_root_plan(
             "output_root": str(Path(output_root) / run_id),
             "observation_jsonl": _derive_observation_jsonl(observation_jsonl, run_id),
             "queue_candidate_ids": list(root["queue_candidate_ids"]),
+            "sweep_config_id": sweep_config_id,
         }
         if pass_id is not None:
             run_spec["optimization_pass_id"] = pass_id
@@ -844,7 +845,7 @@ def build_mlx_learned_sweep_autopilot_batch_root_plan(
         "candidate_generation_only": True,
         "observation_only": True,
         "requires_exact_auth_eval_before_score_claim": True,
-        "allowed_use": "compile_local_mlx_autopilot_batch_queue_only",
+        "allowed_use": "compile_local_learned_sweep_autopilot_batch_queue_only",
         "root_kind": "queue_candidate_waterfill",
         "root_granularity": "queue_candidate_set",
         "candidate_specific_filter_supported": True,

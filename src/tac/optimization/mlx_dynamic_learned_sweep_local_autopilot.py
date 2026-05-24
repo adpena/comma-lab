@@ -16,6 +16,7 @@ from typing import Any
 from tac.optimization.mlx_dynamic_learned_sweep import FALSE_AUTHORITY
 from tac.optimization.mlx_dynamic_learned_sweep_local_actuator import (
     SUPPORTED_SWEEP_CONFIG_ID,
+    SUPPORTED_SWEEP_CONFIG_IDS,
     MLXDynamicLearnedSweepLocalActuatorError,
     ResponseBuilder,
     execute_local_mlx_sweep_rows,
@@ -59,11 +60,12 @@ def run_local_mlx_sweep_autopilot(
     monotonic: Callable[[], float] = time.monotonic,
     source_artifacts: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Run bounded local MLX actuation/replan cycles.
+    """Run bounded local actuation/replan cycles.
 
     ``max_iterations`` counts actuation/replan cycles. ``rows_per_replan``
-    controls how many already-ranked local rows the actuator may execute before
-    a fresh plan is built from the append-only observation ledger.
+    controls how many already-ranked local rows the actuator may execute or
+    harvest before a fresh plan is built from the append-only observation
+    ledger.
     """
 
     _validate_inputs(
@@ -189,8 +191,13 @@ def run_local_mlx_sweep_autopilot(
         "local_mlx_device_used": any(
             cycle["actuation_summary"]["local_mlx_device_used"] for cycle in cycles
         ),
-        "allowed_use": "bounded_local_mlx_learned_sweep_feedback_loop_only",
+        "local_cpu_advisory_artifact_used": any(
+            cycle["actuation_summary"].get("local_cpu_advisory_artifact_used")
+            for cycle in cycles
+        ),
+        "allowed_use": "bounded_local_learned_sweep_feedback_loop_only",
         "supported_sweep_config_id": SUPPORTED_SWEEP_CONFIG_ID,
+        "supported_sweep_config_ids": sorted(SUPPORTED_SWEEP_CONFIG_IDS),
         "sweep_config_id": sweep_config_id,
         "optimization_pass_id": optimization_pass_id,
         "candidate_id_filters": _normalize_filter_values(candidate_ids),
@@ -260,10 +267,11 @@ def _validate_inputs(
         raise MLXDynamicLearnedSweepLocalAutopilotError(
             "rows_per_replan must be positive"
         )
-    if sweep_config_id != SUPPORTED_SWEEP_CONFIG_ID:
+    if sweep_config_id not in SUPPORTED_SWEEP_CONFIG_IDS:
         raise MLXDynamicLearnedSweepLocalAutopilotError(
             f"unsupported sweep_config_id {sweep_config_id!r}; "
-            f"only {SUPPORTED_SWEEP_CONFIG_ID!r} has a local MLX executor"
+            "supported local learned-sweep configs are: "
+            + ", ".join(sorted(SUPPORTED_SWEEP_CONFIG_IDS))
         )
     if max_seconds is not None and float(max_seconds) <= 0.0:
         raise MLXDynamicLearnedSweepLocalAutopilotError(
@@ -296,6 +304,9 @@ def _compact_actuation_summary(summary: Mapping[str, Any]) -> dict[str, Any]:
         "dispatch_attempted": False,
         "gpu_launched": False,
         "local_mlx_device_used": bool(summary.get("local_mlx_device_used")),
+        "local_cpu_advisory_artifact_used": bool(
+            summary.get("local_cpu_advisory_artifact_used")
+        ),
         "device_type": summary.get("device_type"),
         "batch_pairs": summary.get("batch_pairs"),
         "optimization_pass_id_filter": summary.get("optimization_pass_id_filter"),

@@ -32,6 +32,8 @@ from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 MLX_AUTOPILOT_STEP_PREFIX = "run_mlx_learned_sweep_autopilot"
 MLX_AUTOPILOT_TOOL = "tools/run_mlx_dynamic_learned_sweep_autopilot.py"
 MLX_LEARNED_SWEEP_QUEUE_ID_PREFIX = "mlx_learned_sweep_"
+DEFAULT_SWEEP_CONFIG_ID = "mlx_local_response"
+MACOS_CPU_ADVISORY_SWEEP_CONFIG_ID = "macos_cpu_advisory"
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -157,6 +159,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-new-observations", default=1, type=int)
     parser.add_argument("--rows-per-replan", default=1, type=int)
     parser.add_argument(
+        "--sweep-config-id",
+        default=DEFAULT_SWEEP_CONFIG_ID,
+        help=(
+            "learned-sweep config to execute; defaults to mlx_local_response. "
+            "macos_cpu_advisory consumes explicit local advisory artifacts."
+        ),
+    )
+    parser.add_argument(
         "--chain-steps",
         default=1,
         type=int,
@@ -238,7 +248,11 @@ def _load_plan_payload(path: Path, *, repo_root: Path) -> dict:
     return payload
 
 
-def _ready_queue_candidate_ids_from_plan(plan: dict) -> set[str]:
+def _ready_queue_candidate_ids_from_plan(
+    plan: dict,
+    *,
+    sweep_config_id: str,
+) -> set[str]:
     rows = plan.get("ranked_sweep_rows")
     if not isinstance(rows, list):
         return set()
@@ -250,7 +264,7 @@ def _ready_queue_candidate_ids_from_plan(plan: dict) -> set[str]:
             continue
         if row.get("ready_for_local_sweep") is not True:
             continue
-        if row.get("sweep_config_id") != "mlx_local_response":
+        if row.get("sweep_config_id") != sweep_config_id:
             continue
         queue_candidate_id = str(row.get("queue_candidate_id") or "").strip()
         if queue_candidate_id:
@@ -400,7 +414,19 @@ def _command_invokes_mlx_autopilot_tool(command: object) -> bool:
     }
 
 
-def _state_payload_discovery_eligible(payload: dict) -> bool:
+def _resource_kind_for_sweep_config(sweep_config_id: str) -> str:
+    return (
+        "local_cpu"
+        if sweep_config_id == MACOS_CPU_ADVISORY_SWEEP_CONFIG_ID
+        else "local_mlx"
+    )
+
+
+def _state_payload_discovery_eligible(
+    payload: dict,
+    *,
+    resource_kind: str,
+) -> bool:
     if payload.get("schema") != "experiment_queue_worker_result.v1":
         return False
     source_queue_ids = payload.get("source_queue_ids")
@@ -419,7 +445,7 @@ def _state_payload_discovery_eligible(payload: dict) -> bool:
             continue
         if step.get("succeeded") is not True:
             continue
-        if step.get("resource_kind") != "local_mlx":
+        if step.get("resource_kind") != resource_kind:
             continue
         if not str(step.get("step_id") or "").startswith(MLX_AUTOPILOT_STEP_PREFIX):
             continue
@@ -440,6 +466,7 @@ def _payload_compatible_queue_candidate_ids(
     payload: dict,
     *,
     ready_queue_candidate_ids: set[str],
+    resource_kind: str,
 ) -> set[str]:
     if payload.get("schema") != "experiment_queue_worker_result.v1":
         return set()
@@ -450,7 +477,7 @@ def _payload_compatible_queue_candidate_ids(
     for step in steps:
         if not isinstance(step, dict):
             continue
-        if step.get("resource_kind") != "local_mlx":
+        if step.get("resource_kind") != resource_kind:
             continue
         if not str(step.get("step_id") or "").startswith(MLX_AUTOPILOT_STEP_PREFIX):
             continue
@@ -488,6 +515,7 @@ def _runtime_state_policy_payload(
     args: argparse.Namespace,
     runtime_state_paths: list[Path],
     discovered_runtime_state_paths: list[Path],
+    resource_kind: str,
 ) -> dict | None:
     if not runtime_state_paths and not args.auto_batch_discover_runtime_telemetry_states:
         return None
@@ -512,21 +540,22 @@ def _runtime_state_policy_payload(
         "compatibility_filter": {
             "schema": "mlx_runtime_telemetry_state_compatibility_filter.v1",
             "ready_queue_candidate_source": (
-                "current_plan_ready_mlx_local_response_rows"
+                f"current_plan_ready_{args.sweep_config_id}_rows"
             ),
             "accepted_step_event_types": ["step_succeeded"],
             "requires_succeeded": True,
             "requires_source_queue_id_prefix": MLX_LEARNED_SWEEP_QUEUE_ID_PREFIX,
             "requires_step_id_prefix": MLX_AUTOPILOT_STEP_PREFIX,
             "requires_command_tool": MLX_AUTOPILOT_TOOL,
-            "requires_resource_kind": "local_mlx",
+            "requires_resource_kind": resource_kind,
             "requires_artifact_telemetry_schema": "experiment_queue_step_telemetry.v1",
             "requires_positive_artifact_record_count": True,
             "rejects_timed_out": True,
             "rejects_failed_postconditions": True,
             "rejects_postcondition_errors": True,
         },
-        "allowed_use": "local_mlx_runtime_balanced_batch_planning_only",
+        "allowed_use": "local_runtime_balanced_batch_planning_only",
+        "sweep_config_id": args.sweep_config_id,
         "candidate_generation_only": True,
         "observation_only": True,
         "score_claim": False,
@@ -547,12 +576,16 @@ def _discover_runtime_telemetry_state_paths(
     patterns: list[str],
     limit: int,
     plan_payload: dict,
+    sweep_config_id: str,
 ) -> list[Path]:
     if limit < 0:
         raise ExperimentQueueError(
             "--auto-batch-runtime-telemetry-state-limit must be >= 0"
         )
-    ready_queue_candidate_ids = _ready_queue_candidate_ids_from_plan(plan_payload)
+    ready_queue_candidate_ids = _ready_queue_candidate_ids_from_plan(
+        plan_payload,
+        sweep_config_id=sweep_config_id,
+    )
     if not ready_queue_candidate_ids:
         return []
     resolved_dir = _resolve_cli_path(state_dir, repo_root=repo_root)
@@ -574,11 +607,16 @@ def _discover_runtime_telemetry_state_paths(
         if not path.is_file() or path.is_symlink():
             continue
         payload = _load_runtime_telemetry_payload_from_state(path, repo_root=repo_root)
-        if not _state_payload_discovery_eligible(payload):
+        resource_kind = _resource_kind_for_sweep_config(sweep_config_id)
+        if not _state_payload_discovery_eligible(
+            payload,
+            resource_kind=resource_kind,
+        ):
             continue
         compatible = _payload_compatible_queue_candidate_ids(
             payload,
             ready_queue_candidate_ids=ready_queue_candidate_ids,
+            resource_kind=resource_kind,
         )
         if not compatible:
             continue
@@ -613,6 +651,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.auto_batch_from_plan:
             _require_auto_batch_args(args)
             plan_payload = _load_plan_payload(args.plan, repo_root=args.repo_root)
+            resource_kind = _resource_kind_for_sweep_config(args.sweep_config_id)
             if args.auto_batch_discover_runtime_telemetry_states:
                 discovered_runtime_state_paths = _discover_runtime_telemetry_state_paths(
                     repo_root=args.repo_root,
@@ -620,6 +659,7 @@ def main(argv: list[str] | None = None) -> int:
                     patterns=args.auto_batch_runtime_telemetry_state_pattern,
                     limit=args.auto_batch_runtime_telemetry_state_limit,
                     plan_payload=plan_payload,
+                    sweep_config_id=args.sweep_config_id,
                 )
             runtime_state_paths = _unique_paths(
                 list(args.auto_batch_runtime_telemetry_state)
@@ -630,6 +670,7 @@ def main(argv: list[str] | None = None) -> int:
                 args=args,
                 runtime_state_paths=runtime_state_paths,
                 discovered_runtime_state_paths=discovered_runtime_state_paths,
+                resource_kind=resource_kind,
             )
             root_plan = build_mlx_learned_sweep_autopilot_batch_root_plan(
                 plan_payload,
@@ -642,7 +683,11 @@ def main(argv: list[str] | None = None) -> int:
                 root_count=(
                     args.auto_batch_root_count
                     if args.auto_batch_root_count is not None
-                    else args.local_mlx_concurrency
+                    else (
+                        args.local_cpu_concurrency
+                        if args.sweep_config_id == MACOS_CPU_ADVISORY_SWEEP_CONFIG_ID
+                        else args.local_mlx_concurrency
+                    )
                 ),
                 rows_per_root=(
                     args.auto_batch_rows_per_root
@@ -651,6 +696,7 @@ def main(argv: list[str] | None = None) -> int:
                 ),
                 adaptive_rows_per_root=args.auto_batch_adaptive_rows_per_root,
                 run_prefix=args.auto_batch_run_prefix,
+                sweep_config_id=args.sweep_config_id,
                 max_new_observations=args.max_new_observations,
                 rows_per_replan=args.rows_per_replan,
                 chain_steps=args.chain_steps,
@@ -693,6 +739,7 @@ def main(argv: list[str] | None = None) -> int:
                 max_new_observations=args.max_new_observations,
                 rows_per_replan=args.rows_per_replan,
                 chain_steps=args.chain_steps,
+                sweep_config_id=args.sweep_config_id,
                 source_artifact_root=args.source_artifact_root,
                 device=args.device,
                 allow_gpu_research_signal=args.allow_gpu_research_signal,
@@ -715,6 +762,7 @@ def main(argv: list[str] | None = None) -> int:
                 max_new_observations=args.max_new_observations,
                 rows_per_replan=args.rows_per_replan,
                 chain_steps=args.chain_steps,
+                sweep_config_id=args.sweep_config_id,
                 optimization_pass_id=args.optimization_pass_id,
                 candidate_ids=args.candidate_id or None,
                 queue_candidate_ids=args.queue_candidate_id or None,
@@ -746,6 +794,7 @@ def main(argv: list[str] | None = None) -> int:
                 max_new_observations=args.max_new_observations,
                 rows_per_replan=args.rows_per_replan,
                 chain_steps=args.chain_steps,
+                sweep_config_id=args.sweep_config_id,
                 optimization_pass_id=args.optimization_pass_id,
                 candidate_ids=args.candidate_id or None,
                 queue_candidate_ids=args.queue_candidate_id or None,

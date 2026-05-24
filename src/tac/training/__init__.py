@@ -26,6 +26,7 @@ _LEGACY_MODULE_NAME = "tac._training_legacy"
 _LEGACY_PUBLIC = {
     "EMA",
     "KalmanWeightFilter",
+    "ScorerLossConvergenceDetector",
     "SWA",
     "TrainConfig",
     "Trainer",
@@ -62,6 +63,13 @@ def _load_legacy_training_module() -> ModuleType:
 def __getattr__(name: str) -> Any:
     if name not in _LEGACY_PUBLIC:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    if name == "ScorerLossConvergenceDetector":
+        from tac.scorer_loss_convergence_detector import (
+            ScorerLossConvergenceDetector,
+        )
+
+        globals()[name] = ScorerLossConvergenceDetector
+        return ScorerLossConvergenceDetector
     value = getattr(_load_legacy_training_module(), name)
     globals()[name] = value
     return value

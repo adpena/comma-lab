@@ -940,6 +940,102 @@ def test_autopilot_queue_threads_multi_row_queue_candidate_filters(
     assert "executed_unique_queue_candidate_id" not in required_equals
 
 
+def test_autopilot_queue_builds_macos_cpu_advisory_step(tmp_path: Path) -> None:
+    paths = _fixture_paths(tmp_path)
+    queue_candidate_id = (
+        "mlx_scorer_response:window:10:11::macos_cpu_advisory::micro"
+    )
+
+    queue = build_mlx_learned_sweep_autopilot_queue(
+        plan_path=paths["plan"],
+        selection_path=paths["selection"],
+        candidate_payload_paths=[paths["candidate_payload"]],
+        incumbent_score=INCUMBENT_SCORE,
+        output_root=paths["output_root"],
+        observation_jsonl=paths["observations"],
+        queue_id="cpu_advisory_autopilot_fixture",
+        repo_root=tmp_path,
+        local_cpu_concurrency=3,
+        local_mlx_concurrency=1,
+        max_iterations=1,
+        max_new_observations=1,
+        rows_per_replan=1,
+        sweep_config_id="macos_cpu_advisory",
+        queue_candidate_ids=[queue_candidate_id],
+        source_artifact_root=tmp_path,
+        device="cpu",
+        allow_gpu_research_signal=False,
+    )
+
+    assert queue["controls"]["max_concurrency"] == {"local_cpu": 3, "local_mlx": 1}
+    experiment = queue["experiments"][0]
+    assert experiment["metadata"]["sweep_config_id"] == "macos_cpu_advisory"
+    step = experiment["steps"][0]
+    assert step["resources"]["kind"] == "local_cpu"
+    command = step["command"]
+    assert command[command.index("--sweep-config-id") + 1] == "macos_cpu_advisory"
+    assert command[command.index("--device") + 1] == "cpu"
+    assert "--allow-gpu-research-signal" not in command
+    contracts = [
+        condition
+        for condition in step["postconditions"]
+        if condition["type"] == "json_completion_contract"
+    ]
+    assert contracts[0]["required_equals"]["sweep_config_id"] == "macos_cpu_advisory"
+    assert contracts[0]["required_equals"]["executed_unique_queue_candidate_id"] == (
+        queue_candidate_id
+    )
+
+
+def test_autopilot_queue_rejects_macos_cpu_advisory_gpu_queue(
+    tmp_path: Path,
+) -> None:
+    paths = _fixture_paths(tmp_path)
+
+    with pytest.raises(ExperimentQueueError, match="device=cpu"):
+        build_mlx_learned_sweep_autopilot_queue(
+            plan_path=paths["plan"],
+            selection_path=paths["selection"],
+            candidate_payload_paths=[paths["candidate_payload"]],
+            incumbent_score=INCUMBENT_SCORE,
+            output_root=paths["output_root"],
+            observation_jsonl=paths["observations"],
+            queue_id="cpu_advisory_autopilot_fixture",
+            repo_root=tmp_path,
+            sweep_config_id="macos_cpu_advisory",
+            device="gpu",
+            allow_gpu_research_signal=True,
+        )
+
+
+def test_autopilot_queue_rejects_macos_cpu_advisory_without_selection_paths(
+    tmp_path: Path,
+) -> None:
+    paths = _fixture_paths(tmp_path)
+    selection = json.loads(paths["selection"].read_text(encoding="utf-8"))
+    for key in (
+        "local_cpu_advisory_source_path",
+        "window_baseline_local_cpu_advisory_source_path",
+    ):
+        selection["selected_rows"][0].pop(key)
+    _write_json(paths["selection"], selection)
+
+    with pytest.raises(ExperimentQueueError, match="advisory path is required"):
+        build_mlx_learned_sweep_autopilot_queue(
+            plan_path=paths["plan"],
+            selection_path=paths["selection"],
+            candidate_payload_paths=[paths["candidate_payload"]],
+            incumbent_score=INCUMBENT_SCORE,
+            output_root=paths["output_root"],
+            observation_jsonl=paths["observations"],
+            queue_id="cpu_advisory_missing_selection_paths_fixture",
+            repo_root=tmp_path,
+            sweep_config_id="macos_cpu_advisory",
+            device="cpu",
+            allow_gpu_research_signal=False,
+        )
+
+
 def test_autopilot_queue_refuses_duplicate_queue_candidate_rows_before_execution(
     tmp_path: Path,
 ) -> None:

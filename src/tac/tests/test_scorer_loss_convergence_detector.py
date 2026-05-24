@@ -15,6 +15,7 @@ import pytest
 from tac.scorer_loss_convergence_detector import (
     ScorerLossConvergenceDetector,
 )
+
 # Lane S V2: the spec requires `tac.training.ScorerLossConvergenceDetector`
 # to resolve. Verified here so a future maintainer who deletes the
 # re-export gets a loud test failure instead of a silent breakage.

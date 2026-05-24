@@ -64,6 +64,52 @@ def _source_response_artifact(
     )
 
 
+def _local_cpu_advisory_artifact(
+    path: Path,
+    *,
+    archive_size_bytes: int,
+    archive_sha256: str,
+    raw_sha256: str,
+    runtime_sha256: str,
+    segnet: float,
+    posenet: float,
+    rate: float,
+) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "score_axis": "cpu_advisory",
+                "evidence_grade": "macOS-CPU advisory",
+                "lane_tag": "[macOS-CPU advisory]",
+                "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+                **_false_authority(),
+                "candidate_generation_only": True,
+                "score_claim_eligible": False,
+                "score_seg_contribution": segnet,
+                "score_pose_contribution": posenet,
+                "score_rate_contribution": rate,
+                "canonical_score": segnet + posenet + rate,
+                "archive_size_bytes": archive_size_bytes,
+                "archive_sha256": archive_sha256,
+                "provenance": {
+                    "archive_size_bytes": archive_size_bytes,
+                    "archive_sha256": archive_sha256,
+                    "inflate_runtime_manifest": {
+                        "runtime_tree_sha256": runtime_sha256,
+                    },
+                    "inflated_output_manifest": {
+                        "payload": {
+                            "aggregate_sha256": raw_sha256,
+                        }
+                    },
+                },
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+
 def _selection(tmp_path: Path) -> dict[str, Any]:
     reference_cache = tmp_path / "reference_cache"
     candidate_cache = tmp_path / "candidate_cache"
@@ -72,6 +118,8 @@ def _selection(tmp_path: Path) -> dict[str, Any]:
         path.mkdir()
     candidate_source = tmp_path / "candidate_source.json"
     baseline_source = tmp_path / "baseline_source.json"
+    candidate_cpu_advisory = tmp_path / "candidate_cpu_advisory.json"
+    baseline_cpu_advisory = tmp_path / "baseline_cpu_advisory.json"
     _source_response_artifact(
         candidate_source,
         reference_cache=reference_cache,
@@ -85,6 +133,26 @@ def _selection(tmp_path: Path) -> dict[str, Any]:
         candidate_cache=baseline_cache,
         archive_size_bytes=1024,
         archive_sha256="b" * 64,
+    )
+    _local_cpu_advisory_artifact(
+        candidate_cpu_advisory,
+        archive_size_bytes=1024,
+        archive_sha256="a" * 64,
+        raw_sha256="6" * 64,
+        runtime_sha256="4" * 64,
+        segnet=0.071,
+        posenet=0.016278820596099706,
+        rate=0.001,
+    )
+    _local_cpu_advisory_artifact(
+        baseline_cpu_advisory,
+        archive_size_bytes=1034,
+        archive_sha256="b" * 64,
+        raw_sha256="7" * 64,
+        runtime_sha256="5" * 64,
+        segnet=0.073,
+        posenet=0.01630950643030009,
+        rate=0.00101,
     )
     observed_gain = 0.012
     normalized_gain = observed_gain / 600.0
@@ -139,6 +207,10 @@ def _selection(tmp_path: Path) -> dict[str, Any]:
                 "calibrated_min_mlx_gap_for_spend_triage": 0.00001,
                 "source_path": str(candidate_source),
                 "window_baseline_source_path": str(baseline_source),
+                "local_cpu_advisory_source_path": str(candidate_cpu_advisory),
+                "window_baseline_local_cpu_advisory_source_path": str(
+                    baseline_cpu_advisory
+                ),
                 "archive_sha256": "a" * 64,
                 "raw_sha256": "c" * 64,
                 "source_inflated_outputs_aggregate_sha256": "d" * 64,
@@ -460,6 +532,74 @@ def test_local_actuator_refuses_unsupported_config(tmp_path: Path) -> None:
     with pytest.raises(
         MLXDynamicLearnedSweepLocalActuatorError,
         match="unsupported sweep_config_id",
+    ):
+        execute_local_mlx_sweep_rows(
+            plan=plan,
+            selection=selection,
+            output_dir=tmp_path / "actuation",
+            sweep_config_id="contest_cpu_exact_candidate",
+            response_builder=_fake_response_builder,
+        )
+
+
+def test_local_actuator_executes_macos_cpu_advisory_row(
+    tmp_path: Path,
+) -> None:
+    selection = _selection(tmp_path)
+    plan = _plan(selection)
+    queue_candidate_id = (
+        "mlx_scorer_response:window:10:11::macos_cpu_advisory::micro"
+    )
+    observation_jsonl = tmp_path / "cpu_observations.jsonl"
+
+    summary = execute_local_mlx_sweep_rows(
+        plan=plan,
+        selection=selection,
+        output_dir=tmp_path / "actuation",
+        observation_jsonl=observation_jsonl,
+        max_rows=1,
+        sweep_config_id="macos_cpu_advisory",
+        queue_candidate_ids=[queue_candidate_id],
+        device_type="cpu",
+        allow_gpu_research_signal=False,
+    )
+
+    assert summary["schema"] == "mlx_dynamic_learned_sweep_local_actuation.v1"
+    assert summary["sweep_config_id"] == "macos_cpu_advisory"
+    assert summary["local_cpu_advisory_artifact_used"] is True
+    assert summary["local_mlx_device_used"] is False
+    assert summary["executed_unique_queue_candidate_id"] == queue_candidate_id
+    row = load_observation_rows(observation_jsonl)[0]
+    assert row["observed_axis"] == "macos_cpu_advisory"
+    assert row["evidence_tag"] == "[macOS-CPU advisory]"
+    assert row["sweep_config_id"] == "macos_cpu_advisory"
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["segnet_delta"] == pytest.approx(0.071 - 0.073)
+    assert row["posenet_delta"] == pytest.approx(
+        0.016278820596099706 - 0.01630950643030009
+    )
+    assert row["rate_delta"] == pytest.approx(0.001 - 0.00101)
+    assert row["score_delta_vs_baseline"] == pytest.approx(
+        (0.071 + 0.016278820596099706 + 0.001)
+        - (0.073 + 0.01630950643030009 + 0.00101)
+    )
+
+
+def test_local_actuator_refuses_macos_cpu_config_without_advisory_paths(
+    tmp_path: Path,
+) -> None:
+    selection = _selection(tmp_path)
+    for key in (
+        "local_cpu_advisory_source_path",
+        "window_baseline_local_cpu_advisory_source_path",
+    ):
+        selection["selected_rows"][0].pop(key)
+    plan = _plan(selection)
+
+    with pytest.raises(
+        MLXDynamicLearnedSweepLocalActuatorError,
+        match="advisory path is required",
     ):
         execute_local_mlx_sweep_rows(
             plan=plan,
