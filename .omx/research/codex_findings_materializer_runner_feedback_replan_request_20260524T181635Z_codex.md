@@ -18,6 +18,12 @@ The runner now emits `queue_feedback_replan_request.json` with:
 
 The exact-readiness handoff pointer now uses the queue's canonical `exact_eval_handoff/exact_readiness` directory, not the stale `readiness` name.
 
+The runner also treats worker and observer exits as reportable outcomes instead
+of checked subprocess hard-stops. A materializer failure now returns nonzero at
+the end of the runner, but still writes `materializer_campaign_run.json`,
+`queue_performance_summary.json`, `queue_feedback_replan_request.json`, and
+`canonical_response_update_placeholder.json`.
+
 ## Authority Boundary
 
 Malformed, failed, or truthy-authority queue performance output is converted to `experiment_queue_performance_summary_unavailable.v1` with blockers. The runner does not write poisoned telemetry as a consumable `experiment_queue_performance_summary.v1`.
@@ -28,6 +34,11 @@ Malformed, failed, or truthy-authority queue performance output is converted to 
 - `.venv/bin/python -m pytest src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_byte_shaving_campaign_queue.py src/tac/tests/test_inverse_steganalysis_acquisition.py -q`
 - `.venv/bin/python -m ruff check tools/run_byte_shaving_materializer_campaign.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_byte_shaving_campaign_queue.py src/tac/tests/test_inverse_steganalysis_acquisition.py`
 - `git diff --check -- tools/run_byte_shaving_materializer_campaign.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py`
+- 2026-05-24 follow-up verification: `.venv/bin/python -m pytest src/tac/tests/test_byte_shaving_materializer_campaign_runner.py -q`
+- 2026-05-24 follow-up verification: `.venv/bin/python -m pytest src/tac/tests/test_inverse_steganalysis_action_functional_cli.py src/tac/tests/test_inverse_steganalysis_acquisition.py src/tac/tests/test_experiment_queue.py -q`
+- 2026-05-24 follow-up verification: `.venv/bin/python -m pytest src/tac/tests/test_byte_shaving_campaign_queue.py::test_inverse_surface_cells_compile_to_action_functional_work_queue -q`
+- 2026-05-24 follow-up verification: `.venv/bin/python -m ruff check tools/run_byte_shaving_materializer_campaign.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py`
+- 2026-05-24 follow-up verification: `.venv/bin/python tools/lane_maturity.py validate`
 
 ## Remaining Gap
 
