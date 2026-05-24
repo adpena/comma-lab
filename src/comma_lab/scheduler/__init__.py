@@ -61,6 +61,15 @@ from .materializer_chain_harvest import (
     harvest_materializer_chain_manifests,
     run_exact_readiness_bridge_for_harvested_queue,
 )
+from .materializer_exact_eval_consumer import (
+    CONSUMER_SCHEMA as MATERIALIZER_EXACT_EVAL_CONSUMER_SCHEMA,
+)
+from .materializer_exact_eval_consumer import (
+    build_materializer_exact_eval_consumer_queue,
+    collect_exact_ready_queue_paths,
+    load_single_dispatch_ready_row,
+    stable_candidate_identity,
+)
 from .materializer_exact_eval_dispatch_plan import (
     DISPATCH_PLAN_SCHEMA,
     build_materializer_exact_eval_dispatch_plan,
@@ -110,6 +119,7 @@ __all__ = [
     "INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND",
     "INVERSE_SCORER_CELL_TARGET_KIND",
     "MATERIALIZER_DISPATCH_PLAN_STEP_ID",
+    "MATERIALIZER_EXACT_EVAL_CONSUMER_SCHEMA",
     "MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA",
     "MATERIALIZER_EXECUTION_STEP_ID",
     "MATERIALIZER_HARVEST_STEP_ID",
@@ -131,12 +141,14 @@ __all__ = [
     "TrackStatus",
     "assert_canonical_state_for_execution",
     "assert_no_orphaned_steps_for_execution",
+    "build_materializer_exact_eval_consumer_queue",
     "build_materializer_exact_eval_dispatch_plan",
     "build_materializer_execution_queue",
     "build_remote_git_preflight_command",
     "build_remote_shell_command",
     "build_rsync_pull_command",
     "build_rsync_push_command",
+    "collect_exact_ready_queue_paths",
     "connect_state",
     "default_state_path",
     "finalize_claimed_step_execution",
@@ -144,6 +156,7 @@ __all__ = [
     "initialize_queue_state",
     "known_materializer_target_kinds",
     "load_queue_definition",
+    "load_single_dispatch_ready_row",
     "normalize_queue_definition",
     "normalize_resource_kind",
     "observe_experiment_queue",
@@ -163,5 +176,6 @@ __all__ = [
     "run_staircase_ssh_executor",
     "select_ssh_tasks",
     "set_control_mode",
+    "stable_candidate_identity",
     "suggest_materializer_adapters",
 ]

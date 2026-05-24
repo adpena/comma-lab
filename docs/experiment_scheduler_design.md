@@ -192,6 +192,24 @@ mutually exclusive with top-level local `--execute`, takes its own
 fleet work can be launched from the generated queue without turning a detached
 SSH filesystem into implicit source-of-truth state.
 
+## Exact-ready consumer
+
+`tools/build_materializer_exact_eval_consumer.py` bridges materializer exact
+readiness into queue-owned dry-run dispatch preparation. It consumes
+`materializer_chain_exact_readiness_bridge_report.v1` and/or
+`optimizer_candidate_exact_eval_ready_queue_v1` artifacts, dedupes candidates
+by archive SHA plus runtime content/tree SHA, re-runs the exact-ready audit and
+`exact_dispatch_authority` preclaim gate, and emits a paused
+`experiment_queue.v1`.
+
+The consumer is intentionally not a paid dispatcher. Generated claim steps use
+`tools/claim_lane_dispatch.py --dry-run`, generated dispatch steps call
+`tools/parallel_dispatch_top_k.py --dry-run`, and the consumer report is forced
+through the planning/proxy false-authority boundary. A row can be selected for
+the paused dry-run queue only after the exact-dispatch authority path says it
+is ready; score, promotion, rank/kill, and contest authority still require the
+later contest CPU/CUDA auth result artifact.
+
 ## Implementation plan
 
 1. Phase 1 (now): Shell script orchestrator (`run_endgame.sh`) — DONE
