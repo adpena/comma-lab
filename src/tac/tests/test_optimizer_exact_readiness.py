@@ -170,6 +170,7 @@ def _mark_queue_row_as_inverse_scorer_chain(
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "promotable": False,
+        "gpu_launched": False,
         "field_selection_ready_for_exact_eval_dispatch": False,
         "exact_cuda_auth_eval": False,
         "contest_cuda_auth_eval": False,
@@ -1125,6 +1126,10 @@ def test_promotes_family_agnostic_candidate_with_receiver_proof(
         (
             {"extra_fields": {"promotable": True}},
             "runtime_consumption_proof_false_authority_violation:promotable",
+        ),
+        (
+            {"extra_fields": {"gpu_launched": True}},
+            "runtime_consumption_proof_false_authority_violation:gpu_launched",
         ),
     ],
 )

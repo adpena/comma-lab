@@ -40,6 +40,9 @@ Timestamp UTC: 2026-05-24T15:35:02Z
   matching PacketIR operation set before execution, supported final-byte
   contexts carry the same PacketIR bridge contract, and family-agnostic receiver
   proofs reject canonical false-authority leakage.
+- Promoted PacketIR-lowered operation sets from side metadata into the
+  authoritative materializer backlog/work-queue path, preserving packet-only
+  plans as blocked executable-intent rows for queue/DAG visibility.
 
 ## Verification
 

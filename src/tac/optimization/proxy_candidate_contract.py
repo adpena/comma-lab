@@ -21,6 +21,7 @@ PROXY_FALSE_AUTHORITY_FIELDS: dict[str, bool] = {
     "promotion_eligible": False,
     "rank_or_kill_eligible": False,
     "promotable": False,
+    "gpu_launched": False,
     "field_selection_ready_for_exact_eval_dispatch": False,
     "exact_cuda_auth_eval": False,
     "contest_cuda_auth_eval": False,

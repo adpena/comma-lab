@@ -510,6 +510,13 @@ def _packet_ir_compiled_row(packet_ir: Mapping[str, Any]) -> dict[str, Any]:
             "blockers": [],
         }
         resolution = resolve_materializer(operation=operation, unit=unit)
+        packet_ir_context_blockers = (
+            []
+            if resolution.target_kind == DQS1_PAIRSET_TARGET_KIND
+            and resolution.executable
+            and not resolution.blockers
+            else ["packetir_operation_set_requires_materializer_contexts"]
+        )
         resolution_blockers = ordered_unique(
             [
                 *[str(item) for item in resolution.blockers],
@@ -536,7 +543,7 @@ def _packet_ir_compiled_row(packet_ir: Mapping[str, Any]) -> dict[str, Any]:
                     and resolution.target_kind not in known_target_kinds
                     else []
                 ),
-                "packetir_operation_set_requires_materializer_contexts",
+                *packet_ir_context_blockers,
             ]
         )
         materializer_resolutions.append(
@@ -618,6 +625,113 @@ def lower_packetir_operation_set_to_backlog_rows(
             row["source_backlog_key"] = source_backlog_row.get("backlog_key")
         row.update(FALSE_AUTHORITY)
     return rows
+
+
+def _counter_dict(value: Any) -> dict[str, int]:
+    if not isinstance(value, Mapping):
+        return {}
+    out: dict[str, int] = {}
+    for key, count in value.items():
+        parsed = _finite_int(count)
+        if parsed is None:
+            continue
+        out[str(key)] = parsed
+    return out
+
+
+def _merge_packet_ir_materializer_backlog_rows(
+    materializer_backlog: Mapping[str, Any],
+    packet_ir_rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Merge PacketIR-lowered rows into the authoritative materializer backlog."""
+
+    rows_by_key: dict[str, dict[str, Any]] = {}
+    packet_ir_keys: set[str] = set()
+    for row in _as_list(materializer_backlog.get("rows")):
+        if not isinstance(row, Mapping):
+            continue
+        key = str(row.get("backlog_key") or "")
+        if not key:
+            continue
+        rows_by_key[key] = dict(row)
+
+    for packet_row in packet_ir_rows:
+        if not isinstance(packet_row, Mapping):
+            continue
+        key = str(packet_row.get("backlog_key") or "")
+        if not key:
+            continue
+        packet_ir_keys.add(key)
+        current = rows_by_key.get(key)
+        if current is None:
+            current = dict(packet_row)
+            rows_by_key[key] = current
+        current["packet_ir_lowered_row_count"] = int(
+            current.get("packet_ir_lowered_row_count") or 0
+        ) + 1
+        current["source_packet_ir_schemas"] = ordered_unique(
+            [
+                *_as_list(current.get("source_packet_ir_schemas")),
+                str(packet_row.get("source_packet_ir_schema") or ""),
+            ]
+        )
+        current["source_packet_ir_operation_set_ids"] = ordered_unique(
+            [
+                *_as_list(current.get("source_packet_ir_operation_set_ids")),
+                str(packet_row.get("source_packet_ir_operation_set_id") or ""),
+            ]
+        )
+        current["source_packet_ir_source_operation_set_ids"] = ordered_unique(
+            [
+                *_as_list(current.get("source_packet_ir_source_operation_set_ids")),
+                str(packet_row.get("source_packet_ir_source_operation_set_id") or ""),
+            ]
+        )
+        current["source_unit_ids"] = ordered_unique(
+            [
+                *_as_list(current.get("source_unit_ids")),
+                *_as_list(packet_row.get("source_unit_ids")),
+            ]
+        )
+        current["source_selection_ids"] = ordered_unique(
+            [
+                *_as_list(current.get("source_selection_ids")),
+                *_as_list(packet_row.get("source_selection_ids")),
+            ]
+        )
+        packet_blocker_counts = Counter(
+            _counter_dict(current.get("packet_ir_blocker_counts"))
+        )
+        packet_blocker_counts.update(_counter_dict(packet_row.get("blocker_counts")))
+        current["packet_ir_blocker_counts"] = dict(sorted(packet_blocker_counts.items()))
+        current.update(FALSE_AUTHORITY)
+
+    ranked_rows = sorted(rows_by_key.values(), key=_backlog_row_sort_key)
+    for rank, row in enumerate(ranked_rows, start=1):
+        row["backlog_rank"] = rank
+        row["implementation_priority_score"] = (
+            float(row.get("expected_score_gain_sum") or 0.0)
+            + float(row.get("candidate_saved_bytes_sum") or 0) * 1e-9
+            + float(row.get("blocked_row_count") or 0) * 1e-6
+        )
+        row.update(FALSE_AUTHORITY)
+
+    return apply_proxy_evidence_boundary(
+        {
+            "schema": MATERIALIZER_BACKLOG_SCHEMA,
+            "tool": TOOL_NAME,
+            "generated_at_utc": _utc_now(),
+            "backlog_row_count": len(ranked_rows),
+            "packet_ir_lowered_row_count": len(packet_ir_rows),
+            "packet_ir_lowered_backlog_key_count": len(packet_ir_keys),
+            "rows": ranked_rows,
+            **FALSE_AUTHORITY,
+        },
+        dispatch_blockers=(
+            "materializer_backlog_is_planning_only",
+            "requires_adapter_implementation_before_queue_dispatch",
+        ),
+    )
 
 
 def _backlog_row_sort_key(row: Mapping[str, Any]) -> tuple[float, int, int, str]:
@@ -809,6 +923,16 @@ def summarize_materializer_backlog(backlog: Mapping[str, Any], *, limit: int = 8
                     "blocked_resolution_count": row.get("blocked_resolution_count"),
                     "selected_operation_count": row.get("selected_operation_count"),
                     "affected_unit_count": row.get("affected_unit_count"),
+                    "packet_ir_lowered_row_count": row.get(
+                        "packet_ir_lowered_row_count"
+                    ),
+                    "source_packet_ir_operation_set_ids": row.get(
+                        "source_packet_ir_operation_set_ids"
+                    ),
+                    "source_packet_ir_source_operation_set_ids": row.get(
+                        "source_packet_ir_source_operation_set_ids"
+                    ),
+                    "packet_ir_blocker_counts": row.get("packet_ir_blocker_counts"),
                     "candidate_saved_bytes_sum": row.get("candidate_saved_bytes_sum"),
                     "expected_score_gain_sum": row.get("expected_score_gain_sum"),
                     "implementation_priority_score": row.get("implementation_priority_score"),
@@ -1920,6 +2044,18 @@ def build_materializer_work_queue(
                     or "local_cpu",
                     "source_unit_ids": _as_list(row.get("source_unit_ids")),
                     "source_selection_ids": _as_list(row.get("source_selection_ids")),
+                    "packet_ir_lowered_row_count": row.get(
+                        "packet_ir_lowered_row_count"
+                    ),
+                    "source_packet_ir_operation_set_ids": _as_list(
+                        row.get("source_packet_ir_operation_set_ids")
+                    ),
+                    "source_packet_ir_source_operation_set_ids": _as_list(
+                        row.get("source_packet_ir_source_operation_set_ids")
+                    ),
+                    "packet_ir_blocker_counts": _counter_dict(
+                        row.get("packet_ir_blocker_counts")
+                    ),
                     "candidate_saved_bytes_sum": row.get("candidate_saved_bytes_sum"),
                     "expected_score_gain_sum": row.get("expected_score_gain_sum"),
                     "executable": executable,
@@ -2895,13 +3031,17 @@ def compile_dqs1_byte_shaving_campaign(
     if candidate_limit is not None:
         executable_rows = executable_rows[:candidate_limit]
     blocked_rows = [row for row in compiled_rows if row["executable"] is not True]
-    materializer_backlog = build_materializer_backlog(compiled_rows)
+    base_materializer_backlog = build_materializer_backlog(compiled_rows)
     packet_ir_materializer_backlog_rows = [
         backlog_row
         for packet_ir in _as_list(payload.get("packet_ir_operation_sets"))
         if isinstance(packet_ir, Mapping)
         for backlog_row in lower_packetir_operation_set_to_backlog_rows(packet_ir)
     ]
+    materializer_backlog = _merge_packet_ir_materializer_backlog_rows(
+        base_materializer_backlog,
+        packet_ir_materializer_backlog_rows,
+    )
     materializer_backlog_summary = summarize_materializer_backlog(materializer_backlog)
     materializer_work_queue = build_materializer_work_queue(
         materializer_backlog,

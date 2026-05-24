@@ -269,8 +269,8 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
             "runtime_consumption_proof",
         ),
         implementation_module="",
-        emits_candidate_archive=True,
-        planning_only=False,
+        emits_candidate_archive=False,
+        planning_only=True,
     ),
     MaterializerAdapter(
         materializer_id=ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER,

@@ -37,12 +37,15 @@ signal was left orphaned.
   contains a matching PacketIR operation set with the expected schema, source id,
   sequence hash, compiler contract, required order, required proofs, and no
   truthy authority fields.
+- PacketIR-lowered operation sets are merged into the authoritative
+  `byte_shaving_materializer_backlog.v1`, so packet-only plans still produce
+  observable blocked work-queue rows instead of being stranded as side metadata.
 - Supported archive-section, packet-member, and tensor final-byte contexts now
   carry the same compiler-owned PacketIR bridge contract, not only unsupported
   rows.
 - Family-agnostic runtime-consumption proofs now reject canonical false-authority
   leakage such as `score_claim`, `ready_for_exact_eval_dispatch`,
-  `dispatch_attempted`, and `promotable`.
+  `dispatch_attempted`, `promotable`, and `gpu_launched`.
 - Unsupported high-level inverse-steganalysis operation-set rows remain blocked
   and carry a PacketIR compiler bridge hint rather than receiving fake executable
   authority.
@@ -76,6 +79,10 @@ signal was left orphaned.
   -> 5 passed.
 - `.venv/bin/python -m pytest src/tac/tests/test_deterministic_compiler.py::test_packetir_operation_set_bridge_contract_is_fail_closed src/tac/tests/test_final_byte_operation_contexts.py src/tac/tests/test_cooperative_receiver_integration.py src/tac/tests/test_optimizer_exact_readiness.py::test_promotes_family_agnostic_candidate_with_receiver_proof src/tac/tests/test_optimizer_exact_readiness.py::test_family_agnostic_runtime_proof_fails_closed_on_invalid_evidence -q`
   -> 22 passed.
+- `.venv/bin/python -m pytest src/tac/tests/test_inverse_scorer_exact_eval_queue.py -q`
+  -> 11 passed after propagating `gpu_launched=false` through chain fixtures.
+- `.venv/bin/python -m pytest src/tac/tests/test_byte_shaving_campaign.py src/tac/tests/test_byte_shaving_signal_surface_builder.py src/tac/tests/test_byte_shaving_campaign_queue.py src/tac/tests/test_final_byte_operation_contexts.py src/tac/tests/test_materializer_chain_harvest_scheduler.py src/tac/tests/test_optimizer_candidate_queue.py src/tac/tests/test_optimizer_exact_readiness.py src/tac/tests/test_family_agnostic_materializers.py src/tac/tests/test_inverse_steganalysis_acquisition.py src/tac/tests/test_inverse_scorer_cell_materializer.py src/tac/tests/test_inverse_scorer_exact_eval_queue.py src/tac/tests/test_cooperative_receiver_integration.py src/tac/tests/test_deterministic_compiler.py -q`
+  -> 325 passed, 1 duplicate-ZIP warning.
 - `.venv/bin/python -m ruff check src/comma_lab/scheduler/final_byte_operation_contexts.py src/tac/tests/test_final_byte_operation_contexts.py`
   -> passed.
 - `cargo test -p tac-packet-compiler` in `runtime-rs`

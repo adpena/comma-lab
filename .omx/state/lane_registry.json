@@ -51799,11 +51799,11 @@
       "id": "codex_packetir_operation_set_lowering_20260524",
       "name": "Codex PacketIR operation-set lowering",
       "phase": 0.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/comma_lab/scheduler/byte_shaving_campaign_queue.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -51818,16 +51818,16 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/tests/test_byte_shaving_campaign_queue.py"
         },
         "three_clean_review": {
           "status": false,
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/codex_findings_packetir_operation_set_lowering_20260524T163210Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -51844,5 +51844,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T16:14:45Z"
+  "updated_at": "2026-05-24T16:32:46Z"
 }

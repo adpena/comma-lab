@@ -552,8 +552,8 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
             "family materializer with runtime-consumption proof."
         ),
         "executable": False,
-        "emits_candidate_archive": True,
-        "planning_only": False,
+        "emits_candidate_archive": False,
+        "planning_only": True,
         "cooperative_receiver_required": True,
         "materializer_id": INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
         "materialization_resource_kind": "local_mlx",
@@ -681,6 +681,7 @@ def test_byte_shaving_materializer_registry_blocks_bare_inverse_cell_compiler_ga
     )
     assert resolved.blockers == (
         f"materializer_not_executable:{INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER}",
+        f"planning_only_materializer_not_candidate_archive:{INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER}",
     )
 
 
@@ -1074,6 +1075,40 @@ def test_packet_ir_operation_set_lowers_to_materializer_backlog_rows(
     assert compiled["packet_ir_materializer_backlog_rows"][0][
         "source_packet_ir_operation_set_id"
     ] == packet_ir["operation_set_id"]
+    merged_row = next(
+        row
+        for row in compiled["materializer_backlog"]["rows"]
+        if row["target_kind"] == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
+        and row["unit_kind"] == "archive_section"
+    )
+    assert merged_row["packet_ir_lowered_row_count"] >= 1
+    assert packet_ir["operation_set_id"] in merged_row[
+        "source_packet_ir_operation_set_ids"
+    ]
+    assert "packetir_operation_set_requires_materializer_contexts" in merged_row[
+        "packet_ir_blocker_counts"
+    ]
+
+    packet_only_plan = copy.deepcopy(plan)
+    packet_only_plan["operation_set_ladder"] = []
+    packet_only_plan["combination_ladder"] = []
+    packet_only_plan["sweep_ladder"] = []
+    packet_only = compile_dqs1_byte_shaving_campaign(
+        packet_only_plan,
+        repo_root=tmp_path,
+    )
+    assert packet_only["compiled_row_count"] == 0
+    assert packet_only["materializer_backlog"]["backlog_row_count"] >= 1
+    assert packet_only["materializer_backlog"]["packet_ir_lowered_row_count"] >= 1
+    assert packet_only["materializer_work_queue"]["row_count"] >= 1
+    assert packet_only["materializer_work_queue"]["blocked_row_count"] >= 1
+    work_row = packet_only["materializer_work_queue"]["rows"][0]
+    assert packet_ir["operation_set_id"] in work_row[
+        "source_packet_ir_operation_set_ids"
+    ]
+    assert "packetir_operation_set_requires_materializer_contexts" in work_row[
+        "packet_ir_blocker_counts"
+    ]
 
 
 def test_operation_set_execution_requires_matching_packet_ir_handoff(
