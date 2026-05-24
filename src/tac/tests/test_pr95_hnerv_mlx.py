@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import sys
@@ -249,8 +250,17 @@ def test_build_public_pr95_archive_member_round_trips_packet_grammar(
         meta=packet.meta,
         output_zip_path=tmp_path / "archive.zip",
     )
+    summary_again = write_pr95_public_archive_zip(
+        packet.state_dict,
+        packet.latents,
+        meta=packet.meta,
+        output_zip_path=tmp_path / "again" / "archive.zip",
+    )
     reparsed_zip = parse_pr95_public_archive_zip(tmp_path / "archive.zip")
 
+    assert hashlib.sha256(rebuilt_member).hexdigest() == (
+        "4b8013fb1168e21b12fc7ee6c395e032660d88daded48a0b845085e7d5eb11c4"
+    )
     assert rebuilt_meta == packet.meta
     assert rebuilt_latents.shape == packet.latents.shape
     assert rebuilt_state.keys() == packet.state_dict.keys()
@@ -260,10 +270,46 @@ def test_build_public_pr95_archive_member_round_trips_packet_grammar(
     assert summary["member_name"] == "0.bin"
     assert summary["member_compress_type"] == zipfile.ZIP_STORED
     assert summary["parsed_latent_shape"] == [600, 28]
+    assert summary["archive_zip_sha256"] == summary_again["archive_zip_sha256"]
+    assert summary["member_sha256"] == summary_again["member_sha256"]
     assert summary["runtime_consumption_proof_present"] is False
     assert summary["exact_readiness_refusal"]["ready"] is False
     assert reparsed_zip.meta == packet.meta
+    with zipfile.ZipFile(tmp_path / "archive.zip") as zf:
+        assert zf.namelist() == ["0.bin"]
+        assert zf.getinfo("0.bin").compress_type == zipfile.ZIP_STORED
+        assert zf.comment == b""
     _assert_false_authority(summary)
+
+
+def test_public_pr95_archive_export_fails_closed_on_invalid_inputs() -> None:
+    if not PR95_RELEASE_ARCHIVE.is_file():
+        pytest.skip("public PR95 archive.zip is unavailable")
+    packet = parse_pr95_public_archive_zip(PR95_RELEASE_ARCHIVE)
+
+    with pytest.raises(Pr95HNeRVMlxError, match="non-empty"):
+        build_pr95_public_archive_member(
+            packet.state_dict,
+            np.zeros((0, 28), dtype=np.float32),
+            meta={"n_pairs": 0, "latent_dim": 28, "base_channels": 36},
+        )
+    with pytest.raises(Pr95HNeRVMlxError, match="non-finite"):
+        bad_latents = packet.latents.copy()
+        bad_latents[0, 0] = np.nan
+        build_pr95_public_archive_member(packet.state_dict, bad_latents, meta=packet.meta)
+    with pytest.raises(Pr95HNeRVMlxError, match="key mismatch"):
+        bad_state = dict(packet.state_dict)
+        bad_state.pop("rgb_1.bias")
+        build_pr95_public_archive_member(bad_state, packet.latents, meta=packet.meta)
+    with pytest.raises(Pr95HNeRVMlxError, match="shape"):
+        bad_state = dict(packet.state_dict)
+        bad_state["rgb_1.bias"] = np.zeros((4,), dtype=np.float32)
+        build_pr95_public_archive_member(bad_state, packet.latents, meta=packet.meta)
+    with pytest.raises(Pr95HNeRVMlxError, match="non-finite"):
+        bad_state = dict(packet.state_dict)
+        bad_state["rgb_1.bias"] = bad_state["rgb_1.bias"].copy()
+        bad_state["rgb_1.bias"][0] = np.inf
+        build_pr95_public_archive_member(bad_state, packet.latents, meta=packet.meta)
 
 
 def test_pr95_stage8_partition_keeps_muon_off_latents_stem_and_rgb_heads() -> None:
