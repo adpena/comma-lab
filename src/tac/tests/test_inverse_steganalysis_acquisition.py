@@ -7,6 +7,7 @@ from tac.optimization.inverse_steganalysis_acquisition import (
     ACTION_FUNCTIONAL_SCHEMA,
     ATOM_SCHEMA,
     CONTEST_RATE_SCORE_PER_BYTE,
+    MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA,
     OBSERVATION_SCHEMA,
     SCHEMA,
     InverseSteganalysisAcquisitionError,
@@ -14,6 +15,7 @@ from tac.optimization.inverse_steganalysis_acquisition import (
     build_discrete_scorer_action_functional,
     build_inverse_steganalysis_acquisition_plan,
     compute_acquisition_priority,
+    inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection,
     normalize_inverse_steganalysis_atom,
     normalize_inverse_steganalysis_observation,
     observations_from_queue_performance_summary,
@@ -186,6 +188,104 @@ def _review_packet(
     }
 
 
+def _mlx_selection(**overrides: object) -> dict[str, object]:
+    false_authority = {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    row = {
+        "schema": "mlx_effective_spend_triage_candidate_row.v1",
+        **false_authority,
+        "rank": 1,
+        "candidate_generation_only": True,
+        "archive_materialization_required": True,
+        "requires_exact_auth_eval_before_score_claim": True,
+        "selection_basis": "normalized_full_video_mlx_singleton_response_gain",
+        "selection_planning_value_accessor": "scorer_response_planning_value_for_target",
+        "selection_planning_value_scope": "normalized_full_video",
+        "row_id": "best",
+        "family": "mlx_decoder_q",
+        "candidate_id": "mlx_scorer_response:window:best",
+        "pair_indices": [10, 11],
+        "source_pair_window": [10, 11],
+        "source_path": "candidate_pair_best.json",
+        "window_baseline_source_path": "baseline_pair_best.json",
+        "archive_sha256": "a" * 64,
+        "raw_sha256": "b" * 64,
+        "source_inflated_outputs_aggregate_sha256": "c" * 64,
+        "source_candidate_cache_array_sha256": {"pair_indices": "d" * 64},
+        "source_reference_cache_array_sha256": {"pair_indices": "e" * 64},
+        "window_baseline_candidate_cache_array_sha256": {"pair_indices": "f" * 64},
+        "window_baseline_reference_cache_array_sha256": {"pair_indices": "1" * 64},
+        "observed_scorer_gain_vs_baseline": 0.012,
+        "full_video_denominator": 600,
+        "normalized_full_video_scorer_gain_vs_baseline": 0.00002,
+        "projected_full_video_delta_vs_baseline_score": -0.00002,
+        "break_even_added_bytes_from_normalized_full_video_gain": (
+            0.00002 / CONTEST_RATE_SCORE_PER_BYTE
+        ),
+        "normalized_full_video_byte_budget_margin_vs_break_even": (
+            0.00002 / CONTEST_RATE_SCORE_PER_BYTE
+        ),
+        "added_archive_bytes": 0,
+        "calibrated_min_mlx_gap_for_spend_triage": 0.00001,
+        "prediction_field": "ll_predicted_delta_vs_baseline_score",
+        "predicted_delta_vs_baseline_score": -0.000015,
+        "prediction_agrees_with_observed_gain": True,
+    }
+    selection = {
+        "schema": MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA,
+        **false_authority,
+        "candidate_generation_only": True,
+        "archive_materialization_required": True,
+        "requires_exact_auth_eval_before_score_claim": True,
+        "allowed_use": (
+            "candidate_generation_filter_after_strict_effective_mlx_spend_triage_gate"
+        ),
+        "evidence_grade": "macOS-MLX-research-signal",
+        "evidence_tag": "[macOS-MLX research-signal]",
+        "score_axis": "[macOS-MLX research-signal]",
+        "source_artifacts": {},
+        "gates": {
+            "effective_mlx_spend_triage_gate": {
+                "schema": "ll_effective_mlx_spend_triage_gate.v1",
+                "status": "strict_pass",
+                "mlx_exact_eval_spend_triage_allowed": True,
+                "allowed_use": (
+                    "local_exact_eval_spend_triage_filter_after_all_gates"
+                ),
+            },
+            "response_validation_status": "passed",
+            "torch_parity_status": "strict_pass",
+            "score_calibration_status": "strict_pass",
+            "production_contract_status": "strict_pass",
+        },
+        "selection_policy": {
+            "top_k": 1,
+            "families": ["mlx_decoder_q"],
+            "gate_spend_triage_allowed_families": ["mlx_decoder_q"],
+            "min_observed_gain": 0.00001,
+            "prediction_field": "ll_predicted_delta_vs_baseline_score",
+            "require_prediction_negative": False,
+            "require_singleton_windows": True,
+            "planning_value_accessor": "scorer_response_planning_value_for_target",
+            "planning_value_scope": "normalized_full_video",
+        },
+        "summary": {
+            "dataset_row_count": 1,
+            "eligible_row_count": 1,
+            "selected_count": 1,
+        },
+        "selected_rows": [row],
+    }
+    selection.update(overrides)
+    return selection
+
+
 def test_atom_normalization_is_false_authority_only() -> None:
     atom = normalize_inverse_steganalysis_atom(_atom())
 
@@ -339,6 +439,134 @@ def test_local_proxy_observations_never_become_promotion_or_rank_authority() -> 
         normalize_inverse_steganalysis_observation(
             _observation(rank_or_kill_eligible=True)
         )
+
+
+def test_mlx_effective_spend_triage_selection_becomes_false_authority_atoms() -> None:
+    atoms = inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection(
+        _mlx_selection(),
+        source_path="artifacts/selection.json",
+        elapsed_seconds=2.5,
+    )
+
+    assert len(atoms) == 1
+    atom = atoms[0]
+    assert atom["schema"] == ATOM_SCHEMA
+    assert atom["candidate_generation_only"] is True
+    assert atom["resource_kind"] == "local_mlx"
+    assert atom["scope_axis"] == "pairs"
+    assert atom["pair_indices"] == [10, 11]
+    assert atom["predicted_score_gain"] == pytest.approx(0.00002)
+    assert atom["calibration_error"] == pytest.approx(0.00001)
+    provenance = atom["source_provenance"]
+    assert provenance["selection_source_path"] == "artifacts/selection.json"
+    assert provenance["source_row_id"] == "best"
+    assert provenance["selection_planning_value_scope"] == "normalized_full_video"
+    for key, value in PROXY_FALSE_AUTHORITY_FIELDS.items():
+        assert atom[key] is value
+        assert provenance[key] is value
+
+    action = build_discrete_scorer_action_functional(
+        atoms,
+        total_byte_budget=64,
+    )
+    cell = action["cells"][0]
+    assert cell["source_provenance"]["source_row_id"] == "best"
+    assert cell["candidate_generation_only"] is True
+    assert cell["water_bucket_selectable"] is True
+    assert action["water_bucket"]["selected_count"] == 1
+    for key, value in PROXY_FALSE_AUTHORITY_FIELDS.items():
+        assert cell[key] is value
+        assert action[key] is value
+
+
+def test_mlx_effective_spend_triage_selection_bridge_rejects_wrong_schema() -> None:
+    selection = _mlx_selection(schema="some_other_schema.v1")
+
+    with pytest.raises(InverseSteganalysisAcquisitionError, match="selection schema"):
+        inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection(selection)
+
+
+def test_mlx_effective_spend_triage_selection_bridge_requires_strict_gates() -> None:
+    selection = _mlx_selection()
+    gates = selection["gates"]
+    assert isinstance(gates, dict)
+    gates["score_calibration_status"] = "blocked"
+
+    with pytest.raises(
+        InverseSteganalysisAcquisitionError,
+        match="score calibration gate must be strict_pass",
+    ):
+        inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection(selection)
+
+
+def test_mlx_effective_spend_triage_selection_bridge_rejects_truthy_authority() -> None:
+    selection = _mlx_selection()
+    rows = selection["selected_rows"]
+    assert isinstance(rows, list)
+    assert isinstance(rows[0], dict)
+    rows[0]["ready_for_exact_eval_dispatch"] = True
+
+    with pytest.raises(
+        InverseSteganalysisAcquisitionError,
+        match="ready_for_exact_eval_dispatch=truthy",
+    ):
+        inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection(selection)
+
+
+def test_mlx_effective_spend_triage_selection_bridge_rejects_bad_geometry() -> None:
+    selection = _mlx_selection()
+    rows = selection["selected_rows"]
+    assert isinstance(rows, list)
+    assert isinstance(rows[0], dict)
+    rows[0]["pair_indices"] = [10]
+
+    with pytest.raises(
+        InverseSteganalysisAcquisitionError,
+        match="pair_indices must match source_pair_window",
+    ):
+        inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection(selection)
+
+
+def test_mlx_effective_spend_triage_selection_bridge_requires_denominator() -> None:
+    selection = _mlx_selection()
+    rows = selection["selected_rows"]
+    assert isinstance(rows, list)
+    assert isinstance(rows[0], dict)
+    rows[0]["full_video_denominator"] = 599
+
+    with pytest.raises(
+        InverseSteganalysisAcquisitionError,
+        match="full_video_denominator must be 600",
+    ):
+        inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection(selection)
+
+
+def test_mlx_effective_spend_triage_selection_bridge_rejects_bad_sha() -> None:
+    selection = _mlx_selection()
+    rows = selection["selected_rows"]
+    assert isinstance(rows, list)
+    assert isinstance(rows[0], dict)
+    rows[0]["source_candidate_cache_array_sha256"] = {"pair_indices": "not-sha"}
+
+    with pytest.raises(
+        InverseSteganalysisAcquisitionError,
+        match=r"source_candidate_cache_array_sha256\.pair_indices must be sha256 hex",
+    ):
+        inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection(selection)
+
+
+def test_mlx_effective_spend_triage_selection_bridge_rejects_bad_normalization() -> None:
+    selection = _mlx_selection()
+    rows = selection["selected_rows"]
+    assert isinstance(rows, list)
+    assert isinstance(rows[0], dict)
+    rows[0]["normalized_full_video_scorer_gain_vs_baseline"] = 0.001
+
+    with pytest.raises(
+        InverseSteganalysisAcquisitionError,
+        match="normalized gain inconsistent with full_video_denominator",
+    ):
+        inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection(selection)
 
 
 def test_queue_performance_observations_calibrate_acquisition_denominator() -> None:

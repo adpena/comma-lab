@@ -34,8 +34,19 @@ PRIORITY_SCHEMA = "inverse_steganalysis_acquisition_priority.v1"
 ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
 ACTION_CELL_SCHEMA = "inverse_steganalysis_action_cell.v1"
 INVERSE_SCORER_SURFACE_SCHEMA = "scorer_inverse_decision_surface.v1"
+MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA = (
+    "mlx_effective_spend_triage_candidate_selection.v1"
+)
+MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_ROW_SCHEMA = (
+    "mlx_effective_spend_triage_candidate_row.v1"
+)
+MLX_EFFECTIVE_SPEND_TRIAGE_PROVENANCE_SCHEMA = (
+    "inverse_steganalysis_mlx_effective_spend_triage_row_provenance.v1"
+)
 TOOL = "tac.optimization.inverse_steganalysis_acquisition"
 CONTEST_RATE_SCORE_PER_BYTE = 25.0 / 50_000_000.0
+MLX_EVIDENCE_GRADE = "macOS-MLX-research-signal"
+MLX_EVIDENCE_TAG = "[macOS-MLX research-signal]"
 
 ALLOWED_SCALES = frozenset(
     {
@@ -190,6 +201,7 @@ def normalize_inverse_steganalysis_atom(row: Mapping[str, Any]) -> dict[str, Any
         "elapsed_seconds": _float_or_none(row.get("elapsed_seconds"), "elapsed_seconds", minimum=0.0, exclusive=True),
         "artifact_bytes": _int(row.get("artifact_bytes", row.get("source_artifact_bytes", 0)), "artifact_bytes", minimum=0),
         "resource_kind": _resource(row.get("resource_kind", "local_cpu")),
+        "source_provenance": _optional_mapping(row.get("source_provenance"), "source_provenance"),
         "candidate_generation_only": True,
         "planning_only": True,
         "allowed_use": "planning_rank_for_candidate_generation_or_exact_eval_followup",
@@ -776,6 +788,8 @@ def build_discrete_scorer_action_functional(
                     "cell_index": index,
                     "atom_id": atom["atom_id"],
                     "candidate_id": atom["candidate_id"],
+                    "candidate_generation_only": True,
+                    "planning_only": True,
                     "scale": atom["scale"],
                     "scope_axis": atom["scope_axis"],
                     "component": atom["component"],
@@ -801,6 +815,7 @@ def build_discrete_scorer_action_functional(
                         and isinstance(best_obs.get("exact_auth_calibration"), Mapping)
                         else None
                     ),
+                    "source_provenance": atom.get("source_provenance"),
                     "priority": priority,
                 },
                 "inverse_steganalysis_action_cell_is_planning_only",
@@ -919,6 +934,464 @@ def action_atoms_from_inverse_scorer_surface(
             )
         )
     return atoms
+
+
+def inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection(
+    selection: Mapping[str, Any],
+    *,
+    source_path: str | None = None,
+    elapsed_seconds: float | None = None,
+    artifact_bytes: int | None = None,
+    resource_kind: str = "local_mlx",
+) -> list[dict[str, Any]]:
+    """Convert strict MLX spend-triage selections into action atoms.
+
+    The MLX selection is a candidate-generation signal only.  This bridge keeps
+    it in that evidence space by requiring the strict effective, parity,
+    calibration, and production gates and by rejecting truthy authority flags
+    anywhere in the manifest before emitting false-authority action atoms.
+    """
+
+    rows = _validated_mlx_effective_spend_triage_rows(selection)
+    if elapsed_seconds is not None:
+        elapsed_seconds = _float(
+            elapsed_seconds,
+            "elapsed_seconds",
+            minimum=0.0,
+            exclusive=True,
+        )
+    if artifact_bytes is not None:
+        artifact_bytes = _int(artifact_bytes, "artifact_bytes", minimum=0)
+
+    atoms: list[dict[str, Any]] = []
+    for index, row in enumerate(rows):
+        atoms.append(
+            normalize_inverse_steganalysis_atom(
+                _action_atom_from_mlx_effective_spend_triage_row(
+                    row,
+                    selection=selection,
+                    index=index,
+                    source_path=source_path,
+                    elapsed_seconds=elapsed_seconds,
+                    artifact_bytes=artifact_bytes,
+                    resource_kind=resource_kind,
+                )
+            )
+        )
+    return atoms
+
+
+def _validated_mlx_effective_spend_triage_rows(
+    selection: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    _reject_truthy_authority(selection, label="MLX effective spend-triage selection")
+    _require_explicit_false_authority(
+        selection,
+        label="MLX effective spend-triage selection",
+    )
+    if selection.get("schema") != MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA:
+        raise InverseSteganalysisAcquisitionError(
+            "selection schema must be "
+            f"{MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA}"
+        )
+    if selection.get("candidate_generation_only") is not True:
+        raise InverseSteganalysisAcquisitionError(
+            "MLX selection candidate_generation_only must be true"
+        )
+    if selection.get("archive_materialization_required") is not True:
+        raise InverseSteganalysisAcquisitionError(
+            "MLX selection archive_materialization_required must be true"
+        )
+    if selection.get("requires_exact_auth_eval_before_score_claim") is not True:
+        raise InverseSteganalysisAcquisitionError(
+            "MLX selection must require exact auth eval before score claim"
+        )
+    if selection.get("evidence_grade") != MLX_EVIDENCE_GRADE:
+        raise InverseSteganalysisAcquisitionError(
+            f"MLX selection evidence_grade must be {MLX_EVIDENCE_GRADE}"
+        )
+    if selection.get("evidence_tag") != MLX_EVIDENCE_TAG:
+        raise InverseSteganalysisAcquisitionError(
+            f"MLX selection evidence_tag must be {MLX_EVIDENCE_TAG}"
+        )
+    if selection.get("score_axis") != MLX_EVIDENCE_TAG:
+        raise InverseSteganalysisAcquisitionError(
+            f"MLX selection score_axis must be {MLX_EVIDENCE_TAG}"
+        )
+
+    gates = selection.get("gates")
+    if not isinstance(gates, Mapping):
+        raise InverseSteganalysisAcquisitionError("MLX selection gates must be an object")
+    effective_gate = gates.get("effective_mlx_spend_triage_gate")
+    if not isinstance(effective_gate, Mapping):
+        raise InverseSteganalysisAcquisitionError(
+            "MLX selection effective_mlx_spend_triage_gate missing"
+        )
+    if effective_gate.get("status") != "strict_pass":
+        raise InverseSteganalysisAcquisitionError(
+            "MLX effective spend-triage gate must be strict_pass"
+        )
+    if effective_gate.get("mlx_exact_eval_spend_triage_allowed") is not True:
+        raise InverseSteganalysisAcquisitionError(
+            "MLX effective spend-triage gate must allow spend triage"
+        )
+    for key, label in (
+        ("torch_parity_status", "MLX parity gate"),
+        ("score_calibration_status", "MLX score calibration gate"),
+        ("production_contract_status", "MLX production contract gate"),
+    ):
+        if gates.get(key) != "strict_pass":
+            raise InverseSteganalysisAcquisitionError(f"{label} must be strict_pass")
+
+    policy = selection.get("selection_policy")
+    if not isinstance(policy, Mapping):
+        raise InverseSteganalysisAcquisitionError(
+            "MLX selection selection_policy must be an object"
+        )
+    if policy.get("planning_value_accessor") != "scorer_response_planning_value_for_target":
+        raise InverseSteganalysisAcquisitionError(
+            "MLX selection must use scorer_response_planning_value_for_target"
+        )
+    if policy.get("planning_value_scope") != "normalized_full_video":
+        raise InverseSteganalysisAcquisitionError(
+            "MLX selection planning_value_scope must be normalized_full_video"
+        )
+    if policy.get("require_singleton_windows") is not True:
+        raise InverseSteganalysisAcquisitionError(
+            "MLX selection must require singleton windows"
+        )
+
+    rows = selection.get("selected_rows")
+    if not isinstance(rows, list) or not rows:
+        raise InverseSteganalysisAcquisitionError(
+            "MLX selection selected_rows must be a non-empty list"
+        )
+    validated: list[dict[str, Any]] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, Mapping):
+            raise InverseSteganalysisAcquisitionError(
+                f"MLX selection row {index} must be an object"
+            )
+        label = f"MLX selection row {index}"
+        _reject_truthy_authority(row, label=label)
+        _require_explicit_false_authority(row, label=label)
+        if row.get("schema") != MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_ROW_SCHEMA:
+            raise InverseSteganalysisAcquisitionError(f"{label} schema mismatch")
+        if row.get("candidate_generation_only") is not True:
+            raise InverseSteganalysisAcquisitionError(
+                f"{label} candidate_generation_only must be true"
+            )
+        if row.get("archive_materialization_required") is not True:
+            raise InverseSteganalysisAcquisitionError(
+                f"{label} archive_materialization_required must be true"
+            )
+        if row.get("requires_exact_auth_eval_before_score_claim") is not True:
+            raise InverseSteganalysisAcquisitionError(
+                f"{label} must require exact auth eval before score claim"
+            )
+        if row.get("selection_basis") != "normalized_full_video_mlx_singleton_response_gain":
+            raise InverseSteganalysisAcquisitionError(
+                f"{label} selection_basis must be normalized_full_video_mlx_singleton_response_gain"
+            )
+        if row.get("selection_planning_value_accessor") != (
+            "scorer_response_planning_value_for_target"
+        ):
+            raise InverseSteganalysisAcquisitionError(
+                f"{label} must use scorer_response_planning_value_for_target"
+            )
+        if row.get("selection_planning_value_scope") != "normalized_full_video":
+            raise InverseSteganalysisAcquisitionError(
+                f"{label} selection_planning_value_scope must be normalized_full_video"
+            )
+        normalized_gain = _mlx_selection_score_gain(row, label=label)
+        projected_delta = _mlx_selection_projected_delta(row, label=label)
+        if projected_delta >= 0.0:
+            raise InverseSteganalysisAcquisitionError(
+                f"{label} projected full-video delta must be negative"
+            )
+        margin = _mlx_selection_byte_margin(row, label=label)
+        if margin < 0.0:
+            raise InverseSteganalysisAcquisitionError(
+                f"{label} normalized full-video margin must be non-negative"
+            )
+        if normalized_gain <= 0.0:
+            raise InverseSteganalysisAcquisitionError(
+                f"{label} normalized full-video gain must be positive"
+            )
+        _validate_mlx_selection_row_geometry_and_identity(
+            row,
+            label=label,
+            normalized_gain=normalized_gain,
+            projected_delta=projected_delta,
+            margin=margin,
+        )
+        validated.append(dict(row))
+    return validated
+
+
+def _action_atom_from_mlx_effective_spend_triage_row(
+    row: Mapping[str, Any],
+    *,
+    selection: Mapping[str, Any],
+    index: int,
+    source_path: str | None,
+    elapsed_seconds: float | None,
+    artifact_bytes: int | None,
+    resource_kind: str,
+) -> dict[str, Any]:
+    label = f"MLX selection row {index}"
+    row_id = _optional_text(row.get("row_id")) or f"row_{index:04d}"
+    candidate_id = _text(row.get("candidate_id") or row_id, f"{label}.candidate_id")
+    family = _optional_text(row.get("family")) or "mlx_effective_spend_triage"
+    projected_delta = _mlx_selection_projected_delta(row, label=label)
+    normalized_gain = _mlx_selection_score_gain(row, label=label)
+    calibrated_gap = _float(
+        row.get("calibrated_min_mlx_gap_for_spend_triage", 0.0),
+        f"{label}.calibrated_min_mlx_gap_for_spend_triage",
+        minimum=0.0,
+    )
+    predicted_delta = _float_or_none(
+        row.get("predicted_delta_vs_baseline_score"),
+        f"{label}.predicted_delta_vs_baseline_score",
+    )
+    prediction_gap = 0.0 if predicted_delta is None else abs(projected_delta - predicted_delta)
+    added_archive_bytes = _float_or_none(
+        row.get("added_archive_bytes"),
+        f"{label}.added_archive_bytes",
+    )
+    added_bytes = max(0, math.ceil(added_archive_bytes or 0.0))
+    saved_bytes = max(0, math.ceil(abs(added_archive_bytes or 0.0))) if (
+        added_archive_bytes is not None and added_archive_bytes < 0.0
+    ) else 0
+    row_artifact_bytes = artifact_bytes
+    if row_artifact_bytes is None:
+        row_artifact_bytes = max(1, added_bytes, saved_bytes)
+    pair_indices = _mlx_selection_pair_indices(row, label=label)
+    component = _optional_text(row.get("component")) or "scorer"
+    predicted_score_gain = max(0.0, -projected_delta)
+    provenance = _false_authority(
+        {
+            "schema": MLX_EFFECTIVE_SPEND_TRIAGE_PROVENANCE_SCHEMA,
+            "selection_schema": selection.get("schema"),
+            "selection_source_path": source_path,
+            "selection_rank": row.get("rank", index + 1),
+            "source_row_id": row_id,
+            "source_candidate_id": candidate_id,
+            "source_family": family,
+            "source_path": row.get("source_path"),
+            "window_baseline_source_path": row.get("window_baseline_source_path"),
+            "source_pair_window": row.get("source_pair_window"),
+            "pair_indices": pair_indices,
+            "archive_sha256": row.get("archive_sha256"),
+            "raw_sha256": row.get("raw_sha256"),
+            "source_inflated_outputs_aggregate_sha256": row.get(
+                "source_inflated_outputs_aggregate_sha256"
+            ),
+            "source_candidate_cache_array_sha256": row.get(
+                "source_candidate_cache_array_sha256"
+            ),
+            "source_reference_cache_array_sha256": row.get(
+                "source_reference_cache_array_sha256"
+            ),
+            "window_baseline_candidate_cache_array_sha256": row.get(
+                "window_baseline_candidate_cache_array_sha256"
+            ),
+            "window_baseline_reference_cache_array_sha256": row.get(
+                "window_baseline_reference_cache_array_sha256"
+            ),
+            "evidence_grade": selection.get("evidence_grade"),
+            "evidence_tag": selection.get("evidence_tag"),
+            "score_axis": selection.get("score_axis"),
+            "selection_basis": row.get("selection_basis"),
+            "selection_planning_value_accessor": row.get(
+                "selection_planning_value_accessor"
+            ),
+            "selection_planning_value_scope": row.get(
+                "selection_planning_value_scope"
+            ),
+            "normalized_full_video_scorer_gain_vs_baseline": normalized_gain,
+            "projected_full_video_delta_vs_baseline_score": projected_delta,
+            "normalized_full_video_byte_budget_margin_vs_break_even": _mlx_selection_byte_margin(row, label=label),
+            "observed_scorer_gain_vs_baseline": row.get(
+                "observed_scorer_gain_vs_baseline"
+            ),
+            "observed_delta_vs_baseline_score": row.get(
+                "observed_delta_vs_baseline_score"
+            ),
+            "byte_budget_margin_vs_break_even": row.get(
+                "byte_budget_margin_vs_break_even"
+            ),
+            "calibrated_min_mlx_gap_for_spend_triage": calibrated_gap,
+            "prediction_field": row.get("prediction_field"),
+            "predicted_delta_vs_baseline_score": predicted_delta,
+        },
+        "mlx_effective_spend_triage_row_provenance_is_not_score_authority",
+    )
+    return {
+        "atom_id": f"mlx_effective_spend_triage_{_slug(row_id)}_{index:04d}",
+        "candidate_id": candidate_id,
+        "scale": "pair" if pair_indices else "candidate",
+        "scope_axis": "pairs" if pair_indices else "full_video",
+        "parent_unit_id": f"mlx_effective_spend_triage:{row_id}",
+        "pair_indices": pair_indices,
+        "component": component,
+        "frequency_band": "mlx_effective_spend_triage",
+        "coherence_group": family,
+        "sparsity_prior": 0.5,
+        "predicted_segnet_gain": 0.0,
+        "predicted_posenet_gain": 0.0,
+        "predicted_rate_gain": CONTEST_RATE_SCORE_PER_BYTE * float(saved_bytes),
+        "predicted_rate_cost": CONTEST_RATE_SCORE_PER_BYTE * float(added_bytes),
+        "predicted_score_gain": predicted_score_gain,
+        "first_order_marginal_effect": predicted_score_gain,
+        "second_order_interaction_effect": 0.0,
+        "discontinuity_risk": 0.1 if row.get("prediction_agrees_with_observed_gain") is True else 0.25,
+        "discontinuity_threshold": 0.75,
+        "uncertainty": max(calibrated_gap, prediction_gap),
+        "calibration_error": calibrated_gap,
+        "elapsed_seconds": elapsed_seconds,
+        "artifact_bytes": row_artifact_bytes,
+        "resource_kind": resource_kind,
+        "source_provenance": provenance,
+    }
+
+
+def _mlx_selection_pair_indices(row: Mapping[str, Any], *, label: str) -> list[int] | None:
+    pair_indices = _int_list(row.get("pair_indices"), f"{label}.pair_indices")
+    if pair_indices is not None:
+        return pair_indices
+    window = _range(row.get("source_pair_window"), f"{label}.source_pair_window")
+    if window is None:
+        return None
+    return list(range(window[0], window[1] + 1))
+
+
+def _mlx_selection_score_gain(row: Mapping[str, Any], *, label: str) -> float:
+    return _float(
+        row.get("normalized_full_video_scorer_gain_vs_baseline"),
+        f"{label}.normalized_full_video_scorer_gain_vs_baseline",
+        minimum=0.0,
+        exclusive=True,
+    )
+
+
+def _mlx_selection_projected_delta(row: Mapping[str, Any], *, label: str) -> float:
+    return _float(
+        row.get("projected_full_video_delta_vs_baseline_score"),
+        f"{label}.projected_full_video_delta_vs_baseline_score",
+    )
+
+
+def _mlx_selection_byte_margin(row: Mapping[str, Any], *, label: str) -> float:
+    return _float(
+        row.get("normalized_full_video_byte_budget_margin_vs_break_even"),
+        f"{label}.normalized_full_video_byte_budget_margin_vs_break_even",
+    )
+
+
+def _validate_mlx_selection_row_geometry_and_identity(
+    row: Mapping[str, Any],
+    *,
+    label: str,
+    normalized_gain: float,
+    projected_delta: float,
+    margin: float,
+) -> None:
+    denominator = _int(row.get("full_video_denominator"), f"{label}.full_video_denominator", minimum=1)
+    if denominator != 600:
+        raise InverseSteganalysisAcquisitionError(
+            f"{label} full_video_denominator must be 600"
+        )
+    pair_indices = _mlx_selection_pair_indices(row, label=label)
+    window = _range(row.get("source_pair_window"), f"{label}.source_pair_window")
+    if pair_indices is None or window is None:
+        raise InverseSteganalysisAcquisitionError(
+            f"{label} pair_indices and source_pair_window are required"
+        )
+    expected = list(range(window[0], window[1] + 1))
+    if pair_indices != expected:
+        raise InverseSteganalysisAcquisitionError(
+            f"{label} pair_indices must match source_pair_window"
+        )
+    observed_gain = _float_or_none(
+        row.get("observed_scorer_gain_vs_baseline"),
+        f"{label}.observed_scorer_gain_vs_baseline",
+        minimum=0.0,
+        exclusive=True,
+    )
+    if (
+        observed_gain is not None
+        and "normalized_full_video_scorer_gain_vs_baseline" in row
+        and not math.isclose(normalized_gain, observed_gain / denominator, rel_tol=1e-9, abs_tol=1e-12)
+    ):
+        raise InverseSteganalysisAcquisitionError(
+            f"{label} normalized gain inconsistent with full_video_denominator"
+        )
+    observed_delta = _float_or_none(
+        row.get("observed_delta_vs_baseline_score"),
+        f"{label}.observed_delta_vs_baseline_score",
+    )
+    if (
+        observed_delta is not None
+        and "projected_full_video_delta_vs_baseline_score" in row
+        and not math.isclose(projected_delta, observed_delta / denominator, rel_tol=1e-9, abs_tol=1e-12)
+    ):
+        raise InverseSteganalysisAcquisitionError(
+            f"{label} projected delta inconsistent with full_video_denominator"
+        )
+    added_bytes = _float_or_none(
+        row.get("added_archive_bytes"),
+        f"{label}.added_archive_bytes",
+    )
+    break_even = row.get(
+        "break_even_added_bytes_from_normalized_full_video_gain",
+        row.get("break_even_added_bytes_from_scorer_gain"),
+    )
+    if break_even is not None:
+        break_even_bytes = _float(
+            break_even,
+            f"{label}.break_even_added_bytes_from_score_gain",
+            minimum=0.0,
+        )
+        if not math.isclose(
+            break_even_bytes,
+            normalized_gain / CONTEST_RATE_SCORE_PER_BYTE,
+            rel_tol=1e-9,
+            abs_tol=1e-9,
+        ):
+            raise InverseSteganalysisAcquisitionError(
+                f"{label} break-even bytes inconsistent with normalized gain"
+            )
+        if added_bytes is not None and not math.isclose(
+            margin,
+            break_even_bytes - added_bytes,
+            rel_tol=1e-9,
+            abs_tol=1e-9,
+        ):
+            raise InverseSteganalysisAcquisitionError(
+                f"{label} byte budget margin inconsistent with added bytes"
+            )
+    for key in (
+        "archive_sha256",
+        "raw_sha256",
+        "source_inflated_outputs_aggregate_sha256",
+        "source_posenet_sha256",
+        "source_segnet_sha256",
+    ):
+        value = row.get(key)
+        if value is not None:
+            _sha256_value(value, f"{label}.{key}")
+    for key in (
+        "source_candidate_cache_array_sha256",
+        "source_reference_cache_array_sha256",
+        "window_baseline_candidate_cache_array_sha256",
+        "window_baseline_reference_cache_array_sha256",
+    ):
+        value = row.get(key)
+        if value is not None:
+            if not isinstance(value, Mapping):
+                raise InverseSteganalysisAcquisitionError(f"{label}.{key} must be an object")
+            _sha256_value(value, f"{label}.{key}")
 
 
 def _action_atom_from_inverse_cell(
@@ -1084,6 +1557,21 @@ def _false_authority(row: Mapping[str, Any], *blockers: str) -> dict[str, Any]:
     )
 
 
+def _require_explicit_false_authority(row: Mapping[str, Any], *, label: str) -> None:
+    for key in (
+        "score_claim",
+        "score_claim_valid",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "rank_or_kill_eligible",
+        "promotable",
+    ):
+        if row.get(key) is not False:
+            raise InverseSteganalysisAcquisitionError(
+                f"{label} {key} must be explicit false"
+            )
+
+
 def _reject_truthy_authority(row: Mapping[str, Any], *, label: str) -> None:
     violations = truthy_authority_field_violations(row, fields=AUTHORITY_FIELDS)
     if violations:
@@ -1203,6 +1691,8 @@ def _water_bucket_fill(
             {
                 "atom_id": row["atom_id"],
                 "candidate_id": row["candidate_id"],
+                "candidate_generation_only": True,
+                "planning_only": True,
                 "scope_axis": row["scope_axis"],
                 "component": row["component"],
                 "water_fill_cost_bytes": cost,
@@ -1694,6 +2184,14 @@ def _optional_text(value: Any) -> str | None:
     return text or None
 
 
+def _optional_mapping(value: Any, label: str) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise InverseSteganalysisAcquisitionError(f"{label} must be an object")
+    return dict(value)
+
+
 def _text(value: Any, label: str) -> str:
     text = _optional_text(value)
     if text is None:
@@ -1800,6 +2298,9 @@ __all__ = [
     "ATOM_SCHEMA",
     "CONTEST_RATE_SCORE_PER_BYTE",
     "INVERSE_SCORER_SURFACE_SCHEMA",
+    "MLX_EFFECTIVE_SPEND_TRIAGE_PROVENANCE_SCHEMA",
+    "MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_ROW_SCHEMA",
+    "MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA",
     "OBSERVATION_SCHEMA",
     "PRIORITY_SCHEMA",
     "QUEUE_PERFORMANCE_SUMMARY_SCHEMA",
@@ -1814,6 +2315,7 @@ __all__ = [
     "build_discrete_scorer_action_functional",
     "build_inverse_steganalysis_acquisition_plan",
     "compute_acquisition_priority",
+    "inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection",
     "normalize_inverse_steganalysis_atom",
     "normalize_inverse_steganalysis_observation",
     "observations_from_queue_performance_summary",

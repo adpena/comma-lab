@@ -880,21 +880,39 @@ def active_claim_conflicts(
     dispatch_claims_path: Path | None,
     now_utc: dt.datetime | None = None,
     ttl_hours: float = 24.0,
+    allowed_active_claim_platform: str | None = None,
+    allowed_active_claim_instance_job_ids: Iterable[str] = (),
 ) -> list[str]:
     if dispatch_claims_path is None or not dispatch_claims_path.is_file():
         return []
     now = now_utc or dt.datetime.now(tz=dt.UTC).replace(microsecond=0)
+    allowed_platform = str(allowed_active_claim_platform or "").strip().lower()
+    allowed_job_ids = {
+        str(item).strip()
+        for item in allowed_active_claim_instance_job_ids
+        if str(item).strip()
+    }
     blockers: list[str] = []
     for row in _latest_claim_rows_by_job(dispatch_claims_path).values():
         if row["lane_id"] != lane_id or claim_status_terminal(row["status"]):
             continue
         ts = parse_utc(row["timestamp_utc"])
         age_hours = None if ts is None else max((now - ts).total_seconds() / 3600.0, 0.0)
+        allowed_active_claim = (
+            bool(allowed_job_ids)
+            and row["instance_job_id"].strip() in allowed_job_ids
+            and (
+                not allowed_platform
+                or row["platform"].strip().lower() == allowed_platform
+            )
+        )
         if ts is None or age_hours is None or age_hours > ttl_hours:
             blockers.append(
                 "same_lane_stale_nonterminal_dispatch_claim:"
                 f"{row['lane_id']}:{row['instance_job_id']}:{row['status']}"
             )
+        elif allowed_active_claim:
+            continue
         else:
             blockers.append(
                 "same_lane_active_dispatch_claim:"
@@ -1009,7 +1027,10 @@ def terminal_claim_result_conflicts(
         runtime_content_shas_for_match = (
             terminal_runtime_content_shas or claim_runtime_content_shas
         )
+        runtime_identity_evidence_seen = False
+        runtime_identity_matched = False
         if candidate_runtime_sha is not None and runtime_shas_for_match:
+            runtime_identity_evidence_seen = True
             if candidate_runtime_sha not in runtime_shas_for_match:
                 if block_runtime_mismatch_for_same_archive:
                     blockers.append(
@@ -1026,9 +1047,9 @@ def terminal_claim_result_conflicts(
                         f"{','.join(sorted(runtime_shas_for_match))}:{claim_id}"
                     )
                 continue
-        elif score_affecting_runtime_changed is True and candidate_runtime_sha is not None:
-            continue
+            runtime_identity_matched = True
         if candidate_runtime_content_sha is not None and runtime_content_shas_for_match:
+            runtime_identity_evidence_seen = True
             if candidate_runtime_content_sha not in runtime_content_shas_for_match:
                 if block_runtime_mismatch_for_same_archive:
                     blockers.append(
@@ -1045,9 +1066,12 @@ def terminal_claim_result_conflicts(
                         f"{','.join(sorted(runtime_content_shas_for_match))}:{claim_id}"
                     )
                 continue
-        elif (
+            runtime_identity_matched = True
+        if (
             score_affecting_runtime_changed is True
-            and candidate_runtime_content_sha is not None
+            and (candidate_runtime_sha is not None or candidate_runtime_content_sha is not None)
+            and not runtime_identity_evidence_seen
+            and not runtime_identity_matched
         ):
             continue
         status = row["status"].lower()
@@ -1316,6 +1340,8 @@ def readiness_blockers(
     dispatch_claims_path: Path | None = None,
     claim_ttl_hours: float = 24.0,
     ignore_active_claim_conflicts: bool = False,
+    allowed_active_claim_platform: str | None = None,
+    allowed_active_claim_instance_job_ids: Iterable[str] = (),
 ) -> tuple[list[str], dict[str, Any]]:
     blockers: list[str] = []
     facts: dict[str, Any] = {}
@@ -1359,6 +1385,10 @@ def readiness_blockers(
                 effective_lane_id,
                 dispatch_claims_path=dispatch_claims_path,
                 ttl_hours=claim_ttl_hours,
+                allowed_active_claim_platform=allowed_active_claim_platform,
+                allowed_active_claim_instance_job_ids=(
+                    allowed_active_claim_instance_job_ids
+                ),
             )
         )
 

@@ -8,8 +8,8 @@ that survives reboots, sleep/wake, and network changes. Zero port forwarding.
 | Machine | OS | GPU | Role |
 |---------|-----|-----|------|
 | M5 Max MacBook | macOS | MPS 128GB | Primary dev |
-| M1 MacBook Pro | macOS | MPS | Secondary dev |
-| Mac Mini | macOS | MPS | Build server / CI |
+| tertiary M1 MacBook Pro | macOS | advisory only | Low-memory CPU-only edge worker |
+| Intel Mac Mini | macOS | integrated | Build server / CI |
 | bat00 (Windows) | WSL2/Windows | RTX 2070S → 3090 | GPU training |
 
 ## Step 1: Create Tailscale Account (once)

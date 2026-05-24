@@ -8,6 +8,7 @@ actuator is about to fire.
 
 from __future__ import annotations
 
+import datetime as dt
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,6 +18,7 @@ from tac.optimizer.exact_readiness import (
     claim_status_terminal,
     is_sha256,
     parse_claim_rows,
+    parse_utc,
     readiness_blockers,
     resolve_path,
 )
@@ -109,17 +111,19 @@ def active_dispatch_claim_present(
     dispatch_claims_path: Path | None,
     platform: str | None = None,
     instance_job_ids: Iterable[str] = (),
+    now_utc: dt.datetime | None = None,
+    ttl_hours: float = 24.0,
 ) -> bool:
     if dispatch_claims_path is None or not dispatch_claims_path.is_file():
         return False
+    now = now_utc or dt.datetime.now(tz=dt.UTC).replace(microsecond=0)
     platform_token = str(platform or "").strip().lower()
     allowed_job_ids = {
         str(item).strip()
         for item in instance_job_ids
         if str(item).strip()
     }
-    closed_job_ids: set[str] = set()
-    for row in parse_claim_rows(dispatch_claims_path):
+    for row in _latest_claim_rows_by_job(dispatch_claims_path).values():
         if row["lane_id"] != lane_id:
             continue
         if platform_token and row["platform"].strip().lower() != platform_token:
@@ -128,12 +132,27 @@ def active_dispatch_claim_present(
         if allowed_job_ids and job_id not in allowed_job_ids:
             continue
         if claim_status_terminal(row["status"]):
-            closed_job_ids.add(job_id)
             continue
-        if job_id in closed_job_ids:
+        ts = parse_utc(row["timestamp_utc"])
+        if ts is None:
+            continue
+        age_hours = max((now - ts).total_seconds() / 3600.0, 0.0)
+        if age_hours > ttl_hours:
             continue
         return True
     return False
+
+
+def _latest_claim_rows_by_job(path: Path) -> dict[tuple[str, str], dict[str, str]]:
+    latest_by_job: dict[tuple[str, str], dict[str, str]] = {}
+    for row in parse_claim_rows(path):
+        key = (row["lane_id"], row["instance_job_id"])
+        prev = latest_by_job.get(key)
+        row_ts = parse_utc(row["timestamp_utc"])
+        prev_ts = parse_utc(prev["timestamp_utc"]) if prev is not None else None
+        if prev is None or prev_ts is None or (row_ts is not None and row_ts > prev_ts):
+            latest_by_job[key] = row
+    return latest_by_job
 
 
 def exact_dispatch_authority(
@@ -153,6 +172,7 @@ def exact_dispatch_authority(
     claim_policy: ClaimPolicy = "preclaim_conflict_check",
     required_claim_platform: str | None = None,
     required_claim_instance_job_ids: Iterable[str] = (),
+    claim_ttl_hours: float = 24.0,
 ) -> ExactDispatchAuthorityVerdict:
     """Return fail-closed authority for a paid exact-eval dispatch row."""
 
@@ -162,8 +182,19 @@ def exact_dispatch_authority(
     ready_flag = row.get("ready_for_exact_eval_dispatch") is True
     contest_target = CONTEST_EXACT_EVAL_TARGET_MODE in _target_modes(row)
     blockers: list[str] = []
+    required_jobs = tuple(
+        str(item).strip()
+        for item in required_claim_instance_job_ids
+        if str(item).strip()
+    )
+    required_platform = str(required_claim_platform or "").strip()
     if claim_policy not in {"preclaim_conflict_check", "require_active_claim"}:
         blockers.append(f"unknown_claim_policy:{claim_policy}")
+    if claim_policy == "require_active_claim":
+        if not required_platform:
+            blockers.append("active_dispatch_claim_required_platform_missing")
+        if not required_jobs:
+            blockers.append("active_dispatch_claim_required_job_id_missing")
 
     if row.get("score_claim") is True:
         blockers.append("score_claim_true_requires_result_review")
@@ -198,7 +229,14 @@ def exact_dispatch_authority(
         operator_override_reason=operator_override_reason,
         extra_clearable_source_blockers=extra_clearable_source_blockers,
         dispatch_claims_path=claims_path,
-        ignore_active_claim_conflicts=claim_policy == "require_active_claim",
+        claim_ttl_hours=claim_ttl_hours,
+        ignore_active_claim_conflicts=False,
+        allowed_active_claim_platform=required_platform
+        if claim_policy == "require_active_claim"
+        else None,
+        allowed_active_claim_instance_job_ids=required_jobs
+        if claim_policy == "require_active_claim"
+        else (),
     )
     blockers.extend(readiness)
     facts["claim_policy"] = claim_policy
@@ -212,17 +250,13 @@ def exact_dispatch_authority(
         elif not active_dispatch_claim_present(
             lane_id=lane_id,
             dispatch_claims_path=claims_path,
-            platform=required_claim_platform,
-            instance_job_ids=required_claim_instance_job_ids,
+            platform=required_platform,
+            instance_job_ids=required_jobs,
+            ttl_hours=claim_ttl_hours,
         ):
             suffix = ""
-            required_jobs = [
-                str(item).strip()
-                for item in required_claim_instance_job_ids
-                if str(item).strip()
-            ]
-            if required_claim_platform:
-                suffix += f":platform={required_claim_platform}"
+            if required_platform:
+                suffix += f":platform={required_platform}"
             if required_jobs:
                 suffix += ":job_id=" + ",".join(sorted(required_jobs))
             blockers.append("active_dispatch_claim_required_not_found" + suffix)

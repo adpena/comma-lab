@@ -207,6 +207,8 @@ def claim_lane(
     *,
     lane: str,
     job_name: str,
+    dispatch_lane_id: str | None,
+    dispatch_claims_path: Path,
     force_claim: bool,
     force_claim_reason: str | None,
 ) -> None:
@@ -217,7 +219,8 @@ def claim_lane(
         notes = f"{notes}; force-claim: {force_claim_reason}"
     cmd = [
         sys.executable, str(REPO_ROOT / "tools" / "claim_lane_dispatch.py"), "claim",
-        "--lane-id", f"lane_{lane}",
+        "--claims-path", str(dispatch_claims_path),
+        "--lane-id", dispatch_lane_id or f"lane_{lane}",
         "--agent", "claude_lab",
         "--platform", "lightning",
         "--instance-job-id", job_name,
@@ -227,7 +230,7 @@ def claim_lane(
     ]
     if force_claim:
         cmd += ["--force"]
-    print(f"[claim] platform=lightning lane=lane_{lane} job={job_name}")
+    print(f"[claim] platform=lightning lane={dispatch_lane_id or f'lane_{lane}'} job={job_name}")
     result = subprocess.run(cmd, cwd=REPO_ROOT, check=False)
     if result.returncode != 0:
         sys.exit(f"FATAL: claim_lane_dispatch.py failed (rc={result.returncode})")
@@ -236,6 +239,9 @@ def claim_lane(
 def submit_dispatch(*, lane: str, job_name: str, archive: Path, manifest: Path,
                     inflate_sh: Path, predicted_low: float, predicted_high: float,
                     ssh_target: str, machine: str, print_only: bool,
+                    dispatch_lane_id: str | None = None,
+                    dispatch_claims_path: Path = REPO_ROOT
+                    / ".omx/state/active_lane_dispatch_claims.md",
                     remote_pact: str = DEFAULT_REMOTE_PACT) -> int:
     # FIX 2026-05-05: --repo-dir / --upstream-dir MUST be the REMOTE Lightning
     # path, not the operator's local mac path. Previously this passed
@@ -267,7 +273,8 @@ def submit_dispatch(*, lane: str, job_name: str, archive: Path, manifest: Path,
         "--infer-expected-archive",
         "--adjudicate",
         "--regression-threshold", "0.05",
-        "--dispatch-lane-id", f"lane_{lane}",
+        "--dispatch-lane-id", dispatch_lane_id or f"lane_{lane}",
+        "--dispatch-claims-path", str(dispatch_claims_path),
         "--source-manifest", str(manifest),
         # NOTE: do NOT pass --remote-preflight-ssh-target here.
         # The launcher's _run_remote_supply_chain_preflight runs unconditionally
@@ -338,6 +345,25 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--job-name", default=None,
                         help="override auto-generated job name")
+    parser.add_argument(
+        "--dispatch-lane-id",
+        default=None,
+        help=(
+            "Exact lane id expected in the active dispatch-claim ledger. "
+            "Defaults to lane_<--lane> for legacy wrapper calls."
+        ),
+    )
+    parser.add_argument(
+        "--dispatch-claims-path",
+        type=Path,
+        default=REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md",
+        help="Markdown active-dispatch claim ledger checked before Studio submit.",
+    )
+    parser.add_argument(
+        "--use-existing-dispatch-claim",
+        action="store_true",
+        help="Do not create a new claim; require the existing matching claim instead.",
+    )
     args = parser.parse_args(argv)
 
     if not args.archive.is_absolute():
@@ -350,6 +376,7 @@ def main(argv: list[str] | None = None) -> int:
         sys.exit(f"FATAL: archive must be inside repo root: {args.archive}")
 
     job_name = args.job_name or _job_name(args.lane)
+    dispatch_lane_id = args.dispatch_lane_id or f"lane_{args.lane}"
 
     if args.inflate_sh is None:
         # derive: apogee_int4 → submissions/apogee_intN/inflate.sh
@@ -397,12 +424,19 @@ def main(argv: list[str] | None = None) -> int:
             remote_pact=args.remote_pact,
         )
 
-    if not args.print_only:
+    if not args.print_only and not args.use_existing_dispatch_claim:
         claim_lane(
             lane=args.lane,
             job_name=job_name,
+            dispatch_lane_id=dispatch_lane_id,
+            dispatch_claims_path=args.dispatch_claims_path,
             force_claim=args.force_claim,
             force_claim_reason=args.force_claim_reason,
+        )
+    elif args.use_existing_dispatch_claim:
+        print(
+            f"[claim] using existing active dispatch claim "
+            f"lane={dispatch_lane_id} job={job_name}"
         )
 
     return submit_dispatch(
@@ -416,6 +450,8 @@ def main(argv: list[str] | None = None) -> int:
         ssh_target=args.ssh_target,
         machine=args.machine,
         print_only=args.print_only,
+        dispatch_lane_id=dispatch_lane_id,
+        dispatch_claims_path=args.dispatch_claims_path,
         remote_pact=args.remote_pact,
     )
 

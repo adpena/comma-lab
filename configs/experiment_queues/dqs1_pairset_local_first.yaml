@@ -77,7 +77,16 @@
             "--min-bytes",
             "1073741824",
             "--json-output",
-            ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json"
+            ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json",
+            "--execute",
+            "--action",
+            "move",
+            "--cold-store-reserve-gb",
+            "40.0",
+            "--cold-store-root",
+            "/Volumes/VertigoDataTier/pact/cold_store",
+            "--cold-store-root",
+            "/Volumes/APDataStore/pact/cold_store"
           ],
           "id": "proactive_cleanup",
           "kind": "command",

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,7 @@ from tac.optimization.inverse_steganalysis_acquisition import (  # noqa: E402
     InverseSteganalysisAcquisitionError,
     action_atoms_from_inverse_scorer_surface,
     build_discrete_scorer_action_functional,
+    inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection,
     observations_from_queue_performance_summary,
     paired_exact_auth_calibration_observations_from_review_packets,
 )
@@ -118,6 +120,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
     parser.add_argument("--scorer-response", action="append", default=[])
     parser.add_argument("--inverse-scorer-surface", action="append", default=[])
+    parser.add_argument("--mlx-effective-spend-triage-selection", action="append", default=[])
     parser.add_argument("--atom", action="append", default=[])
     parser.add_argument("--observation", action="append", default=[])
     parser.add_argument("--exact-auth-calibration-packet", action="append", default=[])
@@ -176,6 +179,17 @@ def main(argv: list[str] | None = None) -> int:
                 action_atoms_from_inverse_scorer_surface(
                     _load_json(path),
                     candidate_id=args.candidate_id,
+                    elapsed_seconds=args.elapsed_seconds,
+                    artifact_bytes=args.artifact_bytes,
+                    resource_kind=args.resource_kind,
+                )
+            )
+        for raw_path in args.mlx_effective_spend_triage_selection:
+            path = Path(raw_path)
+            atoms.extend(
+                inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection(
+                    _load_json(path),
+                    source_path=_repo_rel(path, args.repo_root),
                     elapsed_seconds=args.elapsed_seconds,
                     artifact_bytes=args.artifact_bytes,
                     resource_kind=args.resource_kind,
@@ -244,7 +258,8 @@ def main(argv: list[str] | None = None) -> int:
                 )
         if not atoms:
             raise SystemExit(
-                "provide at least one --scorer-response, --inverse-scorer-surface, or --atom"
+                "provide at least one --scorer-response, --inverse-scorer-surface, "
+                "--mlx-effective-spend-triage-selection, or --atom"
             )
         action = build_discrete_scorer_action_functional(
             atoms,
@@ -253,7 +268,8 @@ def main(argv: list[str] | None = None) -> int:
             lambda_rate=args.lambda_rate,
         )
     except (InverseSteganalysisAcquisitionError, ScorerResponseDatasetError) as exc:
-        raise SystemExit(str(exc)) from exc
+        print(str(exc), file=sys.stderr)
+        return 2
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(

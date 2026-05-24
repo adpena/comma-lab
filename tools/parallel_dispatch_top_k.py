@@ -65,8 +65,10 @@ from tac.hnerv_frontier_defaults import (  # noqa: E402
     ACTIVE_SCORE_FRONTIER_SCORE,
 )
 from tac.optimizer.exact_dispatch_authority import (  # noqa: E402
+    ClaimPolicy,
     exact_dispatch_authority,
 )
+from tac.optimizer.exact_readiness import QUEUE_SCHEMA as EXACT_READY_QUEUE_SCHEMA  # noqa: E402
 from tac.optimizer.exact_ready_audit import audit_exact_ready_queue  # noqa: E402
 from tac.zipwire_archive import inspect_zip_headers  # noqa: E402
 
@@ -699,6 +701,10 @@ def _candidate_blockers(
     active_floor_score: float | None = DEFAULT_ACTIVE_FLOOR_SCORE,
     allow_above_active_floor_dispatch: bool = False,
     operator_override_reason: str | None = None,
+    dispatch_claims_path: Path | None = REPO / ".omx" / "state" / "active_lane_dispatch_claims.md",
+    claim_policy: ClaimPolicy = "preclaim_conflict_check",
+    required_claim_platform: str | None = None,
+    required_claim_instance_job_ids: tuple[str, ...] = (),
 ) -> list[str]:
     blockers: list[str] = []
     # Round 5 R5-1 fix (2026-05-06, 95% CRITICAL): the historical
@@ -723,6 +729,10 @@ def _candidate_blockers(
         active_floor_score=active_floor_score,
         allow_above_active_floor_dispatch=allow_above_active_floor_dispatch,
         operator_override_reason=operator_override_reason,
+        dispatch_claims_path=dispatch_claims_path,
+        claim_policy=claim_policy,
+        required_claim_platform=required_claim_platform,
+        required_claim_instance_job_ids=required_claim_instance_job_ids,
     )
     blockers.extend(
         f"exact_dispatch_authority:{blocker}"
@@ -824,9 +834,16 @@ def _build_dispatch_cmd(
     label_prefix: str,
     estimated_cost: float,
     max_dph: float,
+    dispatch_claims_path: Path | None = REPO / ".omx" / "state" / "active_lane_dispatch_claims.md",
+    claim_policy: ClaimPolicy = "preclaim_conflict_check",
+    required_claim_instance_job_ids: tuple[str, ...] = (),
 ) -> list[str]:
     candidate_id = candidate["candidate_id"]
-    label = f"{label_prefix}_{candidate_id}"
+    required_claim_job_id = _dispatch_job_id_for_candidate(
+        candidate,
+        required_claim_instance_job_ids=required_claim_instance_job_ids,
+    )
+    label = required_claim_job_id or f"{label_prefix}_{candidate_id}"
     band = candidate.get("predicted_band", [candidate.get("band_low", 0.0), candidate.get("band_high", 1.0)])
 
     if provider == "lightning":
@@ -844,7 +861,12 @@ def _build_dispatch_cmd(
             "--predicted-low", str(band[0]),
             "--predicted-high", str(band[1]),
             "--job-name", label,
+            "--dispatch-lane-id", str(candidate.get("lane_id") or candidate_id),
         ]
+        if dispatch_claims_path is not None:
+            cmd += ["--dispatch-claims-path", str(dispatch_claims_path)]
+        if claim_policy == "require_active_claim":
+            cmd.append("--use-existing-dispatch-claim")
         gate_json = candidate.get("apogee_distortion_gate_json")
         if gate_json:
             cmd += ["--apogee-distortion-gate-json", str(gate_json)]
@@ -865,6 +887,28 @@ def _build_dispatch_cmd(
         ]
 
     raise ValueError(f"unknown provider: {provider} (expected: lightning | vastai)")
+
+
+def _dispatch_job_id_for_candidate(
+    candidate: dict,
+    *,
+    required_claim_instance_job_ids: tuple[str, ...],
+) -> str | None:
+    allowed = [job_id.strip() for job_id in required_claim_instance_job_ids if job_id.strip()]
+    for key in ("dispatch_job_id", "required_claim_instance_job_id", "job_name"):
+        value = candidate.get(key)
+        if isinstance(value, str) and value.strip():
+            job_id = value.strip()
+            if not allowed or job_id in allowed:
+                return job_id
+    if len(allowed) == 1:
+        return allowed[0]
+    if allowed:
+        raise DispatchInputError(
+            "require_active_claim with multiple required job ids needs "
+            "candidate.dispatch_job_id or candidate.required_claim_instance_job_id"
+        )
+    return None
 
 
 def _current_run_auth_eval_candidates(label: str, *, started_unix: float) -> list[Path]:
@@ -938,14 +982,26 @@ def _fire_one(
     estimated_cost: float,
     max_dph: float,
     timeout_seconds: float,
+    dispatch_claims_path: Path | None = REPO / ".omx" / "state" / "active_lane_dispatch_claims.md",
+    claim_policy: ClaimPolicy = "preclaim_conflict_check",
+    required_claim_instance_job_ids: tuple[str, ...] = (),
 ) -> DispatchResult:
     candidate_id = candidate["candidate_id"]
-    label = f"{label_prefix}_{candidate_id}"
+    label = (
+        _dispatch_job_id_for_candidate(
+            candidate,
+            required_claim_instance_job_ids=required_claim_instance_job_ids,
+        )
+        or f"{label_prefix}_{candidate_id}"
+    )
     cmd = _build_dispatch_cmd(
         candidate,
         provider=provider, lane_script=lane_script,
         label_prefix=label_prefix,
         estimated_cost=estimated_cost, max_dph=max_dph,
+        dispatch_claims_path=dispatch_claims_path,
+        claim_policy=claim_policy,
+        required_claim_instance_job_ids=required_claim_instance_job_ids,
     )
     started_unix = time.time()
     started = time.gmtime(started_unix)
@@ -1001,6 +1057,9 @@ def _load_top_k(
     active_floor_score: float | None = DEFAULT_ACTIVE_FLOOR_SCORE,
     allow_above_active_floor_dispatch: bool = False,
     operator_override_reason: str | None = None,
+    claim_policy: ClaimPolicy = "preclaim_conflict_check",
+    required_claim_platform: str | None = None,
+    required_claim_instance_job_ids: tuple[str, ...] = (),
 ) -> list[dict]:
     """Load candidates from a meta-Lagrangian ranked-output JSON file."""
     ranked_input = ranked_input.resolve()
@@ -1009,7 +1068,29 @@ def _load_top_k(
         raise DispatchInputError(
             f"{ranked_input} is marked ready_for_exact_eval_dispatch=false; refusing parallel dispatch"
         )
-    candidates = payload.get("dispatch_ready") or payload.get("top_k") if isinstance(payload, dict) else payload
+    if isinstance(payload, dict) and payload.get("schema") == EXACT_READY_QUEUE_SCHEMA:
+        candidates = payload.get("dispatch_ready")
+        if not isinstance(candidates, list):
+            raise DispatchInputError(
+                f"{ranked_input} exact-ready queue missing dispatch_ready list"
+            )
+        declared_ready_count = payload.get("dispatch_ready_count")
+        if declared_ready_count != len(candidates):
+            raise DispatchInputError(
+                f"{ranked_input} exact-ready dispatch_ready_count mismatch: "
+                f"{declared_ready_count!r}!={len(candidates)}"
+            )
+        if not candidates:
+            raise DispatchInputError(
+                f"{ranked_input} exact-ready queue has no dispatch_ready rows; "
+                "refusing top_k fallback"
+            )
+    else:
+        candidates = (
+            payload.get("dispatch_ready") or payload.get("top_k")
+            if isinstance(payload, dict)
+            else payload
+        )
     if not isinstance(candidates, list):
         raise ValueError(f"ranked-input must contain a top_k or dispatch_ready list, got {type(candidates)}")
     if k is not None:
@@ -1032,6 +1113,10 @@ def _load_top_k(
             active_floor_score=active_floor_score,
             allow_above_active_floor_dispatch=allow_above_active_floor_dispatch,
             operator_override_reason=operator_override_reason,
+            dispatch_claims_path=dispatch_claims_path,
+            claim_policy=claim_policy,
+            required_claim_platform=required_claim_platform,
+            required_claim_instance_job_ids=required_claim_instance_job_ids,
         ):
             blocked.append(f"{candidate_id}: {blocker}")
     if blocked:
@@ -1056,6 +1141,12 @@ def _load_top_k(
             dispatch_claims_path=dispatch_claims_path,
             active_floor_score=active_floor_score,
             candidate_ids=selected_candidate_ids,
+            allowed_active_claim_platform=required_claim_platform
+            if claim_policy == "require_active_claim"
+            else None,
+            allowed_active_claim_instance_job_ids=required_claim_instance_job_ids
+            if claim_policy == "require_active_claim"
+            else (),
         )
         stale_rows = audit.get("stale_ready_rows")
         if isinstance(stale_rows, list) and stale_rows:
@@ -1112,6 +1203,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dispatch-claims-path", type=Path,
                         default=REPO / ".omx/state/active_lane_dispatch_claims.md",
                         help="lane-claim ledger used by the exact-ready audit before paid dispatch")
+    parser.add_argument("--claim-policy",
+                        choices=["preclaim_conflict_check", "require_active_claim"],
+                        default="preclaim_conflict_check",
+                        help="preclaim mode refuses active same-lane claims; require-active mode is for claim-then-dispatch queues")
+    parser.add_argument("--required-claim-platform", default=None,
+                        help="Optional platform required when --claim-policy=require_active_claim")
+    parser.add_argument("--required-claim-instance-job-id", action="append", default=[],
+                        help="Optional active claim job id allowed when --claim-policy=require_active_claim; may be repeated")
     parser.add_argument("--max-dph", type=float, default=0.30,
                         help="passed to vastai dispatcher to gate per-hour cost")
     parser.add_argument("--per-dispatch-timeout-seconds", type=float, default=1800.0,
@@ -1147,6 +1246,9 @@ def main(argv: list[str] | None = None) -> int:
             active_floor_score=args.active_floor_score,
             allow_above_active_floor_dispatch=args.allow_above_active_floor_dispatch,
             operator_override_reason=args.operator_override_reason,
+            claim_policy=args.claim_policy,
+            required_claim_platform=args.required_claim_platform,
+            required_claim_instance_job_ids=tuple(args.required_claim_instance_job_id),
         )
     except DispatchInputError as exc:
         print(f"FATAL: {exc}", file=sys.stderr)
@@ -1178,6 +1280,11 @@ def main(argv: list[str] | None = None) -> int:
                 label_prefix=args.label_prefix,
                 estimated_cost=args.estimated_cost_per_dispatch,
                 max_dph=args.max_dph,
+                dispatch_claims_path=args.dispatch_claims_path,
+                claim_policy=args.claim_policy,
+                required_claim_instance_job_ids=tuple(
+                    args.required_claim_instance_job_id
+                ),
             )
             print("  " + " ".join(cmd))
         return 0
@@ -1193,6 +1300,11 @@ def main(argv: list[str] | None = None) -> int:
                 estimated_cost=args.estimated_cost_per_dispatch,
                 max_dph=args.max_dph,
                 timeout_seconds=args.per_dispatch_timeout_seconds,
+                dispatch_claims_path=args.dispatch_claims_path,
+                claim_policy=args.claim_policy,
+                required_claim_instance_job_ids=tuple(
+                    args.required_claim_instance_job_id
+                ),
             ): c["candidate_id"]
             for c in candidates
         }

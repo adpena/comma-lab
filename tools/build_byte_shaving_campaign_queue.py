@@ -248,6 +248,50 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=float,
         default=40.0,
     )
+    parser.add_argument(
+        "--include-materializer-exact-readiness-followup",
+        "--include-materializer-exact-eval-handoff",
+        dest="include_materializer_exact_readiness_followup",
+        action="store_true",
+        help=(
+            "append per-materializer harvest, exact-readiness bridge, and paused "
+            "dry-run dispatch-plan steps under each materializer output root"
+        ),
+    )
+    parser.add_argument(
+        "--materializer-exact-readiness-followup-require-ready",
+        "--materializer-exact-eval-require-ready",
+        dest="materializer_exact_readiness_followup_require_ready",
+        action="store_true",
+        help=(
+            "make follow-up harvest fail if no exact-ready row is emitted; default "
+            "keeps blocked readiness as durable signal"
+        ),
+    )
+    parser.add_argument(
+        "--materializer-exact-eval-dispatch-require-authorized",
+        action="store_true",
+        help="make generated dispatch-plan step exit nonzero if no row is authorized",
+    )
+    parser.add_argument(
+        "--materializer-exact-eval-dispatch-provider",
+        choices=("lightning", "vastai"),
+        default="lightning",
+    )
+    parser.add_argument(
+        "--materializer-exact-eval-dispatch-label-prefix",
+        default="materializer_exact_eval",
+    )
+    parser.add_argument(
+        "--materializer-exact-eval-dispatch-estimated-cost-per-dispatch",
+        type=float,
+        default=0.30,
+    )
+    parser.add_argument(
+        "--materializer-exact-eval-dispatch-max-total-cost",
+        type=float,
+        default=5.00,
+    )
     parser.add_argument("--results-root", default=DEFAULT_RESULTS_ROOT)
     parser.add_argument("--completed-results-root", action="append", default=[])
     parser.add_argument(
@@ -396,6 +440,27 @@ def main(argv: list[str] | None = None) -> int:
                 scheduler_proactive_cleanup_cold_store_reserve_gb=(
                     args.materializer_scheduler_proactive_cleanup_cold_store_reserve_gb
                 ),
+                include_exact_readiness_followup=(
+                    args.include_materializer_exact_readiness_followup
+                ),
+                exact_readiness_followup_require_ready=(
+                    args.materializer_exact_readiness_followup_require_ready
+                ),
+                exact_eval_dispatch_require_authorized=(
+                    args.materializer_exact_eval_dispatch_require_authorized
+                ),
+                exact_eval_dispatch_provider=(
+                    args.materializer_exact_eval_dispatch_provider
+                ),
+                exact_eval_dispatch_label_prefix=(
+                    args.materializer_exact_eval_dispatch_label_prefix
+                ),
+                exact_eval_dispatch_estimated_cost_per_dispatch=(
+                    args.materializer_exact_eval_dispatch_estimated_cost_per_dispatch
+                ),
+                exact_eval_dispatch_max_total_cost=(
+                    args.materializer_exact_eval_dispatch_max_total_cost
+                ),
             )
         except ExperimentQueueError as exc:
             raise SystemExit(str(exc)) from exc
@@ -415,6 +480,9 @@ def main(argv: list[str] | None = None) -> int:
                 if isinstance(experiment.get("metadata"), dict)
                 and "work_id" in experiment["metadata"]
             ],
+            "exact_readiness_followup": bool(
+                args.include_materializer_exact_readiness_followup
+            ),
         }
 
     queue_payload = None

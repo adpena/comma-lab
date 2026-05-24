@@ -322,8 +322,7 @@ def _queue_build_common_args(args: argparse.Namespace, *, results_root: Path) ->
         preflight_args.extend(["--scheduler-proactive-cleanup-root", root])
     for root in _cold_store_roots(args):
         preflight_args.extend(["--scheduler-proactive-cleanup-cold-store-root", str(root)])
-    if args.execute:
-        preflight_args.append("--scheduler-proactive-cleanup-execute")
+    preflight_args.append("--scheduler-proactive-cleanup-execute")
     return [*base_args, *preflight_args]
 
 

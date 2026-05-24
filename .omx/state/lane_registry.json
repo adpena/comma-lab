@@ -50358,6 +50358,47 @@
         }
       },
       "notes": "L0: explicit optional bridge from harvested materializer planning queue into exact-readiness promoter; fail-closed, no dispatch or score authority."
+    },
+    {
+      "id": "codex_exact_ready_consumer_tranche_20260523",
+      "name": "Codex exact-ready queue consumer tranche",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/comma_lab/scheduler/byte_shaving_campaign_queue.py; tools/run_byte_shaving_materializer_campaign.py; src/comma_lab/scheduler/materializer_exact_eval_dispatch_plan.py; src/comma_lab/scheduler/staircase_dag.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_byte_shaving_campaign_queue.py; src/tac/tests/test_byte_shaving_materializer_campaign_runner.py; src/tac/tests/test_optimizer_exact_ready_audit.py; src/tac/tests/test_storage_tiers.py; src/tac/tests/test_staircase_dag.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_materializer_campaign_control_plane_20260524T000335Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "tools/run_byte_shaving_materializer_campaign.py; tools/build_materializer_exact_eval_dispatch_plan.py; tools/plan_staircase_dag.py"
+        }
+      },
+      "notes": "L0: queue-owned exact-ready artifact consumer and dispatch handoff; fail-closed, plan/dry-run first."
     }
   ],
   "level_rules": {
@@ -50367,5 +50408,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-23T22:57:29Z"
+  "updated_at": "2026-05-24T00:09:34Z"
 }

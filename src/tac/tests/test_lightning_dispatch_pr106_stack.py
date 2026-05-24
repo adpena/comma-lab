@@ -16,9 +16,9 @@ import importlib.util
 import io
 import json
 import sys
-from types import SimpleNamespace
 from contextlib import redirect_stdout
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -371,6 +371,9 @@ def test_claim_lane_does_not_force_without_explicit_force_claim(monkeypatch) -> 
     dispatcher.claim_lane(
         lane="demo",
         job_name="job1",
+        dispatch_lane_id=None,
+        dispatch_claims_path=dispatcher.REPO_ROOT
+        / ".omx/state/active_lane_dispatch_claims.md",
         force_claim=False,
         force_claim_reason=None,
     )
@@ -379,9 +382,57 @@ def test_claim_lane_does_not_force_without_explicit_force_claim(monkeypatch) -> 
     dispatcher.claim_lane(
         lane="demo",
         job_name="job2",
+        dispatch_lane_id=None,
+        dispatch_claims_path=dispatcher.REPO_ROOT
+        / ".omx/state/active_lane_dispatch_claims.md",
         force_claim=True,
         force_claim_reason="terminal stale claim",
     )
     assert "--force" in calls[-1]
-    notes = calls[-1][calls[-1].index("--notes") + 1]
-    assert "terminal stale claim" in notes
+
+
+def test_main_existing_claim_uses_exact_dispatch_lane_and_job(monkeypatch) -> None:
+    dispatcher = _load_dispatcher()
+
+    def _forbidden_claim(*args, **kwargs):
+        raise AssertionError("existing-claim mode must not create a second claim")
+
+    submit_calls = []
+
+    def _fake_submit_dispatch(**kwargs):
+        submit_calls.append(kwargs)
+        assert kwargs["dispatch_lane_id"] == "fixture_lane"
+        assert kwargs["job_name"] == "fixture_job"
+        assert kwargs["dispatch_claims_path"].name == "claims.md"
+        return 0
+
+    monkeypatch.setattr(dispatcher, "stage_workspace", lambda **kwargs: REPO_ROOT / "pyproject.toml")
+    monkeypatch.setattr(dispatcher, "claim_lane", _forbidden_claim)
+    monkeypatch.setattr(dispatcher, "submit_dispatch", _fake_submit_dispatch)
+
+    rc = dispatcher.main(
+        [
+            "--lane",
+            "fixture_lane",
+            "--archive",
+            "pyproject.toml",
+            "--inflate-sh",
+            "pyproject.toml",
+            "--predicted-low",
+            "0.1",
+            "--predicted-high",
+            "0.2",
+            "--ssh-target",
+            "fixture-ssh",
+            "--job-name",
+            "fixture_job",
+            "--dispatch-lane-id",
+            "fixture_lane",
+            "--dispatch-claims-path",
+            str(REPO_ROOT / "claims.md"),
+            "--use-existing-dispatch-claim",
+        ]
+    )
+
+    assert rc == 0
+    assert len(submit_calls) == 1

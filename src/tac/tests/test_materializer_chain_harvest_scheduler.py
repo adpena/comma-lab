@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import subprocess
 import sys
@@ -26,6 +27,16 @@ from comma_lab.scheduler.materializer_chain_harvest import (
     harvest_materializer_chain_manifests,
     run_exact_readiness_bridge_for_harvested_queue,
 )
+from comma_lab.scheduler.materializer_chain_harvest import (
+    write_json as write_harvest_json,
+)
+from comma_lab.scheduler.materializer_exact_eval_dispatch_plan import (
+    DISPATCH_PLAN_SCHEMA,
+    build_materializer_exact_eval_dispatch_plan,
+)
+from comma_lab.scheduler.materializer_exact_eval_dispatch_plan import (
+    write_json as write_dispatch_plan_json,
+)
 from tac.optimization.byte_range_entropy_recode_chain import (
     CHAIN_MANIFEST_NAME,
     CHAIN_SCHEMA,
@@ -37,6 +48,7 @@ from tac.optimization.serialized_archive_economics import (
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = REPO_ROOT / "tools" / "harvest_materializer_chain_candidates.py"
+DISPATCH_PLAN_TOOL = REPO_ROOT / "tools" / "build_materializer_exact_eval_dispatch_plan.py"
 
 
 def _write_json(path: Path, payload: object) -> Path:
@@ -529,6 +541,133 @@ def test_exact_readiness_bridge_promotes_valid_harvested_source_queue(
     assert promoted["dispatch_claim_required_before_gpu_or_remote_eval"] is True
 
 
+def test_materializer_dispatch_plan_dry_run_does_not_write_claim(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+    bridge_path = _write_json(repo / "bridge_report.json", bridge)
+
+    result = build_materializer_exact_eval_dispatch_plan(
+        repo_root=repo,
+        bridge_report_path=bridge_path,
+        active_floor_archive_bytes=None,
+    )
+
+    plan = result["plan"]
+    dispatch_queue = result["experiment_queue"]
+    assert plan["schema"] == DISPATCH_PLAN_SCHEMA
+    assert plan["authorized_candidate_count"] == 1
+    assert plan["ready_for_exact_eval_dispatch"] is False
+    assert truthy_authority_field_violations(plan) == []
+    steps = dispatch_queue["experiments"][0]["steps"]
+    claim_command = steps[0]["command"]
+    dispatch_command = steps[1]["command"]
+    assert steps[0]["id"] == "claim_lane_dispatch"
+    assert "--dry-run" in claim_command
+    assert "--dry-run" in dispatch_command
+    assert "--claim-policy" not in dispatch_command
+
+
+def test_materializer_dispatch_plan_execute_requires_active_claim_for_dispatch(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+    bridge_path = _write_json(repo / "bridge_report.json", bridge)
+
+    result = build_materializer_exact_eval_dispatch_plan(
+        repo_root=repo,
+        bridge_report_path=bridge_path,
+        dispatch_mode="execute",
+        allow_paid_dispatch_queue=True,
+        provider="lightning",
+        label_prefix="fixture_materializer_exact_eval",
+        active_floor_archive_bytes=None,
+    )
+
+    plan = result["plan"]
+    dispatch_queue = result["experiment_queue"]
+    assert plan["authorized_candidate_count"] == 1
+    assert "execute_dispatch_queue_created_requires_operator_review" in plan["plan_blockers"]
+    steps = dispatch_queue["experiments"][0]["steps"]
+    claim_command = steps[0]["command"]
+    dispatch_command = steps[1]["command"]
+    job_id = plan["rows"][0]["dispatch_job_id"]
+    assert "--dry-run" not in claim_command
+    assert "--claim-policy" in dispatch_command
+    assert "require_active_claim" in dispatch_command
+    assert "--required-claim-platform" in dispatch_command
+    assert "lightning" in dispatch_command
+    assert "--required-claim-instance-job-id" in dispatch_command
+    assert job_id in dispatch_command
+
+
+def test_materializer_dispatch_plan_freezes_queue_when_cost_cap_exceeded(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+    bridge_path = _write_json(repo / "bridge_report.json", bridge)
+
+    result = build_materializer_exact_eval_dispatch_plan(
+        repo_root=repo,
+        bridge_report_path=bridge_path,
+        active_floor_archive_bytes=None,
+        estimated_cost_per_dispatch=0.30,
+        max_total_cost=0.01,
+    )
+
+    plan = result["plan"]
+    dispatch_queue = result["experiment_queue"]
+    assert plan["authorized_candidate_count"] == 1
+    assert plan["experiment_count"] == 0
+    assert plan["hard_plan_blockers"] == ["estimated_total_cost_exceeds_cap:0.30>0.01"]
+    assert dispatch_queue["experiments"][0]["id"] == (
+        "frozen_materializer_exact_eval_dispatch"
+    )
+    assert dispatch_queue["experiments"][0]["steps"][0]["id"] == "noop"
+
+
 def test_exact_readiness_bridge_writes_blocked_report_without_ready_queue(
     tmp_path: Path,
 ) -> None:
@@ -710,3 +849,202 @@ def test_harvest_cli_refuses_require_ready_without_bridge_dir(tmp_path: Path) ->
 
     assert completed.returncode != 0
     assert "--exact-readiness-out-dir is required" in completed.stderr
+
+
+def test_dispatch_plan_builds_claim_then_dry_run_queue_from_bridge(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+    bridge_path = _write_json(repo / "bridge_report.json", bridge)
+
+    result = build_materializer_exact_eval_dispatch_plan(
+        repo_root=repo,
+        bridge_report_path=bridge_path,
+        active_floor_archive_bytes=None,
+    )
+
+    plan = result["plan"]
+    queue = result["experiment_queue"]
+    assert plan["schema"] == DISPATCH_PLAN_SCHEMA
+    assert plan["authorized_candidate_count"] == 1
+    assert plan["blocked_candidate_count"] == 0
+    assert plan["ready_for_exact_eval_dispatch"] is False
+    assert truthy_authority_field_violations(plan) == []
+    assert queue["schema"] == QUEUE_SCHEMA
+    assert queue["controls"]["mode"] == "paused"
+    experiment = queue["experiments"][0]
+    assert experiment["metadata"]["candidate_id"] == "exact_ready_materializer_candidate"
+    claim_step, dispatch_step = experiment["steps"]
+    assert claim_step["id"] == "claim_lane_dispatch"
+    assert "tools/claim_lane_dispatch.py" in claim_step["command"]
+    assert dispatch_step["requires"] == ["claim_lane_dispatch"]
+    assert dispatch_step["id"] == "dispatch_exact_eval_dry_run"
+    assert "tools/parallel_dispatch_top_k.py" in dispatch_step["command"]
+    assert "--dry-run" in dispatch_step["command"]
+
+
+def test_dispatch_plan_execute_mode_requires_explicit_paid_queue_flag(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    exact_ready_queue = repo / "exact_ready_queue.json"
+    _write_json(
+        exact_ready_queue,
+        {
+            "schema": "optimizer_candidate_queue_v1",
+            "dispatch_ready_count": 0,
+            "dispatch_ready": [],
+            "top_k": [],
+        },
+    )
+
+    with pytest.raises(
+        Exception,
+        match="execute_dispatch_queue_requires_allow_paid_dispatch_queue",
+    ):
+        build_materializer_exact_eval_dispatch_plan(
+            repo_root=repo,
+            exact_ready_queue_paths=[exact_ready_queue],
+            dispatch_mode="execute",
+        )
+
+
+def test_materializer_handoff_json_writes_refuse_overwrite_by_default(
+    tmp_path: Path,
+) -> None:
+    harvest_path = tmp_path / "harvest.json"
+    dispatch_path = tmp_path / "dispatch.json"
+
+    write_harvest_json(harvest_path, {"value": 1})
+    write_dispatch_plan_json(dispatch_path, {"value": 1})
+
+    with pytest.raises(Exception, match="refusing_to_overwrite_json"):
+        write_harvest_json(harvest_path, {"value": 2})
+    with pytest.raises(Exception, match="refusing_to_overwrite_json"):
+        write_dispatch_plan_json(dispatch_path, {"value": 2})
+
+    write_harvest_json(harvest_path, {"value": 2}, overwrite=True)
+    write_dispatch_plan_json(dispatch_path, {"value": 2}, overwrite=True)
+
+    assert json.loads(harvest_path.read_text(encoding="utf-8"))["value"] == 2
+    assert json.loads(dispatch_path.read_text(encoding="utf-8"))["value"] == 2
+
+
+def test_dispatch_plan_cli_preserves_default_active_floor_guards(
+    tmp_path: Path,
+) -> None:
+    spec = importlib.util.spec_from_file_location(
+        "build_materializer_exact_eval_dispatch_plan_fixture",
+        DISPATCH_PLAN_TOOL,
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    captured: dict[str, object] = {}
+
+    def fake_build_materializer_exact_eval_dispatch_plan(**kwargs: object) -> dict[str, object]:
+        captured.update(kwargs)
+        return {
+            "plan": {
+                "authorized_candidate_count": 0,
+                "blocked_candidate_count": 0,
+                "dispatch_mode": "dry_run",
+            },
+            "experiment_queue": {"schema": QUEUE_SCHEMA, "experiments": []},
+        }
+
+    module.build_materializer_exact_eval_dispatch_plan = (
+        fake_build_materializer_exact_eval_dispatch_plan
+    )
+    module.write_json = lambda path, payload, **kwargs: None
+
+    rc = module.main(
+        [
+            "--repo-root",
+            str(tmp_path),
+            "--exact-ready-queue",
+            str(tmp_path / "exact_ready_queue.json"),
+            "--dispatch-plan-out",
+            str(tmp_path / "dispatch_plan.json"),
+            "--experiment-queue-out",
+            str(tmp_path / "dispatch_queue.json"),
+        ]
+    )
+
+    assert rc == 0
+    assert (
+        captured["active_floor_archive_bytes"]
+        == module.ACTIVE_FLOOR_ARCHIVE_BYTES
+    )
+    assert captured["active_floor_score"] == module.ACTIVE_FLOOR_SCORE
+
+
+def test_dispatch_plan_cli_writes_paused_dry_run_queue_from_bridge(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+    bridge_path = _write_json(repo / "bridge_report.json", bridge)
+    plan_out = repo / "dispatch_plan.json"
+    queue_out = repo / "dispatch_queue.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(DISPATCH_PLAN_TOOL),
+            "--repo-root",
+            str(repo),
+            "--bridge-report",
+            str(bridge_path),
+            "--dispatch-plan-out",
+            str(plan_out),
+            "--experiment-queue-out",
+            str(queue_out),
+            "--active-floor-archive-bytes",
+            "0",
+            "--require-authorized",
+            "--allow-above-active-floor-dispatch",
+            "--operator-override-reason",
+            "fixture",
+        ],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    plan = json.loads(plan_out.read_text(encoding="utf-8"))
+    queue = json.loads(queue_out.read_text(encoding="utf-8"))
+    assert plan["authorized_candidate_count"] == 1
+    assert plan["dispatch_mode"] == "dry_run"
+    assert queue["controls"]["mode"] == "paused"
+    assert "authorized=1 blocked=0" in completed.stdout

@@ -3,9 +3,9 @@
 ## Overview
 
 A CLI tool that orchestrates post-filter training experiments across a fleet
-of heterogeneous compute platforms (local MPS, bat00 CUDA, tertiary MPS,
-Colab T4, Kaggle T4) with automatic scheduling, telemetry, budgeting,
-and recovery.
+of heterogeneous compute platforms (local MLX/MPS advisory compute, bat00 CUDA,
+tertiary CPU-only edge work, Colab T4, Kaggle T4) with automatic scheduling,
+telemetry, budgeting, and recovery.
 
 ## CLI interface
 
@@ -61,12 +61,15 @@ platforms:
     budget: unlimited
     keepalive: "schtasks WSLKeepalive"
     
-  tertiary_mps:
-    type: mps
+  tertiary_cpu:
+    type: cpu
     memory_gb: 8
-    max_concurrent: 1
-    max_hidden: 16  # OOM above h=16
-    connect: "ssh tertiary"
+    max_concurrent: 2
+    max_artifact_gb: 1
+    connect: "ssh adpena@tertiary"
+    verified_hostname: "Tertiary.local"
+    executor: "ssh_experiment_queue_future"
+    policy: "light CPU-only work until remote queue writeback lands"
     budget: unlimited
     
   colab_free:

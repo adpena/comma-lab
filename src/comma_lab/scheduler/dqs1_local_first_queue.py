@@ -187,6 +187,59 @@ def _scheduler_preflight_experiment(
     )
 
 
+def _resolve_output_root(path_value: str, *, repo_root: Path) -> Path:
+    path = Path(path_value).expanduser()
+    if not path.is_absolute():
+        path = repo_root / path
+    return path.resolve(strict=False)
+
+
+def _path_under_root(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return True
+
+
+def _expected_dqs1_workload_root(
+    *,
+    repo_root: Path,
+    results_root: str,
+    expected_workload_root: str | None,
+) -> Path | None:
+    if expected_workload_root is not None:
+        return _resolve_output_root(expected_workload_root, repo_root=repo_root)
+    path = Path(results_root).expanduser()
+    if path.is_absolute():
+        return path.resolve(strict=False)
+    return None
+
+
+def _require_dqs1_outputs_under_storage_root(
+    *,
+    repo_root: Path,
+    results_root: str,
+    expected_workload_root: str | None,
+) -> None:
+    root = _expected_dqs1_workload_root(
+        repo_root=repo_root,
+        results_root=results_root,
+        expected_workload_root=expected_workload_root,
+    )
+    if root is None:
+        raise ExperimentQueueError(
+            "scheduler_storage_expected_workload_root is required when "
+            "results_root is relative and scheduler preflight gates DQS1 queue execution"
+        )
+    resolved_results_root = _resolve_output_root(results_root, repo_root=repo_root)
+    if not _path_under_root(resolved_results_root, root):
+        raise ExperimentQueueError(
+            "DQS1 results_root outside scheduler workload root: "
+            f"{resolved_results_root} not under {root}"
+        )
+
+
 def _require_false_authority(
     row: dict[str, Any],
     *,
@@ -1116,6 +1169,7 @@ def build_dqs1_local_first_queue(
 def build_dqs1_local_first_queue_from_selections(
     selections: tuple[Dqs1QueueSelection, ...],
     *,
+    repo_root: str | Path = ".",
     lane_date: str | None = None,
     queue_id: str = DEFAULT_QUEUE_ID,
     results_root: str = DEFAULT_RESULTS_ROOT,
@@ -1153,6 +1207,17 @@ def build_dqs1_local_first_queue_from_selections(
 ) -> dict[str, Any]:
     if not selections:
         raise ExperimentQueueError("at least one DQS1 queue selection is required")
+    if include_scheduler_preflight and not scheduler_proactive_cleanup_execute:
+        raise ExperimentQueueError(
+            "scheduler_proactive_cleanup_execute must be true when "
+            "scheduler preflight gates DQS1 queue execution"
+        )
+    if include_scheduler_preflight:
+        _require_dqs1_outputs_under_storage_root(
+            repo_root=Path(repo_root),
+            results_root=results_root,
+            expected_workload_root=scheduler_storage_expected_workload_root,
+        )
     date = lane_date or _lane_date_from_summary_path(selections[0].action_summary_path)
     preflight_dependency = (
         f"{DEFAULT_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup"
@@ -1269,6 +1334,7 @@ def build_queue_from_action_summary(
     return Dqs1QueueBuildResult(
         queue=build_dqs1_local_first_queue_from_selections(
             selections,
+            repo_root=repo_root,
             queue_id=queue_id,
             results_root=results_root,
             mlx_effective_selection=mlx_effective_selection,

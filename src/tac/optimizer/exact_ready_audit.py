@@ -337,6 +337,7 @@ def _ready_row_live_custody_blockers(
     queue_dir: Path,
     archive_sha: str | None,
     runtime_tree_sha: str | None,
+    runtime_content_sha: str | None,
 ) -> tuple[list[str], dict[str, Any]]:
     blockers: list[str] = []
     facts: dict[str, Any] = {}
@@ -488,13 +489,28 @@ def _ready_row_live_custody_blockers(
                 facts["runtime_manifest_error"] = str(exc)
             else:
                 actual_runtime_sha = runtime_manifest.get("runtime_tree_sha256")
+                actual_runtime_content_sha = runtime_manifest.get(
+                    "runtime_content_tree_sha256"
+                )
                 facts["actual_runtime_tree_sha256"] = actual_runtime_sha
+                facts["actual_runtime_content_tree_sha256"] = (
+                    actual_runtime_content_sha
+                )
                 if runtime_tree_sha is None:
                     blockers.append("ready_row_runtime_tree_sha256_missing_or_invalid")
                 elif actual_runtime_sha != runtime_tree_sha:
                     blockers.append(
                         "ready_row_runtime_tree_sha_mismatch:"
                         f"{actual_runtime_sha}!={runtime_tree_sha}"
+                    )
+                if runtime_content_sha is None:
+                    blockers.append(
+                        "ready_row_runtime_content_tree_sha256_missing_or_invalid"
+                    )
+                elif actual_runtime_content_sha != runtime_content_sha:
+                    blockers.append(
+                        "ready_row_runtime_content_tree_sha_mismatch:"
+                        f"{actual_runtime_content_sha}!={runtime_content_sha}"
                     )
 
     return blockers, facts
@@ -520,6 +536,9 @@ def audit_exact_ready_queue(
     claim_ttl_hours: float = 24.0,
     packetir_closure_records: Mapping[str, list[dict[str, Any]]] | None = None,
     result_review_records: Mapping[str, list[dict[str, Any]]] | None = None,
+    ignore_active_claim_conflicts: bool = False,
+    allowed_active_claim_platform: str | None = None,
+    allowed_active_claim_instance_job_ids: Iterable[str] = (),
 ) -> dict[str, Any]:
     """Return stale-row findings for one generated exact-ready queue."""
 
@@ -541,7 +560,14 @@ def audit_exact_ready_queue(
 
     stale_rows: list[dict[str, Any]] = []
     seen: set[
-        tuple[str | None, str | None, str | None, str | None, tuple[str, ...]]
+        tuple[
+            str | None,
+            str | None,
+            str | None,
+            str | None,
+            str | None,
+            tuple[str, ...],
+        ]
     ] = set()
     candidate_id_filter = (
         {str(candidate_id) for candidate_id in candidate_ids}
@@ -571,6 +597,7 @@ def audit_exact_ready_queue(
         lane_id = row.get("lane_id")
         archive_sha = _row_archive_sha(row)
         runtime_tree_sha = _row_runtime_tree_sha(row)
+        runtime_content_sha = _row_runtime_content_sha(row)
         runtime_changed = as_bool(row.get("score_affecting_runtime_changed"))
         custody_blockers, custody_facts = _ready_row_live_custody_blockers(
             row,
@@ -578,20 +605,26 @@ def audit_exact_ready_queue(
             queue_dir=queue_dir,
             archive_sha=archive_sha,
             runtime_tree_sha=runtime_tree_sha,
+            runtime_content_sha=runtime_content_sha,
         )
         if not isinstance(lane_id, str) or not lane_id.strip():
             blockers = ["lane_id_missing"]
         else:
             lane_aliases = _claim_lane_aliases(lane_id.strip())
             blockers = []
-            for claim_lane_id in lane_aliases:
-                blockers.extend(
-                    active_claim_conflicts(
-                        claim_lane_id,
-                        dispatch_claims_path=dispatch_claims_path,
-                        ttl_hours=claim_ttl_hours,
+            if not ignore_active_claim_conflicts:
+                for claim_lane_id in lane_aliases:
+                    blockers.extend(
+                        active_claim_conflicts(
+                            claim_lane_id,
+                            dispatch_claims_path=dispatch_claims_path,
+                            ttl_hours=claim_ttl_hours,
+                            allowed_active_claim_platform=allowed_active_claim_platform,
+                            allowed_active_claim_instance_job_ids=(
+                                allowed_active_claim_instance_job_ids
+                            ),
+                        )
                     )
-                )
             if archive_sha is None:
                 blockers.append("archive_sha256_missing_or_invalid")
             else:
@@ -624,6 +657,7 @@ def audit_exact_ready_queue(
                             dispatch_claims_path=dispatch_claims_path,
                             active_floor_score=active_floor_score,
                             runtime_tree_sha256=runtime_tree_sha,
+                            runtime_content_tree_sha256=runtime_content_sha,
                             score_affecting_runtime_changed=runtime_changed,
                         )
                     )
@@ -635,6 +669,7 @@ def audit_exact_ready_queue(
             lane_id if isinstance(lane_id, str) else None,
             archive_sha,
             runtime_tree_sha,
+            runtime_content_sha,
             tuple(blockers),
         )
         if key in seen:
@@ -646,6 +681,7 @@ def audit_exact_ready_queue(
                 "lane_id": lane_id,
                 "archive_sha256": archive_sha,
                 "runtime_tree_sha256": runtime_tree_sha,
+                "runtime_content_tree_sha256": runtime_content_sha,
                 "score_affecting_runtime_changed": runtime_changed,
                 "live_custody": custody_facts,
                 "ready_for_exact_eval_dispatch": True,
@@ -693,6 +729,9 @@ def audit_exact_ready_queues(
     active_floor_score: float | None = ACTIVE_FLOOR_SCORE,
     candidate_ids: Iterable[str] | None = None,
     claim_ttl_hours: float = 24.0,
+    ignore_active_claim_conflicts: bool = False,
+    allowed_active_claim_platform: str | None = None,
+    allowed_active_claim_instance_job_ids: Iterable[str] = (),
 ) -> dict[str, Any]:
     packetir_closure_records = _discover_packetir_exact_closure_records(repo_root)
     result_review_records = _discover_exact_cuda_result_review_records(repo_root)
@@ -706,6 +745,11 @@ def audit_exact_ready_queues(
             claim_ttl_hours=claim_ttl_hours,
             packetir_closure_records=packetir_closure_records,
             result_review_records=result_review_records,
+            ignore_active_claim_conflicts=ignore_active_claim_conflicts,
+            allowed_active_claim_platform=allowed_active_claim_platform,
+            allowed_active_claim_instance_job_ids=(
+                allowed_active_claim_instance_job_ids
+            ),
         )
         for path in queue_paths
     ]

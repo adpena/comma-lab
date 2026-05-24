@@ -127,6 +127,8 @@ def test_repo_policy_keeps_research_state_boundary_in_comma_lab() -> None:
     assert "tools/audit_research_state_tracking.py" in gitignore
     assert ".omx/auto_memory_snapshot_*/" in gitignore
     assert ".omx/research/artifacts/" in gitignore
+    assert ".omx/research/materializer_exact_eval_dispatch_plan_*.json" in gitignore
+    assert "**/.*.tmp-*" in gitignore
     assert "experiments/results/lightning_batch/**/source_manifest.json" in gitignore
     assert "!experiments/results/lightning_batch/**/custody_anchor.json" in gitignore
     assert "Keep `tac` clean" in agents

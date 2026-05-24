@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import datetime as dt
 import hashlib
 import importlib.util
 import json
@@ -45,6 +46,34 @@ def _write_ranked_input(tmp_path: Path, candidates: list[dict]) -> Path:
     return ranked
 
 
+def _recent_claim_timestamp() -> str:
+    return dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace(
+        "+00:00",
+        "Z",
+    )
+
+
+def _write_claims(
+    path: Path,
+    *,
+    lane_id: str,
+    platform: str,
+    job_id: str,
+    status: str = "running",
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    timestamp = _recent_claim_timestamp()
+    lines = [
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |",
+        "|---|---|---|---|---|---|---|---|",
+        (
+            f"| {timestamp} | codex | {lane_id} | {platform} | {job_id} | "
+            f"{timestamp} | {status} | active claim policy dispatch test |"
+        ),
+    ]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def _write_archive(path: Path, payload: bytes = b"fixture") -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     info = zipfile.ZipInfo("x")
@@ -57,10 +86,26 @@ def _write_archive(path: Path, payload: bytes = b"fixture") -> Path:
 
 def _write_runtime_custody_files(archive: Path) -> str:
     runtime_root = archive.parent
+    fixture_repo_root = runtime_root.parent
+    (fixture_repo_root / "upstream").mkdir(parents=True, exist_ok=True)
+    (fixture_repo_root / "upstream" / "evaluate.py").write_text(
+        "# fixture upstream evaluator\n",
+        encoding="utf-8",
+    )
     archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
     archive_size = archive.stat().st_size
+    (runtime_root / "inflate.py").write_text(
+        "#!/usr/bin/env python3\n"
+        "from pathlib import Path\n"
+        "import sys\n"
+        "Path(sys.argv[2] if len(sys.argv) > 2 else sys.argv[-1]).write_bytes(b'')\n",
+        encoding="utf-8",
+    )
     (runtime_root / "inflate.sh").write_text(
-        "#!/usr/bin/env bash\nset -euo pipefail\nexit 0\n",
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "SCRIPT_DIR=\"$(cd \"$(dirname \"$0\")\" && pwd)\"\n"
+        "python \"$SCRIPT_DIR/inflate.py\" \"$@\"\n",
         encoding="utf-8",
     )
     (runtime_root / "inflate.sh").chmod(0o755)
@@ -81,8 +126,64 @@ def _write_runtime_custody_files(archive: Path) -> str:
         + "\n",
         encoding="utf-8",
     )
+    inflate_sh_sha = hashlib.sha256((runtime_root / "inflate.sh").read_bytes()).hexdigest()
+    inflate_py_sha = hashlib.sha256((runtime_root / "inflate.py").read_bytes()).hexdigest()
+    runtime_packet_manifest = runtime_root / "runtime_packet_manifest.json"
+    runtime_packet_manifest.write_text(
+        json.dumps(
+            {
+                "schema": "pr101_kaggle_proxy_runtime_packet_v1",
+                "packet_dir": str(runtime_root),
+                "runtime_custody": {
+                    "runtime_files": [
+                        {"relpath": "inflate.sh", "sha256": inflate_sh_sha},
+                        {"relpath": "inflate.py", "sha256": inflate_py_sha},
+                    ],
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (runtime_root / "runtime_consumption_proof.json").write_text(
+        json.dumps(
+            {
+                "schema": "pr101_kaggle_proxy_runtime_consumption_proof_v1",
+                "proof_kind": "fixture_runtime_bound_pr101_proof",
+                "manifest_path": str(runtime_packet_manifest),
+                "manifest_sha256": hashlib.sha256(
+                    runtime_packet_manifest.read_bytes()
+                ).hexdigest(),
+                "packet_dir": str(runtime_root),
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "inflate_sh_routes_to_packet_inflate_py": True,
+                "runtime_consumption_proven_for_supported_bias_params": True,
+                "archive_unchanged_proof": {"archive_sha256": archive_sha},
+                "inflate_wrapper_route_proof": {
+                    "wrapper_invoked_packet_inflate_py": True,
+                    "inflate_sh_sha256": inflate_sh_sha,
+                    "packet_inflate_py_sha256": inflate_py_sha,
+                },
+                "inflate_static_bias_patch_proof": {
+                    "inflate_sha256": inflate_py_sha,
+                },
+                "inflate_runtime_bias_logic_proof": {
+                    "packet_inflate_function_executed": True,
+                    "inflate_py_sha256": inflate_py_sha,
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     return str(
-        runtime_dependency_manifest(runtime_root, runtime_root.parent)[
+        runtime_dependency_manifest(runtime_root, fixture_repo_root)[
             "runtime_tree_sha256"
         ]
     )
@@ -103,12 +204,21 @@ def _write_archive_with_members(path: Path, names: list[str]) -> Path:
 def _ready_custody_candidate(tmp_path: Path, **overrides) -> dict:
     archive = _write_archive(tmp_path / "submission" / "archive.zip")
     runtime_tree_sha256 = _write_runtime_custody_files(archive)
+    runtime_manifest = runtime_dependency_manifest(archive.parent, archive.parent.parent)
     candidate = {
         **_ready_lightning_candidate(),
         "archive_path": archive.as_posix(),
         "archive_size_bytes": archive.stat().st_size,
         "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
         "runtime_tree_sha256": runtime_tree_sha256,
+        "runtime_content_tree_sha256": runtime_manifest["runtime_content_tree_sha256"],
+        "score_affecting_payload_changed": True,
+        "charged_bits_changed": True,
+        "runtime_consumption_proof_required": True,
+        "runtime_consumption_proof_status": "present",
+        "runtime_consumption_proof_path": (
+            archive.parent / "runtime_consumption_proof.json"
+        ).as_posix(),
     }
     candidate.update(overrides)
     return candidate
@@ -133,8 +243,33 @@ def test_parallel_dispatch_lightning_command_uses_stack_dispatcher_flags() -> No
     assert "--predicted-low 0.19" in joined
     assert "--predicted-high 0.24" in joined
     assert "--job-name batch_candidate42" in joined
+    assert "--dispatch-lane-id pr106_latent_sidecar" in joined
     assert "--lane-script" not in cmd
     assert "--predicted-band" not in cmd
+
+
+def test_parallel_dispatch_lightning_existing_claim_command_uses_required_job(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+
+    cmd = tool._build_dispatch_cmd(
+        _ready_custody_candidate(tmp_path),
+        provider="lightning",
+        lane_script="scripts/legacy_should_be_ignored_for_lightning.sh",
+        label_prefix="batch",
+        estimated_cost=0.11,
+        max_dph=0.50,
+        dispatch_claims_path=tmp_path / "claims.md",
+        claim_policy="require_active_claim",
+        required_claim_instance_job_ids=("claimed_job_1",),
+    )
+
+    joined = " ".join(cmd)
+    assert "--job-name claimed_job_1" in joined
+    assert "--dispatch-lane-id pr106_latent_sidecar" in joined
+    assert "--dispatch-claims-path" in cmd
+    assert "--use-existing-dispatch-claim" in cmd
 
 
 def test_parallel_dispatch_rejects_above_active_floor_archive_by_default(
@@ -177,18 +312,93 @@ def test_parallel_dispatch_allows_above_active_floor_with_operator_reason(
     assert loaded == [candidate]
 
 
+def test_parallel_dispatch_require_active_claim_policy_allows_claim_then_dispatch(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(tmp_path)
+    ranked = _write_ranked_input(tmp_path, [candidate])
+    claims = tmp_path / ".omx/state/active_lane_dispatch_claims.md"
+    _write_claims(
+        claims,
+        lane_id=str(candidate["lane_id"]),
+        platform="lightning",
+        job_id="job-1",
+    )
+
+    try:
+        tool._load_top_k(ranked, k=None, dispatch_claims_path=claims)
+    except tool.DispatchInputError as exc:
+        preclaim_message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected active claim conflict in preclaim mode")
+
+    assert "same_lane_active_dispatch_claim" in preclaim_message
+    loaded = tool._load_top_k(
+        ranked,
+        k=None,
+        dispatch_claims_path=claims,
+        claim_policy="require_active_claim",
+        required_claim_platform="lightning",
+        required_claim_instance_job_ids=("job-1",),
+    )
+
+    assert loaded == [candidate]
+
+
+def test_parallel_dispatch_exact_ready_queue_refuses_top_k_fallback(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(tmp_path)
+    ranked = tmp_path / "exact_ready_queue.json"
+    ranked.write_text(
+        json.dumps(
+            {
+                "schema": "optimizer_candidate_exact_eval_ready_queue_v1",
+                "dispatch_ready_count": 0,
+                "dispatch_ready": [],
+                "top_k": [candidate],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected exact-ready queue to refuse top_k fallback")
+
+    assert "refusing top_k fallback" in message
+
+
 def test_parallel_dispatch_accepts_candidate_archive_schema_with_exact_custody(
     tmp_path: Path,
 ) -> None:
     tool = _load_tool("parallel_dispatch_top_k")
     archive = _write_archive(tmp_path / "submission" / "pr101_candidate.zip", b"pr101")
+    runtime_tree_sha256 = _write_runtime_custody_files(archive)
+    runtime_manifest = runtime_dependency_manifest(archive.parent, archive.parent.parent)
     candidate = {
         **_ready_lightning_candidate(),
         "archive_path": None,
         "candidate_archive_path": archive.as_posix(),
         "candidate_archive_bytes": archive.stat().st_size,
         "candidate_archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
-        "runtime_tree_sha256": _write_runtime_custody_files(archive),
+        "runtime_tree_sha256": runtime_tree_sha256,
+        "runtime_content_tree_sha256": runtime_manifest["runtime_content_tree_sha256"],
+        "score_affecting_payload_changed": True,
+        "charged_bits_changed": True,
+        "runtime_consumption_proof_required": True,
+        "runtime_consumption_proof_status": "present",
+        "runtime_consumption_proof_path": (
+            archive.parent / "runtime_consumption_proof.json"
+        ).as_posix(),
     }
     ranked = _write_ranked_input(tmp_path, [candidate])
 
@@ -401,13 +611,23 @@ def test_parallel_dispatch_rejects_candidate_archive_bytes_above_floor_by_defaul
 ) -> None:
     tool = _load_tool("parallel_dispatch_top_k")
     archive = _write_archive(tmp_path / "submission" / "candidate_archive.zip")
+    runtime_tree_sha256 = _write_runtime_custody_files(archive)
+    runtime_manifest = runtime_dependency_manifest(archive.parent, archive.parent.parent)
     candidate = {
         **_ready_lightning_candidate(),
         "archive_path": None,
         "candidate_archive_path": archive.as_posix(),
         "candidate_archive_bytes": archive.stat().st_size,
         "candidate_archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
-        "runtime_tree_sha256": _write_runtime_custody_files(archive),
+        "runtime_tree_sha256": runtime_tree_sha256,
+        "runtime_content_tree_sha256": runtime_manifest["runtime_content_tree_sha256"],
+        "score_affecting_payload_changed": True,
+        "charged_bits_changed": True,
+        "runtime_consumption_proof_required": True,
+        "runtime_consumption_proof_status": "present",
+        "runtime_consumption_proof_path": (
+            archive.parent / "runtime_consumption_proof.json"
+        ).as_posix(),
     }
     ranked = _write_ranked_input(tmp_path, [candidate])
 
@@ -685,6 +905,8 @@ def test_parallel_dispatch_rejects_self_neural_edge_probe_without_bit_change_pro
         tmp_path,
         candidate_id="self_compress_edge_learning_probe",
         target_modes=["contest_exact_eval", "openpilot"],
+        score_affecting_payload_changed=False,
+        charged_bits_changed=False,
     )
     ranked = _write_ranked_input(tmp_path, [candidate])
 

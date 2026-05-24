@@ -28,12 +28,78 @@ def _write_archive(path: Path) -> tuple[int, str]:
     return len(raw), hashlib.sha256(raw).hexdigest()
 
 
+def _write_runtime_bound_pr101_proof(
+    submission: Path,
+    *,
+    archive_sha: str,
+) -> Path:
+    inflate_sh_sha = hashlib.sha256((submission / "inflate.sh").read_bytes()).hexdigest()
+    inflate_py_sha = hashlib.sha256((submission / "inflate.py").read_bytes()).hexdigest()
+    manifest_path = _write_json(
+        submission / "runtime_packet_manifest.json",
+        {
+            "schema": "pr101_kaggle_proxy_runtime_packet_v1",
+            "packet_dir": str(submission),
+            "runtime_custody": {
+                "runtime_files": [
+                    {"relpath": "inflate.sh", "sha256": inflate_sh_sha},
+                    {"relpath": "inflate.py", "sha256": inflate_py_sha},
+                ],
+            },
+        },
+    )
+    return _write_json(
+        submission / "runtime_consumption_proof.json",
+        {
+            "schema": "pr101_kaggle_proxy_runtime_consumption_proof_v1",
+            "proof_kind": "fixture_runtime_bound_pr101_proof",
+            "manifest_path": str(manifest_path),
+            "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+            "packet_dir": str(submission),
+            "runtime_consumption_proven_for_supported_bias_params": True,
+            "inflate_sh_routes_to_packet_inflate_py": True,
+            "archive_unchanged_proof": {
+                "archive_sha256": archive_sha,
+            },
+            "inflate_wrapper_route_proof": {
+                "wrapper_invoked_packet_inflate_py": True,
+                "inflate_sh_sha256": inflate_sh_sha,
+                "packet_inflate_py_sha256": inflate_py_sha,
+            },
+            "inflate_static_bias_patch_proof": {
+                "inflate_sha256": inflate_py_sha,
+            },
+            "inflate_runtime_bias_logic_proof": {
+                "packet_inflate_function_executed": True,
+                "inflate_py_sha256": inflate_py_sha,
+            },
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+        },
+    )
+
+
 def _ready_row(repo: Path) -> dict[str, object]:
     submission = repo / "experiments/results/exact_dispatch_authority_fixture"
     archive = submission / "archive.zip"
     archive_bytes, archive_sha = _write_archive(archive)
     inflate = submission / "inflate.sh"
-    inflate.write_text("#!/usr/bin/env bash\nset -euo pipefail\nexit 0\n", encoding="utf-8")
+    inflate_py = submission / "inflate.py"
+    inflate_py.write_text(
+        "#!/usr/bin/env python3\n"
+        "from pathlib import Path\n"
+        "import sys\n"
+        "Path(sys.argv[2]).write_bytes(b'')\n",
+        encoding="utf-8",
+    )
+    inflate.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "SCRIPT_DIR=\"$(cd \"$(dirname \"$0\")\" && pwd)\"\n"
+        "python \"$SCRIPT_DIR/inflate.py\" \"$1\" \"$2\"\n",
+        encoding="utf-8",
+    )
     inflate.chmod(inflate.stat().st_mode | stat.S_IXUSR)
     (submission / "report.txt").write_text(
         f"archive.zip sha256={archive_sha} bytes={archive_bytes}\n",
@@ -47,6 +113,10 @@ def _ready_row(repo: Path) -> dict[str, object]:
             "candidate_archive_bytes": archive_bytes,
             "candidate_archive": {"member_name": "0.bin"},
         },
+    )
+    runtime_proof = _write_runtime_bound_pr101_proof(
+        submission,
+        archive_sha=archive_sha,
     )
     (repo / "upstream").mkdir(parents=True, exist_ok=True)
     (repo / "upstream/evaluate.py").write_text("# fixture\n", encoding="utf-8")
@@ -65,6 +135,11 @@ def _ready_row(repo: Path) -> dict[str, object]:
                     "score_claim": False,
                     "score_affecting_payload_changed": True,
                     "charged_bits_changed": True,
+                    "runtime_consumption_proof_required": True,
+                    "runtime_consumption_proof_status": "present",
+                    "runtime_consumption_proof_path": runtime_proof.relative_to(
+                        repo
+                    ).as_posix(),
                     "dispatch_blockers": [
                         "optimizer_candidate_queue_is_planning_only",
                         "requires_exact_eval_readiness_gate",
@@ -101,6 +176,14 @@ def _write_claims(path: Path, rows: list[tuple[str, str, str, str]]) -> None:
 
 def _recent_claim_timestamp() -> str:
     return dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _stale_claim_timestamp() -> str:
+    return (
+        dt.datetime.now(dt.UTC)
+        .replace(microsecond=0)
+        - dt.timedelta(hours=25)
+    ).isoformat().replace("+00:00", "Z")
 
 
 def test_exact_dispatch_authority_preclaim_policy_treats_active_claim_as_conflict(
@@ -149,6 +232,31 @@ def test_exact_dispatch_authority_require_active_claim_blocks_missing_claim(
     )
 
 
+def test_exact_dispatch_authority_require_active_claim_rejects_stale_claim(
+    tmp_path: Path,
+) -> None:
+    row = _ready_row(tmp_path)
+    claims = tmp_path / ".omx/state/active_lane_dispatch_claims.md"
+    _write_claims(claims, [(_stale_claim_timestamp(), "lightning", "job-1", "running")])
+
+    verdict = exact_dispatch_authority(
+        row,
+        repo_root=tmp_path,
+        source="test",
+        active_floor_archive_bytes=None,
+        dispatch_claims_path=claims,
+        claim_policy="require_active_claim",
+        required_claim_platform="lightning",
+        required_claim_instance_job_ids=["job-1"],
+    )
+
+    assert verdict.authorized is False
+    assert (
+        "active_dispatch_claim_required_not_found:platform=lightning:job_id=job-1"
+        in verdict.blockers
+    )
+
+
 def test_exact_dispatch_authority_require_active_claim_accepts_matching_claim(
     tmp_path: Path,
 ) -> None:
@@ -170,6 +278,71 @@ def test_exact_dispatch_authority_require_active_claim_accepts_matching_claim(
     assert verdict.authorized is True
     assert verdict.blockers == ()
     assert verdict.facts["claim_policy"] == "require_active_claim"
+
+
+def test_exact_dispatch_authority_require_active_claim_blocks_stale_claim(
+    tmp_path: Path,
+) -> None:
+    row = _ready_row(tmp_path)
+    claims = tmp_path / ".omx/state/active_lane_dispatch_claims.md"
+    _write_claims(
+        claims,
+        [("2026-05-17T12:00:00Z", "lightning", "job-1", "running")],
+    )
+
+    verdict = exact_dispatch_authority(
+        row,
+        repo_root=tmp_path,
+        source="test",
+        active_floor_archive_bytes=None,
+        dispatch_claims_path=claims,
+        claim_policy="require_active_claim",
+        required_claim_platform="lightning",
+        required_claim_instance_job_ids=["job-1"],
+    )
+
+    assert verdict.authorized is False
+    assert any(
+        blocker.startswith(
+            "same_lane_stale_nonterminal_dispatch_claim:fixture_lane:job-1"
+        )
+        for blocker in verdict.blockers
+    )
+    assert (
+        "active_dispatch_claim_required_not_found:platform=lightning:job_id=job-1"
+        in verdict.blockers
+    )
+
+
+def test_exact_dispatch_authority_require_active_claim_blocks_other_active_claims(
+    tmp_path: Path,
+) -> None:
+    row = _ready_row(tmp_path)
+    claims = tmp_path / ".omx/state/active_lane_dispatch_claims.md"
+    _write_claims(
+        claims,
+        [
+            (_recent_claim_timestamp(), "lightning", "job-1", "running"),
+            (_recent_claim_timestamp(), "lightning", "job-2", "running"),
+        ],
+    )
+
+    verdict = exact_dispatch_authority(
+        row,
+        repo_root=tmp_path,
+        source="test",
+        active_floor_archive_bytes=None,
+        dispatch_claims_path=claims,
+        claim_policy="require_active_claim",
+        required_claim_platform="lightning",
+        required_claim_instance_job_ids=["job-1"],
+    )
+
+    assert verdict.authorized is False
+    assert any(
+        blocker.startswith("same_lane_active_dispatch_claim:fixture_lane:job-2")
+        for blocker in verdict.blockers
+    )
 
 
 def test_exact_dispatch_authority_require_active_claim_respects_terminal_closeout(

@@ -71,6 +71,114 @@ def _scorer_response_dataset(path: Path) -> None:
     )
 
 
+def _mlx_selection(path: Path) -> None:
+    false_authority = _false_authority()
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "mlx_effective_spend_triage_candidate_selection.v1",
+                **false_authority,
+                "candidate_generation_only": True,
+                "archive_materialization_required": True,
+                "requires_exact_auth_eval_before_score_claim": True,
+                "allowed_use": (
+                    "candidate_generation_filter_after_strict_effective_mlx_spend_triage_gate"
+                ),
+                "evidence_grade": "macOS-MLX-research-signal",
+                "evidence_tag": "[macOS-MLX research-signal]",
+                "score_axis": "[macOS-MLX research-signal]",
+                "gates": {
+                    "effective_mlx_spend_triage_gate": {
+                        "schema": "ll_effective_mlx_spend_triage_gate.v1",
+                        "status": "strict_pass",
+                        "mlx_exact_eval_spend_triage_allowed": True,
+                        "allowed_use": (
+                            "local_exact_eval_spend_triage_filter_after_all_gates"
+                        ),
+                    },
+                    "response_validation_status": "passed",
+                    "torch_parity_status": "strict_pass",
+                    "score_calibration_status": "strict_pass",
+                    "production_contract_status": "strict_pass",
+                },
+                "selection_policy": {
+                    "top_k": 1,
+                    "families": ["mlx_decoder_q"],
+                    "gate_spend_triage_allowed_families": ["mlx_decoder_q"],
+                    "min_observed_gain": 0.00001,
+                    "prediction_field": "ll_predicted_delta_vs_baseline_score",
+                    "require_prediction_negative": False,
+                    "require_singleton_windows": True,
+                    "planning_value_accessor": (
+                        "scorer_response_planning_value_for_target"
+                    ),
+                    "planning_value_scope": "normalized_full_video",
+                },
+                "summary": {
+                    "dataset_row_count": 1,
+                    "eligible_row_count": 1,
+                    "selected_count": 1,
+                },
+                "selected_rows": [
+                    {
+                        "schema": "mlx_effective_spend_triage_candidate_row.v1",
+                        **false_authority,
+                        "rank": 1,
+                        "candidate_generation_only": True,
+                        "archive_materialization_required": True,
+                        "requires_exact_auth_eval_before_score_claim": True,
+                        "selection_basis": (
+                            "normalized_full_video_mlx_singleton_response_gain"
+                        ),
+                        "selection_planning_value_accessor": (
+                            "scorer_response_planning_value_for_target"
+                        ),
+                        "selection_planning_value_scope": "normalized_full_video",
+                        "row_id": "best",
+                        "family": "mlx_decoder_q",
+                        "candidate_id": "mlx_scorer_response:window:best",
+                        "pair_indices": [10, 11],
+                        "source_pair_window": [10, 11],
+                        "source_path": "candidate_pair_best.json",
+                        "window_baseline_source_path": "baseline_pair_best.json",
+                        "archive_sha256": "a" * 64,
+                        "raw_sha256": "b" * 64,
+                        "source_inflated_outputs_aggregate_sha256": "c" * 64,
+                        "source_candidate_cache_array_sha256": {
+                            "pair_indices": "d" * 64
+                        },
+                        "source_reference_cache_array_sha256": {
+                            "pair_indices": "e" * 64
+                        },
+                        "window_baseline_candidate_cache_array_sha256": {
+                            "pair_indices": "f" * 64
+                        },
+                        "window_baseline_reference_cache_array_sha256": {
+                            "pair_indices": "1" * 64
+                        },
+                        "observed_scorer_gain_vs_baseline": 0.012,
+                        "full_video_denominator": 600,
+                        "normalized_full_video_scorer_gain_vs_baseline": 0.00002,
+                        "projected_full_video_delta_vs_baseline_score": -0.00002,
+                        "break_even_added_bytes_from_normalized_full_video_gain": (
+                            0.00002 / CONTEST_RATE_SCORE_PER_BYTE
+                        ),
+                        "normalized_full_video_byte_budget_margin_vs_break_even": (
+                            0.00002 / CONTEST_RATE_SCORE_PER_BYTE
+                        ),
+                        "added_archive_bytes": 0,
+                        "calibrated_min_mlx_gap_for_spend_triage": 0.00001,
+                        "prediction_field": "ll_predicted_delta_vs_baseline_score",
+                        "predicted_delta_vs_baseline_score": -0.000015,
+                        "prediction_agrees_with_observed_gain": True,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 def _review_packet(axis: str, *, score: float, baseline: float, aggregate: str) -> dict[str, object]:
     exact_cuda = axis == "contest_cuda"
     return {
@@ -276,6 +384,75 @@ def test_cli_builds_inverse_action_functional_from_scorer_response(
     assert action["cells"][0]["priority"]["elapsed_seconds"] == 2.25
     assert action["cells"][0]["priority"]["artifact_bytes"] == 4096
     assert "Selected Water Buckets" in md_out.read_text(encoding="utf-8")
+
+
+def test_cli_accepts_mlx_effective_spend_triage_selection(tmp_path: Path) -> None:
+    selection = tmp_path / "selection.json"
+    output = tmp_path / "action.json"
+    _mlx_selection(selection)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--mlx-effective-spend-triage-selection",
+            str(selection),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(tmp_path),
+            "--total-byte-budget",
+            "64",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    action = json.loads(output.read_text(encoding="utf-8"))
+    cell = action["cells"][0]
+    assert "score_claim=false" in result.stdout
+    assert action["schema"] == ACTION_FUNCTIONAL_SCHEMA
+    assert action["integral_totals"]["cell_count"] == 1
+    assert action["water_bucket"]["selected_count"] == 1
+    assert cell["source_provenance"]["selection_source_path"] == "selection.json"
+    assert cell["source_provenance"]["source_row_id"] == "best"
+    assert cell["candidate_generation_only"] is True
+    for key, value in PROXY_FALSE_AUTHORITY_FIELDS.items():
+        assert cell[key] is value
+        assert action[key] is value
+
+
+def test_cli_rejects_malformed_mlx_effective_spend_triage_selection(
+    tmp_path: Path,
+) -> None:
+    selection = tmp_path / "selection.json"
+    output = tmp_path / "action.json"
+    _mlx_selection(selection)
+    payload = json.loads(selection.read_text(encoding="utf-8"))
+    payload["selected_rows"][0]["archive_sha256"] = "not-sha"
+    selection.write_text(json.dumps(payload), encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--mlx-effective-spend-triage-selection",
+            str(selection),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(tmp_path),
+            "--total-byte-budget",
+            "64",
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 2
+    assert "archive_sha256 must be sha256 hex" in result.stderr
 
 
 def test_cli_accepts_paired_exact_auth_calibration_packets(tmp_path: Path) -> None:

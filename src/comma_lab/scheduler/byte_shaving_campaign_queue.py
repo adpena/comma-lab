@@ -46,7 +46,11 @@ from .byte_shaving_materializer_registry import (
     suggest_materializer_adapters,
 )
 from .dqs1_local_first_queue import SAFE_OPERATOR_ACTION, candidate_slug
-from .experiment_queue import QUEUE_SCHEMA, ExperimentQueueError, normalize_queue_definition
+from .experiment_queue import (
+    QUEUE_SCHEMA,
+    ExperimentQueueError,
+    normalize_queue_definition,
+)
 from .storage_preflight import build_scheduler_storage_preflight_experiment
 
 MATERIALIZATION_SCHEMA = "byte_shaving_campaign_materialization.v1"
@@ -64,10 +68,20 @@ BYTE_RANGE_CHAIN_TOOL = "tools/run_byte_range_entropy_recode_chain.py"
 INVERSE_ACTION_FUNCTIONAL_TOOL = "tools/build_inverse_steganalysis_action_functional.py"
 INVERSE_SCORER_CELL_TOOL = "tools/materialize_inverse_scorer_cell_candidate.py"
 INVERSE_SCORER_CELL_CHAIN_TOOL = "tools/run_inverse_scorer_cell_candidate_chain.py"
+HARVEST_MATERIALIZER_TOOL = "tools/harvest_materializer_chain_candidates.py"
+MATERIALIZER_DISPATCH_PLAN_TOOL = "tools/build_materializer_exact_eval_dispatch_plan.py"
 BYTE_RANGE_CHAIN_MANIFEST = CHAIN_MANIFEST_NAME
 INVERSE_ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
 INVERSE_SCORER_CELL_CANDIDATE_SCHEMA = "inverse_scorer_cell_candidate_v1"
 MATERIALIZER_EXECUTION_STEP_ID = "materialize_local_proof_chain"
+MATERIALIZER_HARVEST_STEP_ID = "harvest_materializer_chains"
+MATERIALIZER_DISPATCH_PLAN_STEP_ID = "build_exact_eval_dispatch_plan"
+MATERIALIZER_HARVEST_REPORT_SCHEMA = "materializer_chain_harvest_report.v1"
+MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA = (
+    "materializer_chain_exact_readiness_bridge_report.v1"
+)
+MATERIALIZER_EXACT_EVAL_DISPATCH_PLAN_SCHEMA = "materializer_exact_eval_dispatch_plan.v1"
+OPTIMIZER_CANDIDATE_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
 
 
 def _utc_now() -> str:
@@ -1344,6 +1358,170 @@ def _materializer_execution_experiment_id(
     return experiment_id
 
 
+def _resolve_repo_path(path: str | Path, *, repo_root: Path) -> Path:
+    candidate = Path(path).expanduser()
+    if not candidate.is_absolute():
+        candidate = repo_root / candidate
+    return candidate.resolve(strict=False)
+
+
+def _materializer_chain_manifest_path(
+    postconditions: Sequence[Mapping[str, Any]],
+    *,
+    row_id: str,
+) -> str:
+    for condition in postconditions:
+        if condition.get("type") != "materializer_chain_complete":
+            continue
+        path = condition.get("path")
+        if isinstance(path, str) and path.strip():
+            return path
+    raise ExperimentQueueError(
+        "include_exact_readiness_followup requires materializer_chain_complete "
+        f"postcondition for {row_id}"
+    )
+
+
+def _materializer_exact_readiness_followup_steps(
+    *,
+    queue_id: str,
+    repo_root: Path,
+    row_id: str,
+    postconditions: Sequence[Mapping[str, Any]],
+    handoff_dir: Path,
+    materializer_step_id: str,
+    require_ready: bool,
+    dispatch_require_authorized: bool,
+    dispatch_provider: str,
+    dispatch_label_prefix: str,
+    dispatch_max_total_cost: float,
+    dispatch_estimated_cost_per_dispatch: float,
+) -> list[dict[str, Any]]:
+    chain_manifest_path = _materializer_chain_manifest_path(
+        postconditions,
+        row_id=row_id,
+    )
+    manifest_path = _resolve_repo_path(chain_manifest_path, repo_root=repo_root)
+    source_queue_path = handoff_dir / "source_queue.json"
+    harvest_report_path = handoff_dir / "harvest_report.json"
+    readiness_dir = handoff_dir / "exact_readiness"
+    bridge_report_path = handoff_dir / "exact_readiness_bridge_report.json"
+    dispatch_plan_path = handoff_dir / "dispatch_plan.json"
+    dispatch_queue_path = handoff_dir / "dispatch_queue.json"
+
+    harvest_command = [
+        ".venv/bin/python",
+        HARVEST_MATERIALIZER_TOOL,
+        "--repo-root",
+        repo_root.as_posix(),
+        "--chain-manifest",
+        _repo_rel(manifest_path, repo_root),
+        "--source-queue-out",
+        _repo_rel(source_queue_path, repo_root),
+        "--report-out",
+        _repo_rel(harvest_report_path, repo_root),
+        "--exact-readiness-out-dir",
+        _repo_rel(readiness_dir, repo_root),
+        "--exact-readiness-bridge-report-out",
+        _repo_rel(bridge_report_path, repo_root),
+        "--require-accepted",
+    ]
+    if require_ready:
+        harvest_command.append("--exact-readiness-require-ready")
+
+    dispatch_plan_command = [
+        ".venv/bin/python",
+        MATERIALIZER_DISPATCH_PLAN_TOOL,
+        "--repo-root",
+        repo_root.as_posix(),
+        "--bridge-report",
+        _repo_rel(bridge_report_path, repo_root),
+        "--dispatch-plan-out",
+        _repo_rel(dispatch_plan_path, repo_root),
+        "--experiment-queue-out",
+        _repo_rel(dispatch_queue_path, repo_root),
+        "--experiment-queue-id",
+        f"{queue_id}_{row_id}_exact_eval_dispatch",
+        "--provider",
+        dispatch_provider,
+        "--label-prefix",
+        dispatch_label_prefix,
+        "--estimated-cost-per-dispatch",
+        f"{dispatch_estimated_cost_per_dispatch:.8g}",
+        "--max-total-cost",
+        f"{dispatch_max_total_cost:.8g}",
+    ]
+    if dispatch_require_authorized:
+        dispatch_plan_command.append("--require-authorized")
+
+    return [
+        {
+            "id": MATERIALIZER_HARVEST_STEP_ID,
+            "kind": "command",
+            "command": harvest_command,
+            "requires": [materializer_step_id],
+            "resources": {"kind": "local_cpu"},
+            "postconditions": [
+                {
+                    "type": "json_equals",
+                    "path": _repo_rel(source_queue_path, repo_root),
+                    "key": "schema",
+                    "equals": OPTIMIZER_CANDIDATE_QUEUE_SCHEMA,
+                },
+                {
+                    "type": "json_equals",
+                    "path": _repo_rel(harvest_report_path, repo_root),
+                    "key": "schema",
+                    "equals": MATERIALIZER_HARVEST_REPORT_SCHEMA,
+                },
+                {
+                    "type": "json_equals",
+                    "path": _repo_rel(bridge_report_path, repo_root),
+                    "key": "schema",
+                    "equals": MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA,
+                },
+            ],
+            "telemetry": {
+                "artifact_paths": [
+                    _repo_rel(source_queue_path, repo_root),
+                    _repo_rel(harvest_report_path, repo_root),
+                    _repo_rel(readiness_dir, repo_root),
+                    _repo_rel(bridge_report_path, repo_root),
+                ],
+                "recursive": True,
+            },
+        },
+        {
+            "id": MATERIALIZER_DISPATCH_PLAN_STEP_ID,
+            "kind": "command",
+            "command": dispatch_plan_command,
+            "requires": [MATERIALIZER_HARVEST_STEP_ID],
+            "resources": {"kind": "local_cpu"},
+            "postconditions": [
+                {
+                    "type": "json_equals",
+                    "path": _repo_rel(dispatch_plan_path, repo_root),
+                    "key": "schema",
+                    "equals": MATERIALIZER_EXACT_EVAL_DISPATCH_PLAN_SCHEMA,
+                },
+                {
+                    "type": "json_equals",
+                    "path": _repo_rel(dispatch_queue_path, repo_root),
+                    "key": "schema",
+                    "equals": QUEUE_SCHEMA,
+                },
+            ],
+            "telemetry": {
+                "artifact_paths": [
+                    _repo_rel(dispatch_plan_path, repo_root),
+                    _repo_rel(dispatch_queue_path, repo_root),
+                ],
+                "recursive": False,
+            },
+        },
+    ]
+
+
 def build_materializer_execution_queue(
     work_queue: Mapping[str, Any],
     *,
@@ -1368,6 +1546,13 @@ def build_materializer_execution_queue(
     scheduler_proactive_cleanup_min_bytes: str = "1",
     scheduler_proactive_cleanup_cold_store_roots: Sequence[str] = (),
     scheduler_proactive_cleanup_cold_store_reserve_gb: float = 40.0,
+    include_exact_readiness_followup: bool = False,
+    exact_readiness_followup_require_ready: bool = False,
+    exact_eval_dispatch_require_authorized: bool = False,
+    exact_eval_dispatch_provider: str = "lightning",
+    exact_eval_dispatch_label_prefix: str = "materializer_exact_eval",
+    exact_eval_dispatch_max_total_cost: float = 5.0,
+    exact_eval_dispatch_estimated_cost_per_dispatch: float = 0.30,
 ) -> dict[str, Any]:
     """Compile executable materializer rows into ``experiment_queue.v1``."""
 
@@ -1383,6 +1568,14 @@ def build_materializer_execution_queue(
         raise ExperimentQueueError("scheduler_storage_expected_bytes must be non-negative")
     if scheduler_proactive_cleanup_action not in {"move", "delete"}:
         raise ExperimentQueueError("scheduler_proactive_cleanup_action must be move or delete")
+    if exact_eval_dispatch_provider not in {"lightning", "vastai"}:
+        raise ExperimentQueueError("exact_eval_dispatch_provider must be lightning or vastai")
+    if exact_eval_dispatch_max_total_cost <= 0:
+        raise ExperimentQueueError("exact_eval_dispatch_max_total_cost must be > 0")
+    if exact_eval_dispatch_estimated_cost_per_dispatch <= 0:
+        raise ExperimentQueueError(
+            "exact_eval_dispatch_estimated_cost_per_dispatch must be > 0"
+        )
     if include_scheduler_preflight and not scheduler_proactive_cleanup_execute:
         raise ExperimentQueueError(
             "scheduler_proactive_cleanup_execute must be true when "
@@ -1394,7 +1587,7 @@ def build_materializer_execution_queue(
         raise ExperimentQueueError("queue_id must be a non-empty string")
     repo = Path(repo_root)
     work_queue_ref = (
-        _repo_rel(Path(source_work_queue_path), repo)
+        _repo_rel(_resolve_repo_path(source_work_queue_path, repo_root=repo), repo)
         if source_work_queue_path is not None
         else None
     )
@@ -1448,6 +1641,24 @@ def build_materializer_execution_queue(
                         f"{index} artifact path outside scheduler workload root: "
                         f"{raw_path!r} not under {expected_output_root}"
                     )
+    if include_exact_readiness_followup and expected_output_root is not None:
+        for index, row in enumerate(executable_rows, start=1):
+            postconditions = _normalize_materializer_queue_postconditions(
+                row.get("postconditions")
+            )
+            chain_manifest_path = _resolve_repo_path(
+                _materializer_chain_manifest_path(
+                    postconditions,
+                    row_id=str(row.get("work_id") or index),
+                ),
+                repo_root=repo,
+            )
+            handoff_dir = chain_manifest_path.parent / "exact_eval_handoff"
+            if not _path_under_root(handoff_dir, expected_output_root):
+                raise ExperimentQueueError(
+                    "materializer exact-readiness follow-up path outside "
+                    f"scheduler workload root: {handoff_dir} not under {expected_output_root}"
+                )
 
     resource_limits: dict[str, int] = {}
     for key, value in (resource_concurrency or {}).items():
@@ -1475,11 +1686,54 @@ def build_materializer_execution_queue(
                 f"materializer work row {rank} uses non-local resource {resource_kind!r}"
             )
         used_resource_kinds.add(resource_kind)
+        if include_exact_readiness_followup:
+            used_resource_kinds.add("local_cpu")
         experiment_id = _materializer_execution_experiment_id(
             row,
             rank,
             seen_experiments,
         )
+        postconditions = _normalize_materializer_queue_postconditions(
+            row.get("postconditions")
+        )
+        steps = [
+            {
+                "id": MATERIALIZER_EXECUTION_STEP_ID,
+                "kind": "command",
+                "command": command_items,
+                "requires": [] if preflight_dependency is None else [preflight_dependency],
+                "resources": {"kind": resource_kind},
+                "postconditions": postconditions,
+                "telemetry": dict(row.get("telemetry") or {}),
+                "timeout_seconds": step_timeout_seconds,
+            }
+        ]
+        if include_exact_readiness_followup:
+            chain_manifest_path = _resolve_repo_path(
+                _materializer_chain_manifest_path(
+                    postconditions,
+                    row_id=str(row.get("work_id") or experiment_id),
+                ),
+                repo_root=repo,
+            )
+            steps.extend(
+                _materializer_exact_readiness_followup_steps(
+                    queue_id=queue_id,
+                    repo_root=repo,
+                    row_id=experiment_id,
+                    postconditions=postconditions,
+                    handoff_dir=chain_manifest_path.parent / "exact_eval_handoff",
+                    materializer_step_id=MATERIALIZER_EXECUTION_STEP_ID,
+                    require_ready=exact_readiness_followup_require_ready,
+                    dispatch_require_authorized=exact_eval_dispatch_require_authorized,
+                    dispatch_provider=exact_eval_dispatch_provider,
+                    dispatch_label_prefix=exact_eval_dispatch_label_prefix,
+                    dispatch_max_total_cost=exact_eval_dispatch_max_total_cost,
+                    dispatch_estimated_cost_per_dispatch=(
+                        exact_eval_dispatch_estimated_cost_per_dispatch
+                    ),
+                )
+            )
         metadata = apply_proxy_evidence_boundary(
             {
                 "schema": MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA,
@@ -1498,6 +1752,9 @@ def build_materializer_execution_queue(
                 "receiver_contract_kind": row.get("receiver_contract_kind"),
                 "source_unit_ids": _as_list(row.get("source_unit_ids")),
                 "source_selection_ids": _as_list(row.get("source_selection_ids")),
+                "exact_readiness_followup_enabled": bool(
+                    include_exact_readiness_followup
+                ),
                 "candidate_saved_bytes_sum": row.get("candidate_saved_bytes_sum"),
                 "expected_score_gain_sum": row.get("expected_score_gain_sum"),
                 "allowed_use": "local_materializer_proof_chain_only",
@@ -1521,23 +1778,9 @@ def build_materializer_execution_queue(
                     "no-score-authority",
                 ],
                 "metadata": metadata,
-                "steps": [
-                    {
-                        "id": MATERIALIZER_EXECUTION_STEP_ID,
-                        "kind": "command",
-                        "command": command_items,
-                        "requires": [] if preflight_dependency is None else [preflight_dependency],
-                        "resources": {"kind": resource_kind},
-                        "postconditions": _normalize_materializer_queue_postconditions(
-                            row.get("postconditions")
-                        ),
-                        "telemetry": dict(row.get("telemetry") or {}),
-                        "timeout_seconds": step_timeout_seconds,
-                    }
-                ],
+                "steps": steps,
             }
         )
-
     for kind in sorted(used_resource_kinds):
         resource_limits.setdefault(
             kind,
@@ -2023,8 +2266,10 @@ __all__ = [
     "MATERIALIZATION_SCHEMA",
     "MATERIALIZER_BACKLOG_SCHEMA",
     "MATERIALIZER_CONTEXTS_SCHEMA",
+    "MATERIALIZER_DISPATCH_PLAN_STEP_ID",
     "MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA",
     "MATERIALIZER_EXECUTION_STEP_ID",
+    "MATERIALIZER_HARVEST_STEP_ID",
     "MATERIALIZER_WORK_QUEUE_SCHEMA",
     "PORTFOLIO_SCHEMA",
     "build_materializer_backlog",

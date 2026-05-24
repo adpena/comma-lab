@@ -14,8 +14,10 @@ from comma_lab.scheduler.byte_shaving_campaign_queue import (
     MATERIALIZATION_SCHEMA,
     MATERIALIZER_BACKLOG_SCHEMA,
     MATERIALIZER_CONTEXTS_SCHEMA,
+    MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA,
     MATERIALIZER_EXECUTION_STEP_ID,
+    MATERIALIZER_HARVEST_STEP_ID,
     MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID,
     MATERIALIZER_WORK_QUEUE_SCHEMA,
     build_materializer_execution_queue,
@@ -1764,6 +1766,115 @@ def test_materializer_execution_queue_runs_executable_work_rows(
     )
 
 
+def test_materializer_execution_queue_can_append_exact_readiness_followups(
+    tmp_path: Path,
+) -> None:
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _byte_range_entropy_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+    backlog_row = compiled["materializer_backlog"]["rows"][0]
+    output_dir = tmp_path / "chain_out"
+    work_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            backlog_row["backlog_key"]: {
+                "schema_manifest": "schema.json",
+                "beam_probe_reports": ["beam_a.json"],
+                "source_runtime_dir": "runtime",
+                "output_dir": str(output_dir),
+                "source_archive": "archive.zip",
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    execution_queue = build_materializer_execution_queue(
+        work_queue,
+        queue_id="materializer_exec_fixture",
+        repo_root=tmp_path,
+        lane_id="lane_materializer_exec_fixture",
+        local_cpu_concurrency=5,
+        include_exact_readiness_followup=True,
+    )
+
+    assert execution_queue["controls"]["max_concurrency"]["local_cpu"] == 5
+    experiment = execution_queue["experiments"][0]
+    steps = experiment["steps"]
+    assert [step["id"] for step in steps] == [
+        MATERIALIZER_EXECUTION_STEP_ID,
+        MATERIALIZER_HARVEST_STEP_ID,
+        MATERIALIZER_DISPATCH_PLAN_STEP_ID,
+    ]
+    materializer_step, harvest_step, dispatch_step = steps
+    assert harvest_step["requires"] == [MATERIALIZER_EXECUTION_STEP_ID]
+    assert dispatch_step["requires"] == [MATERIALIZER_HARVEST_STEP_ID]
+    assert harvest_step["command"][:2] == [
+        ".venv/bin/python",
+        "tools/harvest_materializer_chain_candidates.py",
+    ]
+    assert "--chain-manifest" in harvest_step["command"]
+    assert "--allow-unfinished-state" not in harvest_step["command"]
+    assert f"chain_out/{CHAIN_MANIFEST_NAME}" in harvest_step["command"]
+    assert "chain_out/exact_eval_handoff/source_queue.json" in (
+        harvest_step["command"]
+    )
+    assert dispatch_step["command"][:2] == [
+        ".venv/bin/python",
+        "tools/build_materializer_exact_eval_dispatch_plan.py",
+    ]
+    assert "--dispatch-mode" not in dispatch_step["command"]
+    assert "--allow-paid-dispatch-queue" not in dispatch_step["command"]
+    assert "chain_out/exact_eval_handoff/dispatch_queue.json" in (
+        dispatch_step["command"]
+    )
+
+    dag = build_staircase_dag_from_experiment_queue(
+        execution_queue,
+        dag_id="materializer_followup_dag_fixture",
+    )
+    by_node_id = {node["node_id"]: node for node in dag["nodes"]}
+    assert by_node_id[
+        f"{experiment['id']}.{MATERIALIZER_HARVEST_STEP_ID}"
+    ]["dependencies"] == [f"{experiment['id']}.{MATERIALIZER_EXECUTION_STEP_ID}"]
+    assert by_node_id[
+        f"{experiment['id']}.{MATERIALIZER_DISPATCH_PLAN_STEP_ID}"
+    ]["dependencies"] == [f"{experiment['id']}.{MATERIALIZER_HARVEST_STEP_ID}"]
+
+
+def test_materializer_execution_queue_followup_requires_chain_postcondition(
+    tmp_path: Path,
+) -> None:
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _inverse_surface_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+    work_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND: {
+                "inverse_scorer_surface": "surface.json",
+                "output": str(tmp_path / "inverse_action.json"),
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    with pytest.raises(ExperimentQueueError, match="materializer_chain_complete"):
+        build_materializer_execution_queue(
+            work_queue,
+            queue_id="inverse_action_exec_fixture",
+            repo_root=tmp_path,
+            include_exact_readiness_followup=True,
+        )
+
+
 def test_materializer_execution_queue_wraps_inverse_action_work_rows(
     tmp_path: Path,
 ) -> None:
@@ -2176,6 +2287,7 @@ def test_byte_shaving_campaign_queue_cli_writes_dqs1_queue(tmp_path: Path) -> No
             "2048",
             "--scheduler-proactive-cleanup-root",
             "experiments/results",
+            "--scheduler-proactive-cleanup-execute",
         ],
         check=True,
         text=True,
@@ -2286,6 +2398,7 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
             "--materializer-scheduler-proactive-cleanup-root",
             "experiments/results",
             "--materializer-scheduler-proactive-cleanup-execute",
+            "--include-materializer-exact-readiness-followup",
             "--repo-root",
             str(tmp_path),
             "--candidate-limit",
@@ -2300,6 +2413,7 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
     assert stdout["materializer_contexts"] == str(contexts_path)
     assert stdout["materializer_work_queue_out"] == str(work_queue)
     assert stdout["materializer_execution_queue"]["queue_out"] == str(execution_queue)
+    assert stdout["materializer_execution_queue"]["exact_readiness_followup"] is True
     assert stdout["materializer_execution_queue"]["experiment_count"] == 2
     assert stdout["materializer_work_queue_row_count"] == 1
     payload = json.loads(work_queue.read_text(encoding="utf-8"))
@@ -2331,3 +2445,8 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
     assert step["timeout_seconds"] == 600
     assert step["telemetry"]["artifact_paths"] == [str(output_dir)]
     assert step["postconditions"][0]["type"] == "json_equals"
+    assert [step["id"] for step in experiment["steps"]] == [
+        MATERIALIZER_EXECUTION_STEP_ID,
+        MATERIALIZER_HARVEST_STEP_ID,
+        MATERIALIZER_DISPATCH_PLAN_STEP_ID,
+    ]

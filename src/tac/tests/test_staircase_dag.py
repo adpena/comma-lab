@@ -15,9 +15,11 @@ from comma_lab.scheduler.experiment_queue import (
     initialize_queue_state,
 )
 from comma_lab.scheduler.staircase_dag import (
+    DEFAULT_MACHINE_PRESETS,
     build_staircase_dag_from_experiment_queue,
     build_storage_plan_payload,
     experiment_queue_status_map,
+    local_lab_resource_pools,
     parse_resource_pool_spec,
     plan_staircase_dispatch,
     write_staircase_dag,
@@ -25,6 +27,38 @@ from comma_lab.scheduler.staircase_dag import (
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = REPO_ROOT / "tools" / "plan_staircase_dag.py"
+
+
+def test_machine_presets_include_tertiary_as_light_cpu_ssh_worker() -> None:
+    presets = {str(row["id"]): row for row in DEFAULT_MACHINE_PRESETS}
+    tertiary = presets["tertiary_m1_macbook_pro_8gb"]
+
+    assert tertiary["ssh_target"] == "adpena@tertiary"
+    assert tertiary["verified_hostname"] == "Tertiary.local"
+    assert tertiary["slots"] == {"local_cpu": 2}
+    assert "low_memory" in tertiary["tags"]
+    assert "local_mlx" not in tertiary["slots"]
+    assert tertiary["resource_policy"] == (
+        "light_cpu_only_until_remote_queue_writeback_executor_lands"
+    )
+
+
+def test_tertiary_metadata_survives_into_executor_task_specs() -> None:
+    tertiary = next(
+        row for row in local_lab_resource_pools() if row["id"] == "tertiary_m1_macbook_pro_8gb"
+    )
+    dag = build_staircase_dag_from_experiment_queue(
+        _queue(),
+        dag_id="fixture_tertiary_dag",
+        resource_pools=[tertiary],
+    )
+
+    plan = plan_staircase_dispatch(dag, max_nodes=1)
+
+    assert plan["dask_task_specs"][0]["machine_hint"] == "tertiary_m1_macbook_pro_8gb"
+    assert plan["dask_task_specs"][0]["machine"]["ssh_target"] == "adpena@tertiary"
+    assert plan["dask_task_specs"][0]["machine"]["verified_hostname"] == "Tertiary.local"
+    assert plan["dask_task_specs"][0]["machine"]["slots"] == {"local_cpu": 2}
 
 
 def _queue() -> dict[str, object]:
@@ -483,11 +517,16 @@ def test_rejects_truthy_authority_in_dag_node() -> None:
 
 
 def test_parse_resource_pool_spec() -> None:
-    pool = parse_resource_pool_spec("bat00:local_cpu=8,local_cuda=1,memory_gb=32,disk_gb=64,tags=windows+cuda")
+    pool = parse_resource_pool_spec(
+        "bat00:local_cpu=8,local_cuda=1,memory_gb=32,disk_gb=64,"
+        "tags=windows+cuda,ssh_target=adpena@bat00,executor=ssh"
+    )
 
     assert pool["id"] == "bat00"
     assert pool["slots"] == {"local_cpu": 8, "local_cuda": 1}
     assert pool["tags"] == ["windows", "cuda"]
+    assert pool["ssh_target"] == "adpena@bat00"
+    assert pool["executor"] == "ssh"
 
 
 def test_parse_resource_pool_spec_rejects_unknown_resource_kind() -> None:

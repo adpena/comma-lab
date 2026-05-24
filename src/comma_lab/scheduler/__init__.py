@@ -1,6 +1,8 @@
 from .byte_shaving_campaign_queue import (
+    MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA,
     MATERIALIZER_EXECUTION_STEP_ID,
+    MATERIALIZER_HARVEST_STEP_ID,
     build_materializer_execution_queue,
 )
 from .byte_shaving_materializer_registry import (
@@ -53,8 +55,14 @@ from .experiment_queue_observer import (
     render_observation_markdown,
 )
 from .materializer_chain_harvest import (
+    EXACT_READINESS_BRIDGE_SCHEMA,
     HARVEST_SCHEMA,
     harvest_materializer_chain_manifests,
+    run_exact_readiness_bridge_for_harvested_queue,
+)
+from .materializer_exact_eval_dispatch_plan import (
+    DISPATCH_PLAN_SCHEMA,
+    build_materializer_exact_eval_dispatch_plan,
 )
 from .models import (
     BudgetReport,
@@ -74,10 +82,12 @@ __all__ = [
     "BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID",
     "BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND",
     "BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND",
+    "DISPATCH_PLAN_SCHEMA",
     "DQS1_DROP_PAIR_MATERIALIZER",
     "DQS1_PAIRSET_TARGET_KIND",
     "DQS1_RECEIVER_CONTRACT_ID",
     "DQS1_RECEIVER_CONTRACT_KIND",
+    "EXACT_READINESS_BRIDGE_SCHEMA",
     "HARVEST_SCHEMA",
     "INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER",
     "INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_ID",
@@ -87,8 +97,10 @@ __all__ = [
     "INVERSE_SCORER_CELL_RECEIVER_CONTRACT_ID",
     "INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND",
     "INVERSE_SCORER_CELL_TARGET_KIND",
+    "MATERIALIZER_DISPATCH_PLAN_STEP_ID",
     "MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA",
     "MATERIALIZER_EXECUTION_STEP_ID",
+    "MATERIALIZER_HARVEST_STEP_ID",
     "REGISTRY_SCHEMA",
     "BudgetReport",
     "BudgetSpec",
@@ -104,6 +116,7 @@ __all__ = [
     "TrackStatus",
     "assert_canonical_state_for_execution",
     "assert_no_orphaned_steps_for_execution",
+    "build_materializer_exact_eval_dispatch_plan",
     "build_materializer_execution_queue",
     "connect_state",
     "default_state_path",
@@ -124,6 +137,7 @@ __all__ = [
     "resolve_materializer",
     "retire_orphaned_steps",
     "rewind_step",
+    "run_exact_readiness_bridge_for_harvested_queue",
     "run_queue_worker",
     "run_ready_step",
     "set_control_mode",

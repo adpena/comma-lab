@@ -228,6 +228,17 @@ src/tac.egg-info/
 .omx/research/byte_shaving_materializer_storage_plan_*.json
 .omx/research/byte_shaving_materializer_proactive_cleanup_*.json
 .omx/research/byte_shaving_materializer_proactive_cleanup_*.json.journal.jsonl
+# Generated materializer harvest/exact-readiness/dispatch handoff JSON is
+# queue-owned local custody. Promote durable conclusions into dated memos
+# instead of accidentally tracking per-run handoff packets.
+.omx/research/materializer_chain_harvest_source_queue_*.json
+.omx/research/materializer_chain_harvest_report_*.json
+.omx/research/materializer_chain_exact_readiness_bridge_report_*.json
+.omx/research/materializer_exact_readiness_*/
+.omx/research/materializer_exact_eval_dispatch_plan_*.json
+.omx/research/materializer_exact_eval_dispatch_queue_*.json
+.omx/research/materializer_exact_eval_dispatch_experiment_queue_*.json
+.omx/research/byte_shaving_materializer_campaign_*/
 #
 # PR110 evidence packs are useful local custody bundles, but the hosted archive
 # and runtime snapshot are rebuildable/raw public artifacts. Keep their compact
@@ -313,6 +324,7 @@ reports/public/.env
 # belongs in the committed target artifact or a dated .omx/research ledger.
 **/.*.partial.*
 **/.*.backup.*
+**/.*.tmp-*
 
 # Ralph tool backup files (auto-generated)
 .ralph/*.bak

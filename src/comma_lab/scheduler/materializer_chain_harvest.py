@@ -10,6 +10,7 @@ before emitting planning-only optimizer queue rows.
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 from collections.abc import Mapping, Sequence
@@ -663,13 +664,17 @@ def _utc_now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
-def write_json(path: str | Path, payload: Any) -> None:
+def write_json(path: str | Path, payload: Any, *, overwrite: bool = False) -> None:
     output = Path(path)
+    if output.exists() and not overwrite:
+        raise ExperimentQueueError(f"refusing_to_overwrite_json:{output}")
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(
+    tmp = output.with_name(f".{output.name}.tmp-{os.getpid()}-{time.time_ns()}")
+    tmp.write_text(
         json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n",
         encoding="utf-8",
     )
+    tmp.replace(output)
 
 
 __all__ = [

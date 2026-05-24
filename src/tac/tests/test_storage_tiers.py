@@ -96,3 +96,29 @@ def test_storage_waterfall_does_not_select_missing_workload_root_without_create(
     assert plan.selected_tier is None
     assert plan.tiers[0].workload_root_exists is False
     assert "workload_root_missing" in plan.tiers[0].blockers
+
+
+def test_storage_waterfall_does_not_fabricate_missing_external_volume(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    volume_root = Path("/Volumes/CodexPactDefinitelyMissingVolumeForTest/pact")
+    tiers = parse_storage_tier_specs(
+        [f"missing={volume_root}"],
+        repo_root=repo,
+        reserve_free_gb=0,
+        allow_local_disk=False,
+    )
+
+    plan = plan_experiment_storage(
+        tiers,
+        workload_subdir="experiments/results/post_training",
+        create=True,
+    )
+
+    assert plan.selected_tier is None
+    assert "volume_mount_missing:CodexPactDefinitelyMissingVolumeForTest" in (
+        plan.tiers[0].blockers
+    )
+    assert not Path("/Volumes/CodexPactDefinitelyMissingVolumeForTest").exists()

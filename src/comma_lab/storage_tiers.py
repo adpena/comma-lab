@@ -260,12 +260,14 @@ def _status_for_tier(
     root = spec.root.expanduser()
     workload_root = root / workload_subdir
     blockers: list[str] = []
+    volume_blockers = _external_volume_blockers(root)
+    blockers.extend(volume_blockers)
     if _looks_like_local_disk(root) and not spec.allow_local_disk:
         blockers.append("local_disk_tier_disabled")
     parent = _nearest_existing_parent(root)
     if parent is None:
         blockers.append("no_existing_parent")
-    if create and spec.allow_create:
+    if create and spec.allow_create and not volume_blockers:
         try:
             workload_root.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
@@ -275,7 +277,7 @@ def _status_for_tier(
     if not workload_root_exists:
         blockers.append("workload_root_missing")
     parent_exists = parent is not None
-    usage_path = workload_root if workload_root_exists else parent
+    usage_path = None if volume_blockers else workload_root if workload_root_exists else parent
     total_bytes: int | None = None
     free_bytes: int | None = None
     if usage_path is not None:
@@ -345,6 +347,31 @@ def _probe_write(path: Path) -> bool:
         except OSError:
             pass
         return False
+
+
+def _external_volume_anchor(path: Path) -> tuple[str, Path] | None:
+    expanded = path.expanduser()
+    parts = expanded.parts
+    if len(parts) < 3 or parts[0] != "/" or parts[1] != "Volumes":
+        return None
+    volume_name = parts[2]
+    if not volume_name:
+        return None
+    return volume_name, Path("/") / "Volumes" / volume_name
+
+
+def _external_volume_blockers(path: Path) -> list[str]:
+    anchor = _external_volume_anchor(path)
+    if anchor is None:
+        return []
+    volume_name, anchor_path = anchor
+    if not anchor_path.exists():
+        return [f"volume_mount_missing:{volume_name}"]
+    if not anchor_path.is_dir():
+        return [f"volume_mount_not_directory:{volume_name}"]
+    if not os.path.ismount(anchor_path):
+        return [f"volume_anchor_not_mounted:{volume_name}"]
+    return []
 
 
 def _looks_like_local_disk(path: Path) -> bool:

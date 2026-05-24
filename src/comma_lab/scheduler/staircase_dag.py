@@ -55,12 +55,17 @@ DEFAULT_MACHINE_PRESETS: tuple[dict[str, Any], ...] = (
         "tags": ["darwin", "arm64", "unified_memory", "primary"],
     },
     {
-        "id": "m1_macbook_pro_8gb",
-        "label": "M1 MacBook Pro",
-        "slots": {"local_cpu": 2, "local_mlx": 1},
+        "id": "tertiary_m1_macbook_pro_8gb",
+        "label": "tertiary M1 MacBook Pro",
+        "slots": {"local_cpu": 2},
         "memory_gb": 8.0,
         "disk_gb": 12.0,
-        "tags": ["darwin", "arm64", "edge"],
+        "tags": ["darwin", "arm64", "tailscale", "ssh", "edge", "low_memory"],
+        "ssh_target": "adpena@tertiary",
+        "hostname": "tertiary",
+        "verified_hostname": "Tertiary.local",
+        "executor": "ssh_experiment_queue_future",
+        "resource_policy": "light_cpu_only_until_remote_queue_writeback_executor_lands",
     },
     {
         "id": "raspberry_pi4_8gb",
@@ -434,6 +439,10 @@ def normalize_resource_pools(raw_pools: Sequence[Mapping[str, Any]] | None) -> l
             "disk_gb": _positive_float(raw_pool.get("disk_gb"), f"{pool_id}.disk_gb", default=1.0),
             "tags": _string_list(raw_pool.get("tags"), f"{pool_id}.tags"),
         }
+        for key in ("ssh_target", "hostname", "verified_hostname", "executor", "resource_policy"):
+            value = raw_pool.get(key)
+            if value is not None:
+                row[key] = _require_text(value, f"{pool_id}.{key}")
         storage = _normalize_storage_plan_payload(raw_pool.get("storage"))
         if storage is not None:
             row["storage"] = storage
@@ -1041,14 +1050,17 @@ def plan_staircase_dispatch(
         )
 
     storage_hint = _storage_hint(storage if isinstance(storage, Mapping) else None)
+    machine_by_id = {str(pool["id"]): dict(pool) for pool in normalized["resource_pools"]}
     dask_tasks = []
     for node in selected:
         metadata = dict(node.metadata)
+        machine = machine_by_id.get(str(node.machine_id), {"id": node.machine_id})
         task = {
             "key": f"{normalized['dag_id']}:{node.node_id}",
             "command": list(node.command),
             "resources": {node.resource_kind: 1, f"machine:{node.machine_id}": 1},
             "machine_hint": node.machine_id,
+            "machine": dict(machine),
             "pure": False,
             "queue_id": metadata.get("queue_id"),
             "experiment_id": metadata.get("experiment_id"),
@@ -1175,7 +1187,7 @@ def parse_resource_pool_spec(spec: str) -> dict[str, Any]:
         value = value.strip()
         if key in {"memory_gb", "disk_gb"}:
             meta[key] = float(value)
-        elif key == "label":
+        elif key in {"label", "ssh_target", "hostname", "verified_hostname", "executor", "resource_policy"}:
             meta[key] = value
         elif key == "tags":
             meta[key] = [item.strip() for item in value.split("+") if item.strip()]

@@ -96,6 +96,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Exit nonzero when no chain manifests validate into source queue rows.",
     )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Allow overwriting generated JSON outputs. Defaults fail closed.",
+    )
     args = parser.parse_args(argv)
 
     if args.top_k is not None and args.top_k < 1:
@@ -135,8 +140,8 @@ def main(argv: list[str] | None = None) -> int:
         require_succeeded_state=not args.allow_unfinished_state,
         top_k=args.top_k,
     )
-    write_json(args.source_queue_out, result["source_queue"])
-    write_json(args.report_out, result["report"])
+    write_json(args.source_queue_out, result["source_queue"], overwrite=args.overwrite)
+    write_json(args.report_out, result["report"], overwrite=args.overwrite)
     report = result["report"]
     bridge_report = None
     if args.exact_readiness_out_dir is not None:
@@ -154,7 +159,11 @@ def main(argv: list[str] | None = None) -> int:
             operator_override_reason=args.exact_readiness_operator_override_reason,
         )
         if args.exact_readiness_bridge_report_out is not None:
-            write_json(args.exact_readiness_bridge_report_out, bridge_report)
+            write_json(
+                args.exact_readiness_bridge_report_out,
+                bridge_report,
+                overwrite=args.overwrite,
+            )
     print(
         f"harvested {report['accepted_manifest_count']}/"
         f"{report['unique_manifest_count']} materializer chain manifest(s); "

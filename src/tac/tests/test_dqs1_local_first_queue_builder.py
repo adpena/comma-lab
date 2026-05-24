@@ -517,6 +517,7 @@ def test_dqs1_queue_builder_can_emit_scheduler_preflight_gate(tmp_path: Path) ->
         ),
         scheduler_storage_tiers=("vertigo=/Volumes/VertigoDataTier/pact",),
         scheduler_proactive_cleanup_roots=("experiments/results", ".omx/tmp"),
+        scheduler_proactive_cleanup_execute=True,
         scheduler_proactive_cleanup_cold_store_roots=(
             "/Volumes/VertigoDataTier/pact/cold_store",
         ),
@@ -533,6 +534,9 @@ def test_dqs1_queue_builder_can_emit_scheduler_preflight_gate(tmp_path: Path) ->
     ]
     assert "tools/plan_experiment_storage.py" in preflight["steps"][0]["command"]
     assert "tools/compact_experiment_artifacts.py" in preflight["steps"][1]["command"]
+    assert "--execute" in preflight["steps"][1]["command"]
+    assert "--action" in preflight["steps"][1]["command"]
+    assert "move" in preflight["steps"][1]["command"]
     assert preflight["steps"][1]["resources"]["kind"] == "local_io_heavy"
     assert preflight["steps"][1]["timeout_seconds"] == 1200
     candidate_steps = {
@@ -541,6 +545,40 @@ def test_dqs1_queue_builder_can_emit_scheduler_preflight_gate(tmp_path: Path) ->
     assert candidate_steps["build_bridge_plan"]["requires"] == [
         "dqs1_scheduler_preflight.proactive_cleanup"
     ]
+
+
+def test_dqs1_queue_builder_rejects_dry_run_scheduler_preflight_cleanup(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+
+    with pytest.raises(
+        ExperimentQueueError,
+        match="scheduler_proactive_cleanup_execute must be true",
+    ):
+        build_queue_from_action_summary(
+            summary,
+            repo_root=tmp_path,
+            results_root=str(tmp_path / "dqs1_local_first"),
+            include_scheduler_preflight=True,
+            scheduler_storage_expected_workload_root=str(tmp_path / "dqs1_local_first"),
+        )
+
+
+def test_dqs1_queue_builder_rejects_preflight_outputs_outside_workload_root(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+
+    with pytest.raises(ExperimentQueueError, match="results_root outside"):
+        build_queue_from_action_summary(
+            summary,
+            repo_root=tmp_path,
+            results_root=str(tmp_path / "outside" / "dqs1_local_first"),
+            include_scheduler_preflight=True,
+            scheduler_storage_expected_workload_root=str(tmp_path / "inside"),
+            scheduler_proactive_cleanup_execute=True,
+        )
 
 
 def test_dqs1_queue_builder_requires_explicit_large_mlx_cache_ack(
@@ -670,6 +708,8 @@ def test_dqs1_harvest_selects_candidate_from_multi_candidate_batch(
         results_root="results",
         candidate_limit=2,
         include_scheduler_preflight=True,
+        scheduler_storage_expected_workload_root=str(tmp_path / "results"),
+        scheduler_proactive_cleanup_execute=True,
         eureka_run_id="20260522T000000Z",
     )
     queue_path = tmp_path / "queue.json"
