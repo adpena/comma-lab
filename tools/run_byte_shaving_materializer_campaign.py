@@ -37,6 +37,8 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (  # noqa: E4
     TENSOR_FACTORIZE_TARGET_KIND,
 )
 from comma_lab.scheduler.experiment_queue import (  # noqa: E402
+    DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
+    DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
     QUEUE_SCHEMA,
     default_state_path,
     load_queue_definition,
@@ -65,6 +67,27 @@ UNAVAILABLE_QUEUE_PERFORMANCE_SUMMARY_SCHEMA = "experiment_queue_performance_sum
 QUEUE_FEEDBACK_REPLAN_REQUEST_SCHEMA = "byte_shaving_materializer_campaign_feedback_replan_request.v1"
 QUEUE_FEEDBACK_REPLAN_EXPERIMENT_METADATA_SCHEMA = (
     "byte_shaving_materializer_campaign_feedback_replan_experiment_metadata.v1"
+)
+QUEUE_FEEDBACK_REPLAN_REQUIRED_FALSE_FIELDS = tuple(
+    dict.fromkeys(
+        (
+            *DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
+            "ready_for_exact_eval_dispatch",
+        )
+    )
+)
+QUEUE_FEEDBACK_REPLAN_FORBIDDEN_COMMAND_FLAGS = frozenset(
+    {
+        "--allow-paid-dispatch-queue",
+        "--contest-auth-eval",
+        "--cuda-auth",
+        "--dispatch-mode",
+        "--exact-auth-eval",
+        "--exact-eval",
+        "--modal",
+        "--provider",
+        "--submit",
+    }
 )
 _RUN_CONFIG_METADATA_KEYS = frozenset({"schema", "notes", "description", "owner"})
 QUEUE_RUNTIME_IDENTITY_FILE_PATHS = (
@@ -476,6 +499,17 @@ def _queue_feedback_replan_followup_queue_payload(
         command_items: list[str] = []
     else:
         command_items = [str(item) for item in command]
+        if len(command_items) < 2 or command_items[1] != (
+            "tools/build_inverse_steganalysis_action_functional.py"
+        ):
+            blockers.append("queue_feedback_replan_command_not_action_functional_tool")
+        forbidden_flags = sorted(
+            flag for flag in command_items if flag in QUEUE_FEEDBACK_REPLAN_FORBIDDEN_COMMAND_FLAGS
+        )
+        blockers.extend(
+            f"queue_feedback_replan_command_forbidden_flag:{flag}"
+            for flag in forbidden_flags
+        )
     output_path = _command_path_arg(command_items, "--output") if command_items else None
     md_path = _command_path_arg(command_items, "--md-out") if command_items else None
     if output_path is None:
@@ -582,19 +616,11 @@ def _queue_feedback_replan_followup_queue_payload(
                                         "schema": "inverse_steganalysis_discrete_action_functional.v1"
                                     },
                                     "required_false": [
-                                        "score_claim",
-                                        "promotion_eligible",
-                                        "rank_or_kill_eligible",
-                                        "ready_for_exact_eval_dispatch",
+                                        *QUEUE_FEEDBACK_REPLAN_REQUIRED_FALSE_FIELDS,
                                     ],
-                                    "false_or_missing": [
-                                        "score_claim_valid",
-                                        "score_claim_eligible",
-                                        "promotable",
-                                        "dispatch_ready",
-                                        "exact_eval_ready",
-                                        "ready_for_exact_eval_dispatch",
-                                    ],
+                                    "false_or_missing": list(
+                                        DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS
+                                    ),
                                 },
                             ],
                         }
@@ -770,6 +796,8 @@ def _response_update_placeholder_payload(
     summary_path: Path,
     queue_performance_summary_path: Path,
     queue_feedback_replan_request_path: Path,
+    queue_feedback_replan_followup_queue_path: Path | None,
+    queue_feedback_replan_followup_blockers: Sequence[str],
     queue_feedback_replan_blockers: Sequence[str],
     next_action_functional_command_hint: Sequence[str],
     run_dir: Path,
@@ -799,6 +827,17 @@ def _response_update_placeholder_payload(
             ),
             "queue_performance_summary_path": performance_arg,
             "queue_feedback_replan_request_path": _display_path(queue_feedback_replan_request_path),
+            "queue_feedback_replan_followup_queue_path": (
+                None
+                if queue_feedback_replan_followup_queue_path is None
+                else _display_path(queue_feedback_replan_followup_queue_path)
+            ),
+            "queue_feedback_replan_followup_queue_emitted": (
+                queue_feedback_replan_followup_queue_path is not None
+            ),
+            "queue_feedback_replan_followup_queue_blockers": [
+                str(item) for item in queue_feedback_replan_followup_blockers
+            ],
             "exact_readiness_handoff_count": len(exact_readiness_handoffs),
             "exact_readiness_handoff_paths": [dict(item) for item in exact_readiness_handoffs],
             "response_update_applied": False,
@@ -822,6 +861,7 @@ def _response_update_placeholder_payload(
                 "requires_next_action_functional_replan",
                 "requires_exact_auth_eval_before_score_claim",
                 *queue_feedback_replan_blockers,
+                *queue_feedback_replan_followup_blockers,
             ],
         }
     )
@@ -2515,6 +2555,12 @@ def main(argv: list[str] | None = None) -> int:
         summary_path=summary_path,
         queue_performance_summary_path=queue_performance_summary_path,
         queue_feedback_replan_request_path=queue_feedback_replan_request_path,
+        queue_feedback_replan_followup_queue_path=(
+            queue_feedback_replan_followup_queue_path
+            if queue_feedback_replan_followup_queue is not None
+            else None
+        ),
+        queue_feedback_replan_followup_blockers=queue_feedback_replan_followup_blockers,
         queue_feedback_replan_blockers=queue_feedback_replan_request["blockers"],
         next_action_functional_command_hint=queue_feedback_replan_request["command_template"],
         run_dir=run_dir,

@@ -1442,6 +1442,7 @@ def _byte_shaving_campaign_plan_digest(path_ref: object) -> dict[str, object]:
             "combination_count": 0,
             "operation_families": [],
             "top_combo": {},
+            "materialization_bridge": {},
             "dispatch_blockers": [],
         }
     rel = _repo_rel(path)
@@ -1453,6 +1454,7 @@ def _byte_shaving_campaign_plan_digest(path_ref: object) -> dict[str, object]:
             "combination_count": 0,
             "operation_families": [],
             "top_combo": {},
+            "materialization_bridge": {},
             "dispatch_blockers": [],
         }
     plan = _load_json_file(path)
@@ -1464,6 +1466,7 @@ def _byte_shaving_campaign_plan_digest(path_ref: object) -> dict[str, object]:
             "combination_count": 0,
             "operation_families": [],
             "top_combo": {},
+            "materialization_bridge": {},
             "dispatch_blockers": [],
         }
     combos = _first_list(plan, "combination_ladder")
@@ -1490,6 +1493,8 @@ def _byte_shaving_campaign_plan_digest(path_ref: object) -> dict[str, object]:
             ),
         ]
     )
+    bridge = plan.get("materialization_bridge")
+    bridge_payload = bridge if isinstance(bridge, dict) else {}
     return {
         "plan_path": rel,
         "plan_exists": True,
@@ -1508,6 +1513,24 @@ def _byte_shaving_campaign_plan_digest(path_ref: object) -> dict[str, object]:
             "dispatch_blockers": top_combo.get("dispatch_blockers")
             if isinstance(top_combo.get("dispatch_blockers"), list)
             else [],
+        },
+        "materialization_bridge": {
+            "next_gate": bridge_payload.get("next_gate"),
+            "high_level_operation_compiler_required_count": _safe_int(
+                bridge_payload.get("high_level_operation_compiler_required_count")
+            ),
+            "packet_ir_operation_set_count": _safe_int(
+                bridge_payload.get("packet_ir_operation_set_count")
+            ),
+            "packet_ir_byte_closed_operation_count": _safe_int(
+                bridge_payload.get("packet_ir_byte_closed_operation_count")
+            ),
+            "queue_consumable_packet_ir_operation_set_count": _safe_int(
+                bridge_payload.get("queue_consumable_packet_ir_operation_set_count")
+            ),
+            "dispatch_blockers": _unique_strings(
+                _first_list(bridge_payload, "dispatch_blockers")
+            ),
         },
         "dispatch_blockers": blockers,
         **_false_authority_fields(),
@@ -1616,6 +1639,22 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
         for step in ready_steps
         if isinstance(step, dict) and step.get("resource_kind") == "local_cpu"
     ]
+    executable_work_count = _safe_int(
+        build.get("materializer_work_queue_executable_row_count")
+    )
+    blocked_work_count = _safe_int(
+        build.get("materializer_work_queue_blocked_row_count")
+    ) + _safe_int(build.get("blocked_row_count"))
+    backlog_row_count = _safe_int(build.get("materializer_backlog_row_count"))
+    total_work_count = executable_work_count + blocked_work_count
+    executable_conversion_rate = (
+        executable_work_count / total_work_count if total_work_count else 0.0
+    )
+    bridge = (
+        plan_digest.get("materialization_bridge")
+        if isinstance(plan_digest.get("materialization_bridge"), dict)
+        else {}
+    )
     row = {
         **base,
         "kind": "byte_shaving_materializer_campaign_run",
@@ -1630,15 +1669,36 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
             payload.get("high_level_action_source_count")
         ),
         "experiment_count": experiment_count,
-        "executable_work_count": _safe_int(
-            build.get("materializer_work_queue_executable_row_count")
+        "executable_work_count": executable_work_count,
+        "blocked_work_count": blocked_work_count,
+        "materializer_backlog_row_count": backlog_row_count,
+        "executable_conversion_rate": executable_conversion_rate,
+        "compiler_required_count": _safe_int(
+            bridge.get("high_level_operation_compiler_required_count")
         ),
-        "blocked_work_count": _safe_int(
-            build.get("materializer_work_queue_blocked_row_count")
-        )
-        + _safe_int(build.get("blocked_row_count")),
-        "materializer_backlog_row_count": _safe_int(
-            build.get("materializer_backlog_row_count")
+        "packet_ir_operation_set_count": _safe_int(
+            bridge.get("packet_ir_operation_set_count")
+        ),
+        "queue_consumable_packet_ir_operation_set_count": _safe_int(
+            bridge.get("queue_consumable_packet_ir_operation_set_count")
+        ),
+        "packet_ir_byte_closed_operation_count": _safe_int(
+            bridge.get("packet_ir_byte_closed_operation_count")
+        ),
+        "exact_readiness_handoff_count": _safe_int(
+            payload.get("exact_readiness_handoff_count")
+        ),
+        "queue_feedback_replan_ready": payload.get("queue_feedback_replan_ready") is True,
+        "queue_feedback_replan_followup_queue_emitted": (
+            payload.get("queue_feedback_replan_followup_queue_emitted") is True
+        ),
+        "queue_feedback_replan_followup_queue_path": str(
+            payload.get("queue_feedback_replan_followup_queue_path") or ""
+        ),
+        "queue_feedback_replan_followup_blocker_count": len(
+            payload.get("queue_feedback_replan_followup_queue_blockers")
+            if isinstance(payload.get("queue_feedback_replan_followup_queue_blockers"), list)
+            else []
         ),
         "local_cpu_concurrency": _safe_int(build.get("local_cpu_concurrency")),
         "worker_max_parallel": _safe_int(worker.get("max_parallel")),
@@ -1700,6 +1760,9 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
         status = "PENDING"
         reason = "latest campaign run has not produced an executable queue yet"
 
+    total_executable = sum(_safe_int(row.get("executable_work_count")) for row in rows)
+    total_blocked = sum(_safe_int(row.get("blocked_work_count")) for row in rows)
+    total_work = total_executable + total_blocked
     return {
         "schema": "pact.byte_shaving_acquisition_summary.v1",
         "scan_roots": [_repo_rel(root) for root in BYTE_SHAVING_ACQUISITION_SCAN_ROOTS],
@@ -1707,12 +1770,35 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
         "reason": reason,
         "campaign_run_count": len(rows),
         "total_experiment_count": sum(_safe_int(row.get("experiment_count")) for row in rows),
-        "total_executable_work_count": sum(
-            _safe_int(row.get("executable_work_count")) for row in rows
+        "total_executable_work_count": total_executable,
+        "total_blocked_work_count": total_blocked,
+        "total_compiler_required_count": sum(
+            _safe_int(row.get("compiler_required_count")) for row in rows
         ),
-        "total_blocked_work_count": sum(
-            _safe_int(row.get("blocked_work_count")) for row in rows
+        "total_packet_ir_operation_set_count": sum(
+            _safe_int(row.get("packet_ir_operation_set_count")) for row in rows
         ),
+        "total_queue_consumable_packet_ir_operation_set_count": sum(
+            _safe_int(row.get("queue_consumable_packet_ir_operation_set_count"))
+            for row in rows
+        ),
+        "total_packet_ir_byte_closed_operation_count": sum(
+            _safe_int(row.get("packet_ir_byte_closed_operation_count")) for row in rows
+        ),
+        "total_exact_readiness_handoff_count": sum(
+            _safe_int(row.get("exact_readiness_handoff_count")) for row in rows
+        ),
+        "queue_feedback_ready_count": sum(
+            1 for row in rows if row.get("queue_feedback_replan_ready") is True
+        ),
+        "queue_feedback_followup_queue_count": sum(
+            1
+            for row in rows
+            if row.get("queue_feedback_replan_followup_queue_emitted") is True
+        ),
+        "overall_executable_conversion_rate": total_executable / total_work
+        if total_work
+        else 0.0,
         "local_mlx_ready_step_count": sum(
             _safe_int(row.get("local_mlx_ready_step_count")) for row in rows
         ),
@@ -1740,6 +1826,14 @@ def _format_byte_shaving_acquisition_summary() -> str:
             f"experiments={payload['total_experiment_count']} "
             f"executable_work={payload['total_executable_work_count']} "
             f"blocked_work={payload['total_blocked_work_count']} "
+            f"conversion={payload['overall_executable_conversion_rate']:.2%} "
+            f"compiler_gaps={payload['total_compiler_required_count']} "
+            f"packetir_sets={payload['total_packet_ir_operation_set_count']} "
+            "packetir_queue_ready="
+            f"{payload['total_queue_consumable_packet_ir_operation_set_count']} "
+            f"exact_handoffs={payload['total_exact_readiness_handoff_count']} "
+            f"feedback_ready={payload['queue_feedback_ready_count']} "
+            f"feedback_queued={payload['queue_feedback_followup_queue_count']} "
             f"local_mlx_ready_steps={payload['local_mlx_ready_step_count']}"
         ),
         f"score_claim: {payload['score_claim']}",
@@ -1765,6 +1859,15 @@ def _format_byte_shaving_acquisition_summary() -> str:
                 f"{row.get('path')} status={row.get('status')} "
                 f"queue={row.get('queue_id') or '<none>'} "
                 f"experiments={row.get('experiment_count', 0)} "
+                f"conversion={row.get('executable_conversion_rate', 0.0):.2%} "
+                f"compiler_gaps={row.get('compiler_required_count', 0)} "
+                f"packetir_sets={row.get('packet_ir_operation_set_count', 0)} "
+                "packetir_queue_ready="
+                f"{row.get('queue_consumable_packet_ir_operation_set_count', 0)} "
+                f"exact_handoffs={row.get('exact_readiness_handoff_count', 0)} "
+                f"feedback_ready={row.get('queue_feedback_replan_ready') is True} "
+                "feedback_queued="
+                f"{row.get('queue_feedback_replan_followup_queue_emitted') is True} "
                 f"ready_steps={row.get('ready_step_count', 0)} "
                 f"local_mlx_ready={row.get('local_mlx_ready_step_count', 0)}"
             )
@@ -3590,6 +3693,33 @@ def _dispatch_readiness() -> dict[str, object]:
             "campaign_run_count": byte_shaving_acquisition["campaign_run_count"],
             "total_experiment_count": byte_shaving_acquisition[
                 "total_experiment_count"
+            ],
+            "total_executable_work_count": byte_shaving_acquisition[
+                "total_executable_work_count"
+            ],
+            "total_blocked_work_count": byte_shaving_acquisition[
+                "total_blocked_work_count"
+            ],
+            "overall_executable_conversion_rate": byte_shaving_acquisition[
+                "overall_executable_conversion_rate"
+            ],
+            "total_compiler_required_count": byte_shaving_acquisition[
+                "total_compiler_required_count"
+            ],
+            "total_packet_ir_operation_set_count": byte_shaving_acquisition[
+                "total_packet_ir_operation_set_count"
+            ],
+            "total_queue_consumable_packet_ir_operation_set_count": byte_shaving_acquisition[
+                "total_queue_consumable_packet_ir_operation_set_count"
+            ],
+            "total_exact_readiness_handoff_count": byte_shaving_acquisition[
+                "total_exact_readiness_handoff_count"
+            ],
+            "queue_feedback_ready_count": byte_shaving_acquisition[
+                "queue_feedback_ready_count"
+            ],
+            "queue_feedback_followup_queue_count": byte_shaving_acquisition[
+                "queue_feedback_followup_queue_count"
             ],
             "local_mlx_ready_step_count": byte_shaving_acquisition[
                 "local_mlx_ready_step_count"

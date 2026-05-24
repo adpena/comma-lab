@@ -1099,6 +1099,16 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
             "campaign_id": "high_level_fixture",
             "candidate_id": "inverse_steganalysis_water_bucket_plan.v1",
             "dispatch_blockers": ["requires_exact_auth_eval_before_score_claim"],
+            "materialization_bridge": {
+                "next_gate": "build_byte_shaving_campaign_queue_packet_ir_lowering",
+                "high_level_operation_compiler_required_count": 1,
+                "packet_ir_operation_set_count": 2,
+                "packet_ir_byte_closed_operation_count": 3,
+                "queue_consumable_packet_ir_operation_set_count": 1,
+                "dispatch_blockers": [
+                    "packet_ir_operation_sets_require_materializer_contexts_and_runtime_proofs"
+                ],
+            },
             "combination_ladder": [
                 {
                     "combo_id": "combo_0001",
@@ -1127,6 +1137,13 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
             "plan": ".omx/research/high_level/campaign3/byte_shaving_campaign_plan.json",
             "queue_id": "high_level_fixture_campaign3",
             "queue_path": queue_path,
+            "queue_feedback_replan_ready": True,
+            "queue_feedback_replan_followup_queue_emitted": True,
+            "queue_feedback_replan_followup_queue_path": (
+                ".omx/research/high_level/campaign3/queue_feedback_replan_followup_queue.json"
+            ),
+            "queue_feedback_replan_followup_queue_blockers": [],
+            "exact_readiness_handoff_count": 1,
             "state_path": ".omx/state/experiment_queue_high_level_fixture_campaign3.sqlite",
             "experiment_count": 3,
             "build": {
@@ -1176,13 +1193,34 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
     assert summary["total_experiment_count"] == 3
     assert summary["total_executable_work_count"] == 2
     assert summary["local_mlx_ready_step_count"] == 1
+    assert summary["total_compiler_required_count"] == 1
+    assert summary["total_packet_ir_operation_set_count"] == 2
+    assert summary["total_queue_consumable_packet_ir_operation_set_count"] == 1
+    assert summary["total_packet_ir_byte_closed_operation_count"] == 3
+    assert summary["total_exact_readiness_handoff_count"] == 1
+    assert summary["queue_feedback_ready_count"] == 1
+    assert summary["queue_feedback_followup_queue_count"] == 1
+    assert summary["overall_executable_conversion_rate"] == 0.5
     assert summary["score_claim"] is False
     assert summary["ready_for_exact_eval_dispatch"] is False
     assert queue_path in summary["next_command"]
     assert "--execute --max-parallel 0" in summary["next_command"]
     assert summary["latest_rows"][0]["plan"]["top_combo"]["expected_score_gain"] == 0.000134
+    assert summary["latest_rows"][0]["compiler_required_count"] == 1
+    assert summary["latest_rows"][0]["packet_ir_operation_set_count"] == 2
+    assert summary["latest_rows"][0]["queue_consumable_packet_ir_operation_set_count"] == 1
+    assert summary["latest_rows"][0]["exact_readiness_handoff_count"] == 1
+    assert summary["latest_rows"][0]["queue_feedback_replan_ready"] is True
+    assert summary["latest_rows"][0]["queue_feedback_replan_followup_queue_emitted"] is True
     assert "High-level inverse-steganalysis/action-surface campaign intake" in text
     assert "status=READY_LOCAL_QUEUE" in text
+    assert "conversion=50.00%" in text
+    assert "compiler_gaps=1" in text
+    assert "packetir_sets=2" in text
+    assert "packetir_queue_ready=1" in text
+    assert "exact_handoffs=1" in text
+    assert "feedback_ready=True" in text
+    assert "feedback_queued=True" in text
     assert "local_mlx_ready=1" in text
     assert "materialize_inverse_scorer_cell_candidate" in text
     assert "not score authority" in text

@@ -10,7 +10,11 @@ import pytest
 from comma_lab.scheduler.experiment_queue import (
     connect_state,
     initialize_queue_state,
+    load_queue_definition,
     normalize_queue_definition,
+    ready_steps,
+    run_ready_step,
+    set_control_mode,
 )
 from tac.optimization.byte_shaving_campaign import (
     SIGNAL_SURFACE_SCHEMA,
@@ -794,6 +798,18 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert feedback_step["command"] == replan_request["command_template"]
     assert feedback_step["resources"]["kind"] == "local_cpu"
     assert feedback_step["postconditions"][1]["type"] == "json_completion_contract"
+    assert "exact_cuda_auth_eval" in feedback_step["postconditions"][1]["false_or_missing"]
+    assert "contest_cuda_auth_eval" in feedback_step["postconditions"][1]["false_or_missing"]
+    assert "gpu_launched" in feedback_step["postconditions"][1]["false_or_missing"]
+    assert load_queue_definition(
+        run_dir / "queue_feedback_replan_followup_queue.json"
+    ) == feedback_queue
+    with connect_state(tmp_path / "feedback_followup.sqlite") as conn:
+        initialize_queue_state(conn, feedback_queue)
+        assert ready_steps(conn, feedback_queue) == []
+        set_control_mode(conn, feedback_queue["queue_id"], "running", reason="unit resume")
+        ready = ready_steps(conn, feedback_queue)
+    assert [step.step_id for step in ready] == ["build_feedback_action_functional"]
     assert runtime_identity["schema"] == (
         "byte_shaving_materializer_campaign_queue_runtime_identity.v1"
     )
@@ -813,6 +829,11 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert placeholder["queue_feedback_replan_request_path"] == str(
         run_dir / "queue_feedback_replan_request.json"
     )
+    assert placeholder["queue_feedback_replan_followup_queue_path"] == str(
+        run_dir / "queue_feedback_replan_followup_queue.json"
+    )
+    assert placeholder["queue_feedback_replan_followup_queue_emitted"] is True
+    assert placeholder["queue_feedback_replan_followup_queue_blockers"] == []
     assert placeholder["next_run_hint"] == [
         "--queue-performance-summary",
         str(run_dir / "queue_performance_summary.json"),
@@ -1050,6 +1071,111 @@ def test_materializer_campaign_runner_executes_no_paid_packet_member_handoff(
     assert bridge["score_claim"] is False
     assert dispatch_plan["authorized_candidate_count"] == 0
     assert dispatch_plan["score_claim"] is False
+
+
+def test_materializer_campaign_feedback_followup_queue_fails_truthy_dispatch_alias(
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "feedback.json"
+    output_path.write_text(
+        json.dumps(
+            {
+                "schema": "inverse_steganalysis_discrete_action_functional.v1",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "exact_cuda_auth_eval": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--materializer-contexts",
+            str(tmp_path / "contexts.json"),
+        ]
+    )
+    request = {
+        "ready_for_action_functional_feedback": True,
+        "blockers": [],
+        "plan_path": str(tmp_path / "plan.json"),
+        "queue_performance_summary_path": str(tmp_path / "performance.json"),
+        "queue_performance_runtime_identity_path": str(tmp_path / "runtime.json"),
+        "queue_performance_cache_identity_path": str(tmp_path / "cache.json"),
+        "command_template": [
+            runner.sys.executable,
+            "tools/build_inverse_steganalysis_action_functional.py",
+            "--output",
+            str(output_path),
+        ],
+    }
+    queue, blockers = runner._queue_feedback_replan_followup_queue_payload(
+        args,
+        queue_feedback_replan_request=request,
+        queue_feedback_replan_request_path=tmp_path / "request.json",
+        run_dir=tmp_path,
+        execution_queue=tmp_path / "source_queue.json",
+        state_path=tmp_path / "source_queue.sqlite",
+        source_queue={"queue_id": "unit_queue"},
+    )
+
+    assert blockers == []
+    assert queue is not None
+    with connect_state(tmp_path / "followup.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        set_control_mode(conn, queue["queue_id"], "running", reason="unit resume")
+        ready = ready_steps(conn, queue)
+        result = run_ready_step(
+            conn,
+            queue,
+            ready[0],
+            repo_root=tmp_path,
+            execute=True,
+            log_root=tmp_path / "logs",
+        )
+
+    assert result["succeeded"] is False
+    assert result["failed_postconditions"][0]["type"] == "json_completion_contract"
+
+
+def test_materializer_campaign_feedback_followup_queue_blocks_non_action_command(
+    tmp_path: Path,
+) -> None:
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--materializer-contexts",
+            str(tmp_path / "contexts.json"),
+        ]
+    )
+    queue, blockers = runner._queue_feedback_replan_followup_queue_payload(
+        args,
+        queue_feedback_replan_request={
+            "ready_for_action_functional_feedback": True,
+            "blockers": [],
+            "command_template": [
+                runner.sys.executable,
+                "tools/parallel_dispatch_top_k.py",
+                "--output",
+                str(tmp_path / "feedback.json"),
+                "--dispatch-mode",
+                "cuda_auth",
+            ],
+        },
+        queue_feedback_replan_request_path=tmp_path / "request.json",
+        run_dir=tmp_path,
+        execution_queue=tmp_path / "source_queue.json",
+        state_path=tmp_path / "source_queue.sqlite",
+        source_queue={"queue_id": "unit_queue"},
+    )
+
+    assert queue is None
+    assert "queue_feedback_replan_command_not_action_functional_tool" in blockers
+    assert "queue_feedback_replan_command_forbidden_flag:--dispatch-mode" in blockers
 
 
 def test_materializer_campaign_runner_preserves_feedback_artifacts_when_worker_fails(
