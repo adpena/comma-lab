@@ -110,3 +110,13 @@ def test_post_harvest_retention_blocks_uncertified_raw_without_deleting(
     assert artifact.is_file()
     payload = json.loads(artifact.read_text(encoding="utf-8"))
     assert payload["plan"]["blocked_candidate_count"] == 1
+
+
+def test_free_disk_probe_accepts_uncreated_external_results_root(
+    tmp_path: Path,
+) -> None:
+    nested = tmp_path / "external" / "pact_experiments" / "frontier_cycle"
+
+    free_gb = autopilot._free_disk_gb(nested)
+
+    assert free_gb > 0

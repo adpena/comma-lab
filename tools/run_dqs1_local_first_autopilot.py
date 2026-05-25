@@ -205,7 +205,9 @@ def _execute_candidate_artifact_retention(
 
 
 def _free_disk_gb(path: Path) -> float:
-    target = path if path.exists() else path.parent
+    target = path
+    while not target.exists() and target != target.parent:
+        target = target.parent
     usage = shutil.disk_usage(target)
     return float(usage.free) / (1024.0**3)
 
