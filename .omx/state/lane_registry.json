@@ -54131,6 +54131,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "codex_operator_briefing_live_queue_health_20260525",
+      "name": "Operator briefing live queue health",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "operator_briefing_live_queue_observation_blocks_failed_stale_queues"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "py_compile_operator_briefing_pytest_operator_36_passed_live_briefing_json_blocked"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_operator_briefing_live_queue_health_20260525T043838Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -54140,5 +54181,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T04:22:16Z"
+  "updated_at": "2026-05-25T04:41:45Z"
 }

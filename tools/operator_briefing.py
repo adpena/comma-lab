@@ -75,6 +75,13 @@ L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH = (
 )
 
 from tac.authority_contract import apply_false_authority_contract  # noqa: E402
+from comma_lab.scheduler.experiment_queue import (  # noqa: E402
+    default_state_path,
+    load_queue_definition,
+)
+from comma_lab.scheduler.experiment_queue_observer import (  # noqa: E402
+    observe_experiment_queue,
+)
 from tac.optimization.atw_v2_phase2_gate import (  # noqa: E402
     atw_v2_phase2_gate_status,
 )
@@ -1447,6 +1454,72 @@ def _repo_path_from_ref(value: object) -> Path | None:
     return path if path.is_absolute() else REPO_ROOT / path
 
 
+def _live_queue_observation_error(
+    blocker: str,
+    *,
+    queue_path: Path | None,
+    state_path: Path | None,
+    error: str,
+) -> dict[str, object]:
+    return {
+        "schema": "operator_briefing_live_queue_observation.v1",
+        "observe_read_only": True,
+        "operator_briefing_live_observation": True,
+        "healthy": False,
+        "blockers": [blocker],
+        "blocker_count": 1,
+        "status_counts": {},
+        "ready_steps": [],
+        "failed_steps": [],
+        "definition_drift": {},
+        "queue_path": _repo_rel(queue_path) if queue_path is not None else "",
+        "state": _repo_rel(state_path) if state_path is not None else "",
+        "error": error,
+        **_false_authority_fields(),
+    }
+
+
+def _byte_shaving_live_queue_observation(
+    queue_path_ref: object,
+    state_path_ref: object,
+) -> dict[str, object]:
+    queue_path = _repo_path_from_ref(queue_path_ref)
+    state_path = _repo_path_from_ref(state_path_ref)
+    if queue_path is None:
+        return {}
+    if not queue_path.is_file():
+        return _live_queue_observation_error(
+            "operator_briefing_live_queue_definition_missing",
+            queue_path=queue_path,
+            state_path=state_path,
+            error=f"queue definition missing: {_repo_rel(queue_path)}",
+        )
+    try:
+        queue = load_queue_definition(queue_path)
+        if state_path is None:
+            state_path = default_state_path(REPO_ROOT, str(queue["queue_id"]))
+        observation = observe_experiment_queue(
+            queue,
+            state_path=state_path,
+            repo_root=REPO_ROOT,
+            tail_lines=0,
+            include_orphans=True,
+        )
+    except Exception as exc:  # pragma: no cover - precise type depends on state corruption
+        return _live_queue_observation_error(
+            "operator_briefing_live_queue_observation_failed",
+            queue_path=queue_path,
+            state_path=state_path,
+            error=f"{type(exc).__name__}: {exc}",
+        )
+    return {
+        **observation,
+        "operator_briefing_live_observation": True,
+        "queue_path": _repo_rel(queue_path),
+        **_false_authority_fields(),
+    }
+
+
 def _first_list(payload: dict[str, object], key: str) -> list[object]:
     value = payload.get(key)
     return value if isinstance(value, list) else []
@@ -1576,11 +1649,19 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
 
     build = payload.get("build") if isinstance(payload.get("build"), dict) else {}
     worker = payload.get("worker") if isinstance(payload.get("worker"), dict) else {}
-    observation = (
+    queue_path = str(payload.get("queue_path") or "")
+    state_path = str(payload.get("state_path") or "")
+    embedded_observation = (
         payload.get("observation")
         if isinstance(payload.get("observation"), dict)
         else {}
     )
+    live_observation = (
+        _byte_shaving_live_queue_observation(queue_path, state_path)
+        if queue_path
+        else {}
+    )
+    observation = live_observation or embedded_observation
     drift = (
         observation.get("definition_drift")
         if isinstance(observation.get("definition_drift"), dict)
@@ -1602,6 +1683,11 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
         if isinstance(observation.get("failed_steps"), list)
         else []
     )
+    observation_blockers = _unique_strings(
+        observation.get("blockers")
+        if isinstance(observation.get("blockers"), list)
+        else []
+    )
     authority_leaks = [
         field
         for field in _false_authority_fields()
@@ -1615,6 +1701,12 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
         blockers.append(f"{len(failed_commands)} campaign command(s) failed")
     if _safe_int(worker.get("failure_count")):
         blockers.append(f"{worker.get('failure_count')} worker step(s) failed")
+    blockers.extend(observation_blockers)
+    if live_observation and str(live_observation.get("mode") or "") != "running":
+        blockers.append(
+            "experiment_queue_observation_mode_not_running:"
+            f"{live_observation.get('mode') or '<unknown>'}"
+        )
     if failed_steps:
         blockers.append(f"{len(failed_steps)} observed queue step(s) failed")
     drift_count = (
@@ -1625,7 +1717,6 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
     if drift_count:
         blockers.append(f"{drift_count} queue definition drift issue(s)")
 
-    queue_path = str(payload.get("queue_path") or "")
     experiment_count = _safe_int(payload.get("experiment_count"))
     if blockers:
         status = "BLOCKED"
@@ -1724,9 +1815,45 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
         "status": status,
         "queue_id": str(payload.get("queue_id") or ""),
         "queue_path": queue_path,
-        "state_path": str(payload.get("state_path") or ""),
+        "state_path": state_path,
         "run_dir": str(payload.get("run_dir") or ""),
         "execute": payload.get("execute") is True,
+        "queue_observation_source": "live"
+        if live_observation
+        else "embedded"
+        if embedded_observation
+        else "missing",
+        "live_queue_observation_used": bool(live_observation),
+        "live_queue_observation_healthy": (
+            live_observation.get("healthy") is True if live_observation else None
+        ),
+        "live_queue_observation_mode": str(live_observation.get("mode") or "")
+        if live_observation
+        else "",
+        "live_queue_observation_queue_sha256": str(
+            live_observation.get("queue_sha256") or ""
+        )
+        if live_observation
+        else "",
+        "live_queue_observation_state_watermark": (
+            live_observation.get("state_watermark")
+            if isinstance(live_observation.get("state_watermark"), dict)
+            else {}
+        )
+        if live_observation
+        else {},
+        "live_queue_observation_blockers": observation_blockers
+        if live_observation
+        else [],
+        "live_queue_observation_blocker_count": len(observation_blockers)
+        if live_observation
+        else 0,
+        "live_queue_observation_status_counts": status_counts
+        if live_observation
+        else {},
+        "live_queue_observation_failed_step_count": len(failed_steps)
+        if live_observation
+        else 0,
         "high_level_action_source_count": _safe_int(
             payload.get("high_level_action_source_count")
         ),
@@ -2143,6 +2270,12 @@ def _byte_shaving_acquisition_next_command(latest: dict[str, object] | None) -> 
             latest.get("queue_observation_recovery_queue_state_path"),
             "init",
         )
+    if latest and latest.get("status") == "BLOCKED" and latest.get("queue_path"):
+        return _experiment_queue_command(
+            latest["queue_path"],
+            latest.get("state_path"),
+            "observe --tail-lines 20",
+        )
     if latest and latest.get("queue_path"):
         return _experiment_queue_command(
             latest["queue_path"],
@@ -2319,6 +2452,19 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
         "ready_for_queue_health_recovery_count": sum(
             1 for row in rows if row.get("ready_for_queue_health_recovery") is True
         ),
+        "live_queue_observation_used_count": sum(
+            1 for row in rows if row.get("live_queue_observation_used") is True
+        ),
+        "live_queue_observation_unhealthy_count": sum(
+            1
+            for row in rows
+            if row.get("live_queue_observation_used") is True
+            and row.get("live_queue_observation_healthy") is not True
+        ),
+        "live_queue_observation_blocker_count": sum(
+            _safe_int(row.get("live_queue_observation_blocker_count"))
+            for row in rows
+        ),
         "queue_feedback_continuation_queue_count": sum(
             1
             for row in rows
@@ -2417,6 +2563,12 @@ def _format_byte_shaving_acquisition_summary() -> str:
             f"{payload['queue_observation_recovery_required_count']} "
             "queue_recovery_ready="
             f"{payload['ready_for_queue_health_recovery_count']} "
+            "live_queue_observed="
+            f"{payload['live_queue_observation_used_count']} "
+            "live_queue_unhealthy="
+            f"{payload['live_queue_observation_unhealthy_count']} "
+            "live_queue_blockers="
+            f"{payload['live_queue_observation_blocker_count']} "
             "queue_recovery_queued="
             f"{payload['queue_observation_recovery_queue_count']} "
             "queue_recovery_executed="
@@ -2493,6 +2645,16 @@ def _format_byte_shaving_acquisition_summary() -> str:
                 f"{row.get('queue_observation_recovery_required') is True} "
                 "queue_recovery_ready="
                 f"{row.get('ready_for_queue_health_recovery') is True} "
+                "queue_observation_source="
+                f"{row.get('queue_observation_source') or '<none>'} "
+                "live_queue_observed="
+                f"{row.get('live_queue_observation_used') is True} "
+                "live_queue_healthy="
+                f"{row.get('live_queue_observation_healthy')} "
+                "live_queue_mode="
+                f"{row.get('live_queue_observation_mode') or '<none>'} "
+                "live_queue_failed_steps="
+                f"{row.get('live_queue_observation_failed_step_count', 0)} "
                 "queue_recovery_queued="
                 f"{row.get('queue_observation_recovery_queue_emitted') is True} "
                 "queue_recovery_executed="
@@ -2553,6 +2715,12 @@ def _format_byte_shaving_acquisition_summary() -> str:
                 lines.append(
                     "    queue_recovery_source_blockers="
                     + ", ".join(str(item) for item in source_blockers[:5])
+                )
+            live_blockers = row.get("live_queue_observation_blockers")
+            if isinstance(live_blockers, list) and live_blockers:
+                lines.append(
+                    "    live_queue_blockers="
+                    + ", ".join(str(item) for item in live_blockers[:5])
                 )
             if top_combo.get("combo_id"):
                 lines.append(

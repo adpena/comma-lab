@@ -16,6 +16,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+from comma_lab.scheduler.experiment_queue import (
+    connect_state,
+    initialize_queue_state,
+    load_queue_definition,
+)
+
 REPO = Path(__file__).resolve().parents[3]
 BRIEFING = REPO / "tools" / "operator_briefing.py"
 
@@ -1093,6 +1099,33 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
     campaign_dir = root / "high_level" / "campaign3"
     plan_path = campaign_dir / "byte_shaving_campaign_plan.json"
     queue_path = ".omx/research/high_level/campaign3/materializer_execution_queue.json"
+    state_path = ".omx/state/experiment_queue_high_level_fixture_campaign3.sqlite"
+
+    queue = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "high_level_fixture_campaign3",
+        "controls": {
+            "mode": "running",
+            "max_concurrency": {"local_mlx": 1},
+        },
+        "experiments": [
+            {
+                "id": "exp0",
+                "status": "queued",
+                "steps": [
+                    {
+                        "id": "materialize_local_proof_chain",
+                        "kind": "command",
+                        "command": ["python", "-c", "print('ready')"],
+                        "resources": {"kind": "local_mlx"},
+                    }
+                ],
+            }
+        ],
+    }
+    queue = load_queue_definition(_write_json(tmp_path / queue_path, queue))
+    with connect_state(tmp_path / state_path) as conn:
+        initialize_queue_state(conn, queue)
     _write_json(
         plan_path,
         {
@@ -1171,7 +1204,7 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
             "queue_feedback_replan_continuation_queue_emitted": True,
             "queue_feedback_replan_continuation_queue_blockers": [],
             "exact_readiness_handoff_count": 1,
-            "state_path": ".omx/state/experiment_queue_high_level_fixture_campaign3.sqlite",
+            "state_path": state_path,
             "experiment_count": 3,
             "build": {
                 "materializer_work_queue_executable_row_count": 2,
@@ -1285,6 +1318,17 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
     )
     assert summary["latest_rows"][0]["queue_feedback_replan_continuation_queue_emitted"] is True
     assert summary["latest_rows"][0]["queue_feedback_replan_continuation_queue_blocker_count"] == 0
+    assert summary["latest_rows"][0]["queue_observation_source"] == "live"
+    assert summary["latest_rows"][0]["live_queue_observation_used"] is True
+    assert summary["latest_rows"][0]["live_queue_observation_healthy"] is True
+    assert summary["latest_rows"][0]["live_queue_observation_mode"] == "running"
+    assert summary["latest_rows"][0]["live_queue_observation_queue_sha256"]
+    assert (
+        summary["latest_rows"][0]["live_queue_observation_state_watermark"].get(
+            "state_missing", False
+        )
+        is False
+    )
     assert "High-level inverse-steganalysis/action-surface campaign intake" in text
     assert "status=READY_LOCAL_QUEUE" in text
     assert "conversion=50.00%" in text
@@ -1300,6 +1344,8 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
     assert "feedback_continue=1" in text
     assert "queue_recovery_required=0" in text
     assert "queue_recovery_ready=0" in text
+    assert "live_queue_observed=1" in text
+    assert "live_queue_unhealthy=0" in text
     assert "queue_recovery_queued=0" in text
     assert "queue_recovery_executed=0" in text
     assert "queue_recovery_success=0" in text
@@ -1310,9 +1356,325 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
     assert "feedback_decision=run_next_materializer_campaign_iteration" in text
     assert "feedback_continue=True" in text
     assert "feedback_continuation_queued=True" in text
+    assert "queue_observation_source=live" in text
+    assert "live_queue_mode=running" in text
     assert "local_mlx_ready=1" in text
     assert "materialize_inverse_scorer_cell_candidate" in text
     assert "not score authority" in text
+
+
+def test_byte_shaving_acquisition_summary_live_observation_wins_over_stale_payload(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+
+    root = tmp_path / ".omx" / "research"
+    campaign_dir = root / "high_level" / "campaign_live_unhealthy"
+    queue_ref = (
+        ".omx/research/high_level/campaign_live_unhealthy/"
+        "materializer_execution_queue.json"
+    )
+    state_ref = ".omx/state/experiment_queue_live_unhealthy.sqlite"
+    queue = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "live_unhealthy",
+        "controls": {
+            "mode": "running",
+            "max_concurrency": {"local_cpu": 1},
+        },
+        "experiments": [
+            {
+                "id": "exp0",
+                "status": "queued",
+                "steps": [
+                    {
+                        "id": "materialize_local_proof_chain",
+                        "kind": "command",
+                        "command": ["python", "-c", "raise SystemExit(1)"],
+                        "resources": {"kind": "local_cpu"},
+                    }
+                ],
+            }
+        ],
+    }
+    queue_path = _write_json(tmp_path / queue_ref, queue)
+    queue = load_queue_definition(queue_path)
+    state_path = tmp_path / state_ref
+    with connect_state(state_path) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'failed',
+                attempts = 1,
+                updated_at_utc = '2026-05-25T00:00:00Z'
+            WHERE queue_id = 'live_unhealthy'
+              AND experiment_id = 'exp0'
+              AND step_id = 'materialize_local_proof_chain'
+            """
+        )
+        conn.commit()
+    _write_json(
+        campaign_dir / "byte_shaving_campaign_plan.json",
+        {
+            "combination_ladder": [],
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    _write_json(
+        campaign_dir / "materializer_campaign_run.json",
+        {
+            "schema": "byte_shaving_materializer_campaign_run.v1",
+            "plan": (
+                ".omx/research/high_level/campaign_live_unhealthy/"
+                "byte_shaving_campaign_plan.json"
+            ),
+            "queue_id": "live_unhealthy",
+            "queue_path": queue_ref,
+            "state_path": state_ref,
+            "experiment_count": 1,
+            "high_level_action_source_count": 1,
+            "build": {
+                "materializer_work_queue_executable_row_count": 1,
+                "materializer_work_queue_blocked_row_count": 0,
+                "blocked_row_count": 0,
+            },
+            "worker": {
+                "schema": "experiment_queue_worker_result.v1",
+                "failure_count": 0,
+            },
+            "observation": {
+                "status_counts": {"queued": 1},
+                "ready_steps": [
+                    {
+                        "step_id": "materialize_local_proof_chain",
+                        "resource_kind": "local_cpu",
+                    }
+                ],
+                "failed_steps": [],
+                "definition_drift": {
+                    "changed_step_count": 0,
+                    "missing_step_count": 0,
+                    "missing_hash_step_count": 0,
+                },
+            },
+            "commands": [{"returncode": 0}],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    monkeypatch.setattr(mod, "BYTE_SHAVING_ACQUISITION_SCAN_ROOTS", (root,))
+
+    summary = mod._byte_shaving_acquisition_summary()
+    text = mod._format_byte_shaving_acquisition_summary()
+    latest = summary["latest_rows"][0]
+
+    assert summary["status"] == "BLOCKED"
+    assert summary["live_queue_observation_used_count"] == 1
+    assert summary["live_queue_observation_unhealthy_count"] == 1
+    assert summary["live_queue_observation_blocker_count"] == 1
+    assert latest["queue_observation_source"] == "live"
+    assert latest["live_queue_observation_used"] is True
+    assert latest["live_queue_observation_healthy"] is False
+    assert latest["live_queue_observation_mode"] == "running"
+    assert latest["live_queue_observation_queue_sha256"]
+    assert (
+        latest["live_queue_observation_state_watermark"].get("state_missing", False)
+        is False
+    )
+    assert latest["live_queue_observation_failed_step_count"] == 1
+    assert latest["failed_step_count"] == 1
+    assert latest["ready_step_count"] == 0
+    assert latest["live_queue_observation_status_counts"] == {"failed": 1}
+    assert latest["live_queue_observation_blockers"] == [
+        "experiment_queue_observation_failed_steps:1"
+    ]
+    assert "experiment_queue_observation_failed_steps:1" in latest["blockers"]
+    assert "1 observed queue step(s) failed" in latest["blockers"]
+    assert summary["next_command"].endswith(" observe --tail-lines 20")
+    assert "run-worker --execute" not in summary["next_command"]
+    assert "live_queue_observed=1" in text
+    assert "live_queue_unhealthy=1" in text
+    assert "live_queue_observed=True" in text
+    assert "live_queue_healthy=False" in text
+    assert "live_queue_mode=running" in text
+    assert "live_queue_failed_steps=1" in text
+    assert "live_queue_blockers=experiment_queue_observation_failed_steps:1" in text
+
+
+def test_byte_shaving_acquisition_summary_blocks_missing_live_queue_state(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    root = tmp_path / ".omx" / "research"
+    campaign_dir = root / "high_level" / "campaign_missing_state"
+    queue_ref = (
+        ".omx/research/high_level/campaign_missing_state/"
+        "materializer_execution_queue.json"
+    )
+    state_ref = ".omx/state/experiment_queue_missing_state.sqlite"
+    _write_json(
+        tmp_path / queue_ref,
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "missing_state",
+            "controls": {"mode": "running"},
+            "experiments": [
+                {
+                    "id": "exp0",
+                    "status": "queued",
+                    "steps": [
+                        {
+                            "id": "materialize",
+                            "kind": "command",
+                            "command": ["python", "-c", "print('ready')"],
+                            "resources": {"kind": "local_cpu"},
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+    _write_json(
+        campaign_dir / "byte_shaving_campaign_plan.json",
+        {
+            "combination_ladder": [],
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    _write_json(
+        campaign_dir / "materializer_campaign_run.json",
+        {
+            "schema": "byte_shaving_materializer_campaign_run.v1",
+            "plan": (
+                ".omx/research/high_level/campaign_missing_state/"
+                "byte_shaving_campaign_plan.json"
+            ),
+            "queue_id": "missing_state",
+            "queue_path": queue_ref,
+            "state_path": state_ref,
+            "experiment_count": 1,
+            "high_level_action_source_count": 1,
+            "build": {"materializer_work_queue_executable_row_count": 1},
+            "worker": {"failure_count": 0},
+            "commands": [{"returncode": 0}],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    monkeypatch.setattr(mod, "BYTE_SHAVING_ACQUISITION_SCAN_ROOTS", (root,))
+
+    summary = mod._byte_shaving_acquisition_summary()
+    text = mod._format_byte_shaving_acquisition_summary()
+    latest = summary["latest_rows"][0]
+
+    assert summary["status"] == "BLOCKED"
+    assert latest["queue_observation_source"] == "live"
+    assert latest["live_queue_observation_used"] is True
+    assert latest["live_queue_observation_healthy"] is False
+    assert "experiment_queue_observation_state_missing" in latest[
+        "live_queue_observation_blockers"
+    ]
+    assert "experiment_queue_observation_state_missing" in latest["blockers"]
+    assert summary["next_command"].endswith(" observe --tail-lines 20")
+    assert "run-worker --execute" not in summary["next_command"]
+    assert "live_queue_healthy=False" in text
+    assert "experiment_queue_observation_state_missing" in text
+
+
+def test_byte_shaving_acquisition_summary_blocks_paused_live_queue(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+
+    root = tmp_path / ".omx" / "research"
+    campaign_dir = root / "high_level" / "campaign_paused"
+    queue_ref = ".omx/research/high_level/campaign_paused/materializer_execution_queue.json"
+    state_ref = ".omx/state/experiment_queue_paused.sqlite"
+    queue = load_queue_definition(
+        _write_json(
+            tmp_path / queue_ref,
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "paused_queue",
+                "controls": {"mode": "paused"},
+                "experiments": [
+                    {
+                        "id": "exp0",
+                        "status": "queued",
+                        "steps": [
+                            {
+                                "id": "materialize",
+                                "kind": "command",
+                                "command": ["python", "-c", "print('ready')"],
+                                "resources": {"kind": "local_cpu"},
+                            }
+                        ],
+                    }
+                ],
+            },
+        )
+    )
+    with connect_state(tmp_path / state_ref) as conn:
+        initialize_queue_state(conn, queue)
+    _write_json(
+        campaign_dir / "byte_shaving_campaign_plan.json",
+        {
+            "combination_ladder": [],
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    _write_json(
+        campaign_dir / "materializer_campaign_run.json",
+        {
+            "schema": "byte_shaving_materializer_campaign_run.v1",
+            "plan": ".omx/research/high_level/campaign_paused/byte_shaving_campaign_plan.json",
+            "queue_id": "paused_queue",
+            "queue_path": queue_ref,
+            "state_path": state_ref,
+            "experiment_count": 1,
+            "high_level_action_source_count": 1,
+            "build": {"materializer_work_queue_executable_row_count": 1},
+            "worker": {"failure_count": 0},
+            "commands": [{"returncode": 0}],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    monkeypatch.setattr(mod, "BYTE_SHAVING_ACQUISITION_SCAN_ROOTS", (root,))
+
+    summary = mod._byte_shaving_acquisition_summary()
+    text = mod._format_byte_shaving_acquisition_summary()
+    latest = summary["latest_rows"][0]
+
+    assert summary["status"] == "BLOCKED"
+    assert latest["queue_observation_source"] == "live"
+    assert latest["live_queue_observation_used"] is True
+    assert latest["live_queue_observation_healthy"] is True
+    assert latest["live_queue_observation_mode"] == "paused"
+    assert latest["ready_step_count"] == 0
+    assert "experiment_queue_observation_mode_not_running:paused" in latest[
+        "blockers"
+    ]
+    assert summary["next_command"].endswith(" observe --tail-lines 20")
+    assert "run-worker --execute" not in summary["next_command"]
+    assert "live_queue_mode=paused" in text
+    assert "experiment_queue_observation_mode_not_running:paused" in text
 
 
 def test_byte_shaving_acquisition_summary_surfaces_queue_recovery_signal(
