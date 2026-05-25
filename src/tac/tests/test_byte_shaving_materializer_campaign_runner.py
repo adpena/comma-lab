@@ -1208,6 +1208,12 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
         "queue_observation_recovery_queue_blockers"
     ]
     assert summary["queue_observation_recovery_staircase_artifacts"] is None
+    assert summary["queue_observation_recovery_policy"] == "paused_only"
+    assert summary["queue_observation_recovery_policy_enabled"] is False
+    assert summary["queue_observation_recovery_execution_requested"] is False
+    assert summary["queue_observation_recovery_executed"] is False
+    assert summary["queue_observation_recovery_execution_success"] is None
+    assert summary["queue_observation_recovery_execution"] is None
     assert not (run_dir / "queue_observation_recovery_queue.json").exists()
     assert summary["queue_feedback_replan_continuation_queue_path"] == str(
         run_dir / "queue_feedback_replan_continuation_queue.json"
@@ -2415,6 +2421,117 @@ def test_materializer_campaign_feedback_followup_queue_blocks_required_queue_rec
     assert "queue_observation_recovery_required" in blockers
 
 
+def test_queue_observation_recovery_execution_payload_runs_local_queue(
+    tmp_path: Path,
+) -> None:
+    source_queue_path = tmp_path / "source_queue.json"
+    source_state_path = tmp_path / "source_queue.sqlite"
+    recovery_queue_path = tmp_path / "recovery_queue.json"
+    recovery_state_path = tmp_path / "recovery_queue.sqlite"
+    source_queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "source_queue",
+            "controls": {
+                "mode": "running",
+                "local_first": True,
+                "max_concurrency": {"local_cpu": 1},
+            },
+            "experiments": [
+                {
+                    "id": "source_exp",
+                    "steps": [
+                        {
+                            "id": "materialize",
+                            "kind": "command",
+                            "command": [
+                                runner.sys.executable,
+                                "-c",
+                                "print('source noop')",
+                            ],
+                            "resources": {"kind": "local_cpu"},
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    source_queue_path.write_text(json.dumps(source_queue), encoding="utf-8")
+    recovery_plan = runner.build_queue_observation_recovery_plan(
+        {
+            "schema": "experiment_queue_observation.v1",
+            "queue_id": "source_queue",
+            "healthy": False,
+            "blockers": ["experiment_queue_observation_state_missing"],
+        },
+        queue_path=str(source_queue_path),
+        state_path=str(source_state_path),
+    )
+    policy = runner.build_queue_feedback_replan_policy(
+        {
+            "schema": runner.RUN_SCHEMA,
+            "run_dir": str(tmp_path),
+            "queue_id": "source_queue",
+            "queue_path": str(source_queue_path),
+            "state_path": str(source_state_path),
+            "queue_observation_recovery_plan": recovery_plan,
+            "queue_feedback_replan_ready": True,
+            "queue_feedback_replan_blockers": [],
+            "queue_feedback_replan_followup_queue_emitted": False,
+            "queue_feedback_replan_followup_queue_blockers": [],
+            "queue_feedback_replan_followup_policy_enabled": False,
+            "queue_feedback_replan_followup_policy_blockers": [],
+            "queue_feedback_replan_followup_executed": False,
+            "queue_feedback_replan_followup_execution_success": None,
+            "exact_readiness_handoff_count": 0,
+            **_false_authority(),
+        },
+        feedback_followup_queue=None,
+    )
+    recovery_queue, blockers = runner.build_queue_observation_recovery_queue(
+        policy,
+        lane_id="recovery_exec_fixture",
+        source_policy_path=str(tmp_path / "policy.json"),
+    )
+    assert blockers == []
+    assert recovery_queue is not None
+    recovery_queue_path.write_text(json.dumps(recovery_queue), encoding="utf-8")
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--materializer-contexts",
+            str(tmp_path / "contexts.json"),
+            "--execute-queue-observation-recovery",
+            "--queue-observation-recovery-state",
+            str(recovery_state_path),
+            "--queue-observation-recovery-state-rationale",
+            "isolated unit recovery state",
+        ]
+    )
+
+    payload, commands, returncode = runner._queue_observation_recovery_execution_payload(
+        args,
+        recovery_queue=recovery_queue,
+        recovery_queue_path=recovery_queue_path,
+        recovery_queue_state_path=recovery_state_path,
+        activation_policy="explicit_cli",
+    )
+
+    assert returncode == 0
+    assert payload["schema"] == runner.QUEUE_OBSERVATION_RECOVERY_EXECUTION_SCHEMA
+    assert payload["success"] is True
+    assert payload["blockers"] == []
+    assert payload["activation_policy"] == "explicit_cli"
+    assert payload["validation"]["valid"] is True
+    assert payload["worker"]["success_count"] == 1
+    assert payload["worker"]["failure_count"] == 0
+    assert payload["source_observation_after"]["healthy"] is True
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert commands
+
+
 def test_materializer_campaign_feedback_followup_local_autopolicy_guard(
     tmp_path: Path,
 ) -> None:
@@ -2507,6 +2624,144 @@ def test_materializer_campaign_feedback_followup_local_autopolicy_guard(
     assert (
         "queue_feedback_replan_followup_step_command_forbidden_flag:0:0:--provider"
     ) in policy_blockers
+
+
+def test_materializer_campaign_queue_observation_recovery_autopolicy_rewinds_source(
+    tmp_path: Path,
+) -> None:
+    source_queue_path = tmp_path / "source_queue.json"
+    source_state_path = tmp_path / "source_queue.sqlite"
+    recovery_queue_path = tmp_path / "queue_observation_recovery_queue.json"
+    recovery_state_path = tmp_path / "queue_observation_recovery_queue.sqlite"
+    output_path = tmp_path / "source_output.txt"
+    source_queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "source_materializer_queue",
+            "controls": {"mode": "running", "max_concurrency": {"local_cpu": 1}},
+            "experiments": [
+                {
+                    "id": "exp0",
+                    "steps": [
+                        {
+                            "id": "materialize",
+                            "kind": "command",
+                            "command": [
+                                runner.sys.executable,
+                                "-c",
+                                (
+                                    "import pathlib; "
+                                    f"pathlib.Path({str(output_path)!r}).write_text('ok')"
+                                ),
+                            ],
+                            "resources": {"kind": "local_cpu"},
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    source_queue_path.write_text(json.dumps(source_queue), encoding="utf-8")
+    with connect_state(source_state_path) as conn:
+        initialize_queue_state(conn, source_queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'failed',
+                attempts = 1,
+                last_event_json = ?
+            WHERE queue_id = 'source_materializer_queue'
+              AND experiment_id = 'exp0'
+              AND step_id = 'materialize'
+            """,
+            (json.dumps({"reason": "unit failed source step"}),),
+        )
+        conn.commit()
+
+    recovery_plan = runner.build_queue_observation_recovery_plan(
+        {
+            "schema": "experiment_queue_observation.v1",
+            "queue_id": "source_materializer_queue",
+            "healthy": False,
+            "blockers": ["experiment_queue_observation_failed_steps:1"],
+            "failed_steps": [
+                {
+                    "experiment_id": "exp0",
+                    "step_id": "materialize",
+                    "status": "failed",
+                }
+            ],
+        },
+        queue_path=str(source_queue_path),
+        state_path=str(source_state_path),
+    )
+    recovery_queue, blockers = runner.build_queue_observation_recovery_queue(
+        {
+            "schema": "queue_feedback_replan_policy.v1",
+            "decision": "recover_queue_health",
+            "ready_for_queue_health_recovery": True,
+            "blockers": [],
+            "queue_id": "source_materializer_queue",
+            "queue_path": str(source_queue_path),
+            "queue_state_path": str(source_state_path),
+            "queue_observation_recovery_plan": recovery_plan,
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        lane_id="unit_queue_observation_recovery",
+        source_policy_path=str(tmp_path / "policy.json"),
+    )
+    assert blockers == []
+    assert recovery_queue is not None
+    recovery_queue_path.write_text(json.dumps(recovery_queue), encoding="utf-8")
+    assert runner._queue_observation_recovery_local_autopolicy_blockers(
+        recovery_queue
+    ) == []
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--queue-observation-recovery-policy-local-autopilot",
+            "--queue-observation-recovery-state",
+            str(recovery_state_path),
+            "--queue-observation-recovery-state-rationale",
+            "isolated unit recovery child queue state",
+            "--queue-observation-recovery-max-steps",
+            "1",
+            "--queue-observation-recovery-max-parallel",
+            "1",
+            "--queue-observation-recovery-tail-lines",
+            "5",
+        ]
+    )
+
+    payload, commands, returncode = runner._queue_observation_recovery_execution_payload(
+        args,
+        recovery_queue=recovery_queue,
+        recovery_queue_path=recovery_queue_path,
+        recovery_queue_state_path=recovery_state_path,
+        activation_policy="local_autopilot_policy",
+    )
+
+    assert returncode == 0
+    assert payload["schema"] == runner.QUEUE_OBSERVATION_RECOVERY_EXECUTION_SCHEMA
+    assert payload["success"] is True
+    assert payload["blockers"] == []
+    assert payload["validation"]["valid"] is True
+    assert payload["worker"]["success_count"] == 1
+    assert payload["source_observation_after"]["healthy"] is True
+    assert len(commands) >= 5
+    with connect_state(source_state_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT status
+            FROM step_state
+            WHERE queue_id = 'source_materializer_queue'
+              AND experiment_id = 'exp0'
+              AND step_id = 'materialize'
+            """
+        ).fetchall()
+    assert [row["status"] for row in rows] == ["queued"]
 
 
 def test_materializer_campaign_runner_preserves_feedback_artifacts_when_worker_fails(

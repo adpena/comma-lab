@@ -54017,7 +54017,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "queue_observation_recovery_queue_builder_and_runner_wiring"
+          "evidence": "queue_observation_recovery_autopilot_and_grouped_blockers"
         },
         "real_archive_empirical": {
           "status": false,
@@ -54033,7 +54033,7 @@
         },
         "strict_preflight": {
           "status": true,
-          "evidence": "pytest_queue_feedback_recovery_runner_operator_106_passed"
+          "evidence": "pytest_queue_recovery_autopilot_grouping_109_passed"
         },
         "three_clean_review": {
           "status": false,
@@ -54041,14 +54041,14 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_queue_observation_recovery_queue_20260525T033211Z_codex.md"
+          "evidence": ".omx/research/codex_findings_queue_observation_recovery_autopilot_and_grouping_20260525T034730Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
           "evidence": ""
         }
       },
-      "notes": "Required queue-observation recovery actions now materialize as paused local experiment_queue.v1 child queues and operator briefing prioritizes their initialization."
+      "notes": "Queue observation blockers now group repeated materializer failures, materialize paused recovery queues, and can run safe local recovery autopilot with source re-observation."
     },
     {
       "id": "codex_queue_health_group_prior_20260525",
@@ -54099,5 +54099,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T03:32:39Z"
+  "updated_at": "2026-05-25T03:48:48Z"
 }

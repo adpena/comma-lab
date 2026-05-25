@@ -131,11 +131,13 @@ from .queue_feedback_replan_policy import (
     QUEUE_OBSERVATION_RECOVERY_EXPERIMENT_ID,
     QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA,
     QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA,
+    QUEUE_OBSERVATION_RECOVERY_QUEUE_VALIDATION_SCHEMA,
     build_queue_feedback_replan_continuation_queue,
     build_queue_feedback_replan_policy,
     build_queue_observation_recovery_plan,
     build_queue_observation_recovery_queue,
     validate_feedback_followup_queue,
+    validate_queue_observation_recovery_queue,
 )
 from .ssh_experiment_queue_executor import (
     SSH_ARTIFACT_MOBILITY_SCHEMA,
@@ -195,6 +197,7 @@ __all__ = [
     "QUEUE_OBSERVATION_RECOVERY_EXPERIMENT_ID",
     "QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA",
     "QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA",
+    "QUEUE_OBSERVATION_RECOVERY_QUEUE_VALIDATION_SCHEMA",
     "REGISTRY_SCHEMA",
     "SCHEDULER_RUNTIME_POLICY_SCHEMA",
     "SSH_ARTIFACT_MOBILITY_SCHEMA",
@@ -270,4 +273,5 @@ __all__ = [
     "stable_candidate_identity",
     "suggest_materializer_adapters",
     "validate_feedback_followup_queue",
+    "validate_queue_observation_recovery_queue",
 ]

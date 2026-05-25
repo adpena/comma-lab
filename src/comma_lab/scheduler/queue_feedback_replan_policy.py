@@ -29,6 +29,9 @@ QUEUE_FEEDBACK_REPLAN_CONTINUATION_METADATA_SCHEMA = (
 QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA = (
     "queue_observation_recovery_queue_metadata.v1"
 )
+QUEUE_OBSERVATION_RECOVERY_QUEUE_VALIDATION_SCHEMA = (
+    "queue_observation_recovery_queue_validation.v1"
+)
 QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA = "queue_observation_recovery_plan.v1"
 MATERIALIZER_CAMPAIGN_RUN_SCHEMA = "byte_shaving_materializer_campaign_run.v1"
 QUEUE_FEEDBACK_REPLAN_CONTINUATION_EXPERIMENT_ID = (
@@ -158,6 +161,18 @@ def _step_identity(step: Mapping[str, Any]) -> tuple[str | None, str | None]:
     return experiment_id, step_id
 
 
+def _artifact_paths_from_step(step: Mapping[str, Any]) -> list[str]:
+    paths: list[str] = []
+    for artifact in _as_list(step.get("expected_artifacts")):
+        if not isinstance(artifact, Mapping):
+            continue
+        path = _nonempty_str(artifact.get("path"))
+        if path:
+            paths.append(path)
+    paths.extend(_string_list(step.get("expected_artifact_paths")))
+    return list(dict.fromkeys(paths))
+
+
 def _recovery_action(
     *,
     action: str,
@@ -183,6 +198,22 @@ def _recovery_action(
                 "experiment_id": experiment_id,
                 "step_id": step_id,
                 "status": step.get("status"),
+                "target_kind": _nonempty_str(step.get("target_kind")),
+                "materializer_id": _nonempty_str(
+                    step.get("materializer_id") or step.get("materializer")
+                ),
+                "receiver_contract_kind": _nonempty_str(
+                    step.get("receiver_contract_kind")
+                ),
+                "resource_kind": _nonempty_str(step.get("resource_kind")),
+                "candidate_ids": _string_list(step.get("candidate_ids")),
+                "work_ids": _string_list(step.get("work_ids")),
+                "backlog_keys": _string_list(step.get("backlog_keys")),
+                "source_unit_ids": _string_list(step.get("source_unit_ids")),
+                "source_selection_ids": _string_list(
+                    step.get("source_selection_ids")
+                ),
+                "expected_artifact_paths": _artifact_paths_from_step(step),
             }
         )
     return _false_authority_payload(payload)
@@ -207,6 +238,146 @@ def _append_unique_action(actions: list[dict[str, Any]], action: dict[str, Any])
         if existing_key == key:
             return
     actions.append(action)
+
+
+def _blocker_family(blocker: Any) -> str:
+    return str(blocker or "unknown_blocker").split(":", 1)[0] or "unknown_blocker"
+
+
+def _action_group_scope(action: Mapping[str, Any]) -> tuple[str, str]:
+    materializer = _nonempty_str(action.get("materializer_id"))
+    receiver = _nonempty_str(action.get("receiver_contract_kind"))
+    target = _nonempty_str(action.get("target_kind"))
+    if materializer and receiver:
+        return "materializer_receiver", f"{materializer}:{receiver}"
+    if materializer and target:
+        return "materializer_target", f"{materializer}:{target}"
+    if receiver and target:
+        return "receiver_target", f"{receiver}:{target}"
+    for key in (
+        "source_selection_ids",
+        "source_unit_ids",
+        "work_ids",
+        "backlog_keys",
+        "expected_artifact_paths",
+        "candidate_ids",
+    ):
+        values = _string_list(action.get(key))
+        if values:
+            return key, "|".join(values)
+    experiment_id = _nonempty_str(action.get("experiment_id"))
+    step_id = _nonempty_str(action.get("step_id"))
+    if experiment_id and step_id:
+        return "step", f"{experiment_id}.{step_id}"
+    action_name = _nonempty_str(action.get("action")) or "unknown_action"
+    return "action", action_name
+
+
+def _recommended_planning_effect(actions: Sequence[Mapping[str, Any]]) -> str:
+    if not any(action.get("required") is True for action in actions):
+        return "advisory_maintenance_only"
+    if any(action.get("command") is None for action in actions):
+        return "operator_inspection_required_before_followup"
+    return "block_followup_until_recovery_queue_runs"
+
+
+def _queue_recovery_grouped_blockers(
+    actions: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    groups_by_id: dict[str, dict[str, Any]] = {}
+    actions_by_id: dict[str, list[dict[str, Any]]] = {}
+    for action in actions:
+        blocker_sources = _string_list(action.get("blocker_sources")) or [
+            _nonempty_str(action.get("action")) or "unknown_action"
+        ]
+        scope_kind, scope_value = _action_group_scope(action)
+        for blocker in blocker_sources:
+            blocker_family = _blocker_family(blocker)
+            group_id = f"{blocker_family}:{scope_kind}:{scope_value}"
+            group = groups_by_id.setdefault(
+                group_id,
+                {
+                    "schema": "queue_observation_recovery_blocker_group.v1",
+                    "group_id": group_id,
+                    "blocker_family": blocker_family,
+                    "scope_kind": scope_kind,
+                    "scope_value": scope_value,
+                    "blockers": [],
+                    "actions": [],
+                    "action_names": [],
+                    "affected_experiment_ids": [],
+                    "affected_step_ids": [],
+                    "statuses": [],
+                    "target_kinds": [],
+                    "materializer_ids": [],
+                    "receiver_contract_kinds": [],
+                    "resource_kinds": [],
+                    "candidate_ids": [],
+                    "work_ids": [],
+                    "backlog_keys": [],
+                    "source_unit_ids": [],
+                    "source_selection_ids": [],
+                    "expected_artifact_paths": [],
+                },
+            )
+            actions_by_id.setdefault(group_id, []).append(dict(action))
+            _extend_unique(group["blockers"], [blocker])
+            _extend_unique(group["actions"], [action.get("action")])
+            _extend_unique(group["action_names"], [action.get("action")])
+            _extend_unique(group["affected_experiment_ids"], [action.get("experiment_id")])
+            _extend_unique(group["affected_step_ids"], [action.get("step_id")])
+            _extend_unique(group["statuses"], [action.get("status")])
+            _extend_unique(group["target_kinds"], [action.get("target_kind")])
+            _extend_unique(group["materializer_ids"], [action.get("materializer_id")])
+            _extend_unique(
+                group["receiver_contract_kinds"],
+                [action.get("receiver_contract_kind")],
+            )
+            _extend_unique(group["resource_kinds"], [action.get("resource_kind")])
+            for key in (
+                "candidate_ids",
+                "work_ids",
+                "backlog_keys",
+                "source_unit_ids",
+                "source_selection_ids",
+                "expected_artifact_paths",
+            ):
+                _extend_unique(group[key], _string_list(action.get(key)))
+    grouped: list[dict[str, Any]] = []
+    for group_id, group in sorted(groups_by_id.items()):
+        group_actions = actions_by_id[group_id]
+        count = len(group_actions)
+        required_action_count = sum(
+            1 for action in group_actions if action.get("required") is True
+        )
+        grouped.append(
+            _false_authority_payload(
+                {
+                    **group,
+                    "count": count,
+                    "repeated": count > 1,
+                    "required_action_count": required_action_count,
+                    "maintenance_action_count": count - required_action_count,
+                    "recommended_planning_effect": _recommended_planning_effect(
+                        group_actions
+                    ),
+                    "allowed_use": "queue_recovery_grouping_and_planning_only",
+                    "forbidden_use": (
+                        "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+                    ),
+                }
+            )
+        )
+    return grouped
+
+
+def _extend_unique(out: list[str], values: Sequence[Any]) -> None:
+    seen = set(out)
+    for value in values:
+        text = _nonempty_str(value)
+        if text and text not in seen:
+            seen.add(text)
+            out.append(text)
 
 
 def build_queue_observation_recovery_plan(
@@ -372,6 +543,8 @@ def build_queue_observation_recovery_plan(
 
     required_actions = [item for item in actions if item.get("required") is True]
     maintenance_actions = [item for item in actions if item.get("required") is not True]
+    grouped_blockers = _queue_recovery_grouped_blockers(actions)
+    repeated_group_count = sum(1 for group in grouped_blockers if group["repeated"])
     return _false_authority_payload(
         {
             "schema": QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA,
@@ -388,6 +561,10 @@ def build_queue_observation_recovery_plan(
             "maintenance_action_count": len(maintenance_actions),
             "action_count": len(actions),
             "actions": actions,
+            "grouped_blocker_count": len(grouped_blockers),
+            "repeated_group_count": repeated_group_count,
+            "grouped_blockers": grouped_blockers,
+            "queue_health_groups": grouped_blockers,
             "commands": [
                 list(item["command"])
                 for item in actions
@@ -799,6 +976,156 @@ def _recovery_queue_command_blockers(
             f"queue_observation_recovery_command_subcommand_not_allowed:{action_index}"
         )
     return list(dict.fromkeys(blockers))
+
+
+def validate_queue_observation_recovery_queue(
+    recovery_queue: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Validate a paused local recovery queue before policy execution."""
+
+    blockers: list[str] = []
+    controls = recovery_queue.get("controls")
+    experiments = recovery_queue.get("experiments")
+    step_count = 0
+    command_count = 0
+    source_queue_paths: list[str] = []
+    source_state_paths: list[str] = []
+
+    if recovery_queue.get("schema") != QUEUE_SCHEMA:
+        blockers.append("queue_observation_recovery_schema_not_experiment_queue")
+
+    if not isinstance(controls, Mapping):
+        blockers.append("queue_observation_recovery_controls_missing")
+        control_mode = None
+        local_first = None
+        max_concurrency = None
+    else:
+        control_mode = controls.get("mode")
+        local_first = controls.get("local_first")
+        max_concurrency = controls.get("max_concurrency")
+        if control_mode != "paused":
+            blockers.append("queue_observation_recovery_control_mode_not_paused")
+        if local_first is not True:
+            blockers.append("queue_observation_recovery_not_local_first")
+        if isinstance(max_concurrency, Mapping):
+            non_local_limits = sorted(
+                str(key) for key in max_concurrency if str(key) != "local_cpu"
+            )
+            blockers.extend(
+                f"queue_observation_recovery_non_local_concurrency:{key}"
+                for key in non_local_limits
+            )
+        elif max_concurrency not in ({}, None):
+            blockers.append("queue_observation_recovery_max_concurrency_not_mapping")
+
+    for violation in truthy_authority_field_violations(
+        recovery_queue,
+        fields=FORBIDDEN_TRUE_AUTHORITY_FIELDS,
+    ):
+        blockers.append(
+            f"queue_observation_recovery_truthy_authority_field:{violation}"
+        )
+
+    if not isinstance(experiments, list) or not experiments:
+        blockers.append("queue_observation_recovery_experiments_missing")
+    else:
+        for experiment_index, experiment in enumerate(experiments):
+            if not isinstance(experiment, Mapping):
+                blockers.append(
+                    f"queue_observation_recovery_experiment_not_object:{experiment_index}"
+                )
+                continue
+            if experiment.get("id") != QUEUE_OBSERVATION_RECOVERY_EXPERIMENT_ID:
+                blockers.append(
+                    f"queue_observation_recovery_experiment_id_unexpected:{experiment_index}"
+                )
+            metadata = (
+                experiment.get("metadata")
+                if isinstance(experiment.get("metadata"), Mapping)
+                else {}
+            )
+            source_queue_path = _nonempty_str(metadata.get("source_queue_path"))
+            source_state_path = _nonempty_str(metadata.get("source_queue_state_path"))
+            if source_queue_path is None:
+                blockers.append(
+                    f"queue_observation_recovery_source_queue_path_missing:{experiment_index}"
+                )
+            else:
+                source_queue_paths.append(source_queue_path)
+            if source_state_path is None:
+                blockers.append(
+                    f"queue_observation_recovery_source_state_path_missing:{experiment_index}"
+                )
+            else:
+                source_state_paths.append(source_state_path)
+
+            steps = experiment.get("steps")
+            if not isinstance(steps, list) or not steps:
+                blockers.append(
+                    f"queue_observation_recovery_steps_missing:{experiment_index}"
+                )
+                continue
+            for step_index, step in enumerate(steps):
+                if not isinstance(step, Mapping):
+                    blockers.append(
+                        "queue_observation_recovery_step_not_object:"
+                        f"{experiment_index}:{step_index}"
+                    )
+                    continue
+                step_count += 1
+                resources = step.get("resources")
+                if not isinstance(resources, Mapping) or resources.get("kind") != "local_cpu":
+                    blockers.append(
+                        "queue_observation_recovery_step_not_local_cpu:"
+                        f"{experiment_index}:{step_index}"
+                    )
+                command = step.get("command")
+                if not isinstance(command, list) or not command:
+                    blockers.append(
+                        "queue_observation_recovery_step_command_missing:"
+                        f"{experiment_index}:{step_index}"
+                    )
+                    continue
+                command_count += 1
+                command_items = [str(item) for item in command]
+                command_blockers = _recovery_queue_command_blockers(
+                    command_items=command_items,
+                    action_index=step_index,
+                    recovery_plan={
+                        "queue_path": source_queue_path,
+                        "queue_state_path": source_state_path,
+                    },
+                )
+                blockers.extend(
+                    "queue_observation_recovery_step_command_validation:"
+                    f"{experiment_index}:{item}"
+                    for item in command_blockers
+                )
+
+    return _false_authority_payload(
+        {
+            "schema": QUEUE_OBSERVATION_RECOVERY_QUEUE_VALIDATION_SCHEMA,
+            "queue_schema": _nonempty_str(recovery_queue.get("schema")),
+            "queue_id": _nonempty_str(recovery_queue.get("queue_id")),
+            "queue_sha256": _stable_json_sha256(recovery_queue),
+            "control_mode": control_mode,
+            "local_first": local_first,
+            "max_concurrency": dict(max_concurrency)
+            if isinstance(max_concurrency, Mapping)
+            else max_concurrency,
+            "experiment_count": len(experiments) if isinstance(experiments, list) else 0,
+            "step_count": step_count,
+            "command_count": command_count,
+            "source_queue_paths": list(dict.fromkeys(source_queue_paths)),
+            "source_state_paths": list(dict.fromkeys(source_state_paths)),
+            "valid": not blockers,
+            "blockers": list(dict.fromkeys(blockers)),
+            "allowed_use": "local_queue_observation_recovery_validation_only",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+        }
+    )
 
 
 def build_queue_observation_recovery_queue(
@@ -1457,9 +1784,11 @@ __all__ = [
     "QUEUE_OBSERVATION_RECOVERY_EXPERIMENT_ID",
     "QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA",
     "QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA",
+    "QUEUE_OBSERVATION_RECOVERY_QUEUE_VALIDATION_SCHEMA",
     "build_queue_feedback_replan_continuation_queue",
     "build_queue_feedback_replan_policy",
     "build_queue_observation_recovery_plan",
     "build_queue_observation_recovery_queue",
     "validate_feedback_followup_queue",
+    "validate_queue_observation_recovery_queue",
 ]

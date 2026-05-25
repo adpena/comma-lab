@@ -24,11 +24,13 @@ from comma_lab.scheduler.queue_feedback_replan_policy import (
     QUEUE_OBSERVATION_RECOVERY_EXPERIMENT_ID,
     QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA,
     QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA,
+    QUEUE_OBSERVATION_RECOVERY_QUEUE_VALIDATION_SCHEMA,
     build_queue_feedback_replan_continuation_queue,
     build_queue_feedback_replan_policy,
     build_queue_observation_recovery_plan,
     build_queue_observation_recovery_queue,
     validate_feedback_followup_queue,
+    validate_queue_observation_recovery_queue,
 )
 
 
@@ -144,10 +146,14 @@ def test_queue_observation_helpers_are_public_package_exports() -> None:
     from comma_lab.scheduler import (
         build_queue_observation_recovery_queue as scheduler_queue_export,
     )
+    from comma_lab.scheduler import (
+        validate_queue_observation_recovery_queue as scheduler_queue_validator,
+    )
     from tac.optimization import observations_from_queue_observation
 
     assert scheduler_export is build_queue_observation_recovery_plan
     assert scheduler_queue_export is build_queue_observation_recovery_queue
+    assert scheduler_queue_validator is validate_queue_observation_recovery_queue
     assert callable(observations_from_queue_observation)
 
 
@@ -176,6 +182,8 @@ def test_queue_observation_recovery_plan_builds_required_local_commands() -> Non
                     "experiment_id": "exp0",
                     "step_id": "materialize",
                     "status": "failed",
+                    "target_kind": "archive_section_entropy_recode_v1",
+                    "materializer_id": "entropy_adapter",
                 }
             ],
             "blocked_steps": [
@@ -225,6 +233,77 @@ def test_queue_observation_recovery_plan_builds_required_local_commands() -> Non
     assert actions["rewind_succeeded_step_with_artifact_failure"]["step_id"] == (
         "handoff"
     )
+    entropy_groups = [
+        group
+        for group in plan["grouped_blockers"]
+        if group["scope_kind"] == "materializer_target"
+        and group["scope_value"]
+        == "entropy_adapter:archive_section_entropy_recode_v1"
+    ]
+    assert len(entropy_groups) == 3
+    assert all(group["score_claim"] is False for group in plan["grouped_blockers"])
+    assert entropy_groups[0]["target_kinds"] == [
+        "archive_section_entropy_recode_v1"
+    ]
+    assert entropy_groups[0]["materializer_ids"] == ["entropy_adapter"]
+    assert entropy_groups[0]["recommended_planning_effect"] == (
+        "block_followup_until_recovery_queue_runs"
+    )
+
+
+def test_queue_observation_recovery_plan_groups_repeated_materializer_blockers() -> None:
+    plan = build_queue_observation_recovery_plan(
+        {
+            "schema": "experiment_queue_observation.v1",
+            "queue_id": "campaign_queue",
+            "healthy": False,
+            "blockers": [
+                "experiment_queue_observation_failed_steps:2",
+            ],
+            "failed_steps": [
+                {
+                    "experiment_id": "exp0",
+                    "step_id": "materialize",
+                    "status": "failed",
+                    "target_kind": "archive_section_entropy_recode_v1",
+                    "materializer_id": "entropy_adapter",
+                    "source_selection_ids": ["compiled_direct_selection"],
+                },
+                {
+                    "experiment_id": "exp0",
+                    "step_id": "proof",
+                    "status": "failed",
+                    "target_kind": "archive_section_entropy_recode_v1",
+                    "materializer_id": "entropy_adapter",
+                    "source_selection_ids": ["compiled_direct_selection"],
+                }
+            ],
+        },
+        queue_path="queue.json",
+        state_path="queue.sqlite",
+    )
+
+    groups = {
+        group["group_id"]: group for group in plan["grouped_blockers"]
+    }
+    repeated = [
+        group
+        for group in groups.values()
+        if group["scope_kind"] == "materializer_target"
+        and group["blocker_family"] == "experiment_queue_observation_failed_steps"
+    ]
+
+    assert plan["grouped_blocker_count"] == 1
+    assert plan["repeated_group_count"] == 1
+    assert len(repeated) == 1
+    assert repeated[0]["count"] == 2
+    assert repeated[0]["repeated"] is True
+    assert repeated[0]["source_selection_ids"] == ["compiled_direct_selection"]
+    assert repeated[0]["affected_step_ids"] == ["materialize", "proof"]
+    assert repeated[0]["recommended_planning_effect"] == (
+        "block_followup_until_recovery_queue_runs"
+    )
+    assert all(group["ready_for_exact_eval_dispatch"] is False for group in repeated)
 
 
 def test_feedback_replan_policy_executes_safe_followup_queue() -> None:
@@ -351,6 +430,67 @@ def test_feedback_replan_policy_prioritizes_queue_health_recovery() -> None:
         "--reason",
         "queue observation health recovery",
     ]
+    validation = validate_queue_observation_recovery_queue(recovery_queue)
+    assert validation["schema"] == QUEUE_OBSERVATION_RECOVERY_QUEUE_VALIDATION_SCHEMA
+    assert validation["valid"] is True
+    assert validation["command_count"] == 1
+    assert validation["source_queue_paths"] == [
+        ".omx/research/campaign/materializer_execution_queue.json"
+    ]
+    assert validation["source_state_paths"] == [
+        ".omx/research/campaign/materializer_execution_queue.sqlite"
+    ]
+    assert validation["score_claim"] is False
+    assert validation["ready_for_exact_eval_dispatch"] is False
+    assert validation["blockers"] == []
+
+    unsafe_queue = dict(recovery_queue)
+    unsafe_queue["controls"] = {
+        **dict(recovery_queue["controls"]),
+        "mode": "running",
+        "max_concurrency": {"local_cpu": 1, "modal_gpu": 1},
+    }
+    unsafe_queue["experiments"] = [
+        {
+            **experiment,
+            "metadata": {
+                **dict(experiment["metadata"]),
+                "score_claim": True,
+            },
+            "steps": [
+                {
+                    **experiment["steps"][0],
+                    "command": [
+                        sys.executable,
+                        "tools/experiment_queue.py",
+                        "--queue",
+                        "other.json",
+                        "--state",
+                        ".omx/research/campaign/materializer_execution_queue.sqlite",
+                        "rewind",
+                        "exp0",
+                        "materialize",
+                    ],
+                }
+            ],
+        }
+    ]
+    unsafe_validation = validate_queue_observation_recovery_queue(unsafe_queue)
+    assert unsafe_validation["valid"] is False
+    assert "queue_observation_recovery_control_mode_not_paused" in unsafe_validation[
+        "blockers"
+    ]
+    assert "queue_observation_recovery_non_local_concurrency:modal_gpu" in (
+        unsafe_validation["blockers"]
+    )
+    assert (
+        "queue_observation_recovery_truthy_authority_field:"
+        "experiments[0].metadata.score_claim=truthy"
+    ) in unsafe_validation["blockers"]
+    assert (
+        "queue_observation_recovery_step_command_validation:0:"
+        "queue_observation_recovery_command_queue_mismatch:0"
+    ) in unsafe_validation["blockers"]
 
 
 def test_feedback_replan_policy_keeps_nonblocking_observation_maintenance_advisory() -> None:

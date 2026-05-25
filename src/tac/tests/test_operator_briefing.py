@@ -1232,6 +1232,8 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
     assert summary["queue_feedback_followup_execution_success_count"] == 1
     assert summary["queue_feedback_policy_continue_count"] == 1
     assert summary["queue_observation_recovery_queue_count"] == 0
+    assert summary["queue_observation_recovery_executed_count"] == 0
+    assert summary["queue_observation_recovery_execution_success_count"] == 0
     assert summary["queue_feedback_continuation_queue_count"] == 1
     assert summary["overall_executable_conversion_rate"] == 0.5
     assert summary["score_claim"] is False
@@ -1297,6 +1299,8 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
     assert "queue_recovery_required=0" in text
     assert "queue_recovery_ready=0" in text
     assert "queue_recovery_queued=0" in text
+    assert "queue_recovery_executed=0" in text
+    assert "queue_recovery_success=0" in text
     assert "queue_maintenance=0" in text
     assert "feedback_continuation_queued=1" in text
     assert "feedback_decision=run_next_materializer_campaign_iteration" in text
@@ -1358,6 +1362,10 @@ def test_byte_shaving_acquisition_summary_surfaces_queue_recovery_signal(
             ),
             "queue_observation_recovery_queue_emitted": True,
             "queue_observation_recovery_queue_blockers": [],
+            "queue_observation_recovery_policy_enabled": True,
+            "queue_observation_recovery_execution_requested": True,
+            "queue_observation_recovery_executed": False,
+            "queue_observation_recovery_execution_success": False,
             "queue_observation_recovery_required": True,
             "queue_observation_maintenance_recommended": False,
             "queue_observation_recovery_plan": {
@@ -1435,6 +1443,8 @@ def test_byte_shaving_acquisition_summary_surfaces_queue_recovery_signal(
 
     assert summary["queue_observation_recovery_required_count"] == 1
     assert summary["queue_observation_recovery_queue_count"] == 1
+    assert summary["queue_observation_recovery_executed_count"] == 0
+    assert summary["queue_observation_recovery_execution_success_count"] == 0
     assert summary["ready_for_queue_health_recovery_count"] == 1
     assert summary["queue_observation_required_action_count"] == 1
     assert latest["queue_observation_recovery_required"] is True
@@ -1442,6 +1452,10 @@ def test_byte_shaving_acquisition_summary_surfaces_queue_recovery_signal(
     assert latest["operator_queue_state_mutation_required"] is True
     assert latest["queue_observation_recovery_queue_emitted"] is True
     assert latest["queue_observation_recovery_queue_blocker_count"] == 0
+    assert latest["queue_observation_recovery_policy_enabled"] is True
+    assert latest["queue_observation_recovery_execution_requested"] is True
+    assert latest["queue_observation_recovery_executed"] is False
+    assert latest["queue_observation_recovery_execution_success"] is False
     assert latest["queue_feedback_replan_policy_should_continue"] is False
     assert latest["queue_observation_recovery_action_count"] == 1
     assert latest["queue_observation_required_action_count"] == 1
@@ -1461,6 +1475,8 @@ def test_byte_shaving_acquisition_summary_surfaces_queue_recovery_signal(
     assert "queue_recovery_required=1" in text
     assert "queue_recovery_ready=1" in text
     assert "queue_recovery_queued=1" in text
+    assert "queue_recovery_executed=0" in text
+    assert "queue_recovery_success=0" in text
     assert "queue_recovery_actions=1" in text
     assert "feedback_continue=False" in text
 

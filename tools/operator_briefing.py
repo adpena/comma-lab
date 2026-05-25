@@ -1765,6 +1765,18 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
             )
             else []
         ),
+        "queue_observation_recovery_policy_enabled": (
+            payload.get("queue_observation_recovery_policy_enabled") is True
+        ),
+        "queue_observation_recovery_execution_requested": (
+            payload.get("queue_observation_recovery_execution_requested") is True
+        ),
+        "queue_observation_recovery_executed": (
+            payload.get("queue_observation_recovery_executed") is True
+        ),
+        "queue_observation_recovery_execution_success": (
+            payload.get("queue_observation_recovery_execution_success") is True
+        ),
         "queue_observation_recovery_required": (
             payload.get("queue_observation_recovery_required") is True
             or feedback_policy.get("queue_observation_recovery_required") is True
@@ -1848,6 +1860,7 @@ def _byte_shaving_acquisition_next_command(latest: dict[str, object] | None) -> 
     if (
         latest
         and latest.get("queue_observation_recovery_queue_emitted") is True
+        and latest.get("queue_observation_recovery_execution_success") is not True
         and latest.get("queue_observation_recovery_queue_path")
     ):
         return _experiment_queue_command(
@@ -1955,6 +1968,14 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
             for row in rows
             if row.get("queue_observation_recovery_queue_emitted") is True
         ),
+        "queue_observation_recovery_executed_count": sum(
+            1 for row in rows if row.get("queue_observation_recovery_executed") is True
+        ),
+        "queue_observation_recovery_execution_success_count": sum(
+            1
+            for row in rows
+            if row.get("queue_observation_recovery_execution_success") is True
+        ),
         "queue_observation_maintenance_recommended_count": sum(
             1
             for row in rows
@@ -1993,6 +2014,7 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
             if (
                 latest
                 and latest.get("queue_observation_recovery_queue_emitted") is True
+                and latest.get("queue_observation_recovery_execution_success") is not True
                 and latest.get("queue_observation_recovery_queue_path")
             )
             else _experiment_queue_command(
@@ -2038,6 +2060,10 @@ def _format_byte_shaving_acquisition_summary() -> str:
             f"{payload['ready_for_queue_health_recovery_count']} "
             "queue_recovery_queued="
             f"{payload['queue_observation_recovery_queue_count']} "
+            "queue_recovery_executed="
+            f"{payload['queue_observation_recovery_executed_count']} "
+            "queue_recovery_success="
+            f"{payload['queue_observation_recovery_execution_success_count']} "
             "queue_maintenance="
             f"{payload['queue_observation_maintenance_recommended_count']} "
             "feedback_continuation_queued="
@@ -2092,6 +2118,10 @@ def _format_byte_shaving_acquisition_summary() -> str:
                 f"{row.get('ready_for_queue_health_recovery') is True} "
                 "queue_recovery_queued="
                 f"{row.get('queue_observation_recovery_queue_emitted') is True} "
+                "queue_recovery_executed="
+                f"{row.get('queue_observation_recovery_executed') is True} "
+                "queue_recovery_success="
+                f"{row.get('queue_observation_recovery_execution_success') is True} "
                 "queue_maintenance="
                 f"{row.get('queue_observation_maintenance_recommended') is True} "
                 "queue_recovery_actions="
@@ -3953,6 +3983,12 @@ def _dispatch_readiness() -> dict[str, object]:
             ],
             "queue_observation_recovery_queue_count": byte_shaving_acquisition[
                 "queue_observation_recovery_queue_count"
+            ],
+            "queue_observation_recovery_executed_count": byte_shaving_acquisition[
+                "queue_observation_recovery_executed_count"
+            ],
+            "queue_observation_recovery_execution_success_count": byte_shaving_acquisition[
+                "queue_observation_recovery_execution_success_count"
             ],
             "local_mlx_ready_step_count": byte_shaving_acquisition[
                 "local_mlx_ready_step_count"

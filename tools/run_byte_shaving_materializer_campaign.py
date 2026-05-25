@@ -54,6 +54,7 @@ from comma_lab.scheduler.queue_feedback_replan_policy import (  # noqa: E402
     build_queue_observation_recovery_plan,
     build_queue_observation_recovery_queue,
     validate_feedback_followup_queue,
+    validate_queue_observation_recovery_queue,
 )
 from comma_lab.scheduler.staircase_dag import (  # noqa: E402
     STAIRCASE_DEPENDENT_QUEUE_REF_SCHEMA,
@@ -83,6 +84,9 @@ QUEUE_FEEDBACK_REPLAN_EXPERIMENT_METADATA_SCHEMA = (
 )
 QUEUE_FEEDBACK_REPLAN_FOLLOWUP_EXECUTION_SCHEMA = (
     "byte_shaving_materializer_campaign_feedback_replan_followup_execution.v1"
+)
+QUEUE_OBSERVATION_RECOVERY_EXECUTION_SCHEMA = (
+    "byte_shaving_materializer_campaign_queue_observation_recovery_execution.v1"
 )
 FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA = (
     "family_agnostic_materializer_empirical_observation.v1"
@@ -1355,6 +1359,239 @@ def _queue_feedback_replan_followup_execution_refusal_payload(
     )
 
 
+def _queue_observation_recovery_activation_policy(args: argparse.Namespace) -> str:
+    if args.execute_queue_observation_recovery:
+        return "explicit_cli"
+    if args.queue_observation_recovery_policy_local_autopilot:
+        return "local_autopilot_policy"
+    return "paused_only"
+
+
+def _queue_observation_recovery_local_autopolicy_blockers(
+    recovery_queue: Mapping[str, Any],
+) -> list[str]:
+    validation = validate_queue_observation_recovery_queue(recovery_queue)
+    return [str(item) for item in validation["blockers"]]
+
+
+def _queue_observation_recovery_source_paths(
+    recovery_queue: Mapping[str, Any],
+) -> tuple[Path | None, Path | None]:
+    try:
+        metadata = recovery_queue["experiments"][0]["metadata"]  # type: ignore[index]
+        source_queue_path = metadata.get("source_queue_path")
+        source_state_path = metadata.get("source_queue_state_path")
+    except (KeyError, IndexError, TypeError, AttributeError):
+        return None, None
+    if not source_queue_path or not source_state_path:
+        return None, None
+    return _resolve(str(source_queue_path)), _resolve(str(source_state_path))
+
+
+def _queue_observation_recovery_execution_payload(
+    args: argparse.Namespace,
+    *,
+    recovery_queue: Mapping[str, Any],
+    recovery_queue_path: Path,
+    recovery_queue_state_path: Path,
+    activation_policy: str,
+) -> tuple[dict[str, Any], list[CommandResult], int]:
+    state_path = (
+        _resolve(args.queue_observation_recovery_state)
+        if args.queue_observation_recovery_state is not None
+        else recovery_queue_state_path
+    )
+    command_results: list[CommandResult] = []
+    blockers: list[str] = []
+    parsed: dict[str, Any] = {}
+
+    def run_step(label: str, subcommand: Sequence[str]) -> CommandResult:
+        result = _run(
+            _experiment_queue_command(
+                execution_queue=recovery_queue_path,
+                state_path=state_path,
+                subcommand=subcommand,
+            ),
+            check=False,
+        )
+        command_results.append(result)
+        if result.returncode != 0:
+            blockers.append(f"{label}_failed")
+        parsed[label] = _execution_stdout_json(
+            result,
+            label=label,
+            blockers=blockers,
+        )
+        return result
+
+    validation = validate_queue_observation_recovery_queue(recovery_queue)
+    parsed["validation"] = validation
+    blockers.extend(
+        f"queue_observation_recovery_validation:{item}"
+        for item in validation["blockers"]
+    )
+
+    validate_result = run_step("validate", ["validate"]) if validation["valid"] else None
+    init_result = (
+        run_step("init", ["init"])
+        if validate_result is not None and validate_result.returncode == 0
+        else None
+    )
+    if init_result is not None and init_result.returncode == 0:
+        default_control_reason = (
+            "queue-owned local observation recovery policy"
+            if activation_policy == "local_autopilot_policy"
+            else "materializer campaign explicit local-only queue observation recovery"
+        )
+        control_reason = (
+            args.queue_observation_recovery_activation_reason
+            or default_control_reason
+        )
+        control_result = run_step(
+            "control",
+            ["control", "running", "--reason", control_reason],
+        )
+    else:
+        control_result = None
+
+    worker_result: CommandResult | None = None
+    if control_result is not None and control_result.returncode == 0:
+        worker_command = [
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            str(args.queue_observation_recovery_max_steps),
+            "--max-parallel",
+            str(args.queue_observation_recovery_max_parallel),
+            "--idle-sleep-seconds",
+            str(args.queue_observation_recovery_idle_sleep_seconds),
+            "--max-idle-cycles",
+            str(args.queue_observation_recovery_max_idle_cycles),
+            "--noncanonical-state-rationale",
+            (
+                args.queue_observation_recovery_state_rationale
+                or "run-scoped materializer queue observation recovery child queue state"
+            ),
+        ]
+        worker_result = run_step("worker", worker_command)
+
+    if init_result is not None and init_result.returncode == 0:
+        run_step(
+            "observation",
+            [
+                "observe",
+                "--tail-lines",
+                str(args.queue_observation_recovery_tail_lines),
+                "--format",
+                "json",
+            ],
+        )
+        run_step("performance", ["performance"])
+
+    source_queue_path, source_state_path = _queue_observation_recovery_source_paths(
+        recovery_queue
+    )
+    if source_queue_path is None or source_state_path is None:
+        blockers.append("source_queue_paths_missing")
+    elif worker_result is not None and worker_result.returncode == 0:
+        source_result = _run(
+            _experiment_queue_command(
+                execution_queue=source_queue_path,
+                state_path=source_state_path,
+                subcommand=[
+                    "observe",
+                    "--include-orphans",
+                    "--tail-lines",
+                    str(args.queue_observation_recovery_tail_lines),
+                    "--format",
+                    "json",
+                ],
+            ),
+            check=False,
+        )
+        command_results.append(source_result)
+        if source_result.returncode != 0:
+            blockers.append("source_observation_after_failed")
+        parsed["source_observation_after"] = _execution_stdout_json(
+            source_result,
+            label="source_observation_after",
+            blockers=blockers,
+        )
+
+    worker_payload = parsed.get("worker")
+    if isinstance(worker_payload, dict):
+        if int(worker_payload.get("failure_count") or 0):
+            blockers.append("worker_reported_failures")
+        expected_successes = int(validation.get("command_count") or 0)
+        if int(worker_payload.get("success_count") or 0) < expected_successes:
+            blockers.append("worker_did_not_complete_all_recovery_actions")
+    elif worker_result is not None and worker_result.returncode == 0:
+        blockers.append("worker_result_missing")
+
+    source_after = parsed.get("source_observation_after")
+    if isinstance(source_after, dict) and source_after.get("healthy") is not True:
+        blockers.append("source_observation_after_unhealthy")
+
+    success = not blockers
+    payload = _false_authority_payload(
+        {
+            "schema": QUEUE_OBSERVATION_RECOVERY_EXECUTION_SCHEMA,
+            "enabled": True,
+            "success": success,
+            "blockers": list(dict.fromkeys(blockers)),
+            "queue_path": _display_path(recovery_queue_path),
+            "queue_id": recovery_queue.get("queue_id"),
+            "state_path": _display_path(state_path),
+            "source_queue_path": (
+                None if source_queue_path is None else _display_path(source_queue_path)
+            ),
+            "source_queue_state_path": (
+                None if source_state_path is None else _display_path(source_state_path)
+            ),
+            "max_steps": args.queue_observation_recovery_max_steps,
+            "max_parallel": args.queue_observation_recovery_max_parallel,
+            "activation_policy": activation_policy,
+            "allowed_use": "local_queue_observation_recovery_execution_only",
+            "forbidden_use": "score_claim_or_promotion_or_paid_dispatch_authority",
+            "validation": parsed.get("validation"),
+            "validate": parsed.get("validate"),
+            "init": parsed.get("init"),
+            "control": parsed.get("control"),
+            "worker": parsed.get("worker"),
+            "observation": parsed.get("observation"),
+            "performance": parsed.get("performance"),
+            "source_observation_after": parsed.get("source_observation_after"),
+            "commands": [result.to_dict() for result in command_results],
+        }
+    )
+    return payload, command_results, (0 if success else 2)
+
+
+def _queue_observation_recovery_execution_refusal_payload(
+    *,
+    blockers: Sequence[str],
+    recovery_queue_path: Path,
+    activation_policy: str,
+) -> dict[str, Any]:
+    return _false_authority_payload(
+        {
+            "schema": QUEUE_OBSERVATION_RECOVERY_EXECUTION_SCHEMA,
+            "enabled": True,
+            "success": False,
+            "blockers": list(dict.fromkeys(str(item) for item in blockers)),
+            "queue_path": _display_path(recovery_queue_path),
+            "queue_id": None,
+            "state_path": None,
+            "source_queue_path": None,
+            "source_queue_state_path": None,
+            "activation_policy": activation_policy,
+            "allowed_use": "local_queue_observation_recovery_execution_only",
+            "forbidden_use": "score_claim_or_promotion_or_paid_dispatch_authority",
+            "commands": [],
+        }
+    )
+
+
 def _git_head_sha() -> str | None:
     result = subprocess.run(
         ["git", "rev-parse", "HEAD"],
@@ -1935,6 +2172,34 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--queue-feedback-replan-followup-idle-sleep-seconds", type=float, default=0.0)
     parser.add_argument("--queue-feedback-replan-followup-max-idle-cycles", type=int, default=1)
     parser.add_argument("--queue-feedback-replan-followup-tail-lines", type=int, default=20)
+    parser.add_argument(
+        "--execute-queue-observation-recovery",
+        action="store_true",
+        help=(
+            "after emitting the paused queue-observation recovery queue, explicitly "
+            "resume and run bounded local-only recovery actions"
+        ),
+    )
+    parser.add_argument(
+        "--queue-observation-recovery-policy-local-autopilot",
+        action="store_true",
+        help=(
+            "allow the queue-owned local autopolicy to resume the paused recovery "
+            "queue when strict local-only and false-authority checks pass"
+        ),
+    )
+    parser.add_argument("--queue-observation-recovery-state", type=Path, default=None)
+    parser.add_argument(
+        "--queue-observation-recovery-state-rationale",
+        default=None,
+        help="rationale used when the recovery child queue runs against a noncanonical state path",
+    )
+    parser.add_argument("--queue-observation-recovery-activation-reason", default=None)
+    parser.add_argument("--queue-observation-recovery-max-steps", type=int, default=8)
+    parser.add_argument("--queue-observation-recovery-max-parallel", type=int, default=1)
+    parser.add_argument("--queue-observation-recovery-idle-sleep-seconds", type=float, default=0.0)
+    parser.add_argument("--queue-observation-recovery-max-idle-cycles", type=int, default=1)
+    parser.add_argument("--queue-observation-recovery-tail-lines", type=int, default=20)
     parser.add_argument("--queue-feedback-replan-policy-iteration", type=int, default=0)
     parser.add_argument("--queue-feedback-replan-policy-max-iterations", type=int, default=3)
     parser.add_argument("--overwrite-output", action="store_true")
@@ -3317,6 +3582,16 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--queue-feedback-replan-followup-idle-sleep-seconds must be non-negative")
     if args.queue_feedback_replan_followup_tail_lines < 0:
         raise SystemExit("--queue-feedback-replan-followup-tail-lines must be non-negative")
+    if args.queue_observation_recovery_max_steps < 1:
+        raise SystemExit("--queue-observation-recovery-max-steps must be >= 1")
+    if args.queue_observation_recovery_max_parallel < 1:
+        raise SystemExit("--queue-observation-recovery-max-parallel must be >= 1")
+    if args.queue_observation_recovery_max_idle_cycles < 1:
+        raise SystemExit("--queue-observation-recovery-max-idle-cycles must be >= 1")
+    if args.queue_observation_recovery_idle_sleep_seconds < 0:
+        raise SystemExit("--queue-observation-recovery-idle-sleep-seconds must be non-negative")
+    if args.queue_observation_recovery_tail_lines < 0:
+        raise SystemExit("--queue-observation-recovery-tail-lines must be non-negative")
     if args.queue_feedback_replan_policy_iteration < 0:
         raise SystemExit("--queue-feedback-replan-policy-iteration must be non-negative")
     if args.queue_feedback_replan_policy_max_iterations < 1:
@@ -3370,6 +3645,18 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(
             "--queue-feedback-replan-followup-state requires "
             "--queue-feedback-replan-followup-state-rationale when executing the feedback queue"
+        )
+    if (
+        (
+            args.execute_queue_observation_recovery
+            or args.queue_observation_recovery_policy_local_autopilot
+        )
+        and args.queue_observation_recovery_state is not None
+        and not args.queue_observation_recovery_state_rationale
+    ):
+        raise SystemExit(
+            "--queue-observation-recovery-state requires "
+            "--queue-observation-recovery-state-rationale when executing the recovery queue"
         )
     run_dir = (
         _resolve(args.run_dir)
@@ -3624,6 +3911,11 @@ def main(argv: list[str] | None = None) -> int:
     queue_observation_recovery_queue: dict[str, Any] | None = None
     queue_observation_recovery_queue_blockers: list[str] = []
     queue_observation_recovery_staircase_artifacts: dict[str, Any] | None = None
+    queue_observation_recovery_execution: dict[str, Any] | None = None
+    queue_observation_recovery_execution_returncode = 0
+    queue_observation_recovery_policy = _queue_observation_recovery_activation_policy(args)
+    queue_observation_recovery_policy_blockers: list[str] = []
+    queue_observation_recovery_execution_attempted = False
     queue_feedback_replan_followup_execution: dict[str, Any] | None = None
     queue_feedback_replan_followup_execution_returncode = 0
     queue_feedback_replan_followup_policy = _queue_feedback_replan_followup_activation_policy(args)
@@ -4013,6 +4305,67 @@ def main(argv: list[str] | None = None) -> int:
             staircase_artifacts["queue_observation_recovery_child"] = (
                 queue_observation_recovery_staircase_artifacts
             )
+        if args.queue_observation_recovery_policy_local_autopilot:
+            queue_observation_recovery_policy_blockers = (
+                _queue_observation_recovery_local_autopolicy_blockers(
+                    queue_observation_recovery_queue
+                )
+            )
+        should_execute_recovery = (
+            args.execute_queue_observation_recovery
+            or (
+                args.queue_observation_recovery_policy_local_autopilot
+                and not queue_observation_recovery_policy_blockers
+            )
+        )
+        if should_execute_recovery:
+            queue_observation_recovery_execution_attempted = True
+            (
+                queue_observation_recovery_execution,
+                recovery_execution_commands,
+                queue_observation_recovery_execution_returncode,
+            ) = _queue_observation_recovery_execution_payload(
+                args,
+                recovery_queue=queue_observation_recovery_queue,
+                recovery_queue_path=queue_observation_recovery_queue_path,
+                recovery_queue_state_path=queue_observation_recovery_queue_state_path,
+                activation_policy=queue_observation_recovery_policy,
+            )
+            commands.extend(recovery_execution_commands)
+        elif args.queue_observation_recovery_policy_local_autopilot:
+            queue_observation_recovery_execution = (
+                _queue_observation_recovery_execution_refusal_payload(
+                    blockers=(
+                        queue_observation_recovery_policy_blockers
+                        or ["queue_observation_recovery_policy_not_enabled"]
+                    ),
+                    recovery_queue_path=queue_observation_recovery_queue_path,
+                    activation_policy=queue_observation_recovery_policy,
+                )
+            )
+    elif args.execute_queue_observation_recovery:
+        queue_observation_recovery_execution_returncode = 2
+        queue_observation_recovery_execution = (
+            _queue_observation_recovery_execution_refusal_payload(
+                blockers=(
+                    queue_observation_recovery_queue_blockers
+                    or ["queue_observation_recovery_queue_not_emitted"]
+                ),
+                recovery_queue_path=queue_observation_recovery_queue_path,
+                activation_policy=queue_observation_recovery_policy,
+            )
+        )
+    elif args.queue_observation_recovery_policy_local_autopilot:
+        queue_observation_recovery_execution = (
+            _queue_observation_recovery_execution_refusal_payload(
+                blockers=(
+                    queue_observation_recovery_queue_blockers
+                    or ["queue_observation_recovery_queue_not_emitted"]
+                ),
+                recovery_queue_path=queue_observation_recovery_queue_path,
+                activation_policy=queue_observation_recovery_policy,
+            )
+        )
     (
         queue_feedback_replan_continuation_queue,
         queue_feedback_replan_continuation_queue_blockers,
@@ -4066,6 +4419,41 @@ def main(argv: list[str] | None = None) -> int:
     payload["queue_observation_recovery_queue_blockers"] = (
         queue_observation_recovery_queue_blockers
     )
+    payload["queue_observation_recovery_policy"] = queue_observation_recovery_policy
+    payload["queue_observation_recovery_execution_policy"] = (
+        queue_observation_recovery_policy
+    )
+    payload["queue_observation_recovery_policy_enabled"] = bool(
+        args.queue_observation_recovery_policy_local_autopilot
+    )
+    payload["queue_observation_recovery_policy_blockers"] = (
+        queue_observation_recovery_policy_blockers
+    )
+    payload["queue_observation_recovery_execution_requested"] = bool(
+        args.execute_queue_observation_recovery
+        or args.queue_observation_recovery_policy_local_autopilot
+    )
+    payload["queue_observation_recovery_executed"] = (
+        queue_observation_recovery_execution_attempted
+    )
+    payload["queue_observation_recovery_execution_success"] = (
+        None
+        if queue_observation_recovery_execution is None
+        else bool(queue_observation_recovery_execution.get("success"))
+    )
+    payload["queue_observation_recovery_execution"] = (
+        queue_observation_recovery_execution
+    )
+    payload["queue_observation_recovery_execution_state_path"] = (
+        None
+        if queue_observation_recovery_execution is None
+        else queue_observation_recovery_execution.get("state_path")
+    )
+    payload["queue_observation_recovery_source_observation_after"] = (
+        None
+        if queue_observation_recovery_execution is None
+        else queue_observation_recovery_execution.get("source_observation_after")
+    )
     payload["queue_observation_recovery_staircase_artifacts"] = (
         queue_observation_recovery_staircase_artifacts
     )
@@ -4093,6 +4481,7 @@ def main(argv: list[str] | None = None) -> int:
         or observe_result.returncode != 0
         or ssh_execute_returncode != 0
         or queue_feedback_replan_followup_execution_returncode != 0
+        or queue_observation_recovery_execution_returncode != 0
         else 0
     )
 
