@@ -87,6 +87,7 @@ def test_mlx_acquisition_batch_derives_grouped_structural_interactions() -> None
                         "unit_id": "gate_src_a_ch0",
                         "operation_family": "dynamic_sparse_channel_gate",
                         "target_kind": "tensor_factorize_v1",
+                        "packet_member": "decoder.bin",
                         "tensor_name": "decoder.gate",
                         "candidate_saved_bytes": 2,
                         "params": {
@@ -112,6 +113,7 @@ def test_mlx_acquisition_batch_derives_grouped_structural_interactions() -> None
                     "unit_id": "gate_src_b_ch0",
                     "operation_family": "dynamic_sparse_channel_gate",
                     "target_kind": "tensor_factorize_v1",
+                    "packet_member": "decoder.bin",
                     "tensor_name": "decoder.gate",
                     "candidate_saved_bytes": 1,
                     "params": {
@@ -137,6 +139,7 @@ def test_mlx_acquisition_batch_derives_grouped_structural_interactions() -> None
 
     assert batch["summary"]["operation_set_interaction_count_sum"] == len(interactions)
     assert "shared_pair_index" in kinds
+    assert "shared_packet_member" in kinds
     assert "shared_target_kind" in kinds
     assert "shared_tensor" in kinds
     assert "dynamic_sparse_same_channel" in kinds

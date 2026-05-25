@@ -631,6 +631,7 @@ def test_mlx_grouped_structural_interactions_survive_to_action_cell() -> None:
                 "unit_id": "gate_src_a_ch0",
                 "operation_family": "dynamic_sparse_channel_gate",
                 "target_kind": "tensor_factorize_v1",
+                "packet_member": "decoder.bin",
                 "tensor_name": "decoder.gate",
                 "params": {
                     "dynamic_sparse_channel_gate": {
@@ -654,6 +655,7 @@ def test_mlx_grouped_structural_interactions_survive_to_action_cell() -> None:
                     "unit_id": "gate_src_b_ch0",
                     "operation_family": "dynamic_sparse_channel_gate",
                     "target_kind": "tensor_factorize_v1",
+                    "packet_member": "decoder.bin",
                     "tensor_name": "decoder.gate",
                     "params": {
                         "dynamic_sparse_channel_gate": {
@@ -678,6 +680,7 @@ def test_mlx_grouped_structural_interactions_survive_to_action_cell() -> None:
 
     assert "dynamic_sparse_same_channel" in interaction_kinds
     assert "shared_pair_index" in interaction_kinds
+    assert "shared_packet_member" in interaction_kinds
     assert atoms[0]["second_order_interaction_effect"] == 0.0
     assert cell["second_order_interaction_effect"] == 0.0
     assert provenance["score_claim"] is False
