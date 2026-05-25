@@ -153,6 +153,16 @@ OPERATION_SET_CLEARABLE_SOURCE_BLOCKERS = frozenset(
 OPERATION_SET_ENFORCED_SOURCE_BLOCKERS = OPERATION_SET_CLEARABLE_SOURCE_BLOCKERS | {
     "operation_set_sequence_not_permutation_of_selected_operations"
 }
+DQS1_LOCAL_MATERIALIZATION_CLEARABLE_BLOCKERS = frozenset(
+    {
+        "dqs1_pairset_acquisition_unit_is_planning_only",
+        "dqs1_pairset_acquisition_signal_is_planning_only",
+        "requires_local_dqs1_materialization_and_locality_controls",
+        "requires_receiver_runtime_consumption_proof",
+        "requires_exact_auth_eval_before_score_claim",
+        "packetir_operation_not_byte_closed:pair",
+    }
+)
 OPERATION_PARAM_HINT_KEYS = (
     "archive_section",
     "archive_path",
@@ -314,6 +324,97 @@ def _validate_pair_indices(values: Sequence[int], *, label: str) -> tuple[int, .
     return pairs
 
 
+def _pair_index_list_from_params(
+    params: Mapping[str, Any],
+    key: str,
+    *,
+    label: str,
+) -> tuple[int, ...] | None:
+    raw = params.get(key)
+    if raw is None:
+        return None
+    if not isinstance(raw, list):
+        raise ExperimentQueueError(f"{label}: expected list of integer pair indices")
+    if any(isinstance(item, bool) or not isinstance(item, int) for item in raw):
+        raise ExperimentQueueError(f"{label}: expected integer pair indices")
+    return _validate_pair_indices([int(item) for item in raw], label=label)
+
+
+def _is_dqs1_pairset_selector_operation(operation: Mapping[str, Any]) -> bool:
+    params = _operation_params(operation)
+    return (
+        operation.get("target_kind") == DQS1_PAIRSET_TARGET_KIND
+        and isinstance(params.get("dropped_pair_indices"), list)
+        and isinstance(params.get("selected_pair_indices"), list)
+    )
+
+
+def _is_dqs1_pairset_selector_unit(unit: Mapping[str, Any]) -> bool:
+    if any(
+        _is_dqs1_pairset_selector_operation(operation)
+        for operation in _as_list(unit.get("operations"))
+        if isinstance(operation, Mapping)
+    ):
+        return True
+    params = _as_mapping(unit.get("recommended_operation_params"))
+    return (
+        unit.get("recommended_operation_target_kind") == DQS1_PAIRSET_TARGET_KIND
+        and isinstance(params.get("dropped_pair_indices"), list)
+        and isinstance(params.get("selected_pair_indices"), list)
+    )
+
+
+def _ranked_unit_selected_operations(row: Mapping[str, Any]) -> list[dict[str, Any]]:
+    operations = [
+        dict(item) for item in _as_list(row.get("operations")) if isinstance(item, Mapping)
+    ]
+    if operations:
+        return operations
+    operation_family = str(row.get("recommended_operation_family") or "").strip()
+    target_kind = str(row.get("recommended_operation_target_kind") or "").strip()
+    materializer = str(row.get("recommended_operation_materializer") or "").strip()
+    if not (operation_family or target_kind or materializer):
+        return []
+    metadata = row.get("recommended_operation_metadata")
+    metadata_map = metadata if isinstance(metadata, Mapping) else {}
+    return [
+        {
+            "unit_id": row.get("unit_id"),
+            "operation_id": row.get("recommended_operation_id")
+            or operation_family
+            or "ranked_unit_operation",
+            "operation_family": operation_family,
+            "target_kind": target_kind,
+            "materializer": materializer,
+            "params": dict(_as_mapping(row.get("recommended_operation_params"))),
+            "candidate_saved_bytes": row.get("candidate_saved_bytes"),
+            **{
+                key: metadata_map[key]
+                for key in (
+                    "receiver_contract_kind",
+                    "materializer_executable",
+                    "materializer_execution_status",
+                )
+                if key in metadata_map and metadata_map[key] is not None
+            },
+        }
+    ]
+
+
+def _local_dqs1_materialization_blockers(
+    blockers: Sequence[Any],
+    *,
+    clear_planning_pairset_blockers: bool,
+) -> list[str]:
+    out: list[str] = []
+    for blocker in blockers:
+        text = str(blocker)
+        if clear_planning_pairset_blockers and text in DQS1_LOCAL_MATERIALIZATION_CLEARABLE_BLOCKERS:
+            continue
+        out.append(text)
+    return ordered_unique(out)
+
+
 def _base_pair_indices(
     payload: Mapping[str, Any],
     explicit: Sequence[int] | None,
@@ -364,7 +465,7 @@ def _candidate_id(kind: str, selection_id: str, dropped_pairs: Sequence[int]) ->
 
 
 def _selection_id(kind: str, row: Mapping[str, Any]) -> str:
-    value = row.get("operation_set_id") or row.get("combo_id") or row.get("sweep_id") or row.get("selection_id")
+    value = row.get("operation_set_id") or row.get("combo_id") or row.get("sweep_id") or row.get("unit_id") or row.get("selection_id")
     if isinstance(value, str) and value.strip():
         return value
     return kind
@@ -377,6 +478,11 @@ def _iter_plan_rows(payload: Mapping[str, Any]) -> list[tuple[str, Mapping[str, 
         rows.extend(("operation_set", row) for row in operation_sets)
     else:
         rows.extend(("combo", row) for row in _as_list(payload.get("combination_ladder")) if isinstance(row, Mapping))
+    rows.extend(
+        ("ranked_unit", row)
+        for row in _as_list(payload.get("ranked_units"))
+        if isinstance(row, Mapping) and _is_dqs1_pairset_selector_unit(row)
+    )
     for kind, key in (("prefix", "sweep_ladder"),):
         for row in _as_list(payload.get(key)):
             if isinstance(row, Mapping):
@@ -4460,6 +4566,8 @@ def _materialize_row(
         raise ExperimentQueueError(str(exc)) from exc
 
     selected_operations = [item for item in _as_list(row.get("selected_operations")) if isinstance(item, Mapping)]
+    if kind == "ranked_unit" and not selected_operations:
+        selected_operations = _ranked_unit_selected_operations(row)
     chosen_operation_sequence = [
         item for item in _as_list(row.get("chosen_operation_sequence")) if isinstance(item, Mapping)
     ]
@@ -4493,14 +4601,24 @@ def _materialize_row(
     dqs1_operation_count = 0
     materializer_resolutions: list[dict[str, Any]] = []
     source_units: list[dict[str, Any]] = []
+    pairset_selector_selected_pairs: tuple[int, ...] | None = None
     for operation in operations_for_materialization:
         unit_id = str(operation.get("unit_id") or "")
         unit = units_by_id.get(unit_id)
-        operation_blockers = ordered_unique(str(item) for item in _as_list(operation.get("blockers")))
+        operation_params = _operation_params(operation, unit)
+        resolution = resolve_materializer(operation=operation, unit=unit)
+        is_dqs1_pairset_selector = (
+            resolution.target_kind == DQS1_PAIRSET_TARGET_KIND
+            and isinstance(operation_params.get("dropped_pair_indices"), list)
+            and isinstance(operation_params.get("selected_pair_indices"), list)
+        )
+        operation_blockers = _local_dqs1_materialization_blockers(
+            _as_list(operation.get("blockers")),
+            clear_planning_pairset_blockers=is_dqs1_pairset_selector,
+        )
         blockers.extend(
             f"selected_operation_blocker:{unit_id or '<missing>'}:{blocker}" for blocker in operation_blockers
         )
-        resolution = resolve_materializer(operation=operation, unit=unit)
         resolution_blockers = list(resolution.blockers)
         if resolution.target_kind and resolution.target_kind != DQS1_PAIRSET_TARGET_KIND and resolution.executable:
             resolution_blockers.append(f"non_dqs1_target_requires_materializer_work_queue:{resolution.target_kind}")
@@ -4527,13 +4645,16 @@ def _materialize_row(
             pass
         else:
             unit_kind = str(unit.get("unit_kind") or "")
-            operation_params = _operation_params(operation, unit)
             unit_blockers = ordered_unique(
                 [
                     *[str(item) for item in _as_list(unit.get("blockers"))],
                     *[str(item) for item in _as_list(unit.get("materialization_blockers"))],
                     *[str(item) for item in _as_list(unit.get("candidate_trust_region_blockers"))],
                 ]
+            )
+            unit_blockers = _local_dqs1_materialization_blockers(
+                unit_blockers,
+                clear_planning_pairset_blockers=is_dqs1_pairset_selector,
             )
             blockers.extend(f"selected_unit_blocker:{unit_id}:{blocker}" for blocker in unit_blockers)
             source_units.append(
@@ -4554,6 +4675,29 @@ def _materialize_row(
         if resolution.target_kind != DQS1_PAIRSET_TARGET_KIND:
             continue
         dqs1_operation_count += 1
+        if is_dqs1_pairset_selector:
+            op_dropped_pairs = _pair_index_list_from_params(
+                operation_params,
+                "dropped_pair_indices",
+                label=f"{unit_id or operation.get('operation_id')}.dropped_pair_indices",
+            )
+            op_selected_pairs = _pair_index_list_from_params(
+                operation_params,
+                "selected_pair_indices",
+                label=f"{unit_id or operation.get('operation_id')}.selected_pair_indices",
+            )
+            if op_dropped_pairs is None:
+                blockers.append(f"dropped_pair_indices_missing:{unit_id or operation.get('operation_id')}")
+                continue
+            if op_selected_pairs is None:
+                blockers.append(f"selected_pair_indices_missing:{unit_id or operation.get('operation_id')}")
+                continue
+            dropped_pairs.extend(op_dropped_pairs)
+            if pairset_selector_selected_pairs is None:
+                pairset_selector_selected_pairs = op_selected_pairs
+            elif pairset_selector_selected_pairs != op_selected_pairs:
+                blockers.append("dqs1_pairset_selector_selected_pairs_mismatch")
+            continue
         pair_index = _pair_index_from_operation(operation)
         if pair_index is None:
             blockers.append(f"pair_index_missing:{operation.get('unit_id') or operation.get('operation_id')}")
@@ -4596,7 +4740,11 @@ def _materialize_row(
     if dqs1_operation_count and base_pairs is None:
         blockers.append("dqs1_base_pair_indices_required")
     dropped_pairs = sorted(set(dropped_pairs))
-    if dqs1_operation_count and len(dropped_pairs) != dqs1_operation_count:
+    if (
+        dqs1_operation_count
+        and pairset_selector_selected_pairs is None
+        and len(dropped_pairs) != dqs1_operation_count
+    ):
         blockers.append("dropped_pair_indices_do_not_match_selected_operations")
     if base_pairs is not None and dqs1_operation_count:
         missing = [pair for pair in dropped_pairs if pair not in set(base_pairs)]
@@ -4605,8 +4753,10 @@ def _materialize_row(
         selected_pairs = tuple(pair for pair in base_pairs if pair not in set(dropped_pairs))
         if not selected_pairs:
             blockers.append("selected_pair_indices_empty_after_drop")
+        if pairset_selector_selected_pairs is not None and selected_pairs != pairset_selector_selected_pairs:
+            blockers.append("dqs1_pairset_selector_selected_pairs_not_base_minus_drop")
     else:
-        selected_pairs = ()
+        selected_pairs = pairset_selector_selected_pairs or ()
 
     conflict_violations = _as_list(row.get("conflict_violations"))
     if conflict_violations:

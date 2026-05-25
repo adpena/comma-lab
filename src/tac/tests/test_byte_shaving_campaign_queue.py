@@ -1421,6 +1421,90 @@ def test_compile_dqs1_byte_shaving_plan_preserves_explicit_target_kind(
     )
 
 
+def test_compile_dqs1_byte_shaving_plan_materializes_pairset_selector_units(
+    tmp_path: Path,
+) -> None:
+    surface = {
+        "schema": SIGNAL_SURFACE_SCHEMA,
+        "campaign_id": "dqs1_pairset_selector_fixture",
+        "candidate_id": "fixture_seed",
+        "lane_id": "lane_dqs1_pairset_selector_fixture",
+        "combo_beam_width": 2,
+        "max_combo_count": 2,
+        "dqs1_base_pair_indices": [101, 320, 371, 501],
+        "units": [
+            {
+                "unit_id": "dqs1_pairset_drop_many_k002",
+                "unit_kind": "pair",
+                "candidate_saved_bytes": 2,
+                "predicted_quality_score_cost": 0.0,
+                "confidence": 0.7,
+                "blockers": [
+                    "dqs1_pairset_acquisition_unit_is_planning_only",
+                    "requires_local_dqs1_materialization_and_locality_controls",
+                    "requires_receiver_runtime_consumption_proof",
+                    "requires_exact_auth_eval_before_score_claim",
+                ],
+                "operations": [
+                    {
+                        "operation_id": "materialize_drop_many_k002",
+                        "operation_family": "drop_pair",
+                        "target_kind": DQS1_PAIRSET_TARGET_KIND,
+                        "materializer": DQS1_DROP_PAIR_MATERIALIZER,
+                        "receiver_contract_kind": DQS1_RECEIVER_CONTRACT_KIND,
+                        "candidate_saved_bytes": 2,
+                        "blockers": [
+                            "dqs1_pairset_acquisition_signal_is_planning_only",
+                            "requires_local_dqs1_materialization_and_locality_controls",
+                            "requires_receiver_runtime_consumption_proof",
+                            "requires_exact_auth_eval_before_score_claim",
+                        ],
+                        "params": {
+                            "dropped_pair_indices": [320, 371],
+                            "selected_pair_indices": [101, 501],
+                            "selector_kind": "drop_many_fixture",
+                        },
+                    }
+                ],
+            }
+        ],
+        **_false_authority(),
+    }
+    plan = build_byte_shaving_campaign_plan(surface, max_k=1)
+
+    compiled = compile_dqs1_byte_shaving_campaign(
+        plan,
+        repo_root=tmp_path,
+        base_pair_indices=[101, 320, 371, 501],
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+        allow_partial_materialization=True,
+        partial_materialization_rationale="unit-test direct pairset selector",
+    )
+
+    row = next(
+        item
+        for item in compiled["executable_rows"]
+        if item["selection_kind"] == "ranked_unit"
+    )
+    assert row["selection_id"] == "dqs1_pairset_drop_many_k002"
+    assert row["dropped_pair_indices"] == [320, 371]
+    assert row["selected_pair_indices"] == [101, 501]
+    assert row["materialization_blockers"] == []
+    assert row["source_units"][0]["blockers"] == []
+    assert row["materializer_resolutions"][0]["selected_operation_blockers"] == []
+    assert row["score_claim"] is False
+    portfolio_row = next(
+        item
+        for item in compiled["portfolio"]["operator_action_rows"]
+        if item["candidate_id"] == row["candidate_id"]
+    )
+    assert portfolio_row["source_metadata"]["allowed_use"] == (
+        "dqs1_local_first_materialization_only"
+    )
+    assert portfolio_row["ready_for_exact_eval_dispatch"] is False
+
+
 def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_ops(
     tmp_path: Path,
 ) -> None:

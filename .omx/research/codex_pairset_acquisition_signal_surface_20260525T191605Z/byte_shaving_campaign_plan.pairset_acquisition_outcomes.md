@@ -1,7 +1,7 @@
 # Byte-Shaving Campaign Plan: dqs1_pairset_acquisition_outcome_signal_surface_20260525T191605Z
 
 - schema: `byte_shaving_campaign_plan.v1`
-- generated_at_utc: `2026-05-25T19:29:02Z`
+- generated_at_utc: `2026-05-25T19:50:31Z`
 - lane_id: `lane_dqs1_pairset_acquisition_outcome_signal_surface_20260525T191605Z`
 - frontier_axis: `[planning-only local DQS1 pairset acquisition + harvest outcomes]`
 - planning_only: `True`

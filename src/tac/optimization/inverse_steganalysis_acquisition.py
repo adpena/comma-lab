@@ -1448,6 +1448,38 @@ def action_atoms_from_byte_shaving_campaign_plan(
             )
         )
     if atoms:
+        covered_unit_ids = {
+            str(unit_id)
+            for operation_set in operation_sets
+            for unit_id in _list_strings(operation_set.get("selected_unit_ids"))
+        }
+        covered_unit_ids.update(
+            str(operation.get("unit_id"))
+            for operation_set in operation_sets
+            for operation in _sequence_of_mappings(operation_set.get("selected_operations"))
+            if str(operation.get("unit_id") or "")
+        )
+        supplemental_units = [
+            unit
+            for unit in _sequence_of_mappings(plan.get("ranked_units"))
+            if unit.get("dqs1_outcome_signal") is not None
+            and str(unit.get("unit_id") or "") not in covered_unit_ids
+        ]
+        for offset, unit in enumerate(supplemental_units, start=len(atoms)):
+            atoms.append(
+                normalize_inverse_steganalysis_atom(
+                    _action_atom_from_byte_shaving_ranked_unit(
+                        unit,
+                        plan=plan,
+                        index=offset,
+                        source_path=source_path,
+                        default_candidate_id=candidate_id,
+                        elapsed_seconds=elapsed_seconds,
+                        artifact_bytes=artifact_bytes,
+                        resource_kind=resource_kind,
+                    )
+                )
+            )
         return atoms
 
     ranked_units = _sequence_of_mappings(plan.get("ranked_units"))

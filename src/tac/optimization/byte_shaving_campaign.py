@@ -65,6 +65,19 @@ MLX_SCORER_RESPONSE_PLACEHOLDER_OPERATION_FAMILY = (
 MLX_SCORER_RESPONSE_PLACEHOLDER_TARGET_KIND = "mlx_scorer_response_candidate_v1"
 PACKET_IR_OPERATION_SCHEMA = "packet_ir_operation_v1"
 INVERSE_ACTION_COMPILED_OPERATION_SET_MODE = "compiled_operation_set"
+DQS1_PAIRSET_DROP_PAIR_TARGET_KIND = "dqs1_pairset_drop_pair"
+DQS1_PAIRSET_DROP_PAIR_MATERIALIZER = "dqs1_pairset_drop_pair_adapter"
+DQS1_PAIRSET_RECEIVER_CONTRACT_KIND = "archive_charged_pairset_runtime_selector"
+DQS1_PAIRSET_ADAPTER_REGISTERED_STATUS = (
+    "registered_adapter_blocked_until_context_and_receiver_proof"
+)
+DQS1_PAIRSET_LEGACY_QUEUE_EXECUTION_STATUS = "queue_executable_local_dqs1_pairset_materializer"
+DQS1_PAIRSET_QUEUE_ACCEPTED_EXECUTION_STATUSES = frozenset(
+    {
+        DQS1_PAIRSET_ADAPTER_REGISTERED_STATUS,
+        DQS1_PAIRSET_LEGACY_QUEUE_EXECUTION_STATUS,
+    }
+)
 INVERSE_ACTION_COMPILER_TARGET_DEFAULTS: dict[str, dict[str, Any]] = {
     "byte_range_entropy_recode_v1": {
         "unit_kind": "byte_range",
@@ -317,8 +330,19 @@ OPERATION_METADATA_KEYS: tuple[str, ...] = (
     "materializer_contract_kinds",
     "materializer_executable",
     "materializer_execution_status",
+    "materializer_adapter_registered",
+    "executable_work_ready",
     "required_context_fields",
     "operation_portability",
+)
+OPERATION_SIGNAL_KEYS: tuple[str, ...] = (
+    "xray_signal",
+    "master_gradient_signal",
+    "inverse_scorer_signal",
+    "bit_allocator_signal",
+    "dqs1_outcome_signal",
+    "engineered_correction_signal",
+    "canonical_equation_provenance",
 )
 
 FALSE_AUTHORITY: dict[str, bool] = {
@@ -626,6 +650,16 @@ def _operation_metadata(operation: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _operation_signal_fields(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Preserve solver signal payloads through operation-set lowering."""
+
+    return {
+        key: row[key]
+        for key in OPERATION_SIGNAL_KEYS
+        if key in row and row[key] is not None
+    }
+
+
 def _operation_candidates(unit: Mapping[str, Any], unit_saved_bytes: int) -> list[dict[str, Any]]:
     explicit_operations = [item for item in _as_list(unit.get("operations")) if isinstance(item, Mapping)]
     raw_operations: list[Mapping[str, Any]] = explicit_operations or [
@@ -670,6 +704,8 @@ def _operation_candidates(unit: Mapping[str, Any], unit_saved_bytes: int) -> lis
                 "target_kind": _operation_target_kind(operation),
                 "operation_params": dict(_mapping(operation.get("params"))),
                 "operation_metadata": _operation_metadata(operation),
+                **_operation_signal_fields(unit),
+                **_operation_signal_fields(operation),
                 "blockers": blockers,
             }
         )
@@ -883,6 +919,8 @@ def _selection_from_unit(unit: Mapping[str, Any], operation: Mapping[str, Any]) 
         "target_kind": operation.get("target_kind"),
         "params": operation.get("operation_params") or {},
         "operation_metadata": dict(_mapping(operation.get("operation_metadata"))),
+        **_operation_signal_fields(unit),
+        **_operation_signal_fields(operation),
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
@@ -950,6 +988,7 @@ def _combo_row(
                 "target_kind": selection.get("target_kind"),
                 "params": selection.get("params") or {},
                 **dict(_mapping(selection.get("operation_metadata"))),
+                **_operation_signal_fields(selection),
                 "blockers": _as_list(selection.get("blockers")),
                 **FALSE_AUTHORITY,
             }
@@ -1026,6 +1065,7 @@ def _operation_sequence_record(
             "materializer": operation.get("materializer"),
             "target_kind": operation.get("target_kind"),
             **_operation_metadata(operation),
+            **_operation_signal_fields(operation),
         }
         for operation in operations
     ]
@@ -1320,6 +1360,7 @@ def _packet_ir_lowered_operation(
             "predicted_quality_score_delta"
         ),
         **metadata,
+        **_operation_signal_fields(operation),
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
@@ -1595,6 +1636,7 @@ def _prefix_rows(
                         "target_kind": row.get("recommended_operation_target_kind"),
                         "params": row.get("recommended_operation_params") or {},
                         **dict(_mapping(row.get("recommended_operation_metadata"))),
+                        **_operation_signal_fields(row),
                         "blockers": _as_list(row.get("blockers")),
                         **FALSE_AUTHORITY,
                     }
@@ -1954,6 +1996,115 @@ def _inverse_action_portfolio_row_links(
     return links
 
 
+def _packet_ir_queue_materialization_links(
+    packet_ir_operation_sets: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    links: list[dict[str, Any]] = []
+    for operation_set in packet_ir_operation_sets:
+        operations = [
+            dict(operation)
+            for operation in _as_list(operation_set.get("operations"))
+            if isinstance(operation, Mapping)
+        ]
+        operation_set_id = str(operation_set.get("operation_set_id") or "")
+        target_kinds = ordered_unique(
+            str(operation.get("target_kind") or "")
+            for operation in operations
+            if str(operation.get("target_kind") or "")
+        )
+        materializers = ordered_unique(
+            str(operation.get("materializer") or "")
+            for operation in operations
+            if str(operation.get("materializer") or "")
+        )
+        receiver_contract_kinds = ordered_unique(
+            str(operation.get("receiver_contract_kind") or "")
+            for operation in operations
+            if str(operation.get("receiver_contract_kind") or "")
+        )
+        materializer_execution_statuses = ordered_unique(
+            str(operation.get("materializer_execution_status") or "")
+            for operation in operations
+            if str(operation.get("materializer_execution_status") or "")
+        )
+        blockers: list[str] = []
+        if not operation_set_id:
+            blockers.append("packet_ir_operation_set_id_missing")
+        if not operations:
+            blockers.append("packet_ir_operation_set_operations_missing")
+        if target_kinds != [DQS1_PAIRSET_DROP_PAIR_TARGET_KIND]:
+            blockers.append(
+                "packet_ir_operation_set_not_dqs1_pairset_drop_pair_target"
+            )
+        if materializers != [DQS1_PAIRSET_DROP_PAIR_MATERIALIZER]:
+            blockers.append(
+                "packet_ir_operation_set_not_dqs1_pairset_drop_pair_materializer"
+            )
+        if receiver_contract_kinds != [DQS1_PAIRSET_RECEIVER_CONTRACT_KIND]:
+            blockers.append(
+                "packet_ir_operation_set_dqs1_receiver_contract_missing"
+            )
+        adapter_registered = all(
+            operation.get("materializer_adapter_registered") is True
+            or operation.get("materializer_executable") is True
+            for operation in operations
+        )
+        if not adapter_registered:
+            blockers.append("packet_ir_operation_set_dqs1_adapter_not_registered")
+        if (
+            materializer_execution_statuses
+            and not set(materializer_execution_statuses).issubset(
+                DQS1_PAIRSET_QUEUE_ACCEPTED_EXECUTION_STATUSES
+            )
+        ):
+            blockers.append("packet_ir_operation_set_dqs1_queue_status_mismatch")
+        queue_consumable = not blockers
+        links.append(
+            {
+                "schema": "packet_ir_operation_set_materialization_bridge_link.v1",
+                "operation_set_id": operation_set_id,
+                "source_operation_set_id": operation_set.get("source_operation_set_id"),
+                "operation_count": len(operations),
+                "target_kinds": target_kinds,
+                "operation_families": ordered_unique(
+                    str(operation.get("operation_family") or "")
+                    for operation in operations
+                    if str(operation.get("operation_family") or "")
+                ),
+                "materializers": materializers,
+                "receiver_contract_kinds": receiver_contract_kinds,
+                "materializer_execution_statuses": materializer_execution_statuses,
+                "queue_consumable": queue_consumable,
+                "queue_consumable_mode": (
+                    "dqs1_local_first_pairset_materializer"
+                    if queue_consumable
+                    else None
+                ),
+                "queue_context_requirements": (
+                    ["dqs1_base_pair_indices"] if queue_consumable else []
+                ),
+                "local_materialization_authority": (
+                    "queue_context_only_no_score_no_promotion_no_dispatch"
+                ),
+                "executable_work_ready": False,
+                "executable_work_ready_blockers": [
+                    "requires_dqs1_base_pair_indices_queue_context",
+                    "requires_materializer_work_queue_execution_probe",
+                    "requires_receiver_runtime_consumption_proof_before_exact_eval",
+                    "requires_exact_auth_eval_before_score_claim",
+                ],
+                "exact_readiness_blockers": [
+                    "requires_receiver_runtime_consumption_proof_before_exact_eval",
+                    "requires_same_runtime_locality_or_inflate_parity_check",
+                    "requires_exact_auth_eval_before_score_claim",
+                ],
+                "blockers": ordered_unique(blockers),
+                **FALSE_AUTHORITY,
+            }
+        )
+    return links
+
+
 def build_inverse_action_materialization_bridge(
     plan_payload: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -1981,11 +2132,25 @@ def build_inverse_action_materialization_bridge(
         portfolio_rows,
         packet_ir_operation_sets,
     )
+    packet_ir_operation_set_links = _packet_ir_queue_materialization_links(
+        packet_ir_operation_sets
+    )
     queue_consumable_packet_ir_operation_set_ids = ordered_unique(
-        str(packet_ir_id)
-        for link in portfolio_row_links
-        if link.get("queue_consumable") is True
-        for packet_ir_id in _as_list(link.get("matched_packet_ir_operation_set_ids"))
+        [
+            *(
+                str(packet_ir_id)
+                for link in portfolio_row_links
+                if link.get("queue_consumable") is True
+                for packet_ir_id in _as_list(
+                    link.get("matched_packet_ir_operation_set_ids")
+                )
+            ),
+            *(
+                str(link.get("operation_set_id") or "")
+                for link in packet_ir_operation_set_links
+                if link.get("queue_consumable") is True
+            ),
+        ]
     )
     actuation_mode_counts = Counter(
         str(row.get("actuation_mode") or "unknown")
@@ -2075,6 +2240,12 @@ def build_inverse_action_materialization_bridge(
         bool(queue_consumable_packet_ir_operation_set_ids)
         and not compiler_required_count
     )
+    queue_context_requirements = ordered_unique(
+        str(item)
+        for link in packet_ir_operation_set_links
+        if link.get("queue_consumable") is True
+        for item in _as_list(link.get("queue_context_requirements"))
+    )
 
     bridge = {
         "schema": INVERSE_ACTION_MATERIALIZATION_BRIDGE_SCHEMA,
@@ -2088,6 +2259,7 @@ def build_inverse_action_materialization_bridge(
         "portfolio_row_count": len(portfolio_rows),
         "water_bucket_materialization_portfolios": portfolios,
         "portfolio_row_bridge_links": portfolio_row_links,
+        "packet_ir_operation_set_bridge_links": packet_ir_operation_set_links,
         "packetir_lowering_ready_portfolio_row_count": sum(
             1 for link in portfolio_row_links if link["packet_ir_lowering_ready"]
         ),
@@ -2136,6 +2308,7 @@ def build_inverse_action_materialization_bridge(
             "compiler_required": bool(compiler_required_count),
             "requires_plan_path": True,
             "requires_materializer_contexts": packet_ir_lowering_ready,
+            "queue_context_requirements": queue_context_requirements,
         },
         "evidence_boundary": {
             "planning_only": True,

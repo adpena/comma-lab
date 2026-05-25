@@ -297,6 +297,122 @@ def test_plan_builds_combination_ladder_with_interactions_and_conflicts() -> Non
     assert packet_ir["score_claim"] is False
 
 
+def test_dqs1_pairset_packet_ir_bridge_is_queue_consumable_without_portfolio() -> None:
+    surface = {
+        "schema": SIGNAL_SURFACE_SCHEMA,
+        "campaign_id": "dqs1_pairset_acquisition_fixture",
+        "candidate_id": "dqs1_pairset_candidate",
+        "lane_id": "dqs1_pairset_acquisition",
+        "combo_beam_width": 4,
+        "max_combo_count": 4,
+        "units": [
+            {
+                "unit_id": "dqs1_pairset_pair0320",
+                "unit_kind": "pair",
+                "candidate_saved_bytes": 64,
+                "predicted_quality_score_cost": 0.0,
+                "confidence": 0.8,
+                "operations": [
+                    {
+                        "operation_id": "drop_pair0320",
+                        "operation_family": "drop_pair",
+                        "target_kind": "dqs1_pairset_drop_pair",
+                        "materializer": "dqs1_pairset_drop_pair_adapter",
+                        "materializer_adapter_registered": True,
+                        "materializer_executable": False,
+                        "executable_work_ready": False,
+                        "materializer_execution_status": (
+                            "registered_adapter_blocked_until_context_and_receiver_proof"
+                        ),
+                        "receiver_contract_kind": (
+                            "archive_charged_pairset_runtime_selector"
+                        ),
+                        "candidate_saved_bytes": 64,
+                        "predicted_quality_score_delta": 0.0,
+                        "params": {
+                            "dropped_pair_indices": [320],
+                            "selected_pair_indices": [101, 371, 501],
+                            "selector_kind": "drop_pair",
+                        },
+                    }
+                ],
+            },
+            {
+                "unit_id": "dqs1_pairset_pair0371",
+                "unit_kind": "pair",
+                "candidate_saved_bytes": 72,
+                "predicted_quality_score_cost": 0.0,
+                "confidence": 0.8,
+                "operations": [
+                    {
+                        "operation_id": "drop_pair0371",
+                        "operation_family": "drop_pair",
+                        "target_kind": "dqs1_pairset_drop_pair",
+                        "materializer": "dqs1_pairset_drop_pair_adapter",
+                        "materializer_adapter_registered": True,
+                        "materializer_executable": False,
+                        "executable_work_ready": False,
+                        "materializer_execution_status": (
+                            "registered_adapter_blocked_until_context_and_receiver_proof"
+                        ),
+                        "receiver_contract_kind": (
+                            "archive_charged_pairset_runtime_selector"
+                        ),
+                        "candidate_saved_bytes": 72,
+                        "predicted_quality_score_delta": 0.0,
+                        "params": {
+                            "dropped_pair_indices": [371],
+                            "selected_pair_indices": [101, 320, 501],
+                            "selector_kind": "drop_pair",
+                        },
+                    }
+                ],
+            },
+        ],
+        **_false_authority(),
+    }
+
+    plan = build_byte_shaving_campaign_plan(surface, max_k=2)
+    bridge = build_inverse_action_materialization_bridge(plan)
+    dqs1_packet_ir_ids = [
+        operation_set["operation_set_id"]
+        for operation_set in plan["packet_ir_operation_sets"]
+        if all(
+            operation["target_kind"] == "dqs1_pairset_drop_pair"
+            for operation in operation_set["operations"]
+        )
+    ]
+
+    assert bridge["portfolio_count"] == 0
+    assert bridge["queue_consumable_portfolio_row_count"] == 0
+    assert bridge["queue_consumable_packet_ir_operation_set_count"] == len(
+        dqs1_packet_ir_ids
+    )
+    assert bridge["queue_consumable_packet_ir_operation_set_ids"] == dqs1_packet_ir_ids
+    assert bridge["packetir_lowering_ready_packet_ir_operation_set_ids"] == (
+        dqs1_packet_ir_ids
+    )
+    assert bridge["queue_consumption"]["packet_ir_lowering_ready"] is True
+    assert bridge["queue_consumption"]["queue_context_requirements"] == [
+        "dqs1_base_pair_indices"
+    ]
+    assert bridge["executable_work_ready_packet_ir_operation_set_count"] == 0
+    assert bridge["ready_for_exact_eval_dispatch"] is False
+    first_link = next(
+        link
+        for link in bridge["packet_ir_operation_set_bridge_links"]
+        if link["operation_set_id"] == dqs1_packet_ir_ids[0]
+    )
+    assert first_link["queue_consumable"] is True
+    assert first_link["queue_consumable_mode"] == (
+        "dqs1_local_first_pairset_materializer"
+    )
+    assert first_link["score_claim"] is False
+    assert "requires_receiver_runtime_consumption_proof_before_exact_eval" in (
+        first_link["exact_readiness_blockers"]
+    )
+
+
 def test_plan_exposes_bounded_operation_permutation_ladder() -> None:
     surface = _surface()
     surface["operation_order_priors"] = {

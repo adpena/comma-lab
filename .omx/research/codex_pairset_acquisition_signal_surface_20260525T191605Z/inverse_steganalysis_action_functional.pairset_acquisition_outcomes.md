@@ -1,7 +1,7 @@
 # Inverse-Steganalysis Action Functional
 
 - schema: `inverse_steganalysis_discrete_action_functional.v1`
-- cells: `32`
+- cells: `122`
 - blocked_cells: `0`
 - selected_cells: `0`
 - selected_water_fill_cost_bytes: `0`

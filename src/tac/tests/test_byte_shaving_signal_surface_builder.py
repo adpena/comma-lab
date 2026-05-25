@@ -15,6 +15,9 @@ from tac.optimization.byte_shaving_campaign import (
 from tac.optimization.byte_shaving_signal_surface_builder import (
     build_byte_shaving_signal_surface,
 )
+from tac.optimization.inverse_steganalysis_acquisition import (
+    action_atoms_from_byte_shaving_campaign_plan,
+)
 from tac.optimization.scorer_response_dataset import RATE_SCORE_PER_BYTE
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -282,7 +285,7 @@ def _pairset_acquisition(
     path: Path,
     *,
     truthy_authority: bool = False,
-    malformed_pair_id: bool = False,
+    malformed_pair_id: object | None = None,
 ) -> None:
     false_authority = {
         "score_claim": False,
@@ -310,8 +313,8 @@ def _pairset_acquisition(
     if truthy_authority:
         repair_budget["score_claim"] = True
     dropped_pair_indices: list[object] = [371, 376, 479]
-    if malformed_pair_id:
-        dropped_pair_indices[1] = 376.5
+    if malformed_pair_id is not None:
+        dropped_pair_indices[1] = malformed_pair_id
     path.write_text(
         json.dumps(
             {
@@ -358,7 +361,7 @@ def _dqs1_observations(
     path: Path,
     *,
     truthy_authority: bool = False,
-    malformed_pair_id: bool = False,
+    malformed_pair_id: object | None = None,
 ) -> None:
     false_authority = {
         "score_claim": False,
@@ -369,8 +372,8 @@ def _dqs1_observations(
         "promotable": False,
     }
     dropped_pair_indices: list[object] = [371, 376, 479]
-    if malformed_pair_id:
-        dropped_pair_indices[2] = {"pair": 479}
+    if malformed_pair_id is not None:
+        dropped_pair_indices[2] = malformed_pair_id
     row = {
         "schema": "mlx_dynamic_sweep_observation.v1",
         **false_authority,
@@ -507,9 +510,23 @@ def test_builder_rejects_pairset_acquisition_malformed_pair_id(
     tmp_path: Path,
 ) -> None:
     pairset = tmp_path / "pairset_acquisition.json"
-    _pairset_acquisition(pairset, malformed_pair_id=True)
+    _pairset_acquisition(pairset, malformed_pair_id=376.5)
 
     with pytest.raises(ByteShavingCampaignError, match="expected integer id"):
+        build_byte_shaving_signal_surface(
+            repo_root=tmp_path,
+            campaign_id="pairset_surface",
+            pairset_acquisition_paths=[pairset],
+        )
+
+
+def test_builder_rejects_pairset_acquisition_out_of_range_pair_id(
+    tmp_path: Path,
+) -> None:
+    pairset = tmp_path / "pairset_acquisition.json"
+    _pairset_acquisition(pairset, malformed_pair_id=600)
+
+    with pytest.raises(ByteShavingCampaignError, match=r"canonical range 0..599"):
         build_byte_shaving_signal_surface(
             repo_root=tmp_path,
             campaign_id="pairset_surface",
@@ -520,19 +537,22 @@ def test_builder_rejects_pairset_acquisition_malformed_pair_id(
 def test_builder_promotes_dqs1_outcomes_to_solver_anchor_units(
     tmp_path: Path,
 ) -> None:
+    pairset = tmp_path / "pairset_acquisition.json"
     observations = tmp_path / "dqs1_observations.jsonl"
+    _pairset_acquisition(pairset)
     _dqs1_observations(observations)
 
     surface = build_byte_shaving_signal_surface(
         repo_root=tmp_path,
         campaign_id="dqs1_outcome_surface",
+        pairset_acquisition_paths=[pairset],
         dqs1_observation_paths=[observations],
     )
     plan = build_byte_shaving_campaign_plan(surface, repo_root=tmp_path)
 
     ref = surface["pair_frame_geometry_outcome_refs"][0]
-    unit = surface["units"][0]
-    ranked = plan["ranked_units"][0]
+    unit = next(item for item in surface["units"] if item.get("dqs1_outcome_signal"))
+    ranked = next(item for item in plan["ranked_units"] if item.get("dqs1_outcome_signal"))
     assert ref["kind"] == "dqs1_pair_frame_geometry_outcome_anchor"
     assert ref["dqs1_row_count"] == 1
     assert ref["k_gt_one_row_count"] == 1
@@ -555,6 +575,25 @@ def test_builder_promotes_dqs1_outcomes_to_solver_anchor_units(
     assert ranked["dqs1_outcome_signal"]["candidate_id"] == (
         "pairset_geometry_lowimpact_k006_habc123"
     )
+    dqs1_selected_operation = next(
+        operation
+        for operation in plan["operation_set_ladder"][0]["selected_operations"]
+        if operation.get("dqs1_outcome_signal")
+    )
+    assert dqs1_selected_operation["dqs1_outcome_signal"]["candidate_id"] == (
+        "pairset_geometry_lowimpact_k006_habc123"
+    )
+    assert dqs1_selected_operation["materializer_executable"] is False
+    assert dqs1_selected_operation["materializer_adapter_registered"] is True
+    assert dqs1_selected_operation["executable_work_ready"] is False
+    atoms = action_atoms_from_byte_shaving_campaign_plan(plan)
+    provenance_operation = atoms[0]["source_provenance"]["selected_operations"][0]
+    assert any(
+        operation.get("dqs1_outcome_signal", {}).get("candidate_id")
+        == "pairset_geometry_lowimpact_k006_habc123"
+        for operation in atoms[0]["source_provenance"]["selected_operations"]
+    )
+    assert provenance_operation["score_claim"] is False
     assert "macos_cpu_advisory_is_not_contest_authority" in ranked["blockers"]
     assert plan["score_claim"] is False
 
@@ -573,9 +612,21 @@ def test_builder_rejects_dqs1_outcome_truthy_authority(tmp_path: Path) -> None:
 
 def test_builder_rejects_dqs1_outcome_malformed_pair_id(tmp_path: Path) -> None:
     observations = tmp_path / "dqs1_observations.jsonl"
-    _dqs1_observations(observations, malformed_pair_id=True)
+    _dqs1_observations(observations, malformed_pair_id={"pair": 479})
 
     with pytest.raises(ByteShavingCampaignError, match="expected integer id"):
+        build_byte_shaving_signal_surface(
+            repo_root=tmp_path,
+            campaign_id="dqs1_outcome_surface",
+            dqs1_observation_paths=[observations],
+        )
+
+
+def test_builder_rejects_dqs1_outcome_negative_pair_id(tmp_path: Path) -> None:
+    observations = tmp_path / "dqs1_observations.jsonl"
+    _dqs1_observations(observations, malformed_pair_id=-1)
+
+    with pytest.raises(ByteShavingCampaignError, match=r"canonical range 0..599"):
         build_byte_shaving_signal_surface(
             repo_root=tmp_path,
             campaign_id="dqs1_outcome_surface",

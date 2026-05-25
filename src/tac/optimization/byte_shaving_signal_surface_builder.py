@@ -59,6 +59,8 @@ DQS1_OBSERVATION_SOURCE_SCHEMA = "dqs1_local_first_harvest.v1"
 DQS1_OBSERVATION_SWEEP_CONFIG_ID = "dqs1_local_first_macos_cpu_advisory"
 DQS1_PAIR_FRAME_OUTCOME_REF_KIND = "dqs1_pair_frame_geometry_outcome_anchor"
 DQS1_PAIR_FRAME_OUTCOME_ANCHOR_SCHEMA = "dqs1_pair_frame_geometry_outcome_anchor.v1"
+DQS1_CANONICAL_PAIR_COUNT = 600
+DQS1_MAX_PAIR_INDEX = DQS1_CANONICAL_PAIR_COUNT - 1
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -694,9 +696,11 @@ def _pairset_acquisition_surface(
                     },
                     "receiver_contract_kind": DQS1_PAIRSET_RECEIVER_CONTRACT_KIND,
                     "materializer_contract_kind": DQS1_PAIRSET_DROP_PAIR_TARGET_KIND,
-                    "materializer_executable": True,
+                    "materializer_adapter_registered": True,
+                    "materializer_executable": False,
+                    "executable_work_ready": False,
                     "materializer_execution_status": (
-                        "queue_executable_local_dqs1_pairset_materializer"
+                        "registered_adapter_blocked_until_context_and_receiver_proof"
                     ),
                     "blockers": [
                         "dqs1_pairset_acquisition_signal_is_planning_only",
@@ -806,6 +810,11 @@ def _strict_int_list(values: Sequence[Any], *, context: str) -> list[int]:
         if parsed is None:
             raise ByteShavingCampaignError(
                 f"{context}[{index}]: expected integer id, got {item!r}"
+            )
+        if parsed < 0 or parsed > DQS1_MAX_PAIR_INDEX:
+            raise ByteShavingCampaignError(
+                f"{context}[{index}]: pair id {parsed} outside canonical range "
+                f"0..{DQS1_MAX_PAIR_INDEX}"
             )
         out.append(parsed)
     return out
@@ -985,9 +994,11 @@ def _dqs1_outcome_surface(
                         },
                         "receiver_contract_kind": DQS1_PAIRSET_RECEIVER_CONTRACT_KIND,
                         "materializer_contract_kind": DQS1_PAIRSET_DROP_PAIR_TARGET_KIND,
-                        "materializer_executable": True,
+                        "materializer_adapter_registered": True,
+                        "materializer_executable": False,
+                        "executable_work_ready": False,
                         "materializer_execution_status": (
-                            "queue_executable_local_dqs1_pairset_materializer"
+                            "registered_adapter_blocked_until_context_and_receiver_proof"
                         ),
                         "blockers": [
                             "dqs1_outcome_anchor_is_local_advisory_only",
