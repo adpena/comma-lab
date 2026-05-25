@@ -13,6 +13,9 @@ UTC: 2026-05-25T10:06:42Z
   delta shape.
 - Queue postconditions require the neutral delta contract for family
   materializer candidates.
+- Recursive adversarial review closed the discrete action-functional counterpart
+  to the ranked-acquisition blocker path: receiver/rate-negative materializer
+  feedback now zeroes cell priority, not just selectable state.
 
 ## Durable Artifacts
 
@@ -27,6 +30,7 @@ UTC: 2026-05-25T10:06:42Z
 - Focused regression tests passed: 9 passed.
 - Relevant materializer/observer/runner/acquisition/queue/sweep suites passed:
   238 passed.
+- Additional focused acquisition regression passed: 49 passed.
 
 ## Remaining Work
 

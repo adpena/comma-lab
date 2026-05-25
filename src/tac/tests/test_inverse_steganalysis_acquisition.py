@@ -2131,6 +2131,7 @@ def test_queue_observation_receiver_negative_materializer_artifact_blocks_water_
     )
     assert cell["materializer_archive_delta_blocked"] is True
     assert cell["water_bucket_selectable"] is False
+    assert cell["priority"]["expected_score_gain"] == 0.0
     assert "receiver_negative_materializer_success" in (
         cell["materializer_archive_delta_feedback"]["blockers"]
     )

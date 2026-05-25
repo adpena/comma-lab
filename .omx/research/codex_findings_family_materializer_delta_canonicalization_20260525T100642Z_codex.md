@@ -35,6 +35,10 @@ edges:
   receiver-negative rows remain blocking feedback.
 - Family materializer queue postconditions now require the neutral
   `serialized_archive_delta.schema` plus source/candidate archive byte fields.
+- Recursive adversarial pass closed the paired action-functional leak: ranked
+  acquisition rows and discrete action cells now both zero priority when
+  materializer archive-delta feedback blocks receiver/rate-safe water-bucket
+  selection.
 
 ## Authority Contract
 
@@ -82,6 +86,20 @@ Result: passed.
 ```
 
 Result: 238 passed.
+
+Additional focused regression after recursive adversarial fix:
+
+```bash
+.venv/bin/python -m ruff check \
+  src/tac/optimization/inverse_steganalysis_acquisition.py \
+  src/tac/tests/test_inverse_steganalysis_acquisition.py \
+  --no-cache
+PYTHONPATH=. .venv/bin/pytest \
+  src/tac/tests/test_inverse_steganalysis_acquisition.py \
+  -q
+```
+
+Result: passed; 49 passed.
 
 ## Next Integration
 
