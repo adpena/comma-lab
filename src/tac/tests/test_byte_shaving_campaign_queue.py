@@ -31,6 +31,7 @@ from comma_lab.scheduler.byte_shaving_campaign_queue import (
     MATERIALIZER_HARVEST_STEP_ID,
     MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID,
     MATERIALIZER_WORK_QUEUE_SCHEMA,
+    _materializer_candidate_postconditions,
     build_materializer_execution_queue,
     build_materializer_work_queue,
     compile_dqs1_byte_shaving_campaign,
@@ -6027,6 +6028,80 @@ def test_byte_shaving_campaign_queue_cli_wires_generated_dfl1_parity_followup(
     assert metadata["renderer_payload_dfl1_parity_followup_blockers"] == []
     assert metadata["score_claim"] is False
     assert metadata["ready_for_exact_eval_dispatch"] is False
+
+
+def test_renderer_payload_dfl1_postconditions_require_runtime_and_full_frame_parity(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"candidate dfl1 bytes")
+    archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    manifest_path = tmp_path / "candidate.json"
+    payload = {
+        "schema": RENDERER_PAYLOAD_DFL1_SCHEMA,
+        "byte_closed_candidate_emitted": True,
+        "receiver_contract_kind": "source_runtime_native_renderer_payload_dfl1",
+        "candidate_archive": {
+            "path": archive.name,
+            "bytes": archive.stat().st_size,
+            "sha256": archive_sha,
+        },
+        "candidate_member": {
+            "name": "p",
+            "bytes": 10,
+            "sha256": "b" * 64,
+        },
+        "selected_payload": {"payload_bytes": 10},
+        "serialized_archive_delta": {
+            "schema": "serialized_archive_delta_contract.v1",
+            "source_archive_bytes": 100,
+            "candidate_archive_bytes": archive.stat().st_size,
+        },
+        "runtime_consumption_proof_path": "runtime_consumption_proof.json",
+        "receiver_contract_satisfied": False,
+        "runtime_adapter_ready": False,
+        "receiver_verification": {
+            "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+            "receiver_contract_satisfied": False,
+            "runtime_adapter_ready": False,
+        },
+        "full_frame_inflate_parity_proven": False,
+        "full_frame_inflate_parity_verification": {
+            "full_frame_inflate_parity_satisfied": False,
+        },
+        "renderer_payload_dfl1_inflate_parity_satisfied": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    manifest_path.write_text(json.dumps(payload), encoding="utf-8")
+    postconditions = _materializer_candidate_postconditions(
+        manifest_path=manifest_path.name,
+        schema=RENDERER_PAYLOAD_DFL1_SCHEMA,
+        target_kind=RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+    )
+
+    assert not all(
+        _condition_passes(condition, repo_root=tmp_path)
+        for condition in postconditions
+    )
+
+    payload["receiver_contract_satisfied"] = True
+    payload["runtime_adapter_ready"] = True
+    payload["receiver_verification"]["receiver_contract_satisfied"] = True
+    payload["receiver_verification"]["runtime_adapter_ready"] = True
+    payload["full_frame_inflate_parity_proven"] = True
+    payload["full_frame_inflate_parity_verification"][
+        "full_frame_inflate_parity_satisfied"
+    ] = True
+    payload["renderer_payload_dfl1_inflate_parity_satisfied"] = True
+    manifest_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert all(
+        _condition_passes(condition, repo_root=tmp_path)
+        for condition in postconditions
+    )
 
 
 def test_inverse_action_compiler_hint_runs_family_agnostic_materializer(

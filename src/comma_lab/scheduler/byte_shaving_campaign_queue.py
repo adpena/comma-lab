@@ -3054,6 +3054,7 @@ def _materializer_candidate_postconditions(
                         PACKET_MEMBER_MERGE_TARGET_KIND,
                         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
                         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+                        RENDERER_PAYLOAD_DFL1_TARGET_KIND,
                         TENSOR_FACTORIZE_TARGET_KIND,
                     }
                     else []
@@ -3061,6 +3062,17 @@ def _materializer_candidate_postconditions(
                 *(
                     ["packet_member_merge_receiver_runtime.runtime_adapter_ready"]
                     if target_kind == PACKET_MEMBER_MERGE_TARGET_KIND
+                    else []
+                ),
+                *(
+                    [
+                        "runtime_adapter_ready",
+                        "receiver_verification.runtime_adapter_ready",
+                        "full_frame_inflate_parity_proven",
+                        "full_frame_inflate_parity_verification.full_frame_inflate_parity_satisfied",
+                        "renderer_payload_dfl1_inflate_parity_satisfied",
+                    ]
+                    if target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND
                     else []
                 ),
             ],
