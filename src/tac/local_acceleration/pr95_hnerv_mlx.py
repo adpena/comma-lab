@@ -39,6 +39,9 @@ from tac.local_acceleration.pr95_hnerv_mlx_contract import (
     PR95_STAGE_SCHEDULE_SOURCE_MISMATCH_BLOCKER,
     PR95_YUV6_SCORER_LOSS_UNWIRED_BLOCKER,
 )
+from tac.local_acceleration.pr95_hnerv_mlx_stage_losses import (
+    pr95_mlx_stage_loss_contract_from_training_config,
+)
 from tac.optimization.optimizer_scheduler_registry import (
     OptimizerSchedulerRegistryError,
     default_optimizer_scheduler_registry,
@@ -1702,6 +1705,7 @@ class Pr95MlxStageSmokeConfig:
     parameter_group_lr_policy_id: str
     parameter_group_lr_policy_sha256: str
     optimizer_backend_status: str
+    source_stage_loss_contract: Mapping[str, Any]
     synthetic_loss: str = "normalized_rgb_pair_mse"
 
 
@@ -1721,6 +1725,7 @@ def stage_smoke_config(
         stage_index
     )
     descriptor = pr95_mlx_optimizer_descriptor_row(descriptor_id)
+    training_config = descriptor.get("training_config", {})
     optimizer = pr95_mlx_optimizer_config_from_descriptor(
         descriptor_id,
         stage_index=stage_index,
@@ -1738,7 +1743,11 @@ def stage_smoke_config(
             descriptor["parameter_group_lr_policy_sha256"]
         ),
         optimizer_backend_status=str(
-            descriptor.get("training_config", {}).get("backend_status")
+            training_config.get("backend_status")
+        ),
+        source_stage_loss_contract=pr95_mlx_stage_loss_contract_from_training_config(
+            training_config if isinstance(training_config, Mapping) else {},
+            stage_index=stage_index,
         ),
     )
 
@@ -2102,6 +2111,7 @@ def run_pr95_mlx_synthetic_timing_smoke(
         "yuv6_preprocess_kind": yuv6_preprocess_kind,
         "target_source_kind": target_kind,
         "target_source": target_source_payload,
+        "source_stage_loss_contract": stage.source_stage_loss_contract,
         "device": "mlx",
         "hardware_substrate": f"{platform.system()}_{platform.machine()}_mlx",
         "seed": seed,
@@ -2170,6 +2180,7 @@ def run_pr95_mlx_synthetic_timing_smoke(
         "yuv6_preprocess_kind": yuv6_preprocess_kind,
         "target_source_kind": target_kind,
         "target_source": target_source_payload,
+        "source_stage_loss_contract": stage.source_stage_loss_contract,
         "evidence_grade": "[macOS-MLX research-signal]",
         "timing": {
             "elapsed_seconds": elapsed,
@@ -2195,6 +2206,7 @@ def run_pr95_mlx_synthetic_timing_smoke(
             "loss_surface_weights": loss_surface_weights,
             "target_yuv6_shape": target_yuv6_shape,
             "yuv6_preprocess_kind": yuv6_preprocess_kind,
+            "source_stage_loss_contract": stage.source_stage_loss_contract,
             "parameter_group_lr_policy_id": stage.parameter_group_lr_policy_id,
             "parameter_group_lr_policy_sha256": stage.parameter_group_lr_policy_sha256,
             "parameter_group_fingerprint_sha256": parameter_group_fingerprint[
