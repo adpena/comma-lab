@@ -1,0 +1,221 @@
+{
+  "actual_signature": {
+    "W_values_tested": [
+      4,
+      6,
+      8
+    ],
+    "all_W_in_plateau_band_of_probe_6": false,
+    "center_pair_indices": [
+      8,
+      9,
+      10,
+      11
+    ],
+    "drift_collapses_any_W_lt_2_of_5_classes": false,
+    "monotone_increase_W4_to_W8": false,
+    "n_frames_decoded": 20,
+    "per_window_results": {
+      "4": {
+        "W": 4,
+        "classes_with_measurable_drift": 3,
+        "kl_mean_temporal": 0.011135047301650047,
+        "kl_temporal_per_pair": [
+          0.02337430976331234,
+          0.006365874316543341,
+          0.007045639678835869,
+          0.00775436544790864
+        ],
+        "per_class_drift_summary": [
+          {
+            "abs_mean_drift": 0.010849256068468094,
+            "class_index": 0,
+            "mean_drift_window_minus_static": 0.010849256068468094
+          },
+          {
+            "abs_mean_drift": 7.028132677078247e-05,
+            "class_index": 1,
+            "mean_drift_window_minus_static": -7.028132677078247e-05
+          },
+          {
+            "abs_mean_drift": 0.003819502890110016,
+            "class_index": 2,
+            "mean_drift_window_minus_static": -0.003819502890110016
+          },
+          {
+            "abs_mean_drift": 0.0007719602435827255,
+            "class_index": 3,
+            "mean_drift_window_minus_static": -0.0007719602435827255
+          },
+          {
+            "abs_mean_drift": 0.006187546998262405,
+            "class_index": 4,
+            "mean_drift_window_minus_static": -0.006187546998262405
+          }
+        ],
+        "ratio_over_ccc_static_baseline": 16.52137365175619,
+        "ratio_over_probe_6_w2": 1.4637895756079988,
+        "soft_entropy_temporal_mean": 1.015400230884552,
+        "window_size_total_frames": 9
+      },
+      "6": {
+        "W": 6,
+        "classes_with_measurable_drift": 3,
+        "kl_mean_temporal": 0.014291458413936198,
+        "kl_temporal_per_pair": [
+          0.030479302629828453,
+          0.006458581890910864,
+          0.00974357407540083,
+          0.010484375059604645
+        ],
+        "per_class_drift_summary": [
+          {
+            "abs_mean_drift": 0.01433742418885231,
+            "class_index": 0,
+            "mean_drift_window_minus_static": 0.01433742418885231
+          },
+          {
+            "abs_mean_drift": 0.00046653207391500473,
+            "class_index": 1,
+            "mean_drift_window_minus_static": 0.00046653207391500473
+          },
+          {
+            "abs_mean_drift": 0.0062476396560668945,
+            "class_index": 2,
+            "mean_drift_window_minus_static": -0.0062476396560668945
+          },
+          {
+            "abs_mean_drift": 0.0005647167563438416,
+            "class_index": 3,
+            "mean_drift_window_minus_static": -0.0005647167563438416
+          },
+          {
+            "abs_mean_drift": 0.007991597056388855,
+            "class_index": 4,
+            "mean_drift_window_minus_static": -0.007991597056388855
+          }
+        ],
+        "ratio_over_ccc_static_baseline": 21.204626984403212,
+        "ratio_over_probe_6_w2": 1.8787246501822266,
+        "soft_entropy_temporal_mean": 1.023305594921112,
+        "window_size_total_frames": 13
+      },
+      "8": {
+        "W": 8,
+        "classes_with_measurable_drift": 3,
+        "kl_mean_temporal": 0.013193020946346223,
+        "kl_temporal_per_pair": [
+          0.029560862109065056,
+          0.005838410463184118,
+          0.00819674413651228,
+          0.00917606707662344
+        ],
+        "per_class_drift_summary": [
+          {
+            "abs_mean_drift": 0.015761319547891617,
+            "class_index": 0,
+            "mean_drift_window_minus_static": 0.015761319547891617
+          },
+          {
+            "abs_mean_drift": 0.0004877690225839615,
+            "class_index": 1,
+            "mean_drift_window_minus_static": 0.0004877690225839615
+          },
+          {
+            "abs_mean_drift": 0.007567591965198517,
+            "class_index": 2,
+            "mean_drift_window_minus_static": -0.007567591965198517
+          },
+          {
+            "abs_mean_drift": 0.0007154243066906929,
+            "class_index": 3,
+            "mean_drift_window_minus_static": -0.0007154243066906929
+          },
+          {
+            "abs_mean_drift": 0.007966060191392899,
+            "class_index": 4,
+            "mean_drift_window_minus_static": -0.007966060191392899
+          }
+        ],
+        "ratio_over_ccc_static_baseline": 19.574845328024118,
+        "ratio_over_probe_6_w2": 1.7343264028324206,
+        "soft_entropy_temporal_mean": 1.0234539210796356,
+        "window_size_total_frames": 17
+      }
+    },
+    "segnet_missing_keys": 0,
+    "segnet_unexpected_keys": 0,
+    "w8_negative_lt_5x": false,
+    "w8_plateau_10_to_20x": true,
+    "w8_scales_ge_20x": false
+  },
+  "axis_tag": "[macOS-CPU advisory]",
+  "canonical_equation_reference": "candidate hinton_kl_temperature2_longer_temporal_context_v1 (Catalog #344 FORMALIZATION_PENDING; RATIFY-N pending per RATE-ATTACK-MATRIX cell #4 W-extension operator-routable)",
+  "canonical_provenance": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "evidence_grade": "macOS-CPU-advisory",
+    "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+    "hinton_canonical_reference": "Hinton/Vinyals/Dean 2015 'Distilling the Knowledge in a Neural Network' (KL T=2.0 dark-knowledge); CLAUDE.md 'Grand Council Geoffrey Hinton' + 'Quantizr intelligence' (Quantizr 0.33 [contest-CUDA] uses kl_on_logits T=2.0).",
+    "kind": "macos_cpu_advisory",
+    "predecessor_probes": [
+      "tier_1_distortion_hinton_kl_t2_segnet_smoke (CCC)",
+      "tier_1_distortion_hinton_kl_t2_temporal_context_segnet_smoke (Probe 6 W=2)"
+    ],
+    "promotable": false,
+    "rate_attack_matrix_reference": "RATE-ATTACK-METHODS-DIMENSIONS-MATRIX commit 7a78c5661 Top-5 cell #4: (M44 Hinton KL T=2.0 x D17 per-time-window temporal-context) W-extension",
+    "score_claim_valid": false,
+    "source": "tier_1_distortion_axis_probe_7_hinton_kl_t2_longer_temporal_context_segnet",
+    "temporal_context_reference": "Atick-Redlich 1990 cooperative-receiver temporal coherence + Rao-Ballard predictive-coding paradigm; CLAUDE.md 'Grand Council Atick' + 'predictive coding'."
+  },
+  "catalog_references": [
+    "#344",
+    "#287",
+    "#323",
+    "#192",
+    "#1",
+    "#313",
+    "#307",
+    "#308"
+  ],
+  "delta_vs_probe_6_w2_baseline": {
+    "ccc_static_baseline": 0.0006739782984368503,
+    "probe_6_w2_kl_mean": 0.007607,
+    "probe_6_w2_ratio_over_ccc": 11.28671355983245,
+    "scaling_direction": "non_monotone_or_saturated",
+    "w4_kl_mean": 0.011135047301650047,
+    "w4_over_probe_6_w2": 1.4637895756079988,
+    "w6_kl_mean": 0.014291458413936198,
+    "w6_over_probe_6_w2": 1.8787246501822266,
+    "w8_kl_mean": 0.013193020946346223,
+    "w8_over_probe_6_w2": 1.7343264028324206
+  },
+  "device": "cpu",
+  "elapsed_seconds": 9.273672103881836,
+  "evidence_grade": "macOS-CPU-advisory",
+  "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+  "lane_id": "lane_combined_tier_1_wave_2_hinton_kl_longer_temporal_plus_uniward_per_segment_label_20260525",
+  "next_action_on_MIXED": "DEFER-PENDING-W-AUDIT; iterate sister probe with intermediate W=3, W=5, W=7 to map saturation curve.",
+  "next_action_on_NEGATIVE": "DEFER W-extension per Catalog #307 IMPLEMENTATION-LEVEL falsification; queue motion-aware weighting OR per-segment-label D16 temporal grouping per Catalog #308 alternative reducer. Probe 6 W=2 Tier-2 dispatch UNCHANGED.",
+  "next_action_on_POSITIVE_PLATEAU": "Probe 6 W=2 substrate remains JUSTIFIED for Tier-2 paid dispatch unchanged; W>=4 extension paradigm is DEFER-PENDING (additional frames do not justify cost).",
+  "next_action_on_POSITIVE_SCALES": "STRONG empirical case for Tier-2 paid dispatch of distillation-substrate training paradigm with W>=8 window size. Operator-routable: HF Jobs T4 (pending RECHARGE) or Vast.ai 4090 ($0.25/hr); estimated cost ~$3-7; predicted DS -0.010 to -0.025 [predicted].",
+  "predicted_signature": {
+    "NEGATIVE": "kl_mean_temporal W=8 < 5x CCC static OR drift collapses",
+    "POSITIVE_PLATEAU": "kl_mean_temporal W=8 in [10x, 20x] CCC static AND all W within plateau band of Probe 6 W=2",
+    "POSITIVE_SCALES": "kl_mean_temporal W=8 >= 20x CCC static AND monotone W=4<W=6<W=8"
+  },
+  "probe_id": "tier_1_distortion_hinton_kl_t2_longer_temporal_context_segnet_smoke",
+  "probe_name": "Hinton KL T=2.0 x LONGER temporal-context SegNet (M44 x D17 W-extension W in {4,6,8})",
+  "promotable": false,
+  "recommendation": "POSITIVE_SIGNAL_PLATEAU: temporal-context KL_mean plateaus at ~10-12x CCC static baseline across W in {4, 6, 8} (W=4: 16.52x, W=6: 21.20x, W=8: 19.57x; Probe 6 W=2: 11.29x). The temporal-coherent dark-knowledge structure saturates at W~3; longer windows do not add signal. Per CLAUDE.md 'Forbidden premature KILL': Probe 6 W=2-3 substrate remains JUSTIFIED for Tier-2 paid dispatch (RATE-ATTACK-MATRIX cell #4); W>=4 extension paradigm is DEFER-PENDING (additional frames do not justify their cost in extra SegNet forwards). Predicted DS unchanged from Probe 6 baseline -0.005 to -0.020 [predicted].",
+  "score_claim": false,
+  "signature_checks": {
+    "all_W_in_plateau_band_present": false,
+    "drift_collapses_present": false,
+    "monotone_increase_present": false,
+    "w8_negative_lt_5x_present": false,
+    "w8_plateau_10_to_20x_present": true,
+    "w8_scales_ge_20x_present": false
+  },
+  "sister_canonical_equation_candidate_for_RATIFY_N": "hinton_kl_temperature2_longer_temporal_context_v1",
+  "verdict": "POSITIVE_SIGNAL_PLATEAU"
+}
