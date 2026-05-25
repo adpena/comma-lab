@@ -433,7 +433,7 @@ def _dynamic_sparse_gate_param(
     return _optional_string(nested.get(key))
 
 
-def _operation_pair_indices(operation: Mapping[str, Any]) -> list[int]:
+def _operation_pair_indices(operation: Mapping[str, Any]) -> list[str]:
     params = _operation_params_mapping(operation)
     return ordered_unique(
         str(pair)
@@ -486,12 +486,12 @@ def _append_group_interactions(
     *,
     operations: Sequence[Mapping[str, Any]],
     interaction_kind: str,
-    value_label: str,
+    value_labels: Sequence[str],
     rationale: str,
 ) -> None:
     groups: dict[str, list[Mapping[str, Any]]] = {}
     for operation in operations:
-        value = _param_text(operation, value_label)
+        value = _param_text(operation, *value_labels)
         if value:
             groups.setdefault(value, []).append(operation)
     for key, grouped in sorted(groups.items()):
@@ -518,39 +518,39 @@ def _active_structural_interactions(
     if len(operations) < 2:
         return rows
 
-    grouped_values: tuple[tuple[str, str, str], ...] = (
+    grouped_values: tuple[tuple[str, tuple[str, ...], str], ...] = (
         (
             "shared_target_kind",
-            "target_kind",
+            ("target_kind",),
             "operations target the same materializer family and may share setup or conflict",
         ),
         (
             "shared_operation_family",
-            "operation_family",
+            ("operation_family",),
             "operations share a transformation family and need grouped calibration",
         ),
         (
             "shared_packet_member",
-            "member_name",
+            ("member_name", "packet_member"),
             "operations touch the same packet member and may have non-additive byte effects",
         ),
         (
             "shared_tensor",
-            "tensor_name",
+            ("tensor_name", "tensor_path"),
             "operations touch the same tensor and may have non-additive distortion effects",
         ),
         (
             "shared_archive_section",
-            "section_name",
+            ("section_name", "archive_section", "target_section"),
             "operations touch the same archive section and may share coding overhead",
         ),
     )
-    for interaction_kind, value_label, rationale in grouped_values:
+    for interaction_kind, value_labels, rationale in grouped_values:
         _append_group_interactions(
             rows,
             operations=operations,
             interaction_kind=interaction_kind,
-            value_label=value_label,
+            value_labels=value_labels,
             rationale=rationale,
         )
 
