@@ -12,6 +12,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     FEEDBACK_REFRESH_SCHEMA,
     LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA,
     OPERATION_PORTFOLIO_SCHEMA,
+    OPERATION_PORTFOLIO_TAXONOMY_SCHEMA,
     FrontierRateAttackFeedbackError,
     build_frontier_rate_attack_feedback_refresh,
     discover_local_cpu_eureka_planning_signals,
@@ -461,6 +462,16 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     operation_portfolio = report["operation_portfolio"]
     assert operation_portfolio["schema"] == OPERATION_PORTFOLIO_SCHEMA
     _assert_false_authority(operation_portfolio)
+    taxonomy = operation_portfolio["taxonomy"]
+    assert taxonomy["schema"] == OPERATION_PORTFOLIO_TAXONOMY_SCHEMA
+    assert "byte_range_entropy_recode_v1" in {
+        row["operation_id"].removeprefix("materializer_backlog_")
+        for row in taxonomy["registered_missing_materializers"]
+    }
+    assert "missing_class_range_ans_packet_compiler_target" in {
+        row["operation_id"] for row in taxonomy["missing_entire_classes"]
+    }
+    _assert_false_authority(taxonomy)
     assert operation_portfolio["queue_executable_operation_count"] >= 2
     assert operation_portfolio["followup_signal_operation_count"] >= 6
     assert {"bit", "byte", "packet_member", "pair", "frame", "scorer_axis"}.issubset(
@@ -525,6 +536,27 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     assert all(
         experiment["metadata"]["frontier_operation_portfolio"]["top_operation_ids"]
         == operation_portfolio["top_operation_ids"]
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        experiment["metadata"]["frontier_operation_portfolio"][
+            "top_queue_executable_operation_ids"
+        ]
+        == operation_portfolio["top_queue_executable_operation_ids"]
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        experiment["metadata"]["frontier_operation_portfolio"][
+            "top_followup_signal_operation_ids"
+        ]
+        == operation_portfolio["top_followup_signal_operation_ids"]
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        experiment["metadata"]["frontier_operation_portfolio"][
+            "followup_signal_operation_count"
+        ]
+        == operation_portfolio["followup_signal_operation_count"]
         for experiment in queue["experiments"]
     )
     assert all(

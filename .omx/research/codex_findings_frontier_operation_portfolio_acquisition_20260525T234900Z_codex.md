@@ -13,23 +13,35 @@ The portfolio is written by the frontier feedback refresh path and persisted as 
 ## Live artifact
 
 Output directory:
-`.omx/research/frontier_operation_portfolio_20260525T234900Z/`
+`.omx/research/frontier_operation_portfolio_20260525T235200Z/`
 
 Key artifact:
-`.omx/research/frontier_operation_portfolio_20260525T234900Z/operation_portfolio.json`
+`.omx/research/frontier_operation_portfolio_20260525T235200Z/operation_portfolio.json`
 
 Observed summary:
-- operation_count: 31
-- queue_executable_operation_count: 4
-- followup_signal_operation_count: 10
+- operation_count: 32
+- queue_executable_operation_count: 5
+- followup_signal_operation_count: 14
 - blocked_operation_count: 26
 - top operation: `chain_dfl1_merge_header_elide_minimal_envelope`
-- next queue: `.omx/research/frontier_operation_portfolio_20260525T234900Z/dqs1_followup_queue.json`
-- next queue shape: 8 experiments, 56 steps, queue validate clean
+- next queue: `.omx/research/frontier_operation_portfolio_20260525T235200Z/dqs1_followup_queue.json`
+- next queue shape: 4 experiments, 28 steps, queue validate clean
+
+This supersedes the earlier local scratch artifact at
+`.omx/research/frontier_operation_portfolio_20260525T234900Z/`, whose
+operation rows predated the strict `queue_executable` vs `followup_signal`
+split.
 
 The root-wide eureka scan intentionally ignores stale local advisory rows that
 carry truthy authority fields; those rows remain visible as ignored candidates
 rather than aborting broad planning discovery or becoming executable signal.
+
+Related validated handoff artifact:
+`.omx/research/frontier_chain_receiver_handoff_20260525T235229Z/`.
+It contains a valid `experiment_queue.v1` with one executable
+`packet_member_zip_header_elide_v1` local work row and false score authority.
+It preserves the next receiver-proof handoff path without treating it as exact
+readiness or a score claim.
 
 ## Current mathematical reading
 
@@ -47,11 +59,11 @@ The current live top chain combines:
 Observed positive local byte savings from parts sum to 794 bytes, but the chain is still blocked on a single runtime-consumption proof and exact-readiness handoff. The row records synergy terms to measure, including DFL1 binary header after payload-member rename and central-directory minimization after member merge, plus antagonism terms such as runtime-adapter size versus archive-byte gain.
 
 The portfolio also emits a targeted-correction budget summary: current local
-DQS1 drops expose 2 saved advisory bytes worth about 1.3317179062555251e-06
-score units of rate credit, while receiver-positive materializer parts expose
-794 observed saved bytes. Those bytes are acquisition budget for targeted
-SegNet/PoseNet repairs only after receiver/runtime proof and component guards;
-they are not score, promotion, or dispatch authority.
+DQS1 drops expose 28 saved advisory bytes, with a max single-candidate credit
+of 2 bytes, while receiver-positive materializer parts expose 794 observed
+saved bytes. Those bytes are acquisition budget for targeted SegNet/PoseNet
+repairs only after receiver/runtime proof and component guards; they are not
+score, promotion, or dispatch authority.
 
 ## Important negative/guardrail signal
 
