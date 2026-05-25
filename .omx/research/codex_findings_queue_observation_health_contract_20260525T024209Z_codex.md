@@ -11,14 +11,18 @@
 2. `tools/run_byte_shaving_materializer_campaign.py` recorded the final observation without `--include-orphans`, so the run artifact could preserve an orphan count while dropping the actual orphan step identities.
 3. The exact-readiness follow-up harvest path had a state-provenance bug class: generated harvest steps could read the canonical default queue state even when the campaign runner was executing against an isolated `--queue-state`. That causes accepted materializer output to lose scheduler provenance and fail closed during harvest.
 4. Harvest state filtering accepted ambiguous state arguments too easily: a supplied state path without an explicit queue id could silently broaden provenance interpretation.
+5. Sidecar adversarial review found two observer false-green cases: `blocked` step rows were omitted from observed health, and `succeeded` rows whose required artifacts were later missing/corrupt were not rechecked.
+6. Sidecar adversarial review also found that the runner test proved the `--include-orphans` flag but not retention of real orphan identities in the saved run artifact.
 
 ## Landed Fixes
 
 - `src/comma_lab/scheduler/experiment_queue_observer.py` now emits `healthy`, `blockers`, and `blocker_count`.
+- The observer now treats `blocked` rows as health blockers and rechecks succeeded rows for missing/corrupt declared artifacts without tailing logs for every succeeded row.
 - `tools/run_byte_shaving_materializer_campaign.py` now calls queue observation with `--include-orphans`.
 - `src/comma_lab/scheduler/byte_shaving_campaign_queue.py` now threads both `source_work_queue_path` and `source_state_path` into generated exact-readiness harvest steps and records both in experiment metadata.
 - `tools/build_byte_shaving_campaign_queue.py` exposes `--materializer-execution-state`; the campaign runner passes its actual execution state path through that flag.
 - `src/comma_lab/scheduler/materializer_chain_harvest.py` and `tools/harvest_materializer_chain_candidates.py` now require an explicit queue id whenever state filtering is supplied.
+- The campaign runner E2E now seeds a nonblocking stale row and asserts `observation.orphaned_steps` carries the stale row identity and blocker into `materializer_campaign_run.json`.
 
 ## Verification
 
