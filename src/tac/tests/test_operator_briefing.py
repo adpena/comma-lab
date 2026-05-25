@@ -1450,6 +1450,12 @@ def test_byte_shaving_acquisition_summary_surfaces_feedback_candidate_widening(
                 "rank_or_kill_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
             },
+            "queue_feedback_candidate_widening_queue_path": (
+                ".omx/research/high_level/campaign_dry_feedback/"
+                "queue_feedback_candidate_widening_queue.json"
+            ),
+            "queue_feedback_candidate_widening_queue_emitted": True,
+            "queue_feedback_candidate_widening_queue_blockers": [],
             "experiment_count": 0,
             "build": {
                 "materializer_work_queue_executable_row_count": 0,
@@ -1493,6 +1499,7 @@ def test_byte_shaving_acquisition_summary_surfaces_feedback_candidate_widening(
     )
     assert summary["campaign_run_count"] == 1
     assert summary["queue_feedback_candidate_widening_ready_count"] == 1
+    assert summary["queue_feedback_candidate_widening_queue_count"] == 1
     assert summary["queue_feedback_dry_no_selected_count"] == 1
     assert summary["queue_feedback_archive_delta_blocked_cell_count"] == 1
     assert summary["queue_feedback_policy_continue_count"] == 0
@@ -1510,9 +1517,11 @@ def test_byte_shaving_acquisition_summary_surfaces_feedback_candidate_widening(
     assert "feedback_widen=1" in text
     assert "feedback_dry=1" in text
     assert "feedback_archive_delta_blocked_cells=1" in text
+    assert "feedback_widen_queue=1" in text
     assert "feedback_decision=widen_inverse_candidate_generation" in text
     assert "feedback_widening=True" in text
     assert "feedback_dry=True" in text
+    assert "feedback_widen_queue=True" in text
 
 
 def test_byte_shaving_acquisition_summary_live_observation_wins_over_stale_payload(

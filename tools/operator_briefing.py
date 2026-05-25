@@ -2020,6 +2020,20 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
                 "materializer_archive_delta_blocked_cell_count"
             )
         ),
+        "queue_feedback_candidate_widening_queue_path": str(
+            payload.get("queue_feedback_candidate_widening_queue_path") or ""
+        ),
+        "queue_feedback_candidate_widening_queue_emitted": (
+            payload.get("queue_feedback_candidate_widening_queue_emitted") is True
+        ),
+        "queue_feedback_candidate_widening_queue_blocker_count": len(
+            payload.get("queue_feedback_candidate_widening_queue_blockers")
+            if isinstance(
+                payload.get("queue_feedback_candidate_widening_queue_blockers"),
+                list,
+            )
+            else []
+        ),
         "queue_observation_path": str(
             payload.get("queue_observation_path")
             or (
@@ -2560,6 +2574,11 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
             _safe_int(row.get("queue_feedback_replan_archive_delta_blocked_cell_count"))
             for row in rows
         ),
+        "queue_feedback_candidate_widening_queue_count": sum(
+            1
+            for row in rows
+            if row.get("queue_feedback_candidate_widening_queue_emitted") is True
+        ),
         "queue_observation_recovery_required_count": sum(
             1 for row in rows if row.get("queue_observation_recovery_required") is True
         ),
@@ -2786,6 +2805,8 @@ def _format_byte_shaving_acquisition_summary() -> str:
             f"{payload['queue_feedback_dry_no_selected_count']} "
             "feedback_archive_delta_blocked_cells="
             f"{payload['queue_feedback_archive_delta_blocked_cell_count']} "
+            "feedback_widen_queue="
+            f"{payload['queue_feedback_candidate_widening_queue_count']} "
             "queue_recovery_required="
             f"{payload['queue_observation_recovery_required_count']} "
             "queue_recovery_ready="
@@ -2882,6 +2903,8 @@ def _format_byte_shaving_acquisition_summary() -> str:
                 f"{row.get('queue_feedback_replan_dry_no_selected_cells') is True} "
                 "feedback_archive_delta_blocked_cells="
                 f"{row.get('queue_feedback_replan_archive_delta_blocked_cell_count', 0)} "
+                "feedback_widen_queue="
+                f"{row.get('queue_feedback_candidate_widening_queue_emitted') is True} "
                 "queue_recovery_required="
                 f"{row.get('queue_observation_recovery_required') is True} "
                 "queue_recovery_ready="

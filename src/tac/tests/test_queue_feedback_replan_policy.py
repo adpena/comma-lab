@@ -18,6 +18,9 @@ from comma_lab.scheduler.queue_feedback_replan_policy import (
     ACTION_RUN_NEXT_ITERATION,
     ACTION_STOP_MAX_ITERATIONS,
     ACTION_WIDEN_CANDIDATE_GENERATION,
+    QUEUE_FEEDBACK_CANDIDATE_WIDENING_EXPERIMENT_ID,
+    QUEUE_FEEDBACK_CANDIDATE_WIDENING_METADATA_SCHEMA,
+    QUEUE_FEEDBACK_CANDIDATE_WIDENING_STEP_ID,
     QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL,
     QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA,
     QUEUE_FEEDBACK_REPLAN_CONTINUATION_EXPERIMENT_ID,
@@ -29,6 +32,7 @@ from comma_lab.scheduler.queue_feedback_replan_policy import (
     QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA,
     QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA,
     QUEUE_OBSERVATION_RECOVERY_QUEUE_VALIDATION_SCHEMA,
+    build_queue_feedback_candidate_widening_queue,
     build_queue_feedback_replan_continuation_queue,
     build_queue_feedback_replan_policy,
     build_queue_observation_recovery_plan,
@@ -732,6 +736,24 @@ def test_feedback_replan_policy_routes_dry_action_functional_to_candidate_wideni
             queue_feedback_replan_followup_executed=True,
             queue_feedback_replan_followup_execution_success=True,
             queue_feedback_replan_followup_action_functional_path=str(action_path),
+            queue_feedback_replan_request={
+                "command_template": [
+                    ".venv/bin/python",
+                    QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL,
+                    "--output",
+                    str(action_path),
+                    "--md-out",
+                    str(action_path.with_suffix(".md")),
+                    "--scorer-response",
+                    "experiments/results/scorer_response.json",
+                    "--inverse-scorer-max-units",
+                    "16",
+                    "--max-cells",
+                    "128",
+                    "--expected-output-sha256",
+                    "0" * 64,
+                ],
+            },
         ),
         feedback_followup_queue=_child_queue(),
         iteration_index=1,
@@ -753,6 +775,20 @@ def test_feedback_replan_policy_routes_dry_action_functional_to_candidate_wideni
     assert action["action"] == ACTION_WIDEN_CANDIDATE_GENERATION
     assert action["next_gate"] == "widen_inverse_surface_candidate_generation"
     assert "refresh_source_inverse_scorer_surface" in action["candidate_generation_hints"]
+    assert action["candidate_generation_command_template"] == policy[
+        "candidate_generation_command_template"
+    ]
+    widening = policy["candidate_widening_handoff"]
+    assert widening["blockers"] == []
+    assert widening["previous_inverse_scorer_max_units"] == 16
+    assert widening["inverse_scorer_max_units"] == 64
+    assert widening["widened_output_path"].endswith(
+        "inverse_steganalysis_action_functional.feedback.widened.json"
+    )
+    assert "--expected-output-sha256" not in widening["command_template"]
+    assert widening["command_template"][
+        widening["command_template"].index("--inverse-scorer-max-units") + 1
+    ] == "64"
 
     queue, blockers = build_queue_feedback_replan_continuation_queue(
         policy,
@@ -761,6 +797,26 @@ def test_feedback_replan_policy_routes_dry_action_functional_to_candidate_wideni
     assert queue is None
     assert "queue_feedback_replan_continuation_policy_not_next_iteration" in blockers
     assert "queue_feedback_replan_continuation_policy_not_continuable" in blockers
+
+    widening_queue, widening_blockers = build_queue_feedback_candidate_widening_queue(
+        policy,
+        lane_id="feedback_lane",
+        source_policy_path=".omx/research/campaign/queue_feedback_replan_policy.json",
+    )
+    assert widening_blockers == []
+    assert widening_queue is not None
+    assert widening_queue["schema"] == "experiment_queue.v1"
+    assert widening_queue["controls"]["mode"] == "paused"
+    assert widening_queue["controls"]["max_concurrency"] == {"local_cpu": 1}
+    experiment = widening_queue["experiments"][0]
+    assert experiment["id"] == QUEUE_FEEDBACK_CANDIDATE_WIDENING_EXPERIMENT_ID
+    assert experiment["lane_id"] == "feedback_lane"
+    assert experiment["metadata"]["schema"] == QUEUE_FEEDBACK_CANDIDATE_WIDENING_METADATA_SCHEMA
+    assert experiment["metadata"]["score_claim"] is False
+    step = experiment["steps"][0]
+    assert step["id"] == QUEUE_FEEDBACK_CANDIDATE_WIDENING_STEP_ID
+    assert step["command"] == policy["candidate_generation_command_template"]
+    assert step["resources"] == {"kind": "local_cpu"}
 
 
 def test_feedback_replan_policy_builds_paused_next_iteration_queue() -> None:

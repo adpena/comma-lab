@@ -29,6 +29,9 @@ QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA = (
 QUEUE_FEEDBACK_REPLAN_CONTINUATION_METADATA_SCHEMA = (
     "queue_feedback_replan_continuation_metadata.v1"
 )
+QUEUE_FEEDBACK_CANDIDATE_WIDENING_METADATA_SCHEMA = (
+    "queue_feedback_candidate_widening_metadata.v1"
+)
 QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA = (
     "queue_observation_recovery_queue_metadata.v1"
 )
@@ -41,6 +44,10 @@ QUEUE_FEEDBACK_REPLAN_CONTINUATION_EXPERIMENT_ID = (
     "queue_feedback_replan_next_materializer_iteration"
 )
 QUEUE_FEEDBACK_REPLAN_CONTINUATION_STEP_ID = "run_next_materializer_campaign_iteration"
+QUEUE_FEEDBACK_CANDIDATE_WIDENING_EXPERIMENT_ID = (
+    "queue_feedback_widen_inverse_candidate_generation"
+)
+QUEUE_FEEDBACK_CANDIDATE_WIDENING_STEP_ID = "widen_inverse_candidate_generation"
 QUEUE_OBSERVATION_RECOVERY_EXPERIMENT_ID = "queue_observation_recovery_actions"
 QUEUE_FEEDBACK_REPLAN_MATERIALIZER_CAMPAIGN_TOOL = (
     "tools/run_byte_shaving_materializer_campaign.py"
@@ -711,6 +718,60 @@ def _is_local_python_command(command0: str) -> bool:
     return name in {"python", "python3"} or name.startswith("python3.")
 
 
+def _without_flag(command_items: Sequence[str], flag: str) -> list[str]:
+    out: list[str] = []
+    skip_next = False
+    for item in command_items:
+        if skip_next:
+            skip_next = False
+            continue
+        if item == flag:
+            skip_next = True
+            continue
+        if item.startswith(f"{flag}="):
+            continue
+        out.append(str(item))
+    return out
+
+
+def _replace_or_append_flag(
+    command_items: Sequence[str],
+    flag: str,
+    value: str,
+) -> list[str]:
+    out: list[str] = []
+    replaced = False
+    skip_next = False
+    for item in command_items:
+        if skip_next:
+            skip_next = False
+            continue
+        if item == flag:
+            out.extend([flag, value])
+            replaced = True
+            skip_next = True
+            continue
+        if item.startswith(f"{flag}="):
+            out.extend([flag, value])
+            replaced = True
+            continue
+        out.append(str(item))
+    if not replaced:
+        out.extend([flag, value])
+    return out
+
+
+def _widened_json_path(path_text: str | None, *, suffix: str) -> str | None:
+    path_text = _nonempty_str(path_text)
+    if path_text is None:
+        return None
+    path = Path(path_text)
+    name = path.name
+    if name.endswith(".json"):
+        return path.with_name(f"{name[:-5]}.{suffix}.json").as_posix()
+    return path.with_name(f"{name}.{suffix}.json").as_posix()
+
+
 def _id_fragment(value: Any) -> str:
     text = str(value or "").strip().lower()
     out = "".join(ch if ch.isalnum() else "_" for ch in text)
@@ -1084,6 +1145,121 @@ def _feedback_action_functional_summary(path: str | None) -> dict[str, Any]:
             "dry_no_selected_cells": cell_count > 0 and selected_count == 0,
             "blockers": list(dict.fromkeys(blockers)),
             "allowed_use": "local_feedback_policy_routing_only",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_dispatch_authority"
+            ),
+        }
+    )
+
+
+def _candidate_widening_command_template(
+    run_summary: Mapping[str, Any],
+    *,
+    feedback_action_functional_summary: Mapping[str, Any],
+) -> dict[str, Any]:
+    request = run_summary.get("queue_feedback_replan_request")
+    request = request if isinstance(request, Mapping) else {}
+    raw_command = request.get("command_template")
+    blockers: list[str] = []
+    if not isinstance(raw_command, list) or not raw_command:
+        return _false_authority_payload(
+            {
+                "command_template": None,
+                "blockers": ["candidate_widening_source_command_missing"],
+                "widened_output_path": None,
+                "widened_md_path": None,
+                "inverse_scorer_max_units": None,
+                "allowed_use": "local_candidate_generation_queue_only",
+                "forbidden_use": (
+                    "score_claim_or_promotion_or_rank_kill_or_dispatch_authority"
+                ),
+            }
+        )
+    command_items = [str(item) for item in raw_command]
+    if len(command_items) < 2:
+        blockers.append("candidate_widening_source_command_too_short")
+    elif command_items[1] != QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL:
+        blockers.append("candidate_widening_source_command_not_action_functional_tool")
+    if command_items:
+        command0_name = posixpath.basename(command_items[0])
+        if command0_name in QUEUE_FEEDBACK_REPLAN_FORBIDDEN_COMMAND_WRAPPERS:
+            blockers.append(
+                f"candidate_widening_command_shell_or_remote_wrapper:{command0_name}"
+            )
+        if not _is_local_python_command(command_items[0]):
+            blockers.append("candidate_widening_command_not_local_python")
+    blockers.extend(
+        f"candidate_widening_command_forbidden_flag:{flag}"
+        for flag in _forbidden_command_flag_uses(command_items)
+    )
+
+    source_output = _nonempty_str(
+        feedback_action_functional_summary.get("path")
+    ) or _command_arg(command_items, "--output")
+    widened_output = _widened_json_path(source_output, suffix="widened")
+    if widened_output is None:
+        blockers.append("candidate_widening_output_path_missing")
+    widened_md = None
+    if widened_output is not None:
+        md_path = Path(widened_output)
+        widened_md = md_path.with_suffix(".md").as_posix()
+
+    current_units = _safe_int(_command_arg(command_items, "--inverse-scorer-max-units"))
+    if current_units < 1:
+        current_units = 32
+    cell_count = _safe_int(feedback_action_functional_summary.get("cell_count"))
+    blocked_cell_count = _safe_int(
+        feedback_action_functional_summary.get("blocked_cell_count")
+    )
+    archive_blocked_count = _safe_int(
+        feedback_action_functional_summary.get(
+            "materializer_archive_delta_blocked_cell_count"
+        )
+    )
+    widened_units = min(
+        4096,
+        max(
+            current_units * 2,
+            current_units + max(blocked_cell_count, archive_blocked_count, 1),
+            cell_count * 2,
+            64,
+        ),
+    )
+    widened_max_cells = min(16384, max(4096, widened_units * 8))
+    if widened_output is not None:
+        command_items = _replace_or_append_flag(command_items, "--output", widened_output)
+    if widened_md is not None:
+        command_items = _replace_or_append_flag(command_items, "--md-out", widened_md)
+    command_items = _replace_or_append_flag(
+        command_items,
+        "--inverse-scorer-max-units",
+        str(widened_units),
+    )
+    command_items = _replace_or_append_flag(
+        command_items,
+        "--max-cells",
+        str(widened_max_cells),
+    )
+    command_items = _without_flag(command_items, "--expected-output-sha256")
+    command_items = _without_flag(command_items, "--expected-md-sha256")
+
+    return _false_authority_payload(
+        {
+            "command_template": None if blockers else command_items,
+            "blockers": list(dict.fromkeys(blockers)),
+            "source_command_template": [str(item) for item in raw_command],
+            "widened_output_path": widened_output,
+            "widened_md_path": widened_md,
+            "previous_inverse_scorer_max_units": current_units,
+            "inverse_scorer_max_units": widened_units,
+            "max_cells": widened_max_cells,
+            "widening_rules": [
+                "double_inverse_scorer_max_units",
+                "raise_max_cells_for_local_candidate_generation",
+                "write_distinct_widened_action_functional",
+                "strip_expected_output_hashes",
+            ],
+            "allowed_use": "local_candidate_generation_queue_only",
             "forbidden_use": (
                 "score_claim_or_promotion_or_rank_kill_or_dispatch_authority"
             ),
@@ -1711,6 +1887,163 @@ def build_queue_feedback_replan_continuation_queue(
     return queue, []
 
 
+def build_queue_feedback_candidate_widening_queue(
+    policy: Mapping[str, Any],
+    *,
+    lane_id: str,
+    source_policy_path: str | None = None,
+    queue_id: str | None = None,
+) -> tuple[dict[str, Any] | None, list[str]]:
+    blockers: list[str] = []
+    if policy.get("schema") != QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA:
+        blockers.append("queue_feedback_candidate_widening_policy_schema_invalid")
+    if policy.get("decision") != ACTION_WIDEN_CANDIDATE_GENERATION:
+        blockers.append("queue_feedback_candidate_widening_policy_not_widening")
+    if policy.get("ready_for_candidate_generation_widening") is not True:
+        blockers.append("queue_feedback_candidate_widening_policy_not_ready")
+    if policy.get("should_continue_feedback_loop") is True:
+        blockers.append("queue_feedback_candidate_widening_policy_continuable")
+    if truthy_authority_field_violations(
+        policy,
+        fields=FORBIDDEN_TRUE_AUTHORITY_FIELDS,
+    ):
+        blockers.append("queue_feedback_candidate_widening_policy_authority_violation")
+
+    handoff = policy.get("candidate_widening_handoff")
+    handoff = handoff if isinstance(handoff, Mapping) else {}
+    blockers.extend(
+        f"queue_feedback_candidate_widening_handoff:{item}"
+        for item in _string_list(handoff.get("blockers"))
+    )
+    command = handoff.get("command_template") or policy.get(
+        "candidate_generation_command_template"
+    )
+    if not isinstance(command, list) or not command:
+        blockers.append("queue_feedback_candidate_widening_command_missing")
+        command_items: list[str] = []
+    else:
+        command_items = [str(item) for item in command]
+        if len(command_items) < 2:
+            blockers.append("queue_feedback_candidate_widening_command_too_short")
+        else:
+            command0_name = posixpath.basename(command_items[0])
+            if command0_name in QUEUE_FEEDBACK_REPLAN_FORBIDDEN_COMMAND_WRAPPERS:
+                blockers.append(
+                    "queue_feedback_candidate_widening_command_shell_or_remote_wrapper:"
+                    f"{command0_name}"
+                )
+            if not _is_local_python_command(command_items[0]):
+                blockers.append("queue_feedback_candidate_widening_command_not_local_python")
+            if command_items[1] != QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL:
+                blockers.append(
+                    "queue_feedback_candidate_widening_command_not_action_functional_tool"
+                )
+        blockers.extend(
+            f"queue_feedback_candidate_widening_command_forbidden_flag:{flag}"
+            for flag in _forbidden_command_flag_uses(command_items)
+        )
+
+    if blockers:
+        return None, list(dict.fromkeys(blockers))
+
+    lane = lane_id.strip()
+    if not lane:
+        return None, ["queue_feedback_candidate_widening_lane_id_missing"]
+    source_queue_id = _nonempty_str(policy.get("queue_id")) or "materializer_campaign"
+    effective_queue_id = queue_id or f"{source_queue_id}_feedback_candidate_widening"
+    input_artifacts = [
+        source_policy_path,
+        policy.get("source_run_path"),
+        policy.get("plan_path"),
+        policy.get("feedback_action_functional_path"),
+        policy.get("queue_performance_summary_path"),
+        policy.get("feedback_followup_queue_path"),
+    ]
+    output_artifacts = [
+        handoff.get("widened_output_path"),
+        handoff.get("widened_md_path"),
+    ]
+    metadata = _false_authority_payload(
+        {
+            "schema": QUEUE_FEEDBACK_CANDIDATE_WIDENING_METADATA_SCHEMA,
+            "source_policy_path": source_policy_path,
+            "source_policy_sha256": _stable_json_sha256(policy),
+            "source_run_path": policy.get("source_run_path"),
+            "source_queue_id": policy.get("queue_id"),
+            "source_queue_path": policy.get("queue_path"),
+            "source_queue_state_path": policy.get("queue_state_path"),
+            "policy_decision": policy.get("decision"),
+            "action": ACTION_WIDEN_CANDIDATE_GENERATION,
+            "feedback_action_functional_path": policy.get(
+                "feedback_action_functional_path"
+            ),
+            "widened_output_path": handoff.get("widened_output_path"),
+            "inverse_scorer_max_units": handoff.get("inverse_scorer_max_units"),
+            "allowed_use": "paused_local_inverse_candidate_generation_only",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+            "dispatch_blockers": [
+                "paused_candidate_generation_queue_requires_explicit_operator_or_autopilot_resume",
+                "generated_action_functional_is_planning_only",
+                "exact_auth_eval_required_before_score_claim",
+                "lane_dispatch_claim_required_before_paid_or_remote_eval",
+            ],
+        }
+    )
+    queue = normalize_queue_definition(
+        {
+            "schema": QUEUE_SCHEMA,
+            "queue_id": effective_queue_id,
+            "controls": {
+                "mode": "paused",
+                "local_first": True,
+                "max_concurrency": {"local_cpu": 1},
+            },
+            "experiments": [
+                {
+                    "id": QUEUE_FEEDBACK_CANDIDATE_WIDENING_EXPERIMENT_ID,
+                    "lane_id": lane,
+                    "priority": 85,
+                    "status": "queued",
+                    "tags": [
+                        "byte-shaving",
+                        "inverse-steganalysis",
+                        "queue-feedback",
+                        "candidate-widening",
+                        "paused-followup",
+                        "no-score-authority",
+                    ],
+                    "metadata": metadata,
+                    "steps": [
+                        {
+                            "id": QUEUE_FEEDBACK_CANDIDATE_WIDENING_STEP_ID,
+                            "kind": "command",
+                            "command": command_items,
+                            "requires": [],
+                            "resources": {"kind": "local_cpu"},
+                            "timeout_seconds": 0,
+                            "telemetry": {
+                                "artifact_paths": [
+                                    str(item) for item in output_artifacts if item
+                                ],
+                                "input_artifact_paths": [
+                                    str(item) for item in input_artifacts if item
+                                ],
+                                "pullback_artifact_paths": [
+                                    str(item) for item in output_artifacts if item
+                                ],
+                                "recursive": False,
+                            },
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    return queue, []
+
+
 def build_queue_feedback_replan_policy(
     run_summary: Mapping[str, Any],
     *,
@@ -1896,6 +2229,27 @@ def build_queue_feedback_replan_policy(
         decision = ACTION_RUN_NEXT_ITERATION
         stop_reason = None
 
+    candidate_widening_handoff = (
+        _candidate_widening_command_template(
+            run_summary,
+            feedback_action_functional_summary=feedback_action_functional_summary,
+        )
+        if decision == ACTION_WIDEN_CANDIDATE_GENERATION
+        else _false_authority_payload(
+            {
+                "command_template": None,
+                "blockers": [],
+                "widened_output_path": None,
+                "widened_md_path": None,
+                "inverse_scorer_max_units": None,
+                "allowed_use": "local_candidate_generation_queue_only",
+                "forbidden_use": (
+                    "score_claim_or_promotion_or_rank_kill_or_dispatch_authority"
+                ),
+            }
+        )
+    )
+
     recommended_actions: list[dict[str, Any]] = []
     if exact_handoff_count:
         recommended_actions.append(
@@ -1977,6 +2331,12 @@ def build_queue_feedback_replan_policy(
                     "refresh_source_inverse_scorer_surface",
                     "switch_to_compiled_receiver_transform_materializers",
                 ],
+                "candidate_generation_command_template": (
+                    candidate_widening_handoff.get("command_template")
+                ),
+                "candidate_generation_blockers": candidate_widening_handoff.get(
+                    "blockers"
+                ),
                 "local_only": True,
                 "score_claim": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -2031,6 +2391,13 @@ def build_queue_feedback_replan_policy(
             ),
             "feedback_action_functional_path": followup_action_functional_path,
             "feedback_action_functional_summary": feedback_action_functional_summary,
+            "candidate_widening_handoff": candidate_widening_handoff,
+            "candidate_generation_command_template": (
+                candidate_widening_handoff.get("command_template")
+            ),
+            "candidate_generation_queue_blockers": candidate_widening_handoff.get(
+                "blockers"
+            ),
             "feedback_followup_queue_validation": queue_validation,
             "iteration_index": iteration_index,
             "next_iteration_index": next_iteration_index,
@@ -2096,6 +2463,9 @@ __all__ = [
     "ACTION_STOP_MAX_ITERATIONS",
     "ACTION_WIDEN_CANDIDATE_GENERATION",
     "MATERIALIZER_CAMPAIGN_RUN_SCHEMA",
+    "QUEUE_FEEDBACK_CANDIDATE_WIDENING_EXPERIMENT_ID",
+    "QUEUE_FEEDBACK_CANDIDATE_WIDENING_METADATA_SCHEMA",
+    "QUEUE_FEEDBACK_CANDIDATE_WIDENING_STEP_ID",
     "QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL",
     "QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA",
     "QUEUE_FEEDBACK_REPLAN_CONTINUATION_EXPERIMENT_ID",
@@ -2108,6 +2478,7 @@ __all__ = [
     "QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA",
     "QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA",
     "QUEUE_OBSERVATION_RECOVERY_QUEUE_VALIDATION_SCHEMA",
+    "build_queue_feedback_candidate_widening_queue",
     "build_queue_feedback_replan_continuation_queue",
     "build_queue_feedback_replan_policy",
     "build_queue_observation_recovery_plan",
