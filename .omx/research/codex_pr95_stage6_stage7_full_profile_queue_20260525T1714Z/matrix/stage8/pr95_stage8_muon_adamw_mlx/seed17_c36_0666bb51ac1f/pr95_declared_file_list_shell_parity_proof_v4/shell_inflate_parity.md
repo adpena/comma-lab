@@ -1,0 +1,37 @@
+# Shell Inflate Parity Proof
+
+- Generated UTC: 2026-05-25T18:23:59Z
+- File list entries: 1
+- File list SHA-256: `7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8`
+- Full-frame file-list source: `pr95_stage8_single_pair_archive_member_0_bin`
+- Expected full-frame file-list SHA-256: `7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8`
+- Expected full-frame entry count: 1
+- Full-frame file-list SHA-256 match: true
+- Full-frame entry count match: true
+- Parity scope kind: `declared_file_list`
+- Contest full-sample claim: false
+- Contest full-sample parity claim: false
+- Full-frame file-list claim: true
+- Full-frame inflate parity claim: true
+- Output count: 1
+- Single output raw basename: `0.raw`
+- Python bin: `/Users/adpena/Projects/pact/.venv/bin/python`
+- Left archive: `.omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_public_archive.zip`
+- Right archive: `.omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_packaged_submission/archive.zip`
+- Left archive SHA-256: `6414614bd8f1ecbeb4c12b6f92ad670ea5a138941053ca7fa7d543c8e400e5f2`
+- Right archive SHA-256: `6414614bd8f1ecbeb4c12b6f92ad670ea5a138941053ca7fa7d543c8e400e5f2`
+- Left output bytes: 6104016
+- Right output bytes: 6104016
+- Left output manifest SHA-256: `cb5801aa1ede6b9677f1e07ae68c4cfa9e593d7ee338f695ffb68ae02b2f3ef6`
+- Right output manifest SHA-256: `cb5801aa1ede6b9677f1e07ae68c4cfa9e593d7ee338f695ffb68ae02b2f3ef6`
+- Output bytes match: true
+- Output SHA-256 match: true
+- Output manifest SHA-256 match: true
+- cmp equal: true
+- Blockers: none
+- Scratch retained: false
+- Score claim: false
+- Promotion eligible: false
+- Rank/kill eligible: false
+- Ready for exact eval dispatch: false
+- Promotable: false

@@ -1,0 +1,83 @@
+{
+  "blockers": [],
+  "cmp_equal": true,
+  "contest_full_sample_claim": false,
+  "contest_full_sample_parity_claim": false,
+  "expected_full_frame_entry_count": 1,
+  "expected_full_frame_file_list_sha256": "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8",
+  "file_list_entries": [
+    "0.mkv"
+  ],
+  "file_list_entry": "0.mkv",
+  "file_list_entry_count": 1,
+  "file_list_sha256": "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8",
+  "full_frame_entry_count_match": true,
+  "full_frame_file_list_claim": true,
+  "full_frame_file_list_sha256_match": true,
+  "full_frame_file_list_source": "pr95_stage8_single_pair_archive_member_0_bin",
+  "full_frame_inflate_output_parity_claim": true,
+  "generated_at_utc": "2026-05-25T18:23:59Z",
+  "left": {
+    "archive": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_public_archive.zip",
+    "archive_bytes": 230345,
+    "archive_sha256": "6414614bd8f1ecbeb4c12b6f92ad670ea5a138941053ca7fa7d543c8e400e5f2",
+    "inflate_seconds": 0.5792892500758171,
+    "inflate_sh": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+    "inflate_sh_sha256": "0cb9c3df78ad870cadd2ac6d46007b6c1aeb6a61c76b7800ae74a00addafb885",
+    "label": "left",
+    "output_count": 1,
+    "output_manifest_sha256": "cb5801aa1ede6b9677f1e07ae68c4cfa9e593d7ee338f695ffb68ae02b2f3ef6",
+    "output_raw_bytes": 6104016,
+    "output_raw_sha256": "db7e778f4a846a0417e630031b6bfeb9852d78642f1a26d9a52ffde17d4279ee",
+    "outputs": [
+      {
+        "file_list_entry": "0.mkv",
+        "output_basename": "0.raw",
+        "output_raw_bytes": 6104016,
+        "output_raw_sha256": "db7e778f4a846a0417e630031b6bfeb9852d78642f1a26d9a52ffde17d4279ee"
+      }
+    ],
+    "submission_dir": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon",
+    "submission_tree_file_count": 24,
+    "submission_tree_sha256": "013bad48a16bcbfbea57460a10db1d0cf5d1fc1335933a51767c3c22d09ffa88"
+  },
+  "output_basename": "0.raw",
+  "output_bytes_match": true,
+  "output_count": 1,
+  "output_manifest_sha256_match": true,
+  "output_sha256_match": true,
+  "parity_scope_kind": "declared_file_list",
+  "promotable": false,
+  "promotion_eligible": false,
+  "python_bin": "/Users/adpena/Projects/pact/.venv/bin/python",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "right": {
+    "archive": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_packaged_submission/archive.zip",
+    "archive_bytes": 230345,
+    "archive_sha256": "6414614bd8f1ecbeb4c12b6f92ad670ea5a138941053ca7fa7d543c8e400e5f2",
+    "inflate_seconds": 0.5868447920074686,
+    "inflate_sh": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_packaged_submission/inflate.sh",
+    "inflate_sh_sha256": "2b7a299ccc07e89eae45b27f1b95c7eb3e8466161f04f7d776d615c83059da77",
+    "label": "right",
+    "output_count": 1,
+    "output_manifest_sha256": "cb5801aa1ede6b9677f1e07ae68c4cfa9e593d7ee338f695ffb68ae02b2f3ef6",
+    "output_raw_bytes": 6104016,
+    "output_raw_sha256": "db7e778f4a846a0417e630031b6bfeb9852d78642f1a26d9a52ffde17d4279ee",
+    "outputs": [
+      {
+        "file_list_entry": "0.mkv",
+        "output_basename": "0.raw",
+        "output_raw_bytes": 6104016,
+        "output_raw_sha256": "db7e778f4a846a0417e630031b6bfeb9852d78642f1a26d9a52ffde17d4279ee"
+      }
+    ],
+    "submission_dir": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_packaged_submission",
+    "submission_tree_file_count": 9,
+    "submission_tree_sha256": "878791f3a50961cdcd3a3aa2e32fae7475262571e2af194cb5bb5a7fda88a798"
+  },
+  "schema": "shell_inflate_parity_proof_v2",
+  "score_claim": false,
+  "scratch_dir": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_declared_file_list_shell_parity_proof_v4/scratch",
+  "scratch_retained": false
+}

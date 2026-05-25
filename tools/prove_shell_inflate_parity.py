@@ -24,6 +24,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+SHELL_PARITY_SCOPE_DECLARED_FILE_LIST = "declared_file_list"
+SHELL_PARITY_SCOPE_CONTEST_FULL_SAMPLE = "contest_full_sample"
+
 
 @dataclass(frozen=True)
 class ShellInflateOutput:
@@ -64,6 +67,9 @@ class ShellInflateParityProof:
     expected_full_frame_entry_count: int | None
     full_frame_file_list_sha256_match: bool | None
     full_frame_entry_count_match: bool | None
+    parity_scope_kind: str
+    contest_full_sample_claim: bool
+    contest_full_sample_parity_claim: bool
     output_count: int
     file_list_entry: str | None
     output_basename: str | None
@@ -81,7 +87,9 @@ class ShellInflateParityProof:
     scratch_dir: str
     score_claim: bool = False
     promotion_eligible: bool = False
+    rank_or_kill_eligible: bool = False
     ready_for_exact_eval_dispatch: bool = False
+    promotable: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -230,9 +238,26 @@ def _run_inflate(
         raise FileNotFoundError(f"missing inflate.sh: {inflate_sh}")
     env = os.environ.copy()
     env["PACT_PYTHON_BIN"] = python_bin
+    python_path = Path(python_bin)
+    if python_path.is_absolute() or python_path.parent != Path("."):
+        if not python_path.is_absolute():
+            python_path = Path.cwd() / python_path
+        # Preserve venv shims/symlinks: resolving the executable can jump out of
+        # the environment that owns the installed packages.
+        python_dir = str(python_path.parent.resolve())
+        env["PATH"] = f"{python_dir}{os.pathsep}{env.get('PATH', '')}"
     start = time.perf_counter()
+    data_arg = str(data_dir.resolve())
+    output_arg = str(output_dir.resolve())
+    file_list_arg = str(file_list.resolve())
+    inflate_arg = str(inflate_sh.resolve())
+    command = (
+        [inflate_arg, data_arg, output_arg, file_list_arg]
+        if os.access(inflate_sh, os.X_OK)
+        else ["bash", inflate_arg, data_arg, output_arg, file_list_arg]
+    )
     subprocess.run(
-        [str(inflate_sh), str(data_dir), str(output_dir), str(file_list)],
+        command,
         check=True,
         env=env,
     )
@@ -295,6 +320,8 @@ def build_proof(
     expected_full_frame_file_list_sha256: str | None = None,
     expected_full_frame_entry_count: int | None = None,
     full_frame_file_list_source: str | None = None,
+    parity_scope_kind: str = SHELL_PARITY_SCOPE_DECLARED_FILE_LIST,
+    contest_full_sample_claim: bool = False,
 ) -> ShellInflateParityProof:
     _prepare_output_dir(output_dir)
     if not file_list_entries:
@@ -308,6 +335,9 @@ def build_proof(
         expected_full_frame_file_list_sha256
     )
     file_list_source = str(full_frame_file_list_source or "").strip() or None
+    scope_kind = (
+        str(parity_scope_kind or "").strip() or SHELL_PARITY_SCOPE_DECLARED_FILE_LIST
+    )
     file_list_sha256_match = (
         None
         if expected_file_list_sha256 is None
@@ -384,6 +414,11 @@ def build_proof(
                 blockers.append("expected_full_frame_entry_count_mismatch")
             if file_list_source is None:
                 blockers.append("full_frame_file_list_source_missing")
+        if (
+            contest_full_sample_claim
+            and scope_kind != SHELL_PARITY_SCOPE_CONTEST_FULL_SAMPLE
+        ):
+            blockers.append("contest_full_sample_scope_kind_mismatch")
         if not (
             output_bytes_match
             and output_sha256_match
@@ -392,6 +427,11 @@ def build_proof(
         ):
             blockers.append("shell_inflate_output_parity_failed")
         full_frame_claim = full_frame_file_list_claim and not blockers
+        contest_full_sample_parity_claim = (
+            full_frame_claim
+            and contest_full_sample_claim
+            and scope_kind == SHELL_PARITY_SCOPE_CONTEST_FULL_SAMPLE
+        )
         return ShellInflateParityProof(
             schema="shell_inflate_parity_proof_v2",
             generated_at_utc=_utc_iso(),
@@ -403,6 +443,9 @@ def build_proof(
             expected_full_frame_entry_count=expected_full_frame_entry_count,
             full_frame_file_list_sha256_match=file_list_sha256_match,
             full_frame_entry_count_match=entry_count_match,
+            parity_scope_kind=scope_kind,
+            contest_full_sample_claim=contest_full_sample_claim,
+            contest_full_sample_parity_claim=contest_full_sample_parity_claim,
             output_count=len(file_list_entries),
             file_list_entry=file_list_entries[0] if len(file_list_entries) == 1 else None,
             output_basename=output_basename,
@@ -437,6 +480,9 @@ def render_markdown(proof: ShellInflateParityProof) -> str:
             f"- Expected full-frame entry count: {proof.expected_full_frame_entry_count}",
             f"- Full-frame file-list SHA-256 match: {str(proof.full_frame_file_list_sha256_match).lower()}",
             f"- Full-frame entry count match: {str(proof.full_frame_entry_count_match).lower()}",
+            f"- Parity scope kind: `{proof.parity_scope_kind}`",
+            f"- Contest full-sample claim: {str(proof.contest_full_sample_claim).lower()}",
+            f"- Contest full-sample parity claim: {str(proof.contest_full_sample_parity_claim).lower()}",
             f"- Full-frame file-list claim: {str(proof.full_frame_file_list_claim).lower()}",
             f"- Full-frame inflate parity claim: {str(proof.full_frame_inflate_output_parity_claim).lower()}",
             f"- Output count: {proof.output_count}",
@@ -458,6 +504,9 @@ def render_markdown(proof: ShellInflateParityProof) -> str:
             f"- Scratch retained: {str(proof.scratch_retained).lower()}",
             "- Score claim: false",
             "- Promotion eligible: false",
+            "- Rank/kill eligible: false",
+            "- Ready for exact eval dispatch: false",
+            "- Promotable: false",
             "",
         ]
     )
@@ -476,6 +525,19 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--expected-full-frame-file-list-sha256")
     parser.add_argument("--expected-full-frame-entry-count", type=int)
     parser.add_argument("--full-frame-file-list-source")
+    parser.add_argument(
+        "--parity-scope-kind",
+        default=SHELL_PARITY_SCOPE_DECLARED_FILE_LIST,
+        help=(
+            "Semantic scope of the provided file list. Use 'contest_full_sample' "
+            "only when the file list covers the complete contest sample."
+        ),
+    )
+    parser.add_argument(
+        "--contest-full-sample-claim",
+        action="store_true",
+        help="Require the proof to be interpreted as complete contest-sample parity.",
+    )
     parser.add_argument("--python-bin", default=sys.executable)
     parser.add_argument("--keep-scratch", action="store_true")
     parser.add_argument(
@@ -507,6 +569,8 @@ def main(argv: list[str] | None = None) -> int:
         ),
         expected_full_frame_entry_count=args.expected_full_frame_entry_count,
         full_frame_file_list_source=args.full_frame_file_list_source,
+        parity_scope_kind=args.parity_scope_kind,
+        contest_full_sample_claim=args.contest_full_sample_claim,
     )
     payload = json.dumps(proof.to_dict(), indent=2, sort_keys=True) + "\n"
     (args.output_dir / "shell_inflate_parity.json").write_text(payload, encoding="utf-8")

@@ -4665,6 +4665,9 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
         "expected_full_frame_file_list_sha256": "c" * 64,
         "expected_full_frame_entry_count": 2,
         "full_frame_file_list_source": "fixture_full_file_list",
+        "parity_scope_kind": "declared_file_list",
+        "contest_full_sample_claim": False,
+        "contest_full_sample_parity_claim": False,
         "full_frame_inflate_output_parity_claim": True,
         "output_bytes_match": True,
         "output_sha256_match": True,
@@ -4673,6 +4676,8 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
         "blockers": [],
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
     }
     assert harvest_step["requires"] == [MATERIALIZER_DFL1_PARITY_STEP_ID]
     assert harvest_step["timeout_seconds"] == 600

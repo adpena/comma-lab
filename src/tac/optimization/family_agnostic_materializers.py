@@ -43,6 +43,8 @@ PACKET_MEMBER_RECOMPRESS_TARGET_KIND = "packet_member_recompress_v1"
 PACKET_MEMBER_MERGE_TARGET_KIND = "packet_member_merge_v1"
 RENDERER_PAYLOAD_DFL1_TARGET_KIND = "renderer_payload_dfl1_v1"
 SHELL_INFLATE_PARITY_PROOF_SCHEMA = "shell_inflate_parity_proof_v2"
+SHELL_INFLATE_PARITY_SCOPE_DECLARED_FILE_LIST = "declared_file_list"
+SHELL_INFLATE_PARITY_SCOPE_CONTEST_FULL_SAMPLE = "contest_full_sample"
 PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND = "packet_member_zip_header_elide_v1"
 TENSOR_FACTORIZE_TARGET_KIND = "tensor_factorize_v1"
 ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID = "archive_section_entropy_recode_adapter"
@@ -2177,6 +2179,24 @@ def verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
         blockers.append("shell_inflate_parity_full_frame_file_list_claim_missing")
     if proof.get("full_frame_inflate_output_parity_claim") is not True:
         blockers.append("shell_inflate_full_frame_output_parity_claim_missing")
+    parity_scope_kind = _clean_str(proof.get("parity_scope_kind"))
+    if not parity_scope_kind:
+        blockers.append("shell_inflate_parity_scope_kind_missing")
+    contest_full_sample_claim = proof.get("contest_full_sample_claim") is True
+    contest_full_sample_parity_claim = (
+        proof.get("contest_full_sample_parity_claim") is True
+    )
+    if contest_full_sample_claim:
+        if parity_scope_kind != SHELL_INFLATE_PARITY_SCOPE_CONTEST_FULL_SAMPLE:
+            blockers.append(
+                "shell_inflate_parity_contest_full_sample_scope_kind_mismatch"
+            )
+        if not contest_full_sample_parity_claim:
+            blockers.append(
+                "shell_inflate_parity_contest_full_sample_parity_claim_not_true"
+            )
+    elif contest_full_sample_parity_claim:
+        blockers.append("shell_inflate_parity_contest_full_sample_claim_missing")
     full_frame_source = _clean_str(proof.get("full_frame_file_list_source"))
     expected_file_list_sha = _clean_str(
         proof.get("expected_full_frame_file_list_sha256")
@@ -2256,6 +2276,9 @@ def verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
         "file_list_entry_count": file_list_entry_count,
         "file_list_sha256": actual_file_list_sha,
         "full_frame_file_list_source": full_frame_source,
+        "parity_scope_kind": parity_scope_kind,
+        "contest_full_sample_claim": contest_full_sample_claim,
+        "contest_full_sample_parity_claim": contest_full_sample_parity_claim,
         "expected_full_frame_file_list_sha256": expected_file_list_sha,
         "expected_full_frame_entry_count": expected_entry_count,
         "source_archive_sha256": required_source_archive_sha256,

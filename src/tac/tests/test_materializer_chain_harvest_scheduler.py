@@ -897,6 +897,9 @@ def test_shell_inflate_parity_proof_supports_full_frame_multi_entry_scope(
     assert proof["full_frame_file_list_source"] == "fixture_full_file_list"
     assert proof["full_frame_file_list_sha256_match"] is True
     assert proof["full_frame_entry_count_match"] is True
+    assert proof["parity_scope_kind"] == "declared_file_list"
+    assert proof["contest_full_sample_claim"] is False
+    assert proof["contest_full_sample_parity_claim"] is False
     assert proof["output_count"] == 2
     assert proof["output_basename"] is None
     assert proof["output_bytes_match"] is True
@@ -910,7 +913,141 @@ def test_shell_inflate_parity_proof_supports_full_frame_multi_entry_scope(
     ]
     assert not (out_dir / "scratch").exists()
     assert proof["score_claim"] is False
+    assert proof["rank_or_kill_eligible"] is False
     assert proof["ready_for_exact_eval_dispatch"] is False
+    assert proof["promotable"] is False
+
+
+def test_shell_inflate_parity_invokes_nonexecutable_chdir_runtime_with_absolute_paths(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    source = repo / "source.zip"
+    candidate = repo / "candidate.zip"
+    runtime = repo / "runtime"
+    runtime.mkdir()
+    inflate = runtime / "inflate.sh"
+    inflate.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "cd /\n"
+        '"${PACT_PYTHON_BIN:-python}" - "$1" "$2" "$3" <<\'PY\'\n'
+        "import sys\n"
+        "from pathlib import Path\n"
+        "archive_dir = Path(sys.argv[1])\n"
+        "output_dir = Path(sys.argv[2])\n"
+        "file_list = Path(sys.argv[3])\n"
+        "output_dir.mkdir(parents=True, exist_ok=True)\n"
+        "payload = (archive_dir / 'data.bin').read_bytes()\n"
+        "for line in file_list.read_text(encoding='utf-8').splitlines():\n"
+        "    entry = line.strip()\n"
+        "    if entry:\n"
+        "        (output_dir / (Path(entry).stem + '.raw')).write_bytes(payload + entry.encode())\n"
+        "PY\n",
+        encoding="utf-8",
+    )
+    inflate.chmod(0o644)
+    file_list = repo / "file_list.txt"
+    out_dir = repo / "parity"
+    file_list.write_text("0.mkv\n", encoding="utf-8")
+    with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+    with zipfile.ZipFile(candidate, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(SHELL_PARITY_TOOL),
+            "--left-archive",
+            str(source),
+            "--left-submission-dir",
+            str(runtime),
+            "--right-archive",
+            str(candidate),
+            "--right-submission-dir",
+            str(runtime),
+            "--file-list",
+            str(file_list),
+            "--full-frame-file-list-claim",
+            "--expected-full-frame-file-list-sha256",
+            hashlib.sha256(file_list.read_bytes()).hexdigest(),
+            "--expected-full-frame-entry-count",
+            "1",
+            "--full-frame-file-list-source",
+            "nonexec_chdir_fixture",
+            "--output-dir",
+            str(out_dir),
+        ],
+        check=True,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    proof = json.loads((out_dir / "shell_inflate_parity.json").read_text())
+    assert proof["full_frame_inflate_output_parity_claim"] is True
+    assert proof["parity_scope_kind"] == "declared_file_list"
+    assert proof["contest_full_sample_claim"] is False
+    assert proof["contest_full_sample_parity_claim"] is False
+    assert proof["cmp_equal"] is True
+    assert proof["blockers"] == []
+
+
+def test_shell_inflate_parity_refuses_contest_sample_claim_without_contest_scope(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    source = repo / "source.zip"
+    candidate = repo / "candidate.zip"
+    runtime = _write_simple_shell_runtime(repo / "runtime")
+    file_list = repo / "file_list.txt"
+    out_dir = repo / "parity"
+    file_list.write_text("0.mkv\n", encoding="utf-8")
+    with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+    with zipfile.ZipFile(candidate, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SHELL_PARITY_TOOL),
+            "--left-archive",
+            str(source),
+            "--left-submission-dir",
+            str(runtime),
+            "--right-archive",
+            str(candidate),
+            "--right-submission-dir",
+            str(runtime),
+            "--file-list",
+            str(file_list),
+            "--full-frame-file-list-claim",
+            "--contest-full-sample-claim",
+            "--expected-full-frame-file-list-sha256",
+            hashlib.sha256(file_list.read_bytes()).hexdigest(),
+            "--expected-full-frame-entry-count",
+            "1",
+            "--full-frame-file-list-source",
+            "fixture_full_file_list",
+            "--output-dir",
+            str(out_dir),
+        ],
+        check=False,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    assert proc.returncode == 1
+    proof = json.loads((out_dir / "shell_inflate_parity.json").read_text())
+    assert proof["full_frame_inflate_output_parity_claim"] is False
+    assert proof["contest_full_sample_claim"] is True
+    assert proof["contest_full_sample_parity_claim"] is False
+    assert "contest_full_sample_scope_kind_mismatch" in proof["blockers"]
 
 
 def test_shell_inflate_parity_proof_fails_without_full_frame_claim(

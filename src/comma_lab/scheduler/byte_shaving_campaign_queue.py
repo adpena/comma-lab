@@ -3947,6 +3947,24 @@ def _renderer_payload_dfl1_parity_followup_step(
             {
                 "type": "json_equals",
                 "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "parity_scope_kind",
+                "equals": "declared_file_list",
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "contest_full_sample_claim",
+                "equals": False,
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "contest_full_sample_parity_claim",
+                "equals": False,
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
                 "key": "full_frame_inflate_output_parity_claim",
                 "equals": True,
             },
@@ -3990,6 +4008,18 @@ def _renderer_payload_dfl1_parity_followup_step(
                 "type": "json_equals",
                 "path": _repo_rel_no_resolve(proof_path, repo_root),
                 "key": "ready_for_exact_eval_dispatch",
+                "equals": False,
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "rank_or_kill_eligible",
+                "equals": False,
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "promotable",
                 "equals": False,
             },
         ],

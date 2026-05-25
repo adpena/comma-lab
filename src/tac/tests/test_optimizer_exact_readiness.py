@@ -494,6 +494,9 @@ def _write_dfl1_shell_parity_proof(
         "expected_full_frame_entry_count": 1,
         "full_frame_file_list_sha256_match": True,
         "full_frame_entry_count_match": True,
+        "parity_scope_kind": "declared_file_list",
+        "contest_full_sample_claim": False,
+        "contest_full_sample_parity_claim": False,
         "output_count": 1,
         "file_list_entry": "0.mkv",
         "output_basename": "0.raw",
@@ -1462,6 +1465,9 @@ def test_renderer_payload_dfl1_exact_readiness_revalidates_full_frame_parity(
         "expected_full_frame_entry_count": 1,
         "full_frame_file_list_sha256_match": True,
         "full_frame_entry_count_match": True,
+        "parity_scope_kind": "declared_file_list",
+        "contest_full_sample_claim": False,
+        "contest_full_sample_parity_claim": False,
         "output_count": 1,
         "file_list_entry": "0.mkv",
         "output_basename": "0.raw",
@@ -1488,7 +1494,9 @@ def test_renderer_payload_dfl1_exact_readiness_revalidates_full_frame_parity(
         "scratch_retained": False,
         "score_claim": False,
         "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "promotable": False,
     }
     parity_path = _write_json(tmp_path / "dfl1_parity.json", parity_payload)
     parity_sha = hashlib.sha256(parity_path.read_bytes()).hexdigest()
