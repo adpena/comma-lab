@@ -1719,6 +1719,15 @@ def _frontier_feedback_cycle_summary() -> dict[str, object]:
     ]
     latest_cycle = cycle_rows[0] if cycle_rows else None
     latest_refresh = refresh_rows[0] if refresh_rows else None
+    latest_eureka_refresh = next(
+        (
+            row
+            for row in refresh_rows
+            if row.get("eureka_pairset_profile_active")
+            or int(row.get("selected_drop_many_candidate_count") or 0) > 0
+        ),
+        None,
+    )
     if error_rows:
         status = "BLOCKED"
         reason = f"{len(error_rows)} frontier feedback artifact(s) failed safe loading"
@@ -1751,6 +1760,7 @@ def _frontier_feedback_cycle_summary() -> dict[str, object]:
         ),
         "latest_cycle": latest_cycle or {},
         "latest_refresh": latest_refresh or {},
+        "latest_eureka_refresh": latest_eureka_refresh or {},
         "error_count": len(error_rows),
         "next_command": _frontier_feedback_cycle_execute_command(latest_cycle),
         **_false_authority_fields(),
@@ -1800,6 +1810,22 @@ def _format_frontier_feedback_cycle_summary() -> str:
                     f"{'execute' if latest_refresh.get('raw_retention_execute') else 'plan'}"
                     f" {latest_refresh.get('raw_retention_action') or ''}".rstrip()
                 ),
+            ]
+        )
+    latest_eureka_refresh = payload.get("latest_eureka_refresh")
+    if (
+        isinstance(latest_eureka_refresh, dict)
+        and latest_eureka_refresh
+        and latest_eureka_refresh.get("path")
+        != (latest_refresh.get("path") if isinstance(latest_refresh, dict) else None)
+    ):
+        lines.extend(
+            [
+                "latest eureka refresh:",
+                f"  path: {latest_eureka_refresh.get('path')}",
+                f"  queue: {latest_eureka_refresh.get('queue_path') or '-'}",
+                f"  selected_drop_many: {latest_eureka_refresh.get('selected_drop_many_candidate_count', 0)}",
+                f"  eureka_drop_many_counts: {latest_eureka_refresh.get('eureka_drop_many_counts', [])}",
             ]
         )
     lines.append("next command:")
