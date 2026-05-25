@@ -30,6 +30,7 @@ import numpy as np
 
 from tac.local_acceleration.pr95_hnerv_mlx_contract import (
     PR95_EXPORT_FORWARD_PARITY_BLOCKER,
+    PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER,
     PR95_QAT_RESUME_UNPORTED_BLOCKER,
     PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER,
     PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER,
@@ -65,18 +66,23 @@ SMOKE_MANIFEST_SCHEMA = "pr95_hnerv_mlx_timing_smoke_manifest_v1"
 SMOKE_ARCHIVE_SCHEMA = "pr95_hnerv_mlx_byte_closed_smoke_archive_v1"
 PUBLIC_ARCHIVE_PACKET_SCHEMA = "pr95_hnerv_public_archive_packet.v1"
 PUBLIC_ARCHIVE_FORWARD_PARITY_SCHEMA = "pr95_hnerv_public_archive_mlx_forward_parity.v1"
+PR95_MLX_PYTORCH_EXPORT_FORWARD_PARITY_SCHEMA = (
+    "pr95_hnerv_mlx_pytorch_export_forward_parity.v1"
+)
 PR95_ARCHIVE_EXPORT_SCHEMA = "pr95_hnerv_archive_export.v1"
 PR95_ARCHIVE_N_QUANT = 127
 
 PR95_STAGE_MODULES: dict[int, str] = {
     1: "stage1_v328_ce",
     2: "stage2_v331_softplus",
+    3: "stage3_v332_smooth",
     5: "stage5_c1a_l7",
     8: "stage8_muon_finetune",
 }
 PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS: dict[int, str] = {
     1: "pr95_stage1_adamw_baseline_mlx",
     2: "pr95_stage2_adamw_baseline_mlx",
+    3: "pr95_stage3_adamw_baseline_mlx",
     5: "pr95_stage5_adamw_baseline_mlx",
     8: "pr95_stage8_muon_adamw_mlx",
 }
@@ -1103,6 +1109,91 @@ def compare_pr95_public_archive_forward_with_pytorch(
     }
 
 
+def write_pr95_public_archive_pytorch_export_forward_parity(
+    packet: Pr95PublicArchivePacket,
+    torch_decoder_cls: Any,
+    *,
+    output_pt_path: Path,
+    run_id: str,
+    sample_indices: Sequence[int] | None = None,
+    mlx_device: str = "cpu",
+    atol_max: float = 2e-3,
+    atol_mean: float = 1e-4,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Export a decoded PR95 MLX archive checkpoint to ``.pt`` and prove parity.
+
+    This is the queue-owned bridge from native MLX training artifacts to the
+    public PR95 PyTorch runtime.  It proves that the exported checkpoint can be
+    loaded by the source PyTorch decoder and that PyTorch and MLX agree on the
+    selected latent rows.  It is still local implementation evidence only:
+    full-frame inflate parity and exact CPU/CUDA auth eval remain separate gates.
+    """
+
+    from tac.local_acceleration.mlx_to_pytorch_export import (
+        export_mlx_state_dict_to_torch_pt,
+    )
+
+    output_pt_path = Path(output_pt_path)
+    export_manifest = export_mlx_state_dict_to_torch_pt(
+        {
+            name: np.asarray(value, dtype=np.float32)
+            for name, value in packet.state_dict.items()
+        },
+        output_pt_path,
+        substrate_id="pr95_hnerv_mlx",
+        run_id=run_id,
+        overwrite=overwrite,
+    )
+    forward_parity = compare_pr95_public_archive_forward_with_pytorch(
+        packet,
+        torch_decoder_cls,
+        sample_indices=sample_indices,
+        mlx_device=mlx_device,
+        atol_max=atol_max,
+        atol_mean=atol_mean,
+    )
+    parity = forward_parity.get("parity", {})
+    passed = isinstance(parity, Mapping) and parity.get("passed") is True
+    blockers = [
+        "local_mlx_pytorch_export_parity_probe_is_not_contest_auth_eval",
+        PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER,
+        "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+    ]
+    if not passed:
+        blockers.extend(
+            [
+                PR95_EXPORT_FORWARD_PARITY_BLOCKER,
+                "requires_pytorch_export_forward_parity_on_source_checkpoint",
+            ]
+        )
+    return {
+        "schema": PR95_MLX_PYTORCH_EXPORT_FORWARD_PARITY_SCHEMA,
+        "generated_utc": datetime.now(UTC).isoformat(),
+        "lane_id": LANE_ID,
+        "source_pr": 95,
+        "submission": "hnerv_muon",
+        "evidence_grade": "[macOS-MLX research-signal]",
+        "run_id": run_id,
+        "archive_packet": packet.custody_manifest(),
+        "state_dict_pt_export": export_manifest,
+        "pt_path": str(export_manifest["output_pt_path"]),
+        "pt_sha256": str(export_manifest["file_sha256"]),
+        "pt_bytes": int(export_manifest["file_size_bytes"]),
+        "sample_indices": list(forward_parity["sample_indices"]),
+        "sample_count": int(forward_parity["sample_count"]),
+        "mlx_device": mlx_device,
+        "pytorch_export_forward_parity_established": bool(passed),
+        "forward_parity": forward_parity,
+        "exact_readiness_refusal": {
+            "schema": "exact_readiness_refusal.v1",
+            "ready": False,
+            "blockers": blockers,
+        },
+        **FALSE_AUTHORITY,
+    }
+
+
 def partition_pr95_mlx_parameter_names(params: Any) -> dict[str, list[str]]:
     """Return the source-faithful PR95 stage-8 Muon/AdamW parameter split."""
 
@@ -1952,6 +2043,7 @@ __all__ = [
     "PR95_MLX_LOSS_SURFACES",
     "PR95_MLX_LOSS_SURFACE_RGB_MSE",
     "PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE",
+    "PR95_MLX_PYTORCH_EXPORT_FORWARD_PARITY_SCHEMA",
     "PR95_MLX_SOURCE_FAITHFUL_BLOCKERS",
     "PR95_MLX_SOURCE_VIDEO_RGB_BLOCKERS",
     "PR95_MLX_SOURCE_VIDEO_RGB_YUV6_BLOCKERS",
@@ -1988,6 +2080,7 @@ __all__ = [
     "run_pr95_mlx_synthetic_timing_smoke",
     "stage_smoke_config",
     "write_pr95_mlx_byte_closed_smoke_archive",
+    "write_pr95_public_archive_pytorch_export_forward_parity",
     "write_pr95_public_archive_zip",
     "zeropower_via_newtonschulz5_mlx",
 ]

@@ -60,22 +60,32 @@ def test_pr95_stage_default_descriptor_for_stage_2() -> None:
 
 
 def test_pr95_stage_modules_canonical_set_is_supported() -> None:
-    """Canonical supported stages after Stage 2 landing: {1, 2, 5, 8}."""
+    """Canonical supported stages: at minimum the Stage 2 set {1, 2, 5, 8}.
 
-    assert sorted(PR95_STAGE_MODULES) == [1, 2, 5, 8]
-    assert sorted(PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS) == [1, 2, 5, 8]
+    Asserted as superset-of so future Stage 3/4/6/7 additions do not
+    require mutating this Stage 2 test per Catalog #110/#113
+    HISTORICAL_PROVENANCE APPEND-ONLY discipline (Stage 3 landed in
+    `.omx/research/pr95_mlx_stage_3_v332_smooth_curriculum_build_landed_20260525.md`
+    growing the canonical set to {1, 2, 3, 5, 8}).
+    """
+
+    assert {1, 2, 5, 8}.issubset(set(PR95_STAGE_MODULES))
+    assert {1, 2, 5, 8}.issubset(set(PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS))
 
 
 def test_unsupported_stage_raises_value_error_with_canonical_supported_list() -> None:
     """Unsupported stage raises ValueError mentioning canonical supported set.
 
     Soft-error pattern uses `sorted(PR95_STAGE_MODULES)` dynamically so
-    future stage 3/4/6/7 additions do not require updating hardcoded strings.
+    future stage additions do not require updating hardcoded strings. Per
+    Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY: Stage 4/6/7 are
+    not yet in PR95_STAGE_MODULES; sampling those at random surfaces the
+    canonical supported-set message.
     """
 
-    with pytest.raises(ValueError, match=r"\[1, 2, 5, 8\]"):
-        stage_smoke_config(3)
-    with pytest.raises(ValueError, match=r"\[1, 2, 5, 8\]"):
+    with pytest.raises(ValueError, match=r"supported PR95 MLX timing stages"):
+        stage_smoke_config(4)
+    with pytest.raises(ValueError, match=r"supported PR95 MLX timing stages"):
         pr95_default_optimizer_descriptor_id(7)
 
 

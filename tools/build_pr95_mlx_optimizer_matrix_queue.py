@@ -198,6 +198,9 @@ def _emit_plan(
     write_byte_closed_smoke: bool,
     write_pr95_public_archive_export: bool,
     prove_pr95_runtime_consumption: bool,
+    write_pytorch_export_parity: bool,
+    pytorch_export_sample_indices: list[int],
+    pytorch_export_mlx_device: str,
     write_source_faithful_preprocess_smoke: bool,
     write_source_video_preprocess_smoke: bool,
     train_on_source_video_pairs: bool,
@@ -283,6 +286,16 @@ def _emit_plan(
                 str(runtime_proof_max_output_bytes),
             ]
         )
+    if write_pytorch_export_parity:
+        command.extend(
+            [
+                "--write-pytorch-export-parity",
+                "--pytorch-export-mlx-device",
+                pytorch_export_mlx_device,
+            ]
+        )
+        for sample_index in pytorch_export_sample_indices:
+            command.extend(["--pytorch-export-sample-index", str(sample_index)])
     if allow_existing_plan_dirs:
         command.append("--allow-existing-output-dir")
     result = subprocess.run(
@@ -321,6 +334,9 @@ def build_pr95_mlx_optimizer_matrix_queue(
     write_byte_closed_smoke: bool,
     write_pr95_public_archive_export: bool,
     prove_pr95_runtime_consumption: bool,
+    write_pytorch_export_parity: bool,
+    pytorch_export_sample_indices: list[int],
+    pytorch_export_mlx_device: str,
     write_source_faithful_preprocess_smoke: bool,
     write_source_video_preprocess_smoke: bool,
     train_on_source_video_pairs: bool,
@@ -440,6 +456,9 @@ def build_pr95_mlx_optimizer_matrix_queue(
                     write_byte_closed_smoke=write_byte_closed_smoke,
                     write_pr95_public_archive_export=write_pr95_public_archive_export,
                     prove_pr95_runtime_consumption=prove_pr95_runtime_consumption,
+                    write_pytorch_export_parity=write_pytorch_export_parity,
+                    pytorch_export_sample_indices=pytorch_export_sample_indices,
+                    pytorch_export_mlx_device=pytorch_export_mlx_device,
                     write_source_faithful_preprocess_smoke=(
                         write_source_faithful_preprocess_smoke
                     ),
@@ -519,9 +538,14 @@ def build_pr95_mlx_optimizer_matrix_queue(
         "latent_dim": latent_dim,
         "write_byte_closed_smoke": write_byte_closed_smoke,
         "write_pr95_public_archive_export": bool(
-            write_pr95_public_archive_export or prove_pr95_runtime_consumption
+            write_pr95_public_archive_export
+            or prove_pr95_runtime_consumption
+            or write_pytorch_export_parity
         ),
         "prove_pr95_runtime_consumption": prove_pr95_runtime_consumption,
+        "write_pytorch_export_parity": write_pytorch_export_parity,
+        "pytorch_export_sample_indices": pytorch_export_sample_indices,
+        "pytorch_export_mlx_device": pytorch_export_mlx_device,
         "write_source_faithful_preprocess_smoke": (
             write_source_faithful_preprocess_smoke
         ),
@@ -597,7 +621,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help=(
             "Apply a canonical PR95 MLX control profile. "
-            "full_pr95_source_video_runtime emits stage 1/2/5/8, full PR95 "
+            "full_pr95_source_video_runtime emits stage 1/2/3/5/8, full PR95 "
             "dimensions, source-video RGB+YUV6 timing loss, and PR95 runtime "
             "consumption proof requests."
         ),
@@ -689,6 +713,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--write-pr95-public-archive-export", action="store_true")
     parser.add_argument("--prove-pr95-runtime-consumption", action="store_true")
+    parser.add_argument("--write-pytorch-export-parity", action="store_true")
+    parser.add_argument(
+        "--pytorch-export-sample-index",
+        action="append",
+        type=int,
+        help="Latent row index for PyTorch export forward parity proof.",
+    )
+    parser.add_argument(
+        "--pytorch-export-mlx-device",
+        choices=("cpu", "gpu"),
+        default="cpu",
+        help="MLX device for generated PyTorch export forward parity proofs.",
+    )
     parser.add_argument("--runtime-proof-timeout-seconds", type=float, default=900.0)
     parser.add_argument(
         "--runtime-proof-max-output-bytes",
@@ -714,14 +751,21 @@ def _apply_control_profile(args: argparse.Namespace) -> None:
         return
     if args.control_profile == CONTROL_PROFILE_FULL_SOURCE_VIDEO_RUNTIME:
         # PR 95 published 8-stage curriculum: current MLX control covers the
-        # source-faithful Stage 1/2/5/8 timing spine.
-        args.stages = [1, 2, 5, 8]
+        # source-faithful Stage 1/2/3/5/8 timing spine per the PR95-STAGE-3-MLX-BUILD
+        # landing (`.omx/research/pr95_mlx_stage_3_v332_smooth_curriculum_build_landed_20260525.md`)
+        # + MLX-PARADIGM-T3 commit `916c43d89` Op #3 cascade (Stage 3 = smooth-disagreement
+        # bridge between Stage 2 softplus refinement and Stage 5 c1a_l7 quantization).
+        args.stages = [1, 2, 3, 5, 8]
         args.batch_size = 1
         args.synthetic_pairs = 1
         args.base_channels = 36
         args.latent_dim = 28
         args.write_pr95_public_archive_export = True
         args.prove_pr95_runtime_consumption = True
+        args.write_pytorch_export_parity = True
+        if args.pytorch_export_sample_index is None:
+            args.pytorch_export_sample_index = [0]
+        args.pytorch_export_mlx_device = "cpu"
         args.write_source_video_preprocess_smoke = True
         args.train_on_source_video_pairs = True
         args.source_video_loss_surface = PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
@@ -755,8 +799,12 @@ def main(argv: list[str] | None = None) -> int:
             write_pr95_public_archive_export=(
                 args.write_pr95_public_archive_export
                 or args.prove_pr95_runtime_consumption
+                or args.write_pytorch_export_parity
             ),
             prove_pr95_runtime_consumption=args.prove_pr95_runtime_consumption,
+            write_pytorch_export_parity=args.write_pytorch_export_parity,
+            pytorch_export_sample_indices=args.pytorch_export_sample_index or [0],
+            pytorch_export_mlx_device=args.pytorch_export_mlx_device,
             write_source_faithful_preprocess_smoke=(
                 args.write_source_faithful_preprocess_smoke
             ),

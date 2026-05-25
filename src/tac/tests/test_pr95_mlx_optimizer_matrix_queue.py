@@ -269,11 +269,15 @@ def test_pr95_mlx_optimizer_matrix_full_source_video_control_profile(
     queue = json.loads(queue_path.read_text(encoding="utf-8"))
 
     assert manifest["control_profile"] == "full_pr95_source_video_runtime"
-    assert manifest["stage_indices"] == [1, 2, 5, 8]
-    assert manifest["plan_count"] == 4
+    # Stage 3 added per PR95-STAGE-3-MLX-BUILD landing
+    # `.omx/research/pr95_mlx_stage_3_v332_smooth_curriculum_build_landed_20260525.md`;
+    # canonical Stage 1+2+3+5+8 spine.
+    assert manifest["stage_indices"] == [1, 2, 3, 5, 8]
+    assert manifest["plan_count"] == 5
     assert {row["optimizer_descriptor_id"] for row in manifest["plans"]} == {
         "pr95_stage1_adamw_baseline_mlx",
         "pr95_stage2_adamw_baseline_mlx",
+        "pr95_stage3_adamw_baseline_mlx",
         "pr95_stage5_adamw_baseline_mlx",
         "pr95_stage8_muon_adamw_mlx",
     }
@@ -286,7 +290,8 @@ def test_pr95_mlx_optimizer_matrix_full_source_video_control_profile(
     assert manifest["source_video_output_hw"] == "384,512"
     assert manifest["prove_pr95_runtime_consumption"] is True
     assert queue["controls"]["max_concurrency"]["local_mlx"] == 1
-    assert len(queue["experiments"]) == 4
+    # Stage 3 added per PR95-STAGE-3-MLX-BUILD landing; 5 experiments emitted.
+    assert len(queue["experiments"]) == 5
     assert all(
         "--train-on-source-video-pairs" in experiment["steps"][0]["command"]
         for experiment in queue["experiments"]
