@@ -891,6 +891,119 @@ def test_observer_surfaces_succeeded_single_family_materializer_manifests(
         assert artifact["postcondition_passed"] is True
 
 
+def test_observer_surfaces_future_materializer_with_serialized_archive_delta(
+    tmp_path: Path,
+) -> None:
+    manifest = tmp_path / "future_materializer.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "future_materializer_candidate.v1",
+                "target_kind": "future_byte_packer_v1",
+                "materializer_id": "future_byte_packer_adapter",
+                "receiver_contract_kind": "family_agnostic_future_byte_packer",
+                "receiver_contract_satisfied": True,
+                "source_archive": {"bytes": 1024, "sha256": "a" * 64},
+                "candidate_archive": {"bytes": 1000, "sha256": "b" * 64},
+                "serialized_archive_delta": {
+                    "schema": "serialized_archive_delta_contract.v1",
+                    "source_archive_bytes": 1024,
+                    "candidate_archive_bytes": 1000,
+                    "archive_delta_bytes": -24,
+                    "realized_saved_bytes": 24,
+                    "savings_realized": True,
+                    "status": "realized_saving",
+                    "score_claim": False,
+                },
+                "score_claim": False,
+                "score_claim_valid": False,
+                "score_claim_eligible": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "ready_for_exact_eval_dispatch": False,
+                "field_selection_ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+                "exact_cuda_auth_eval": False,
+                "contest_cuda_auth_eval": False,
+                "score_affecting_payload_changed": False,
+                "charged_bits_changed": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "observer_test",
+        "controls": {"mode": "running", "max_concurrency": {"local_cpu": 1}},
+        "experiments": [
+            {
+                "id": "future_materializer_experiment",
+                "status": "queued",
+                "priority": 1,
+                "metadata": {
+                    "candidate_ids": ["future_candidate"],
+                    "source_unit_ids": ["future_source"],
+                },
+                "steps": [
+                    {
+                        "id": "materialize",
+                        "kind": "command",
+                        "command": ["python", "tools/run_family_agnostic_materializer.py"],
+                        "resources": {"kind": "local_cpu"},
+                        "postconditions": [
+                            {
+                                "type": "json_false_authority",
+                                "path": manifest.as_posix(),
+                                "required_false": [
+                                    "score_claim",
+                                    "promotion_eligible",
+                                    "rank_or_kill_eligible",
+                                    "ready_for_exact_eval_dispatch",
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-25T06:00:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'future_materializer_experiment'
+              AND step_id = 'materialize'
+            """,
+            (json.dumps({"command": ["python", "tools/run_family_agnostic_materializer.py"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+    )
+
+    assert len(observation["succeeded_artifact_steps"]) == 1
+    artifact = observation["succeeded_artifact_steps"][0]["expected_artifacts"][0]
+    assert artifact["json_schema"] == "future_materializer_candidate.v1"
+    assert artifact["serialized_archive_delta_schema"] == "serialized_archive_delta_contract.v1"
+    assert artifact["materializer_delta_source"] == "serialized_archive_delta"
+    assert artifact["serialized_archive_delta_realized_saved_bytes"] == 24
+    assert artifact["score_claim"] is False
+
+
 def test_observer_health_marks_missing_state_fail_closed(tmp_path: Path) -> None:
     artifact = tmp_path / "artifact.json"
     state = tmp_path / "missing.sqlite"

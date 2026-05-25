@@ -18,6 +18,7 @@ from tac.optimization.dynamic_sparse_gate_oracle import (
 from tac.optimization.inverse_steganalysis_operation_set_compiler import (
     packet_ir_operation_set_from_compiler_hint,
 )
+from tac.optimization.materializer_feedback import materializer_observation_feedback_rows
 from tools import build_dynamic_sparse_gate_compiler_hint as gate_cli
 
 
@@ -273,6 +274,69 @@ def test_materializer_feedback_builds_channel_gate_hint() -> None:
     assert feedback["saved_bytes"] == 48
     assert feedback["source_path"] == "candidate_manifest.json"
     assert selected["score_claim"] is False
+
+
+def test_materializer_feedback_accepts_serialized_archive_delta_contract() -> None:
+    rows = materializer_observation_feedback_rows(
+        {
+            "schema": "future_materializer_candidate.v1",
+            "target_kind": "future_byte_packer_v1",
+            "materializer_id": "future_byte_packer_adapter",
+            "receiver_contract_kind": "family_agnostic_future_byte_packer",
+            "candidate_id": "future_candidate",
+            "selected_member_name": "future/payload.bin",
+            "source_archive": {"bytes": 2048, "sha256": "a" * 64},
+            "candidate_archive": {"bytes": 2000, "sha256": "b" * 64},
+            "serialized_archive_delta": {
+                "schema": "serialized_archive_delta_contract.v1",
+                "source_archive_bytes": 2048,
+                "candidate_archive_bytes": 2000,
+                "archive_delta_bytes": -48,
+                "realized_saved_bytes": 48,
+                "savings_realized": True,
+                "status": "realized_saving",
+                "score_claim": False,
+            },
+            "receiver_contract_satisfied": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+        },
+        source_path="future_manifest.json",
+    )
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["target_kind"] == "future_byte_packer_v1"
+    assert row["selected_materialization_key"] == "serialized_archive_delta"
+    assert row["serialized_archive_delta"]["schema"] == "serialized_archive_delta_contract.v1"
+    assert row["saved_bytes"] == 48
+    assert row["rate_positive"] is True
+    assert row["source_unit_ids"] == ["future/payload.bin"]
+    assert row["score_claim"] is False
+
+
+def test_materializer_feedback_rejects_truthy_serialized_archive_delta_authority() -> None:
+    with pytest.raises(ValueError, match="score_claim"):
+        materializer_observation_feedback_rows(
+            {
+                "schema": "future_materializer_candidate.v1",
+                "target_kind": "future_byte_packer_v1",
+                "materializer_id": "future_byte_packer_adapter",
+                "receiver_contract_kind": "family_agnostic_future_byte_packer",
+                "source_archive": {"bytes": 2048, "sha256": "a" * 64},
+                "candidate_archive": {"bytes": 2000, "sha256": "b" * 64},
+                "serialized_archive_delta": {
+                    "schema": "serialized_archive_delta_contract.v1",
+                    "realized_saved_bytes": 48,
+                    "savings_realized": True,
+                    "status": "realized_saving",
+                    "score_claim": True,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+            },
+            source_path="future_manifest.json",
+        )
 
 
 def test_dynamic_sparse_gate_compiler_hint_cli_writes_channel_hint(tmp_path: Path) -> None:

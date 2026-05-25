@@ -10,6 +10,7 @@ from tac.optimization.proxy_candidate_contract import (
     PROXY_FALSE_AUTHORITY_FIELDS,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.serialized_archive_economics import SERIALIZED_ARCHIVE_DELTA_SCHEMA
 from tac.score_composition import CANONICAL_RATE_DENOM_BYTES, CANONICAL_RATE_MULTIPLIER
 
 FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA = (
@@ -35,6 +36,7 @@ MATERIALIZER_DELTA_KEYS: tuple[str, ...] = (
     "selected_elision",
     "factorization",
 )
+SERIALIZED_ARCHIVE_DELTA_KEY = "serialized_archive_delta"
 
 
 def _slug(value: Any, *, fallback: str = "materializer_feedback") -> str:
@@ -105,9 +107,34 @@ def selected_materializer_delta(
     return "", {}
 
 
+def _serialized_archive_delta(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    delta = payload.get(SERIALIZED_ARCHIVE_DELTA_KEY)
+    if not isinstance(delta, Mapping):
+        return {}
+    require_no_truthy_authority_fields(
+        delta,
+        context="family_agnostic_materializer_feedback.serialized_archive_delta",
+    )
+    schema = delta.get("schema")
+    if schema not in (None, SERIALIZED_ARCHIVE_DELTA_SCHEMA):
+        return {}
+    return delta
+
+
+def _archive_delta_status(saved_bytes: int) -> str:
+    if saved_bytes > 0:
+        return "realized_saving"
+    if saved_bytes < 0:
+        return "realized_cost"
+    return "no_realized_delta"
+
+
 def materializer_archive_delta(payload: Mapping[str, Any]) -> dict[str, Any] | None:
     selected_key, selected = selected_materializer_delta(payload)
     if not selected_key:
+        selected_key = SERIALIZED_ARCHIVE_DELTA_KEY
+        selected = _serialized_archive_delta(payload)
+    if not selected:
         return None
     source_archive = (
         payload.get("source_archive")
@@ -125,25 +152,33 @@ def materializer_archive_delta(payload: Mapping[str, Any]) -> dict[str, Any] | N
     candidate_bytes = optional_int(
         selected.get("candidate_archive_bytes") or candidate_archive.get("bytes")
     )
-    saved_bytes = optional_int(selected.get("saved_bytes"))
+    saved_bytes = optional_int(
+        selected.get("saved_bytes") if selected_key != SERIALIZED_ARCHIVE_DELTA_KEY else None
+    )
+    if saved_bytes is None:
+        saved_bytes = optional_int(selected.get("realized_saved_bytes"))
+    if saved_bytes is None:
+        archive_delta_bytes = optional_int(selected.get("archive_delta_bytes"))
+        if archive_delta_bytes is not None:
+            saved_bytes = -archive_delta_bytes
     if saved_bytes is None and source_bytes is not None and candidate_bytes is not None:
         saved_bytes = source_bytes - candidate_bytes
     if saved_bytes is None and source_bytes is None and candidate_bytes is None:
         return None
     if saved_bytes is None:
         saved_bytes = 0
-    if saved_bytes > 0:
-        status = "realized_saving"
-    elif saved_bytes < 0:
-        status = "realized_cost"
-    else:
-        status = "no_realized_delta"
+    status = str(selected.get("status") or _archive_delta_status(saved_bytes))
+    savings_realized = (
+        selected.get("savings_realized")
+        if isinstance(selected.get("savings_realized"), bool)
+        else saved_bytes > 0
+    )
     return {
         "selected_materialization_key": selected_key or None,
         "realized_saved_bytes": saved_bytes,
         "source_archive_bytes": source_bytes,
         "candidate_archive_bytes": candidate_bytes,
-        "savings_realized": saved_bytes > 0,
+        "savings_realized": savings_realized,
         "status": status,
     }
 
@@ -171,8 +206,11 @@ def materializer_observation_from_manifest(
     if not target_kind:
         return None
 
-    selected_key, selected = selected_materializer_delta(result)
     saved_bytes = int(archive_delta.get("realized_saved_bytes") or 0)
+    selected_key, selected = selected_materializer_delta(result)
+    if not selected_key:
+        selected_key = str(archive_delta.get("selected_materialization_key") or "")
+        selected = _as_mapping(result.get(selected_key))
     readiness_blockers = _string_sequence(result.get("readiness_blockers"))
     source_archive = _as_mapping(result.get("source_archive"))
     candidate_archive = _as_mapping(result.get("candidate_archive"))
@@ -187,8 +225,15 @@ def materializer_observation_from_manifest(
     candidate_id = str(result.get("candidate_id") or observation_id).strip()
     receiver_contract_satisfied = result.get("receiver_contract_satisfied") is True
     inflate_parity_satisfied = result.get("inflate_parity_satisfied") is True
-    rate_positive = saved_bytes > 0 and "candidate_not_rate_positive" not in readiness_blockers
-    observed_rate_gain = float(rate_score_per_byte) * float(saved_bytes) if rate_positive else 0.0
+    savings_realized = bool(archive_delta.get("savings_realized"))
+    rate_positive = (
+        savings_realized
+        and saved_bytes > 0
+        and "candidate_not_rate_positive" not in readiness_blockers
+    )
+    observed_rate_gain = (
+        float(rate_score_per_byte) * float(saved_bytes) if rate_positive else 0.0
+    )
     observed_score_gain = (
         observed_rate_gain
         if receiver_contract_satisfied or inflate_parity_satisfied
@@ -238,7 +283,7 @@ def materializer_observation_from_manifest(
         "observed_rate_gain": observed_rate_gain,
         "observed_score_gain": observed_score_gain,
         "rate_positive": rate_positive,
-        "savings_realized": bool(archive_delta.get("savings_realized")),
+        "savings_realized": savings_realized,
         "receiver_contract_satisfied": receiver_contract_satisfied,
         "inflate_parity_satisfied": inflate_parity_satisfied,
         "receiver_verification_blockers": receiver_verification.get("blockers") or [],
@@ -251,6 +296,9 @@ def materializer_observation_from_manifest(
         "selection_scope": result.get("selection_scope"),
         "selected_materialization_key": selected_key or None,
         "selected_materialization": dict(selected),
+        "serialized_archive_delta": dict(selected)
+        if selected_key == SERIALIZED_ARCHIVE_DELTA_KEY
+        else {},
         "selected_elision": dict(selected) if selected_key == "selected_elision" else {},
         "section_recode": dict(selected) if selected_key == "section_recode" else {},
         "selected_compression": dict(selected)
@@ -354,6 +402,7 @@ __all__ = [
     "FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA",
     "MATERIALIZER_DELTA_KEYS",
     "MATERIALIZER_FALSE_AUTHORITY",
+    "SERIALIZED_ARCHIVE_DELTA_KEY",
     "materializer_archive_delta",
     "materializer_observation_feedback_rows",
     "materializer_observation_from_manifest",

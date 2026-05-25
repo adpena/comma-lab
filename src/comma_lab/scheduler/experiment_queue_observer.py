@@ -25,6 +25,7 @@ from tac.optimization.materializer_feedback import (
     MATERIALIZER_FALSE_AUTHORITY,
     materializer_archive_delta,
 )
+from tac.optimization.serialized_archive_economics import SERIALIZED_ARCHIVE_DELTA_SCHEMA
 
 OBSERVATION_SCHEMA = "experiment_queue_observation.v1"
 FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA = "family_agnostic_materializer_empirical_observation.v1"
@@ -182,7 +183,9 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
                 }
                 receiver_blockers = receiver.get("blockers")
                 if isinstance(receiver_blockers, list):
-                    record["receiver_verification"]["blockers"] = [str(item) for item in receiver_blockers if str(item)]
+                    record["receiver_verification"]["blockers"] = [
+                        str(item) for item in receiver_blockers if str(item)
+                    ]
             candidate_archive = payload.get("candidate_archive")
             if isinstance(candidate_archive, Mapping):
                 record["candidate_archive"] = {
@@ -192,11 +195,20 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
                 }
             delta = payload.get("serialized_archive_delta")
             if isinstance(delta, Mapping):
+                record["serialized_archive_delta_schema"] = delta.get("schema")
                 record["serialized_archive_delta_status"] = delta.get("status")
-                record["serialized_archive_delta_realized_saved_bytes"] = delta.get("realized_saved_bytes")
-                record["serialized_archive_delta_savings_realized"] = delta.get("savings_realized")
-                record["serialized_archive_delta_source_archive_bytes"] = delta.get("source_archive_bytes")
-                record["serialized_archive_delta_candidate_archive_bytes"] = delta.get("candidate_archive_bytes")
+                record["serialized_archive_delta_realized_saved_bytes"] = delta.get(
+                    "realized_saved_bytes"
+                )
+                record["serialized_archive_delta_savings_realized"] = delta.get(
+                    "savings_realized"
+                )
+                record["serialized_archive_delta_source_archive_bytes"] = delta.get(
+                    "source_archive_bytes"
+                )
+                record["serialized_archive_delta_candidate_archive_bytes"] = delta.get(
+                    "candidate_archive_bytes"
+                )
             materializer_delta = materializer_archive_delta(payload)
             if materializer_delta is not None:
                 selected_key = materializer_delta.get("selected_materialization_key")
@@ -204,11 +216,17 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
                 if selected_key:
                     prefix = str(selected_key)
                     if f"{prefix}_saved_bytes" not in record:
-                        record[f"{prefix}_saved_bytes"] = materializer_delta.get("realized_saved_bytes")
+                        record[f"{prefix}_saved_bytes"] = materializer_delta.get(
+                            "realized_saved_bytes"
+                        )
                     if f"{prefix}_source_archive_bytes" not in record:
-                        record[f"{prefix}_source_archive_bytes"] = materializer_delta.get("source_archive_bytes")
+                        record[f"{prefix}_source_archive_bytes"] = materializer_delta.get(
+                            "source_archive_bytes"
+                        )
                     if f"{prefix}_candidate_archive_bytes" not in record:
-                        record[f"{prefix}_candidate_archive_bytes"] = materializer_delta.get("candidate_archive_bytes")
+                        record[f"{prefix}_candidate_archive_bytes"] = (
+                            materializer_delta.get("candidate_archive_bytes")
+                        )
                 if record.get("serialized_archive_delta_realized_saved_bytes") is None:
                     record["serialized_archive_delta_realized_saved_bytes"] = materializer_delta.get(
                         "realized_saved_bytes"
@@ -222,7 +240,9 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
                         "candidate_archive_bytes"
                     )
                 if record.get("serialized_archive_delta_savings_realized") is None:
-                    record["serialized_archive_delta_savings_realized"] = materializer_delta.get("savings_realized")
+                    record["serialized_archive_delta_savings_realized"] = (
+                        materializer_delta.get("savings_realized")
+                    )
                 if record.get("serialized_archive_delta_status") is None:
                     record["serialized_archive_delta_status"] = materializer_delta.get("status")
             score = payload.get("score")
@@ -239,7 +259,6 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
                     if key in score
                 }
     return record
-
 
 def _experiment_lookup(queue: Mapping[str, Any]) -> dict[tuple[str, str], Mapping[str, Any]]:
     out: dict[tuple[str, str], Mapping[str, Any]] = {}
@@ -533,7 +552,10 @@ def _step_has_materializer_feedback_artifact(
         }:
             return True
         if (
-            artifact.get("json_schema") in FAMILY_AGNOSTIC_MATERIALIZER_CANDIDATE_SCHEMAS
+            (
+                artifact.get("json_schema") in FAMILY_AGNOSTIC_MATERIALIZER_CANDIDATE_SCHEMAS
+                or artifact.get("serialized_archive_delta_schema") == SERIALIZED_ARCHIVE_DELTA_SCHEMA
+            )
             and _artifact_has_materializer_identity(artifact)
             and _artifact_has_materializer_delta(artifact)
         ):
