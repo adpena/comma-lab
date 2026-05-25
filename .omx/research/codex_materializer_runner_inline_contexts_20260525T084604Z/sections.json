@@ -1,0 +1,15 @@
+{
+  "member": {
+    "name": "0.raw"
+  },
+  "schema": "proof_section_manifest.v1",
+  "sections": [
+    {
+      "index": 0,
+      "length": 101,
+      "name": "decoder_packed_brotli",
+      "offset": 0,
+      "sha256": "b9a445f95fd1af11b4b382e6c0e4d76e8d23f00c6a7ba1967ce643e5e4fab0a2"
+    }
+  ]
+}

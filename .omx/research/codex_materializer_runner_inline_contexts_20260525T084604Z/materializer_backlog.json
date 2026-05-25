@@ -1,0 +1,192 @@
+{
+  "backlog_row_count": 1,
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "materializer_backlog_is_planning_only",
+    "requires_adapter_implementation_before_queue_dispatch"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "2026-05-25T08:46:19Z",
+  "gpu_launched": false,
+  "packet_ir_lowered_backlog_key_count": 1,
+  "packet_ir_lowered_row_count": 1,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "rows": [
+    {
+      "affected_unit_count": 1,
+      "backlog_key": "materializer_work_queue_required:archive_section_entropy_recode_v1:archive_section:section_entropy_recode:archive_section_entropy_recode_adapter",
+      "backlog_rank": 1,
+      "best_candidate_saved_bytes": 64,
+      "best_expected_delta_score": -0.00014261497299981898,
+      "best_expected_score_gain": 0.00014261497299981898,
+      "blocked_resolution_count": 2,
+      "blocked_row_count": 2,
+      "blocker_counts": {
+        "non_dqs1_target_requires_materializer_work_queue:archive_section_entropy_recode_v1": 2,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:compiled_from_inverse_action_operation_set_compiler": 2,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:inverse_action_rehydrated_operation_is_planning_only": 2,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:inverse_action_source_operations_rehydrated_from_provenance": 2,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:inverse_action_unit_is_planning_only": 2,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:requires_byte_closed_archive_before_dispatch": 2,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:requires_exact_auth_eval_before_score_claim": 2,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:requires_materializer_contexts": 2,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:requires_runtime_consumption_proof_before_exact_eval": 2,
+        "selected_unit_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:compiled_from_inverse_action_operation_set_compiler": 2,
+        "selected_unit_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:inverse_action_rehydrated_operation_is_planning_only": 2,
+        "selected_unit_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:inverse_action_source_operations_rehydrated_from_provenance": 2,
+        "selected_unit_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:inverse_action_unit_is_planning_only": 2,
+        "selected_unit_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:requires_byte_closed_archive_before_dispatch": 2,
+        "selected_unit_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:requires_exact_auth_eval_before_score_claim": 2,
+        "selected_unit_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:requires_materializer_contexts": 2,
+        "selected_unit_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:requires_runtime_consumption_proof_before_exact_eval": 2
+      },
+      "candidate_saved_bytes_sum": 128,
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "cooperative_receiver_required": true,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "expected_score_gain_sum": 0.00028522994599963796,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gap_class": "materializer_work_queue_required",
+      "gpu_launched": false,
+      "implementation_priority_score": 0.00028735794599963797,
+      "materialization_resource_kind": "local_cpu",
+      "materializer_id": "archive_section_entropy_recode_adapter",
+      "operation_family": "section_entropy_recode",
+      "operation_params": {
+        "archive_path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+        "archive_section": "decoder_packed_brotli",
+        "inverse_action_atom_id": "runner_inline_compiler_cell",
+        "inverse_action_operation_set_id": "runner_inline_compiler_set",
+        "inverse_action_source_schema": "inverse_steganalysis_byte_shaving_operation_set_provenance.v1",
+        "runtime_consumption_proof": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/runtime_proof.json",
+        "section_manifest": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+        "water_fill_cost_bytes": 64,
+        "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+      },
+      "packet_ir_blocker_counts": {
+        "non_dqs1_target_requires_materializer_work_queue:archive_section_entropy_recode_v1": 1,
+        "packetir_operation_set_requires_materializer_contexts": 1,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:compiled_from_inverse_action_operation_set_compiler": 1,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:inverse_action_rehydrated_operation_is_planning_only": 1,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:inverse_action_source_operations_rehydrated_from_provenance": 1,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:inverse_action_unit_is_planning_only": 1,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:requires_byte_closed_archive_before_dispatch": 1,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:requires_exact_auth_eval_before_score_claim": 1,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:requires_materializer_contexts": 1,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:requires_runtime_consumption_proof_before_exact_eval": 1
+      },
+      "packet_ir_lowered_row_count": 1,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_contract_id": "archive_section_entropy_recode_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+      "receiver_contract_status": "receiver_contract_registered_for_materializer_work_queue",
+      "schema": "byte_shaving_materializer_backlog_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operation_count": 2,
+      "source_operation_params_by_unit": {
+        "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000": {
+          "archive_path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+          "archive_section": "decoder_packed_brotli",
+          "inverse_action_atom_id": "runner_inline_compiler_cell",
+          "inverse_action_operation_set_id": "runner_inline_compiler_set",
+          "inverse_action_source_schema": "inverse_steganalysis_byte_shaving_operation_set_provenance.v1",
+          "runtime_consumption_proof": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/runtime_proof.json",
+          "section_manifest": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+          "water_fill_cost_bytes": 64,
+          "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+        }
+      },
+      "source_packet_ir_operation_set_ids": [
+        "packetir_opset_combo_0001"
+      ],
+      "source_packet_ir_schemas": [
+        "packet_ir_operation_set_v1"
+      ],
+      "source_packet_ir_source_operation_set_ids": [
+        "opset_combo_0001"
+      ],
+      "source_selection_ids": [
+        "opset_combo_0001",
+        "top_0001",
+        "packetir_opset_combo_0001"
+      ],
+      "source_selection_samples": [
+        {
+          "candidate_saved_bytes": 64,
+          "expected_delta_score": -0.00014261497299981898,
+          "expected_score_gain": 0.00014261497299981898,
+          "selection_id": "opset_combo_0001",
+          "selection_kind": "operation_set",
+          "unit_id": "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+        },
+        {
+          "candidate_saved_bytes": 64,
+          "expected_delta_score": -0.00014261497299981898,
+          "expected_score_gain": 0.00014261497299981898,
+          "selection_id": "top_0001",
+          "selection_kind": "prefix",
+          "unit_id": "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+        }
+      ],
+      "source_unit_ids": [
+        "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+      ],
+      "suggested_materializer_count": 1,
+      "suggested_materializers": [
+        {
+          "cooperative_receiver_required": true,
+          "description": "Family-agnostic HNeRV/BoostNeRV/non-NeRV archive-section entropy recode materializer. Runtime-consumption proof is required before exact-readiness, not before local candidate emission.",
+          "emits_candidate_archive": true,
+          "executable": true,
+          "implementation_module": "tac.optimization.family_agnostic_materializers",
+          "materialization_resource_kind": "local_cpu",
+          "materialize_function": "materialize_archive_section_entropy_recode_candidate",
+          "materializer_id": "archive_section_entropy_recode_adapter",
+          "plan_function": "",
+          "planning_only": false,
+          "receiver_contract_id": "archive_section_entropy_recode_v1.receiver.v1",
+          "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+          "receiver_proof_function": "",
+          "receiver_verify_function": "",
+          "required_context_fields": [
+            "archive_path",
+            "section_manifest",
+            "output_archive",
+            "output_manifest"
+          ],
+          "target_kind": "archive_section_entropy_recode_v1"
+        }
+      ],
+      "target_kind": "archive_section_entropy_recode_v1",
+      "unit_kind": "archive_section"
+    }
+  ],
+  "schema": "byte_shaving_materializer_backlog.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "tool": "comma_lab.scheduler.byte_shaving_campaign_queue"
+}

@@ -1,0 +1,2035 @@
+{
+  "auth_eval_refs": [],
+  "campaign_id": "inverse_steganalysis_action_byte_shaving_surface",
+  "candidate_id": "inverse_steganalysis_water_bucket_plan.v1",
+  "charged_bits_changed": false,
+  "combination_ladder": [
+    {
+      "active_interactions": [],
+      "base_saved_bytes": 64,
+      "candidate_saved_bytes": 64,
+      "charged_bits_changed": false,
+      "combo_id": "combo_0001",
+      "confidence": 0.5,
+      "confidence_adjusted_gain": 7.130748649990949e-05,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "exact_cuda_auth_eval": false,
+      "expected_delta_score": -0.00014261497299981898,
+      "expected_score_gain": 0.00014261497299981898,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "interaction_delta_score": 0,
+      "interaction_extra_saved_bytes": 0,
+      "interaction_shared_overhead_bytes": 0,
+      "operation_families": [
+        "section_entropy_recode"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "quality_cost_score": -0.0001,
+      "rank_or_kill_eligible": false,
+      "rate_delta_score": -4.261497299981897e-05,
+      "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "blockers": [
+            "inverse_action_unit_is_planning_only",
+            "inverse_action_source_operations_rehydrated_from_provenance",
+            "requires_byte_closed_archive_before_dispatch",
+            "requires_exact_auth_eval_before_score_claim",
+            "compiled_from_inverse_action_operation_set_compiler",
+            "requires_materializer_contexts",
+            "requires_runtime_consumption_proof_before_exact_eval",
+            "inverse_action_rehydrated_operation_is_planning_only"
+          ],
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "materializer": "archive_section_entropy_recode_adapter",
+          "materializer_executable": true,
+          "materializer_execution_status": "registered_executable_after_materializer_contexts",
+          "operation_family": "section_entropy_recode",
+          "operation_id": "section_entropy_recode_runner_inline_compiler_cell_0000",
+          "operation_portability": "family_agnostic",
+          "params": {
+            "archive_path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+            "archive_section": "decoder_packed_brotli",
+            "inverse_action_atom_id": "runner_inline_compiler_cell",
+            "inverse_action_operation_set_id": "runner_inline_compiler_set",
+            "inverse_action_source_schema": "inverse_steganalysis_byte_shaving_operation_set_provenance.v1",
+            "runtime_consumption_proof": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/runtime_proof.json",
+            "section_manifest": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+            "water_fill_cost_bytes": 64,
+            "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+          },
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+          "receiver_contract_kinds": [
+            "family_agnostic_archive_section_entropy_recode"
+          ],
+          "representation_family_class": "hnerv_variant",
+          "required_context_fields": [
+            "archive_path",
+            "section_manifest",
+            "output_archive",
+            "output_manifest"
+          ],
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "source_family_classes": [
+            "hnerv_variant"
+          ],
+          "target_kind": "archive_section_entropy_recode_v1",
+          "unit_id": "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000",
+          "unit_kind": "archive_section"
+        }
+      ],
+      "selected_unit_ids": [
+        "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+      ],
+      "unit_count": 1
+    }
+  ],
+  "combination_policy": {
+    "beam_width": 64,
+    "conflicts_mode": "unit conflict sets cannot co-occur in one combo",
+    "interactions_mode": "direct delta_score plus extra_saved_bytes/shared_overhead_bytes for scorer-axis and runtime externalities",
+    "max_combo_count": 32,
+    "max_ops_per_unit": 3,
+    "max_units_considered": 32
+  },
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "byte_shaving_plan_is_planning_only",
+    "requires_byte_closed_materialization_before_dispatch",
+    "requires_runtime_consumption_proof_before_exact_eval",
+    "requires_same_runtime_locality_or_inflate_parity_check",
+    "requires_exact_auth_eval_before_score_claim"
+  ],
+  "evidence_boundary": {
+    "next_gate": "materialize selected operation family, run locality/inflate controls, then exact auth eval before any score claim",
+    "planning_only": true,
+    "quality_cost_source": "predicted_quality_score_cost or seg/pose/master-gradient score costs",
+    "rate_delta_formula": "-25 * saved_bytes / 37545489"
+  },
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "frontier_axis": "[planning-only inverse-steganalysis action]",
+  "generated_at_utc": "2026-05-25T08:46:04Z",
+  "gpu_launched": false,
+  "inverse_action_materialization_portfolios": [
+    {
+      "actuation_modes": [
+        "compiled_operation_set"
+      ],
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "portfolio_row_count": 1,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "rows": [
+        {
+          "actuation_mode": "compiled_operation_set",
+          "atom_id": "runner_inline_compiler_cell",
+          "blockers": [
+            "compiled_from_inverse_action_operation_set_compiler",
+            "requires_materializer_queue_execution",
+            "requires_runtime_consumption_proof_before_exact_eval",
+            "requires_exact_auth_eval_before_score_claim"
+          ],
+          "candidate_id": "runner_inline_compiler_candidate",
+          "charged_bits_changed": false,
+          "component": "rate",
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "euler_lagrange_residual": 9e-05,
+          "exact_cuda_auth_eval": false,
+          "expected_score_gain": 0.0001,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "operation_families": [
+            "section_entropy_recode"
+          ],
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "inverse_steganalysis_water_bucket_materialization_portfolio_row.v1",
+          "scope_axis": "bytes",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "source_index": 0,
+          "target_kinds": [
+            "archive_section_entropy_recode_v1"
+          ],
+          "unit_ids": [
+            "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+          ],
+          "water_fill_cost_bytes": 64,
+          "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+        }
+      ],
+      "schema": "inverse_steganalysis_water_bucket_materialization_portfolio.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_cell_count": 1
+    }
+  ],
+  "inverse_scorer_surface_refs": [],
+  "lane_id": "inverse_steganalysis_action_byte_shaving",
+  "materialization_bridge": {
+    "actuation_mode_counts": {
+      "compiled_operation_set": 1
+    },
+    "campaign_id": "inverse_steganalysis_action_byte_shaving_surface",
+    "candidate_id": "inverse_steganalysis_water_bucket_plan.v1",
+    "charged_bits_changed": false,
+    "compiled_operation_set_count": 1,
+    "contest_cuda_auth_eval": false,
+    "deployment_target": "desktop_research",
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "optimizer_candidate_queue_is_planning_only",
+      "requires_exact_eval_readiness_gate",
+      "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+      "requires_non_proxy_score_evidence_before_promotion",
+      "byte_shaving_plan_is_planning_only",
+      "requires_byte_closed_materialization_before_dispatch",
+      "requires_runtime_consumption_proof_before_exact_eval",
+      "requires_same_runtime_locality_or_inflate_parity_check",
+      "requires_exact_auth_eval_before_score_claim",
+      "packet_ir_operation_sets_require_materializer_contexts_and_runtime_proofs"
+    ],
+    "evidence_boundary": {
+      "authority": "no_score_no_promotion_no_dispatch",
+      "planning_only": true,
+      "score_axis": "[planning-only inverse-steganalysis action]"
+    },
+    "exact_cuda_auth_eval": false,
+    "executable_work_ready_blockers": [
+      "materializer_context_generation_required_after_packetir_lowering",
+      "materializer_work_queue_execution_probe_required"
+    ],
+    "executable_work_ready_packet_ir_operation_set_count": 0,
+    "executable_work_ready_packet_ir_operation_set_ids": [],
+    "executable_work_ready_portfolio_row_count": 0,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "generated_at_utc": "2026-05-25T08:46:04Z",
+    "gpu_launched": false,
+    "high_level_operation_compiler_required_count": 0,
+    "lane_id": "inverse_steganalysis_action_byte_shaving",
+    "leaf_cell_candidate_count": 0,
+    "operation_families": [
+      "section_entropy_recode"
+    ],
+    "packet_ir_byte_closed_operation_count": 1,
+    "packet_ir_operation_set_count": 1,
+    "packet_ir_operation_sets": [
+      {
+        "active_interactions": [],
+        "blockers": [
+          "byte_shaving_plan_is_planning_only",
+          "requires_byte_closed_materialization_before_dispatch",
+          "requires_runtime_consumption_proof_before_exact_eval",
+          "requires_same_runtime_locality_or_inflate_parity_check",
+          "requires_exact_auth_eval_before_score_claim",
+          "operation_set_requires_atomic_materializer_or_explicit_partial_set_split",
+          "operation_set_order_requires_materialization_probe",
+          "inverse_action_unit_is_planning_only",
+          "inverse_action_source_operations_rehydrated_from_provenance",
+          "requires_byte_closed_archive_before_dispatch",
+          "compiled_from_inverse_action_operation_set_compiler",
+          "requires_materializer_contexts",
+          "inverse_action_rehydrated_operation_is_planning_only",
+          "packetir_operation_set_requires_materializer_contexts",
+          "packetir_operation_set_requires_runtime_consumption_proof",
+          "packetir_operation_set_requires_exact_readiness_handoff"
+        ],
+        "byte_closed_operation_count": 1,
+        "candidate_id": "inverse_steganalysis_water_bucket_plan.v1",
+        "candidate_saved_bytes": 64,
+        "charged_bits_changed": false,
+        "chosen_operation_sequence": [
+          {
+            "materializer": "archive_section_entropy_recode_adapter",
+            "materializer_executable": true,
+            "materializer_execution_status": "registered_executable_after_materializer_contexts",
+            "operation_family": "section_entropy_recode",
+            "operation_id": "section_entropy_recode_runner_inline_compiler_cell_0000",
+            "operation_portability": "family_agnostic",
+            "order_priority": 40,
+            "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+            "receiver_contract_kinds": [
+              "family_agnostic_archive_section_entropy_recode"
+            ],
+            "representation_family_class": "hnerv_variant",
+            "required_context_fields": [
+              "archive_path",
+              "section_manifest",
+              "output_archive",
+              "output_manifest"
+            ],
+            "source_family_classes": [
+              "hnerv_variant"
+            ],
+            "target_kind": "archive_section_entropy_recode_v1",
+            "unit_id": "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000",
+            "unit_kind": "archive_section"
+          }
+        ],
+        "chosen_operation_sequence_is_permutation": true,
+        "chosen_operation_sequence_sha256": "e8b0026cdb1338089f28494f2b87a4ca4e8455d34fe7861f1ae19bbbaaf36174",
+        "chosen_operation_sequence_source": "bounded_permutation_ladder_rank_1",
+        "compiler_contract": {
+          "canonical_packet_compiler_module": "tac.packet_compiler.deterministic_compiler",
+          "canonical_packet_compiler_schema": "deterministic_packet_compiler.v1",
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "recommended_ir_schema": "packet_ir_operation_set_v1",
+          "required_order": [
+            "representation",
+            "prediction",
+            "quantization",
+            "hyperprior",
+            "arithmetic",
+            "pack"
+          ],
+          "required_proofs": [
+            "byte_closed_archive",
+            "deterministic_packet_manifest",
+            "runtime_consumption_proof",
+            "same_runtime_full_frame_parity_or_rate_only_control",
+            "exact_auth_eval_axis_payload"
+          ],
+          "schema": "packet_ir_operation_set_bridge_contract.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "expected_delta_score": -0.00014261497299981898,
+        "expected_score_gain": 0.00014261497299981898,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "lane_id": "inverse_steganalysis_action_byte_shaving",
+        "lowering_status": "blocked_until_materializer_contexts_and_proofs",
+        "operation_count": 1,
+        "operation_set_id": "packetir_opset_combo_0001",
+        "operation_set_rank": 1,
+        "operations": [
+          {
+            "blockers": [
+              "inverse_action_unit_is_planning_only",
+              "inverse_action_source_operations_rehydrated_from_provenance",
+              "requires_byte_closed_archive_before_dispatch",
+              "requires_exact_auth_eval_before_score_claim",
+              "compiled_from_inverse_action_operation_set_compiler",
+              "requires_materializer_contexts",
+              "requires_runtime_consumption_proof_before_exact_eval",
+              "inverse_action_rehydrated_operation_is_planning_only"
+            ],
+            "candidate_saved_bytes": null,
+            "charged_bits_changed": false,
+            "compiler_phase": "arithmetic",
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "materializer": "archive_section_entropy_recode_adapter",
+            "materializer_executable": true,
+            "materializer_execution_status": "registered_executable_after_materializer_contexts",
+            "operation_family": "section_entropy_recode",
+            "operation_id": "section_entropy_recode_runner_inline_compiler_cell_0000",
+            "operation_portability": "family_agnostic",
+            "order_index": 0,
+            "params": {
+              "archive_path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+              "archive_section": "decoder_packed_brotli",
+              "inverse_action_atom_id": "runner_inline_compiler_cell",
+              "inverse_action_operation_set_id": "runner_inline_compiler_set",
+              "inverse_action_source_schema": "inverse_steganalysis_byte_shaving_operation_set_provenance.v1",
+              "runtime_consumption_proof": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/runtime_proof.json",
+              "section_manifest": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+              "water_fill_cost_bytes": 64,
+              "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+            },
+            "predicted_quality_score_delta": null,
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+            "receiver_contract_kinds": [
+              "family_agnostic_archive_section_entropy_recode"
+            ],
+            "representation_family_class": "hnerv_variant",
+            "required_context_fields": [
+              "archive_path",
+              "section_manifest",
+              "output_archive",
+              "output_manifest"
+            ],
+            "schema": "packet_ir_operation_v1",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_family_classes": [
+              "hnerv_variant"
+            ],
+            "target_kind": "archive_section_entropy_recode_v1",
+            "unit_id": "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000",
+            "unit_kind": "archive_section"
+          }
+        ],
+        "partial_materialization_allowed": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "required_order": [
+          "representation",
+          "prediction",
+          "quantization",
+          "hyperprior",
+          "arithmetic",
+          "pack"
+        ],
+        "required_proofs": [
+          "byte_closed_archive",
+          "deterministic_packet_manifest",
+          "runtime_consumption_proof",
+          "same_runtime_full_frame_parity_or_rate_only_control",
+          "exact_auth_eval_axis_payload"
+        ],
+        "required_proofs_status": {
+          "byte_closed_archive": "missing",
+          "deterministic_packet_manifest": "missing",
+          "exact_auth_eval_axis_payload": "missing",
+          "runtime_consumption_proof": "missing",
+          "same_runtime_full_frame_parity_or_rate_only_control": "missing"
+        },
+        "requires_atomic_materialization": true,
+        "schema": "packet_ir_operation_set_v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "selected_operations": [
+          {
+            "blockers": [
+              "inverse_action_unit_is_planning_only",
+              "inverse_action_source_operations_rehydrated_from_provenance",
+              "requires_byte_closed_archive_before_dispatch",
+              "requires_exact_auth_eval_before_score_claim",
+              "compiled_from_inverse_action_operation_set_compiler",
+              "requires_materializer_contexts",
+              "requires_runtime_consumption_proof_before_exact_eval",
+              "inverse_action_rehydrated_operation_is_planning_only"
+            ],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "materializer": "archive_section_entropy_recode_adapter",
+            "materializer_executable": true,
+            "materializer_execution_status": "registered_executable_after_materializer_contexts",
+            "operation_family": "section_entropy_recode",
+            "operation_id": "section_entropy_recode_runner_inline_compiler_cell_0000",
+            "operation_portability": "family_agnostic",
+            "params": {
+              "archive_path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+              "archive_section": "decoder_packed_brotli",
+              "inverse_action_atom_id": "runner_inline_compiler_cell",
+              "inverse_action_operation_set_id": "runner_inline_compiler_set",
+              "inverse_action_source_schema": "inverse_steganalysis_byte_shaving_operation_set_provenance.v1",
+              "runtime_consumption_proof": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/runtime_proof.json",
+              "section_manifest": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+              "water_fill_cost_bytes": 64,
+              "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+            },
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+            "receiver_contract_kinds": [
+              "family_agnostic_archive_section_entropy_recode"
+            ],
+            "representation_family_class": "hnerv_variant",
+            "required_context_fields": [
+              "archive_path",
+              "section_manifest",
+              "output_archive",
+              "output_manifest"
+            ],
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_family_classes": [
+              "hnerv_variant"
+            ],
+            "target_kind": "archive_section_entropy_recode_v1",
+            "unit_id": "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000",
+            "unit_kind": "archive_section"
+          }
+        ],
+        "selected_unit_ids": [
+          "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+        ],
+        "source_combo_id": "combo_0001",
+        "source_operation_set_id": "opset_combo_0001",
+        "source_paths": [],
+        "source_portfolio_schema": "inverse_steganalysis_water_bucket_materialization_portfolio.v1",
+        "source_schema": "byte_shaving_coupled_operation_set.v1"
+      }
+    ],
+    "packetir_lowering_ready_packet_ir_operation_set_count": 1,
+    "packetir_lowering_ready_packet_ir_operation_set_ids": [
+      "packetir_opset_combo_0001"
+    ],
+    "packetir_lowering_ready_portfolio_row_count": 1,
+    "portfolio_count": 1,
+    "portfolio_row_bridge_links": [
+      {
+        "actuation_mode": "compiled_operation_set",
+        "atom_id": "runner_inline_compiler_cell",
+        "blockers": [
+          "compiled_from_inverse_action_operation_set_compiler",
+          "requires_materializer_queue_execution",
+          "requires_runtime_consumption_proof_before_exact_eval",
+          "requires_exact_auth_eval_before_score_claim"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "executable_work_ready": false,
+        "executable_work_ready_blockers": [
+          "requires_materializer_work_queue_context_generation",
+          "requires_materializer_work_queue_execution_probe"
+        ],
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "matched_packet_ir_operation_set_ids": [
+          "packetir_opset_combo_0001"
+        ],
+        "matched_source_operation_set_ids": [
+          "opset_combo_0001"
+        ],
+        "packet_ir_lowering_ready": true,
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_consumable": true,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "inverse_steganalysis_water_bucket_materialization_bridge_link.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_index": 0,
+        "unit_ids": [
+          "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+        ]
+      }
+    ],
+    "portfolio_row_count": 1,
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_consumable_packet_ir_operation_set_count": 1,
+    "queue_consumable_packet_ir_operation_set_ids": [
+      "packetir_opset_combo_0001"
+    ],
+    "queue_consumable_portfolio_row_count": 1,
+    "queue_consumption": {
+      "compiler_required": false,
+      "next_gate": "build_byte_shaving_campaign_queue_packet_ir_lowering",
+      "packet_ir_lowering_ready": true,
+      "plan_queue_builder": "tools/build_byte_shaving_campaign_queue.py",
+      "requires_materializer_contexts": true,
+      "requires_plan_path": true
+    },
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "representation_family_classes": [
+      "hnerv_variant"
+    ],
+    "schema": "inverse_steganalysis_water_bucket_materialization_bridge.v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "source_paths": [],
+    "source_provenance_operation_set_count": 0,
+    "source_schema": "byte_shaving_campaign_plan.v1",
+    "target_kinds": [
+      "archive_section_entropy_recode_v1"
+    ],
+    "target_modes": [
+      "contest_exact_eval_planning"
+    ],
+    "water_bucket_materialization_portfolios": [
+      {
+        "actuation_modes": [
+          "compiled_operation_set"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "portfolio_row_count": 1,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "rows": [
+          {
+            "actuation_mode": "compiled_operation_set",
+            "atom_id": "runner_inline_compiler_cell",
+            "blockers": [
+              "compiled_from_inverse_action_operation_set_compiler",
+              "requires_materializer_queue_execution",
+              "requires_runtime_consumption_proof_before_exact_eval",
+              "requires_exact_auth_eval_before_score_claim"
+            ],
+            "candidate_id": "runner_inline_compiler_candidate",
+            "charged_bits_changed": false,
+            "component": "rate",
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "euler_lagrange_residual": 9e-05,
+            "exact_cuda_auth_eval": false,
+            "expected_score_gain": 0.0001,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "operation_families": [
+              "section_entropy_recode"
+            ],
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "inverse_steganalysis_water_bucket_materialization_portfolio_row.v1",
+            "scope_axis": "bytes",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_index": 0,
+            "target_kinds": [
+              "archive_section_entropy_recode_v1"
+            ],
+            "unit_ids": [
+              "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+            ],
+            "water_fill_cost_bytes": 64,
+            "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+          }
+        ],
+        "schema": "inverse_steganalysis_water_bucket_materialization_portfolio.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "selected_cell_count": 1
+      }
+    ]
+  },
+  "mlx_calibration_refs": [],
+  "operation_menu": {
+    "archive_section": [
+      "section_header_elide",
+      "section_entropy_recode",
+      "section_reorder",
+      "section_proceduralize"
+    ],
+    "byte_range": [
+      "entropy_recode",
+      "null_remove_or_seed",
+      "delta_encode",
+      "literal_elide"
+    ],
+    "correction_target": [
+      "apply_engineered_correction",
+      "probe_correction_neighbor"
+    ],
+    "frame": [
+      "drop_frame",
+      "substitute_frame",
+      "temporal_predict_frame",
+      "lower_frame_precision"
+    ],
+    "packet_member": [
+      "zip_header_elide",
+      "member_recompress",
+      "member_reorder",
+      "member_merge",
+      "native_renderer_payload"
+    ],
+    "pair": [
+      "drop_pair",
+      "substitute_pair",
+      "lower_pair_precision",
+      "proceduralize_pair_residual"
+    ],
+    "scorer_inverse_surface_cell": [
+      "compile_inverse_steganalysis_operation_set",
+      "probe_inverse_scorer_surface_cell",
+      "materialize_inverse_scorer_cell_candidate"
+    ],
+    "scorer_response_row": [
+      "materialize_scorer_response_candidate",
+      "probe_followup_neighbor"
+    ],
+    "tensor": [
+      "quantize_tensor",
+      "prune_tensor",
+      "factorize_tensor",
+      "shared_codebook_tensor"
+    ]
+  },
+  "operation_order_priors": {
+    "apply_engineered_correction": 5,
+    "compile_inverse_steganalysis_operation_set": 0,
+    "delta_encode": 40,
+    "drop_frame": 10,
+    "drop_pair": 10,
+    "entropy_recode": 40,
+    "factorize_tensor": 30,
+    "literal_elide": 50,
+    "lower_frame_precision": 30,
+    "lower_pair_precision": 30,
+    "materialize_inverse_scorer_cell_candidate": 1,
+    "materialize_scorer_response_candidate": 0,
+    "member_merge": 50,
+    "member_recompress": 40,
+    "member_reorder": 50,
+    "native_renderer_payload": 50,
+    "null_remove_or_seed": 50,
+    "probe_correction_neighbor": 6,
+    "probe_followup_neighbor": 1,
+    "probe_inverse_scorer_surface_cell": 0,
+    "proceduralize_pair_residual": 20,
+    "prune_tensor": 30,
+    "quantize_tensor": 30,
+    "section_entropy_recode": 40,
+    "section_header_elide": 50,
+    "section_proceduralize": 20,
+    "section_reorder": 50,
+    "shared_codebook_tensor": 30,
+    "substitute_frame": 20,
+    "substitute_pair": 20,
+    "temporal_predict_frame": 20,
+    "zip_header_elide": 50
+  },
+  "operation_set_ladder": [
+    {
+      "active_interactions": [],
+      "base_saved_bytes": 64,
+      "candidate_saved_bytes": 64,
+      "charged_bits_changed": false,
+      "chosen_operation_sequence": [
+        {
+          "materializer": "archive_section_entropy_recode_adapter",
+          "materializer_executable": true,
+          "materializer_execution_status": "registered_executable_after_materializer_contexts",
+          "operation_family": "section_entropy_recode",
+          "operation_id": "section_entropy_recode_runner_inline_compiler_cell_0000",
+          "operation_portability": "family_agnostic",
+          "order_priority": 40,
+          "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+          "receiver_contract_kinds": [
+            "family_agnostic_archive_section_entropy_recode"
+          ],
+          "representation_family_class": "hnerv_variant",
+          "required_context_fields": [
+            "archive_path",
+            "section_manifest",
+            "output_archive",
+            "output_manifest"
+          ],
+          "source_family_classes": [
+            "hnerv_variant"
+          ],
+          "target_kind": "archive_section_entropy_recode_v1",
+          "unit_id": "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000",
+          "unit_kind": "archive_section"
+        }
+      ],
+      "chosen_operation_sequence_is_permutation": true,
+      "chosen_operation_sequence_sha256": "e8b0026cdb1338089f28494f2b87a4ca4e8455d34fe7861f1ae19bbbaaf36174",
+      "chosen_operation_sequence_source": "bounded_permutation_ladder_rank_1",
+      "combo_id": "combo_0001",
+      "confidence": 0.5,
+      "confidence_adjusted_gain": 7.130748649990949e-05,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim",
+        "operation_set_requires_atomic_materializer_or_explicit_partial_set_split",
+        "operation_set_order_requires_materialization_probe"
+      ],
+      "exact_cuda_auth_eval": false,
+      "expected_delta_score": -0.00014261497299981898,
+      "expected_score_gain": 0.00014261497299981898,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "interaction_delta_score": 0,
+      "interaction_extra_saved_bytes": 0,
+      "interaction_shared_overhead_bytes": 0,
+      "operation_families": [
+        "section_entropy_recode"
+      ],
+      "operation_set_id": "opset_combo_0001",
+      "operation_set_rank": 1,
+      "partial_materialization_allowed": false,
+      "prior_order_inversion_count": 0,
+      "promotable": false,
+      "promotion_eligible": false,
+      "quality_cost_score": -0.0001,
+      "rank_or_kill_eligible": false,
+      "rate_delta_score": -4.261497299981897e-05,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_atomic_materialization": true,
+      "schema": "byte_shaving_coupled_operation_set.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "blockers": [
+            "inverse_action_unit_is_planning_only",
+            "inverse_action_source_operations_rehydrated_from_provenance",
+            "requires_byte_closed_archive_before_dispatch",
+            "requires_exact_auth_eval_before_score_claim",
+            "compiled_from_inverse_action_operation_set_compiler",
+            "requires_materializer_contexts",
+            "requires_runtime_consumption_proof_before_exact_eval",
+            "inverse_action_rehydrated_operation_is_planning_only"
+          ],
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "materializer": "archive_section_entropy_recode_adapter",
+          "materializer_executable": true,
+          "materializer_execution_status": "registered_executable_after_materializer_contexts",
+          "operation_family": "section_entropy_recode",
+          "operation_id": "section_entropy_recode_runner_inline_compiler_cell_0000",
+          "operation_portability": "family_agnostic",
+          "params": {
+            "archive_path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+            "archive_section": "decoder_packed_brotli",
+            "inverse_action_atom_id": "runner_inline_compiler_cell",
+            "inverse_action_operation_set_id": "runner_inline_compiler_set",
+            "inverse_action_source_schema": "inverse_steganalysis_byte_shaving_operation_set_provenance.v1",
+            "runtime_consumption_proof": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/runtime_proof.json",
+            "section_manifest": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+            "water_fill_cost_bytes": 64,
+            "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+          },
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+          "receiver_contract_kinds": [
+            "family_agnostic_archive_section_entropy_recode"
+          ],
+          "representation_family_class": "hnerv_variant",
+          "required_context_fields": [
+            "archive_path",
+            "section_manifest",
+            "output_archive",
+            "output_manifest"
+          ],
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "source_family_classes": [
+            "hnerv_variant"
+          ],
+          "target_kind": "archive_section_entropy_recode_v1",
+          "unit_id": "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000",
+          "unit_kind": "archive_section"
+        }
+      ],
+      "selected_unit_ids": [
+        "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+      ],
+      "unit_count": 1
+    }
+  ],
+  "packet_ir_operation_sets": [
+    {
+      "active_interactions": [],
+      "blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim",
+        "operation_set_requires_atomic_materializer_or_explicit_partial_set_split",
+        "operation_set_order_requires_materialization_probe",
+        "inverse_action_unit_is_planning_only",
+        "inverse_action_source_operations_rehydrated_from_provenance",
+        "requires_byte_closed_archive_before_dispatch",
+        "compiled_from_inverse_action_operation_set_compiler",
+        "requires_materializer_contexts",
+        "inverse_action_rehydrated_operation_is_planning_only",
+        "packetir_operation_set_requires_materializer_contexts",
+        "packetir_operation_set_requires_runtime_consumption_proof",
+        "packetir_operation_set_requires_exact_readiness_handoff"
+      ],
+      "byte_closed_operation_count": 1,
+      "candidate_id": "inverse_steganalysis_water_bucket_plan.v1",
+      "candidate_saved_bytes": 64,
+      "charged_bits_changed": false,
+      "chosen_operation_sequence": [
+        {
+          "materializer": "archive_section_entropy_recode_adapter",
+          "materializer_executable": true,
+          "materializer_execution_status": "registered_executable_after_materializer_contexts",
+          "operation_family": "section_entropy_recode",
+          "operation_id": "section_entropy_recode_runner_inline_compiler_cell_0000",
+          "operation_portability": "family_agnostic",
+          "order_priority": 40,
+          "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+          "receiver_contract_kinds": [
+            "family_agnostic_archive_section_entropy_recode"
+          ],
+          "representation_family_class": "hnerv_variant",
+          "required_context_fields": [
+            "archive_path",
+            "section_manifest",
+            "output_archive",
+            "output_manifest"
+          ],
+          "source_family_classes": [
+            "hnerv_variant"
+          ],
+          "target_kind": "archive_section_entropy_recode_v1",
+          "unit_id": "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000",
+          "unit_kind": "archive_section"
+        }
+      ],
+      "chosen_operation_sequence_is_permutation": true,
+      "chosen_operation_sequence_sha256": "e8b0026cdb1338089f28494f2b87a4ca4e8455d34fe7861f1ae19bbbaaf36174",
+      "chosen_operation_sequence_source": "bounded_permutation_ladder_rank_1",
+      "compiler_contract": {
+        "canonical_packet_compiler_module": "tac.packet_compiler.deterministic_compiler",
+        "canonical_packet_compiler_schema": "deterministic_packet_compiler.v1",
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_ir_schema": "packet_ir_operation_set_v1",
+        "required_order": [
+          "representation",
+          "prediction",
+          "quantization",
+          "hyperprior",
+          "arithmetic",
+          "pack"
+        ],
+        "required_proofs": [
+          "byte_closed_archive",
+          "deterministic_packet_manifest",
+          "runtime_consumption_proof",
+          "same_runtime_full_frame_parity_or_rate_only_control",
+          "exact_auth_eval_axis_payload"
+        ],
+        "schema": "packet_ir_operation_set_bridge_contract.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      },
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "expected_delta_score": -0.00014261497299981898,
+      "expected_score_gain": 0.00014261497299981898,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "inverse_steganalysis_action_byte_shaving",
+      "lowering_status": "blocked_until_materializer_contexts_and_proofs",
+      "operation_count": 1,
+      "operation_set_id": "packetir_opset_combo_0001",
+      "operation_set_rank": 1,
+      "operations": [
+        {
+          "blockers": [
+            "inverse_action_unit_is_planning_only",
+            "inverse_action_source_operations_rehydrated_from_provenance",
+            "requires_byte_closed_archive_before_dispatch",
+            "requires_exact_auth_eval_before_score_claim",
+            "compiled_from_inverse_action_operation_set_compiler",
+            "requires_materializer_contexts",
+            "requires_runtime_consumption_proof_before_exact_eval",
+            "inverse_action_rehydrated_operation_is_planning_only"
+          ],
+          "candidate_saved_bytes": null,
+          "charged_bits_changed": false,
+          "compiler_phase": "arithmetic",
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "materializer": "archive_section_entropy_recode_adapter",
+          "materializer_executable": true,
+          "materializer_execution_status": "registered_executable_after_materializer_contexts",
+          "operation_family": "section_entropy_recode",
+          "operation_id": "section_entropy_recode_runner_inline_compiler_cell_0000",
+          "operation_portability": "family_agnostic",
+          "order_index": 0,
+          "params": {
+            "archive_path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+            "archive_section": "decoder_packed_brotli",
+            "inverse_action_atom_id": "runner_inline_compiler_cell",
+            "inverse_action_operation_set_id": "runner_inline_compiler_set",
+            "inverse_action_source_schema": "inverse_steganalysis_byte_shaving_operation_set_provenance.v1",
+            "runtime_consumption_proof": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/runtime_proof.json",
+            "section_manifest": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+            "water_fill_cost_bytes": 64,
+            "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+          },
+          "predicted_quality_score_delta": null,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+          "receiver_contract_kinds": [
+            "family_agnostic_archive_section_entropy_recode"
+          ],
+          "representation_family_class": "hnerv_variant",
+          "required_context_fields": [
+            "archive_path",
+            "section_manifest",
+            "output_archive",
+            "output_manifest"
+          ],
+          "schema": "packet_ir_operation_v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "source_family_classes": [
+            "hnerv_variant"
+          ],
+          "target_kind": "archive_section_entropy_recode_v1",
+          "unit_id": "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000",
+          "unit_kind": "archive_section"
+        }
+      ],
+      "partial_materialization_allowed": false,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_order": [
+        "representation",
+        "prediction",
+        "quantization",
+        "hyperprior",
+        "arithmetic",
+        "pack"
+      ],
+      "required_proofs": [
+        "byte_closed_archive",
+        "deterministic_packet_manifest",
+        "runtime_consumption_proof",
+        "same_runtime_full_frame_parity_or_rate_only_control",
+        "exact_auth_eval_axis_payload"
+      ],
+      "required_proofs_status": {
+        "byte_closed_archive": "missing",
+        "deterministic_packet_manifest": "missing",
+        "exact_auth_eval_axis_payload": "missing",
+        "runtime_consumption_proof": "missing",
+        "same_runtime_full_frame_parity_or_rate_only_control": "missing"
+      },
+      "requires_atomic_materialization": true,
+      "schema": "packet_ir_operation_set_v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "blockers": [
+            "inverse_action_unit_is_planning_only",
+            "inverse_action_source_operations_rehydrated_from_provenance",
+            "requires_byte_closed_archive_before_dispatch",
+            "requires_exact_auth_eval_before_score_claim",
+            "compiled_from_inverse_action_operation_set_compiler",
+            "requires_materializer_contexts",
+            "requires_runtime_consumption_proof_before_exact_eval",
+            "inverse_action_rehydrated_operation_is_planning_only"
+          ],
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "materializer": "archive_section_entropy_recode_adapter",
+          "materializer_executable": true,
+          "materializer_execution_status": "registered_executable_after_materializer_contexts",
+          "operation_family": "section_entropy_recode",
+          "operation_id": "section_entropy_recode_runner_inline_compiler_cell_0000",
+          "operation_portability": "family_agnostic",
+          "params": {
+            "archive_path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+            "archive_section": "decoder_packed_brotli",
+            "inverse_action_atom_id": "runner_inline_compiler_cell",
+            "inverse_action_operation_set_id": "runner_inline_compiler_set",
+            "inverse_action_source_schema": "inverse_steganalysis_byte_shaving_operation_set_provenance.v1",
+            "runtime_consumption_proof": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/runtime_proof.json",
+            "section_manifest": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+            "water_fill_cost_bytes": 64,
+            "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+          },
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+          "receiver_contract_kinds": [
+            "family_agnostic_archive_section_entropy_recode"
+          ],
+          "representation_family_class": "hnerv_variant",
+          "required_context_fields": [
+            "archive_path",
+            "section_manifest",
+            "output_archive",
+            "output_manifest"
+          ],
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "source_family_classes": [
+            "hnerv_variant"
+          ],
+          "target_kind": "archive_section_entropy_recode_v1",
+          "unit_id": "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000",
+          "unit_kind": "archive_section"
+        }
+      ],
+      "selected_unit_ids": [
+        "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+      ],
+      "source_combo_id": "combo_0001",
+      "source_operation_set_id": "opset_combo_0001",
+      "source_paths": [],
+      "source_portfolio_schema": "inverse_steganalysis_water_bucket_materialization_portfolio.v1",
+      "source_schema": "byte_shaving_coupled_operation_set.v1"
+    }
+  ],
+  "permutation_ladder": [
+    {
+      "candidate_saved_bytes": 64,
+      "charged_bits_changed": false,
+      "combo_id": "combo_0001",
+      "combo_rank": 1,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim",
+        "permutation_order_requires_materialization_and_empirical_probe"
+      ],
+      "exact_cuda_auth_eval": false,
+      "expected_delta_score": -0.00014261497299981898,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "operation_count": 1,
+      "permutation_policy": {
+        "max_ops_permuted": 6,
+        "max_permutations_per_combo": 24,
+        "order_prior_source": "payload.operation_order_priors_or_default"
+      },
+      "permutations": [
+        {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "fixed_suffix_count": 0,
+          "gpu_launched": false,
+          "operation_sequence": [
+            {
+              "materializer": "archive_section_entropy_recode_adapter",
+              "materializer_executable": true,
+              "materializer_execution_status": "registered_executable_after_materializer_contexts",
+              "operation_family": "section_entropy_recode",
+              "operation_id": "section_entropy_recode_runner_inline_compiler_cell_0000",
+              "operation_portability": "family_agnostic",
+              "order_priority": 40,
+              "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+              "receiver_contract_kinds": [
+                "family_agnostic_archive_section_entropy_recode"
+              ],
+              "representation_family_class": "hnerv_variant",
+              "required_context_fields": [
+                "archive_path",
+                "section_manifest",
+                "output_archive",
+                "output_manifest"
+              ],
+              "source_family_classes": [
+                "hnerv_variant"
+              ],
+              "target_kind": "archive_section_entropy_recode_v1",
+              "unit_id": "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000",
+              "unit_kind": "archive_section"
+            }
+          ],
+          "order_rank": 1,
+          "permuted_operation_count": 1,
+          "planning_notes": [
+            "operation_order_is_prior_not_score_claim",
+            "bounded_permutation_search_avoids_factorial_explosion"
+          ],
+          "prior_order_inversion_count": 0,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        }
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_operation_permutation_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_unit_ids": [
+        "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+      ]
+    }
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ranked_units": [
+    {
+      "atom_ids": [
+        "runner_inline_compiler_cell"
+      ],
+      "blockers": [
+        "inverse_action_unit_is_planning_only",
+        "inverse_action_source_operations_rehydrated_from_provenance",
+        "requires_byte_closed_archive_before_dispatch",
+        "requires_exact_auth_eval_before_score_claim",
+        "compiled_from_inverse_action_operation_set_compiler",
+        "requires_materializer_contexts",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "inverse_action_rehydrated_operation_is_planning_only"
+      ],
+      "candidate_archive_bytes": null,
+      "candidate_archive_sha256": null,
+      "candidate_saved_bytes": 64,
+      "candidate_trust_region_blockers": [],
+      "canonical_equation_provenance": null,
+      "charged_bits_changed": false,
+      "confidence": 0.5,
+      "confidence_adjusted_gain": 7.130748649990949e-05,
+      "conservative_projected_contest_score": null,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "inverse_action_unit_is_planning_only",
+        "inverse_action_source_operations_rehydrated_from_provenance",
+        "requires_byte_closed_archive_before_dispatch",
+        "requires_exact_auth_eval_before_score_claim",
+        "compiled_from_inverse_action_operation_set_compiler",
+        "requires_materializer_contexts",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "inverse_action_rehydrated_operation_is_planning_only"
+      ],
+      "engineered_correction_signal": null,
+      "evidence_grade": "[planning-only inverse-steganalysis action]",
+      "evidence_semantics": "rehydrated_action_source_provenance",
+      "exact_cuda_auth_eval": false,
+      "expected_delta_score": -0.00014261497299981898,
+      "expected_score_gain": 0.00014261497299981898,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gain_per_byte": 2.2283589531221716e-06,
+      "gpu_launched": false,
+      "local_axis": null,
+      "local_score": null,
+      "master_gradient_signal": null,
+      "operation_candidates": [
+        {
+          "blockers": [
+            "compiled_from_inverse_action_operation_set_compiler",
+            "requires_materializer_contexts",
+            "requires_runtime_consumption_proof_before_exact_eval",
+            "requires_exact_auth_eval_before_score_claim",
+            "inverse_action_rehydrated_operation_is_planning_only",
+            "requires_byte_closed_archive_before_dispatch"
+          ],
+          "candidate_saved_bytes": 64,
+          "confidence": 0.5,
+          "confidence_adjusted_gain": 7.130748649990949e-05,
+          "expected_delta_score": -0.00014261497299981898,
+          "expected_score_gain": 0.00014261497299981898,
+          "gain_per_byte": 2.2283589531221716e-06,
+          "materializer": "archive_section_entropy_recode_adapter",
+          "operation_family": "section_entropy_recode",
+          "operation_id": "section_entropy_recode_runner_inline_compiler_cell_0000",
+          "operation_metadata": {
+            "materializer_executable": true,
+            "materializer_execution_status": "registered_executable_after_materializer_contexts",
+            "operation_portability": "family_agnostic",
+            "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+            "receiver_contract_kinds": [
+              "family_agnostic_archive_section_entropy_recode"
+            ],
+            "representation_family_class": "hnerv_variant",
+            "required_context_fields": [
+              "archive_path",
+              "section_manifest",
+              "output_archive",
+              "output_manifest"
+            ],
+            "source_family_classes": [
+              "hnerv_variant"
+            ]
+          },
+          "operation_params": {
+            "archive_path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+            "archive_section": "decoder_packed_brotli",
+            "inverse_action_atom_id": "runner_inline_compiler_cell",
+            "inverse_action_operation_set_id": "runner_inline_compiler_set",
+            "inverse_action_source_schema": "inverse_steganalysis_byte_shaving_operation_set_provenance.v1",
+            "runtime_consumption_proof": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/runtime_proof.json",
+            "section_manifest": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+            "water_fill_cost_bytes": 64,
+            "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+          },
+          "operation_priority": 40,
+          "quality_cost_score": -0.0001,
+          "rate_delta_score": -4.261497299981897e-05,
+          "target_kind": "archive_section_entropy_recode_v1"
+        }
+      ],
+      "operation_families": [
+        "section_entropy_recode"
+      ],
+      "paired_control_required": true,
+      "projected_contest_score": null,
+      "promotable": false,
+      "promotion_eligible": false,
+      "quality_cost_score": -0.0001,
+      "rank_or_kill_eligible": false,
+      "rate_delta_score": -4.261497299981897e-05,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_operation_family": "section_entropy_recode",
+      "recommended_operation_id": "section_entropy_recode_runner_inline_compiler_cell_0000",
+      "recommended_operation_materializer": "archive_section_entropy_recode_adapter",
+      "recommended_operation_metadata": {
+        "materializer_executable": true,
+        "materializer_execution_status": "registered_executable_after_materializer_contexts",
+        "operation_portability": "family_agnostic",
+        "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+        "receiver_contract_kinds": [
+          "family_agnostic_archive_section_entropy_recode"
+        ],
+        "representation_family_class": "hnerv_variant",
+        "required_context_fields": [
+          "archive_path",
+          "section_manifest",
+          "output_archive",
+          "output_manifest"
+        ],
+        "source_family_classes": [
+          "hnerv_variant"
+        ]
+      },
+      "recommended_operation_params": {
+        "archive_path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+        "archive_section": "decoder_packed_brotli",
+        "inverse_action_atom_id": "runner_inline_compiler_cell",
+        "inverse_action_operation_set_id": "runner_inline_compiler_set",
+        "inverse_action_source_schema": "inverse_steganalysis_byte_shaving_operation_set_provenance.v1",
+        "runtime_consumption_proof": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/runtime_proof.json",
+        "section_manifest": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+        "water_fill_cost_bytes": 64,
+        "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+      },
+      "recommended_operation_priority": 40,
+      "recommended_operation_target_kind": "archive_section_entropy_recode_v1",
+      "score_affecting_payload_changed": false,
+      "score_axis": "rate",
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "source_candidate_id": "runner_inline_compiler_candidate",
+      "source_index": 0,
+      "source_paths": [],
+      "source_span": null,
+      "target_axis": null,
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "unit_id": "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000",
+      "unit_kind": "archive_section",
+      "xray_signal": null
+    }
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_combination": {
+    "active_interactions": [],
+    "base_saved_bytes": 64,
+    "candidate_saved_bytes": 64,
+    "charged_bits_changed": false,
+    "combo_id": "combo_0001",
+    "confidence": 0.5,
+    "confidence_adjusted_gain": 7.130748649990949e-05,
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "byte_shaving_plan_is_planning_only",
+      "requires_byte_closed_materialization_before_dispatch",
+      "requires_runtime_consumption_proof_before_exact_eval",
+      "requires_same_runtime_locality_or_inflate_parity_check",
+      "requires_exact_auth_eval_before_score_claim"
+    ],
+    "exact_cuda_auth_eval": false,
+    "expected_delta_score": -0.00014261497299981898,
+    "expected_score_gain": 0.00014261497299981898,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "interaction_delta_score": 0,
+    "interaction_extra_saved_bytes": 0,
+    "interaction_shared_overhead_bytes": 0,
+    "operation_families": [
+      "section_entropy_recode"
+    ],
+    "promotable": false,
+    "promotion_eligible": false,
+    "quality_cost_score": -0.0001,
+    "rank_or_kill_eligible": false,
+    "rate_delta_score": -4.261497299981897e-05,
+    "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "selected_operations": [
+      {
+        "blockers": [
+          "inverse_action_unit_is_planning_only",
+          "inverse_action_source_operations_rehydrated_from_provenance",
+          "requires_byte_closed_archive_before_dispatch",
+          "requires_exact_auth_eval_before_score_claim",
+          "compiled_from_inverse_action_operation_set_compiler",
+          "requires_materializer_contexts",
+          "requires_runtime_consumption_proof_before_exact_eval",
+          "inverse_action_rehydrated_operation_is_planning_only"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "materializer": "archive_section_entropy_recode_adapter",
+        "materializer_executable": true,
+        "materializer_execution_status": "registered_executable_after_materializer_contexts",
+        "operation_family": "section_entropy_recode",
+        "operation_id": "section_entropy_recode_runner_inline_compiler_cell_0000",
+        "operation_portability": "family_agnostic",
+        "params": {
+          "archive_path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+          "archive_section": "decoder_packed_brotli",
+          "inverse_action_atom_id": "runner_inline_compiler_cell",
+          "inverse_action_operation_set_id": "runner_inline_compiler_set",
+          "inverse_action_source_schema": "inverse_steganalysis_byte_shaving_operation_set_provenance.v1",
+          "runtime_consumption_proof": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/runtime_proof.json",
+          "section_manifest": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+          "water_fill_cost_bytes": 64,
+          "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+        },
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+        "receiver_contract_kinds": [
+          "family_agnostic_archive_section_entropy_recode"
+        ],
+        "representation_family_class": "hnerv_variant",
+        "required_context_fields": [
+          "archive_path",
+          "section_manifest",
+          "output_archive",
+          "output_manifest"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_family_classes": [
+          "hnerv_variant"
+        ],
+        "target_kind": "archive_section_entropy_recode_v1",
+        "unit_id": "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000",
+        "unit_kind": "archive_section"
+      }
+    ],
+    "selected_unit_ids": [
+      "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+    ],
+    "unit_count": 1
+  },
+  "recommended_operation_set": {
+    "active_interactions": [],
+    "base_saved_bytes": 64,
+    "candidate_saved_bytes": 64,
+    "charged_bits_changed": false,
+    "chosen_operation_sequence": [
+      {
+        "materializer": "archive_section_entropy_recode_adapter",
+        "materializer_executable": true,
+        "materializer_execution_status": "registered_executable_after_materializer_contexts",
+        "operation_family": "section_entropy_recode",
+        "operation_id": "section_entropy_recode_runner_inline_compiler_cell_0000",
+        "operation_portability": "family_agnostic",
+        "order_priority": 40,
+        "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+        "receiver_contract_kinds": [
+          "family_agnostic_archive_section_entropy_recode"
+        ],
+        "representation_family_class": "hnerv_variant",
+        "required_context_fields": [
+          "archive_path",
+          "section_manifest",
+          "output_archive",
+          "output_manifest"
+        ],
+        "source_family_classes": [
+          "hnerv_variant"
+        ],
+        "target_kind": "archive_section_entropy_recode_v1",
+        "unit_id": "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000",
+        "unit_kind": "archive_section"
+      }
+    ],
+    "chosen_operation_sequence_is_permutation": true,
+    "chosen_operation_sequence_sha256": "e8b0026cdb1338089f28494f2b87a4ca4e8455d34fe7861f1ae19bbbaaf36174",
+    "chosen_operation_sequence_source": "bounded_permutation_ladder_rank_1",
+    "combo_id": "combo_0001",
+    "confidence": 0.5,
+    "confidence_adjusted_gain": 7.130748649990949e-05,
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "byte_shaving_plan_is_planning_only",
+      "requires_byte_closed_materialization_before_dispatch",
+      "requires_runtime_consumption_proof_before_exact_eval",
+      "requires_same_runtime_locality_or_inflate_parity_check",
+      "requires_exact_auth_eval_before_score_claim",
+      "operation_set_requires_atomic_materializer_or_explicit_partial_set_split",
+      "operation_set_order_requires_materialization_probe"
+    ],
+    "exact_cuda_auth_eval": false,
+    "expected_delta_score": -0.00014261497299981898,
+    "expected_score_gain": 0.00014261497299981898,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "interaction_delta_score": 0,
+    "interaction_extra_saved_bytes": 0,
+    "interaction_shared_overhead_bytes": 0,
+    "operation_families": [
+      "section_entropy_recode"
+    ],
+    "operation_set_id": "opset_combo_0001",
+    "operation_set_rank": 1,
+    "partial_materialization_allowed": false,
+    "prior_order_inversion_count": 0,
+    "promotable": false,
+    "promotion_eligible": false,
+    "quality_cost_score": -0.0001,
+    "rank_or_kill_eligible": false,
+    "rate_delta_score": -4.261497299981897e-05,
+    "ready_for_exact_eval_dispatch": false,
+    "requires_atomic_materialization": true,
+    "schema": "byte_shaving_coupled_operation_set.v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "selected_operations": [
+      {
+        "blockers": [
+          "inverse_action_unit_is_planning_only",
+          "inverse_action_source_operations_rehydrated_from_provenance",
+          "requires_byte_closed_archive_before_dispatch",
+          "requires_exact_auth_eval_before_score_claim",
+          "compiled_from_inverse_action_operation_set_compiler",
+          "requires_materializer_contexts",
+          "requires_runtime_consumption_proof_before_exact_eval",
+          "inverse_action_rehydrated_operation_is_planning_only"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "materializer": "archive_section_entropy_recode_adapter",
+        "materializer_executable": true,
+        "materializer_execution_status": "registered_executable_after_materializer_contexts",
+        "operation_family": "section_entropy_recode",
+        "operation_id": "section_entropy_recode_runner_inline_compiler_cell_0000",
+        "operation_portability": "family_agnostic",
+        "params": {
+          "archive_path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+          "archive_section": "decoder_packed_brotli",
+          "inverse_action_atom_id": "runner_inline_compiler_cell",
+          "inverse_action_operation_set_id": "runner_inline_compiler_set",
+          "inverse_action_source_schema": "inverse_steganalysis_byte_shaving_operation_set_provenance.v1",
+          "runtime_consumption_proof": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/runtime_proof.json",
+          "section_manifest": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+          "water_fill_cost_bytes": 64,
+          "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+        },
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+        "receiver_contract_kinds": [
+          "family_agnostic_archive_section_entropy_recode"
+        ],
+        "representation_family_class": "hnerv_variant",
+        "required_context_fields": [
+          "archive_path",
+          "section_manifest",
+          "output_archive",
+          "output_manifest"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_family_classes": [
+          "hnerv_variant"
+        ],
+        "target_kind": "archive_section_entropy_recode_v1",
+        "unit_id": "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000",
+        "unit_kind": "archive_section"
+      }
+    ],
+    "selected_unit_ids": [
+      "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+    ],
+    "unit_count": 1
+  },
+  "recommended_prefix": {
+    "candidate_saved_bytes": 64,
+    "charged_bits_changed": false,
+    "conflict_violations": [],
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "byte_shaving_plan_is_planning_only",
+      "requires_byte_closed_materialization_before_dispatch",
+      "requires_runtime_consumption_proof_before_exact_eval",
+      "requires_same_runtime_locality_or_inflate_parity_check",
+      "requires_exact_auth_eval_before_score_claim"
+    ],
+    "exact_cuda_auth_eval": false,
+    "expected_delta_score": -0.00014261497299981898,
+    "expected_score_gain": 0.00014261497299981898,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "operation_families": [
+      "section_entropy_recode"
+    ],
+    "promotable": false,
+    "promotion_eligible": false,
+    "quality_cost_score": -0.0001,
+    "rank_or_kill_eligible": false,
+    "rate_delta_score": -4.261497299981897e-05,
+    "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "selected_operations": [
+      {
+        "blockers": [
+          "inverse_action_unit_is_planning_only",
+          "inverse_action_source_operations_rehydrated_from_provenance",
+          "requires_byte_closed_archive_before_dispatch",
+          "requires_exact_auth_eval_before_score_claim",
+          "compiled_from_inverse_action_operation_set_compiler",
+          "requires_materializer_contexts",
+          "requires_runtime_consumption_proof_before_exact_eval",
+          "inverse_action_rehydrated_operation_is_planning_only"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "materializer": "archive_section_entropy_recode_adapter",
+        "materializer_executable": true,
+        "materializer_execution_status": "registered_executable_after_materializer_contexts",
+        "operation_family": "section_entropy_recode",
+        "operation_id": "section_entropy_recode_runner_inline_compiler_cell_0000",
+        "operation_portability": "family_agnostic",
+        "params": {
+          "archive_path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+          "archive_section": "decoder_packed_brotli",
+          "inverse_action_atom_id": "runner_inline_compiler_cell",
+          "inverse_action_operation_set_id": "runner_inline_compiler_set",
+          "inverse_action_source_schema": "inverse_steganalysis_byte_shaving_operation_set_provenance.v1",
+          "runtime_consumption_proof": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/runtime_proof.json",
+          "section_manifest": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+          "water_fill_cost_bytes": 64,
+          "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+        },
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+        "receiver_contract_kinds": [
+          "family_agnostic_archive_section_entropy_recode"
+        ],
+        "representation_family_class": "hnerv_variant",
+        "required_context_fields": [
+          "archive_path",
+          "section_manifest",
+          "output_archive",
+          "output_manifest"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_family_classes": [
+          "hnerv_variant"
+        ],
+        "target_kind": "archive_section_entropy_recode_v1",
+        "unit_id": "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000",
+        "unit_kind": "archive_section"
+      }
+    ],
+    "selected_unit_ids": [
+      "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+    ],
+    "sweep_id": "top_0001",
+    "unit_count": 1
+  },
+  "schema": "byte_shaving_campaign_plan.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "scorer_response_refs": [],
+  "search_space_policy": {
+    "combination_search": "bounded_beam_over_units_and_operation_alternatives",
+    "non_bruteforce_principle": "rank by rate-distortion prior, component/scorer marginal costs, explicit interactions, conflicts, and confidence before any local or exact scorer spend",
+    "operation_layers": {
+      "archive_section": [
+        "section_header_elide",
+        "section_entropy_recode",
+        "section_reorder",
+        "section_proceduralize"
+      ],
+      "byte_range": [
+        "entropy_recode",
+        "null_remove_or_seed",
+        "delta_encode",
+        "literal_elide"
+      ],
+      "correction_target": [
+        "apply_engineered_correction",
+        "probe_correction_neighbor"
+      ],
+      "frame": [
+        "drop_frame",
+        "substitute_frame",
+        "temporal_predict_frame",
+        "lower_frame_precision"
+      ],
+      "packet_member": [
+        "zip_header_elide",
+        "member_recompress",
+        "member_reorder",
+        "member_merge",
+        "native_renderer_payload"
+      ],
+      "pair": [
+        "drop_pair",
+        "substitute_pair",
+        "lower_pair_precision",
+        "proceduralize_pair_residual"
+      ],
+      "scorer_inverse_surface_cell": [
+        "compile_inverse_steganalysis_operation_set",
+        "probe_inverse_scorer_surface_cell",
+        "materialize_inverse_scorer_cell_candidate"
+      ],
+      "scorer_response_row": [
+        "materialize_scorer_response_candidate",
+        "probe_followup_neighbor"
+      ],
+      "tensor": [
+        "quantize_tensor",
+        "prune_tensor",
+        "factorize_tensor",
+        "shared_codebook_tensor"
+      ]
+    },
+    "operation_set_search": "durable_coupled_operation_sets_preserve_interactions_and_order_for_queueing",
+    "permutation_search": "bounded_operation_order_permutations_for_top_combos",
+    "scorer_interaction_terms": [
+      "rate_delta_score",
+      "quality_cost_score",
+      "predicted_seg_score_cost",
+      "predicted_pose_score_cost",
+      "master_gradient_score_cost",
+      "interaction_delta_score"
+    ],
+    "unit_layers": [
+      "archive_section",
+      "byte_range",
+      "correction_target",
+      "frame",
+      "packet_member",
+      "pair",
+      "scorer_inverse_surface_cell",
+      "scorer_response_row",
+      "tensor"
+    ]
+  },
+  "source_paths": [],
+  "source_signal_refs": [
+    {
+      "cell_count": null,
+      "charged_bits_changed": false,
+      "compiled_operation_set_count": 1,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "high_level_operation_compiler_required_count": 0,
+      "kind": "inverse_steganalysis_action_functional",
+      "leaf_cell_candidate_count": 0,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "inverse_steganalysis_discrete_action_functional.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_count": 1,
+      "selected_expected_score_gain": 0.0001,
+      "source_provenance_operation_set_count": 0,
+      "water_bucket_materialization_portfolio_schema": "inverse_steganalysis_water_bucket_materialization_portfolio.v1"
+    }
+  ],
+  "sweep_ladder": [
+    {
+      "candidate_saved_bytes": 64,
+      "charged_bits_changed": false,
+      "conflict_violations": [],
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "exact_cuda_auth_eval": false,
+      "expected_delta_score": -0.00014261497299981898,
+      "expected_score_gain": 0.00014261497299981898,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "operation_families": [
+        "section_entropy_recode"
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "quality_cost_score": -0.0001,
+      "rank_or_kill_eligible": false,
+      "rate_delta_score": -4.261497299981897e-05,
+      "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "blockers": [
+            "inverse_action_unit_is_planning_only",
+            "inverse_action_source_operations_rehydrated_from_provenance",
+            "requires_byte_closed_archive_before_dispatch",
+            "requires_exact_auth_eval_before_score_claim",
+            "compiled_from_inverse_action_operation_set_compiler",
+            "requires_materializer_contexts",
+            "requires_runtime_consumption_proof_before_exact_eval",
+            "inverse_action_rehydrated_operation_is_planning_only"
+          ],
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "materializer": "archive_section_entropy_recode_adapter",
+          "materializer_executable": true,
+          "materializer_execution_status": "registered_executable_after_materializer_contexts",
+          "operation_family": "section_entropy_recode",
+          "operation_id": "section_entropy_recode_runner_inline_compiler_cell_0000",
+          "operation_portability": "family_agnostic",
+          "params": {
+            "archive_path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+            "archive_section": "decoder_packed_brotli",
+            "inverse_action_atom_id": "runner_inline_compiler_cell",
+            "inverse_action_operation_set_id": "runner_inline_compiler_set",
+            "inverse_action_source_schema": "inverse_steganalysis_byte_shaving_operation_set_provenance.v1",
+            "runtime_consumption_proof": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/runtime_proof.json",
+            "section_manifest": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+            "water_fill_cost_bytes": 64,
+            "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+          },
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+          "receiver_contract_kinds": [
+            "family_agnostic_archive_section_entropy_recode"
+          ],
+          "representation_family_class": "hnerv_variant",
+          "required_context_fields": [
+            "archive_path",
+            "section_manifest",
+            "output_archive",
+            "output_manifest"
+          ],
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "source_family_classes": [
+            "hnerv_variant"
+          ],
+          "target_kind": "archive_section_entropy_recode_v1",
+          "unit_id": "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000",
+          "unit_kind": "archive_section"
+        }
+      ],
+      "selected_unit_ids": [
+        "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+      ],
+      "sweep_id": "top_0001",
+      "unit_count": 1
+    }
+  ],
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "tool": "tools/plan_byte_shaving_campaign.py"
+}

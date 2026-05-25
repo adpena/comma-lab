@@ -1,0 +1,25 @@
+{
+  "artifact_map_path": null,
+  "assertions": {
+    "runner_artifact_map_omitted": true,
+    "runner_contexts_generated": true,
+    "runner_contexts_unblocked": true,
+    "runner_work_queue_has_executable_row": true,
+    "runner_worker_plans_materializer_step": true,
+    "score_authority_false": true
+  },
+  "build_materializer_contexts_blocked_count": 0,
+  "build_materializer_contexts_generated": true,
+  "build_materializer_work_queue_executable_row_count": 1,
+  "contexts_blocked_count": 0,
+  "contexts_row_count": 1,
+  "generated_at_utc": "2026-05-25T08:46:20Z",
+  "run_dir": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z",
+  "runner_summary_path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_campaign_run.json",
+  "schema": "codex_materializer_runner_inline_context_autowire_proof.v1",
+  "work_queue_blocked_row_count": 0,
+  "work_queue_executable_row_count": 1,
+  "work_queue_row_count": 1,
+  "worker_planned_step_count": 1,
+  "worker_stop_reason": "dry_run"
+}

@@ -1,0 +1,364 @@
+{
+  "auto_parallelism": {
+    "idle_declared_resources": {},
+    "local_only": {
+      "max_parallel": 18,
+      "resource_limits": {
+        "local_cpu": 18
+      }
+    },
+    "used_resource_kinds": [
+      "local_cpu"
+    ],
+    "with_cloud": {
+      "max_parallel": 18,
+      "resource_limits": {
+        "local_cpu": 18
+      }
+    }
+  },
+  "blocked_steps": [],
+  "blocker_count": 0,
+  "blockers": [],
+  "definition_drift": {
+    "changed_step_count": 0,
+    "changed_steps": [],
+    "missing_hash_step_count": 0,
+    "missing_hash_steps": [],
+    "missing_step_count": 0,
+    "missing_steps": [],
+    "read_only": true,
+    "schema": "experiment_queue_definition_drift.v1"
+  },
+  "failed_steps": [],
+  "generated_at_utc": "2026-05-25T08:46:20Z",
+  "healthy": true,
+  "mode": "running",
+  "observe_read_only": true,
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "performance": {
+    "backlog_key_by_experiment": {},
+    "by_backlog_key": {},
+    "by_experiment": {},
+    "by_resource_kind": {},
+    "by_source_selection_id": {},
+    "by_source_unit_id": {},
+    "by_step": {},
+    "by_work_id": {},
+    "candidate_id_by_experiment": {},
+    "event_count": 0,
+    "promotion_eligible": false,
+    "queue_id": "runner_inline_contexts_proof",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_performance_summary.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_selection_ids_by_experiment": {},
+    "source_unit_ids_by_experiment": {},
+    "telemetry_only": true,
+    "work_id_by_experiment": {}
+  },
+  "queue_id": "runner_inline_contexts_proof",
+  "queue_sha256": "5dd2211d9c379a76fa0d1231d4de6c842426755f04c2e2a300f9278f3dc2c68c",
+  "queued_steps": [
+    {
+      "attempts": 0,
+      "backlog_keys": [
+        "materializer_work_queue_required:archive_section_entropy_recode_v1:archive_section:section_entropy_recode:archive_section_entropy_recode_adapter"
+      ],
+      "candidate_saved_bytes_sum": 128,
+      "expected_artifact_paths": [
+        ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/dispatch_plan.json",
+        ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/dispatch_queue.json"
+      ],
+      "expected_artifacts": [
+        {
+          "exists": false,
+          "path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/dispatch_plan.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/dispatch_plan.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "exists": false,
+          "path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/dispatch_queue.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/dispatch_queue.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "expected_score_gain_sum": 0.00028522994599963796,
+      "experiment_id": "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter",
+      "log_exists": false,
+      "log_path": null,
+      "materializer_id": "archive_section_entropy_recode_adapter",
+      "operation_family": "section_entropy_recode",
+      "pid": null,
+      "processes": [],
+      "receiver_contract_id": "archive_section_entropy_recode_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "opset_combo_0001",
+        "top_0001",
+        "packetir_opset_combo_0001"
+      ],
+      "source_unit_ids": [
+        "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+      ],
+      "status": "queued",
+      "step_id": "build_exact_eval_dispatch_plan",
+      "target_kind": "archive_section_entropy_recode_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "archive_section",
+      "updated_at_utc": "2026-05-25T08:46:20Z",
+      "work_ids": [
+        "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter"
+      ],
+      "worker_run_id": null
+    },
+    {
+      "attempts": 0,
+      "backlog_keys": [
+        "materializer_work_queue_required:archive_section_entropy_recode_v1:archive_section:section_entropy_recode:archive_section_entropy_recode_adapter"
+      ],
+      "candidate_saved_bytes_sum": 128,
+      "expected_artifact_paths": [
+        ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/source_queue.json",
+        ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/harvest_report.json",
+        ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/exact_readiness_bridge_report.json",
+        ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/exact_readiness"
+      ],
+      "expected_artifacts": [
+        {
+          "exists": false,
+          "path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/source_queue.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/source_queue.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "exists": false,
+          "path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/harvest_report.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/harvest_report.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "exists": false,
+          "path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/exact_readiness_bridge_report.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/exact_readiness_bridge_report.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        }
+      ],
+      "expected_score_gain_sum": 0.00028522994599963796,
+      "experiment_id": "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter",
+      "log_exists": false,
+      "log_path": null,
+      "materializer_id": "archive_section_entropy_recode_adapter",
+      "operation_family": "section_entropy_recode",
+      "pid": null,
+      "processes": [],
+      "receiver_contract_id": "archive_section_entropy_recode_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "opset_combo_0001",
+        "top_0001",
+        "packetir_opset_combo_0001"
+      ],
+      "source_unit_ids": [
+        "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+      ],
+      "status": "queued",
+      "step_id": "harvest_materializer_chains",
+      "target_kind": "archive_section_entropy_recode_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "archive_section",
+      "updated_at_utc": "2026-05-25T08:46:20Z",
+      "work_ids": [
+        "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter"
+      ],
+      "worker_run_id": null
+    },
+    {
+      "attempts": 0,
+      "backlog_keys": [
+        "materializer_work_queue_required:archive_section_entropy_recode_v1:archive_section:section_entropy_recode:archive_section_entropy_recode_adapter"
+      ],
+      "candidate_saved_bytes_sum": 128,
+      "expected_artifact_paths": [
+        ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+        ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+        ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+        ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+        ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/runtime_proof.json"
+      ],
+      "expected_artifacts": [
+        {
+          "exists": false,
+          "path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_equals"
+        },
+        {
+          "exists": false,
+          "path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+          "postcondition_error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json'",
+          "postcondition_passed": false,
+          "postcondition_type": "json_completion_contract"
+        }
+      ],
+      "expected_score_gain_sum": 0.00028522994599963796,
+      "experiment_id": "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter",
+      "log_exists": false,
+      "log_path": null,
+      "materializer_id": "archive_section_entropy_recode_adapter",
+      "operation_family": "section_entropy_recode",
+      "pid": null,
+      "processes": [],
+      "receiver_contract_id": "archive_section_entropy_recode_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+      "resource_kind": "local_cpu",
+      "source_selection_ids": [
+        "opset_combo_0001",
+        "top_0001",
+        "packetir_opset_combo_0001"
+      ],
+      "source_unit_ids": [
+        "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+      ],
+      "status": "queued",
+      "step_id": "materialize_local_proof_chain",
+      "target_kind": "archive_section_entropy_recode_v1",
+      "timeout_deadline_epoch_seconds": null,
+      "timeout_seconds": null,
+      "unit_kind": "archive_section",
+      "updated_at_utc": "2026-05-25T08:46:20Z",
+      "work_ids": [
+        "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter"
+      ],
+      "worker_run_id": null
+    }
+  ],
+  "ready_steps": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/run_family_agnostic_materializer.py",
+        "--target-kind",
+        "archive_section_entropy_recode_v1",
+        "--archive-path",
+        "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+        "--output-archive",
+        "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+        "--output-manifest",
+        "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+        "--runtime-consumption-proof",
+        "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/runtime_proof.json",
+        "--section-manifest",
+        "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+        "--section-name",
+        "decoder_packed_brotli"
+      ],
+      "experiment_id": "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter",
+      "priority": 1,
+      "queue_id": "runner_inline_contexts_proof",
+      "resource_kind": "local_cpu",
+      "step_hashes": {
+        "command_hash": "681d865eb9d845f980e7baa88cd6992fc84999c43decd3b7cd05a5b4635bec9e",
+        "definition_hash": "45d57dd6fc130c372a2e5f59517aa21a642cddf019e8bed1abf9fa12dea41aaa",
+        "postcondition_hash": "5a1c007078eef334cb453dd9ae5b149b3d38799e2a1901c4a4d904f50a577c52"
+      },
+      "step_id": "materialize_local_proof_chain"
+    }
+  ],
+  "running_steps": [],
+  "runtime_policy": {
+    "advisory_only": true,
+    "apply_requires_explicit_call": true,
+    "backpressure": {
+      "local_io_heavy": {
+        "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+        "recommended_concurrency": 4
+      }
+    },
+    "current_max_concurrency": {
+      "local_cpu": 18
+    },
+    "dispatch_attempted": false,
+    "generated_from_schema": "experiment_queue_performance_summary.v1",
+    "gpu_launched": false,
+    "input_event_count": 0,
+    "machine_capacity": {
+      "local_cpu": 18,
+      "local_io_heavy": 4,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "runner_inline_contexts_proof",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_max_concurrency": {
+      "local_cpu": 18
+    },
+    "recommended_timeout_seconds_by_resource": {},
+    "resource_policies": {
+      "local_cpu": {
+        "advisory_only": true,
+        "concurrency_reason": "use_detected_local_cpu_capacity",
+        "current_concurrency": 18,
+        "current_timeout_seconds_max": null,
+        "elapsed_seconds_p50": null,
+        "elapsed_seconds_p95": null,
+        "observed_failure_count": 0,
+        "observed_run_count": 0,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 18,
+        "recommended_timeout_seconds": null,
+        "resource_kind": "local_cpu",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      }
+    },
+    "schema": "scheduler_runtime_policy.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "telemetry_only": true
+  },
+  "schema": "experiment_queue_observation.v1",
+  "state": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_execution_queue.sqlite",
+  "state_watermark": {
+    "control_mode": "running",
+    "control_updated_at_utc": "2026-05-25T08:46:20Z",
+    "event_count": 4,
+    "max_event_id": 4,
+    "max_step_updated_at_utc": "2026-05-25T08:46:20Z",
+    "queue_id": "runner_inline_contexts_proof",
+    "schema": "experiment_queue_state_watermark.v1",
+    "state_path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_execution_queue.sqlite",
+    "step_state_count": 3
+  },
+  "status_counts": {
+    "queued": 3
+  },
+  "step_count": 3,
+  "succeeded_artifact_failure_steps": [],
+  "suggested_commands": {
+    "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
+    "refresh": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines 20",
+    "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
+    "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute"
+  }
+}

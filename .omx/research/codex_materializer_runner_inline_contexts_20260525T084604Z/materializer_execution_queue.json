@@ -1,0 +1,315 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 18
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter",
+      "lane_id": null,
+      "metadata": {
+        "allowed_use": "local_materializer_proof_chain_only",
+        "backlog_key": "materializer_work_queue_required:archive_section_entropy_recode_v1:archive_section:section_entropy_recode:archive_section_entropy_recode_adapter",
+        "backlog_rank": 1,
+        "candidate_saved_bytes_sum": 128,
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "materializer_execution_queue_local_proof_chain_only",
+          "exact_auth_eval_required_before_score_claim"
+        ],
+        "exact_cuda_auth_eval": false,
+        "exact_readiness_followup_enabled": true,
+        "exact_readiness_followup_requested": true,
+        "exact_readiness_followup_skipped_reason": null,
+        "expected_score_gain_sum": 0.00028522994599963796,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "materializer_id": "archive_section_entropy_recode_adapter",
+        "operation_family": "section_entropy_recode",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_contract_id": "archive_section_entropy_recode_v1.receiver.v1",
+        "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+        "renderer_payload_dfl1_parity_followup_blockers": [],
+        "renderer_payload_dfl1_parity_followup_enabled": false,
+        "renderer_payload_dfl1_parity_followup_requested": false,
+        "schema": "byte_shaving_materializer_execution_experiment_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_plan_path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/byte_shaving_campaign_plan.inline_compiler.json",
+        "source_selection_ids": [
+          "opset_combo_0001",
+          "top_0001",
+          "packetir_opset_combo_0001"
+        ],
+        "source_state_path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_execution_queue.sqlite",
+        "source_unit_ids": [
+          "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+        ],
+        "source_work_queue_path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_work_queue.json",
+        "source_work_queue_schema": "byte_shaving_materializer_work_queue.v1",
+        "target_kind": "archive_section_entropy_recode_v1",
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ],
+        "unit_kind": "archive_section",
+        "work_id": "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter",
+        "work_rank": 1
+      },
+      "priority": 1,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_family_agnostic_materializer.py",
+            "--target-kind",
+            "archive_section_entropy_recode_v1",
+            "--archive-path",
+            "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+            "--output-archive",
+            "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+            "--output-manifest",
+            "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+            "--runtime-consumption-proof",
+            "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/runtime_proof.json",
+            "--section-manifest",
+            "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+            "--section-name",
+            "decoder_packed_brotli"
+          ],
+          "id": "materialize_local_proof_chain",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "archive_section_entropy_recode_candidate.v1",
+              "key": "schema",
+              "path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "forbidden_statuses": [
+                "failed"
+              ],
+              "path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+              "required_artifact_records": [
+                "candidate_archive"
+              ],
+              "required_equals": {
+                "receiver_verification.schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+                "schema": "archive_section_entropy_recode_candidate.v1"
+              },
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "required_nonempty": [
+                "runtime_consumption_proof_path"
+              ],
+              "required_nonempty_unless_true": [],
+              "required_positive_int": [
+                "candidate_archive.bytes",
+                "candidate_member.bytes"
+              ],
+              "required_sha256": [
+                "candidate_archive.sha256",
+                "candidate_member.sha256"
+              ],
+              "required_true": [
+                "byte_closed_candidate_emitted",
+                "receiver_contract_satisfied",
+                "receiver_verification.receiver_contract_satisfied"
+              ],
+              "type": "json_completion_contract"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+              "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json"
+            ],
+            "family_agnostic_materializer_contract": {
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "ready_for_exact_eval_dispatch": false,
+              "schema": "family_agnostic_materializer_command_contract.v1",
+              "score_claim": false,
+              "target_kind": "archive_section_entropy_recode_v1"
+            },
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+              "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+              "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/runtime_proof.json"
+            ],
+            "max_recursive_entries": 256,
+            "pullback_artifact_paths": [
+              "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+              "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json"
+            ],
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/harvest_materializer_chain_candidates.py",
+            "--repo-root",
+            "/Users/adpena/Projects/pact",
+            "--work-queue",
+            ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_work_queue.json",
+            "--state",
+            ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_execution_queue.sqlite",
+            "--queue-id",
+            "runner_inline_contexts_proof",
+            "--chain-manifest",
+            ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+            "--source-queue-out",
+            ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/source_queue.json",
+            "--report-out",
+            ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/harvest_report.json",
+            "--exact-readiness-out-dir",
+            ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/exact_readiness",
+            "--exact-readiness-bridge-report-out",
+            ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/exact_readiness_bridge_report.json",
+            "--require-accepted"
+          ],
+          "id": "harvest_materializer_chains",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "optimizer_candidate_queue_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/source_queue.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "materializer_chain_harvest_report.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/harvest_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "materializer_chain_exact_readiness_bridge_report.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "materialize_local_proof_chain"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/source_queue.json",
+              ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/harvest_report.json",
+              ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/exact_readiness",
+              ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/exact_readiness_bridge_report.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_materializer_exact_eval_dispatch_plan.py",
+            "--repo-root",
+            "/Users/adpena/Projects/pact",
+            "--bridge-report",
+            ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/exact_readiness_bridge_report.json",
+            "--dispatch-plan-out",
+            ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/dispatch_plan.json",
+            "--experiment-queue-out",
+            ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/dispatch_queue.json",
+            "--experiment-queue-id",
+            "runner_inline_contexts_proof_materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter_exact_eval_dispatch",
+            "--provider",
+            "lightning",
+            "--label-prefix",
+            "materializer_exact_eval",
+            "--estimated-cost-per-dispatch",
+            "0.3",
+            "--max-total-cost",
+            "5"
+          ],
+          "id": "build_exact_eval_dispatch_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "materializer_exact_eval_dispatch_plan.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/dispatch_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "experiment_queue.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/dispatch_queue.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "harvest_materializer_chains"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/dispatch_plan.json",
+              ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/materializer_outputs/exact_eval_handoff/dispatch_queue.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": [
+        "byte-shaving",
+        "materializer",
+        "local-proof-chain",
+        "no-score-authority"
+      ]
+    }
+  ],
+  "queue_id": "runner_inline_contexts_proof",
+  "schema": "experiment_queue.v1"
+}

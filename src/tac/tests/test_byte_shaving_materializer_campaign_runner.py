@@ -290,8 +290,33 @@ def test_materializer_campaign_runner_builds_queue_owned_followup_command(
     assert "--materializer-scheduler-proactive-cleanup-execute" in command
     assert "--materializer-scheduler-proactive-cleanup-cold-store-root" in command
     assert str(tmp_path / "cold_store") in command
+    assert "--materializer-contexts" in command
+    assert "--materializer-contexts-out" not in command
     assert "--dispatch-mode" not in command
     assert "--allow-paid-dispatch-queue" not in command
+
+
+def test_materializer_campaign_runner_generates_contexts_without_artifact_map(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--run-dir",
+            str(run_dir),
+        ]
+    )
+
+    command = runner._build_queue_command(args, run_dir=run_dir)
+
+    assert "--materializer-artifact-map" not in command
+    assert "--materializer-contexts" not in command
+    assert "--materializer-contexts-out" in command
+    assert str(run_dir / "materializer_contexts.json") in command
+    assert "--materializer-context-default-output-root" in command
+    assert str(run_dir / "materializer_outputs") in command
 
 
 def test_materializer_campaign_runner_can_auto_generate_contexts_from_artifact_map(

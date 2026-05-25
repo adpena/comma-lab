@@ -162,6 +162,23 @@ def _path_under_root(path: Path, root: Path) -> bool:
     return True
 
 
+def _default_materializer_context_output_root(
+    args: argparse.Namespace,
+    *,
+    run_dir: Path,
+) -> Path:
+    if args.materializer_context_default_output_root is not None:
+        return _resolve(args.materializer_context_default_output_root)
+    if args.include_storage_preflight and args.storage_expected_workload_root:
+        expected_workload_root = _resolve(args.storage_expected_workload_root)
+        return (
+            run_dir / "materializer_outputs"
+            if _path_under_root(run_dir, expected_workload_root)
+            else expected_workload_root / "materializer_outputs"
+        )
+    return run_dir / "materializer_outputs"
+
+
 def _json_print(payload: object) -> None:
     print(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False))
 
@@ -3152,28 +3169,26 @@ def _build_queue_command(
     )
     if args.materializer_contexts is not None:
         command.extend(["--materializer-contexts", _display_path(_resolve(args.materializer_contexts))])
-    if artifact_map is not None:
-        if args.materializer_context_default_output_root is not None:
-            default_context_output_root = _resolve(args.materializer_context_default_output_root)
-        elif args.include_storage_preflight and args.storage_expected_workload_root:
-            expected_workload_root = _resolve(args.storage_expected_workload_root)
-            default_context_output_root = (
-                run_dir / "materializer_outputs"
-                if _path_under_root(run_dir, expected_workload_root)
-                else expected_workload_root / "materializer_outputs"
-            )
-        else:
-            default_context_output_root = run_dir / "materializer_outputs"
+    else:
+        default_context_output_root = _default_materializer_context_output_root(
+            args,
+            run_dir=run_dir,
+        )
         command.extend(
             [
-                "--materializer-artifact-map",
-                _display_path(artifact_map),
                 "--materializer-contexts-out",
                 _display_path(run_dir / "materializer_contexts.json"),
                 "--materializer-context-default-output-root",
                 _display_path(default_context_output_root),
             ]
         )
+        if artifact_map is not None:
+            command.extend(
+                [
+                    "--materializer-artifact-map",
+                    _display_path(artifact_map),
+                ]
+            )
         if args.materializer_contexts_fail_if_blocked:
             command.append("--materializer-contexts-fail-if-blocked")
     if args.lane_id:
