@@ -1,0 +1,52 @@
+{
+  "schema": "codex_many_materializer_autonomous_portfolio_retention_manifest.v1",
+  "generated_at_utc": "2026-05-25T22:51:17Z",
+  "lane_id": "codex_many_materializer_autonomous_portfolio",
+  "authority": "planning-only; no score, promotion, rank/kill, dispatch, or exact-eval authority",
+  "full_artifact_root": ".omx/research/codex_many_materializer_autonomous_portfolio_20260525T225117Z",
+  "commit_policy": {
+    "commit_compact_artifacts": true,
+    "keep_large_generated_artifacts_local": true,
+    "reason": "The full generated portfolio is reproducible and about 96 MB; durable signal is preserved by code, tests, markdown summaries, findings memo, and this manifest."
+  },
+  "summary": {
+    "surface_unit_count": 20,
+    "materializer_registry_adapter_count": 18,
+    "materializer_target_kind_count": 18,
+    "campaign_plan_ranked_unit_count": 20,
+    "campaign_plan_combination_count": 32,
+    "campaign_plan_packet_ir_operation_set_count": 32,
+    "compiled_materialization_row_count": 43,
+    "materializer_work_queue_row_count": 19,
+    "materializer_work_queue_executable_row_count": 0,
+    "materializer_work_queue_blocked_row_count": 19,
+    "top_backlog_target_kinds": [
+      "archive_section_entropy_recode_v1",
+      "packet_member_merge_v1",
+      "packet_member_recompress_v1",
+      "dqs1_pairset_drop_pair",
+      "packet_member_zip_header_elide_v1",
+      "inverse_scorer_cell_candidate_v1",
+      "tensor_factorize_v1"
+    ]
+  },
+  "artifact_sha256": {
+    "action_summary.json": "cdd1dce54d3bbaab0fb94fcb6e1d61dc9123ff9d3e64895d9b0bdb35d482a9f0",
+    "byte_shaving_campaign_plan.json": "6752d9994d72806e327a3bf6b8fc827f301f7b1c53874db0ae9b5c8c1429cf45",
+    "byte_shaving_campaign_plan.md": "262359c7a998fba0caa9290cd2a7ef312c6cc966d2df60dcc6b6048d32beeed7",
+    "byte_shaving_signal_surface.json": "b5f6e745e981b2a35f360154c1be89e584fde587e9132d82724ce6bdc0791479",
+    "byte_shaving_signal_surface.md": "a07ec9c8540ee5a7bcc78a5bad59c2de6967c891f21455a99bc0af595f1073be",
+    "inverse_action_materialization_bridge.json": "9e12bedec00cf873bc5791ed3a2dec0d60bf8081244c0d657a6cfffacfd136c5",
+    "materialization.json": "5fc2c3cd1fc84b369668df4c6b832ddeb98e2bfafac994f0ca5840d3734e05e1",
+    "materializer_backlog.json": "38ebc5decf6277be9f93b01f6012e8b43d0c72e49a2a04065db800386878198a",
+    "materializer_contexts.json": "dbe76bed54dc10591c5f2a92290cad90bafbbea8606c0df295da11cd7694215a",
+    "materializer_work_queue.json": "96e9e0e2e6b50a4e0a89b4379cdfe6e23c33f8003773fac8977a81f23ac333b2",
+    "operator_portfolio.json": "1118a4ade75aea475f4be07f20ecf78be5d132f84b310893288f4565d9172a4c"
+  },
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "dispatch_attempted": false,
+  "gpu_launched": false
+}

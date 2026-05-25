@@ -120,6 +120,32 @@ def _extend_refs(target: list[dict[str, Any]], refs: Iterable[Any]) -> None:
             target.append(dict(item))
 
 
+def _validated_materializer_registry_portfolio_units(
+    units: Sequence[Mapping[str, Any]],
+    *,
+    seen_unit_ids: set[str],
+) -> list[dict[str, Any]]:
+    """Accept scheduler-built registry units without importing scheduler here."""
+
+    out: list[dict[str, Any]] = []
+    for index, raw_unit in enumerate(units):
+        try:
+            require_no_truthy_authority_fields(
+                raw_unit,
+                context=f"materializer_registry_portfolio_unit:{index}",
+            )
+        except ValueError as exc:
+            raise ByteShavingCampaignError(str(exc)) from exc
+        out.append(
+            _dedupe_unit_id(
+                raw_unit,
+                prefix=f"materializer_registry_portfolio_{index}",
+                seen=seen_unit_ids,
+            )
+        )
+    return out
+
+
 def _json_payload_ref(path: Path, repo_root: Path, *, kind: str, payload: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "kind": kind,
@@ -1316,6 +1342,8 @@ def build_byte_shaving_signal_surface(
     atom_ids: Sequence[str] = (),
     atom_min_predicted_impact: float | None = None,
     atom_ledger_path: str | Path | None = None,
+    materializer_registry_portfolio_units: Sequence[Mapping[str, Any]] = (),
+    materializer_registry_portfolio_refs: Sequence[Mapping[str, Any]] = (),
     candidate_id: str | None = None,
     lane_id: str = "byte_shaving_signal_surface",
     frontier_axis: str = "[planning-only]",
@@ -1335,7 +1363,20 @@ def build_byte_shaving_signal_surface(
     engineered_correction_refs: list[dict[str, Any]] = []
     inverse_action_functional_refs: list[dict[str, Any]] = []
     inverse_action_materialization_portfolios: list[dict[str, Any]] = []
+    materializer_registry_refs: list[dict[str, Any]] = []
     surface_blockers: list[str] = []
+
+    for unit in _validated_materializer_registry_portfolio_units(
+        materializer_registry_portfolio_units,
+        seen_unit_ids=seen_unit_ids,
+    ):
+        units.append(unit)
+    _extend_refs(materializer_registry_refs, materializer_registry_portfolio_refs)
+    _extend_refs(source_signal_refs, materializer_registry_refs)
+    if materializer_registry_refs:
+        surface_blockers.append(
+            "materializer_registry_portfolio_requires_concrete_artifact_context"
+        )
 
     for index, raw_path in enumerate(candidate_queue_paths):
         path = _resolve_path(raw_path, repo)
@@ -1553,6 +1594,7 @@ def build_byte_shaving_signal_surface(
         "inverse_action_materialization_portfolios": (
             inverse_action_materialization_portfolios
         ),
+        "materializer_registry_portfolio_refs": materializer_registry_refs,
         "xray_refs": _xray_hook_refs(xray_hooks),
         "canonical_equation_refs": _canonical_equation_refs(
             repo_root=repo,

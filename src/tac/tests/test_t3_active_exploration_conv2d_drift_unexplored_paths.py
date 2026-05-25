@@ -8,6 +8,7 @@ non-promotable markers.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
 import sys
@@ -29,6 +30,14 @@ from tac.local_acceleration.deterministic_primitives import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+_MEASURE_SPEC = importlib.util.spec_from_file_location(
+    "measure_unexplored_mitigation_paths_drift",
+    REPO_ROOT / "tools" / "measure_unexplored_mitigation_paths_drift.py",
+)
+assert _MEASURE_SPEC is not None
+_MEASURE_MODULE = importlib.util.module_from_spec(_MEASURE_SPEC)
+assert _MEASURE_SPEC.loader is not None
+_MEASURE_SPEC.loader.exec_module(_MEASURE_MODULE)
 
 # ---------------------------------------------------------------------------
 # ActiveExplorationPathVerdict enum
@@ -409,6 +418,11 @@ class TestMeasureUnexploredMitigationPathsCli:
         manifest = json.loads(output.read_text(encoding="utf-8"))
         assert stdout["mitigation_paths"] == ["kahan", "fp64"]
         assert manifest["shape_preset"] == "smoke"
+        assert manifest["axis_tag"] == "[macOS-MLX research-signal]"
+        assert manifest["thread_1_kahan_per_scale_measurements"][0]["axis_tag"] == (
+            "[macOS-MLX research-signal]"
+        )
+        assert manifest["active_exploration_summary"]["threads_fixable_count"] == 0
         assert manifest["thread_3_mlx_deterministic_investigation"]["measurement_status"] == (
             "skipped_by_mitigation_paths_filter"
         )
@@ -416,6 +430,18 @@ class TestMeasureUnexploredMitigationPathsCli:
             "skipped_by_mitigation_paths_filter"
         )
         assert manifest["score_claim"] is False
+
+    def test_partial_verdicts_do_not_count_as_fixable(self) -> None:
+        summary = _MEASURE_MODULE._summarize_path_verdicts(
+            aggregate_kahan_verdict="PARTIALLY_FIXABLE_MARGINAL",
+            aggregate_fp64_verdict="PARTIALLY_FIXABLE_MARGINAL",
+            thread_3_verdict="NOT_FIXABLE_FRAMEWORK_FUNDAMENTAL",
+            thread_4_verdict="DEFERRED_PENDING_PAID_DISPATCH",
+        )
+        assert summary["threads_fixable_count"] == 0
+        assert summary["threads_partially_fixable_count"] == 2
+        assert summary["threads_deferred_or_not_fixable_count"] == 2
+        assert summary["overall_verdict"] == "PROCEED"
 
     def test_framework_smoke_filter_skips_conv_measurements(
         self,

@@ -22,6 +22,8 @@ from tac.optimization.scorer_response_dataset import RATE_SCORE_PER_BYTE
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = REPO_ROOT / "tools" / "build_byte_shaving_signal_surface.py"
+PLAN_TOOL = REPO_ROOT / "tools" / "plan_byte_shaving_campaign.py"
+QUEUE_TOOL = REPO_ROOT / "tools" / "build_byte_shaving_campaign_queue.py"
 
 
 def _candidate_queue(path: Path) -> None:
@@ -934,6 +936,133 @@ def test_cli_writes_surface_and_markdown(tmp_path: Path) -> None:
     assert "pair_frame_geometry_outcome_refs" in md
     assert "inverse_action_materialization_portfolios" in md
     assert "Authority Boundary" in md
+
+
+def test_cli_seeds_many_materializer_registry_portfolio_into_campaign_queue(
+    tmp_path: Path,
+) -> None:
+    surface_out = tmp_path / "surface.json"
+    surface_md = tmp_path / "surface.md"
+    plan_out = tmp_path / "plan.json"
+    materialization_out = tmp_path / "materialization.json"
+    portfolio_out = tmp_path / "portfolio.json"
+    action_summary_out = tmp_path / "action_summary.json"
+    backlog_out = tmp_path / "materializer_backlog.json"
+    work_queue_out = tmp_path / "materializer_work_queue.json"
+    target_kinds = {
+        "archive_section_entropy_recode_v1",
+        "packet_member_merge_v1",
+        "packet_member_reorder_v1",
+        "tensor_factorize_v1",
+    }
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--include-materializer-registry-portfolio",
+            "--materializer-registry-target-kind",
+            "archive_section_entropy_recode_v1",
+            "--materializer-registry-target-kind",
+            "packet_member_merge_v1",
+            "--materializer-registry-target-kind",
+            "packet_member_reorder_v1",
+            "--materializer-registry-target-kind",
+            "tensor_factorize_v1",
+            "--output",
+            str(surface_out),
+            "--md-out",
+            str(surface_md),
+            "--repo-root",
+            str(tmp_path),
+            "--campaign-id",
+            "fixture_many_materializer_surface",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        [
+            sys.executable,
+            str(PLAN_TOOL),
+            "--source",
+            str(surface_out),
+            "--output",
+            str(plan_out),
+            "--repo-root",
+            str(tmp_path),
+            "--campaign-id",
+            "fixture_many_materializer_surface",
+            "--max-k",
+            "4",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        [
+            sys.executable,
+            str(QUEUE_TOOL),
+            "--plan",
+            str(plan_out),
+            "--materialization-out",
+            str(materialization_out),
+            "--portfolio-out",
+            str(portfolio_out),
+            "--action-summary-out",
+            str(action_summary_out),
+            "--materializer-backlog-out",
+            str(backlog_out),
+            "--materializer-work-queue-out",
+            str(work_queue_out),
+            "--repo-root",
+            str(tmp_path),
+            "--candidate-limit",
+            "8",
+            "--allow-partial-materialization",
+            "--partial-materialization-rationale",
+            "fixture preserves registry-wide many-materializer backlog signal",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    surface = json.loads(surface_out.read_text(encoding="utf-8"))
+    plan = json.loads(plan_out.read_text(encoding="utf-8"))
+    materialization = json.loads(materialization_out.read_text(encoding="utf-8"))
+    backlog = json.loads(backlog_out.read_text(encoding="utf-8"))
+    work_queue = json.loads(work_queue_out.read_text(encoding="utf-8"))
+
+    ref = surface["materializer_registry_portfolio_refs"][0]
+    assert ref["adapter_count"] == 4
+    assert ref["score_claim"] is False
+    assert "materializer_registry_portfolio_refs" in surface_md.read_text(
+        encoding="utf-8"
+    )
+    surface_targets = {
+        unit["operations"][0]["target_kind"] for unit in surface["units"]
+    }
+    assert surface_targets == target_kinds
+    assert all(
+        "materializer_registry_portfolio_requires_concrete_artifact_context"
+        in unit["blockers"]
+        for unit in surface["units"]
+    )
+    assert plan["materializer_registry_portfolio_refs"][0]["adapter_count"] == 4
+    packet_ir_targets = {
+        operation["target_kind"]
+        for operation_set in plan["packet_ir_operation_sets"]
+        for operation in operation_set["operations"]
+    }
+    assert target_kinds.issubset(packet_ir_targets)
+    assert materialization["materializer_backlog"]["backlog_row_count"] >= 4
+    assert backlog["packet_ir_lowered_row_count"] > 0
+    assert work_queue["row_count"] >= 1
+    assert materialization["score_claim"] is False
+    assert materialization["ready_for_exact_eval_dispatch"] is False
 
 
 def test_cli_can_build_surface_from_scorer_response_only(tmp_path: Path) -> None:

@@ -31,7 +31,7 @@ to ``experiments/results/conv2d_drift_unexplored_paths_<utc>/results.json``
 
 Per Catalog #287/#323 canonical Provenance: every measurement carries
 ``evidence_grade=macOS-MLX-research-signal`` + ``score_claim=False`` +
-``axis_tag=[predicted]``.
+``axis_tag=[macOS-MLX research-signal]``.
 """
 
 from __future__ import annotations
@@ -204,7 +204,7 @@ def measure_threads_1_and_2(shape_spec: dict[str, Any]) -> dict[str, Any]:
         "thread_1_verdict": _classify_reduction(_reduction("kahan_fp32")),
         "thread_2_verdict": _classify_reduction(_reduction("fixed_fp64")),
         "evidence_grade": "macOS-MLX-research-signal",
-        "axis_tag": "[predicted]",
+        "axis_tag": "[macOS-MLX research-signal]",
         "score_claim": False,
         "promotion_eligible": False,
         "promotable": False,
@@ -250,7 +250,7 @@ def measure_thread_3() -> dict[str, Any]:
         ),
         "thread_3_predicted_verdict_lower_bound": "FIXABLE_OR_FRAMEWORK_DIFFERENT",
         "evidence_grade": "macOS-MLX-research-signal",
-        "axis_tag": "[predicted]",
+        "axis_tag": "[macOS-MLX research-signal]",
         "score_claim": False,
         "promotion_eligible": False,
         "promotable": False,
@@ -297,7 +297,7 @@ def measure_thread_4() -> dict[str, Any]:
             "NOISE' non-negotiable (23x drift on PoseNet documented)"
         ),
         "evidence_grade": "macOS-MLX-research-signal",
-        "axis_tag": "[predicted]",
+        "axis_tag": "[macOS-MLX research-signal]",
         "score_claim": False,
         "promotion_eligible": False,
         "promotable": False,
@@ -311,7 +311,7 @@ def _skipped_path(path_name: str) -> dict[str, Any]:
         "path_name": path_name,
         "measurement_status": "skipped_by_mitigation_paths_filter",
         "evidence_grade": "macOS-MLX-research-signal",
-        "axis_tag": "[predicted]",
+        "axis_tag": "[macOS-MLX research-signal]",
         "score_claim": False,
         "promotion_eligible": False,
         "promotable": False,
@@ -360,31 +360,11 @@ def build_active_exploration_manifest(
     )
 
     # Compose overall verdict.
-    fixable_count = sum(
-        1
-        for v in (
-            aggregate_kahan_verdict,
-            aggregate_fp64_verdict,
-            thread_3.get("thread_3_verdict", "NOT_MEASURED"),
-            thread_4.get("thread_4_verdict", "NOT_MEASURED"),
-        )
-        if "FIXABLE" in v and "NOT_FIXABLE" not in v
-    )
-    partially_fixable_count = sum(
-        1
-        for v in (
-            aggregate_kahan_verdict,
-            aggregate_fp64_verdict,
-        )
-        if "PARTIALLY_FIXABLE" in v
-    )
-    deferred_count = sum(
-        1
-        for v in (
-            thread_3.get("thread_3_verdict", "NOT_MEASURED"),
-            thread_4.get("thread_4_verdict", "NOT_MEASURED"),
-        )
-        if "DEFERRED" in v or "NOT_FIXABLE" in v
+    summary = _summarize_path_verdicts(
+        aggregate_kahan_verdict=aggregate_kahan_verdict,
+        aggregate_fp64_verdict=aggregate_fp64_verdict,
+        thread_3_verdict=str(thread_3.get("thread_3_verdict", "NOT_MEASURED")),
+        thread_4_verdict=str(thread_4.get("thread_4_verdict", "NOT_MEASURED")),
     )
 
     return {
@@ -396,7 +376,7 @@ def build_active_exploration_manifest(
         "mitigation_paths": list(selected_paths),
         "hardware_substrate": "macos_apple_silicon_m5_max_mlx_cpu_vs_torch_cpu",
         "evidence_grade": "macOS-MLX-research-signal",
-        "axis_tag": "[predicted]",
+        "axis_tag": "[macOS-MLX research-signal]",
         "score_claim": False,
         "promotion_eligible": False,
         "promotable": False,
@@ -424,18 +404,7 @@ def build_active_exploration_manifest(
         ),
         "thread_3_mlx_deterministic_investigation": thread_3,
         "thread_4_cudnn_reference_measurement": thread_4,
-        "active_exploration_summary": {
-            "threads_fixable_count": fixable_count,
-            "threads_partially_fixable_count": partially_fixable_count,
-            "threads_deferred_or_not_fixable_count": deferred_count,
-            "overall_verdict": (
-                "PROCEED"
-                if (fixable_count + partially_fixable_count) >= 2
-                else "PARTIAL"
-                if (fixable_count + partially_fixable_count) >= 1
-                else "DEFER"
-            ),
-        },
+        "active_exploration_summary": summary,
         "blockers": [
             "active_exploration_is_local_mlx_pytorch_macos_research_signal_only",
             "requires_paired_cuda_t4_or_linux_x86_64_eval_for_promotion",
@@ -456,6 +425,56 @@ def build_active_exploration_manifest(
             "step_4_verdict_same_commit_batch": "TRUE",
             "step_5_operator_priority_queue_reroute": "TRUE - Slot 1 export bridge VERDICT upgrade routed",
         },
+    }
+
+
+def _summarize_path_verdicts(
+    *,
+    aggregate_kahan_verdict: str,
+    aggregate_fp64_verdict: str,
+    thread_3_verdict: str,
+    thread_4_verdict: str,
+) -> dict[str, Any]:
+    """Return aggregate counts without substring false positives."""
+
+    measured_verdicts = (
+        aggregate_kahan_verdict,
+        aggregate_fp64_verdict,
+        thread_3_verdict,
+        thread_4_verdict,
+    )
+    fixable_count = sum(
+        1
+        for v in measured_verdicts
+        if v in {"FIXABLE", "FIXABLE_VIA_MLX_PUBLIC_API"}
+    )
+    partially_fixable_count = sum(
+        1
+        for v in (
+            aggregate_kahan_verdict,
+            aggregate_fp64_verdict,
+        )
+        if "PARTIALLY_FIXABLE" in v
+    )
+    deferred_count = sum(
+        1
+        for v in (
+            thread_3_verdict,
+            thread_4_verdict,
+        )
+        if "DEFERRED" in v or "NOT_FIXABLE" in v
+    )
+    return {
+        "threads_fixable_count": fixable_count,
+        "threads_partially_fixable_count": partially_fixable_count,
+        "threads_deferred_or_not_fixable_count": deferred_count,
+        "overall_verdict": (
+            "PROCEED"
+            if (fixable_count + partially_fixable_count) >= 2
+            else "PARTIAL"
+            if (fixable_count + partially_fixable_count) >= 1
+            else "DEFER"
+        ),
     }
 
 

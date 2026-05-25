@@ -845,7 +845,48 @@ def main(argv: list[str] | None = None) -> int:
             "experiments/results/pr95_mlx_pytorch_full_decoder_downstream_drift_<utc>/results.json"
         ),
     )
+    parser.add_argument(
+        "--register-canonical-equation",
+        action="store_true",
+        help=(
+            "Register mlx_pytorch_full_decoder_downstream_scorer_drift_propagation_v1 "
+            "from the emitted result JSON. This appends to the canonical equations "
+            "ledger and does not grant score or dispatch authority."
+        ),
+    )
+    parser.add_argument(
+        "--register-from-result-json",
+        type=Path,
+        default=None,
+        help=(
+            "Register mlx_pytorch_full_decoder_downstream_scorer_drift_propagation_v1 "
+            "from an existing result JSON and skip measurement."
+        ),
+    )
     args = parser.parse_args(argv)
+
+    if args.register_from_result_json is not None:
+        from tac.canonical_equations import (
+            build_mlx_pytorch_drift_equation_from_result_json,
+            register_canonical_equation,
+        )
+
+        result_json = args.register_from_result_json
+        if not result_json.is_absolute():
+            result_json = REPO_ROOT / result_json
+        if not result_json.is_file():
+            print(f"ERROR: result JSON not found: {result_json}", file=sys.stderr)
+            return 2
+        equation = build_mlx_pytorch_drift_equation_from_result_json(result_json)
+        register_canonical_equation(
+            equation,
+            agent="codex",
+            subagent_id="codex_mlx_downstream_drift_equation_registration_20260525",
+            notes="Registered from existing full-decoder downstream drift result JSON; false-authority preserved.",
+        )
+        print(f"Registered canonical equation: {equation.equation_id}")
+        print(f"Source result JSON: {result_json}")
+        return 0
 
     if args.output_json is None:
         utc = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
@@ -898,6 +939,23 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Aggregate verdict: {manifest['aggregate_verdict']}")
     print(f"Aggregate contest-score drift: {manifest['aggregate_contest_score_drift_units']:.6e}")
     print(f"Wall clock: {elapsed:.1f}s")
+    if args.register_canonical_equation:
+        from tac.canonical_equations import (
+            build_mlx_pytorch_full_decoder_downstream_scorer_drift_propagation_v1,
+            register_canonical_equation,
+        )
+
+        equation = build_mlx_pytorch_full_decoder_downstream_scorer_drift_propagation_v1(
+            manifest,
+            source_artifact=str(args.output_json),
+        )
+        register_canonical_equation(
+            equation,
+            agent="codex",
+            subagent_id="codex_mlx_downstream_drift_equation_registration_20260525",
+            notes="Registered from full-decoder downstream drift CLI; false-authority preserved.",
+        )
+        print(f"Registered canonical equation: {equation.equation_id}")
     return 0
 
 

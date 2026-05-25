@@ -41,6 +41,7 @@ def _render_markdown(surface: dict[str, Any]) -> str:
         f"- engineered_correction_refs: `{len(surface.get('engineered_correction_refs') or [])}`",
         f"- inverse_action_functional_refs: `{len(surface.get('inverse_action_functional_refs') or [])}`",
         f"- inverse_action_materialization_portfolios: `{len(surface.get('inverse_action_materialization_portfolios') or [])}`",
+        f"- materializer_registry_portfolio_refs: `{len(surface.get('materializer_registry_portfolio_refs') or [])}`",
         f"- xray_refs: `{len(surface.get('xray_refs') or [])}`",
         f"- canonical_equation_refs: `{len(surface.get('canonical_equation_refs') or [])}`",
         f"- atom_refs: `{len(surface.get('atom_refs') or [])}`",
@@ -55,6 +56,204 @@ def _render_markdown(surface: dict[str, Any]) -> str:
         "",
     ]
     return "\n".join(lines)
+
+
+def _materializer_registry_portfolio(
+    *,
+    target_kinds: list[str],
+    planning_saved_bytes: int,
+    executable_confidence: float,
+    contract_confidence: float,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    from comma_lab.scheduler.byte_shaving_materializer_registry import (
+        registry_manifest,
+    )
+
+    if planning_saved_bytes < 1:
+        raise ByteShavingCampaignError(
+            "--materializer-registry-planning-saved-bytes must be >= 1"
+        )
+    targets = {str(item).strip() for item in target_kinds if str(item).strip()}
+    manifest = registry_manifest()
+    adapters = [
+        item
+        for item in manifest.get("adapters", [])
+        if isinstance(item, dict)
+        and (not targets or str(item.get("target_kind") or "") in targets)
+    ]
+    if targets:
+        found = {str(item.get("target_kind") or "") for item in adapters}
+        missing = sorted(targets - found)
+        if missing:
+            raise ByteShavingCampaignError(
+                "materializer registry target kind(s) not found: " + ",".join(missing)
+            )
+
+    units: list[dict[str, Any]] = []
+    target_kind_counts: dict[str, int] = {}
+    executable_count = 0
+    candidate_archive_count = 0
+    blocker_counts: dict[str, int] = {}
+    for index, adapter in enumerate(adapters):
+        target_kind = str(adapter.get("target_kind") or "")
+        materializer_id = str(adapter.get("materializer_id") or "")
+        executable = (
+            adapter.get("executable") is True
+            and adapter.get("emits_candidate_archive") is True
+            and adapter.get("planning_only") is not True
+        )
+        if adapter.get("executable") is True:
+            executable_count += 1
+        if adapter.get("emits_candidate_archive") is True:
+            candidate_archive_count += 1
+        required_context_fields = [
+            str(item)
+            for item in adapter.get("required_context_fields", [])
+            if str(item).strip()
+        ]
+        blockers = [
+            "materializer_registry_portfolio_unit_is_planning_only",
+            "materializer_registry_portfolio_requires_concrete_artifact_context",
+            "requires_receiver_runtime_consumption_proof_before_exact_eval",
+            "requires_exact_auth_eval_before_score_claim",
+        ]
+        if required_context_fields:
+            blockers.append("materializer_registry_required_context_fields_missing")
+        if adapter.get("cooperative_receiver_required") is True:
+            blockers.append("requires_cooperative_receiver_runtime_adapter")
+        if adapter.get("executable") is not True:
+            blockers.append("materializer_registry_adapter_not_executable")
+        if adapter.get("emits_candidate_archive") is not True or adapter.get("planning_only") is True:
+            blockers.append(
+                "materializer_registry_planning_only_adapter_not_candidate_archive"
+            )
+        for blocker in blockers:
+            blocker_counts[blocker] = blocker_counts.get(blocker, 0) + 1
+        target_kind_counts[target_kind] = target_kind_counts.get(target_kind, 0) + 1
+        operation = {
+            "operation_id": f"registry_portfolio_{target_kind or index}",
+            "operation_family": adapter.get("operation_family"),
+            "candidate_saved_bytes": planning_saved_bytes,
+            "predicted_quality_score_delta": 0.0,
+            "confidence": (
+                executable_confidence if executable else contract_confidence
+            ),
+            "materializer": materializer_id,
+            "target_kind": target_kind,
+            "params": {
+                "materializer_registry_schema": manifest.get("schema"),
+                "materializer_registry_target_kind": target_kind,
+                "materializer_id": materializer_id,
+                "required_context_fields": required_context_fields,
+                "implementation_module": adapter.get("implementation_module"),
+                "materialize_function": adapter.get("materialize_function"),
+                "receiver_proof_function": adapter.get("receiver_proof_function"),
+                "receiver_verify_function": adapter.get("receiver_verify_function"),
+            },
+            "receiver_contract_kind": adapter.get("receiver_contract_kind"),
+            "materializer_executable": bool(adapter.get("executable")),
+            "materializer_adapter_registered": True,
+            "executable_work_ready": False,
+            "materializer_execution_status": (
+                "registered_executable_requires_artifact_context"
+                if executable
+                else "registered_contract_not_executable"
+            ),
+            "required_context_fields": required_context_fields,
+            "operation_portability": (
+                "family_agnostic"
+                if str(adapter.get("unit_kind") or "") in {"archive_section", "tensor", "packet_member"}
+                else "adapter_contract_specific"
+            ),
+            "blockers": blockers,
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+        }
+        unit_id = (
+            f"materializer_registry_{adapter.get('unit_kind')}_"
+            f"{adapter.get('operation_family')}_{target_kind or index}"
+        )
+        units.append(
+            {
+                "unit_id": unit_id,
+                "unit_kind": adapter.get("unit_kind"),
+                "source_index": index,
+                "candidate_saved_bytes": planning_saved_bytes,
+                "predicted_quality_score_cost": 0.0,
+                "confidence": operation["confidence"],
+                "operation_families": [adapter.get("operation_family")],
+                "operations": [operation],
+                "score_axis": "[planning-only materializer portfolio]",
+                "evidence_grade": "[planning-only registry contract]",
+                "evidence_semantics": (
+                    "materializer_registry_portfolio_seed_for_autonomous_many_op_search"
+                ),
+                "source_candidate_id": materializer_id,
+                "materializer_registry_signal": {
+                    "schema": "byte_shaving_materializer_registry_portfolio_unit.v1",
+                    "registry_schema": manifest.get("schema"),
+                    "materializer_id": materializer_id,
+                    "target_kind": target_kind,
+                    "receiver_contract_id": adapter.get("receiver_contract_id"),
+                    "receiver_contract_kind": adapter.get("receiver_contract_kind"),
+                    "cooperative_receiver_required": adapter.get(
+                        "cooperative_receiver_required"
+                    ),
+                    "materialization_resource_kind": adapter.get(
+                        "materialization_resource_kind"
+                    ),
+                    "required_context_fields": required_context_fields,
+                    "score_claim": False,
+                    "score_claim_valid": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "blockers": blockers,
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+            }
+        )
+
+    refs = [
+        {
+            "kind": "materializer_registry_portfolio",
+            "schema": "byte_shaving_materializer_registry_portfolio_ref.v1",
+            "registry_schema": manifest.get("schema"),
+            "adapter_count": len(adapters),
+            "registry_adapter_count": len(manifest.get("adapters", [])),
+            "executable_adapter_count": executable_count,
+            "candidate_archive_adapter_count": candidate_archive_count,
+            "target_kind_filter": sorted(targets),
+            "target_kind_counts": dict(sorted(target_kind_counts.items())),
+            "blocker_counts": dict(sorted(blocker_counts.items())),
+            "cooperative_receiver_grammar_registry": manifest.get(
+                "cooperative_receiver_grammar_registry"
+            ),
+            "allowed_use": "planning_only_many_materializer_portfolio_seed",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+        }
+    ]
+    return units, refs
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -136,9 +335,50 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--atom-id", action="append", default=[])
     parser.add_argument("--atom-min-predicted-impact", type=float, default=None)
     parser.add_argument("--atom-ledger", type=Path, default=None)
+    parser.add_argument(
+        "--include-materializer-registry-portfolio",
+        action="store_true",
+        help=(
+            "seed the signal surface with every registered materializer/receiver "
+            "contract so campaign planning explores many operations, not one leaf"
+        ),
+    )
+    parser.add_argument(
+        "--materializer-registry-target-kind",
+        action="append",
+        default=[],
+        help="optional target-kind filter for --include-materializer-registry-portfolio",
+    )
+    parser.add_argument(
+        "--materializer-registry-planning-saved-bytes",
+        type=int,
+        default=1,
+        help="planning-only saved-byte prior assigned to each registry portfolio unit",
+    )
+    parser.add_argument(
+        "--materializer-registry-executable-confidence",
+        type=float,
+        default=0.45,
+    )
+    parser.add_argument(
+        "--materializer-registry-contract-confidence",
+        type=float,
+        default=0.25,
+    )
     args = parser.parse_args(argv)
 
     try:
+        registry_units: list[dict[str, Any]] = []
+        registry_refs: list[dict[str, Any]] = []
+        if args.include_materializer_registry_portfolio:
+            registry_units, registry_refs = _materializer_registry_portfolio(
+                target_kinds=args.materializer_registry_target_kind,
+                planning_saved_bytes=args.materializer_registry_planning_saved_bytes,
+                executable_confidence=(
+                    args.materializer_registry_executable_confidence
+                ),
+                contract_confidence=args.materializer_registry_contract_confidence,
+            )
         surface = build_byte_shaving_signal_surface(
             repo_root=args.repo_root,
             campaign_id=args.campaign_id,
@@ -181,6 +421,8 @@ def main(argv: list[str] | None = None) -> int:
             atom_ids=args.atom_id,
             atom_min_predicted_impact=args.atom_min_predicted_impact,
             atom_ledger_path=args.atom_ledger,
+            materializer_registry_portfolio_units=registry_units,
+            materializer_registry_portfolio_refs=registry_refs,
         )
     except ByteShavingCampaignError as exc:
         raise SystemExit(str(exc)) from exc
@@ -196,7 +438,7 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f"wrote {args.output} "
         f"(units={len(surface['units'])}, "
-        f"refs={len(surface['source_signal_refs']) + len(surface['auth_eval_refs']) + len(surface['mlx_calibration_refs']) + len(surface['scorer_response_refs']) + len(surface['pairset_acquisition_refs']) + len(surface['pair_frame_geometry_outcome_refs']) + len(surface['inverse_scorer_surface_refs']) + len(surface['inverse_action_functional_refs'])})"
+        f"refs={len(surface['source_signal_refs']) + len(surface['auth_eval_refs']) + len(surface['mlx_calibration_refs']) + len(surface['scorer_response_refs']) + len(surface['pairset_acquisition_refs']) + len(surface['pair_frame_geometry_outcome_refs']) + len(surface['inverse_scorer_surface_refs']) + len(surface['inverse_action_functional_refs']) + len(surface.get('materializer_registry_portfolio_refs') or [])})"
     )
     print(
         "score_claim=false promotion_eligible=false "

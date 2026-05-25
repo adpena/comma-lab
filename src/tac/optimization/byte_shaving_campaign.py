@@ -343,6 +343,7 @@ OPERATION_SIGNAL_KEYS: tuple[str, ...] = (
     "dqs1_outcome_signal",
     "engineered_correction_signal",
     "canonical_equation_provenance",
+    "materializer_registry_signal",
 )
 
 FALSE_AUTHORITY: dict[str, bool] = {
@@ -837,6 +838,7 @@ def normalize_unit_signal(unit: Mapping[str, Any]) -> dict[str, Any]:
         "dqs1_outcome_signal": unit.get("dqs1_outcome_signal"),
         "engineered_correction_signal": unit.get("engineered_correction_signal"),
         "canonical_equation_provenance": unit.get("canonical_equation_provenance"),
+        "materializer_registry_signal": unit.get("materializer_registry_signal"),
         "atom_ids": ordered_unique(str(item) for item in _as_list(unit.get("atom_ids"))),
         "candidate_trust_region_blockers": ordered_unique(
             str(item) for item in _as_list(unit.get("candidate_trust_region_blockers"))
@@ -1732,6 +1734,9 @@ def build_byte_shaving_campaign_plan(
         "mlx_calibration_refs": _as_list(payload.get("mlx_calibration_refs")),
         "scorer_response_refs": _as_list(payload.get("scorer_response_refs")),
         "inverse_scorer_surface_refs": _as_list(payload.get("inverse_scorer_surface_refs")),
+        "materializer_registry_portfolio_refs": _as_list(
+            payload.get("materializer_registry_portfolio_refs")
+        ),
         "inverse_action_materialization_portfolios": (
             _inverse_action_materialization_portfolios(payload)
         ),
@@ -1836,6 +1841,9 @@ def _empty_byte_shaving_campaign_plan(
         "mlx_calibration_refs": _as_list(payload.get("mlx_calibration_refs")),
         "scorer_response_refs": _as_list(payload.get("scorer_response_refs")),
         "inverse_scorer_surface_refs": _as_list(payload.get("inverse_scorer_surface_refs")),
+        "materializer_registry_portfolio_refs": _as_list(
+            payload.get("materializer_registry_portfolio_refs")
+        ),
         "inverse_action_materialization_portfolios": (
             _inverse_action_materialization_portfolios(payload)
         ),
