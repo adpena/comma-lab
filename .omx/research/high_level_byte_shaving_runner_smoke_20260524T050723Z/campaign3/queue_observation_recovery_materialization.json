@@ -1,0 +1,74 @@
+{
+  "allowed_use": "local_queue_health_recovery_materialization_only",
+  "artifact_records": [
+    {
+      "allow_overwrite": false,
+      "bytes": 41518,
+      "exists_before": false,
+      "path": "/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_observation.json",
+      "sha256": "3ac948c28bbe4129987e63ee7de7dc646f14298cc4acb450c3c3a32761e90a93",
+      "write_requested": true,
+      "written": true
+    },
+    {
+      "allow_overwrite": false,
+      "bytes": 12767,
+      "exists_before": false,
+      "path": "/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_observation_recovery_plan.json",
+      "sha256": "1413e482e8031a8067c1e132c145105a7ebf84e979f0da8d39bc11f8332c8eed",
+      "write_requested": true,
+      "written": true
+    },
+    {
+      "allow_overwrite": false,
+      "bytes": 20278,
+      "exists_before": false,
+      "path": "/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_feedback_replan_policy.json",
+      "sha256": "97ef0c54ed99b2e91be39beb575b78e43df3e9f31b559cd496bb2e338d015895",
+      "write_requested": true,
+      "written": true
+    },
+    {
+      "allow_overwrite": false,
+      "bytes": 5410,
+      "exists_before": false,
+      "path": "/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_observation_recovery_queue.json",
+      "sha256": "a18ccf55a1311a454dec3a7f2c79bc1974534624cb0f55cdcf8e5e4bbedb4d5c",
+      "write_requested": true,
+      "written": true
+    }
+  ],
+  "authority_contract": "byte_shaving_queue_recovery_materialization_no_score_authority",
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "lane_id": "codex_live_queue_recovery_bridge_20260525",
+  "overwrite": false,
+  "promotion_eligible": false,
+  "queue_feedback_replan_policy_decision": "recover_queue_health",
+  "queue_feedback_replan_policy_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_feedback_replan_policy.json",
+  "queue_id": "high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3",
+  "queue_observation_blockers": [
+    "experiment_queue_observation_failed_steps:1"
+  ],
+  "queue_observation_failed_step_count": 1,
+  "queue_observation_healthy": false,
+  "queue_observation_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_observation.json",
+  "queue_observation_ready_step_count": 0,
+  "queue_observation_recovery_action_count": 1,
+  "queue_observation_recovery_plan_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_observation_recovery_plan.json",
+  "queue_observation_recovery_queue_blockers": [],
+  "queue_observation_recovery_queue_emitted": true,
+  "queue_observation_recovery_queue_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_observation_recovery_queue.json",
+  "queue_observation_recovery_queue_state_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_observation_recovery_queue.sqlite",
+  "queue_observation_recovery_required": true,
+  "queue_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_execution_queue.json",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_queue_health_recovery": true,
+  "run_dir": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3",
+  "run_summary_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_campaign_run.json",
+  "schema": "byte_shaving_materializer_campaign_queue_recovery_materialization.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "state_path": ".omx/state/experiment_queue_high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3.sqlite",
+  "write_requested": true
+}

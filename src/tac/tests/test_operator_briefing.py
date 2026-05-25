@@ -24,6 +24,7 @@ from comma_lab.scheduler.experiment_queue import (
 
 REPO = Path(__file__).resolve().parents[3]
 BRIEFING = REPO / "tools" / "operator_briefing.py"
+RECOVERY_TOOL = REPO / "tools" / "materialize_byte_shaving_queue_recovery.py"
 
 
 def _run(*args: str) -> subprocess.CompletedProcess:
@@ -1494,9 +1495,16 @@ def test_byte_shaving_acquisition_summary_live_observation_wins_over_stale_paylo
     assert latest["live_queue_observation_blockers"] == [
         "experiment_queue_observation_failed_steps:1"
     ]
+    assert latest["queue_observation_recovery_required"] is True
+    assert latest["ready_for_queue_health_recovery"] is True
+    assert latest["operator_queue_state_mutation_required"] is True
+    assert latest["queue_observation_recovery_plan_source"] == "live_queue_observation"
+    assert latest["queue_observation_recovery_action_count"] == 1
     assert "experiment_queue_observation_failed_steps:1" in latest["blockers"]
     assert "1 observed queue step(s) failed" in latest["blockers"]
-    assert summary["next_command"].endswith(" observe --tail-lines 20")
+    assert "tools/materialize_byte_shaving_queue_recovery.py" in summary["next_command"]
+    assert "--run-summary" in summary["next_command"]
+    assert "--write" in summary["next_command"]
     assert "run-worker --execute" not in summary["next_command"]
     assert "live_queue_observed=1" in text
     assert "live_queue_unhealthy=1" in text
@@ -1504,7 +1512,121 @@ def test_byte_shaving_acquisition_summary_live_observation_wins_over_stale_paylo
     assert "live_queue_healthy=False" in text
     assert "live_queue_mode=running" in text
     assert "live_queue_failed_steps=1" in text
+    assert "queue_recovery_required=True" in text
+    assert "queue_recovery_plan_source=live_queue_observation" in text
     assert "live_queue_blockers=experiment_queue_observation_failed_steps:1" in text
+    assert "recovery_materialize=.venv/bin/python tools/materialize_byte_shaving_queue_recovery.py" in text
+
+
+def test_materialize_byte_shaving_queue_recovery_emits_paused_recovery_queue(
+    tmp_path: Path,
+) -> None:
+    from comma_lab.scheduler.experiment_queue import (
+        connect_state,
+        initialize_queue_state,
+        load_queue_definition,
+    )
+
+    run_dir = tmp_path / ".omx" / "research" / "campaign_repair"
+    queue_ref = ".omx/research/campaign_repair/materializer_execution_queue.json"
+    state_ref = ".omx/state/experiment_queue_repair.sqlite"
+    queue = load_queue_definition(
+        _write_json(
+            tmp_path / queue_ref,
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "repair_queue",
+                "controls": {"mode": "running"},
+                "experiments": [
+                    {
+                        "id": "exp0",
+                        "status": "queued",
+                        "steps": [
+                            {
+                                "id": "materialize",
+                                "kind": "command",
+                                "command": ["python", "-c", "raise SystemExit(1)"],
+                                "resources": {"kind": "local_cpu"},
+                            }
+                        ],
+                    }
+                ],
+            },
+        )
+    )
+    with connect_state(tmp_path / state_ref) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'failed',
+                attempts = 1,
+                updated_at_utc = '2026-05-25T00:00:00Z'
+            WHERE queue_id = 'repair_queue'
+              AND experiment_id = 'exp0'
+              AND step_id = 'materialize'
+            """
+        )
+        conn.commit()
+    run_summary = _write_json(
+        run_dir / "materializer_campaign_run.json",
+        {
+            "schema": "byte_shaving_materializer_campaign_run.v1",
+            "run_dir": ".omx/research/campaign_repair",
+            "plan": ".omx/research/campaign_repair/byte_shaving_campaign_plan.json",
+            "queue_id": "repair_queue",
+            "queue_path": queue_ref,
+            "state_path": state_ref,
+            "experiment_count": 1,
+            "build": {"materializer_work_queue_executable_row_count": 1},
+            "worker": {"failure_count": 0},
+            "commands": [{"returncode": 0}],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(RECOVERY_TOOL),
+            "--repo-root",
+            str(tmp_path),
+            "--run-summary",
+            str(run_summary),
+            "--lane-id",
+            "unit_live_queue_recovery",
+            "--write",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    payload = json.loads(proc.stdout)
+    recovery_queue_path = run_dir / "queue_observation_recovery_queue.json"
+    recovery_queue = json.loads(recovery_queue_path.read_text(encoding="utf-8"))
+
+    assert payload["schema"] == (
+        "byte_shaving_materializer_campaign_queue_recovery_materialization.v1"
+    )
+    assert payload["queue_observation_healthy"] is False
+    assert payload["queue_observation_recovery_required"] is True
+    assert payload["ready_for_queue_health_recovery"] is True
+    assert payload["queue_observation_recovery_queue_emitted"] is True
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert (run_dir / "queue_observation.json").is_file()
+    assert (run_dir / "queue_observation_recovery_plan.json").is_file()
+    assert (run_dir / "queue_feedback_replan_policy.json").is_file()
+    assert recovery_queue["schema"] == "experiment_queue.v1"
+    assert recovery_queue["controls"]["mode"] == "paused"
+    command = recovery_queue["experiments"][0]["steps"][0]["command"]
+    assert "tools/experiment_queue.py" in command
+    assert "rewind" in command
+    assert "exp0" in command
+    assert "materialize" in command
 
 
 def test_byte_shaving_acquisition_summary_blocks_missing_live_queue_state(
@@ -1585,8 +1707,10 @@ def test_byte_shaving_acquisition_summary_blocks_missing_live_queue_state(
     assert "experiment_queue_observation_state_missing" in latest[
         "live_queue_observation_blockers"
     ]
+    assert latest["queue_observation_recovery_required"] is True
+    assert latest["ready_for_queue_health_recovery"] is True
     assert "experiment_queue_observation_state_missing" in latest["blockers"]
-    assert summary["next_command"].endswith(" observe --tail-lines 20")
+    assert "tools/materialize_byte_shaving_queue_recovery.py" in summary["next_command"]
     assert "run-worker --execute" not in summary["next_command"]
     assert "live_queue_healthy=False" in text
     assert "experiment_queue_observation_state_missing" in text
