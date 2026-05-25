@@ -1,0 +1,191 @@
+{
+  "blocked_context_count": 0,
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "2026-05-25T08:36:13Z",
+  "generator_schema": "final_byte_operation_context_compiler.v1",
+  "gpu_launched": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "row_count": 1,
+  "rows": [
+    {
+      "backlog_key": "materializer_work_queue_required:archive_section_entropy_recode_v1:archive_section:section_entropy_recode:archive_section_entropy_recode_adapter",
+      "backlog_rank": 1,
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "context": {
+        "archive_path": "/Users/adpena/Projects/pact/.omx/research/codex_inverse_action_context_autowire_20260525T083613Z/source.zip",
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "context_blockers": [],
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "json_out": "/Users/adpena/Projects/pact/.omx/research/codex_inverse_action_context_autowire_20260525T083613Z/materializer_outputs.inline_compiler/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+        "label": "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter",
+        "output_archive": "/Users/adpena/Projects/pact/.omx/research/codex_inverse_action_context_autowire_20260525T083613Z/materializer_outputs.inline_compiler/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+        "output_manifest": "/Users/adpena/Projects/pact/.omx/research/codex_inverse_action_context_autowire_20260525T083613Z/materializer_outputs.inline_compiler/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+        "packet_ir_blocker_counts": {
+          "non_dqs1_target_requires_materializer_work_queue:archive_section_entropy_recode_v1": 1,
+          "packetir_operation_set_requires_materializer_contexts": 1,
+          "selected_operation_blocker:inverse_action_proof_inline_compiler_cell_proof_inline_decoder_section_0000:compiled_from_inverse_action_operation_set_compiler": 1,
+          "selected_operation_blocker:inverse_action_proof_inline_compiler_cell_proof_inline_decoder_section_0000:inverse_action_rehydrated_operation_is_planning_only": 1,
+          "selected_operation_blocker:inverse_action_proof_inline_compiler_cell_proof_inline_decoder_section_0000:inverse_action_source_operations_rehydrated_from_provenance": 1,
+          "selected_operation_blocker:inverse_action_proof_inline_compiler_cell_proof_inline_decoder_section_0000:inverse_action_unit_is_planning_only": 1,
+          "selected_operation_blocker:inverse_action_proof_inline_compiler_cell_proof_inline_decoder_section_0000:requires_byte_closed_archive_before_dispatch": 1,
+          "selected_operation_blocker:inverse_action_proof_inline_compiler_cell_proof_inline_decoder_section_0000:requires_exact_auth_eval_before_score_claim": 1,
+          "selected_operation_blocker:inverse_action_proof_inline_compiler_cell_proof_inline_decoder_section_0000:requires_materializer_contexts": 1,
+          "selected_operation_blocker:inverse_action_proof_inline_compiler_cell_proof_inline_decoder_section_0000:requires_runtime_consumption_proof_before_exact_eval": 1
+        },
+        "packetir_operation_set_contract": {
+          "canonical_packet_compiler_module": "tac.packet_compiler.deterministic_compiler",
+          "canonical_packet_compiler_schema": "deterministic_packet_compiler.v1",
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "recommended_ir_schema": "packet_ir_operation_set_v1",
+          "required_order": [
+            "representation",
+            "prediction",
+            "quantization",
+            "hyperprior",
+            "arithmetic",
+            "pack"
+          ],
+          "required_proofs": [
+            "byte_closed_archive",
+            "deterministic_packet_manifest",
+            "runtime_consumption_proof",
+            "same_runtime_full_frame_parity_or_rate_only_control",
+            "exact_auth_eval_axis_payload"
+          ],
+          "schema": "packet_ir_operation_set_bridge_contract.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_ir_schema": "packet_ir_operation_set_v1",
+        "required_order": [
+          "representation",
+          "prediction",
+          "quantization",
+          "hyperprior",
+          "arithmetic",
+          "pack"
+        ],
+        "required_proofs": [
+          "byte_closed_archive",
+          "deterministic_packet_manifest",
+          "runtime_consumption_proof",
+          "same_runtime_full_frame_parity_or_rate_only_control",
+          "exact_auth_eval_axis_payload"
+        ],
+        "runtime_consumption_proof": "/Users/adpena/Projects/pact/.omx/research/codex_inverse_action_context_autowire_20260525T083613Z/runtime_proof.json",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "section_manifest": "/Users/adpena/Projects/pact/.omx/research/codex_inverse_action_context_autowire_20260525T083613Z/sections.json",
+        "section_manifest_source_key": "section_manifest",
+        "source_archive": "/Users/adpena/Projects/pact/.omx/research/codex_inverse_action_context_autowire_20260525T083613Z/source.zip",
+        "source_packet_ir_operation_set_ids": [
+          "packetir_opset_combo_0001"
+        ],
+        "source_packet_ir_schemas": [
+          "packet_ir_operation_set_v1"
+        ],
+        "source_packet_ir_source_operation_set_ids": [
+          "opset_combo_0001"
+        ],
+        "target_sections": [
+          "decoder_packed_brotli"
+        ]
+      },
+      "context_blockers": [],
+      "context_keys": [
+        "materializer_work_queue_required:archive_section_entropy_recode_v1:archive_section:section_entropy_recode:archive_section_entropy_recode_adapter",
+        "archive_section_entropy_recode_adapter",
+        "archive_section_entropy_recode_v1",
+        "inverse_action_proof_inline_compiler_cell_proof_inline_decoder_section_0000"
+      ],
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "materializer_id": "archive_section_entropy_recode_adapter",
+      "operation_family": "section_entropy_recode",
+      "packet_ir_blocker_counts": {
+        "non_dqs1_target_requires_materializer_work_queue:archive_section_entropy_recode_v1": 1,
+        "packetir_operation_set_requires_materializer_contexts": 1,
+        "selected_operation_blocker:inverse_action_proof_inline_compiler_cell_proof_inline_decoder_section_0000:compiled_from_inverse_action_operation_set_compiler": 1,
+        "selected_operation_blocker:inverse_action_proof_inline_compiler_cell_proof_inline_decoder_section_0000:inverse_action_rehydrated_operation_is_planning_only": 1,
+        "selected_operation_blocker:inverse_action_proof_inline_compiler_cell_proof_inline_decoder_section_0000:inverse_action_source_operations_rehydrated_from_provenance": 1,
+        "selected_operation_blocker:inverse_action_proof_inline_compiler_cell_proof_inline_decoder_section_0000:inverse_action_unit_is_planning_only": 1,
+        "selected_operation_blocker:inverse_action_proof_inline_compiler_cell_proof_inline_decoder_section_0000:requires_byte_closed_archive_before_dispatch": 1,
+        "selected_operation_blocker:inverse_action_proof_inline_compiler_cell_proof_inline_decoder_section_0000:requires_exact_auth_eval_before_score_claim": 1,
+        "selected_operation_blocker:inverse_action_proof_inline_compiler_cell_proof_inline_decoder_section_0000:requires_materializer_contexts": 1,
+        "selected_operation_blocker:inverse_action_proof_inline_compiler_cell_proof_inline_decoder_section_0000:requires_runtime_consumption_proof_before_exact_eval": 1
+      },
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_materializer_context_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "source_packet_ir_operation_set_ids": [
+        "packetir_opset_combo_0001"
+      ],
+      "source_packet_ir_schemas": [
+        "packet_ir_operation_set_v1"
+      ],
+      "source_packet_ir_source_operation_set_ids": [
+        "opset_combo_0001"
+      ],
+      "source_unit_ids": [
+        "inverse_action_proof_inline_compiler_cell_proof_inline_decoder_section_0000"
+      ],
+      "target_kind": "archive_section_entropy_recode_v1",
+      "unit_kind": "archive_section"
+    }
+  ],
+  "schema": "byte_shaving_materializer_contexts.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_backlog_schema": "byte_shaving_materializer_backlog.v1",
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "tool": "comma_lab.scheduler.final_byte_operation_contexts",
+  "unsupported_backlog_keys": []
+}

@@ -853,6 +853,12 @@ def _candidate_actuation_paths(widened_action_path: str) -> dict[str, str]:
         "materializer_backlog": path.with_name(
             f"materializer_backlog{suffix}.json"
         ).as_posix(),
+        "materializer_contexts": path.with_name(
+            f"materializer_contexts{suffix}.json"
+        ).as_posix(),
+        "materializer_context_output_root": path.with_name(
+            f"materializer_outputs{suffix}"
+        ).as_posix(),
         "materializer_work_queue": path.with_name(
             f"materializer_work_queue{suffix}.json"
         ).as_posix(),
@@ -2455,6 +2461,10 @@ def build_queue_feedback_candidate_actuation_planning_queue(
         paths["action_summary"],
         "--materializer-backlog-out",
         paths["materializer_backlog"],
+        "--materializer-contexts-out",
+        paths["materializer_contexts"],
+        "--materializer-context-default-output-root",
+        paths["materializer_context_output_root"],
         "--materializer-work-queue-out",
         paths["materializer_work_queue"],
         "--repo-root",
@@ -2484,6 +2494,7 @@ def build_queue_feedback_candidate_actuation_planning_queue(
         paths["portfolio"],
         paths["action_summary"],
         paths["materializer_backlog"],
+        paths["materializer_contexts"],
         paths["materializer_work_queue"],
     ]
     metadata = _false_authority_payload(
@@ -2501,6 +2512,10 @@ def build_queue_feedback_candidate_actuation_planning_queue(
                 "inverse_action_materialization_bridge"
             ],
             "materializer_work_queue_path": paths["materializer_work_queue"],
+            "materializer_contexts_path": paths["materializer_contexts"],
+            "materializer_context_default_output_root": paths[
+                "materializer_context_output_root"
+            ],
             "allowed_use": (
                 "paused_local_candidate_widening_actuation_planning_only"
             ),
@@ -2508,8 +2523,9 @@ def build_queue_feedback_candidate_actuation_planning_queue(
                 "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
             ),
             "dispatch_blockers": [
+                "generated_materializer_contexts_may_be_blocked",
                 "generated_materializer_work_queue_may_be_blocked",
-                "compiler_required_cells_need_receiver_operation_transform",
+                "missing_receiver_operation_transform_or_custody_hints_block_execution",
                 "materializer_execution_queue_required_before_candidate_archive",
                 "exact_auth_eval_required_before_score_claim",
             ],
@@ -2650,6 +2666,23 @@ def build_queue_feedback_candidate_actuation_planning_queue(
                                     ],
                                     "required_nonempty": ["rows"],
                                     "required_positive_int": ["backlog_row_count"],
+                                },
+                                {
+                                    "type": "json_completion_contract",
+                                    "path": paths["materializer_contexts"],
+                                    "required_equals": {
+                                        "schema": (
+                                            "byte_shaving_materializer_contexts.v1"
+                                        )
+                                    },
+                                    "required_false": [
+                                        *DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
+                                    ],
+                                    "false_or_missing": [
+                                        *DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
+                                    ],
+                                    "required_nonempty": ["rows"],
+                                    "required_positive_int": ["row_count"],
                                 },
                                 {
                                     "type": "json_completion_contract",

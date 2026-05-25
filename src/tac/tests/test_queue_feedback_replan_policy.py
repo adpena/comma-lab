@@ -1194,6 +1194,8 @@ def test_feedback_candidate_actuation_planning_queue_compiles_widened_cells() ->
         ".venv/bin/python",
         "tools/build_byte_shaving_campaign_queue.py",
     ]
+    assert "--materializer-contexts-out" in compile_step["command"]
+    assert "--materializer-context-default-output-root" in compile_step["command"]
     assert "--materializer-work-queue-out" in compile_step["command"]
     assert "--materializer-execution-queue-out" not in compile_step["command"]
     assert plan_step["telemetry"]["pullback_artifact_paths"] == [
@@ -1205,8 +1207,18 @@ def test_feedback_candidate_actuation_planning_queue_compiles_widened_cells() ->
         ),
     ]
     assert (
+        ".omx/research/campaign/materializer_contexts.feedback.widened.json"
+        in compile_step["telemetry"]["pullback_artifact_paths"]
+    )
+    assert (
         ".omx/research/campaign/materializer_work_queue.feedback.widened.json"
         in compile_step["telemetry"]["pullback_artifact_paths"]
+    )
+    assert experiment["metadata"]["materializer_contexts_path"].endswith(
+        "materializer_contexts.feedback.widened.json"
+    )
+    assert experiment["metadata"]["materializer_context_default_output_root"].endswith(
+        "materializer_outputs.feedback.widened"
     )
     assert any(
         condition.get("path", "").endswith(
@@ -1236,6 +1248,17 @@ def test_feedback_candidate_actuation_planning_queue_compiles_widened_cells() ->
     assert any(
         "backlog_row_count" in condition.get("required_positive_int", [])
         for condition in backlog_contracts
+    )
+    context_contracts = [
+        condition
+        for condition in compile_step["postconditions"]
+        if condition.get("path", "").endswith(
+            "materializer_contexts.feedback.widened.json"
+        )
+    ]
+    assert any(
+        "row_count" in condition.get("required_positive_int", [])
+        for condition in context_contracts
     )
 
 

@@ -2164,6 +2164,33 @@ def _action_atom_from_inverse_cell(
             artifact_bytes if artifact_bytes is not None else max(1, saved_bytes)
         ),
         "resource_kind": resource_kind,
+        "operation_set_compiler": _optional_mapping(
+            cell.get("operation_set_compiler"),
+            "inverse_cell.operation_set_compiler",
+        ),
+        "operation_set_target_kind": _optional_text(
+            _first(
+                cell.get("operation_set_target_kind"),
+                cell.get("target_kind"),
+                cell.get("recommended_operation_target_kind"),
+            )
+        ),
+        "operation_set_operation_family": _optional_text(
+            _first(
+                cell.get("operation_set_operation_family"),
+                cell.get("operation_family"),
+                cell.get("recommended_operation_family"),
+            )
+        ),
+        "operation_set_params": _optional_mapping(
+            _first(
+                cell.get("operation_set_params"),
+                cell.get("recommended_operation_params"),
+                cell.get("operation_params"),
+                cell.get("params"),
+            ),
+            "inverse_cell.operation_set_params",
+        ),
     }
 
 
@@ -2248,6 +2275,23 @@ def _action_atom_from_byte_shaving_operation_set(
         "elapsed_seconds": elapsed_seconds,
         "artifact_bytes": row_artifact_bytes,
         "resource_kind": resource_kind,
+        "operation_set_compiler": _optional_mapping(
+            operation_set.get("operation_set_compiler"),
+            "operation_set.operation_set_compiler",
+        ),
+        "operation_set_target_kind": _optional_text(
+            _first(operation_set.get("operation_set_target_kind"), operation_set.get("target_kind"))
+        ),
+        "operation_set_operation_family": _optional_text(
+            _first(
+                operation_set.get("operation_set_operation_family"),
+                operation_set.get("operation_family"),
+            )
+        ),
+        "operation_set_params": _optional_mapping(
+            _first(operation_set.get("operation_set_params"), operation_set.get("params")),
+            "operation_set.operation_set_params",
+        ),
         "source_provenance": _byte_shaving_operation_set_provenance(
             operation_set,
             plan=plan,
@@ -2435,6 +2479,33 @@ def _action_atom_from_byte_shaving_ranked_unit(
         "elapsed_seconds": elapsed_seconds,
         "artifact_bytes": row_artifact_bytes,
         "resource_kind": resource_kind,
+        "operation_set_compiler": _optional_mapping(
+            unit.get("operation_set_compiler"),
+            "ranked_unit.operation_set_compiler",
+        ),
+        "operation_set_target_kind": _optional_text(
+            _first(
+                unit.get("operation_set_target_kind"),
+                unit.get("recommended_operation_target_kind"),
+                unit.get("target_kind"),
+            )
+        ),
+        "operation_set_operation_family": _optional_text(
+            _first(
+                unit.get("operation_set_operation_family"),
+                unit.get("recommended_operation_family"),
+                unit.get("operation_family"),
+            )
+        ),
+        "operation_set_params": _optional_mapping(
+            _first(
+                unit.get("operation_set_params"),
+                unit.get("recommended_operation_params"),
+                unit.get("operation_params"),
+                unit.get("params"),
+            ),
+            "ranked_unit.operation_set_params",
+        ),
         "source_provenance": _byte_shaving_unit_provenance(
             unit,
             plan=plan,
@@ -2471,6 +2542,10 @@ def _byte_shaving_operation_set_provenance(
             ),
             "chosen_operation_sequence_source": operation_set.get(
                 "chosen_operation_sequence_source"
+            ),
+            "operation_set_compiler": _optional_mapping(
+                operation_set.get("operation_set_compiler"),
+                "operation_set.operation_set_compiler",
             ),
             "selected_operations": _sequence_of_mappings(
                 operation_set.get("selected_operations")
@@ -2611,6 +2686,14 @@ def _byte_shaving_unit_provenance(
             ),
             "recommended_operation_target_kind": unit.get(
                 "recommended_operation_target_kind"
+            ),
+            "recommended_operation_params": _optional_mapping(
+                unit.get("recommended_operation_params"),
+                "ranked_unit.recommended_operation_params",
+            ),
+            "operation_set_compiler": _optional_mapping(
+                unit.get("operation_set_compiler"),
+                "ranked_unit.operation_set_compiler",
             ),
             "operation_candidates": _sequence_of_mappings(unit.get("operation_candidates")),
             "source_paths": _list_strings(unit.get("source_paths")),

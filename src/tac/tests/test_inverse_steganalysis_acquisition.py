@@ -7,6 +7,7 @@ from tac.local_acceleration.mlx_acquisition_batch import (
     build_mlx_acquisition_batch_from_selection,
 )
 from tac.optimization.byte_shaving_campaign import (
+    COUPLED_OPERATION_SET_SCHEMA,
     SIGNAL_SURFACE_SCHEMA,
     build_byte_shaving_campaign_plan,
 )
@@ -15,6 +16,7 @@ from tac.optimization.inverse_steganalysis_acquisition import (
     ATOM_SCHEMA,
     CONTEST_RATE_DENOM_BYTES,
     CONTEST_RATE_SCORE_PER_BYTE,
+    INVERSE_SCORER_SURFACE_SCHEMA,
     MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND,
     MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA,
     OBSERVATION_SCHEMA,
@@ -22,6 +24,7 @@ from tac.optimization.inverse_steganalysis_acquisition import (
     InverseSteganalysisAcquisitionError,
     action_atoms_from_byte_shaving_campaign_plan,
     action_atoms_from_byte_shaving_signal_surface,
+    action_atoms_from_inverse_scorer_surface,
     action_atoms_from_mlx_acquisition_batch,
     action_surface_terms,
     build_discrete_scorer_action_functional,
@@ -454,6 +457,147 @@ def test_action_functional_preserves_explicit_target_metadata_for_compiler() -> 
     )
     assert cell["operation_set_params"] == {"section_name": "decoder_blob"}
     assert action["score_claim"] is False
+
+
+def test_inverse_scorer_surface_preserves_operation_compiler_metadata() -> None:
+    compiler = {
+        "schema": "inverse_action_operation_set_compiler_hint.v1",
+        "operation_set_id": "inverse_surface_compiler",
+        "candidate_saved_bytes": 64,
+        "operation_portability": "family_agnostic",
+        "selected_operations": [
+            {
+                "unit_id": "compiled_decoder_blob",
+                "target_kind": "archive_section_entropy_recode_v1",
+                "archive_section": "decoder_blob",
+                "candidate_saved_bytes": 64,
+                "representation_family_class": "hnerv_variant",
+            }
+        ],
+        **_planning_false_authority(),
+    }
+    atoms = action_atoms_from_inverse_scorer_surface(
+        {
+            "schema": INVERSE_SCORER_SURFACE_SCHEMA,
+            "cells": [
+                {
+                    "cell_id": "pair0007_decoder_blob",
+                    "decision_surface_class": "rate_only_null_space",
+                    "dominant_receiver_axis": "rate",
+                    "candidate_saved_bytes": 64,
+                    "median_projected_delta_vs_baseline_score": -0.0001,
+                    "best_projected_delta_vs_baseline_score": -0.00012,
+                    "worst_projected_delta_vs_baseline_score": -0.00008,
+                    "median_scorer_delta_vs_baseline": 0.0,
+                    "operation_set_compiler": compiler,
+                    "operation_set_target_kind": "archive_section_entropy_recode_v1",
+                    "operation_set_params": {"section_name": "decoder_blob"},
+                }
+            ],
+            **_planning_false_authority(),
+        }
+    )
+    action = build_discrete_scorer_action_functional(atoms)
+    cell = action["cells"][0]
+
+    assert atoms[0]["operation_set_compiler"]["operation_set_id"] == (
+        "inverse_surface_compiler"
+    )
+    assert cell["operation_set_compiler"]["operation_set_id"] == (
+        "inverse_surface_compiler"
+    )
+    assert cell["operation_set_target_kind"] == "archive_section_entropy_recode_v1"
+    assert cell["operation_set_params"] == {"section_name": "decoder_blob"}
+    assert cell["score_claim"] is False
+
+
+def test_byte_shaving_plan_producer_preserves_compiler_and_target_metadata() -> None:
+    compiler = {
+        "schema": "inverse_action_operation_set_compiler_hint.v1",
+        "operation_set_id": "producer_compiled_set",
+        "candidate_saved_bytes": 128,
+        "operation_portability": "family_agnostic",
+        "selected_operations": [
+            {
+                "unit_id": "producer_decoder_blob",
+                "target_kind": "archive_section_entropy_recode_v1",
+                "archive_section": "decoder_blob",
+                "candidate_saved_bytes": 128,
+            }
+        ],
+        **_planning_false_authority(),
+    }
+    plan = {
+        "schema": "byte_shaving_campaign_plan.v1",
+        "candidate_id": "producer_candidate",
+        "lane_id": "producer_lane",
+        "operation_set_ladder": [
+            {
+                "schema": COUPLED_OPERATION_SET_SCHEMA,
+                "operation_set_id": "producer_opset",
+                "candidate_saved_bytes": 128,
+                "expected_score_gain": 0.0002,
+                "selected_operations": [
+                    {
+                        "unit_id": "producer_decoder_blob",
+                        "operation_family": "section_entropy_recode",
+                        "target_kind": "archive_section_entropy_recode_v1",
+                    }
+                ],
+                "operation_set_compiler": compiler,
+                **_planning_false_authority(),
+            }
+        ],
+        **_planning_false_authority(),
+    }
+
+    opset_atoms = action_atoms_from_byte_shaving_campaign_plan(plan)
+    action = build_discrete_scorer_action_functional(opset_atoms)
+    opset_cell = action["cells"][0]
+
+    assert opset_atoms[0]["operation_set_compiler"]["operation_set_id"] == (
+        "producer_compiled_set"
+    )
+    assert opset_atoms[0]["source_provenance"]["operation_set_compiler"][
+        "operation_set_id"
+    ] == "producer_compiled_set"
+    assert opset_cell["operation_set_compiler"]["operation_set_id"] == (
+        "producer_compiled_set"
+    )
+
+    ranked_plan = {
+        "schema": "byte_shaving_campaign_plan.v1",
+        "candidate_id": "ranked_candidate",
+        "lane_id": "ranked_lane",
+        "ranked_units": [
+            {
+                "unit_id": "ranked_decoder_blob",
+                "unit_kind": "archive_section",
+                "candidate_saved_bytes": 64,
+                "expected_score_gain": 0.0001,
+                "quality_cost_score": 0.0,
+                "recommended_operation_family": "section_entropy_recode",
+                "recommended_operation_target_kind": (
+                    "archive_section_entropy_recode_v1"
+                ),
+                "recommended_operation_params": {"section_name": "decoder_blob"},
+                **_planning_false_authority(),
+            }
+        ],
+        **_planning_false_authority(),
+    }
+    ranked_atoms = action_atoms_from_byte_shaving_campaign_plan(ranked_plan)
+    ranked_action = build_discrete_scorer_action_functional(ranked_atoms)
+    ranked_cell = ranked_action["cells"][0]
+
+    assert ranked_cell["operation_set_target_kind"] == (
+        "archive_section_entropy_recode_v1"
+    )
+    assert ranked_cell["operation_set_operation_family"] == "section_entropy_recode"
+    assert ranked_cell["operation_set_params"] == {"section_name": "decoder_blob"}
+    assert ranked_atoms[0]["source_provenance"]["recommended_operation_params"] == {
+        "section_name": "decoder_blob"
+    }
 
 
 def test_mlx_acquisition_batch_compiler_hint_survives_to_action_cell() -> None:

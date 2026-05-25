@@ -5456,6 +5456,144 @@ def test_inverse_action_compiler_hint_runs_family_agnostic_materializer(
     assert proof["section_proofs"][0]["raw_payload_identical"] is True
 
 
+def test_byte_shaving_campaign_queue_cli_generates_contexts_from_inline_compiler_hints(
+    tmp_path: Path,
+) -> None:
+    source_archive = tmp_path / "source.zip"
+    section_manifest = tmp_path / "sections.json"
+    runtime_proof = tmp_path / "runtime_proof.json"
+    plan_path = tmp_path / "plan.json"
+    contexts_path = tmp_path / "generated_contexts.json"
+    materialization = tmp_path / "materialization.json"
+    portfolio = tmp_path / "portfolio.json"
+    summary = tmp_path / "action_summary.json"
+    work_queue = tmp_path / "materializer_work_queue.json"
+    output_root = tmp_path / "materializer_outputs"
+
+    raw = b"inline-compiler-fixture" * 256
+    section = brotli.compress(raw, quality=0)
+    with zipfile.ZipFile(source_archive, "w", compression=zipfile.ZIP_STORED) as archive:
+        archive.writestr("0.raw", section)
+    section_manifest.write_text(
+        json.dumps(
+            {
+                "schema": "fixture_section_manifest.v1",
+                "member": {"name": "0.raw"},
+                "sections": [
+                    {
+                        "name": "decoder_packed_brotli",
+                        "index": 0,
+                        "offset": 0,
+                        "length": len(section),
+                        "sha256": hashlib.sha256(section).hexdigest(),
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    action_payload = {
+        "schema": "inverse_steganalysis_discrete_action_functional.v1",
+        "water_bucket": {
+            "schema": "inverse_steganalysis_water_bucket_plan.v1",
+            "selected_count": 1,
+            "selected_expected_score_gain": 0.0001,
+            "selected_cells": [
+                {
+                    "atom_id": "inline_compiler_cell",
+                    "candidate_id": "inline_compiler_candidate",
+                    "scope_axis": "bytes",
+                    "component": "rate",
+                    "water_fill_cost_bytes": 64,
+                    "expected_score_gain": 0.0001,
+                    "euler_lagrange_residual": 0.00009,
+                }
+            ],
+            **_false_authority(),
+        },
+        "cells": [
+            {
+                "atom_id": "inline_compiler_cell",
+                "candidate_id": "inline_compiler_candidate",
+                "scope_axis": "bytes",
+                "component": "rate",
+                "operation_set_compiler": {
+                    "schema": "inverse_action_operation_set_compiler_hint.v1",
+                    "operation_set_id": "inline_compiler_set",
+                    "candidate_saved_bytes": 64,
+                    "operation_portability": "family_agnostic",
+                    "selected_operations": [
+                        {
+                            "unit_id": "inline_decoder_section",
+                            "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+                            "archive_path": str(source_archive),
+                            "archive_section": "decoder_packed_brotli",
+                            "section_manifest": str(section_manifest),
+                            "runtime_consumption_proof": str(runtime_proof),
+                            "brotli_quality": [0],
+                            "allow_size_regression": True,
+                            "candidate_saved_bytes": 64,
+                            "representation_family_class": "hnerv_variant",
+                        }
+                    ],
+                },
+            }
+        ],
+        **_false_authority(),
+    }
+    signal = build_signal_surface_from_inverse_action_functional(action_payload)
+    plan = build_byte_shaving_campaign_plan(signal, max_k=1)
+    plan_path.write_text(json.dumps(plan), encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--plan",
+            str(plan_path),
+            "--materializer-contexts-out",
+            str(contexts_path),
+            "--materializer-context-default-output-root",
+            str(output_root),
+            "--materializer-contexts-fail-if-blocked",
+            "--materialization-out",
+            str(materialization),
+            "--portfolio-out",
+            str(portfolio),
+            "--action-summary-out",
+            str(summary),
+            "--materializer-work-queue-out",
+            str(work_queue),
+            "--repo-root",
+            str(tmp_path),
+            "--candidate-limit",
+            "4",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    stdout = json.loads(result.stdout)
+    assert stdout["materializer_contexts"] == str(contexts_path)
+    assert stdout["materializer_contexts_generated"] is True
+    assert stdout["materializer_contexts_blocked_count"] == 0
+    assert stdout["materializer_work_queue_executable_row_count"] == 1
+    assert stdout["materializer_work_queue_blocked_row_count"] == 0
+    contexts = json.loads(contexts_path.read_text(encoding="utf-8"))
+    assert contexts["schema"] == MATERIALIZER_CONTEXTS_SCHEMA
+    assert contexts["blocked_context_count"] == 0
+    work = json.loads(work_queue.read_text(encoding="utf-8"))
+    row = work["rows"][0]
+    assert row["executable"] is True
+    assert row["target_kind"] == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["rank_or_kill_eligible"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
 def test_byte_shaving_campaign_queue_cli_generates_inverse_scorer_contexts_and_smoke_materializes(
     tmp_path: Path,
 ) -> None:

@@ -30,6 +30,7 @@ from tac.optimization.byte_shaving_campaign import (
 )
 from tac.optimization.inverse_steganalysis_acquisition import (
     CONTEST_RATE_SCORE_PER_BYTE,
+    action_atoms_from_byte_shaving_campaign_plan,
     build_discrete_scorer_action_functional,
     inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection,
 )
@@ -764,6 +765,56 @@ def test_inverse_action_compiler_hint_lowers_to_family_packet_ir() -> None:
     ]
     assert bridge["score_claim"] is False
     assert bridge["ready_for_exact_eval_dispatch"] is False
+
+
+def test_byte_shaving_ranked_unit_target_metadata_round_trips_to_packet_ir() -> None:
+    source_plan = {
+        "schema": "byte_shaving_campaign_plan.v1",
+        "candidate_id": "ranked_metadata_candidate",
+        "lane_id": "ranked_metadata_lane",
+        "ranked_units": [
+            {
+                "unit_id": "ranked_decoder_section",
+                "unit_kind": "archive_section",
+                "candidate_saved_bytes": 64,
+                "expected_score_gain": 0.0001,
+                "quality_cost_score": 0.0,
+                "recommended_operation_family": "section_entropy_recode",
+                "recommended_operation_target_kind": (
+                    "archive_section_entropy_recode_v1"
+                ),
+                "recommended_operation_params": {
+                    "archive_section": "decoder_blob",
+                    "section_manifest": "sections.json",
+                    "archive_path": "source.zip",
+                    "runtime_consumption_proof": "proof.json",
+                },
+                **_false_authority(),
+            }
+        ],
+        **_false_authority(),
+    }
+
+    atoms = action_atoms_from_byte_shaving_campaign_plan(source_plan)
+    action = build_discrete_scorer_action_functional(atoms)
+    surface = build_signal_surface_from_inverse_action_functional(action)
+    plan = build_byte_shaving_campaign_plan(surface, max_k=1)
+    bridge = plan["materialization_bridge"]
+
+    assert surface["water_bucket_materialization_portfolio"]["actuation_modes"] == [
+        "compiled_operation_set"
+    ]
+    assert bridge["compiled_operation_set_count"] == 1
+    assert bridge["high_level_operation_compiler_required_count"] == 0
+    assert bridge["queue_consumable_packet_ir_operation_set_count"] == 1
+    packet_ir = plan["packet_ir_operation_sets"][0]
+    operation = packet_ir["operations"][0]
+    assert operation["target_kind"] == "archive_section_entropy_recode_v1"
+    assert operation["operation_family"] == "section_entropy_recode"
+    assert operation["params"]["archive_section"] == "decoder_blob"
+    assert operation["params"]["archive_path"] == "source.zip"
+    assert operation["score_claim"] is False
+    assert packet_ir["ready_for_exact_eval_dispatch"] is False
 
 
 def test_inverse_action_mixed_compiled_and_high_level_routes_to_compiler_first() -> None:
