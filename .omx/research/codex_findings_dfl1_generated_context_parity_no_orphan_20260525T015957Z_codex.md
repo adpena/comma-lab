@@ -15,6 +15,11 @@ not guaranteed to reach `build_materializer_execution_queue(...)`. That could
 leave generated DFL1 materializer candidates with materialization and harvest
 steps but no automatic full-frame shell-parity proof step.
 
+An adversarial audit also caught a fake-green class: a caller-provided
+`--full-frame-file-list-claim` could previously make a partial one-entry file
+list look strict if the outputs matched. Strict DFL1 parity now requires
+expected full-frame file-list identity, not just a caller assertion.
+
 ## Landing
 
 - `src/comma_lab/scheduler/final_byte_operation_contexts.py` now preserves DFL1
@@ -37,9 +42,10 @@ steps but no automatic full-frame shell-parity proof step.
 - `tools/build_byte_shaving_campaign_queue.py` now surfaces DFL1 parity
   requested/enabled/blocked counts and blocker summaries in CLI stdout.
 - `tools/run_byte_shaving_materializer_campaign.py` now exposes DFL1 parity
-  artifact-map flags, validates SHA-256 input, and rejects those flags unless
-  the packet-member target is `renderer_payload_dfl1`, preventing cross-family
-  context pollution.
+  artifact-map flags and rejects those flags unless the packet-member target is
+  `renderer_payload_dfl1`, preventing cross-family context pollution. Invalid
+  or missing full-frame identity remains fail-closed in context compilation and
+  queue follow-up blockers.
 - `src/tac/tests/test_final_byte_operation_contexts.py` asserts the compiler
   carries those hints into the work-row DFL1 parity context.
 - `src/tac/tests/test_byte_shaving_campaign_queue.py` adds a CLI-level generated
@@ -64,12 +70,18 @@ PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest \
   src/tac/tests/test_byte_shaving_materializer_campaign_runner.py -q
 ```
 
-Result: 267 passed in 11.28s.
+Result: 267 passed in 11.44s.
 
 ```bash
-ruff check tools/run_byte_shaving_materializer_campaign.py \
-  src/tac/tests/test_byte_shaving_materializer_campaign_runner.py \
+ruff check tools/prove_shell_inflate_parity.py \
+  tools/harvest_materializer_chain_candidates.py \
+  tools/build_byte_shaving_campaign_queue.py \
+  tools/run_byte_shaving_materializer_campaign.py \
+  src/comma_lab/scheduler/byte_shaving_campaign_queue.py \
   src/comma_lab/scheduler/final_byte_operation_contexts.py \
+  src/comma_lab/scheduler/materializer_chain_harvest.py \
+  src/tac/optimization/family_agnostic_materializers.py \
+  src/tac/tests/test_byte_shaving_materializer_campaign_runner.py \
   src/tac/tests/test_final_byte_operation_contexts.py \
   src/tac/tests/test_byte_shaving_campaign_queue.py \
   src/tac/tests/test_materializer_chain_harvest_scheduler.py \
@@ -87,6 +99,8 @@ Result: clean.
 ## Remaining boundary
 
 This landing makes the generated local materializer DAG preserve DFL1 shell
-parity proof signal. It does not claim a contest score and does not authorize
+parity proof signal and prevents partial-list proof self-attestation from
+becoming strict parity. It does not claim a contest score and does not authorize
 promotion. Exact CPU/CUDA auth-axis evaluation still owns score and promotion
-authority after a byte-closed candidate is produced and parity proof passes.
+authority after a byte-closed candidate is produced and strict parity proof
+passes.
