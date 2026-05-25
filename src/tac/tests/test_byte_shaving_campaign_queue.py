@@ -2129,6 +2129,8 @@ def test_materializer_work_queue_wraps_archive_section_entropy_recode_adapter(
     assert completion_contract["required_positive_int"] == [
         "candidate_archive.bytes",
         "candidate_member.bytes",
+        "serialized_archive_delta.source_archive_bytes",
+        "serialized_archive_delta.candidate_archive_bytes",
     ]
     assert completion_contract["required_sha256"] == [
         "candidate_archive.sha256",
@@ -2736,6 +2738,13 @@ def test_family_agnostic_candidate_postconditions_reject_weak_receiver_manifest(
         },
         "runtime_consumption_proof_path": str(proof_path),
         "readiness_blockers": [],
+        "serialized_archive_delta": {
+            "schema": "serialized_archive_delta_contract.v1",
+            "source_archive_bytes": 128,
+            "candidate_archive_bytes": int(candidate_archive["bytes"]),
+            "realized_saved_bytes": 128 - int(candidate_archive["bytes"]),
+            "status": "realized_saving",
+        },
     }
     out_manifest.write_text(json.dumps(strong_manifest), encoding="utf-8")
     assert _condition_passes(completion_contract, repo_root=tmp_path)

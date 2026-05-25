@@ -83,6 +83,14 @@ def test_packet_member_recompress_materializer_preserves_member_payload(
     assert result["candidate_member"]["sha256"] == sha256_bytes(payload)
     assert result["candidate_archive"]["bytes"] < result["source_archive"]["bytes"]
     assert result["selected_compression"]["saved_bytes"] > 0
+    delta = result["serialized_archive_delta"]
+    assert delta["schema"] == "serialized_archive_delta_contract.v1"
+    assert delta["status"] == "realized_saving"
+    assert delta["realized_saved_bytes"] == result["selected_compression"]["saved_bytes"]
+    assert delta["source_archive_bytes"] == result["source_archive"]["bytes"]
+    assert delta["candidate_archive_bytes"] == result["candidate_archive"]["bytes"]
+    assert delta["score_claim"] is False
+    assert delta["ready_for_exact_eval_dispatch"] is False
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
     assert "runtime_consumption_proof_missing" in result["readiness_blockers"]
@@ -174,6 +182,45 @@ def test_packet_member_recompress_materializer_rejects_stale_member_proof(
 
     assert result["receiver_contract_satisfied"] is False
     assert "runtime_consumption_proof_candidate_member_sha_mismatch" in (
+        result["readiness_blockers"]
+    )
+
+
+def test_packet_member_recompress_materializer_rejects_wrong_proof_metadata(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    first_output = tmp_path / "candidate_a.zip"
+    second_output = tmp_path / "candidate_b.zip"
+    valid_proof = tmp_path / "valid_runtime_consumption_proof.json"
+    mismatched_proof = tmp_path / "mismatched_runtime_consumption_proof.json"
+    payload = b"A" * 8192
+    _write_zip(archive, {"payload.bin": payload})
+    materialize_packet_member_recompress_candidate(
+        archive_path=archive,
+        output_archive=first_output,
+        member_name="payload.bin",
+        runtime_consumption_proof_out=valid_proof,
+        repo_root=tmp_path,
+    )
+    proof_payload = json.loads(valid_proof.read_text(encoding="utf-8"))
+    proof_payload["proof_kind"] = (
+        "archive_section_entropy_recode_raw_payload_identity_receiver_proof.v1"
+    )
+    proof_payload["target_kind"] = "archive_section_entropy_recode_v1"
+    mismatched_proof.write_text(json.dumps(proof_payload), encoding="utf-8")
+
+    result = materialize_packet_member_recompress_candidate(
+        archive_path=archive,
+        output_archive=second_output,
+        member_name="payload.bin",
+        runtime_consumption_proof=mismatched_proof,
+        repo_root=tmp_path,
+    )
+
+    assert result["receiver_contract_satisfied"] is False
+    assert "runtime_consumption_proof_kind_mismatch" in result["readiness_blockers"]
+    assert "runtime_consumption_proof_target_kind_mismatch" in (
         result["readiness_blockers"]
     )
 
@@ -1108,6 +1155,65 @@ def test_archive_section_entropy_recode_materializer_accepts_length_preserved_pr
     assert result["ready_for_exact_eval_dispatch"] is False
 
 
+def test_archive_section_entropy_recode_materializer_rejects_wrong_proof_metadata(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    first_output = tmp_path / "candidate_a.zip"
+    second_output = tmp_path / "candidate_b.zip"
+    valid_proof = tmp_path / "valid_runtime_consumption_proof.json"
+    mismatched_proof = tmp_path / "mismatched_runtime_consumption_proof.json"
+    raw = b"already-quality-zero" * 256
+    section = brotli.compress(raw, quality=0)
+    _write_zip(archive, {"0.raw": section})
+    manifest = {
+        "schema": "fixture_section_manifest.v1",
+        "member": {"name": "0.raw"},
+        "sections": [
+            {
+                "name": "section_a",
+                "index": 0,
+                "offset": 0,
+                "length": len(section),
+                "sha256": sha256_bytes(section),
+            }
+        ],
+    }
+    materialize_archive_section_entropy_recode_candidate(
+        archive_path=archive,
+        section_manifest=manifest,
+        output_archive=first_output,
+        section_names=("section_a",),
+        brotli_qualities=(0,),
+        runtime_consumption_proof_out=valid_proof,
+        allow_size_regression=True,
+        repo_root=tmp_path,
+    )
+    proof_payload = json.loads(valid_proof.read_text(encoding="utf-8"))
+    proof_payload["materializer_id"] = "packet_member_recompress_adapter"
+    proof_payload["receiver_contract_kind"] = "family_agnostic_packet_member_recompress"
+    mismatched_proof.write_text(json.dumps(proof_payload), encoding="utf-8")
+
+    result = materialize_archive_section_entropy_recode_candidate(
+        archive_path=archive,
+        section_manifest=manifest,
+        output_archive=second_output,
+        section_names=("section_a",),
+        brotli_qualities=(0,),
+        runtime_consumption_proof=mismatched_proof,
+        allow_size_regression=True,
+        repo_root=tmp_path,
+    )
+
+    assert result["receiver_contract_satisfied"] is False
+    assert "runtime_consumption_proof_receiver_contract_kind_mismatch" in (
+        result["readiness_blockers"]
+    )
+    assert "runtime_consumption_proof_materializer_id_mismatch" in (
+        result["readiness_blockers"]
+    )
+
+
 def test_archive_section_entropy_recode_materializer_preserves_brotli_quality_zero(
     tmp_path: Path,
 ) -> None:
@@ -1169,6 +1275,14 @@ def test_tensor_factorize_materializer_emits_cooperative_receiver_packet(
     assert result["byte_closed_candidate_emitted"] is True
     assert result["factorization"]["rank"] == 1
     assert result["candidate_archive"]["bytes"] < result["source_archive"]["bytes"]
+    delta = result["serialized_archive_delta"]
+    assert delta["schema"] == "serialized_archive_delta_contract.v1"
+    assert delta["status"] == "realized_saving"
+    assert delta["realized_saved_bytes"] == result["factorization"]["saved_bytes"]
+    assert delta["source_archive_bytes"] == result["source_archive"]["bytes"]
+    assert delta["candidate_archive_bytes"] == result["candidate_archive"]["bytes"]
+    assert delta["promotion_eligible"] is False
+    assert delta["rank_or_kill_eligible"] is False
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
     assert "tensor_factorized_payload_requires_cooperative_receiver" in (
@@ -1219,6 +1333,60 @@ def test_tensor_factorize_materializer_emits_cooperative_receiver_proof(
     )
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
+
+
+def test_tensor_factorize_materializer_rejects_wrong_proof_metadata(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    first_output = tmp_path / "candidate_a.zip"
+    second_output = tmp_path / "candidate_b.zip"
+    valid_proof = tmp_path / "valid_runtime_consumption_proof.json"
+    mismatched_proof = tmp_path / "mismatched_runtime_consumption_proof.json"
+    tensor_path = tmp_path / "tensor.npy"
+    vector_a = np.arange(256, dtype=np.float32)[:, None]
+    vector_b = np.linspace(0.25, 2.0, 256, dtype=np.float32)[None, :]
+    np.save(tensor_path, vector_a @ vector_b)
+    _write_zip(archive, {"weights.npy": tensor_path.read_bytes()})
+    contract = {
+        "rank": 1,
+        "cooperative_receiver_id": "fixture_tensor_factorize_receiver",
+        "receiver_adapter_kind": "npz_svd_low_rank_v1",
+        "max_abs_error_tolerance": 1.0e-3,
+    }
+    materialize_tensor_factorize_candidate(
+        archive_path=archive,
+        tensor_manifest={"member_name": "weights.npy"},
+        factorization_contract=contract,
+        output_archive=first_output,
+        runtime_consumption_proof_out=valid_proof,
+        repo_root=tmp_path,
+    )
+    proof_payload = json.loads(valid_proof.read_text(encoding="utf-8"))
+    proof_payload["proof_kind"] = (
+        "packet_member_recompress_payload_identity_receiver_proof.v1"
+    )
+    proof_payload["target_kind"] = "packet_member_recompress_v1"
+    proof_payload["materializer_id"] = "packet_member_recompress_adapter"
+    mismatched_proof.write_text(json.dumps(proof_payload), encoding="utf-8")
+
+    result = materialize_tensor_factorize_candidate(
+        archive_path=archive,
+        tensor_manifest={"member_name": "weights.npy"},
+        factorization_contract=contract,
+        output_archive=second_output,
+        runtime_consumption_proof=mismatched_proof,
+        repo_root=tmp_path,
+    )
+
+    assert result["receiver_contract_satisfied"] is False
+    assert "runtime_consumption_proof_kind_mismatch" in result["readiness_blockers"]
+    assert "runtime_consumption_proof_target_kind_mismatch" in (
+        result["readiness_blockers"]
+    )
+    assert "runtime_consumption_proof_materializer_id_mismatch" in (
+        result["readiness_blockers"]
+    )
 
 
 def test_tensor_factorize_materializer_proof_requires_declared_receiver(

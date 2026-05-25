@@ -20,10 +20,20 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.optimization.family_agnostic_materializers import (  # noqa: E402
+    PACKET_MEMBER_RECOMPRESS_MATERIALIZER_ID,
+    PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+    TENSOR_FACTORIZE_MATERIALIZER_ID,
+    TENSOR_FACTORIZE_TARGET_KIND,
     FamilyAgnosticMaterializerError,
+    materialize_packet_member_recompress_candidate,
     materialize_packet_member_zip_header_elide_candidate,
+    materialize_tensor_factorize_candidate,
+)
+from tac.optimization.materializer_feedback import (  # noqa: E402
+    materializer_archive_delta,
+    selected_materializer_delta,
 )
 from tac.optimization.proxy_candidate_contract import (  # noqa: E402
     require_no_truthy_authority_fields,
@@ -62,7 +72,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--target-kind",
         default=PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
-        choices=(PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,),
+        choices=(
+            PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+            PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+            TENSOR_FACTORIZE_TARGET_KIND,
+        ),
     )
     parser.add_argument(
         "--archive",
@@ -78,6 +92,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--all-members", action="store_true")
     parser.add_argument("--packet-member-manifest", type=Path)
     parser.add_argument("--header-elision-contract", type=Path)
+    parser.add_argument("--zip-compression-method", action="append", default=[])
+    parser.add_argument("--zip-compresslevel", action="append", type=int, default=[])
+    parser.add_argument("--tensor-manifest", type=Path)
+    parser.add_argument("--factorization-contract", type=Path)
+    parser.add_argument("--rank", type=int)
     parser.add_argument("--min-free-bytes", type=int, default=0)
     parser.add_argument("--allow-overwrite", action="store_true")
     parser.add_argument("--expected-existing-output-json-sha256")
@@ -98,6 +117,11 @@ def main(argv: list[str] | None = None) -> int:
             member_names=tuple(args.member_names),
             packet_member_manifest=args.packet_member_manifest,
             header_elision_contract=args.header_elision_contract,
+            zip_compression_methods=tuple(args.zip_compression_method),
+            zip_compresslevels=tuple(args.zip_compresslevel),
+            tensor_manifest=args.tensor_manifest,
+            factorization_contract=args.factorization_contract,
+            rank=args.rank,
             all_members=args.all_members,
             min_free_bytes=args.min_free_bytes,
             allow_overwrite=args.allow_overwrite,
@@ -134,11 +158,32 @@ def build_materializer_empirical_sweep(
     all_members: bool = False,
     packet_member_manifest: str | Path | Mapping[str, Any] | None = None,
     header_elision_contract: str | Path | Mapping[str, Any] | None = None,
+    zip_compression_methods: Sequence[str] = (),
+    zip_compresslevels: Sequence[int] = (),
+    tensor_manifest: str | Path | Mapping[str, Any] | None = None,
+    factorization_contract: str | Path | Mapping[str, Any] | None = None,
+    rank: int | None = None,
     min_free_bytes: int = 0,
     allow_overwrite: bool = False,
 ) -> dict[str, Any]:
-    if target_kind != PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
+    if target_kind not in {
+        PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+        TENSOR_FACTORIZE_TARGET_KIND,
+    }:
         raise FamilyAgnosticMaterializerError(f"unsupported target kind: {target_kind}")
+    if target_kind == TENSOR_FACTORIZE_TARGET_KIND and tensor_manifest is None:
+        raise FamilyAgnosticMaterializerError(
+            "tensor_factorize_v1 requires tensor_manifest"
+        )
+    if (
+        target_kind == TENSOR_FACTORIZE_TARGET_KIND
+        and factorization_contract is None
+        and rank is None
+    ):
+        raise FamilyAgnosticMaterializerError(
+            "tensor_factorize_v1 requires factorization_contract or rank"
+        )
     archive_specs = [_parse_archive_spec(value) for value in archives]
     if not archive_specs:
         raise FamilyAgnosticMaterializerError("at least one archive is required")
@@ -152,16 +197,21 @@ def build_materializer_empirical_sweep(
         manifest_path = row_dir / "candidate.json"
         candidate_path = row_dir / "candidate.zip"
         proof_path = row_dir / "candidate.runtime_consumption_proof.json"
-        result = materialize_packet_member_zip_header_elide_candidate(
-            archive_path=archive,
-            output_archive=candidate_path,
+        result = _materialize_target(
+            target_kind=target_kind,
+            archive=archive,
+            candidate_path=candidate_path,
+            proof_path=proof_path,
             packet_member_manifest=packet_member_manifest,
             member_name=member_name,
             member_names=member_names,
             all_members=all_members,
             header_elision_contract=header_elision_contract,
-            runtime_consumption_proof_out=proof_path,
-            repo_root=REPO_ROOT,
+            zip_compression_methods=zip_compression_methods,
+            zip_compresslevels=zip_compresslevels,
+            tensor_manifest=tensor_manifest,
+            factorization_contract=factorization_contract,
+            rank=rank,
             allow_overwrite=allow_overwrite,
             min_free_bytes=min_free_bytes,
         )
@@ -188,18 +238,97 @@ def build_materializer_empirical_sweep(
     return {
         "schema": SWEEP_SCHEMA,
         "target_kind": target_kind,
-        "materializer_id": PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID,
+        "materializer_id": _target_materializer_id(target_kind),
         "archive_count": len(rows),
         "observation_count": len(rows),
         "rate_positive_count": len(rate_positive),
         "rate_nonpositive_count": len(rows) - len(rate_positive),
         "max_saved_bytes": max_saved_bytes,
         "total_positive_saved_bytes": total_saved_bytes,
-        "planner_feedback": _planner_feedback(rows),
+        "planner_feedback": _planner_feedback(rows, target_kind=target_kind),
         "blockers": blockers,
         "observations": rows,
         **FALSE_AUTHORITY,
     }
+
+
+def _materialize_target(
+    *,
+    target_kind: str,
+    archive: Path,
+    candidate_path: Path,
+    proof_path: Path,
+    packet_member_manifest: str | Path | Mapping[str, Any] | None,
+    member_name: str | None,
+    member_names: Sequence[str],
+    all_members: bool,
+    header_elision_contract: str | Path | Mapping[str, Any] | None,
+    zip_compression_methods: Sequence[str],
+    zip_compresslevels: Sequence[int],
+    tensor_manifest: str | Path | Mapping[str, Any] | None,
+    factorization_contract: str | Path | Mapping[str, Any] | None,
+    rank: int | None,
+    allow_overwrite: bool,
+    min_free_bytes: int,
+) -> dict[str, Any]:
+    if target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
+        return materialize_packet_member_zip_header_elide_candidate(
+            archive_path=archive,
+            output_archive=candidate_path,
+            packet_member_manifest=packet_member_manifest,
+            member_name=member_name,
+            member_names=member_names,
+            all_members=all_members,
+            header_elision_contract=header_elision_contract,
+            runtime_consumption_proof_out=proof_path,
+            repo_root=REPO_ROOT,
+            allow_overwrite=allow_overwrite,
+            min_free_bytes=min_free_bytes,
+        )
+    if target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
+        return materialize_packet_member_recompress_candidate(
+            archive_path=archive,
+            output_archive=candidate_path,
+            packet_member_manifest=packet_member_manifest,
+            member_name=member_name,
+            compression_methods=tuple(zip_compression_methods or ("stored", "deflated")),
+            compresslevels=tuple(zip_compresslevels or (9,)),
+            runtime_consumption_proof_out=proof_path,
+            repo_root=REPO_ROOT,
+            allow_overwrite=allow_overwrite,
+            min_free_bytes=min_free_bytes,
+        )
+    if target_kind == TENSOR_FACTORIZE_TARGET_KIND:
+        contract: str | Path | Mapping[str, Any]
+        if factorization_contract is not None:
+            contract = factorization_contract
+        elif rank is not None:
+            contract = {"rank": rank}
+        else:
+            raise FamilyAgnosticMaterializerError(
+                "tensor_factorize_v1 requires factorization_contract or rank"
+            )
+        return materialize_tensor_factorize_candidate(
+            archive_path=archive,
+            output_archive=candidate_path,
+            tensor_manifest=tensor_manifest,
+            factorization_contract=contract,
+            runtime_consumption_proof_out=proof_path,
+            repo_root=REPO_ROOT,
+            allow_overwrite=allow_overwrite,
+            min_free_bytes=min_free_bytes,
+        )
+    raise FamilyAgnosticMaterializerError(f"unsupported target kind: {target_kind}")
+
+
+def _target_materializer_id(target_kind: str) -> str:
+    if target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
+        return PACKET_MEMBER_RECOMPRESS_MATERIALIZER_ID
+    if target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
+        return PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID
+    if target_kind == TENSOR_FACTORIZE_TARGET_KIND:
+        return TENSOR_FACTORIZE_MATERIALIZER_ID
+    raise FamilyAgnosticMaterializerError(f"unsupported target kind: {target_kind}")
 
 
 def _observation_from_manifest(
@@ -213,8 +342,9 @@ def _observation_from_manifest(
         result,
         context="family_agnostic_materializer_empirical_sweep.manifest",
     )
-    selected = result.get("selected_elision") if isinstance(result.get("selected_elision"), Mapping) else {}
-    saved_bytes = int(selected.get("saved_bytes") or 0)
+    selected_key, selected = selected_materializer_delta(result)
+    archive_delta = materializer_archive_delta(result) or {}
+    saved_bytes = int(archive_delta.get("realized_saved_bytes") or 0)
     readiness_blockers = [str(item) for item in result.get("readiness_blockers") or []]
     source_archive = result.get("source_archive") if isinstance(result.get("source_archive"), Mapping) else {}
     candidate_archive = (
@@ -230,8 +360,10 @@ def _observation_from_manifest(
         if isinstance(result.get("receiver_verification"), Mapping)
         else {}
     )
+    receiver_contract_satisfied = result.get("receiver_contract_satisfied") is True
     rate_positive = saved_bytes > 0 and "candidate_not_rate_positive" not in readiness_blockers
     observed_rate_gain = LOCAL_RATE_SCORE_PER_BYTE * float(saved_bytes) if rate_positive else 0.0
+    observed_score_gain = observed_rate_gain if receiver_contract_satisfied else 0.0
     return {
         "schema": OBSERVATION_SCHEMA,
         "observation_kind": "family_agnostic_materializer_empirical_observation",
@@ -261,9 +393,9 @@ def _observation_from_manifest(
         "artifact_bytes": candidate_archive.get("bytes") or source_archive.get("bytes") or 0,
         "saved_bytes": saved_bytes,
         "observed_rate_gain": observed_rate_gain,
-        "observed_score_gain": observed_rate_gain,
+        "observed_score_gain": observed_score_gain,
         "rate_positive": rate_positive,
-        "receiver_contract_satisfied": result.get("receiver_contract_satisfied") is True,
+        "receiver_contract_satisfied": receiver_contract_satisfied,
         "receiver_verification_blockers": receiver_verification.get("blockers") or [],
         "readiness_blockers": readiness_blockers,
         "runtime_consumption_proof_path": result.get("runtime_consumption_proof_path"),
@@ -272,19 +404,55 @@ def _observation_from_manifest(
         "selected_member_name": result.get("selected_member_name"),
         "selected_member_names": result.get("selected_member_names") or [],
         "selection_scope": result.get("selection_scope"),
-        "selected_elision": dict(selected),
-        "recommended_planner_action": (
-            "keep_rate_positive_candidate_for_inflate_parity_gate"
-            if rate_positive
-            else "demote_matching_archive_class_for_header_elide"
+        "selected_materialization_key": selected_key,
+        "selected_materialization": dict(selected),
+        "selected_elision": dict(selected) if selected_key == "selected_elision" else {},
+        "selected_compression": (
+            dict(selected) if selected_key == "selected_compression" else {}
+        ),
+        "factorization": dict(selected) if selected_key == "factorization" else {},
+        "recommended_planner_action": _recommended_planner_action(
+            target_kind=str(result.get("target_kind") or ""),
+            rate_positive=rate_positive,
+            receiver_contract_satisfied=receiver_contract_satisfied,
         ),
         "observation_feedback_is_not_score_authority": True,
         **FALSE_AUTHORITY,
     }
 
 
-def _planner_feedback(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+def _recommended_planner_action(
+    *,
+    target_kind: str,
+    rate_positive: bool,
+    receiver_contract_satisfied: bool,
+) -> str:
+    if rate_positive and receiver_contract_satisfied:
+        return "keep_rate_positive_candidate_for_inflate_parity_gate"
+    if rate_positive:
+        return "repair_receiver_contract_before_exact_readiness"
+    suffix_by_target = {
+        PACKET_MEMBER_RECOMPRESS_TARGET_KIND: "member_recompress",
+        PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND: "header_elide",
+        TENSOR_FACTORIZE_TARGET_KIND: "tensor_factorize",
+    }
+    return (
+        "demote_matching_archive_class_for_"
+        f"{suffix_by_target.get(target_kind, target_kind or 'materializer')}"
+    )
+
+
+def _planner_feedback(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    target_kind: str,
+) -> dict[str, Any]:
     rate_positive_count = sum(1 for row in rows if row.get("rate_positive") is True)
+    receiver_negative_count = sum(
+        1
+        for row in rows
+        if row.get("receiver_contract_satisfied") is False
+    )
     blocker_counts: dict[str, int] = {}
     for row in rows:
         for blocker in row.get("readiness_blockers") or []:
@@ -293,14 +461,15 @@ def _planner_feedback(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     return {
         "schema": "family_agnostic_materializer_planner_feedback.v1",
         "observation_kind": "materializer_rate_observation",
-        "target_kind": PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+        "target_kind": target_kind,
         "rate_positive_count": rate_positive_count,
         "rate_nonpositive_count": len(rows) - rate_positive_count,
+        "receiver_negative_count": receiver_negative_count,
         "blocker_counts": dict(sorted(blocker_counts.items())),
         "recommended_acquisition_rule": (
-            "rank_rate_positive_header_elide_after_inflate_parity"
+            "rank_rate_positive_materializer_after_inflate_parity"
             if rate_positive_count
-            else "demote_packet_member_zip_header_elide_for_matching_archive_class"
+            else f"demote_{target_kind}_for_matching_archive_class"
         ),
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,

@@ -2267,8 +2267,17 @@ def _materializer_candidate_postconditions(
         TENSOR_FACTORIZE_TARGET_KIND,
     }:
         required_equals["receiver_verification.schema"] = "family_agnostic_runtime_consumption_proof_verification.v1"
+        required_equals["serialized_archive_delta.schema"] = (
+            "serialized_archive_delta_contract.v1"
+        )
         required_sha256.append("candidate_member.sha256")
-        required_positive_int.append("candidate_member.bytes")
+        required_positive_int.extend(
+            [
+                "candidate_member.bytes",
+                "serialized_archive_delta.source_archive_bytes",
+                "serialized_archive_delta.candidate_archive_bytes",
+            ]
+        )
         required_nonempty.append("runtime_consumption_proof_path")
     if target_kind == TENSOR_FACTORIZE_TARGET_KIND:
         required_equals["receiver_contract_kind"] = "family_agnostic_tensor_factorize"

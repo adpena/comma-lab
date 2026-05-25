@@ -26,6 +26,9 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.serialized_archive_economics import (
+    build_serialized_archive_delta_contract,
+)
 from tac.repo_io import read_json, sha256_bytes, sha256_file, write_bytes_artifact, write_json_artifact
 
 ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA = "archive_section_entropy_recode_candidate.v1"
@@ -47,6 +50,22 @@ PACKET_MEMBER_MERGE_MATERIALIZER_ID = "packet_member_merge_adapter"
 RENDERER_PAYLOAD_DFL1_MATERIALIZER_ID = "renderer_payload_dfl1_adapter"
 PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID = "packet_member_zip_header_elide_adapter"
 TENSOR_FACTORIZE_MATERIALIZER_ID = "tensor_factorize_adapter"
+ARCHIVE_SECTION_ENTROPY_RECODE_PROOF_KIND = (
+    "archive_section_entropy_recode_raw_payload_identity_receiver_proof.v1"
+)
+ARCHIVE_SECTION_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND = (
+    "family_agnostic_archive_section_entropy_recode"
+)
+PACKET_MEMBER_RECOMPRESS_PROOF_KIND = (
+    "packet_member_recompress_payload_identity_receiver_proof.v1"
+)
+PACKET_MEMBER_RECOMPRESS_RECEIVER_CONTRACT_KIND = (
+    "family_agnostic_packet_member_recompress"
+)
+TENSOR_FACTORIZE_PROOF_KIND = (
+    "tensor_factorize_cooperative_receiver_reconstruction_proof.v1"
+)
+TENSOR_FACTORIZE_RECEIVER_CONTRACT_KIND = "family_agnostic_tensor_factorize"
 PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND = (
     "packet_member_merge_runtime_adapter_consumption_proof.v1"
 )
@@ -101,6 +120,20 @@ def _materializer_portability_contract(
         "rank_or_kill_authority": False,
         "notes": notes,
     }
+
+
+def _serialized_archive_delta_contract(
+    *,
+    source_archive: Mapping[str, Any],
+    candidate_archive: Mapping[str, Any],
+    saved_bytes: Any,
+) -> dict[str, Any]:
+    return build_serialized_archive_delta_contract(
+        source_archive=source_archive,
+        candidate_archive=candidate_archive,
+        modeled_saved_bytes=saved_bytes,
+        require_realized_saving=False,
+    )
 
 
 def materialize_packet_member_recompress_candidate(
@@ -218,6 +251,10 @@ def materialize_packet_member_recompress_candidate(
         runtime_consumption_proof=runtime_proof_ref,
         required_candidate_archive_sha256=candidate_record["sha256"],
         required_candidate_member_sha256=member_record["sha256"],
+        required_proof_kind=PACKET_MEMBER_RECOMPRESS_PROOF_KIND,
+        required_receiver_contract_kind=PACKET_MEMBER_RECOMPRESS_RECEIVER_CONTRACT_KIND,
+        required_target_kind=PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        required_materializer_id=PACKET_MEMBER_RECOMPRESS_MATERIALIZER_ID,
         repo_root=repo,
     )
     readiness_blockers = _readiness_blockers(
@@ -236,7 +273,7 @@ def materialize_packet_member_recompress_candidate(
             deterministic_surface="python_stdlib_zipfile_member_rewrite",
         ),
         "receiver_contract_id": f"{PACKET_MEMBER_RECOMPRESS_TARGET_KIND}.receiver.v1",
-        "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+        "receiver_contract_kind": PACKET_MEMBER_RECOMPRESS_RECEIVER_CONTRACT_KIND,
         "byte_closed_candidate_emitted": True,
         "source_archive": source_record,
         "source_member": member_record,
@@ -250,6 +287,11 @@ def materialize_packet_member_recompress_candidate(
             "candidate_archive_bytes": candidate_record["bytes"],
             "saved_bytes": saved_bytes,
         },
+        "serialized_archive_delta": _serialized_archive_delta_contract(
+            source_archive=source_record,
+            candidate_archive=candidate_record,
+            saved_bytes=saved_bytes,
+        ),
         "candidate_trials": [
             {
                 key: value
@@ -290,11 +332,11 @@ def _packet_member_recompress_runtime_consumption_proof(
     )
     return {
         "schema": "family_agnostic_runtime_consumption_proof_v1",
-        "proof_kind": "packet_member_recompress_payload_identity_receiver_proof.v1",
+        "proof_kind": PACKET_MEMBER_RECOMPRESS_PROOF_KIND,
         "proof_scope": "zip_member_payload_identity_after_archive_recompression",
         "target_kind": PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
         "materializer_id": PACKET_MEMBER_RECOMPRESS_MATERIALIZER_ID,
-        "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+        "receiver_contract_kind": PACKET_MEMBER_RECOMPRESS_RECEIVER_CONTRACT_KIND,
         "receiver_contract_id": f"{PACKET_MEMBER_RECOMPRESS_TARGET_KIND}.receiver.v1",
         "selected_member_name": selected_member_name,
         "source_archive": dict(source_archive),
@@ -563,6 +605,11 @@ def materialize_packet_member_merge_candidate(
             "zip_compression_method": best["zip_compression_method"],
             "zip_compresslevel": best["zip_compresslevel"],
         },
+        "serialized_archive_delta": _serialized_archive_delta_contract(
+            source_archive=source_record,
+            candidate_archive=candidate_record,
+            saved_bytes=saved_bytes,
+        ),
         "candidate_trials": [
             {
                 key: value
@@ -784,6 +831,11 @@ def materialize_renderer_payload_dfl1_candidate(
             "zip_compression_method": best["zip_compression_method"],
             "zip_compresslevel": best["zip_compresslevel"],
         },
+        "serialized_archive_delta": _serialized_archive_delta_contract(
+            source_archive=source_record,
+            candidate_archive=candidate_record,
+            saved_bytes=saved_bytes,
+        ),
         "candidate_trials": [
             {key: value for key, value in trial.items() if key != "payload"}
             for trial in candidate_trials
@@ -1181,6 +1233,11 @@ def materialize_packet_member_zip_header_elide_candidate(
                 - int(candidate_header_summary["total_elidable_header_bytes"])
             ),
         },
+        "serialized_archive_delta": _serialized_archive_delta_contract(
+            source_archive=source_record,
+            candidate_archive=candidate_record,
+            saved_bytes=saved_bytes,
+        ),
         "receiver_verification": receiver_verification,
         "runtime_consumption_proof_path": (
             proof_out.as_posix() if proof_out is not None else receiver_verification.get("proof_path")
@@ -1500,6 +1557,12 @@ def materialize_archive_section_entropy_recode_candidate(
         runtime_consumption_proof=runtime_proof_ref,
         required_candidate_archive_sha256=candidate_record["sha256"],
         required_candidate_member_sha256=candidate_member["sha256"],
+        required_proof_kind=ARCHIVE_SECTION_ENTROPY_RECODE_PROOF_KIND,
+        required_receiver_contract_kind=(
+            ARCHIVE_SECTION_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND
+        ),
+        required_target_kind=ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        required_materializer_id=ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID,
         repo_root=repo,
     )
     if (
@@ -1523,7 +1586,7 @@ def materialize_archive_section_entropy_recode_candidate(
             deterministic_surface="python_zipfile_brotli_section_recode",
         ),
         "receiver_contract_id": f"{ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND}.receiver.v1",
-        "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+        "receiver_contract_kind": ARCHIVE_SECTION_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND,
         "byte_closed_candidate_emitted": True,
         "source_archive": source_record,
         "source_member": source_member,
@@ -1539,6 +1602,11 @@ def materialize_archive_section_entropy_recode_candidate(
             "candidate_archive_bytes": candidate_record["bytes"],
             "saved_bytes": saved_bytes,
         },
+        "serialized_archive_delta": _serialized_archive_delta_contract(
+            source_archive=source_record,
+            candidate_archive=candidate_record,
+            saved_bytes=saved_bytes,
+        ),
         "sections": section_outputs,
         "receiver_verification": receiver_verification,
         "receiver_contract_satisfied": (
@@ -1621,11 +1689,11 @@ def _archive_section_entropy_recode_runtime_consumption_proof(
         passed = False
     return {
         "schema": "family_agnostic_runtime_consumption_proof_v1",
-        "proof_kind": "archive_section_entropy_recode_raw_payload_identity_receiver_proof.v1",
+        "proof_kind": ARCHIVE_SECTION_ENTROPY_RECODE_PROOF_KIND,
         "proof_scope": "brotli_section_raw_payload_identity_after_entropy_recode",
         "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
         "materializer_id": ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID,
-        "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+        "receiver_contract_kind": ARCHIVE_SECTION_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND,
         "receiver_contract_id": f"{ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND}.receiver.v1",
         "selected_member_name": selected_member_name,
         "source_archive": dict(source_archive),
@@ -1770,6 +1838,10 @@ def materialize_tensor_factorize_candidate(
         runtime_consumption_proof=runtime_proof_ref,
         required_candidate_archive_sha256=candidate_record["sha256"],
         required_candidate_member_sha256=candidate_member["sha256"],
+        required_proof_kind=TENSOR_FACTORIZE_PROOF_KIND,
+        required_receiver_contract_kind=TENSOR_FACTORIZE_RECEIVER_CONTRACT_KIND,
+        required_target_kind=TENSOR_FACTORIZE_TARGET_KIND,
+        required_materializer_id=TENSOR_FACTORIZE_MATERIALIZER_ID,
         repo_root=repo,
     )
     if receiver_verification.get("receiver_contract_satisfied") is not True:
@@ -1794,7 +1866,7 @@ def materialize_tensor_factorize_candidate(
             ),
         ),
         "receiver_contract_id": f"{TENSOR_FACTORIZE_TARGET_KIND}.receiver.v1",
-        "receiver_contract_kind": "family_agnostic_tensor_factorize",
+        "receiver_contract_kind": TENSOR_FACTORIZE_RECEIVER_CONTRACT_KIND,
         "byte_closed_candidate_emitted": True,
         "source_archive": source_record,
         "source_member": source_member,
@@ -1810,6 +1882,11 @@ def materialize_tensor_factorize_candidate(
             "candidate_archive_bytes": candidate_record["bytes"],
             "saved_bytes": saved_bytes,
         },
+        "serialized_archive_delta": _serialized_archive_delta_contract(
+            source_archive=source_record,
+            candidate_archive=candidate_record,
+            saved_bytes=saved_bytes,
+        ),
         "receiver_verification": receiver_verification,
         "receiver_contract_satisfied": (
             receiver_verification["receiver_contract_satisfied"] is True
@@ -1889,11 +1966,11 @@ def _tensor_factorize_runtime_consumption_proof(
     passed = finite and abs_passed and relative_passed and receiver_declared
     return {
         "schema": "family_agnostic_runtime_consumption_proof_v1",
-        "proof_kind": "tensor_factorize_cooperative_receiver_reconstruction_proof.v1",
+        "proof_kind": TENSOR_FACTORIZE_PROOF_KIND,
         "proof_scope": "low_rank_npz_packet_reconstructs_source_tensor_for_cooperative_receiver",
         "target_kind": TENSOR_FACTORIZE_TARGET_KIND,
         "materializer_id": TENSOR_FACTORIZE_MATERIALIZER_ID,
-        "receiver_contract_kind": "family_agnostic_tensor_factorize",
+        "receiver_contract_kind": TENSOR_FACTORIZE_RECEIVER_CONTRACT_KIND,
         "receiver_contract_id": f"{TENSOR_FACTORIZE_TARGET_KIND}.receiver.v1",
         "selected_member_name": selected_member_name,
         "source_archive": dict(source_archive),

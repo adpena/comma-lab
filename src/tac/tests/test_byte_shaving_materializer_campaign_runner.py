@@ -638,6 +638,8 @@ def test_materializer_campaign_runner_emits_receiver_negative_observation_sweep(
     assert row["schema"] == runner.FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA
     assert row["candidate_id"] == "inverse_action_receiver_negative_unit"
     assert row["saved_bytes"] == 66
+    assert row["archive_delta_status"] == "realized_saving"
+    assert row["archive_delta_source_kind"] == "section_recode"
     assert row["rate_positive"] is True
     assert row["observed_rate_gain"] > 0.0
     assert row["receiver_contract_satisfied"] is False
@@ -691,6 +693,85 @@ def test_materializer_campaign_runner_emits_receiver_negative_observation_sweep(
     assert request["command_template"][observation_index + 1] == str(observation_path)
     assert request["ready_for_action_functional_feedback"] is True
     assert request["score_claim"] is False
+
+
+def test_materializer_receiver_feedback_row_uses_family_local_archive_delta(
+    tmp_path: Path,
+) -> None:
+    manifest = {
+        "schema": "packet_member_recompress_candidate.v1",
+        "byte_closed_candidate_emitted": True,
+        "target_kind": runner.PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        "materializer_id": "packet_member_recompress_adapter",
+        "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+        "receiver_contract_satisfied": False,
+        "source_archive": {
+            "path": str(tmp_path / "source.zip"),
+            "bytes": 500,
+            "sha256": "c" * 64,
+        },
+        "candidate_archive": {
+            "path": str(tmp_path / "candidate.zip"),
+            "bytes": 425,
+            "sha256": "d" * 64,
+        },
+        "selected_compression": {
+            "source_archive_bytes": 500,
+            "candidate_archive_bytes": 425,
+            "saved_bytes": 75,
+        },
+        "readiness_blockers": ["runtime_consumption_proof_missing"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    row = runner._materializer_receiver_feedback_row(
+        manifest_path=tmp_path / "packet_recompress.json",
+        manifest=manifest,
+        step={"source_unit_ids": ["unit-packet"], "source_selection_ids": ["sel-packet"]},
+        runtime_identity={"runtime_contract_sha256": "a" * 64},
+        cache_identity={"cache_sha256": "b" * 64},
+    )
+
+    assert row is not None
+    assert row["candidate_id"] == "unit-packet"
+    assert row["saved_bytes"] == 75
+    assert row["archive_delta_status"] == "realized_saving"
+    assert row["archive_delta_source_kind"] == "selected_compression"
+    assert row["source_archive_bytes"] == 500
+    assert row["candidate_archive_bytes"] == 425
+    assert row["rate_positive"] is True
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_campaign_runner_discovers_family_local_archive_delta_manifest(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "run"
+    output_dir = run_dir / "materializer_outputs"
+    output_dir.mkdir(parents=True)
+    manifest = output_dir / "packet_recompress_manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "packet_member_recompress_candidate.v1",
+                "source_archive": {"bytes": 500, "sha256": "c" * 64},
+                "candidate_archive": {"bytes": 425, "sha256": "d" * 64},
+                "selected_compression": {
+                    "source_archive_bytes": 500,
+                    "candidate_archive_bytes": 425,
+                    "saved_bytes": 75,
+                },
+                **_false_authority(),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert runner._discover_materializer_chain_manifest_paths(run_dir) == [manifest]
 
 
 def test_materializer_campaign_runner_builds_runtime_policy_command(
@@ -2552,6 +2633,12 @@ def test_materializer_campaign_runner_executes_no_paid_packet_member_handoff(
     assert manifest["byte_closed_candidate_emitted"] is True
     assert manifest["receiver_contract_satisfied"] is True
     assert manifest["candidate_member"]["sha256"] == manifest["source_member"]["sha256"]
+    assert manifest["serialized_archive_delta"]["schema"] == (
+        "serialized_archive_delta_contract.v1"
+    )
+    assert manifest["serialized_archive_delta"]["realized_saved_bytes"] == (
+        manifest["selected_compression"]["saved_bytes"]
+    )
     assert manifest["runtime_consumption_proof_path"] == str(proof_path)
     proof_payload = json.loads(proof_path.read_text(encoding="utf-8"))
     assert proof_payload["candidate_archive"]["sha256"] == manifest["candidate_archive"]["sha256"]

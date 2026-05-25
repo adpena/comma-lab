@@ -69,6 +69,10 @@ from comma_lab.scheduler.storage_preflight import (  # noqa: E402
     validate_scheduler_storage_preflight_config,
 )
 from tac.optimization.byte_shaving_campaign import FALSE_AUTHORITY  # noqa: E402
+from tac.optimization.materializer_feedback import (  # noqa: E402
+    materializer_archive_delta,
+    selected_materializer_delta,
+)
 from tac.optimization.proxy_candidate_contract import (  # noqa: E402
     truthy_authority_field_violations,
 )
@@ -402,8 +406,12 @@ def _path_has_materializer_chain_archive_delta(path: Path) -> bool:
     payload = _load_json_object_if_present(path)
     if payload is None:
         return False
-    delta = payload.get("serialized_archive_delta")
-    if not isinstance(delta, Mapping):
+    if not isinstance(payload.get("serialized_archive_delta"), Mapping):
+        selected_key, _selected = selected_materializer_delta(payload)
+        if not selected_key:
+            return False
+    delta = _materializer_manifest_archive_delta(payload)
+    if delta is None:
         return False
     return bool(
         str(delta.get("status") or "").strip()
@@ -473,6 +481,39 @@ def _optional_int(value: Any) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _materializer_manifest_archive_delta(payload: Mapping[str, Any]) -> dict[str, Any] | None:
+    explicit_delta = payload.get("serialized_archive_delta")
+    if isinstance(explicit_delta, Mapping):
+        saved_bytes = _optional_int(explicit_delta.get("realized_saved_bytes"))
+        if saved_bytes is not None:
+            return {
+                "archive_delta_source_kind": "serialized_archive_delta",
+                "status": explicit_delta.get("status"),
+                "realized_saved_bytes": saved_bytes,
+                "source_archive_bytes": _optional_int(
+                    explicit_delta.get("source_archive_bytes")
+                ),
+                "candidate_archive_bytes": _optional_int(
+                    explicit_delta.get("candidate_archive_bytes")
+                ),
+                "savings_realized": explicit_delta.get("savings_realized") is True,
+            }
+
+    archive_delta = materializer_archive_delta(payload)
+    if archive_delta is not None:
+        return {
+            "archive_delta_source_kind": archive_delta.get(
+                "selected_materialization_key"
+            ),
+            "status": archive_delta.get("status"),
+            "realized_saved_bytes": archive_delta.get("realized_saved_bytes"),
+            "source_archive_bytes": archive_delta.get("source_archive_bytes"),
+            "candidate_archive_bytes": archive_delta.get("candidate_archive_bytes"),
+            "savings_realized": archive_delta.get("savings_realized") is True,
+        }
+    return None
 
 
 def _blocker_counts(values: Sequence[Any]) -> dict[str, int]:
@@ -557,19 +598,16 @@ def _materializer_receiver_feedback_row(
         if isinstance(manifest.get("source_archive"), Mapping)
         else {}
     )
-    section_recode = (
-        manifest.get("section_recode")
-        if isinstance(manifest.get("section_recode"), Mapping)
-        else {}
-    )
+    selected_key, selected_delta = selected_materializer_delta(manifest)
+    archive_delta = _materializer_manifest_archive_delta(manifest) or {}
     source_bytes = _optional_int(
-        source_archive.get("bytes") or section_recode.get("source_archive_bytes")
+        archive_delta.get("source_archive_bytes") or source_archive.get("bytes")
     )
     candidate_bytes = _optional_int(
-        candidate_archive.get("bytes")
-        or section_recode.get("candidate_archive_bytes")
+        archive_delta.get("candidate_archive_bytes")
+        or candidate_archive.get("bytes")
     )
-    saved_bytes = _optional_int(section_recode.get("saved_bytes"))
+    saved_bytes = _optional_int(archive_delta.get("realized_saved_bytes"))
     if saved_bytes is None and source_bytes is not None and candidate_bytes is not None:
         saved_bytes = source_bytes - candidate_bytes
     saved_bytes = int(saved_bytes or 0)
@@ -646,6 +684,8 @@ def _materializer_receiver_feedback_row(
             "candidate_archive_bytes": candidate_bytes,
             "artifact_bytes": candidate_bytes or source_bytes or 0,
             "saved_bytes": saved_bytes,
+            "archive_delta_status": archive_delta.get("status"),
+            "archive_delta_source_kind": archive_delta.get("archive_delta_source_kind"),
             "observed_rate_gain": observed_rate_gain,
             "observed_score_gain": 0.0,
             "rate_positive": rate_positive,
@@ -660,6 +700,17 @@ def _materializer_receiver_feedback_row(
             "manifest_path": _display_path(manifest_path),
             "selected_member_name": manifest.get("selected_member_name"),
             "selected_member_names": manifest.get("selected_member_names") or [],
+            "selected_materialization_key": selected_key or None,
+            "selected_materialization": dict(selected_delta),
+            "selected_compression": (
+                dict(selected_delta) if selected_key == "selected_compression" else {}
+            ),
+            "factorization": (
+                dict(selected_delta) if selected_key == "factorization" else {}
+            ),
+            "selected_elision": (
+                dict(selected_delta) if selected_key == "selected_elision" else {}
+            ),
             "source_unit_ids": (
                 [] if step is None else _as_sequence(step.get("source_unit_ids"))
             ),

@@ -510,6 +510,77 @@ def test_observer_preserves_materializer_metadata_for_recovery_grouping(
     assert groups[0]["source_selection_ids"] == ["selection-a"]
 
 
+def test_observer_derives_generic_materializer_archive_delta(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "packet_recompress.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "packet_member_recompress_candidate.v1",
+                "target_kind": "packet_member_recompress_v1",
+                "materializer_id": "packet_member_recompress_adapter",
+                "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+                "receiver_contract_satisfied": True,
+                "source_archive": {"bytes": 500, "sha256": "a" * 64},
+                "candidate_archive": {
+                    "path": str(tmp_path / "candidate.zip"),
+                    "bytes": 425,
+                    "sha256": "b" * 64,
+                },
+                "selected_compression": {
+                    "compression_method": "deflated",
+                    "compresslevel": 9,
+                    "source_archive_bytes": 500,
+                    "candidate_archive_bytes": 425,
+                    "saved_bytes": 75,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+    queue["experiments"][0]["steps"][0]["telemetry"] = {
+        "artifact_paths": [artifact.as_posix()],
+    }
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'failed',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-25T10:00:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+    )
+    artifact_record = observation["failed_steps"][0]["expected_artifacts"][0]
+
+    assert artifact_record["materializer_delta_source"] == "selected_compression"
+    assert artifact_record["selected_compression_saved_bytes"] == 75
+    assert artifact_record["selected_compression_source_archive_bytes"] == 500
+    assert artifact_record["selected_compression_candidate_archive_bytes"] == 425
+    assert artifact_record["serialized_archive_delta_status"] == "realized_saving"
+    assert artifact_record["serialized_archive_delta_realized_saved_bytes"] == 75
+    assert artifact_record["serialized_archive_delta_savings_realized"] is True
+    assert artifact_record["serialized_archive_delta_source_archive_bytes"] == 500
+    assert artifact_record["serialized_archive_delta_candidate_archive_bytes"] == 425
+
+
 def test_observer_health_marks_blocked_steps(tmp_path: Path) -> None:
     artifact = tmp_path / "artifact.json"
     state = tmp_path / "queue.sqlite"

@@ -21,6 +21,7 @@ from comma_lab.scheduler.experiment_queue import (
     queue_summary,
     resolve_worker_max_parallel,
 )
+from tac.optimization.materializer_feedback import materializer_archive_delta
 
 OBSERVATION_SCHEMA = "experiment_queue_observation.v1"
 
@@ -189,47 +190,44 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
                 record["serialized_archive_delta_candidate_archive_bytes"] = (
                     delta.get("candidate_archive_bytes")
                 )
-            section_recode = payload.get("section_recode")
-            if isinstance(section_recode, Mapping):
-                saved_bytes = section_recode.get("saved_bytes")
-                if "section_recode_saved_bytes" not in record:
-                    record["section_recode_saved_bytes"] = saved_bytes
-                if "section_recode_source_archive_bytes" not in record:
-                    record["section_recode_source_archive_bytes"] = section_recode.get(
-                        "source_archive_bytes"
-                    )
-                if "section_recode_candidate_archive_bytes" not in record:
-                    record["section_recode_candidate_archive_bytes"] = (
-                        section_recode.get("candidate_archive_bytes")
-                    )
+            materializer_delta = materializer_archive_delta(payload)
+            if materializer_delta is not None:
+                selected_key = materializer_delta.get("selected_materialization_key")
+                record["materializer_delta_source"] = selected_key
+                if selected_key:
+                    prefix = str(selected_key)
+                    if f"{prefix}_saved_bytes" not in record:
+                        record[f"{prefix}_saved_bytes"] = materializer_delta.get(
+                            "realized_saved_bytes"
+                        )
+                    if f"{prefix}_source_archive_bytes" not in record:
+                        record[f"{prefix}_source_archive_bytes"] = materializer_delta.get(
+                            "source_archive_bytes"
+                        )
+                    if f"{prefix}_candidate_archive_bytes" not in record:
+                        record[f"{prefix}_candidate_archive_bytes"] = materializer_delta.get(
+                            "candidate_archive_bytes"
+                        )
                 if record.get("serialized_archive_delta_realized_saved_bytes") is None:
-                    record["serialized_archive_delta_realized_saved_bytes"] = saved_bytes
+                    record["serialized_archive_delta_realized_saved_bytes"] = (
+                        materializer_delta.get("realized_saved_bytes")
+                    )
                 if record.get("serialized_archive_delta_source_archive_bytes") is None:
                     record["serialized_archive_delta_source_archive_bytes"] = (
-                        section_recode.get("source_archive_bytes")
+                        materializer_delta.get("source_archive_bytes")
                     )
                 if record.get("serialized_archive_delta_candidate_archive_bytes") is None:
                     record["serialized_archive_delta_candidate_archive_bytes"] = (
-                        section_recode.get("candidate_archive_bytes")
+                        materializer_delta.get("candidate_archive_bytes")
                     )
                 if record.get("serialized_archive_delta_savings_realized") is None:
-                    try:
-                        record["serialized_archive_delta_savings_realized"] = (
-                            int(saved_bytes) > 0
-                        )
-                    except (TypeError, ValueError):
-                        pass
+                    record["serialized_archive_delta_savings_realized"] = (
+                        materializer_delta.get("savings_realized")
+                    )
                 if record.get("serialized_archive_delta_status") is None:
-                    try:
-                        saved_int = int(saved_bytes)
-                    except (TypeError, ValueError):
-                        saved_int = 0
-                    if saved_int > 0:
-                        record["serialized_archive_delta_status"] = "realized_saving"
-                    elif saved_int < 0:
-                        record["serialized_archive_delta_status"] = "realized_cost"
-                    else:
-                        record["serialized_archive_delta_status"] = "no_realized_delta"
+                    record["serialized_archive_delta_status"] = (
+                        materializer_delta.get("status")
+                    )
             score = payload.get("score")
             if isinstance(score, Mapping):
                 record["score"] = {

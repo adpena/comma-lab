@@ -5,7 +5,10 @@ import json
 import subprocess
 import sys
 import zipfile
+from io import BytesIO
 from pathlib import Path
+
+import numpy as np
 
 from tools.run_family_agnostic_materializer_sweep import (
     OBSERVATION_SCHEMA,
@@ -40,6 +43,27 @@ def _write_multi_member_zip(path: Path) -> None:
             info.extra = b"\x7f\x7f\x04\x00abcd"
             info.comment = f"{name} comment".encode()
             zf.writestr(info, payload)
+
+
+def _write_recompress_zip(path: Path) -> None:
+    payload = (b"ABCD" * 4096) + (b"\x00" * 4096)
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr(
+            "payload.bin",
+            payload,
+            compress_type=zipfile.ZIP_DEFLATED,
+            compresslevel=1,
+        )
+
+
+def _write_tensor_zip(path: Path) -> None:
+    rows = np.arange(256, dtype=np.float32).reshape(256, 1)
+    cols = np.linspace(0.25, 2.0, 256, dtype=np.float32).reshape(1, 256)
+    matrix = rows @ cols
+    payload = BytesIO()
+    np.save(payload, matrix, allow_pickle=False)
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr("weights.npy", payload.getvalue(), compress_type=zipfile.ZIP_STORED)
 
 
 def test_materializer_empirical_sweep_summarizes_rate_positive_and_zero(
@@ -109,6 +133,69 @@ def test_materializer_empirical_sweep_can_record_all_member_header_elide(
     assert row["selected_elision"]["elided_header_bytes"] > 0
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_empirical_sweep_supports_packet_member_recompress(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "recompress.zip"
+    _write_recompress_zip(archive)
+
+    payload = build_materializer_empirical_sweep(
+        target_kind="packet_member_recompress_v1",
+        archives=[f"recompress={archive}"],
+        output_dir=tmp_path / "sweep",
+        member_name="payload.bin",
+        zip_compression_methods=("deflated",),
+        zip_compresslevels=(9,),
+    )
+
+    row = payload["observations"][0]
+    assert payload["materializer_id"] == "packet_member_recompress_adapter"
+    assert payload["planner_feedback"]["target_kind"] == "packet_member_recompress_v1"
+    assert row["selected_materialization_key"] == "selected_compression"
+    assert row["selected_compression"]["compression_method"] == "deflated"
+    assert row["saved_bytes"] > 0
+    assert row["observed_rate_gain"] > 0
+    assert row["observed_score_gain"] > 0
+    assert row["receiver_contract_satisfied"] is True
+    assert row["score_claim"] is False
+    assert Path(row["candidate_archive_path"]).is_file()
+
+
+def test_materializer_empirical_sweep_supports_tensor_factorize(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "tensor.zip"
+    _write_tensor_zip(archive)
+
+    payload = build_materializer_empirical_sweep(
+        target_kind="tensor_factorize_v1",
+        archives=[f"tensor={archive}"],
+        output_dir=tmp_path / "sweep",
+        tensor_manifest={"member_name": "weights.npy"},
+        factorization_contract={
+            "rank": 1,
+            "max_abs_error_tolerance": 0.01,
+            "max_relative_error_tolerance": 0.01,
+            "cooperative_receiver_id": "fixture_tensor_receiver",
+            "receiver_adapter_kind": "numpy_low_rank_reconstruction",
+        },
+    )
+
+    row = payload["observations"][0]
+    assert payload["materializer_id"] == "tensor_factorize_adapter"
+    assert payload["planner_feedback"]["target_kind"] == "tensor_factorize_v1"
+    assert row["selected_materialization_key"] == "factorization"
+    assert row["factorization"]["rank"] == 1
+    assert row["saved_bytes"] > 0
+    assert row["rate_positive"] is True
+    assert row["receiver_contract_satisfied"] is True
+    assert row["recommended_planner_action"] == (
+        "keep_rate_positive_candidate_for_inflate_parity_gate"
+    )
+    assert row["score_claim"] is False
+    assert Path(row["manifest_path"]).is_file()
 
 
 def test_materializer_empirical_sweep_cli_writes_json_and_jsonl(

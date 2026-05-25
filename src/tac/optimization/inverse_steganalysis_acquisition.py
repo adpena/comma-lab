@@ -1151,6 +1151,24 @@ def build_inverse_steganalysis_acquisition_plan(
             by_candidate,
         )
         best_obs = _best_observation(atom, candidate_obs)
+        queue_health_feedback = _queue_health_feedback_for_observations(
+            candidate_obs,
+            atom=atom,
+        )
+        materializer_archive_delta_feedback = (
+            _materializer_archive_delta_feedback_for_observations(
+                candidate_obs,
+                atom=atom,
+            )
+        )
+        priority = _apply_queue_health_feedback_to_priority(
+            compute_acquisition_priority(atom, best_obs),
+            queue_health_feedback,
+        )
+        priority = _apply_materializer_archive_delta_feedback_to_priority(
+            priority,
+            materializer_archive_delta_feedback,
+        )
         ranked.append(
             _false_authority(
                 {
@@ -1158,7 +1176,17 @@ def build_inverse_steganalysis_acquisition_plan(
                     "source_atom_index": index,
                     "best_observation_id": None if best_obs is None else best_obs["observation_id"],
                     "observation_count": len(candidate_obs),
-                    "priority": compute_acquisition_priority(atom, best_obs),
+                    "queue_health_feedback": queue_health_feedback,
+                    "materializer_archive_delta_feedback": (
+                        materializer_archive_delta_feedback
+                    ),
+                    "queue_health_blocked": bool(
+                        queue_health_feedback["blocks_water_bucket"]
+                    ),
+                    "materializer_archive_delta_blocked": bool(
+                        materializer_archive_delta_feedback["blocks_water_bucket"]
+                    ),
+                    "priority": priority,
                 },
                 "ranked_inverse_steganalysis_row_is_planning_only",
                 "requires_exact_eval_before_score_or_promotion_claim",
@@ -1191,6 +1219,14 @@ def build_inverse_steganalysis_acquisition_plan(
             "summary": {
                 "atom_count": len(ranked),
                 "observation_count": len(obs_rows),
+                "queue_health_blocked_count": sum(
+                    1 for row in ranked if row.get("queue_health_blocked") is True
+                ),
+                "materializer_archive_delta_blocked_count": sum(
+                    1
+                    for row in ranked
+                    if row.get("materializer_archive_delta_blocked") is True
+                ),
                 "top_atom_id": None if not ranked else ranked[0]["atom_id"],
                 "top_candidate_id": None if not ranked else ranked[0]["candidate_id"],
             },
@@ -1260,6 +1296,10 @@ def build_discrete_scorer_action_functional(
         priority = _apply_queue_health_feedback_to_priority(
             compute_acquisition_priority(atom, best_obs),
             queue_health_feedback,
+        )
+        priority = _apply_materializer_archive_delta_feedback_to_priority(
+            priority,
+            materializer_archive_delta_feedback,
         )
         measure = _cell_measure(atom)
         first_order = _float(atom["first_order_marginal_effect"], "first_order_marginal_effect")
@@ -3535,6 +3575,27 @@ def _apply_queue_health_feedback_to_priority(
     return out
 
 
+def _apply_materializer_archive_delta_feedback_to_priority(
+    priority: Mapping[str, Any],
+    materializer_feedback: Mapping[str, Any],
+) -> dict[str, Any]:
+    if materializer_feedback.get("blocks_water_bucket") is not True:
+        return dict(priority)
+    out = dict(priority)
+    for key in (
+        "expected_score_gain",
+        "score_gain_per_second",
+        "score_gain_per_gb",
+        "acquisition_priority",
+    ):
+        out[key] = 0.0
+    out["materializer_archive_delta_blocked"] = True
+    out["materializer_archive_delta_blocker_count"] = int(
+        materializer_feedback.get("blocking_observation_count") or 0
+    )
+    return out
+
+
 def _extend_unique(out: list[str], values: Sequence[Any]) -> None:
     seen = set(out)
     for value in values:
@@ -4192,6 +4253,11 @@ def _queue_materializer_delta_observations_for_step(
             _first(
                 artifact.get("serialized_archive_delta_realized_saved_bytes"),
                 artifact.get("section_recode_saved_bytes"),
+                artifact.get("selected_compression_saved_bytes"),
+                artifact.get("selected_merge_saved_bytes"),
+                artifact.get("selected_payload_saved_bytes"),
+                artifact.get("selected_elision_saved_bytes"),
+                artifact.get("factorization_saved_bytes"),
             ),
             "serialized_archive_delta_realized_saved_bytes",
         )
@@ -4258,6 +4324,11 @@ def _queue_materializer_delta_observations_for_step(
             _first(
                 artifact.get("serialized_archive_delta_candidate_archive_bytes"),
                 artifact.get("section_recode_candidate_archive_bytes"),
+                artifact.get("selected_compression_candidate_archive_bytes"),
+                artifact.get("selected_merge_candidate_archive_bytes"),
+                artifact.get("selected_payload_candidate_archive_bytes"),
+                artifact.get("selected_elision_candidate_archive_bytes"),
+                artifact.get("factorization_candidate_archive_bytes"),
                 candidate_archive.get("bytes")
                 if isinstance(candidate_archive, Mapping)
                 else None,
@@ -4334,6 +4405,11 @@ def _queue_materializer_delta_observations_for_step(
                                     "serialized_archive_delta_source_archive_bytes"
                                 ),
                                 artifact.get("section_recode_source_archive_bytes"),
+                                artifact.get("selected_compression_source_archive_bytes"),
+                                artifact.get("selected_merge_source_archive_bytes"),
+                                artifact.get("selected_payload_source_archive_bytes"),
+                                artifact.get("selected_elision_source_archive_bytes"),
+                                artifact.get("factorization_source_archive_bytes"),
                             ),
                             "source_archive_bytes",
                             minimum=0,
