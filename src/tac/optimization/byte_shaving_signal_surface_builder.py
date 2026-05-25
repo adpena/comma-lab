@@ -795,7 +795,14 @@ def _strict_int_list(values: Sequence[Any], *, context: str) -> list[int]:
     for index, item in enumerate(values):
         if isinstance(item, bool):
             raise ByteShavingCampaignError(f"{context}[{index}]: bool is not an integer id")
-        parsed = _finite_int_or_none(item)
+        if isinstance(item, int):
+            parsed = item
+        elif (isinstance(item, float) and item.is_integer()) or (
+            isinstance(item, str) and item.strip().lstrip("+-").isdigit()
+        ):
+            parsed = int(item)
+        else:
+            parsed = None
         if parsed is None:
             raise ByteShavingCampaignError(
                 f"{context}[{index}]: expected integer id, got {item!r}"

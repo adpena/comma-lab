@@ -311,7 +311,7 @@ def _pairset_acquisition(
         repair_budget["score_claim"] = True
     dropped_pair_indices: list[object] = [371, 376, 479]
     if malformed_pair_id:
-        dropped_pair_indices[1] = "pair-not-an-int"
+        dropped_pair_indices[1] = 376.5
     path.write_text(
         json.dumps(
             {
