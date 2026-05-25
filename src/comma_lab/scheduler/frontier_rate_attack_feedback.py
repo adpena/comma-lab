@@ -61,6 +61,7 @@ LOCAL_CPU_EUREKA_PLANNER_HINT_SCHEMA = "frontier_rate_attack_local_cpu_eureka_pl
 LOCAL_CPU_EUREKA_PAIRSET_PROFILE_SCHEMA = (
     "frontier_rate_attack_local_cpu_eureka_pairset_acquisition_profile.v1"
 )
+DQS1_OBSERVATION_DISCOVERY_SCHEMA = "frontier_rate_attack_dqs1_observation_discovery.v1"
 
 
 class FrontierRateAttackFeedbackError(ExperimentQueueError):
@@ -861,6 +862,50 @@ def load_dqs1_observations(
     return tuple(rows), tuple(source_paths)
 
 
+def discover_dqs1_observation_jsonl_paths(
+    *,
+    repo_root: str | Path,
+    frontier_artifact_roots: Sequence[str | Path] = (),
+) -> dict[str, Any]:
+    """Find append-only DQS1 local-first observation JSONLs for queue feedback."""
+
+    repo = Path(repo_root)
+    roots: Sequence[str | Path] = (
+        frontier_artifact_roots
+        if frontier_artifact_roots
+        else (repo / ".omx" / "research",)
+    )
+    paths: list[Path] = []
+    seen: set[str] = set()
+    for value in roots:
+        root = _resolve_path(value, repo_root=repo)
+        if root.is_file():
+            candidates = [root] if root.name.startswith("dqs1_local_first_harvest_observations_") and root.suffix == ".jsonl" else []
+        elif root.exists():
+            candidates = list(root.rglob("dqs1_local_first_harvest_observations_*.jsonl"))
+        else:
+            candidates = []
+        for path in sorted(candidates):
+            key = path.resolve(strict=False).as_posix()
+            if key in seen:
+                continue
+            seen.add(key)
+            paths.append(path)
+    return {
+        "schema": DQS1_OBSERVATION_DISCOVERY_SCHEMA,
+        "active": bool(paths),
+        "frontier_artifact_roots": [
+            _repo_rel(_resolve_path(root, repo_root=repo), repo)
+            for root in roots
+        ],
+        "discovered_observation_count": len(paths),
+        "discovered_observation_jsonl_paths": [_repo_rel(path, repo) for path in paths],
+        "allowed_use": "local_advisory_observation_replanning_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def _queue_summary(queue: Mapping[str, Any]) -> dict[str, Any]:
     experiments = queue.get("experiments")
     experiment_rows = experiments if isinstance(experiments, list) else []
@@ -927,9 +972,23 @@ def build_frontier_rate_attack_feedback_refresh(
         repo_root=repo,
         frontier_artifact_roots=frontier_artifact_roots,
     )
+    dqs1_observation_discovery = discover_dqs1_observation_jsonl_paths(
+        repo_root=repo,
+        frontier_artifact_roots=frontier_artifact_roots,
+    )
+    discovered_dqs1_observation_paths = tuple(
+        str(path)
+        for path in dqs1_observation_discovery.get(
+            "discovered_observation_jsonl_paths",
+            (),
+        )
+    )
     dqs1_observations, dqs1_source_paths = load_dqs1_observations(
         repo_root=repo,
-        observation_paths=dqs1_observation_paths,
+        observation_paths=(
+            *dqs1_observation_paths,
+            *discovered_dqs1_observation_paths,
+        ),
     )
     queue_payload: dict[str, Any] | None = None
     bridge: dict[str, Any] | None = None
@@ -993,6 +1052,7 @@ def build_frontier_rate_attack_feedback_refresh(
         "pair_frame_geometry_request_source_paths": list(pair_frame_source_paths),
         "pair_frame_geometry_queue_request_count": len(pair_frame_requests),
         "local_cpu_eureka_planning": eureka_planning,
+        "dqs1_observation_discovery": dqs1_observation_discovery,
         "materializer_feedback_source_paths": list(source_paths),
         "materializer_feedback_payload_count": len(payloads),
         "dqs1_observation_source_paths": list(dqs1_source_paths),
@@ -1031,6 +1091,7 @@ def build_frontier_rate_attack_feedback_refresh(
 
 __all__ = [
     "DISCOVERED_MATERIALIZER_FEEDBACK_SCHEMA",
+    "DQS1_OBSERVATION_DISCOVERY_SCHEMA",
     "FEEDBACK_REFRESH_SCHEMA",
     "FRONTIER_RATE_ATTACK_FEEDBACK_REFRESH_SCHEMA",
     "LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA",
@@ -1040,6 +1101,7 @@ __all__ = [
     "PAIR_FRAME_GEOMETRY_DISCOVERY_SCHEMA",
     "FrontierRateAttackFeedbackError",
     "build_frontier_rate_attack_feedback_refresh",
+    "discover_dqs1_observation_jsonl_paths",
     "discover_local_cpu_eureka_planning_signals",
     "discover_materializer_feedback_payloads",
     "discover_pair_frame_geometry_queue_requests",

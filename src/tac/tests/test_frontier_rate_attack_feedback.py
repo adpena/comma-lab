@@ -412,6 +412,38 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     assert report["queue_summary"]["score_claim"] is False
 
 
+def test_frontier_feedback_discovers_dqs1_observation_jsonls_from_artifact_roots(
+    tmp_path: Path,
+) -> None:
+    action_summary = _write_action_summary(tmp_path)
+    artifact_root = tmp_path / ".omx" / "research"
+    _write_jsonl(
+        artifact_root / "dqs1_local_first_harvest_observations_20260525T010203Z.jsonl",
+        [_dqs1_observation_row()],
+    )
+
+    report = build_frontier_rate_attack_feedback_refresh(
+        repo_root=tmp_path,
+        frontier_artifact_roots=(artifact_root,),
+        action_summary_path=action_summary,
+        results_root=str(tmp_path / "results"),
+        queue_id="frontier_feedback_dqs1_discovery_unit",
+        candidate_limit=1,
+    )
+
+    discovery = report["dqs1_observation_discovery"]
+    assert discovery["schema"] == "frontier_rate_attack_dqs1_observation_discovery.v1"
+    assert discovery["active"] is True
+    assert discovery["discovered_observation_count"] == 1
+    assert report["dqs1_observation_count"] == 1
+    assert report["dqs1_observation_source_paths"] == [
+        ".omx/research/dqs1_local_first_harvest_observations_20260525T010203Z.jsonl"
+    ]
+    assert report["selected_candidate_ids"] == ["pairset_drop_one_rank024_pair0112"]
+    _assert_false_authority(discovery)
+    assert report["ready_for_exact_eval_dispatch"] is False
+
+
 def test_frontier_feedback_compiler_turns_eureka_near_misses_into_beyond_drop_two_hints(
     tmp_path: Path,
 ) -> None:
@@ -760,18 +792,53 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
         tmp_path / "pairset_acquisition.json",
         {
             "schema": "decoder_q_pairset_acquisition.v1",
+            **_false_authority(),
             "candidates": [
                 {
+                    **_false_authority(),
                     "acquisition_id": "pairset_drop_one_rank023_pair0440",
                     "selector_id": "pairset_drop_one_rank023_pair0440",
                     "selector_kind": "drop_one_from_best",
+                    "acquisition_rank": 23,
+                    "predicted_score_mean": 0.1919,
                     "selected_pair_indices": [1, 2, 440],
+                    "selected_pair_count": 3,
                     "acquisition_operation": {
                         "op": "drop_one",
                         "dropped_pair_rank": 23,
                         "dropped_pair_index": 440,
                     },
-                }
+                },
+                {
+                    **_false_authority(),
+                    "acquisition_id": "pairset_drop_one_rank024_pair0112",
+                    "selector_id": "pairset_drop_one_rank024_pair0112",
+                    "selector_kind": "drop_one_from_best",
+                    "acquisition_rank": 24,
+                    "predicted_score_mean": 0.19191,
+                    "selected_pair_indices": [1, 2, 112],
+                    "selected_pair_count": 3,
+                    "acquisition_operation": {
+                        "op": "drop_one",
+                        "dropped_pair_rank": 24,
+                        "dropped_pair_index": 112,
+                    },
+                },
+                {
+                    **_false_authority(),
+                    "acquisition_id": "pairset_drop_one_rank025_pair0233",
+                    "selector_id": "pairset_drop_one_rank025_pair0233",
+                    "selector_kind": "drop_one_from_best",
+                    "acquisition_rank": 25,
+                    "predicted_score_mean": 0.19192,
+                    "selected_pair_indices": [1, 2, 233],
+                    "selected_pair_count": 3,
+                    "acquisition_operation": {
+                        "op": "drop_one",
+                        "dropped_pair_rank": 25,
+                        "dropped_pair_index": 233,
+                    },
+                },
             ],
         },
     )
@@ -855,8 +922,28 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
         )
     )
     assert cycle_report["schema"] == "frontier_rate_attack_feedback_cycle.v1"
+    component = cycle_report["post_harvest_refresh"]["pairset_component_marginal"]
+    assert component["schema"] == "frontier_rate_attack_pairset_component_marginal_bundle.v1"
+    assert component["active"] is True
+    assert component["training_row_count"] == 1
+    assert cycle_report["post_harvest_refresh"]["artifacts"][
+        "feedback_refresh_report"
+    ].endswith("feedback_refresh_report.json")
+    assert cycle_report["post_harvest_refresh"]["queue_summary"]["selected_candidate_ids"] == [
+        "pairset_drop_one_rank024_pair0112",
+        "pairset_drop_one_rank025_pair0233",
+    ]
+    assert "post_harvest_component_marginal_refresh/action_summary.json" in (
+        cycle_report["post_harvest_refresh"]["artifacts"]["feedback_refresh_report"]
+        or ""
+    ) or cycle_report["post_harvest_refresh"]["pairset_component_marginal"][
+        "action_summary_json"
+    ].endswith("post_harvest_component_marginal_refresh/action_summary.json")
     assert cycle_report["post_harvest_refresh"]["queue_validate"]["valid"] is True
     assert "dynamic_observation_jsonl_to_refreshed_dqs1_queue" in cycle_report[
+        "integration_edges"
+    ]
+    assert "dynamic_observation_jsonl_to_pairset_component_marginal_model" in cycle_report[
         "integration_edges"
     ]
 

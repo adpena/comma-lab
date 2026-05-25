@@ -1822,3 +1822,67 @@ def test_find_latest_cross_family_action_summary_uses_path_timestamp(tmp_path: P
         )
 
     assert find_latest_cross_family_action_summary(tmp_path) == newer / "action_summary.json"
+
+
+def test_find_latest_cross_family_action_summary_prefers_omx_research(
+    tmp_path: Path,
+) -> None:
+    stale = (
+        tmp_path
+        / "experiments"
+        / "results"
+        / "cross_family_candidate_portfolio"
+        / "20260525T010000Z_stale"
+    )
+    current = tmp_path / ".omx" / "research" / "codex_pairset_component_marginal"
+    stale.mkdir(parents=True)
+    current.mkdir(parents=True)
+    stale_portfolio = stale / "portfolio.json"
+    current_portfolio = current / "portfolio.json"
+    stale_portfolio.write_text(
+        json.dumps(
+            {
+                "operator_action_rows": [
+                    _row("pairset_drop_one_rank023_pair0440", [1, 2, 440])
+                ]
+            }
+        )
+    )
+    current_portfolio.write_text(
+        json.dumps(
+            {
+                "operator_action_rows": [
+                    _row("pairset_drop_two_r029_021_p0259_0371", [1, 2, 371])
+                ]
+            }
+        )
+    )
+    (stale / "action_summary.json").write_text(
+        json.dumps(
+            {
+                **_false_authority(),
+                "schema": "cross_family_candidate_portfolio_action_summary.v1",
+                "created_at_utc": "2026-05-25T01:00:00Z",
+                "json_out": str(stale_portfolio),
+                "top_operator_actions": [
+                    _action("pairset_drop_one_rank023_pair0440", 1)
+                ],
+            }
+        )
+    )
+    current_summary = current / "action_summary.json"
+    current_summary.write_text(
+        json.dumps(
+            {
+                **_false_authority(),
+                "schema": "pairset_component_marginal_canonicalization_summary.v1",
+                "created_at_utc": "2026-05-25T02:00:00Z",
+                "portfolio_json": str(current_portfolio),
+                "top_operator_actions": [
+                    _action("pairset_drop_two_r029_021_p0259_0371", 1)
+                ],
+            }
+        )
+    )
+
+    assert find_latest_cross_family_action_summary(tmp_path) == current_summary

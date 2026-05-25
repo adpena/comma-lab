@@ -16,6 +16,12 @@ from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.cross_family_candidate_portfolio import (
+    CrossFamilyCandidatePortfolioError,
+    build_cross_family_candidate_portfolio,
+    render_cross_family_candidate_portfolio_markdown,
+    source_artifacts_from_paths,
+)
 from tac.optimization.dqs1_local_first_harvest_observations import (
     build_harvest_observation_summary,
     build_observation_rows_from_harvests,
@@ -24,10 +30,18 @@ from tac.optimization.dqs1_local_first_harvest_observations import (
     write_observation_jsonl,
 )
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
+from tac.optimization.mlx_dynamic_sweep_observations import (
+    load_observation_rows,
+    observation_duplicate_key,
+)
+from tac.optimization.pairset_component_marginal import (
+    PAIRSET_COMPONENT_MARGINAL_MODEL_SCHEMA,
+)
 from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
 from tac.repo_io import (
     ArtifactWriteError,
     json_text,
+    sha256_file,
     write_json_artifact,
     write_text_artifact,
 )
@@ -37,6 +51,12 @@ from .experiment_queue import ExperimentQueueError
 FRONTIER_RATE_ATTACK_FEEDBACK_CYCLE_SCHEMA = "frontier_rate_attack_feedback_cycle.v1"
 FRONTIER_RATE_ATTACK_DQS1_OBSERVATION_BUNDLE_SCHEMA = (
     "frontier_rate_attack_dqs1_observation_bundle.v1"
+)
+FRONTIER_RATE_ATTACK_PAIRSET_COMPONENT_MARGINAL_BUNDLE_SCHEMA = (
+    "frontier_rate_attack_pairset_component_marginal_bundle.v1"
+)
+PAIRSET_COMPONENT_MARGINAL_ACTION_SUMMARY_SCHEMA = (
+    "pairset_component_marginal_canonicalization_summary.v1"
 )
 AUTOPILOT_RESULT_SCHEMA = "dqs1_local_first_autopilot_result.v1"
 
@@ -141,6 +161,98 @@ def _unique_paths(paths: Iterable[Path]) -> tuple[Path, ...]:
     return tuple(out)
 
 
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _component_model_from_portfolio(portfolio: Mapping[str, Any]) -> dict[str, Any]:
+    feedback = _mapping(portfolio.get("observation_feedback"))
+    model = feedback.get("pairset_component_marginal_model")
+    if isinstance(model, Mapping):
+        return dict(model)
+    return {
+        "schema": PAIRSET_COMPONENT_MARGINAL_MODEL_SCHEMA,
+        "active": False,
+        "inactive_reason": "missing_from_portfolio",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _top_component_marginal_actions(
+    portfolio: Mapping[str, Any],
+    *,
+    limit: int,
+) -> list[dict[str, Any]]:
+    rows = portfolio.get("operator_action_rows")
+    if not isinstance(rows, list):
+        return []
+    out: list[dict[str, Any]] = []
+    for row in rows[:limit]:
+        if not isinstance(row, Mapping):
+            continue
+        blockers = [str(blocker) for blocker in row.get("dispatch_blockers") or []]
+        out.append(
+            {
+                "operator_action_rank": row.get("operator_action_rank"),
+                "bayesian_rank": row.get("rank"),
+                "candidate_id": row.get("candidate_id"),
+                "source_kind": row.get("source_kind"),
+                "operator_next_action": row.get("operator_next_action"),
+                "acquisition_value": row.get("acquisition_value"),
+                "predicted_score_mean": row.get("predicted_score_mean"),
+                "predicted_score_variance": row.get("predicted_score_variance"),
+                "dispatch_blocker_count": len(blockers),
+                "dispatch_blockers": blockers[:8],
+                **FALSE_AUTHORITY,
+            }
+        )
+    return out
+
+
+def _render_component_marginal_action_summary_markdown(
+    summary: Mapping[str, Any],
+) -> str:
+    component = _mapping(summary.get("pairset_component_marginal_model"))
+    lines = [
+        "## Pairset Component Marginal Feedback",
+        "",
+        f"- Schema: `{summary.get('schema')}`",
+        f"- Allowed use: `{summary.get('allowed_use')}`",
+        f"- Component model active: `{component.get('active')}`",
+        f"- Axes: `{component.get('axes')}`",
+        f"- Training rows: `{component.get('training_row_count')}`",
+        f"- Score claim: `{summary.get('score_claim')}`",
+        f"- Ready for exact eval dispatch: `{summary.get('ready_for_exact_eval_dispatch')}`",
+        "",
+        "### Queue Candidate Actions",
+        "",
+        "| action rank | bayes rank | candidate | action | acquisition | blockers |",
+        "|---:|---:|---|---|---:|---:|",
+    ]
+    rows = summary.get("top_operator_actions")
+    if isinstance(rows, list):
+        for row in rows:
+            if not isinstance(row, Mapping):
+                continue
+            try:
+                acquisition = float(row.get("acquisition_value", 0.0))
+            except (TypeError, ValueError):
+                acquisition = 0.0
+            lines.append(
+                "| {action_rank} | {bayes_rank} | `{candidate}` | `{action}` | "
+                "{acquisition:.12g} | {blockers} |".format(
+                    action_rank=row.get("operator_action_rank"),
+                    bayes_rank=row.get("bayesian_rank"),
+                    candidate=row.get("candidate_id"),
+                    action=row.get("operator_next_action"),
+                    acquisition=acquisition,
+                    blockers=row.get("dispatch_blocker_count"),
+                )
+            )
+    lines.append("")
+    return "\n".join(lines)
+
+
 def harvest_paths_from_autopilot_payload(
     payload: Mapping[str, Any],
     *,
@@ -233,6 +345,11 @@ def write_frontier_refresh_artifacts(
         path = out / "materializer_feedback_discovery.json"
         write_json_artifact(path, dict(discovery))
         artifacts["materializer_feedback_discovery"] = repo_rel(path, repo_root)
+    dqs1_discovery = report.get("dqs1_observation_discovery")
+    if isinstance(dqs1_discovery, Mapping):
+        path = out / "dqs1_observation_discovery.json"
+        write_json_artifact(path, dict(dqs1_discovery))
+        artifacts["dqs1_observation_discovery"] = repo_rel(path, repo_root)
     pair_frame = report.get("pair_frame_geometry_discovery")
     if isinstance(pair_frame, Mapping):
         path = out / "pair_frame_geometry_discovery.json"
@@ -354,6 +471,183 @@ def write_dqs1_harvest_observation_bundle(
     }
 
 
+def write_pairset_component_marginal_feedback_bundle(
+    *,
+    repo_root: str | Path,
+    pairset_acquisition_paths: Sequence[str | Path],
+    observation_paths: Sequence[str | Path],
+    incumbent_score: float,
+    incumbent_scores_by_axis: Mapping[str, Any] | None,
+    output_dir: str | Path,
+    stamp: str | None = None,
+    top_k: int = 64,
+    top_actions: int = 16,
+) -> dict[str, Any]:
+    """Canonicalize DQS1 observations into the next queue-owned action summary."""
+
+    repo = Path(repo_root)
+    if not pairset_acquisition_paths:
+        raise FrontierRateAttackFeedbackCycleError(
+            "pairset component-marginal feedback requires a pairset acquisition"
+        )
+    if not observation_paths:
+        raise FrontierRateAttackFeedbackCycleError(
+            "pairset component-marginal feedback requires observation JSONL paths"
+        )
+    if top_k < 1:
+        raise FrontierRateAttackFeedbackCycleError("top_k must be >= 1")
+    if top_actions < 1:
+        raise FrontierRateAttackFeedbackCycleError("top_actions must be >= 1")
+
+    acquisition_paths = _unique_paths(
+        resolve_repo_path(path, repo_root=repo) for path in pairset_acquisition_paths
+    )
+    resolved_observation_paths = _unique_paths(
+        resolve_repo_path(path, repo_root=repo) for path in observation_paths
+    )
+    missing = [
+        path.as_posix()
+        for path in (*acquisition_paths, *resolved_observation_paths)
+        if not path.is_file()
+    ]
+    if missing:
+        raise FrontierRateAttackFeedbackCycleError(
+            "missing component-marginal source artifact: " + ", ".join(missing)
+        )
+
+    observations: list[dict[str, Any]] = []
+    try:
+        seen_observations: set[tuple[tuple[str, str | None], ...]] = set()
+        for path in resolved_observation_paths:
+            for row in load_observation_rows(path):
+                key = observation_duplicate_key(row)
+                if key in seen_observations:
+                    continue
+                seen_observations.add(key)
+                observations.append(row)
+        pairset_acquisitions = [load_json_object(path) for path in acquisition_paths]
+        source_artifacts = source_artifacts_from_paths(
+            {
+                "pairset_acquisitions": acquisition_paths,
+                "observation_jsonl": resolved_observation_paths,
+            },
+            repo_root=repo,
+        )
+        portfolio = build_cross_family_candidate_portfolio(
+            incumbent_score=incumbent_score,
+            pairset_acquisitions=pairset_acquisitions,
+            observations=observations,
+            incumbent_scores_by_axis=incumbent_scores_by_axis or {},
+            source_artifacts=source_artifacts,
+            source_artifact_paths={
+                "pairset_acquisitions": [
+                    repo_rel(path, repo) for path in acquisition_paths
+                ],
+            },
+            top_k=top_k,
+        )
+        require_no_truthy_authority_fields(
+            portfolio,
+            context="frontier_rate_attack_feedback_cycle.component_marginal_portfolio",
+        )
+    except (CrossFamilyCandidatePortfolioError, ValueError) as exc:
+        raise FrontierRateAttackFeedbackCycleError(str(exc)) from exc
+
+    component_model = _component_model_from_portfolio(portfolio)
+    active = component_model.get("active") is True
+    run_stamp = stamp or utc_stamp()
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    portfolio_path = out / "portfolio.json"
+    portfolio_md_path = out / "portfolio.md"
+    action_summary_path = out / "action_summary.json"
+    action_summary_md_path = out / "action_summary.md"
+
+    write_json_artifact(portfolio_path, portfolio)
+    write_text_artifact(
+        portfolio_md_path,
+        render_cross_family_candidate_portfolio_markdown(portfolio),
+    )
+    summary = {
+        "schema": PAIRSET_COMPONENT_MARGINAL_ACTION_SUMMARY_SCHEMA,
+        "created_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "stamp": run_stamp,
+        "producer": "comma_lab.scheduler.frontier_rate_attack_feedback_cycle",
+        "allowed_use": "queue_owned_component_marginal_replanning_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "portfolio_json": repo_rel(portfolio_path, repo),
+        "portfolio_sha256": sha256_file(portfolio_path),
+        "portfolio_md": repo_rel(portfolio_md_path, repo),
+        "action_summary_json": repo_rel(action_summary_path, repo),
+        "pairset_acquisition_paths": [repo_rel(path, repo) for path in acquisition_paths],
+        "observation_jsonl_paths": [
+            repo_rel(path, repo) for path in resolved_observation_paths
+        ],
+        "observation_row_count": len(observations),
+        "pairset_component_marginal_model": component_model,
+        "portfolio_summary": dict(_mapping(portfolio.get("portfolio_summary"))),
+        "top_action_limit": top_actions,
+        "top_operator_actions": _top_component_marginal_actions(
+            portfolio,
+            limit=top_actions,
+        ),
+        "dispatch_blockers": [
+            str(blocker) for blocker in portfolio.get("dispatch_blockers") or []
+        ],
+        **FALSE_AUTHORITY,
+    }
+    try:
+        require_no_truthy_authority_fields(
+            summary,
+            context="frontier_rate_attack_feedback_cycle.component_marginal_summary",
+        )
+    except ValueError as exc:
+        raise FrontierRateAttackFeedbackCycleError(str(exc)) from exc
+    write_json_artifact(action_summary_path, summary)
+    write_text_artifact(
+        action_summary_md_path,
+        _render_component_marginal_action_summary_markdown(summary),
+    )
+    return {
+        "schema": FRONTIER_RATE_ATTACK_PAIRSET_COMPONENT_MARGINAL_BUNDLE_SCHEMA,
+        "created_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "active": active,
+        "inactive_reason": component_model.get("inactive_reason"),
+        "component_model_schema": component_model.get("schema"),
+        "training_row_count": component_model.get("training_row_count", 0),
+        "axes": component_model.get("axes", []),
+        "pairset_acquisition_paths": [repo_rel(path, repo) for path in acquisition_paths],
+        "observation_jsonl_paths": [
+            repo_rel(path, repo) for path in resolved_observation_paths
+        ],
+        "observed_candidate_ids": sorted(
+            {
+                str(row.get("candidate_id"))
+                for row in observations
+                if row.get("candidate_id")
+            }
+        ),
+        "portfolio_json": repo_rel(portfolio_path, repo),
+        "portfolio_md": repo_rel(portfolio_md_path, repo),
+        "action_summary_json": repo_rel(action_summary_path, repo),
+        "action_summary_md": repo_rel(action_summary_md_path, repo),
+        "recommended_next_candidate_id": _mapping(
+            portfolio.get("portfolio_summary")
+        ).get("recommended_next_candidate_id"),
+        "recommended_next_action": _mapping(portfolio.get("portfolio_summary")).get(
+            "recommended_next_action"
+        ),
+        "top_operator_action_candidate_ids": [
+            str(row.get("candidate_id"))
+            for row in summary["top_operator_actions"]
+            if isinstance(row, Mapping) and row.get("candidate_id")
+        ],
+        "allowed_use": "queue_owned_component_marginal_replanning_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def write_cycle_report(
     *,
     output_dir: str | Path,
@@ -373,6 +667,7 @@ __all__ = [
     "AUTOPILOT_RESULT_SCHEMA",
     "FRONTIER_RATE_ATTACK_DQS1_OBSERVATION_BUNDLE_SCHEMA",
     "FRONTIER_RATE_ATTACK_FEEDBACK_CYCLE_SCHEMA",
+    "FRONTIER_RATE_ATTACK_PAIRSET_COMPONENT_MARGINAL_BUNDLE_SCHEMA",
     "FrontierRateAttackFeedbackCycleError",
     "artifact_token",
     "harvest_paths_from_autopilot_payload",
@@ -386,4 +681,5 @@ __all__ = [
     "write_cycle_report",
     "write_dqs1_harvest_observation_bundle",
     "write_frontier_refresh_artifacts",
+    "write_pairset_component_marginal_feedback_bundle",
 ]

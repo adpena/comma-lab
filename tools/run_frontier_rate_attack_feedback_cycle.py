@@ -36,6 +36,7 @@ from comma_lab.scheduler.experiment_queue import ExperimentQueueError  # noqa: E
 from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
     FrontierRateAttackFeedbackError,
     build_frontier_rate_attack_feedback_refresh,
+    discover_dqs1_observation_jsonl_paths,
 )
 from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (  # noqa: E402
     FRONTIER_RATE_ATTACK_FEEDBACK_CYCLE_SCHEMA,
@@ -50,6 +51,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (  # noqa: E
     write_cycle_report,
     write_dqs1_harvest_observation_bundle,
     write_frontier_refresh_artifacts,
+    write_pairset_component_marginal_feedback_bundle,
 )
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY  # noqa: E402
 
@@ -84,6 +86,9 @@ def _action_summary_path(value: str) -> Path | None:
 def _latest_pairset_acquisition(root: str | Path) -> Path:
     resolved = resolve_repo_path(root, repo_root=REPO_ROOT)
     search_roots = [resolved / "pairset_acquisition", resolved]
+    research_root = REPO_ROOT / ".omx" / "research"
+    if research_root not in search_roots:
+        search_roots.append(research_root)
     candidates: list[Path] = []
     for search_root in search_roots:
         if not search_root.exists():
@@ -105,6 +110,60 @@ def _pairset_acquisition_path(value: str, *, root: str | Path) -> Path:
     if value == "latest":
         return _latest_pairset_acquisition(root)
     return resolve_repo_path(value, repo_root=REPO_ROOT)
+
+
+def _parse_axis_scores(values: tuple[str, ...] | list[str]) -> dict[str, float]:
+    out: dict[str, float] = {}
+    for value in values:
+        if "=" not in value:
+            raise FrontierRateAttackFeedbackCycleError(
+                "--component-marginal-incumbent-score-by-axis must use AXIS=SCORE"
+            )
+        axis, raw = value.split("=", 1)
+        axis = axis.strip()
+        if not axis:
+            raise FrontierRateAttackFeedbackCycleError(
+                "--component-marginal-incumbent-score-by-axis axis must be non-empty"
+            )
+        try:
+            out[axis] = float(raw)
+        except ValueError as exc:
+            raise FrontierRateAttackFeedbackCycleError(
+                f"--component-marginal-incumbent-score-by-axis {axis} score must be numeric"
+            ) from exc
+    return out
+
+
+def _baseline_advisory_score(path: str | Path) -> float:
+    payload_path = resolve_repo_path(path, repo_root=REPO_ROOT)
+    try:
+        payload = json.loads(payload_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise FrontierRateAttackFeedbackCycleError(
+            f"{payload_path}: cannot load baseline advisory score"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise FrontierRateAttackFeedbackCycleError(
+            f"{payload_path}: baseline advisory must be a JSON object"
+        )
+    for key in (
+        "canonical_score",
+        "score_recomputed_from_components",
+        "observed_score",
+        "local_score",
+    ):
+        value = payload.get(key)
+        if isinstance(value, bool) or value is None:
+            continue
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            continue
+        if parsed == parsed and parsed not in (float("inf"), float("-inf")):
+            return parsed
+    raise FrontierRateAttackFeedbackCycleError(
+        f"{payload_path}: no finite baseline score field found"
+    )
 
 
 def _run(command: list[str], *, label: str) -> dict[str, Any]:
@@ -152,6 +211,7 @@ def _build_refresh(
     args: argparse.Namespace,
     queue_id: str,
     dqs1_observation_paths: tuple[str | Path, ...],
+    action_summary_path: str | Path | None = None,
 ) -> dict[str, Any]:
     raw_retention_execute = _effective_raw_retention_execute(args)
     return build_frontier_rate_attack_feedback_refresh(
@@ -160,7 +220,11 @@ def _build_refresh(
         materializer_feedback_paths=tuple(args.materializer_feedback),
         pair_frame_geometry_paths=tuple(args.pair_frame_geometry_lattice),
         dqs1_observation_paths=dqs1_observation_paths,
-        action_summary_path=_action_summary_path(args.action_summary),
+        action_summary_path=(
+            resolve_repo_path(action_summary_path, repo_root=REPO_ROOT)
+            if action_summary_path is not None
+            else _action_summary_path(args.action_summary)
+        ),
         results_root=args.results_root,
         queue_id=queue_id,
         candidate_limit=args.candidate_limit,
@@ -178,6 +242,70 @@ def _build_refresh(
         mlx_retention_cold_store_roots=tuple(args.mlx_retention_cold_store_root),
         mlx_retention_cold_store_reserve_gb=args.mlx_retention_cold_store_reserve_gb,
     )
+
+
+def _component_marginal_pairset_acquisition(args: argparse.Namespace) -> Path:
+    value = args.component_marginal_pairset_acquisition or args.pairset_acquisition
+    return _pairset_acquisition_path(value, root=args.pairset_acquisition_root)
+
+
+def _cycle_dqs1_observation_paths(
+    args: argparse.Namespace,
+    explicit_paths: tuple[str | Path, ...],
+) -> tuple[str | Path, ...]:
+    discovery = discover_dqs1_observation_jsonl_paths(
+        repo_root=REPO_ROOT,
+        frontier_artifact_roots=tuple(args.frontier_artifact_root),
+    )
+    discovered = tuple(
+        str(path)
+        for path in discovery.get("discovered_observation_jsonl_paths", ())
+    )
+    return tuple(dict.fromkeys([*explicit_paths, *discovered]))
+
+
+def _write_component_marginal_bundle(
+    *,
+    args: argparse.Namespace,
+    output_dir: Path,
+    stamp: str,
+    dqs1_observation_paths: tuple[str | Path, ...],
+) -> dict[str, Any] | None:
+    if args.skip_component_marginal_refresh or not dqs1_observation_paths:
+        return None
+    baseline_score = _baseline_advisory_score(args.baseline_advisory)
+    axis_scores = _parse_axis_scores(args.component_marginal_incumbent_score_by_axis)
+    axis_scores.setdefault("macos_cpu_advisory", baseline_score)
+    return write_pairset_component_marginal_feedback_bundle(
+        repo_root=REPO_ROOT,
+        pairset_acquisition_paths=(_component_marginal_pairset_acquisition(args),),
+        observation_paths=dqs1_observation_paths,
+        incumbent_score=(
+            baseline_score
+            if args.component_marginal_incumbent_score is None
+            else args.component_marginal_incumbent_score
+        ),
+        incumbent_scores_by_axis=axis_scores,
+        output_dir=output_dir,
+        stamp=stamp,
+        top_k=args.component_marginal_top_k,
+        top_actions=args.component_marginal_top_actions,
+    )
+
+
+def _component_action_summary_path(bundle: dict[str, Any] | None) -> str | None:
+    if not bundle or bundle.get("active") is not True:
+        return None
+    observed = {str(value) for value in bundle.get("observed_candidate_ids") or []}
+    top_ids = [
+        str(value)
+        for value in bundle.get("top_operator_action_candidate_ids") or []
+        if value
+    ]
+    if top_ids and all(candidate_id in observed for candidate_id in top_ids):
+        return None
+    value = bundle.get("action_summary_json")
+    return value if isinstance(value, str) and value.strip() else None
 
 
 def _autopilot_command(
@@ -349,6 +477,43 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--min-free-disk-gb", type=float, default=40.0)
     parser.add_argument("--pairset-acquisition", default="latest")
     parser.add_argument("--pairset-acquisition-root", default=DEFAULT_RESULTS_ROOT)
+    parser.add_argument(
+        "--skip-component-marginal-refresh",
+        action="store_true",
+        help=(
+            "Do not canonicalize DQS1 observations into a component-marginal "
+            "action summary before building the next queue."
+        ),
+    )
+    parser.add_argument(
+        "--component-marginal-pairset-acquisition",
+        default=None,
+        help=(
+            "Pairset acquisition JSON for component-marginal canonicalization. "
+            "Defaults to --pairset-acquisition."
+        ),
+    )
+    parser.add_argument(
+        "--component-marginal-incumbent-score",
+        type=float,
+        default=None,
+        help=(
+            "Incumbent score for component-marginal portfolio ranking. Defaults "
+            "to the finite canonical score in --baseline-advisory."
+        ),
+    )
+    parser.add_argument(
+        "--component-marginal-incumbent-score-by-axis",
+        action="append",
+        default=[],
+        metavar="AXIS=SCORE",
+        help=(
+            "Axis-specific incumbent score for component-marginal observations. "
+            "Defaults macos_cpu_advisory to --baseline-advisory score."
+        ),
+    )
+    parser.add_argument("--component-marginal-top-k", type=int, default=64)
+    parser.add_argument("--component-marginal-top-actions", type=int, default=16)
     parser.add_argument("--baseline-advisory", default=DEFAULT_BASELINE_ADVISORY)
     parser.add_argument(
         "--baseline-archive-size-bytes",
@@ -379,13 +544,29 @@ def main(argv: list[str] | None = None) -> int:
     initial_dir = output_dir / "initial_refresh"
     post_dir = output_dir / "post_harvest_refresh"
     observation_dir = output_dir / "dqs1_harvest_observations"
+    initial_component_dir = output_dir / "initial_component_marginal_refresh"
+    post_component_dir = output_dir / "post_harvest_component_marginal_refresh"
 
     try:
         initial_observations = tuple(args.dqs1_observation_jsonl)
+        initial_observation_context = _cycle_dqs1_observation_paths(
+            args,
+            initial_observations,
+        )
+        initial_component_marginal = _write_component_marginal_bundle(
+            args=args,
+            output_dir=initial_component_dir,
+            stamp=stamp,
+            dqs1_observation_paths=initial_observation_context,
+        )
+        initial_action_summary_path = _component_action_summary_path(
+            initial_component_marginal
+        )
         initial_report = _build_refresh(
             args=args,
             queue_id=queue_id,
             dqs1_observation_paths=initial_observations,
+            action_summary_path=initial_action_summary_path,
         )
         initial_artifacts = write_frontier_refresh_artifacts(
             output_dir=initial_dir,
@@ -447,6 +628,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
         observation_bundle = None
+        post_component_marginal = None
         post_report = None
         post_artifacts: dict[str, str] = {}
         post_validate = None
@@ -474,13 +656,23 @@ def main(argv: list[str] | None = None) -> int:
                 stamp=stamp,
             )
             post_observations = (
-                *initial_observations,
+                *initial_observation_context,
                 observation_bundle["observation_jsonl"],
+            )
+            post_component_marginal = _write_component_marginal_bundle(
+                args=args,
+                output_dir=post_component_dir,
+                stamp=stamp,
+                dqs1_observation_paths=post_observations,
+            )
+            post_action_summary_path = _component_action_summary_path(
+                post_component_marginal
             )
             post_report = _build_refresh(
                 args=args,
                 queue_id=post_queue_id,
                 dqs1_observation_paths=post_observations,
+                action_summary_path=post_action_summary_path,
             )
             post_artifacts = write_frontier_refresh_artifacts(
                 output_dir=post_dir,
@@ -500,6 +692,7 @@ def main(argv: list[str] | None = None) -> int:
                 "selected_candidate_ids": initial_report.get("selected_candidate_ids"),
                 "queue_summary": initial_report.get("queue_summary"),
                 "retention_policy": initial_report.get("retention_policy"),
+                "pairset_component_marginal": initial_component_marginal,
                 "queue_validate": initial_validate,
                 **FALSE_AUTHORITY,
             },
@@ -517,6 +710,7 @@ def main(argv: list[str] | None = None) -> int:
                 "selected_candidate_ids": post_report.get("selected_candidate_ids"),
                 "queue_summary": post_report.get("queue_summary"),
                 "retention_policy": post_report.get("retention_policy"),
+                "pairset_component_marginal": post_component_marginal,
                 "queue_validate": post_validate,
                 **FALSE_AUTHORITY,
             },
@@ -524,6 +718,8 @@ def main(argv: list[str] | None = None) -> int:
                 "family_materializer_feedback_to_dqs1_bridge",
                 "dqs1_batch_followup_queue_to_local_autopilot",
                 "local_autopilot_harvest_to_dynamic_observation_jsonl",
+                "dynamic_observation_jsonl_to_pairset_component_marginal_model",
+                "pairset_component_marginal_model_to_queue_owned_local_first_actions",
                 "dynamic_observation_jsonl_to_refreshed_dqs1_queue",
             ],
             "allowed_use": "local_queue_owned_frontier_feedback_iteration_only",
@@ -556,6 +752,12 @@ def main(argv: list[str] | None = None) -> int:
                 "observation_jsonl": None
                 if observation_bundle is None
                 else observation_bundle.get("observation_jsonl"),
+                "initial_component_marginal_action_summary": None
+                if initial_component_marginal is None
+                else initial_component_marginal.get("action_summary_json"),
+                "post_harvest_component_marginal_action_summary": None
+                if post_component_marginal is None
+                else post_component_marginal.get("action_summary_json"),
                 **FALSE_AUTHORITY,
             }
         ),

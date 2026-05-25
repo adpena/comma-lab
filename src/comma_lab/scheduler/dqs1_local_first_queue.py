@@ -132,21 +132,38 @@ def _timestamp_key(path: Path) -> tuple[str, float, str]:
     return (timestamp, path.stat().st_mtime, str(path))
 
 
+def _action_summary_embedded_timestamp(summary: Mapping[str, Any]) -> str:
+    for key in ("generated_at_utc", "created_at_utc", "captured_at_utc", "stamp"):
+        value = summary.get(key)
+        if not isinstance(value, str) or not value.strip():
+            continue
+        normalized = re.sub(r"[^0-9]", "", value)
+        if len(normalized) >= 12:
+            return normalized
+    return ""
+
+
+def _action_summary_sort_key(path: Path, summary: Mapping[str, Any]) -> tuple[str, str, float, str]:
+    path_timestamp, mtime, path_key = _timestamp_key(path)
+    return (_action_summary_embedded_timestamp(summary), path_timestamp, mtime, path_key)
+
+
 def find_latest_cross_family_action_summary(repo_root: str | Path) -> Path:
     repo = Path(repo_root)
-    candidates = []
-    for path in (repo / "experiments" / "results").rglob("action_summary.json"):
-        if "cross_family_candidate_portfolio" not in str(path):
+    candidates: list[tuple[Path, dict[str, Any]]] = []
+    for root in (repo / "experiments" / "results", repo / ".omx" / "research"):
+        if not root.exists():
             continue
-        try:
-            summary = _json_load(path)
-        except ExperimentQueueError:
-            continue
-        if _is_dqs1_safe_action_summary(summary):
-            candidates.append(path)
+        for path in root.rglob("action_summary.json"):
+            try:
+                summary = _json_load(path)
+            except ExperimentQueueError:
+                continue
+            if _is_dqs1_safe_action_summary(summary):
+                candidates.append((path, summary))
     if not candidates:
         raise ExperimentQueueError("no DQS1-safe cross-family action_summary.json files found")
-    return max(candidates, key=_timestamp_key)
+    return max(candidates, key=lambda item: _action_summary_sort_key(item[0], item[1]))[0]
 
 
 def candidate_slug(candidate_id: str) -> str:

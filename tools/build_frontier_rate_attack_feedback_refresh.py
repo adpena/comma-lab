@@ -184,6 +184,11 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
         path = output_dir / "materializer_feedback_discovery.json"
         write_json_artifact(path, discovery)
         artifacts["materializer_feedback_discovery"] = _display_path(path)
+    dqs1_discovery = report.get("dqs1_observation_discovery")
+    if isinstance(dqs1_discovery, dict):
+        path = output_dir / "dqs1_observation_discovery.json"
+        write_json_artifact(path, dqs1_discovery)
+        artifacts["dqs1_observation_discovery"] = _display_path(path)
     pair_frame = report.get("pair_frame_geometry_discovery")
     if isinstance(pair_frame, dict):
         path = output_dir / "pair_frame_geometry_discovery.json"
