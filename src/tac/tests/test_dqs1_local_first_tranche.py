@@ -43,6 +43,11 @@ def test_tranche_parse_args_accepts_post_training_candidate_inputs() -> None:
     assert args.refresh_pairset_acquisition is True
     assert args.refresh_pairset_max_drop_two == 512
     assert args.refresh_pairset_max_swap_in == 32
+    assert args.refresh_pairset_geometry_lattice is True
+    assert args.refresh_pairset_geometry_frame_pair_curriculum == "latest"
+    assert args.refresh_pairset_geometry_pair_component_xray == []
+    assert args.refresh_pairset_geometry_drop_counts == "3,4,6,8,12,16"
+    assert args.refresh_pairset_geometry_max_requests == 32
 
 
 def test_tranche_portfolio_directory_names_include_harvest_count() -> None:
@@ -269,6 +274,7 @@ def test_tranche_refresh_pairset_acquisition_uses_prior_and_round_observations(
             "7",
             "--refresh-pairset-max-swap-in",
             "3",
+            "--no-refresh-pairset-geometry-lattice",
         ]
     )
 
@@ -291,6 +297,104 @@ def test_tranche_refresh_pairset_acquisition_uses_prior_and_round_observations(
     assert "prior.jsonl" in command
     assert "round.jsonl" in command
     assert "--include-observed-dqs1-candidate" in command
+    assert payload["pair_frame_geometry_lattice"]["active"] is False
+
+
+def test_tranche_refresh_pairset_acquisition_binds_geometry_lattice(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    selector_root = tmp_path / "selector_pareto"
+    selector_root.mkdir(parents=True)
+    selector = selector_root / "latest_selector_pareto.json"
+    selector.write_text("{}", encoding="utf-8")
+    output_root = tmp_path / "refreshed_pairset"
+    curriculum = tmp_path / "ll_frame_pair_curriculum.json"
+    xray = tmp_path / "pair_component_xray.json"
+    curriculum.write_text("{}", encoding="utf-8")
+    xray.write_text("{}", encoding="utf-8")
+    calls: list[list[str]] = []
+
+    def fake_run(command: list[str], *, check: bool = True) -> tranche.CommandResult:
+        calls.append(command)
+        if command[1] == "tools/build_pair_frame_scorer_geometry_lattice.py":
+            stdout = {
+                "queue_executable_request_count": 2,
+                "geometry_coverage": 1.0,
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        elif "--pair-frame-geometry-lattice-json" in command:
+            stdout = {
+                "candidate_count": 7,
+                "unfiltered_candidate_count": 10,
+                "suppressed_observed_candidate_count": 0,
+                "pair_frame_geometry_candidate_count": 2,
+            }
+        else:
+            stdout = {
+                "candidate_count": 5,
+                "unfiltered_candidate_count": 8,
+                "suppressed_observed_candidate_count": 0,
+                "pair_frame_geometry_candidate_count": 0,
+            }
+        return tranche.CommandResult(
+            command=command,
+            returncode=0,
+            stdout=json.dumps(stdout),
+            stderr="",
+            elapsed_seconds=0.01,
+        )
+
+    monkeypatch.setattr(tranche, "_run", fake_run)
+    args = tranche.parse_args(
+        [
+            "--pairset-acquisition-refresh-root",
+            str(output_root),
+            "--refresh-pairset-geometry-frame-pair-curriculum",
+            str(curriculum),
+            "--refresh-pairset-geometry-pair-component-xray",
+            str(xray),
+            "--refresh-pairset-geometry-drop-counts",
+            "3,4",
+            "--refresh-pairset-geometry-max-requests",
+            "9",
+        ]
+    )
+
+    json_out, payload = tranche._refresh_pairset_acquisition(
+        args=args,
+        pairset_acquisition_root=tmp_path,
+        refresh_stamp="20260525T020304Z",
+        dqs1_observation_jsonl=(),
+    )
+
+    assert json_out == output_root / "dqs1_pairset_acquisition_observation_filtered_20260525T020304Z.json"
+    assert len(calls) == 3
+    base_command, geometry_command, final_command = calls
+    assert base_command[base_command.index("--json-out") + 1].endswith(".base.json")
+    assert geometry_command[1] == "tools/build_pair_frame_scorer_geometry_lattice.py"
+    assert geometry_command[geometry_command.index("--pairset-acquisition") + 1].endswith(
+        ".base.json"
+    )
+    assert geometry_command[geometry_command.index("--frame-pair-curriculum") + 1] == str(
+        curriculum
+    )
+    assert geometry_command[geometry_command.index("--pair-component-xray") + 1] == str(
+        xray
+    )
+    assert geometry_command[geometry_command.index("--drop-counts") + 1] == "3,4"
+    assert geometry_command[geometry_command.index("--max-requests") + 1] == "9"
+    assert "--pair-frame-geometry-lattice-json" in final_command
+    lattice_arg = final_command[final_command.index("--pair-frame-geometry-lattice-json") + 1]
+    assert lattice_arg.endswith("pair_frame_scorer_geometry_lattice_20260525T020304Z.json")
+    assert payload["stdout"]["pair_frame_geometry_candidate_count"] == 2
+    geometry = payload["pair_frame_geometry_lattice"]
+    assert geometry["active"] is True
+    assert geometry["queue_executable_request_count"] == 2
+    assert geometry["geometry_coverage"] == 1.0
+    assert geometry["frame_pair_curriculum"] == str(curriculum)
+    assert geometry["pair_component_xrays"] == [str(xray)]
 
 
 def test_tranche_proactive_cleanup_move_is_not_gated_by_mlx_cache_flag(

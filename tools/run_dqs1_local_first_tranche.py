@@ -60,6 +60,12 @@ DEFAULT_DYNAMIC_OBSERVATIONS = (
     "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/"
     "pareto_gap_uleb/dynamic_learned_sweep/dqs1_dynamic_sweep_observations.jsonl"
 )
+DEFAULT_FRAME_PAIR_CURRICULUM_GLOBS = (
+    "experiments/results/**/ll_frame_pair_curriculum*.json",
+)
+DEFAULT_PAIR_COMPONENT_XRAY_GLOBS = (
+    "experiments/results/**/pair_component_xray.json",
+)
 DEFAULT_PORTFOLIO_ROOT = "experiments/results/cross_family_candidate_portfolio"
 DEFAULT_CONTEST_CPU_FRONTIER = "0.19202828295713675"
 DEFAULT_CONTEST_CUDA_FRONTIER = "0.2053300290"
@@ -204,6 +210,59 @@ def _latest_selector_pareto(results_root: Path) -> Path:
     if not candidates:
         raise RuntimeError(f"{root}: no DQS1 selector Pareto JSON found")
     return candidates[-1]
+
+
+def _latest_path_from_globs(patterns: Sequence[str], *, label: str) -> Path:
+    candidates: list[Path] = []
+    for pattern in patterns:
+        root = Path(pattern)
+        matches = root.parent.glob(root.name) if root.is_absolute() else REPO_ROOT.glob(pattern)
+        candidates.extend(path for path in matches if path.is_file())
+    ordered = sorted(
+        candidates,
+        key=lambda path: (path.stat().st_mtime_ns, path.as_posix()),
+    )
+    if not ordered:
+        raise RuntimeError(f"no {label} JSON found for patterns: {', '.join(patterns)}")
+    return ordered[-1]
+
+
+def _refresh_geometry_frame_pair_curriculum(args: argparse.Namespace) -> Path | None:
+    value = str(args.refresh_pairset_geometry_frame_pair_curriculum or "").strip()
+    if value.lower() in {"", "none", "disabled", "false"}:
+        return None
+    if value == "latest":
+        return _latest_path_from_globs(
+            DEFAULT_FRAME_PAIR_CURRICULUM_GLOBS,
+            label="frame-pair curriculum",
+        )
+    return _resolve(value)
+
+
+def _refresh_geometry_pair_component_xrays(args: argparse.Namespace) -> list[Path]:
+    values = [str(value).strip() for value in args.refresh_pairset_geometry_pair_component_xray]
+    values = [value for value in values if value]
+    if not values:
+        return [
+            _latest_path_from_globs(
+                DEFAULT_PAIR_COMPONENT_XRAY_GLOBS,
+                label="pair-component xray",
+            )
+        ]
+    if len(values) == 1 and values[0].lower() in {"none", "disabled", "false"}:
+        return []
+    paths: list[Path] = []
+    for value in values:
+        if value == "latest":
+            paths.append(
+                _latest_path_from_globs(
+                    DEFAULT_PAIR_COMPONENT_XRAY_GLOBS,
+                    label="pair-component xray",
+                )
+            )
+        else:
+            paths.append(_resolve(value))
+    return paths
 
 
 def _portfolio_dir_name(stamp: str, row_count: int) -> str:
@@ -429,35 +488,136 @@ def _refresh_pairset_acquisition(
     output_root.mkdir(parents=True, exist_ok=True)
     json_out = output_root / f"dqs1_pairset_acquisition_observation_filtered_{refresh_stamp}.json"
     md_out = json_out.with_suffix(".md")
-    command = [
-        ".venv/bin/python",
-        "tools/plan_decoder_q_pairset_acquisition.py",
-        "--selector-pareto",
-        _display_path(selector_pareto),
-        "--max-drop-two",
-        str(args.refresh_pairset_max_drop_two),
-        "--max-swap-in",
-        str(args.refresh_pairset_max_swap_in),
-        "--json-out",
-        _display_path(json_out),
-        "--md-out",
-        _display_path(md_out),
-    ]
-    if args.refresh_pairset_prefix_ks:
-        command.extend(["--prefix-ks", args.refresh_pairset_prefix_ks])
-    if args.refresh_pairset_diversity_ks:
-        command.extend(["--diversity-ks", args.refresh_pairset_diversity_ks])
-    if args.refresh_pairset_no_drop_one:
-        command.append("--no-drop-one")
-    for observation_path in _dqs1_observation_path_values(
-        args,
-        extra=dqs1_observation_jsonl,
-    ):
-        command.extend(["--dqs1-observation-jsonl", observation_path])
-    if args.include_observed_dqs1_candidate:
-        command.append("--include-observed-dqs1-candidate")
-    result = _run(command)
-    stdout_payload = _json_from_stdout(result, label="pairset acquisition refresh")
+
+    def acquisition_command(
+        *,
+        out_json: Path,
+        out_md: Path,
+        pair_frame_geometry_lattice: Path | None = None,
+    ) -> list[str]:
+        command = [
+            ".venv/bin/python",
+            "tools/plan_decoder_q_pairset_acquisition.py",
+            "--selector-pareto",
+            _display_path(selector_pareto),
+            "--max-drop-two",
+            str(args.refresh_pairset_max_drop_two),
+            "--max-swap-in",
+            str(args.refresh_pairset_max_swap_in),
+            "--json-out",
+            _display_path(out_json),
+            "--md-out",
+            _display_path(out_md),
+        ]
+        if args.refresh_pairset_prefix_ks:
+            command.extend(["--prefix-ks", args.refresh_pairset_prefix_ks])
+        if args.refresh_pairset_diversity_ks:
+            command.extend(["--diversity-ks", args.refresh_pairset_diversity_ks])
+        if args.refresh_pairset_no_drop_one:
+            command.append("--no-drop-one")
+        for observation_path in _dqs1_observation_path_values(
+            args,
+            extra=dqs1_observation_jsonl,
+        ):
+            command.extend(["--dqs1-observation-jsonl", observation_path])
+        if args.include_observed_dqs1_candidate:
+            command.append("--include-observed-dqs1-candidate")
+        if pair_frame_geometry_lattice is not None:
+            command.extend(
+                [
+                    "--pair-frame-geometry-lattice-json",
+                    _display_path(pair_frame_geometry_lattice),
+                ]
+            )
+        return command
+
+    geometry_payload: dict[str, Any] = {
+        "schema": "dqs1_tranche_pair_frame_geometry_lattice_refresh.v1",
+        "active": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if args.refresh_pairset_geometry_lattice:
+        base_json_out = output_root / f"dqs1_pairset_acquisition_observation_filtered_{refresh_stamp}.base.json"
+        base_md_out = base_json_out.with_suffix(".md")
+        base_result = _run(
+            acquisition_command(out_json=base_json_out, out_md=base_md_out)
+        )
+        base_stdout = _json_from_stdout(
+            base_result,
+            label="base pairset acquisition refresh",
+        )
+        lattice_json = output_root / f"pair_frame_scorer_geometry_lattice_{refresh_stamp}.json"
+        lattice_md = lattice_json.with_suffix(".md")
+        frame_pair_curriculum = _refresh_geometry_frame_pair_curriculum(args)
+        component_xrays = _refresh_geometry_pair_component_xrays(args)
+        geometry_command = [
+            ".venv/bin/python",
+            "tools/build_pair_frame_scorer_geometry_lattice.py",
+            "--pairset-acquisition",
+            _display_path(base_json_out),
+            "--drop-counts",
+            args.refresh_pairset_geometry_drop_counts,
+            "--max-requests",
+            str(args.refresh_pairset_geometry_max_requests),
+            "--json-out",
+            _display_path(lattice_json),
+            "--md-out",
+            _display_path(lattice_md),
+        ]
+        if frame_pair_curriculum is not None:
+            geometry_command.extend(
+                ["--frame-pair-curriculum", _display_path(frame_pair_curriculum)]
+            )
+        for xray_path in component_xrays:
+            geometry_command.extend(["--pair-component-xray", _display_path(xray_path)])
+        geometry_result = _run(geometry_command)
+        geometry_stdout = _json_from_stdout(
+            geometry_result,
+            label="pair-frame geometry lattice refresh",
+        )
+        final_result = _run(
+            acquisition_command(
+                out_json=json_out,
+                out_md=md_out,
+                pair_frame_geometry_lattice=lattice_json,
+            )
+        )
+        stdout_payload = _json_from_stdout(
+            final_result,
+            label="pairset acquisition refresh",
+        )
+        command = final_result.command
+        geometry_payload.update(
+            {
+                "active": True,
+                "base_json_out": str(base_json_out),
+                "base_md_out": str(base_md_out),
+                "base_command": base_result.command,
+                "base_elapsed_seconds": base_result.elapsed_seconds,
+                "base_stdout": base_stdout,
+                "json_out": str(lattice_json),
+                "md_out": str(lattice_md),
+                "command": geometry_command,
+                "elapsed_seconds": geometry_result.elapsed_seconds,
+                "stdout": geometry_stdout,
+                "frame_pair_curriculum": (
+                    str(frame_pair_curriculum) if frame_pair_curriculum is not None else None
+                ),
+                "pair_component_xrays": [str(path) for path in component_xrays],
+                "queue_executable_request_count": geometry_stdout.get(
+                    "queue_executable_request_count"
+                ),
+                "geometry_coverage": geometry_stdout.get("geometry_coverage"),
+            }
+        )
+        result = final_result
+    else:
+        result = _run(acquisition_command(out_json=json_out, out_md=md_out))
+        stdout_payload = _json_from_stdout(result, label="pairset acquisition refresh")
+        command = result.command
     return json_out, {
         "schema": "dqs1_tranche_pairset_acquisition_refresh.v1",
         "selector_pareto": str(selector_pareto),
@@ -466,6 +626,7 @@ def _refresh_pairset_acquisition(
         "command": command,
         "elapsed_seconds": result.elapsed_seconds,
         "stdout": stdout_payload,
+        "pair_frame_geometry_lattice": geometry_payload,
         "observation_jsonl": _dqs1_observation_path_values(
             args,
             extra=dqs1_observation_jsonl,
@@ -815,6 +976,39 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--refresh-pairset-max-swap-in", type=int, default=32)
     parser.add_argument("--refresh-pairset-no-drop-one", action="store_true")
     parser.add_argument(
+        "--refresh-pairset-geometry-lattice",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "during acquisition refresh, build a pair-frame scorer-geometry "
+            "lattice from the base plan and rebind geometry-aware low-impact "
+            "drop starts into the final acquisition plan"
+        ),
+    )
+    parser.add_argument(
+        "--refresh-pairset-geometry-frame-pair-curriculum",
+        default="latest",
+        help=(
+            "frame-pair curriculum JSON for geometry refresh, 'latest' for "
+            "experiments/results/**/ll_frame_pair_curriculum*.json, or 'none'"
+        ),
+    )
+    parser.add_argument(
+        "--refresh-pairset-geometry-pair-component-xray",
+        action="append",
+        default=[],
+        help=(
+            "pair-component xray JSON for geometry refresh. May repeat. "
+            "Defaults to latest experiments/results/**/pair_component_xray.json; "
+            "use 'none' to build rank-only geometry."
+        ),
+    )
+    parser.add_argument(
+        "--refresh-pairset-geometry-drop-counts",
+        default="3,4,6,8,12,16",
+    )
+    parser.add_argument("--refresh-pairset-geometry-max-requests", type=int, default=32)
+    parser.add_argument(
         "--mlx-selection",
         action="append",
         default=[],
@@ -935,6 +1129,8 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--refresh-pairset-max-drop-two must be >= 1")
     if args.refresh_pairset_max_swap_in < 0:
         raise SystemExit("--refresh-pairset-max-swap-in must be >= 0")
+    if args.refresh_pairset_geometry_max_requests < 0:
+        raise SystemExit("--refresh-pairset-geometry-max-requests must be >= 0")
     queue_path = _resolve(args.queue)
     frontier_scores, frontier_payload = _frontier_scores()
     incumbent_score = args.incumbent_score or str(frontier_scores["contest_cuda"])
