@@ -52,6 +52,7 @@ from comma_lab.scheduler.queue_feedback_replan_policy import (  # noqa: E402
     build_queue_feedback_replan_continuation_queue,
     build_queue_feedback_replan_policy,
     build_queue_observation_recovery_plan,
+    build_queue_observation_recovery_queue,
     validate_feedback_followup_queue,
 )
 from comma_lab.scheduler.staircase_dag import (  # noqa: E402
@@ -3602,6 +3603,10 @@ def main(argv: list[str] | None = None) -> int:
     summary_path = run_dir / "materializer_campaign_run.json"
     queue_observation_path = run_dir / "queue_observation.json"
     queue_observation_recovery_plan_path = run_dir / "queue_observation_recovery_plan.json"
+    queue_observation_recovery_queue_path = run_dir / "queue_observation_recovery_queue.json"
+    queue_observation_recovery_queue_state_path = (
+        run_dir / "queue_observation_recovery_queue.sqlite"
+    )
     queue_performance_summary_path = run_dir / "queue_performance_summary.json"
     queue_feedback_replan_request_path = run_dir / "queue_feedback_replan_request.json"
     queue_feedback_replan_followup_queue_path = run_dir / "queue_feedback_replan_followup_queue.json"
@@ -3616,6 +3621,9 @@ def main(argv: list[str] | None = None) -> int:
     queue_feedback_replan_continuation_staircase_artifacts: dict[str, Any] | None = None
     queue_feedback_replan_continuation_queue: dict[str, Any] | None = None
     queue_feedback_replan_continuation_queue_blockers: list[str] = []
+    queue_observation_recovery_queue: dict[str, Any] | None = None
+    queue_observation_recovery_queue_blockers: list[str] = []
+    queue_observation_recovery_staircase_artifacts: dict[str, Any] | None = None
     queue_feedback_replan_followup_execution: dict[str, Any] | None = None
     queue_feedback_replan_followup_execution_returncode = 0
     queue_feedback_replan_followup_policy = _queue_feedback_replan_followup_activation_policy(args)
@@ -3972,13 +3980,45 @@ def main(argv: list[str] | None = None) -> int:
         max_iterations=args.queue_feedback_replan_policy_max_iterations,
     )
     _write_json(queue_feedback_replan_policy_path, queue_feedback_replan_policy)
+    feedback_lane_id = args.lane_id or _queue_feedback_replan_continuation_lane_id(
+        queue,
+        plan_path=plan_path,
+    )
+    (
+        queue_observation_recovery_queue,
+        queue_observation_recovery_queue_blockers,
+    ) = build_queue_observation_recovery_queue(
+        queue_feedback_replan_policy,
+        lane_id=feedback_lane_id,
+        source_policy_path=_display_path(queue_feedback_replan_policy_path),
+    )
+    if queue_observation_recovery_queue is not None:
+        _write_json(
+            queue_observation_recovery_queue_path,
+            queue_observation_recovery_queue,
+        )
+        queue_observation_recovery_staircase_artifacts = (
+            _build_queue_feedback_staircase_artifacts(
+                args,
+                run_dir=run_dir,
+                parent_queue=queue,
+                parent_queue_path=execution_queue,
+                parent_state_path=state_path,
+                child_queue=queue_observation_recovery_queue,
+                child_queue_path=queue_observation_recovery_queue_path,
+                artifact_stem="queue_observation_recovery",
+            )
+        )
+        if staircase_artifacts is not None:
+            staircase_artifacts["queue_observation_recovery_child"] = (
+                queue_observation_recovery_staircase_artifacts
+            )
     (
         queue_feedback_replan_continuation_queue,
         queue_feedback_replan_continuation_queue_blockers,
     ) = build_queue_feedback_replan_continuation_queue(
         queue_feedback_replan_policy,
-        lane_id=args.lane_id
-        or _queue_feedback_replan_continuation_lane_id(queue, plan_path=plan_path),
+        lane_id=feedback_lane_id,
         source_policy_path=_display_path(queue_feedback_replan_policy_path),
     )
     if queue_feedback_replan_continuation_queue is not None:
@@ -4011,6 +4051,23 @@ def main(argv: list[str] | None = None) -> int:
     ]
     payload["queue_feedback_replan_policy_should_continue"] = (
         queue_feedback_replan_policy["should_continue_feedback_loop"]
+    )
+    payload["queue_observation_recovery_queue_path"] = (
+        _display_path(queue_observation_recovery_queue_path)
+        if queue_observation_recovery_queue is not None
+        else None
+    )
+    payload["queue_observation_recovery_queue_state_path"] = (
+        _display_path(queue_observation_recovery_queue_state_path)
+    )
+    payload["queue_observation_recovery_queue_emitted"] = (
+        queue_observation_recovery_queue is not None
+    )
+    payload["queue_observation_recovery_queue_blockers"] = (
+        queue_observation_recovery_queue_blockers
+    )
+    payload["queue_observation_recovery_staircase_artifacts"] = (
+        queue_observation_recovery_staircase_artifacts
     )
     payload["queue_feedback_replan_continuation_queue_path"] = (
         _display_path(queue_feedback_replan_continuation_queue_path)

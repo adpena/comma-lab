@@ -26,18 +26,23 @@ QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA = (
 QUEUE_FEEDBACK_REPLAN_CONTINUATION_METADATA_SCHEMA = (
     "queue_feedback_replan_continuation_metadata.v1"
 )
+QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA = (
+    "queue_observation_recovery_queue_metadata.v1"
+)
 QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA = "queue_observation_recovery_plan.v1"
 MATERIALIZER_CAMPAIGN_RUN_SCHEMA = "byte_shaving_materializer_campaign_run.v1"
 QUEUE_FEEDBACK_REPLAN_CONTINUATION_EXPERIMENT_ID = (
     "queue_feedback_replan_next_materializer_iteration"
 )
 QUEUE_FEEDBACK_REPLAN_CONTINUATION_STEP_ID = "run_next_materializer_campaign_iteration"
+QUEUE_OBSERVATION_RECOVERY_EXPERIMENT_ID = "queue_observation_recovery_actions"
 QUEUE_FEEDBACK_REPLAN_MATERIALIZER_CAMPAIGN_TOOL = (
     "tools/run_byte_shaving_materializer_campaign.py"
 )
 QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL = (
     "tools/build_inverse_steganalysis_action_functional.py"
 )
+QUEUE_OBSERVATION_RECOVERY_TOOL = "tools/experiment_queue.py"
 QUEUE_FEEDBACK_REPLAN_FORBIDDEN_COMMAND_FLAGS = frozenset(
     {
         "--allow-paid-dispatch-queue",
@@ -421,6 +426,12 @@ def _is_local_python_command(command0: str) -> bool:
     return name in {"python", "python3"} or name.startswith("python3.")
 
 
+def _id_fragment(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    out = "".join(ch if ch.isalnum() else "_" for ch in text)
+    return "_".join(part for part in out.split("_") if part) or "unknown"
+
+
 def _normalized_posix_path(path: str) -> str:
     text = path.strip().replace("\\", "/")
     return posixpath.normpath(text)
@@ -747,6 +758,230 @@ def _validate_next_iteration_command(
             "queue_feedback_replan_continuation_command_max_iterations_mismatch"
         )
     return list(dict.fromkeys(blockers))
+
+
+def _recovery_queue_command_blockers(
+    *,
+    command_items: Sequence[str],
+    action_index: int,
+    recovery_plan: Mapping[str, Any],
+) -> list[str]:
+    blockers: list[str] = []
+    if len(command_items) < 2:
+        return [f"queue_observation_recovery_command_too_short:{action_index}"]
+    command0_name = posixpath.basename(command_items[0])
+    if command0_name in QUEUE_FEEDBACK_REPLAN_FORBIDDEN_COMMAND_WRAPPERS:
+        blockers.append(
+            "queue_observation_recovery_command_shell_or_remote_wrapper:"
+            f"{action_index}:{command0_name}"
+        )
+    if not _is_local_python_command(command_items[0]):
+        blockers.append(
+            f"queue_observation_recovery_command_not_local_python:{action_index}"
+        )
+    if command_items[1] != QUEUE_OBSERVATION_RECOVERY_TOOL:
+        blockers.append(
+            f"queue_observation_recovery_command_not_experiment_queue_tool:{action_index}"
+        )
+    blockers.extend(
+        f"queue_observation_recovery_command_forbidden_flag:{action_index}:{flag}"
+        for flag in _forbidden_command_flag_uses(command_items)
+    )
+    expected_queue = _nonempty_str(recovery_plan.get("queue_path"))
+    expected_state = _nonempty_str(recovery_plan.get("queue_state_path"))
+    if _command_arg(command_items, "--queue") != expected_queue:
+        blockers.append(f"queue_observation_recovery_command_queue_mismatch:{action_index}")
+    if _command_arg(command_items, "--state") != expected_state:
+        blockers.append(f"queue_observation_recovery_command_state_mismatch:{action_index}")
+    allowed_subcommands = {"init", "observe", "retire-orphans", "rewind"}
+    if not any(item in allowed_subcommands for item in command_items[2:]):
+        blockers.append(
+            f"queue_observation_recovery_command_subcommand_not_allowed:{action_index}"
+        )
+    return list(dict.fromkeys(blockers))
+
+
+def build_queue_observation_recovery_queue(
+    policy: Mapping[str, Any],
+    *,
+    lane_id: str,
+    queue_id: str | None = None,
+    source_policy_path: str | None = None,
+) -> tuple[dict[str, Any] | None, list[str]]:
+    """Return a paused local queue for required queue-observation recovery actions."""
+
+    blockers: list[str] = []
+    lane = _nonempty_str(lane_id)
+    if lane is None:
+        blockers.append("queue_observation_recovery_lane_id_missing")
+    if policy.get("schema") != QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA:
+        blockers.append("queue_observation_recovery_policy_schema_invalid")
+    if policy.get("decision") != ACTION_RECOVER_QUEUE_HEALTH:
+        blockers.append("queue_observation_recovery_policy_not_recovery")
+    if policy.get("ready_for_queue_health_recovery") is not True:
+        blockers.append("queue_observation_recovery_policy_not_ready")
+    policy_blockers = _string_list(policy.get("blockers"))
+    blockers.extend(
+        f"queue_observation_recovery_policy_blocker:{item}"
+        for item in policy_blockers
+    )
+    for violation in truthy_authority_field_violations(
+        policy,
+        fields=FORBIDDEN_TRUE_AUTHORITY_FIELDS,
+    ):
+        blockers.append(
+            f"queue_observation_recovery_policy_truthy_authority_field:{violation}"
+        )
+
+    recovery_plan = policy.get("queue_observation_recovery_plan")
+    if not isinstance(recovery_plan, Mapping):
+        blockers.append("queue_observation_recovery_plan_missing")
+        recovery_plan = {}
+    elif recovery_plan.get("schema") != QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA:
+        blockers.append("queue_observation_recovery_plan_schema_invalid")
+    elif recovery_plan.get("recovery_required") is not True:
+        blockers.append("queue_observation_recovery_plan_not_required")
+    for violation in truthy_authority_field_violations(
+        recovery_plan,
+        fields=FORBIDDEN_TRUE_AUTHORITY_FIELDS,
+    ):
+        blockers.append(
+            f"queue_observation_recovery_plan_truthy_authority_field:{violation}"
+        )
+
+    required_actions = [
+        dict(item)
+        for item in _as_list(recovery_plan.get("actions"))
+        if isinstance(item, Mapping) and item.get("required") is True
+    ]
+    if not required_actions:
+        blockers.append("queue_observation_recovery_required_actions_missing")
+
+    command_items_by_index: list[tuple[int, dict[str, Any], list[str]]] = []
+    for index, action in enumerate(required_actions):
+        command = action.get("command")
+        action_name = _nonempty_str(action.get("action")) or f"action_{index}"
+        if not isinstance(command, list) or not command:
+            blockers.append(
+                f"queue_observation_recovery_action_command_missing:{action_name}"
+            )
+            continue
+        command_items = [str(item) for item in command]
+        blockers.extend(
+            _recovery_queue_command_blockers(
+                command_items=command_items,
+                action_index=index,
+                recovery_plan=recovery_plan,
+            )
+        )
+        command_items_by_index.append((index, action, command_items))
+
+    if blockers:
+        return None, list(dict.fromkeys(blockers))
+
+    source_queue_id = _nonempty_str(policy.get("queue_id")) or "materializer_campaign"
+    effective_queue_id = queue_id or f"{source_queue_id}_queue_observation_recovery"
+    input_artifacts = [
+        source_policy_path,
+        policy.get("source_run_path"),
+        policy.get("queue_path"),
+        policy.get("queue_state_path"),
+    ]
+    metadata = _false_authority_payload(
+        {
+            "schema": QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA,
+            "source_policy_path": source_policy_path,
+            "source_policy_sha256": _stable_json_sha256(policy),
+            "source_run_path": policy.get("source_run_path"),
+            "source_queue_id": policy.get("queue_id"),
+            "source_queue_path": policy.get("queue_path"),
+            "source_queue_state_path": policy.get("queue_state_path"),
+            "policy_decision": policy.get("decision"),
+            "action": ACTION_RECOVER_QUEUE_HEALTH,
+            "required_action_count": len(command_items_by_index),
+            "operator_queue_state_mutation_required": True,
+            "auto_execute_eligible": False,
+            "allowed_use": "paused_local_queue_health_recovery_only",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+            "dispatch_blockers": [
+                "paused_recovery_queue_requires_explicit_operator_or_autopilot_resume",
+                "local_queue_state_mutation_only",
+                "exact_auth_eval_required_before_score_claim",
+                "lane_dispatch_claim_required_before_paid_or_remote_eval",
+            ],
+        }
+    )
+    steps: list[dict[str, Any]] = []
+    for index, action, command_items in command_items_by_index:
+        action_name = _nonempty_str(action.get("action")) or f"action_{index}"
+        step_suffix = "_".join(
+            item
+            for item in (
+                _id_fragment(action_name),
+                _id_fragment(action.get("experiment_id")),
+                _id_fragment(action.get("step_id")),
+            )
+            if item != "unknown"
+        )
+        steps.append(
+            {
+                "id": f"recover_{index:03d}_{step_suffix}",
+                "kind": "command",
+                "command": command_items,
+                "requires": [],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 0,
+                "metadata": _false_authority_payload(
+                    {
+                        "action": action_name,
+                        "source_experiment_id": action.get("experiment_id"),
+                        "source_step_id": action.get("step_id"),
+                        "reason": action.get("reason"),
+                        "operator_queue_state_mutation_required": True,
+                        "auto_execute_eligible": False,
+                    }
+                ),
+                "telemetry": {
+                    "artifact_paths": [],
+                    "input_artifact_paths": [
+                        str(item) for item in input_artifacts if item
+                    ],
+                    "recursive": False,
+                },
+            }
+        )
+    queue = normalize_queue_definition(
+        {
+            "schema": QUEUE_SCHEMA,
+            "queue_id": effective_queue_id,
+            "controls": {
+                "mode": "paused",
+                "local_first": True,
+                "max_concurrency": {"local_cpu": 1},
+            },
+            "experiments": [
+                {
+                    "id": QUEUE_OBSERVATION_RECOVERY_EXPERIMENT_ID,
+                    "lane_id": lane,
+                    "priority": 95,
+                    "status": "queued",
+                    "tags": [
+                        "byte-shaving",
+                        "inverse-steganalysis",
+                        "queue-observation",
+                        "queue-recovery",
+                        "paused-followup",
+                        "no-score-authority",
+                    ],
+                    "metadata": metadata,
+                    "steps": steps,
+                }
+            ],
+        }
+    )
+    return queue, []
 
 
 def build_queue_feedback_replan_continuation_queue(
@@ -1219,9 +1454,12 @@ __all__ = [
     "QUEUE_FEEDBACK_REPLAN_FORBIDDEN_COMMAND_FLAGS",
     "QUEUE_FEEDBACK_REPLAN_MATERIALIZER_CAMPAIGN_TOOL",
     "QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA",
+    "QUEUE_OBSERVATION_RECOVERY_EXPERIMENT_ID",
     "QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA",
+    "QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA",
     "build_queue_feedback_replan_continuation_queue",
     "build_queue_feedback_replan_policy",
     "build_queue_observation_recovery_plan",
+    "build_queue_observation_recovery_queue",
     "validate_feedback_followup_queue",
 ]

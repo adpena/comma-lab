@@ -54041,14 +54041,14 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_queue_observation_recovery_feedback_20260525T0303Z_codex.md"
+          "evidence": ".omx/research/codex_findings_queue_observation_recovery_queue_20260525T033022Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
           "evidence": ""
         }
       },
-      "notes": "Queue observation blockers feed recovery planning, feedback policy, and inverse-steganalysis action-functional signal."
+      "notes": "Required queue-observation recovery actions now materialize as paused local experiment_queue.v1 child queues and operator briefing prioritizes their initialization."
     },
     {
       "id": "codex_queue_health_group_prior_20260525",
@@ -54099,5 +54099,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T03:26:04Z"
+  "updated_at": "2026-05-25T03:31:04Z"
 }

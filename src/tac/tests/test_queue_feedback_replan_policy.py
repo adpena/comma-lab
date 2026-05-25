@@ -21,10 +21,13 @@ from comma_lab.scheduler.queue_feedback_replan_policy import (
     QUEUE_FEEDBACK_REPLAN_CONTINUATION_STEP_ID,
     QUEUE_FEEDBACK_REPLAN_MATERIALIZER_CAMPAIGN_TOOL,
     QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA,
+    QUEUE_OBSERVATION_RECOVERY_EXPERIMENT_ID,
     QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA,
+    QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA,
     build_queue_feedback_replan_continuation_queue,
     build_queue_feedback_replan_policy,
     build_queue_observation_recovery_plan,
+    build_queue_observation_recovery_queue,
     validate_feedback_followup_queue,
 )
 
@@ -138,9 +141,13 @@ def test_queue_observation_helpers_are_public_package_exports() -> None:
     from comma_lab.scheduler import (
         build_queue_observation_recovery_plan as scheduler_export,
     )
+    from comma_lab.scheduler import (
+        build_queue_observation_recovery_queue as scheduler_queue_export,
+    )
     from tac.optimization import observations_from_queue_observation
 
     assert scheduler_export is build_queue_observation_recovery_plan
+    assert scheduler_queue_export is build_queue_observation_recovery_queue
     assert callable(observations_from_queue_observation)
 
 
@@ -314,6 +321,36 @@ def test_feedback_replan_policy_prioritizes_queue_health_recovery() -> None:
     assert "queue_feedback_replan_continuation_policy_not_continuable" in (
         continuation_blockers
     )
+    recovery_queue, recovery_blockers = build_queue_observation_recovery_queue(
+        policy,
+        lane_id="queue_recovery_regression",
+        source_policy_path=".omx/research/campaign/queue_feedback_replan_policy.json",
+    )
+    assert recovery_blockers == []
+    assert recovery_queue is not None
+    assert recovery_queue["schema"] == "experiment_queue.v1"
+    assert recovery_queue["controls"]["mode"] == "paused"
+    assert recovery_queue["controls"]["max_concurrency"] == {"local_cpu": 1}
+    experiment = recovery_queue["experiments"][0]
+    assert experiment["id"] == QUEUE_OBSERVATION_RECOVERY_EXPERIMENT_ID
+    assert experiment["metadata"]["schema"] == (
+        QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA
+    )
+    assert experiment["metadata"]["score_claim"] is False
+    assert experiment["metadata"]["ready_for_exact_eval_dispatch"] is False
+    assert experiment["metadata"]["operator_queue_state_mutation_required"] is True
+    assert experiment["metadata"]["auto_execute_eligible"] is False
+    assert experiment["steps"][0]["id"] == (
+        "recover_000_rewind_failed_step_exp0_materialize"
+    )
+    assert experiment["steps"][0]["resources"] == {"kind": "local_cpu"}
+    assert experiment["steps"][0]["command"][-5:] == [
+        "rewind",
+        "exp0",
+        "materialize",
+        "--reason",
+        "queue observation health recovery",
+    ]
 
 
 def test_feedback_replan_policy_keeps_nonblocking_observation_maintenance_advisory() -> None:
@@ -347,6 +384,43 @@ def test_feedback_replan_policy_keeps_nonblocking_observation_maintenance_adviso
         ACTION_QUEUE_OBSERVATION_MAINTENANCE
     )
     assert policy["recommended_actions"][1]["action"] == ACTION_EXECUTE_FEEDBACK_FOLLOWUP
+    recovery_queue, recovery_blockers = build_queue_observation_recovery_queue(
+        policy,
+        lane_id="queue_recovery_regression",
+    )
+    assert recovery_queue is None
+    assert "queue_observation_recovery_policy_not_recovery" in recovery_blockers
+    assert "queue_observation_recovery_policy_not_ready" in recovery_blockers
+
+
+def test_queue_observation_recovery_queue_requires_command_backed_actions() -> None:
+    recovery_plan = build_queue_observation_recovery_plan(
+        {
+            "schema": "experiment_queue_observation.v1",
+            "queue_id": "campaign_queue",
+            "healthy": False,
+            "blockers": [
+                "experiment_queue_observation_artifact_postcondition_failures:1"
+            ],
+        },
+        queue_path=".omx/research/campaign/materializer_execution_queue.json",
+        state_path=".omx/research/campaign/materializer_execution_queue.sqlite",
+    )
+    policy = build_queue_feedback_replan_policy(
+        _run_summary(queue_observation_recovery_plan=recovery_plan),
+        feedback_followup_queue=_child_queue(),
+    )
+
+    recovery_queue, recovery_blockers = build_queue_observation_recovery_queue(
+        policy,
+        lane_id="queue_recovery_regression",
+    )
+
+    assert recovery_queue is None
+    assert (
+        "queue_observation_recovery_action_command_missing:"
+        "inspect_artifact_postcondition_failures"
+    ) in recovery_blockers
 
 
 def test_feedback_replan_policy_blocks_unpaired_exact_auth_calibration() -> None:

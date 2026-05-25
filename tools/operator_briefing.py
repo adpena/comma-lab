@@ -1748,6 +1748,23 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
         "queue_observation_recovery_plan_path": str(
             payload.get("queue_observation_recovery_plan_path") or ""
         ),
+        "queue_observation_recovery_queue_path": str(
+            payload.get("queue_observation_recovery_queue_path") or ""
+        ),
+        "queue_observation_recovery_queue_state_path": str(
+            payload.get("queue_observation_recovery_queue_state_path") or ""
+        ),
+        "queue_observation_recovery_queue_emitted": (
+            payload.get("queue_observation_recovery_queue_emitted") is True
+        ),
+        "queue_observation_recovery_queue_blocker_count": len(
+            payload.get("queue_observation_recovery_queue_blockers")
+            if isinstance(
+                payload.get("queue_observation_recovery_queue_blockers"),
+                list,
+            )
+            else []
+        ),
         "queue_observation_recovery_required": (
             payload.get("queue_observation_recovery_required") is True
             or feedback_policy.get("queue_observation_recovery_required") is True
@@ -1815,15 +1832,34 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
     )
 
 
+def _experiment_queue_command(
+    queue_path: object,
+    state_path: object,
+    subcommand: str,
+) -> str:
+    state_arg = f" --state {state_path}" if state_path else ""
+    return (
+        f".venv/bin/python tools/experiment_queue.py --queue {queue_path}"
+        f"{state_arg} {subcommand}"
+    )
+
+
 def _byte_shaving_acquisition_next_command(latest: dict[str, object] | None) -> str:
+    if (
+        latest
+        and latest.get("queue_observation_recovery_queue_emitted") is True
+        and latest.get("queue_observation_recovery_queue_path")
+    ):
+        return _experiment_queue_command(
+            latest["queue_observation_recovery_queue_path"],
+            latest.get("queue_observation_recovery_queue_state_path"),
+            "init",
+        )
     if latest and latest.get("queue_path"):
-        queue_path = latest["queue_path"]
-        state_path = latest.get("state_path")
-        state_arg = f" --state {state_path}" if state_path else ""
-        return (
-            f".venv/bin/python tools/experiment_queue.py --queue {queue_path}"
-            f"{state_arg} "
-            "run-worker --execute --max-parallel 0"
+        return _experiment_queue_command(
+            latest["queue_path"],
+            latest.get("state_path"),
+            "run-worker --execute --max-parallel 0",
         )
     return ".venv/bin/python tools/run_byte_shaving_materializer_campaign.py --help"
 
@@ -1914,6 +1950,11 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
         "queue_observation_recovery_required_count": sum(
             1 for row in rows if row.get("queue_observation_recovery_required") is True
         ),
+        "queue_observation_recovery_queue_count": sum(
+            1
+            for row in rows
+            if row.get("queue_observation_recovery_queue_emitted") is True
+        ),
         "queue_observation_maintenance_recommended_count": sum(
             1
             for row in rows
@@ -1944,9 +1985,21 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
         "latest_rows": rows[:5],
         "next_command": _byte_shaving_acquisition_next_command(latest),
         "observe_command": (
-            f".venv/bin/python tools/experiment_queue.py --queue {latest['queue_path']}"
-            f"{' --state ' + str(latest['state_path']) if latest.get('state_path') else ''} "
-            "observe --tail-lines 20"
+            _experiment_queue_command(
+                latest["queue_observation_recovery_queue_path"],
+                latest.get("queue_observation_recovery_queue_state_path"),
+                "observe --tail-lines 20",
+            )
+            if (
+                latest
+                and latest.get("queue_observation_recovery_queue_emitted") is True
+                and latest.get("queue_observation_recovery_queue_path")
+            )
+            else _experiment_queue_command(
+                latest["queue_path"],
+                latest.get("state_path"),
+                "observe --tail-lines 20",
+            )
             if latest and latest.get("queue_path")
             else ""
         ),
@@ -1983,6 +2036,8 @@ def _format_byte_shaving_acquisition_summary() -> str:
             f"{payload['queue_observation_recovery_required_count']} "
             "queue_recovery_ready="
             f"{payload['ready_for_queue_health_recovery_count']} "
+            "queue_recovery_queued="
+            f"{payload['queue_observation_recovery_queue_count']} "
             "queue_maintenance="
             f"{payload['queue_observation_maintenance_recommended_count']} "
             "feedback_continuation_queued="
@@ -2035,6 +2090,8 @@ def _format_byte_shaving_acquisition_summary() -> str:
                 f"{row.get('queue_observation_recovery_required') is True} "
                 "queue_recovery_ready="
                 f"{row.get('ready_for_queue_health_recovery') is True} "
+                "queue_recovery_queued="
+                f"{row.get('queue_observation_recovery_queue_emitted') is True} "
                 "queue_maintenance="
                 f"{row.get('queue_observation_maintenance_recommended') is True} "
                 "queue_recovery_actions="
@@ -3893,6 +3950,9 @@ def _dispatch_readiness() -> dict[str, object]:
             ],
             "queue_feedback_followup_queue_count": byte_shaving_acquisition[
                 "queue_feedback_followup_queue_count"
+            ],
+            "queue_observation_recovery_queue_count": byte_shaving_acquisition[
+                "queue_observation_recovery_queue_count"
             ],
             "local_mlx_ready_step_count": byte_shaving_acquisition[
                 "local_mlx_ready_step_count"

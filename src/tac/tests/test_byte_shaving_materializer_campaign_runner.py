@@ -1193,6 +1193,22 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert feedback_policy["feedback_followup_queue_validation"]["queue_sha256"]
     assert feedback_policy["score_claim"] is False
     assert feedback_policy["ready_for_exact_eval_dispatch"] is False
+    assert summary["queue_observation_recovery_queue_path"] is None
+    assert summary["queue_observation_recovery_queue_state_path"] == str(
+        run_dir / "queue_observation_recovery_queue.sqlite"
+    )
+    assert summary["queue_observation_recovery_queue_emitted"] is False
+    assert "queue_observation_recovery_policy_not_recovery" in summary[
+        "queue_observation_recovery_queue_blockers"
+    ]
+    assert "queue_observation_recovery_policy_not_ready" in summary[
+        "queue_observation_recovery_queue_blockers"
+    ]
+    assert "queue_observation_recovery_plan_not_required" in summary[
+        "queue_observation_recovery_queue_blockers"
+    ]
+    assert summary["queue_observation_recovery_staircase_artifacts"] is None
+    assert not (run_dir / "queue_observation_recovery_queue.json").exists()
     assert summary["queue_feedback_replan_continuation_queue_path"] == str(
         run_dir / "queue_feedback_replan_continuation_queue.json"
     )
