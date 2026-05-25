@@ -1,19 +1,26 @@
-# Codex Findings - Tensor Factorize Receiver Runtime
+# Codex Findings - Tensor Factorize Receiver Runtime And DFL1 Queue Ordering
 
 UTC: 2026-05-25T20:59:02Z
 
 ## Scope
 
 Continuation of the family-agnostic materializer hardening lane after
-`tensor_factorize_v1` gained a SHA-bearing runtime-adapter proof gate.
+`tensor_factorize_v1` gained a SHA-bearing runtime-adapter proof gate, plus
+the DFL1 queue-ordering blocker found by sidecar review.
 
 ## Finding
 
-The proof gate was correct but incomplete as an executable system: tensor
-factorization had no first-class receiver runtime that could consume the
-factorized NPZ packet, reconstruct a source-runtime-compatible `.npy` member,
-delegate to the original inflate runtime, and emit the generic
-`family_agnostic_runtime_consumption_proof_v1` expected by queue postconditions.
+Two integration gaps were present:
+
+1. The tensor-factorize proof gate was correct but incomplete as an executable
+   system: tensor factorization had no first-class receiver runtime that could
+   consume the factorized NPZ packet, reconstruct a source-runtime-compatible
+   `.npy` member, delegate to the original inflate runtime, and emit the
+   generic `family_agnostic_runtime_consumption_proof_v1` expected by queue
+   postconditions.
+2. The DFL1 materializer execution step could require full-frame inflate
+   parity before the parity follow-up step had a chance to create that proof,
+   deadlocking the receiver-positive path.
 
 ## Landing
 
@@ -31,12 +38,24 @@ Wired the runtime path through:
 - `comma_lab.scheduler.byte_shaving_campaign_queue`;
 - `comma_lab.scheduler.final_byte_operation_contexts`.
 
+The queue now defers DFL1 full-frame parity postconditions to the dedicated
+parity/handoff follow-up unless the context already provides an existing
+inflate-parity proof. The materializer step still requires runtime adapter
+readiness, but no longer blocks on a proof produced by a later step.
+
+## Authority Boundary
+
+Tensor-factorize receiver evidence and DFL1 parity-followup readiness remain
+runtime/queue evidence only. They do not claim score, rank/kill authority,
+promotion eligibility, or exact-eval dispatch readiness. Parser
+reconstruction, generated runtime metadata, and local smoke behavior remain
+below contest-auth authority.
+
 ## Verification
 
 - `.venv/bin/python -m ruff check src/tac/optimization/tensor_factorize_receiver.py src/tac/optimization/family_agnostic_materializers.py tools/run_family_agnostic_materializer.py src/comma_lab/scheduler/byte_shaving_campaign_queue.py src/comma_lab/scheduler/final_byte_operation_contexts.py src/tac/tests/test_family_agnostic_materializers.py src/tac/tests/test_byte_shaving_campaign_queue.py src/tac/tests/test_final_byte_operation_contexts.py`
-- `.venv/bin/python -m pytest src/tac/tests/test_family_agnostic_materializers.py -q`
-- `.venv/bin/python -m pytest src/tac/tests/test_byte_shaving_campaign_queue.py -q`
-- `.venv/bin/python -m pytest src/tac/tests/test_final_byte_operation_contexts.py -q`
+- Focused receiver/queue tests: 6 passed.
+- `PYTHONPATH=. .venv/bin/python -m pytest src/tac/tests/test_family_agnostic_materializers.py src/tac/tests/test_final_byte_operation_contexts.py src/tac/tests/test_byte_shaving_campaign_queue.py -q`: 145 passed.
 
 ## Remaining Work
 

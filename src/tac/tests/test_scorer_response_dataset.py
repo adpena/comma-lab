@@ -290,7 +290,46 @@ def _mlx_production_contract_payload(*, passed: bool = True) -> dict:
             "batch_invariance": False,
             "batch_invariance_policy_requested": True,
             "score_calibration": passed,
+            "conv2d_accumulation_probe": passed,
             "strict_gate_policy": passed,
+        },
+        "numerical_mitigation_summary": {
+            "conv2d_accumulation_probe": {
+                "schema_version": "mlx_conv2d_accumulation_probe.v1",
+                "passed": passed,
+                "verdict": (
+                    "PASS_MLX_CONV2D_ACCUMULATION_PROBE"
+                    if passed
+                    else "FAIL_MLX_CONV2D_ACCUMULATION_PROBE"
+                ),
+                "device_type": "cpu",
+                "torch_device_type": "cpu",
+                "modes": [
+                    {
+                        "mode": "optimized_mlx_conv2d",
+                        "passed": passed,
+                        "max_abs_delta": 8.0e-8,
+                    },
+                    {
+                        "mode": "fixed_fp32",
+                        "passed": passed,
+                        "max_abs_delta": 1.0e-7,
+                    },
+                    {
+                        "mode": "kahan_fp32",
+                        "passed": passed,
+                        "max_abs_delta": 8.0e-8,
+                    },
+                    {
+                        "mode": "fixed_fp64",
+                        "passed": passed,
+                        "max_abs_delta": 8.0e-8,
+                    },
+                ],
+                "mlx_backend_classification": (
+                    "framework_different_no_public_deterministic_reduction_flag"
+                ),
+            },
         },
         "authority_status": "non-authoritative local MLX production signal",
     }
@@ -797,6 +836,71 @@ def test_next_probe_plan_prioritizes_mlx_response_harvest() -> None:
     )
 
 
+def test_next_probe_plan_routes_missing_conv2d_probe_to_numerical_gate() -> None:
+    false_authority = {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    normalized_gain = 1.0e-6
+    contract = _mlx_production_contract_payload()
+    contract["required_gates"]["conv2d_accumulation_probe"] = False
+    contract["numerical_mitigation_summary"] = {}
+    plan = build_next_probe_plan(
+        {
+            "schema": "scorer_response_dataset.v1",
+            "summary": {"row_count": 1},
+            "rows": [
+                {
+                    "schema": "scorer_response_row.v1",
+                    "row_id": "mlx-row-1",
+                    "family": "mlx_scorer_response",
+                    "delta_vs_baseline_score": 1.0e-6,
+                    "scorer_delta_vs_baseline": 1.0e-6,
+                    "observed_scorer_gain_vs_baseline": normalized_gain,
+                    "added_archive_bytes": 0,
+                    "full_video_denominator": 600,
+                    "normalized_full_video_scorer_gain_vs_baseline": normalized_gain,
+                    "projected_full_video_delta_vs_baseline_score": -normalized_gain,
+                    "break_even_added_bytes_from_normalized_full_video_gain": (
+                        normalized_gain / RATE_SCORE_PER_BYTE
+                    ),
+                    "normalized_full_video_byte_budget_margin_vs_break_even": (
+                        normalized_gain / RATE_SCORE_PER_BYTE
+                    ),
+                    "byte_budget_margin_vs_break_even": None,
+                    "archive_sha256": "a" * 64,
+                    "source_inflated_outputs_aggregate_sha256": "e" * 64,
+                    "source_batch_pairs": 1,
+                    "source_n_samples": 600,
+                    "source_pair_window": [0, 600],
+                    **false_authority,
+                }
+            ],
+        },
+        mlx_torch_parity_sweep=_mlx_parity_sweep_payload(passed=True),
+        mlx_score_calibration=_mlx_score_calibration_payload(),
+        mlx_production_contract=contract,
+    )
+
+    assert plan["mlx_production_contract_gate"]["status"] == "blocked"
+    assert plan["probes"][0]["probe_id"] == "ll_mlx_conv2d_accumulation_probe_required"
+    assert plan["probes"][0]["class"] == "numerical_mitigation_gate"
+    assert plan["effective_mlx_spend_triage_gate"]["status"] == "blocked"
+    assert (
+        "mlx_production_contract_gate_not_strict_pass"
+        in plan["effective_mlx_spend_triage_gate"]["blockers"]
+    )
+    rules = {item["rule"] for item in plan["prohibitions"]}
+    assert (
+        "do_not_use_mlx_rows_for_exact_eval_spend_triage_after_failed_production_contract"
+        in rules
+    )
+
+
 def test_next_probe_plan_excludes_mlx_rows_missing_normalized_objective() -> None:
     false_authority = {
         "score_claim": False,
@@ -921,6 +1025,25 @@ def test_mlx_production_contract_gate_passes_strict_bundle() -> None:
     assert gate["summary"]["batch_pairs"] == 1
     assert gate["summary"]["n_samples"] == 600
     assert gate["summary"]["required_gates"]["score_calibration"] is True
+    assert gate["summary"]["required_gates"]["conv2d_accumulation_probe"] is True
+    assert gate["summary"]["numerical_mitigation_summary"][
+        "conv2d_accumulation_probe"
+    ]["verdict"] == "PASS_MLX_CONV2D_ACCUMULATION_PROBE"
+
+
+def test_mlx_production_contract_gate_requires_conv2d_accumulation_probe() -> None:
+    payload = _mlx_production_contract_payload()
+    payload["required_gates"]["conv2d_accumulation_probe"] = False
+    payload["numerical_mitigation_summary"] = {}
+
+    gate = build_mlx_production_contract_gate(payload)
+
+    assert gate["status"] == "blocked"
+    assert gate["mlx_spend_triage_allowed"] is False
+    assert (
+        "mlx_production_contract_required_gate_conv2d_accumulation_probe_not_true"
+        in gate["blockers"]
+    )
 
 
 def test_mlx_production_contract_gate_blocks_failed_bundle() -> None:

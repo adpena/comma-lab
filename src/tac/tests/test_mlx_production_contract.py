@@ -135,7 +135,9 @@ def test_mlx_production_contract_bundle_accepts_strict_contracts() -> None:
         profile_stability=_profile_stability(),
         batch_invariance=_batch_invariance(),
         score_calibration=_score_calibration(),
+        conv2d_accumulation_probe=_conv2d_accumulation_probe(),
         require_score_calibration=True,
+        require_conv2d_accumulation_probe=True,
     )
 
     bundle = build_mlx_scorer_production_contract_bundle_manifest(
@@ -457,7 +459,9 @@ def test_mlx_production_contract_can_require_score_calibration() -> None:
         profile_stability=_profile_stability(),
         batch_invariance=_batch_invariance(),
         score_calibration=_score_calibration(),
+        conv2d_accumulation_probe=_conv2d_accumulation_probe(),
         require_score_calibration=True,
+        require_conv2d_accumulation_probe=True,
     )
 
     assert manifest["passed"] is True
@@ -763,7 +767,9 @@ def test_mlx_production_contract_bundle_cli_writes_manifest(tmp_path: Path) -> N
         profile_stability=_profile_stability(),
         batch_invariance=_batch_invariance(),
         score_calibration=_score_calibration(),
+        conv2d_accumulation_probe=_conv2d_accumulation_probe(),
         require_score_calibration=True,
+        require_conv2d_accumulation_probe=True,
     )
     contract_path = tmp_path / "contract.json"
     out_path = tmp_path / "bundle.json"
@@ -805,7 +811,9 @@ def test_mlx_production_contract_bundle_cli_validates_dataset_coverage(
         profile_stability=_profile_stability(),
         batch_invariance=_batch_invariance(),
         score_calibration=_score_calibration(),
+        conv2d_accumulation_probe=_conv2d_accumulation_probe(),
         require_score_calibration=True,
+        require_conv2d_accumulation_probe=True,
     )
     contract_path = tmp_path / "contract.json"
     dataset_path = tmp_path / "dataset.json"
@@ -856,7 +864,9 @@ def test_mlx_production_contract_bundle_cli_blocks_uncovered_dataset_row(
         profile_stability=_profile_stability(),
         batch_invariance=_batch_invariance(),
         score_calibration=_score_calibration(),
+        conv2d_accumulation_probe=_conv2d_accumulation_probe(),
         require_score_calibration=True,
+        require_conv2d_accumulation_probe=True,
     )
     row = _mlx_dataset_row_from_contract(contract)
     row["source_pair_window"] = [1, 2]
