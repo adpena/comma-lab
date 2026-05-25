@@ -78,6 +78,8 @@ PR95_STAGE_MODULES: dict[int, str] = {
     3: "stage3_v332_smooth",
     4: "stage4_v332_qat",
     5: "stage5_c1a_l7",
+    6: "stage6_lambda_sweep",
+    7: "stage7_sigma_sweep",
     8: "stage8_muon_finetune",
 }
 PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS: dict[int, str] = {
@@ -86,6 +88,8 @@ PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS: dict[int, str] = {
     3: "pr95_stage3_adamw_baseline_mlx",
     4: "pr95_stage4_adamw_qat_mlx",
     5: "pr95_stage5_adamw_baseline_mlx",
+    6: "pr95_stage6_adamw_lambda_sweep_mlx",
+    7: "pr95_stage7_adamw_sigma_sweep_mlx",
     8: "pr95_stage8_muon_adamw_mlx",
 }
 PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY = "implemented_mlx_local_timing_proxy"

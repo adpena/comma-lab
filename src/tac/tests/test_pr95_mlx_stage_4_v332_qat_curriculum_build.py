@@ -95,9 +95,9 @@ def test_unsupported_stage_raises_value_error_with_canonical_supported_list() ->
     """
 
     with pytest.raises(ValueError, match=r"supported PR95 MLX timing stages"):
-        stage_smoke_config(6)
+        stage_smoke_config(9)
     with pytest.raises(ValueError, match=r"supported PR95 MLX timing stages"):
-        pr95_default_optimizer_descriptor_id(7)
+        pr95_default_optimizer_descriptor_id(9)
 
 
 # ---------------------------------------------------------------------------

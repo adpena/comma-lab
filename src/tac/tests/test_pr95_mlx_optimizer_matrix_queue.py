@@ -295,17 +295,18 @@ def test_pr95_mlx_optimizer_matrix_full_source_video_control_profile(
     queue = json.loads(queue_path.read_text(encoding="utf-8"))
 
     assert manifest["control_profile"] == "full_pr95_source_video_runtime"
-    # Stage 4 added per PR95-STAGE-4-MLX-BUILD landing
-    # `.omx/research/pr95_mlx_stage_4_v332_qat_curriculum_build_landed_20260525.md`;
-    # canonical Stage 1+2+3+4+5+8 spine.
-    assert manifest["stage_indices"] == [1, 2, 3, 4, 5, 8]
-    assert manifest["plan_count"] == 6
+    # Stage 6 + Stage 7 close the PR95 source curriculum spine before
+    # Stage 8 Muon finetune.
+    assert manifest["stage_indices"] == [1, 2, 3, 4, 5, 6, 7, 8]
+    assert manifest["plan_count"] == 8
     assert {row["optimizer_descriptor_id"] for row in manifest["plans"]} == {
         "pr95_stage1_adamw_baseline_mlx",
         "pr95_stage2_adamw_baseline_mlx",
         "pr95_stage3_adamw_baseline_mlx",
         "pr95_stage4_adamw_qat_mlx",
         "pr95_stage5_adamw_baseline_mlx",
+        "pr95_stage6_adamw_lambda_sweep_mlx",
+        "pr95_stage7_adamw_sigma_sweep_mlx",
         "pr95_stage8_muon_adamw_mlx",
     }
     assert manifest["batch_size"] == 1
@@ -320,8 +321,8 @@ def test_pr95_mlx_optimizer_matrix_full_source_video_control_profile(
     assert manifest["pytorch_export_sample_indices"] == [0]
     assert manifest["pytorch_export_mlx_device"] == "cpu"
     assert queue["controls"]["max_concurrency"]["local_mlx"] == 1
-    # Stage 4 added per PR95-STAGE-4-MLX-BUILD landing; 6 experiments emitted.
-    assert len(queue["experiments"]) == 6
+    # Stage 7 added alongside Stage 6; full profile emits all 8 stages.
+    assert len(queue["experiments"]) == 8
     assert all(
         "--train-on-source-video-pairs" in experiment["steps"][0]["command"]
         for experiment in queue["experiments"]

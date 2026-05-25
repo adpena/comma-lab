@@ -792,6 +792,108 @@ def default_optimizer_scheduler_descriptors() -> tuple[OptimizerSchedulerDescrip
             intended_use="pr95_hnerv_mlx_synthetic_timing_smoke",
         ),
         OptimizerSchedulerDescriptor(
+            descriptor_id="pr95_stage6_adamw_lambda_sweep_mlx",
+            optimizer="mlx.optimizers.AdamW",
+            scheduler="pr95_stage_static_lr",
+            optimizer_config={
+                "use_muon": False,
+                # Stage 6 lambda_sweep continues Stage 5 cosine schedule per the
+                # recovered public PR 95 source
+                # (`.omx/research/pr95_8stage_curriculum_forensic_20260513.md`
+                # line 36 + `.omx/research/pr95_curriculum_recovery_20260513_codex.md`
+                # line 100). AdamW base LR = 3e-5 (same as Stage 5); cosine
+                # continuation is a runtime scheduler concern, not a descriptor
+                # concern.
+                "adamw_lr": 3e-5,
+                "latent_lr_mult": 10.0,
+                "adamw_betas": [0.9, 0.999],
+                "adamw_eps": 1e-8,
+                "adamw_weight_decay": 0.0,
+                "grad_clip": 1.0,
+            },
+            scheduler_config={"stage_indices": [6], "source_pr": 95},
+            training_config={
+                "backend_status": PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY,
+                "training_fidelity": PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY,
+                "supported_training_fidelities": list(
+                    PR95_MLX_SUPPORTED_TRAINING_FIDELITIES
+                ),
+                "supported_loss_surfaces": list(PR95_MLX_SUPPORTED_LOSS_SURFACES),
+                "source_faithful_training": False,
+                "source_faithfulness_blockers": list(
+                    PR95_MLX_SOURCE_FAITHFUL_BLOCKERS
+                ),
+                "pr95_stage_indices": [6],
+                "stage_modules": ["stage6_lambda_sweep"],
+                # Stage 6 per published PR 95 curriculum: 2000 epochs canonical
+                # (sister Stage 4 landing memo line 173 + forensic memo line 36
+                # + codex recovery memo line 100). Sweep parameter = C1a λ
+                # (stage_cat_lambda) 0.01 → 0.02 vs Stage 5; σ preserved at 0.2.
+                "stage_epochs": 2000,
+                "stage_loss_family": "l7_softplus_seg_loss",
+                "stage_cat_sigma": 0.2,
+                "stage_cat_lambda": 0.02,
+                "stage_uses_qat": True,
+                "stage_uses_muon": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            parameter_group_lr_policy=EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY,
+            intended_use="pr95_hnerv_mlx_synthetic_timing_smoke",
+        ),
+        OptimizerSchedulerDescriptor(
+            descriptor_id="pr95_stage7_adamw_sigma_sweep_mlx",
+            optimizer="mlx.optimizers.AdamW",
+            scheduler="pr95_stage_static_lr",
+            optimizer_config={
+                "use_muon": False,
+                # Stage 7 sigma_sweep continues the Stage 6 L7/C1a schedule per
+                # the recovered public PR 95 source
+                # (`.omx/research/pr95_8stage_curriculum_forensic_20260513.md`
+                # line 37 + `.omx/research/pr95_curriculum_recovery_20260513_codex.md`
+                # line 101). AdamW base LR remains 3e-5; sigma is the swept
+                # regularizer bandwidth, not a new optimizer family.
+                "adamw_lr": 3e-5,
+                "latent_lr_mult": 10.0,
+                "adamw_betas": [0.9, 0.999],
+                "adamw_eps": 1e-8,
+                "adamw_weight_decay": 0.0,
+                "grad_clip": 1.0,
+            },
+            scheduler_config={"stage_indices": [7], "source_pr": 95},
+            training_config={
+                "backend_status": PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY,
+                "training_fidelity": PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY,
+                "supported_training_fidelities": list(
+                    PR95_MLX_SUPPORTED_TRAINING_FIDELITIES
+                ),
+                "supported_loss_surfaces": list(PR95_MLX_SUPPORTED_LOSS_SURFACES),
+                "source_faithful_training": False,
+                "source_faithfulness_blockers": list(
+                    PR95_MLX_SOURCE_FAITHFUL_BLOCKERS
+                ),
+                "pr95_stage_indices": [7],
+                "stage_modules": ["stage7_sigma_sweep"],
+                # Stage 7 per recovered PR 95 curriculum: tighten C1a sigma
+                # from 0.2 to 0.1 after Stage 6's lambda sweep; lambda remains
+                # 0.02 and QAT remains enabled.
+                "stage_epochs": 3000,
+                "stage_loss_family": "l7_softplus_seg_loss",
+                "stage_cat_sigma": 0.1,
+                "stage_cat_lambda": 0.02,
+                "stage_uses_qat": True,
+                "stage_uses_muon": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            parameter_group_lr_policy=EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY,
+            intended_use="pr95_hnerv_mlx_synthetic_timing_smoke",
+        ),
+        OptimizerSchedulerDescriptor(
             descriptor_id="pr95_stage8_muon_adamw_mlx",
             optimizer="tac.local_acceleration.pr95_hnerv_mlx.Muon+AdamW",
             scheduler="pr95_stage_static_lr",
