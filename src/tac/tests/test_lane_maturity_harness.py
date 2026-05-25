@@ -207,6 +207,51 @@ def test_validate_passes_when_evidence_file_exists(tmp_path, monkeypatch):
     assert lm.validate_registry(data2, repo_root=repo) == []
 
 
+def test_validate_rejects_l2_exact_readiness_refusal_evidence(
+    tmp_path,
+    monkeypatch,
+):
+    repo = _make_repo(tmp_path, [])
+    evidence = repo / ".omx" / "research" / "package_report.json"
+    evidence.parent.mkdir(parents=True, exist_ok=True)
+    evidence.write_text(
+        json.dumps(
+            {
+                "schema_version": "example_package_report.v1",
+                "exact_readiness_refusal": {
+                    "ready": False,
+                    "blockers": ["requires_exact_auth_eval"],
+                },
+            }
+        )
+    )
+    gates = _empty_gates()
+    gates["impl_complete"] = {"status": True, "evidence": "src/tac/fake.py"}
+    gates["real_archive_empirical"] = {
+        "status": True,
+        "evidence": ".omx/research/package_report.json",
+    }
+    (repo / "src" / "tac").mkdir(parents=True, exist_ok=True)
+    (repo / "src" / "tac" / "fake.py").write_text("# fake\n")
+    data = json.loads((repo / lm.REGISTRY_REL).read_text())
+    data["lanes"].append(
+        {
+            "id": "lane_refusal",
+            "name": "Refusal",
+            "phase": 2,
+            "level": 2,
+            "gates": gates,
+            "notes": "",
+        }
+    )
+    (repo / lm.REGISTRY_REL).write_text(json.dumps(data))
+    monkeypatch.setattr(lm, "REPO_ROOT", repo)
+
+    errors = lm.validate_registry(lm.load_registry(), repo_root=repo)
+
+    assert any("exact_readiness_refusal.ready=false" in e for e in errors), errors
+
+
 def test_validate_descriptive_text_evidence_no_path_check(tmp_path, monkeypatch):
     """Evidence that doesn't look like a path skips file-existence check."""
     repo = _make_repo(tmp_path, [

@@ -2638,6 +2638,86 @@
             {
               "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/runtime_consumption_proof.json",
               "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_mlx_pytorch_per_op_drift.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_mlx_pytorch_per_op_drift_report.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_mlx_pytorch_per_op_drift.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_mlx_pytorch_per_op_drift.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_mlx_pytorch_per_op_drift.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_export_forward_parity_with_decoder_trace.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_mlx_archive_pytorch_export_bridge.v1",
+              "key": "schema_version",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_export_forward_parity_with_decoder_trace.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_export_forward_parity_with_decoder_trace.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_export_forward_parity_with_decoder_trace.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_mlx_decoder_trace.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_archive_mlx_decoder_trace.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_mlx_decoder_trace.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_mlx_decoder_trace.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_mlx_decoder_trace.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_packaged_submission_report.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_mlx_pytorch_state_dict_to_contest_archive.v1",
+              "key": "schema_version",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_packaged_submission_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_packaged_submission_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_packaged_submission_report.json",
+              "type": "json_false_authority"
             }
           ],
           "requires": [],
@@ -2654,7 +2734,11 @@
               ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_public_archive_export.json",
               ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_pytorch_state_dict.pt",
               ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_export_forward_parity.json",
-              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/runtime_consumption_proof.json"
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/runtime_consumption_proof.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_mlx_pytorch_per_op_drift.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_export_forward_parity_with_decoder_trace.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_mlx_decoder_trace.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_packaged_submission_report.json"
             ],
             "include_postcondition_paths": true,
             "input_artifact_paths": [],

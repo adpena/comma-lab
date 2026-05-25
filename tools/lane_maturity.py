@@ -300,6 +300,30 @@ def compute_level(gates: dict[str, dict[str, Any]]) -> int:
     return 0
 
 
+def _evidence_exact_readiness_refusal(
+    evidence: str,
+    *,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    path_text = extract_filepath(evidence)
+    if path_text is None and evidence:
+        path_text = evidence.split()[0]
+    if not path_text:
+        return None
+    path = Path(path_text)
+    candidate = path if path.is_absolute() else repo_root / path
+    if candidate.suffix != ".json" or not candidate.is_file():
+        return None
+    try:
+        payload = json.loads(candidate.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    refusal = payload.get("exact_readiness_refusal")
+    return refusal if isinstance(refusal, dict) else None
+
+
 # ── Validation ───────────────────────────────────────────────────────────
 
 
@@ -352,6 +376,24 @@ def validate_registry(
                 f"level {computed} (gate count: "
                 f"{sum(1 for g in GATES if gates.get(g, {}).get('status') is True)}/{len(GATES)})"
             )
+        real_archive_gate = gates.get("real_archive_empirical", {})
+        if (
+            isinstance(stored, int)
+            and stored >= 2
+            and isinstance(real_archive_gate, dict)
+            and real_archive_gate.get("status") is True
+        ):
+            refusal = _evidence_exact_readiness_refusal(
+                str(real_archive_gate.get("evidence") or ""),
+                repo_root=root,
+            )
+            if refusal is not None and refusal.get("ready") is False:
+                errors.append(
+                    f"{lid}: L2+ real_archive_empirical evidence has "
+                    "exact_readiness_refusal.ready=false; unmark "
+                    "real_archive_empirical or use a non-authority packaging "
+                    "ledger instead"
+                )
 
         # Evidence path heuristic — if it LOOKS like a path, it MUST exist
         for gname, g in gates.items():

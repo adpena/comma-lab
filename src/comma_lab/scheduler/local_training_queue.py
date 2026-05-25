@@ -20,15 +20,20 @@ SUPPORTED_PLAN_SCHEMAS = frozenset(
         "local_training_execution_plan.v1",
         "representation_training_probe_plan_v1",
         "pr95_local_training_probe_plan_v1",
+        "pr95_mlx_long_training_plan.v1",
     }
 )
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
     "score_claim_valid": False,
+    "score_claim_eligible": False,
     "promotion_eligible": False,
     "promotable": False,
     "rank_or_kill_eligible": False,
     "ready_for_exact_eval_dispatch": False,
+    "reproduction_claim": False,
+    "pr95_1to1_reproduction_claim": False,
+    "reproduction_equivalence": False,
 }
 
 
@@ -209,7 +214,7 @@ def _validate_command_writes_declared_outputs(
     output_manifest = _resolve_output_path(execution.get("output_manifest"), repo_root=repo_root)
     output_dir_value = _flag_value(command, "--output-dir")
     matching_output = False
-    for flag in ("--output-manifest", "--manifest-out", "--output"):
+    for flag in ("--output-manifest", "--manifest-out", "--output", "--output-report"):
         value = _flag_value(command, flag)
         if value is None:
             continue
@@ -410,7 +415,11 @@ def build_local_training_execution_queue(
             if isinstance(path_value, str):
                 extra_path = _resolve_output_path(path_value, repo_root=repo)
                 extra_key = extra_path.expanduser().resolve(strict=False).as_posix()
-                if extra_key in seen_output_paths and extra_key not in extra_artifact_keys:
+                if (
+                    extra_key in seen_output_paths
+                    and extra_key != output_key
+                    and extra_key not in extra_artifact_keys
+                ):
                     raise ExperimentQueueError(
                         f"local_training_plan[{index}]: duplicate extra artifact "
                         f"{extra_key!r}"

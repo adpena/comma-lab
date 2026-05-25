@@ -16,6 +16,8 @@ from comma_lab.scheduler.queue_feedback_replan_policy import (
     build_queue_observation_recovery_plan,
 )
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
 
 def _queue(artifact_path: Path) -> dict[str, object]:
     return {
@@ -642,6 +644,180 @@ def test_observer_surfaces_pr95_mlx_package_report_readiness(
         "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
         "requires_paired_contest_cpu_and_cuda_auth_eval_before_score_claim",
     ]
+
+
+def test_observer_surfaces_pr95_mlx_long_training_plan(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "long_training_plan.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "pr95_mlx_long_training_plan.v1",
+                "mode": "plan_only",
+                "lane_id": "lane_pr95_mlx_long_training_test",
+                "source_video_sha256": "a" * 64,
+                "source_video_frame_count": 1200,
+                "checkpoint_root": "experiments/results/pr95_mlx_long_training",
+                "telemetry_path": ".omx/state/pr95_mlx_long_training.jsonl",
+                "candidate_registry_count": 6,
+                "total_epochs": 3000,
+                "smoke_mode": True,
+                "training_fidelity_class": "rgb_frame_mse_local_mlx_research_mvp",
+                "training_fidelity_status": (
+                    "local_rgb_frame_mse_mvp_not_segnet_posenet_scorer_faithful"
+                ),
+                "reproduction_equivalence": False,
+                "reproduction_claim": False,
+                "pr95_1to1_reproduction_claim": False,
+                "reproduction_equivalence_class": "not_pr95_1to1_rgb_mse_mvp",
+                "exact_readiness_refusal": {
+                    "schema": "exact_readiness_refusal.v1",
+                    "ready": False,
+                    "blockers": [
+                        "local_mlx_long_training_is_research_signal_not_contest_auth_eval",
+                        "requires_paired_contest_cpu_and_cuda_auth_eval_before_score_claim",
+                    ],
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "promotable": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+    queue["experiments"][0]["steps"][0]["telemetry"] = {
+        "artifact_paths": [artifact.as_posix()],
+    }
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'running',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-25T18:00:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+    )
+    artifact_record = observation["running_steps"][0]["expected_artifacts"][0]
+
+    assert artifact_record["json_schema"] == "pr95_mlx_long_training_plan.v1"
+    assert artifact_record["pr95_mlx_long_training_plan"] is True
+    assert artifact_record["mode"] == "plan_only"
+    assert artifact_record["lane_id"] == "lane_pr95_mlx_long_training_test"
+    assert (
+        artifact_record["training_fidelity_class"]
+        == "rgb_frame_mse_local_mlx_research_mvp"
+    )
+    assert artifact_record["candidate_registry_count"] == 6
+    assert artifact_record["reproduction_equivalence"] is False
+    assert artifact_record["reproduction_claim"] is False
+    assert artifact_record["pr95_1to1_reproduction_claim"] is False
+    assert artifact_record["reproduction_equivalence_class"] == (
+        "not_pr95_1to1_rgb_mse_mvp"
+    )
+    assert artifact_record["ready_for_exact_eval_dispatch"] is False
+    assert artifact_record["exact_readiness_refusal"]["ready"] is False
+    assert artifact_record["readiness_blockers"] == [
+        "local_mlx_long_training_is_research_signal_not_contest_auth_eval",
+        "requires_paired_contest_cpu_and_cuda_auth_eval_before_score_claim",
+    ]
+
+
+def test_observer_real_pr95_queue_owns_drift_trace_and_package_artifacts(
+    tmp_path: Path,
+) -> None:
+    queue_path = (
+        REPO_ROOT
+        / ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z"
+        / "pr95_mlx_full_profile_queue.json"
+    )
+    queue = json.loads(queue_path.read_text(encoding="utf-8"))
+    stage8 = queue["experiments"][-1]
+    step = stage8["steps"][0]
+    artifact_paths = set(step["telemetry"]["artifact_paths"])
+    expected = {
+        ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/"
+        "matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/"
+        "pr95_mlx_pytorch_per_op_drift.json",
+        ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/"
+        "matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/"
+        "pytorch_export_forward_parity_with_decoder_trace.json",
+        ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/"
+        "matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/"
+        "pytorch_mlx_decoder_trace.json",
+        ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/"
+        "matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/"
+        "pr95_packaged_submission_report.json",
+    }
+    assert expected <= artifact_paths
+
+    state = tmp_path / "queue.sqlite"
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'running',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-25T18:00:00Z'
+            WHERE queue_id = ?
+              AND experiment_id = ?
+              AND step_id = ?
+            """,
+            (
+                json.dumps({"command": step["command"]}),
+                queue["queue_id"],
+                stage8["id"],
+                step["id"],
+            ),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=REPO_ROOT,
+        tail_lines=1,
+    )
+    records = {
+        record["path"]: record
+        for record in observation["running_steps"][0]["expected_artifacts"]
+    }
+
+    package = records[
+        ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/"
+        "matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/"
+        "pr95_packaged_submission_report.json"
+    ]
+    trace = records[
+        ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/"
+        "matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/"
+        "pytorch_mlx_decoder_trace.json"
+    ]
+    assert package["pr95_mlx_package_report"] is True
+    assert package["ready_for_exact_eval_dispatch"] is False
+    assert trace["json_schema"] == "pr95_hnerv_public_archive_mlx_decoder_trace.v1"
+    assert trace["ready_for_exact_eval_dispatch"] is False
 
 
 def test_observer_health_marks_blocked_steps(tmp_path: Path) -> None:

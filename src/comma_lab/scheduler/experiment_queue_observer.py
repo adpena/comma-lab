@@ -31,6 +31,7 @@ OBSERVATION_SCHEMA = "experiment_queue_observation.v1"
 FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA = "family_agnostic_materializer_empirical_observation.v1"
 FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA = "family_agnostic_materializer_empirical_sweep.v1"
 PR95_MLX_PACKAGE_SCHEMA = "pr95_mlx_pytorch_state_dict_to_contest_archive.v1"
+PR95_MLX_LONG_TRAINING_PLAN_SCHEMA = "pr95_mlx_long_training_plan.v1"
 FAMILY_AGNOSTIC_MATERIALIZER_CANDIDATE_SCHEMAS = frozenset(
     {
         "archive_section_entropy_recode_candidate.v1",
@@ -186,6 +187,40 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
                 if isinstance(runtime_files, Mapping):
                     record["runtime_file_count"] = len(runtime_files)
                     record["runtime_files_emitted"] = sorted(str(key) for key in runtime_files)
+                refusal = payload.get("exact_readiness_refusal")
+                if isinstance(refusal, Mapping):
+                    blockers = [
+                        str(item)
+                        for item in refusal.get("blockers", [])
+                        if str(item)
+                    ]
+                    record["exact_readiness_refusal"] = {
+                        "ready": refusal.get("ready"),
+                        "blockers": blockers,
+                    }
+                    if blockers and "readiness_blockers" not in record:
+                        record["readiness_blockers"] = blockers
+            if record.get("json_schema") == PR95_MLX_LONG_TRAINING_PLAN_SCHEMA:
+                record["pr95_mlx_long_training_plan"] = True
+                for key in (
+                    "mode",
+                    "lane_id",
+                    "source_video_sha256",
+                    "source_video_frame_count",
+                    "checkpoint_root",
+                    "telemetry_path",
+                    "candidate_registry_count",
+                    "total_epochs",
+                    "smoke_mode",
+                    "training_fidelity_class",
+                    "training_fidelity_status",
+                    "reproduction_equivalence",
+                    "reproduction_claim",
+                    "pr95_1to1_reproduction_claim",
+                    "reproduction_equivalence_class",
+                ):
+                    if key in payload:
+                        record[key] = payload[key]
                 refusal = payload.get("exact_readiness_refusal")
                 if isinstance(refusal, Mapping):
                     blockers = [
