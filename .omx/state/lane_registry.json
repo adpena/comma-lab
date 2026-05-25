@@ -54017,7 +54017,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/comma_lab/scheduler/queue_feedback_replan_policy.py"
+          "evidence": "queue_observation_recovery_queue_builder_and_runner_wiring"
         },
         "real_archive_empirical": {
           "status": false,
@@ -54033,7 +54033,7 @@
         },
         "strict_preflight": {
           "status": true,
-          "evidence": "src/tac/tests/test_queue_feedback_replan_policy.py"
+          "evidence": "pytest_queue_feedback_recovery_runner_operator_106_passed"
         },
         "three_clean_review": {
           "status": false,
@@ -54041,7 +54041,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_queue_observation_recovery_queue_20260525T033022Z_codex.md"
+          "evidence": ".omx/research/codex_findings_queue_observation_recovery_queue_20260525T033211Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -54099,5 +54099,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T03:31:04Z"
+  "updated_at": "2026-05-25T03:32:39Z"
 }
