@@ -28,7 +28,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
     parser.add_argument("--work-queue", type=Path, default=None)
-    parser.add_argument("--state", type=Path, default=None)
+    parser.add_argument(
+        "--state",
+        type=Path,
+        default=None,
+        help="Experiment queue SQLite state path; requires --queue-id.",
+    )
     parser.add_argument("--queue-id", default=None)
     parser.add_argument("--chain-manifest", type=Path, action="append", default=[])
     parser.add_argument("--chain-root", type=Path, action="append", default=[])
@@ -133,6 +138,8 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(
             "provide at least one of --work-queue, --chain-manifest, or --chain-root"
         )
+    if args.state is not None and not str(args.queue_id or "").strip():
+        raise SystemExit("--queue-id is required when --state is provided")
     bridge_option_without_bridge = (
         args.exact_readiness_out_dir is None
         and (

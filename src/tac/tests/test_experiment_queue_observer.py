@@ -97,6 +97,9 @@ def test_observer_surfaces_running_step_log_tail_and_artifacts(tmp_path: Path) -
     running = observation["running_steps"][0]
 
     assert observation["schema"] == "experiment_queue_observation.v1"
+    assert observation["healthy"] is True
+    assert observation["blockers"] == []
+    assert observation["blocker_count"] == 0
     assert observation["auto_parallelism"]["local_only"] == {
         "max_parallel": 1,
         "resource_limits": {"local_cpu": 1},
@@ -114,6 +117,7 @@ def test_observer_surfaces_running_step_log_tail_and_artifacts(tmp_path: Path) -
     assert "observer_test" in markdown
     assert "local_mlx" in markdown
     assert "smoke" in markdown
+    assert "healthy" in markdown
 
 
 def test_observer_marks_existing_artifact_failed_when_postcondition_fails(
@@ -155,6 +159,11 @@ def test_observer_marks_existing_artifact_failed_when_postcondition_fails(
     assert artifact_record["exists"] is True
     assert artifact_record["json_schema"] == "wrong.v1"
     assert artifact_record["postcondition_passed"] is False
+    assert observation["healthy"] is False
+    assert observation["blockers"] == [
+        "experiment_queue_observation_artifact_postcondition_failures:1"
+    ]
+    assert observation["blocker_count"] == 1
     markdown = render_observation_markdown(observation)
     assert "0/1" in markdown
 
@@ -193,6 +202,8 @@ def test_observer_reports_definition_drift_without_mutating_state(
 
     assert observation["observe_read_only"] is True
     assert observation["definition_drift"]["changed_step_count"] == 1
+    assert observation["healthy"] is False
+    assert "experiment_queue_observation_changed_steps:1" in observation["blockers"]
     with connect_state(state) as conn:
         after = conn.execute(
             """
@@ -276,3 +287,167 @@ def test_observer_surfaces_read_only_performance_telemetry(
     assert "runtime_policy" in markdown
     assert "telemetry_only" in markdown
     assert "score_claim" in markdown
+
+
+def test_observer_health_marks_orphaned_steps_with_details_when_requested(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "artifact.json"
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+
+    changed_queue = _queue(artifact)
+    changed_queue["experiments"][0]["steps"] = []
+
+    observation = observe_experiment_queue(
+        changed_queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+        include_orphans=True,
+    )
+
+    assert observation["healthy"] is False
+    assert observation["orphaned_step_count"] == 1
+    assert "experiment_queue_observation_orphaned_steps:1" in observation["blockers"]
+    assert observation["orphaned_steps"][0]["experiment_id"] == "exp0"
+    assert observation["orphaned_steps"][0]["step_id"] == "smoke"
+    assert observation["orphaned_steps"][0]["expected_artifacts"] == []
+
+
+def test_observer_health_marks_failed_steps(tmp_path: Path) -> None:
+    artifact = tmp_path / "artifact.json"
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'failed',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-23T00:00:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+    )
+
+    assert observation["healthy"] is False
+    assert "experiment_queue_observation_failed_steps:1" in observation["blockers"]
+    assert observation["failed_steps"][0]["step_id"] == "smoke"
+
+
+def test_observer_health_marks_blocked_steps(tmp_path: Path) -> None:
+    artifact = tmp_path / "artifact.json"
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'blocked',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-23T00:00:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (
+                json.dumps(
+                    {
+                        "reason": "fixture_dependency_missing",
+                        "command": ["python", "-c", "print('hello queue')"],
+                    }
+                ),
+            ),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+    )
+
+    assert observation["healthy"] is False
+    assert "experiment_queue_observation_blocked_steps:1" in observation["blockers"]
+    assert observation["blocked_steps"][0]["step_id"] == "smoke"
+
+
+def test_observer_health_marks_succeeded_step_with_missing_artifact(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "artifact.json"
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-23T00:00:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+    )
+
+    failed_step = observation["succeeded_artifact_failure_steps"][0]
+    failed_artifact = failed_step["expected_artifacts"][0]
+    assert observation["healthy"] is False
+    assert "experiment_queue_observation_artifact_postcondition_failures:1" in (
+        observation["blockers"]
+    )
+    assert failed_step["step_id"] == "smoke"
+    assert failed_artifact["exists"] is False
+    assert failed_artifact["postcondition_passed"] is False
+
+
+def test_observer_health_marks_missing_state_fail_closed(tmp_path: Path) -> None:
+    artifact = tmp_path / "artifact.json"
+    state = tmp_path / "missing.sqlite"
+    queue = _queue(artifact)
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+    )
+
+    assert observation["healthy"] is False
+    assert observation["observe_read_only"] is True
+    assert observation["blocker_count"] >= 1
+    assert "experiment_queue_observation_state_missing" in observation["blockers"]
+    assert "experiment_queue_observation_missing_steps:1" in observation["blockers"]

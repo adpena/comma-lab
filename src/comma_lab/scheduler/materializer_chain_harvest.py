@@ -106,6 +106,10 @@ def harvest_materializer_chain_manifests(
 
     if top_k is not None and (isinstance(top_k, bool) or top_k < 1):
         raise ExperimentQueueError("top_k must be >= 1 when provided")
+    if experiment_queue_state_path is not None and not str(experiment_queue_id or "").strip():
+        raise ExperimentQueueError(
+            "experiment_queue_id is required when experiment_queue_state_path is provided"
+        )
     repo = Path(repo_root)
     state_rows = _load_state_rows(
         experiment_queue_state_path,
@@ -819,8 +823,6 @@ def _state_blockers(
     require_succeeded_state: bool,
     state_filter_active: bool,
 ) -> list[str]:
-    if not require_succeeded_state:
-        return []
     state_rows = row.get("state_rows")
     work_id = row.get("work_id")
     if not isinstance(work_id, str) or not work_id:
@@ -828,7 +830,11 @@ def _state_blockers(
             return ["experiment_queue_state_work_id_missing_for_manifest"]
         return []
     if not isinstance(state_rows, list) or not state_rows:
-        return [f"experiment_queue_state_missing:{work_id}"]
+        if state_filter_active:
+            return [f"experiment_queue_state_missing:{work_id}"]
+        return []
+    if not require_succeeded_state:
+        return []
     statuses = ordered_unique(
         str(item.get("status") or "") for item in state_rows if isinstance(item, Mapping)
     )

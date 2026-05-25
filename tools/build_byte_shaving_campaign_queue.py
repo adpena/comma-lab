@@ -261,6 +261,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="byte_shaving_materializer_local_proof_chain",
     )
     parser.add_argument("--materializer-execution-lane-id", default=None)
+    parser.add_argument(
+        "--materializer-execution-state",
+        type=Path,
+        default=None,
+        help=(
+            "State path generated exact-readiness harvest steps must read; "
+            "defaults to the canonical queue state path."
+        ),
+    )
     parser.add_argument("--materializer-execution-limit", type=int, default=None)
     parser.add_argument("--materializer-execution-timeout-seconds", type=int, default=0)
     parser.add_argument(
@@ -547,6 +556,7 @@ def main(argv: list[str] | None = None) -> int:
                 repo_root=args.repo_root,
                 lane_id=args.materializer_execution_lane_id,
                 source_work_queue_path=args.materializer_work_queue_out,
+                source_state_path=args.materializer_execution_state,
                 local_cpu_concurrency=local_cpu_concurrency,
                 resource_concurrency=_parse_resource_concurrency(
                     args.materializer_resource_concurrency

@@ -347,24 +347,36 @@ def observe_experiment_queue(
     lookup = _experiment_lookup(queue)
     processes = _process_table()
     active_steps: list[dict[str, Any]] = []
+    health_steps: list[dict[str, Any]] = []
+    succeeded_artifact_failure_steps: list[dict[str, Any]] = []
     for step_state in summary.get("steps", []):
         if not isinstance(step_state, Mapping):
             continue
-        if step_state.get("status") not in {"running", "failed", "queued"}:
+        status = step_state.get("status")
+        if status not in {"running", "failed", "queued", "blocked", "succeeded"}:
             continue
         key = (
             str(step_state.get("experiment_id") or ""),
             str(step_state.get("step_id") or ""),
         )
-        active_steps.append(
-            _step_observation(
-                step_state,
-                lookup.get(key),
-                repo_root=repo_root,
-                processes=processes,
-                tail_lines=tail_lines,
-            )
+        step_observation = _step_observation(
+            step_state,
+            lookup.get(key),
+            repo_root=repo_root,
+            processes=processes,
+            tail_lines=0 if status == "succeeded" else tail_lines,
         )
+        if status == "succeeded":
+            artifacts = step_observation.get("expected_artifacts") or []
+            if any(
+                isinstance(item, Mapping) and item.get("postcondition_passed") is False
+                for item in artifacts
+            ):
+                succeeded_artifact_failure_steps.append(step_observation)
+                health_steps.append(step_observation)
+            continue
+        active_steps.append(step_observation)
+        health_steps.append(step_observation)
     orphaned = []
     if include_orphans:
         for step_state in summary.get("orphaned_steps", []):
@@ -382,6 +394,14 @@ def observe_experiment_queue(
     running = [step for step in active_steps if step.get("status") == "running"]
     failed = [step for step in active_steps if step.get("status") == "failed"]
     queued = [step for step in active_steps if step.get("status") == "queued"]
+    blocked = [step for step in active_steps if step.get("status") == "blocked"]
+    blockers = _observation_blockers(
+        definition_drift=definition_drift,
+        performance=performance,
+        runtime_policy=runtime_policy,
+        orphaned_step_count=summary.get("orphaned_step_count"),
+        active_steps=health_steps,
+    )
     return {
         "schema": OBSERVATION_SCHEMA,
         "generated_at_utc": _utc_now(),
@@ -390,6 +410,9 @@ def observe_experiment_queue(
         "state": _repo_rel(state_path, repo_root),
         "status_counts": summary.get("status_counts", {}),
         "observe_read_only": True,
+        "healthy": not blockers,
+        "blockers": blockers,
+        "blocker_count": len(blockers),
         "definition_drift": definition_drift,
         "performance": performance,
         "runtime_policy": runtime_policy,
@@ -400,6 +423,8 @@ def observe_experiment_queue(
         "running_steps": running,
         "failed_steps": failed,
         "queued_steps": queued,
+        "blocked_steps": blocked,
+        "succeeded_artifact_failure_steps": succeeded_artifact_failure_steps,
         "orphaned_steps": orphaned,
         "suggested_commands": {
             "refresh": (
@@ -413,6 +438,78 @@ def observe_experiment_queue(
     }
 
 
+def _observation_blockers(
+    *,
+    definition_drift: Mapping[str, Any],
+    performance: Mapping[str, Any],
+    runtime_policy: Mapping[str, Any],
+    orphaned_step_count: Any,
+    active_steps: Sequence[Mapping[str, Any]],
+) -> list[str]:
+    blockers: list[str] = []
+    if definition_drift.get("state_missing") is True:
+        blockers.append("experiment_queue_observation_state_missing")
+    for key, blocker in (
+        ("missing_step_count", "experiment_queue_observation_missing_steps"),
+        ("changed_step_count", "experiment_queue_observation_changed_steps"),
+        (
+            "missing_hash_step_count",
+            "experiment_queue_observation_missing_step_hashes",
+        ),
+    ):
+        try:
+            count = int(definition_drift.get(key) or 0)
+        except (TypeError, ValueError):
+            count = 0
+        if count > 0:
+            blockers.append(f"{blocker}:{count}")
+    if performance.get("state_missing") is True:
+        blockers.append("experiment_queue_observation_performance_state_missing")
+    if runtime_policy.get("state_missing") is True:
+        blockers.append("experiment_queue_observation_runtime_policy_state_missing")
+    try:
+        orphan_count = int(orphaned_step_count or 0)
+    except (TypeError, ValueError):
+        orphan_count = 0
+    if orphan_count > 0:
+        blockers.append(f"experiment_queue_observation_orphaned_steps:{orphan_count}")
+    failed_steps = [
+        step
+        for step in active_steps
+        if isinstance(step, Mapping) and step.get("status") == "failed"
+    ]
+    if failed_steps:
+        blockers.append(f"experiment_queue_observation_failed_steps:{len(failed_steps)}")
+    blocked_steps = [
+        step
+        for step in active_steps
+        if isinstance(step, Mapping) and step.get("status") == "blocked"
+    ]
+    if blocked_steps:
+        blockers.append(f"experiment_queue_observation_blocked_steps:{len(blocked_steps)}")
+    artifact_failures = 0
+    for step in active_steps:
+        status = step.get("status") if isinstance(step, Mapping) else None
+        artifacts = step.get("expected_artifacts") if isinstance(step, Mapping) else None
+        if not isinstance(artifacts, Sequence) or isinstance(
+            artifacts,
+            (str, bytes, bytearray),
+        ):
+            continue
+        artifact_failures += sum(
+            1
+            for artifact in artifacts
+            if isinstance(artifact, Mapping)
+            and (status == "succeeded" or artifact.get("exists") is True)
+            and artifact.get("postcondition_passed") is False
+        )
+    if artifact_failures:
+        blockers.append(
+            f"experiment_queue_observation_artifact_postcondition_failures:{artifact_failures}"
+        )
+    return blockers
+
+
 def render_observation_markdown(observation: Mapping[str, Any]) -> str:
     """Render a small live dashboard suitable for terminal or memo paste."""
 
@@ -423,6 +520,8 @@ def render_observation_markdown(observation: Mapping[str, Any]) -> str:
         f"- mode: `{observation.get('mode')}`",
         f"- state: `{observation.get('state')}`",
         f"- status_counts: `{observation.get('status_counts')}`",
+        f"- healthy: `{observation.get('healthy')}`",
+        f"- blockers: `{observation.get('blockers')}`",
         f"- auto_parallelism: `{observation.get('auto_parallelism')}`",
         f"- performance: `{_performance_markdown_summary(observation.get('performance'))}`",
         f"- runtime_policy: `{_runtime_policy_markdown_summary(observation.get('runtime_policy'))}`",
@@ -435,6 +534,8 @@ def render_observation_markdown(observation: Mapping[str, Any]) -> str:
         *list(observation.get("running_steps") or []),
         *list(observation.get("failed_steps") or []),
         *list(observation.get("queued_steps") or []),
+        *list(observation.get("blocked_steps") or []),
+        *list(observation.get("succeeded_artifact_failure_steps") or []),
     ]
     for step in steps:
         if not isinstance(step, Mapping):

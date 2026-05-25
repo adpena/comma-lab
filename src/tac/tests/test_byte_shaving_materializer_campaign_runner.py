@@ -280,6 +280,10 @@ def test_materializer_campaign_runner_builds_queue_owned_followup_command(
     ]
     assert "--include-materializer-exact-readiness-followup" in command
     assert "--materializer-execution-queue-out" in command
+    state_index = command.index("--materializer-execution-state")
+    assert command[state_index + 1] == str(
+        tmp_path / "campaign" / "materializer_execution_queue.sqlite"
+    )
     assert "--materializer-resource-concurrency" in command
     assert "local_mlx=2" in command
     assert "--include-materializer-scheduler-preflight" in command
@@ -858,6 +862,8 @@ def test_materializer_campaign_runner_dfl1_artifact_map_builds_parity_followup(
         queue_id="dfl1_runner_generated_context",
         repo_root=tmp_path,
         lane_id="lane_dfl1_runner_generated_context",
+        source_work_queue_path=tmp_path / "work_queue.json",
+        source_state_path=tmp_path / "queue.sqlite",
         step_timeout_seconds=300,
         include_exact_readiness_followup=True,
     )
@@ -881,6 +887,15 @@ def test_materializer_campaign_runner_dfl1_artifact_map_builds_parity_followup(
     assert ["--expected-full-frame-entry-count", "1"] in [
         parity_step["command"][index : index + 2]
         for index in range(len(parity_step["command"]) - 1)
+    ]
+    harvest_step = steps[2]
+    assert ["--work-queue", "work_queue.json"] in [
+        harvest_step["command"][index : index + 2]
+        for index in range(len(harvest_step["command"]) - 1)
+    ]
+    assert ["--state", "queue.sqlite"] in [
+        harvest_step["command"][index : index + 2]
+        for index in range(len(harvest_step["command"]) - 1)
     ]
     assert [
         "--full-frame-file-list-source",
@@ -989,6 +1004,42 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     _write_inverse_action_functional(action)
     _write_template_archive(template)
     _write_constant_inflate_runtime(inflate_runtime)
+    legacy_queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "inverse_scorer_runner_e2e_fixture",
+            "controls": {"mode": "running", "max_concurrency": {"local_cpu": 1}},
+            "experiments": [
+                {
+                    "id": "legacy_exp",
+                    "steps": [
+                        {
+                            "id": "legacy_step",
+                            "kind": "command",
+                            "command": ["python", "-c", "print('legacy')"],
+                            "resources": {"kind": "local_cpu"},
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    with connect_state(state_path) as conn:
+        initialize_queue_state(conn, legacy_queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'skipped',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-23T00:00:00Z'
+            WHERE queue_id = 'inverse_scorer_runner_e2e_fixture'
+              AND experiment_id = 'legacy_exp'
+              AND step_id = 'legacy_step'
+            """,
+            (json.dumps({"reason": "legacy_nonblocking_orphan_fixture"}),),
+        )
+        conn.commit()
 
     result = runner.main(
         [
@@ -1051,6 +1102,22 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     summary = json.loads((run_dir / "materializer_campaign_run.json").read_text(encoding="utf-8"))
     assert summary["schema"] == runner.RUN_SCHEMA
     assert summary["execute"] is True
+    observe_commands = [
+        command["command"]
+        for command in summary["commands"]
+        if "observe" in command["command"]
+    ]
+    assert observe_commands
+    assert "--include-orphans" in observe_commands[0]
+    assert summary["observation"]["schema"] == "experiment_queue_observation.v1"
+    assert summary["observation"]["healthy"] is False
+    assert summary["observation"]["orphaned_step_count"] == 1
+    assert "experiment_queue_observation_orphaned_steps:1" in (
+        summary["observation"]["blockers"]
+    )
+    assert summary["observation"]["orphaned_steps"][0]["experiment_id"] == "legacy_exp"
+    assert summary["observation"]["orphaned_steps"][0]["step_id"] == "legacy_step"
+    assert summary["observation"]["orphaned_steps"][0]["status"] == "skipped"
     assert summary["score_claim"] is False
     assert summary["ready_for_exact_eval_dispatch"] is False
     assert summary["state_path"] == str(state_path)

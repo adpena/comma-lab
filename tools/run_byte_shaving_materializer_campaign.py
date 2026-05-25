@@ -2243,6 +2243,12 @@ def _build_queue_command(
         _display_path(execution_queue),
         "--materializer-execution-queue-id",
         args.queue_id,
+        "--materializer-execution-state",
+        _display_path(
+            _resolve(args.queue_state)
+            if args.queue_state is not None
+            else run_dir / "materializer_execution_queue.sqlite"
+        ),
         "--candidate-limit",
         str(args.candidate_limit),
         "--local-cpu-concurrency",
@@ -3539,6 +3545,7 @@ def main(argv: list[str] | None = None) -> int:
                 "observe",
                 "--tail-lines",
                 str(args.tail_lines),
+                "--include-orphans",
                 "--format",
                 "json",
             ],

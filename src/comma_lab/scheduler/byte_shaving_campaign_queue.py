@@ -77,6 +77,7 @@ from .dqs1_local_first_queue import SAFE_OPERATOR_ACTION, candidate_slug
 from .experiment_queue import (
     QUEUE_SCHEMA,
     ExperimentQueueError,
+    default_state_path,
     normalize_queue_definition,
 )
 from .storage_preflight import (
@@ -2764,6 +2765,8 @@ def _materializer_exact_readiness_followup_steps(
     queue_id: str,
     repo_root: Path,
     row_id: str,
+    source_work_queue_path: Path,
+    source_state_path: Path,
     work_row: Mapping[str, Any],
     postconditions: Sequence[Mapping[str, Any]],
     handoff_dir: Path,
@@ -2808,6 +2811,12 @@ def _materializer_exact_readiness_followup_steps(
         HARVEST_MATERIALIZER_TOOL,
         "--repo-root",
         repo_root.as_posix(),
+        "--work-queue",
+        _repo_rel(source_work_queue_path, repo_root),
+        "--state",
+        _repo_rel(source_state_path, repo_root),
+        "--queue-id",
+        queue_id,
         "--chain-manifest",
         _repo_rel(manifest_path, repo_root),
         "--source-queue-out",
@@ -3121,6 +3130,7 @@ def build_materializer_execution_queue(
     repo_root: str | Path,
     lane_id: str | None = None,
     source_work_queue_path: str | Path | None = None,
+    source_state_path: str | Path | None = None,
     local_cpu_concurrency: int = 1,
     resource_concurrency: Mapping[str, int] | None = None,
     step_timeout_seconds: int = 0,
@@ -3194,6 +3204,11 @@ def build_materializer_execution_queue(
         _repo_rel(_resolve_repo_path(source_work_queue_path, repo_root=repo), repo)
         if source_work_queue_path is not None
         else None
+    )
+    state_ref = (
+        _repo_rel(_resolve_repo_path(source_state_path, repo_root=repo), repo)
+        if source_state_path is not None
+        else _repo_rel(default_state_path(repo, queue_id), repo)
     )
 
     source_rows = [item for item in _as_list(work_queue.get("rows")) if isinstance(item, Mapping)]
@@ -3311,6 +3326,11 @@ def build_materializer_execution_queue(
         )
         exact_readiness_followup_enabled = include_exact_readiness_followup and exact_readiness_skip_reason is None
         if exact_readiness_followup_enabled:
+            if work_queue_ref is None:
+                raise ExperimentQueueError(
+                    "source_work_queue_path is required for generated exact-readiness "
+                    f"follow-up harvest step {experiment_id}"
+                )
             used_resource_kinds.add("local_cpu")
         dfl1_parity_followup_requested = (
             exact_readiness_followup_enabled
@@ -3356,6 +3376,8 @@ def build_materializer_execution_queue(
                     queue_id=queue_id,
                     repo_root=repo,
                     row_id=experiment_id,
+                    source_work_queue_path=_resolve_repo_path(work_queue_ref, repo_root=repo),
+                    source_state_path=_resolve_repo_path(state_ref, repo_root=repo),
                     work_row=row,
                     postconditions=postconditions,
                     handoff_dir=chain_manifest_path.parent / "exact_eval_handoff",
@@ -3380,6 +3402,7 @@ def build_materializer_execution_queue(
                 "schema": MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA,
                 "source_work_queue_schema": work_queue.get("schema"),
                 "source_work_queue_path": work_queue_ref,
+                "source_state_path": state_ref,
                 "source_plan_path": row.get("source_plan_path"),
                 "work_id": row.get("work_id"),
                 "work_rank": row.get("work_rank"),

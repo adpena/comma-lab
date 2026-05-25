@@ -1414,6 +1414,7 @@ def test_inverse_action_dfl1_packet_ir_context_reaches_executable_work_queue(
         queue_id="inverse_action_dfl1_packet_ir_context_fixture",
         repo_root=tmp_path,
         lane_id="lane_inverse_action_dfl1_packet_ir_context_fixture",
+        source_work_queue_path=tmp_path / "work_queue.json",
         step_timeout_seconds=300,
         include_exact_readiness_followup=True,
     )
@@ -3620,6 +3621,7 @@ def test_materializer_execution_queue_can_append_exact_readiness_followups(
         queue_id="materializer_exec_fixture",
         repo_root=tmp_path,
         lane_id="lane_materializer_exec_fixture",
+        source_work_queue_path=tmp_path / "materializer_work_queue.json",
         local_cpu_concurrency=5,
         include_exact_readiness_followup=True,
     )
@@ -3640,6 +3642,21 @@ def test_materializer_execution_queue_can_append_exact_readiness_followups(
         "tools/harvest_materializer_chain_candidates.py",
     ]
     assert "--chain-manifest" in harvest_step["command"]
+    assert ["--work-queue", "materializer_work_queue.json"] in [
+        harvest_step["command"][index : index + 2]
+        for index in range(len(harvest_step["command"]) - 1)
+    ]
+    assert [
+        "--state",
+        ".omx/state/experiment_queue_materializer_exec_fixture.sqlite",
+    ] in [
+        harvest_step["command"][index : index + 2]
+        for index in range(len(harvest_step["command"]) - 1)
+    ]
+    assert ["--queue-id", "materializer_exec_fixture"] in [
+        harvest_step["command"][index : index + 2]
+        for index in range(len(harvest_step["command"]) - 1)
+    ]
     assert "--allow-unfinished-state" not in harvest_step["command"]
     assert f"chain_out/{CHAIN_MANIFEST_NAME}" in harvest_step["command"]
     assert "chain_out/exact_eval_handoff/source_queue.json" in (harvest_step["command"])
@@ -3662,6 +3679,40 @@ def test_materializer_execution_queue_can_append_exact_readiness_followups(
     assert by_node_id[f"{experiment['id']}.{MATERIALIZER_DISPATCH_PLAN_STEP_ID}"]["dependencies"] == [
         f"{experiment['id']}.{MATERIALIZER_HARVEST_STEP_ID}"
     ]
+
+
+def test_materializer_execution_queue_requires_source_work_queue_path_for_exact_followup(
+    tmp_path: Path,
+) -> None:
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _byte_range_entropy_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+    backlog_row = compiled["materializer_backlog"]["rows"][0]
+    work_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            backlog_row["backlog_key"]: {
+                "schema_manifest": "schema.json",
+                "beam_probe_reports": ["beam_a.json"],
+                "source_runtime_dir": "runtime",
+                "output_dir": str(tmp_path / "chain_out"),
+                "source_archive": "archive.zip",
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    with pytest.raises(ExperimentQueueError, match="source_work_queue_path is required"):
+        build_materializer_execution_queue(
+            work_queue,
+            queue_id="materializer_exec_fixture",
+            repo_root=tmp_path,
+            include_exact_readiness_followup=True,
+        )
 
 
 def test_materializer_execution_queue_builds_dfl1_parity_followup(
@@ -3710,6 +3761,7 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
         queue_id="dfl1_exec_fixture",
         repo_root=tmp_path,
         lane_id="lane_dfl1_exec_fixture",
+        source_work_queue_path=tmp_path / "dfl1_work_queue.json",
         step_timeout_seconds=600,
         include_exact_readiness_followup=True,
     )
@@ -3842,6 +3894,7 @@ def test_materializer_execution_queue_records_missing_dfl1_parity_context(
         work_queue,
         queue_id="dfl1_missing_parity_context",
         repo_root=tmp_path,
+        source_work_queue_path=tmp_path / "dfl1_work_queue.json",
         include_exact_readiness_followup=True,
     )
 
@@ -3900,6 +3953,7 @@ def test_materializer_execution_queue_requires_dfl1_parity_followup_when_strict(
             work_queue,
             queue_id="dfl1_missing_required_parity_context",
             repo_root=tmp_path,
+            source_work_queue_path=tmp_path / "dfl1_work_queue.json",
             include_exact_readiness_followup=True,
             require_renderer_payload_dfl1_parity_followup=True,
         )
@@ -3954,6 +4008,7 @@ def test_materializer_execution_queue_rejects_dfl1_parity_output_outside_workloa
             work_queue,
             queue_id="dfl1_bad_parity_output_root",
             repo_root=tmp_path,
+            source_work_queue_path=tmp_path / "dfl1_work_queue.json",
             include_scheduler_preflight=True,
             scheduler_results_root=str(workload),
             scheduler_storage_expected_workload_root=str(workload),
@@ -4100,6 +4155,7 @@ def test_materializer_execution_queue_appends_exact_followup_for_archive_section
         work_queue,
         queue_id="packet_section_transform_exec_fixture",
         repo_root=tmp_path,
+        source_work_queue_path=tmp_path / "section_work_queue.json",
         include_exact_readiness_followup=True,
     )
 
@@ -4114,6 +4170,21 @@ def test_materializer_execution_queue_appends_exact_followup_for_archive_section
     assert experiment["metadata"]["exact_readiness_followup_skipped_reason"] is None
     harvest_step = experiment["steps"][1]
     assert "--chain-manifest" in harvest_step["command"]
+    assert ["--work-queue", "section_work_queue.json"] in [
+        harvest_step["command"][index : index + 2]
+        for index in range(len(harvest_step["command"]) - 1)
+    ]
+    assert [
+        "--state",
+        ".omx/state/experiment_queue_packet_section_transform_exec_fixture.sqlite",
+    ] in [
+        harvest_step["command"][index : index + 2]
+        for index in range(len(harvest_step["command"]) - 1)
+    ]
+    assert ["--queue-id", "packet_section_transform_exec_fixture"] in [
+        harvest_step["command"][index : index + 2]
+        for index in range(len(harvest_step["command"]) - 1)
+    ]
     assert "candidate.json" in harvest_step["command"]
     assert "exact_eval_handoff/source_queue.json" in " ".join(harvest_step["command"])
 
@@ -4148,6 +4219,7 @@ def test_materializer_execution_queue_followup_requires_chain_postcondition_for_
             work_queue,
             queue_id="candidate_exec_fixture",
             repo_root=tmp_path,
+            source_work_queue_path=tmp_path / "candidate_work_queue.json",
             include_exact_readiness_followup=True,
         )
 

@@ -20,6 +20,7 @@ from comma_lab.scheduler.byte_shaving_campaign_queue import (
 )
 from comma_lab.scheduler.experiment_queue import (
     QUEUE_SCHEMA,
+    ExperimentQueueError,
     connect_state,
     initialize_queue_state,
     normalize_queue_definition,
@@ -462,15 +463,22 @@ def _work_queue(repo: Path, chain_manifest: Path) -> Path:
     return _write_json(repo / "materializer_work_queue.json", payload)
 
 
-def _state_path(repo: Path, *, status: str) -> Path:
+def _state_path(
+    repo: Path,
+    *,
+    status: str,
+    queue_id: str = "materializer_execution_queue",
+    experiment_id: str = "materializer_work_fixture",
+    path_name: str = "queue.sqlite",
+) -> Path:
     queue = normalize_queue_definition(
         {
             "schema": QUEUE_SCHEMA,
-            "queue_id": "materializer_execution_queue",
+            "queue_id": queue_id,
             "controls": {"mode": "running", "max_concurrency": {"local_cpu": 1}},
             "experiments": [
                 {
-                    "id": "materializer_work_fixture",
+                    "id": experiment_id,
                     "steps": [
                         {
                             "id": MATERIALIZER_EXECUTION_STEP_ID,
@@ -482,7 +490,7 @@ def _state_path(repo: Path, *, status: str) -> Path:
             ],
         }
     )
-    state = repo / "queue.sqlite"
+    state = repo / path_name
     with connect_state(state) as conn:
         initialize_queue_state(conn, queue)
         conn.execute(
@@ -494,8 +502,8 @@ def _state_path(repo: Path, *, status: str) -> Path:
             (
                 status,
                 json.dumps({"fixture": True}),
-                "materializer_execution_queue",
-                "materializer_work_fixture",
+                queue_id,
+                experiment_id,
                 MATERIALIZER_EXECUTION_STEP_ID,
             ),
         )
@@ -1410,6 +1418,126 @@ def test_harvest_rejects_explicit_manifest_without_state_provenance_when_state_s
     result = harvest_materializer_chain_manifests(
         repo_root=repo,
         chain_manifest_paths=[chain],
+        experiment_queue_state_path=state,
+        experiment_queue_id="materializer_execution_queue",
+    )
+
+    assert result["report"]["accepted_manifest_count"] == 0
+    assert result["source_queue"]["n_candidates"] == 0
+    assert result["report"]["rows"][0]["blockers"] == [
+        "experiment_queue_state_work_id_missing_for_manifest"
+    ]
+
+
+def test_harvest_rejects_explicit_manifest_without_state_provenance_even_when_unfinished_state_allowed(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _chain_manifest(tmp_path / "external")
+    state = _state_path(repo, status="running")
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+        experiment_queue_state_path=state,
+        experiment_queue_id="materializer_execution_queue",
+        require_succeeded_state=False,
+    )
+
+    assert result["report"]["accepted_manifest_count"] == 0
+    assert result["source_queue"]["n_candidates"] == 0
+    assert result["report"]["rows"][0]["blockers"] == [
+        "experiment_queue_state_work_id_missing_for_manifest"
+    ]
+
+
+def test_harvest_rejects_work_queue_manifest_missing_state_row_when_unfinished_state_allowed(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _chain_manifest(tmp_path / "external")
+    work_queue = _work_queue(repo, chain)
+    state = _state_path(repo, status="running", experiment_id="other_work")
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        work_queue_path=work_queue,
+        experiment_queue_state_path=state,
+        experiment_queue_id="materializer_execution_queue",
+        require_succeeded_state=False,
+    )
+
+    assert result["report"]["accepted_manifest_count"] == 0
+    assert result["source_queue"]["n_candidates"] == 0
+    assert result["report"]["rows"][0]["blockers"] == [
+        "experiment_queue_state_missing:Materializer Work Fixture"
+    ]
+
+
+def test_harvest_requires_queue_id_when_state_filter_is_supplied(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _chain_manifest(tmp_path / "external")
+    work_queue = _work_queue(repo, chain)
+    state = _state_path(
+        repo,
+        status="succeeded",
+        queue_id="other_materializer_queue",
+        path_name="other_queue.sqlite",
+    )
+
+    with pytest.raises(ExperimentQueueError, match="experiment_queue_id is required"):
+        harvest_materializer_chain_manifests(
+            repo_root=repo,
+            work_queue_path=work_queue,
+            experiment_queue_state_path=state,
+        )
+
+
+def test_harvest_rejects_cross_queue_state_row_when_queue_id_is_supplied(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _chain_manifest(tmp_path / "external")
+    work_queue = _work_queue(repo, chain)
+    state = _state_path(
+        repo,
+        status="succeeded",
+        queue_id="other_materializer_queue",
+        path_name="other_queue.sqlite",
+    )
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        work_queue_path=work_queue,
+        experiment_queue_state_path=state,
+        experiment_queue_id="materializer_execution_queue",
+        require_succeeded_state=False,
+    )
+
+    assert result["report"]["accepted_manifest_count"] == 0
+    assert result["source_queue"]["n_candidates"] == 0
+    assert result["report"]["rows"][0]["blockers"] == [
+        "experiment_queue_state_missing:Materializer Work Fixture"
+    ]
+
+
+def test_harvest_rejects_chain_root_manifest_without_state_provenance_when_state_supplied(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _chain_manifest(tmp_path / "external")
+    state = _state_path(repo, status="succeeded")
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_roots=[chain.parent],
         experiment_queue_state_path=state,
         experiment_queue_id="materializer_execution_queue",
     )
