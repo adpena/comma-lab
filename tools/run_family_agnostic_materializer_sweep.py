@@ -35,11 +35,7 @@ from tac.optimization.family_agnostic_materializers import (  # noqa: E402
     materialize_tensor_factorize_candidate,
 )
 from tac.optimization.materializer_feedback import (  # noqa: E402
-    materializer_archive_delta,
-    selected_materializer_delta,
-)
-from tac.optimization.proxy_candidate_contract import (  # noqa: E402
-    require_no_truthy_authority_fields,
+    materializer_observation_from_manifest,
 )
 from tac.repo_io import (  # noqa: E402
     ArtifactWriteError,
@@ -380,110 +376,20 @@ def _observation_from_manifest(
     manifest_path: Path,
     result: Mapping[str, Any],
 ) -> dict[str, Any]:
-    require_no_truthy_authority_fields(
+    row = materializer_observation_from_manifest(
         result,
-        context="family_agnostic_materializer_empirical_sweep.manifest",
+        row_slug=row_slug,
+        manifest_path=manifest_path.as_posix(),
+        label=label,
+        axis=LOCAL_MATERIALIZER_AXIS,
+        scorer_version=SWEEP_SCHEMA,
+        rate_score_per_byte=LOCAL_RATE_SCORE_PER_BYTE,
     )
-    selected_key, selected = selected_materializer_delta(result)
-    archive_delta = materializer_archive_delta(result) or {}
-    saved_bytes = int(archive_delta.get("realized_saved_bytes") or 0)
-    readiness_blockers = [str(item) for item in result.get("readiness_blockers") or []]
-    source_archive = result.get("source_archive") if isinstance(result.get("source_archive"), Mapping) else {}
-    candidate_archive = (
-        result.get("candidate_archive") if isinstance(result.get("candidate_archive"), Mapping) else {}
-    )
-    proof_write = (
-        result.get("runtime_consumption_proof_write")
-        if isinstance(result.get("runtime_consumption_proof_write"), Mapping)
-        else {}
-    )
-    receiver_verification = (
-        result.get("receiver_verification")
-        if isinstance(result.get("receiver_verification"), Mapping)
-        else {}
-    )
-    receiver_contract_satisfied = result.get("receiver_contract_satisfied") is True
-    rate_positive = saved_bytes > 0 and "candidate_not_rate_positive" not in readiness_blockers
-    observed_rate_gain = LOCAL_RATE_SCORE_PER_BYTE * float(saved_bytes) if rate_positive else 0.0
-    observed_score_gain = observed_rate_gain if receiver_contract_satisfied else 0.0
-    return {
-        "schema": OBSERVATION_SCHEMA,
-        "observation_kind": "family_agnostic_materializer_empirical_observation",
-        "observation_id": row_slug,
-        "candidate_id": row_slug,
-        "axis": LOCAL_MATERIALIZER_AXIS,
-        "resource_kind": "local_cpu",
-        "runtime_identity": {
-            "runtime_contract_sha256": proof_write.get("sha256"),
-            "scorer_version": SWEEP_SCHEMA,
-        },
-        "cache_identity": {
-            "cache_sha256": candidate_archive.get("sha256")
-            or source_archive.get("sha256"),
-            "source_archive_sha256": source_archive.get("sha256"),
-        },
-        "archive_label": label,
-        "target_kind": result.get("target_kind"),
-        "materializer_id": result.get("materializer_id"),
-        "portability_contract": result.get("portability_contract"),
-        "receiver_contract_kind": result.get("receiver_contract_kind"),
-        "source_archive_path": source_archive.get("path"),
-        "source_archive_sha256": source_archive.get("sha256"),
-        "source_archive_bytes": source_archive.get("bytes"),
-        "candidate_archive_sha256": candidate_archive.get("sha256"),
-        "candidate_archive_bytes": candidate_archive.get("bytes"),
-        "artifact_bytes": candidate_archive.get("bytes") or source_archive.get("bytes") or 0,
-        "saved_bytes": saved_bytes,
-        "observed_rate_gain": observed_rate_gain,
-        "observed_score_gain": observed_score_gain,
-        "rate_positive": rate_positive,
-        "receiver_contract_satisfied": receiver_contract_satisfied,
-        "receiver_verification_blockers": receiver_verification.get("blockers") or [],
-        "readiness_blockers": readiness_blockers,
-        "runtime_consumption_proof_path": result.get("runtime_consumption_proof_path"),
-        "manifest_path": manifest_path.as_posix(),
-        "candidate_archive_path": candidate_archive.get("path"),
-        "selected_member_name": result.get("selected_member_name"),
-        "selected_member_names": result.get("selected_member_names") or [],
-        "selection_scope": result.get("selection_scope"),
-        "selected_materialization_key": selected_key,
-        "selected_materialization": dict(selected),
-        "selected_elision": dict(selected) if selected_key == "selected_elision" else {},
-        "section_recode": dict(selected) if selected_key == "section_recode" else {},
-        "selected_compression": (
-            dict(selected) if selected_key == "selected_compression" else {}
-        ),
-        "factorization": dict(selected) if selected_key == "factorization" else {},
-        "recommended_planner_action": _recommended_planner_action(
-            target_kind=str(result.get("target_kind") or ""),
-            rate_positive=rate_positive,
-            receiver_contract_satisfied=receiver_contract_satisfied,
-        ),
-        "observation_feedback_is_not_score_authority": True,
-        **FALSE_AUTHORITY,
-    }
-
-
-def _recommended_planner_action(
-    *,
-    target_kind: str,
-    rate_positive: bool,
-    receiver_contract_satisfied: bool,
-) -> str:
-    if rate_positive and receiver_contract_satisfied:
-        return "keep_rate_positive_candidate_for_inflate_parity_gate"
-    if rate_positive:
-        return "repair_receiver_contract_before_exact_readiness"
-    suffix_by_target = {
-        ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND: "archive_section_entropy_recode",
-        PACKET_MEMBER_RECOMPRESS_TARGET_KIND: "member_recompress",
-        PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND: "header_elide",
-        TENSOR_FACTORIZE_TARGET_KIND: "tensor_factorize",
-    }
-    return (
-        "demote_matching_archive_class_for_"
-        f"{suffix_by_target.get(target_kind, target_kind or 'materializer')}"
-    )
+    if row is None:
+        raise FamilyAgnosticMaterializerError(
+            "materializer manifest did not produce an empirical observation row"
+        )
+    return row
 
 
 def _planner_feedback(

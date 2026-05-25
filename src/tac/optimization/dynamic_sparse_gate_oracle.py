@@ -19,6 +19,10 @@ from tac.optimization.byte_shaving_campaign import FALSE_AUTHORITY
 from tac.optimization.inverse_steganalysis_operation_set_compiler import (
     OPERATION_SET_COMPILER_HINT_SCHEMA,
 )
+from tac.optimization.materializer_feedback import (
+    DEFAULT_LOCAL_MATERIALIZER_AXIS,
+    materializer_observation_feedback_rows,
+)
 from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
@@ -801,6 +805,61 @@ def operation_set_compiler_hint_from_observation_feedback(
     return hint
 
 
+def operation_set_compiler_hint_from_materializer_feedback(
+    materializer_feedback: Mapping[str, Any] | Sequence[Mapping[str, Any]],
+    *,
+    operation_set_id: str,
+    source_path: str | None = None,
+    default_axis: str = DEFAULT_LOCAL_MATERIALIZER_AXIS,
+    channel_ids: Sequence[str] = DEFAULT_OBSERVATION_CHANNEL_IDS,
+    max_operations: int | None = None,
+    min_abs_gate: float = 0.0,
+    lane_id: str | None = None,
+    candidate_id: str | None = None,
+    coefficient_mode: str = "materializer_feedback",
+    shared_projection_id: str | None = None,
+    topology_id: str | None = None,
+    rate_score_per_byte: float = DEFAULT_RATE_SCORE_PER_BYTE,
+) -> dict[str, Any]:
+    """Build a compiler hint directly from materializer manifests or sweep output."""
+
+    rows = materializer_observation_feedback_rows(
+        materializer_feedback,
+        source_path=source_path,
+        default_axis=default_axis,
+        rate_score_per_byte=rate_score_per_byte,
+    )
+    if not rows:
+        raise DynamicSparseGateOracleError(
+            "materializer feedback produced no canonical observation rows"
+        )
+    hint = operation_set_compiler_hint_from_observation_feedback(
+        rows,
+        operation_set_id=operation_set_id,
+        channel_ids=channel_ids,
+        max_operations=max_operations,
+        min_abs_gate=min_abs_gate,
+        lane_id=lane_id,
+        candidate_id=candidate_id,
+        coefficient_mode=coefficient_mode,
+        shared_projection_id=shared_projection_id,
+        topology_id=topology_id,
+        rate_score_per_byte=rate_score_per_byte,
+    )
+    hint["selection_source"] = "dynamic_sparse_materializer_feedback"
+    hint["materializer_feedback"] = {
+        "schema": "dynamic_sparse_materializer_feedback_selection.v1",
+        "source_path": source_path,
+        "artifact_count": 1 if isinstance(materializer_feedback, Mapping) else len(materializer_feedback),
+        "normalized_observation_count": len(rows),
+        "default_axis": default_axis,
+        "allowed_use": "queue_materializer_feedback_candidate_generation_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        **FALSE_AUTHORITY,
+    }
+    return hint
+
+
 __all__ = [
     "DYNAMIC_SPARSE_CHANNEL_GATE_OPERATION_SELECTION_SCHEMA",
     "DYNAMIC_SPARSE_GATE_OPERATION_SELECTION_SCHEMA",
@@ -811,6 +870,7 @@ __all__ = [
     "gelu",
     "operation_set_compiler_hint_from_channel_gate_scores",
     "operation_set_compiler_hint_from_gate_scores",
+    "operation_set_compiler_hint_from_materializer_feedback",
     "operation_set_compiler_hint_from_observation_feedback",
     "rms_norm",
 ]

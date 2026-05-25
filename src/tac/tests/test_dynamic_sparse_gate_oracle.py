@@ -12,6 +12,7 @@ from tac.optimization.dynamic_sparse_gate_oracle import (
     dynamic_sparse_skip_mixture,
     operation_set_compiler_hint_from_channel_gate_scores,
     operation_set_compiler_hint_from_gate_scores,
+    operation_set_compiler_hint_from_materializer_feedback,
     operation_set_compiler_hint_from_observation_feedback,
 )
 from tac.optimization.inverse_steganalysis_operation_set_compiler import (
@@ -235,6 +236,45 @@ def test_observation_feedback_builds_channel_gate_hint() -> None:
     assert packet_ir["selected_operations"][0]["score_claim"] is False
 
 
+def test_materializer_feedback_builds_channel_gate_hint() -> None:
+    hint = operation_set_compiler_hint_from_materializer_feedback(
+        {
+            "target_kind": "packet_member_recompress_v1",
+            "materializer_id": "packet_member_recompress_adapter",
+            "receiver_contract_kind": "packet_member_receiver",
+            "candidate_id": "candidate_manifest_feedback",
+            "selected_member_name": "payload.bin",
+            "source_archive": {"sha256": "a" * 64, "bytes": 128},
+            "candidate_archive": {"sha256": "b" * 64, "bytes": 80},
+            "selected_compression": {
+                "source_archive_bytes": 128,
+                "candidate_archive_bytes": 80,
+                "saved_bytes": 48,
+            },
+            "runtime_consumption_proof_write": {"sha256": "c" * 64},
+            "receiver_contract_satisfied": True,
+            "inflate_parity_satisfied": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+        },
+        operation_set_id="materializer_feedback_fixture",
+        source_path="candidate_manifest.json",
+        max_operations=1,
+        lane_id="codex_dynamic_sparse_queue_observation_bridge_20260525",
+    )
+
+    selected = hint["selected_operations"][0]
+    feedback = selected["params"]["dynamic_sparse_observation_feedback"]
+    assert hint["selection_source"] == "dynamic_sparse_materializer_feedback"
+    assert hint["materializer_feedback"]["normalized_observation_count"] == 1
+    assert selected["unit_id"] == "payload.bin"
+    assert selected["target_kind"] == "packet_member_recompress_v1"
+    assert selected["candidate_saved_bytes"] == 48
+    assert feedback["saved_bytes"] == 48
+    assert feedback["source_path"] == "candidate_manifest.json"
+    assert selected["score_claim"] is False
+
+
 def test_dynamic_sparse_gate_compiler_hint_cli_writes_channel_hint(tmp_path: Path) -> None:
     candidates = tmp_path / "candidates.json"
     coefficients = tmp_path / "coefficients.json"
@@ -335,3 +375,135 @@ def test_dynamic_sparse_gate_compiler_hint_cli_writes_observation_feedback_hint(
     assert payload["selection_source"] == "dynamic_sparse_observation_feedback"
     assert payload["observation_feedback"]["selectable_observation_count"] == 1
     assert payload["selected_operations"][0]["unit_id"] == "packet_member_cli"
+
+
+def test_dynamic_sparse_gate_compiler_hint_cli_accepts_queue_observation(
+    tmp_path: Path,
+) -> None:
+    queue_observation = tmp_path / "queue_observation.json"
+    runtime_identity = tmp_path / "runtime_identity.json"
+    cache_identity = tmp_path / "cache_identity.json"
+    out = tmp_path / "hint.json"
+    runtime_identity.write_text(
+        json.dumps({"runtime_tree_sha256": "a" * 64}),
+        encoding="utf-8",
+    )
+    cache_identity.write_text(
+        json.dumps({"cache_sha256": "b" * 64}),
+        encoding="utf-8",
+    )
+    queue_observation.write_text(
+        json.dumps(
+            {
+                "schema": "experiment_queue_observation.v1",
+                "queue_id": "queue_gate_feedback",
+                "healthy": True,
+                "status_counts": {"succeeded": 1},
+                "succeeded_artifact_steps": [
+                    {
+                        "experiment_id": "materializer_candidate_cli",
+                        "step_id": "materialize_local_proof_chain",
+                        "resource_kind": "local_cpu",
+                        "candidate_ids": ["candidate_cli"],
+                        "source_unit_ids": ["packet_member_queue"],
+                        "expected_artifacts": [
+                            {
+                                "path": "candidate_manifest.json",
+                                "candidate_id": "candidate_cli",
+                                "target_kind": "packet_member_recompress_v1",
+                                "materializer_id": "packet_member_recompress_adapter",
+                                "receiver_contract_kind": "packet_member_receiver",
+                                "serialized_archive_delta_status": "realized_saving",
+                                "serialized_archive_delta_realized_saved_bytes": 64,
+                                "serialized_archive_delta_savings_realized": True,
+                                "receiver_contract_satisfied": True,
+                                "bytes": 128,
+                            }
+                        ],
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert (
+        gate_cli.main(
+            [
+                "--queue-observation",
+                str(queue_observation),
+                "--queue-performance-runtime-identity",
+                str(runtime_identity),
+                "--queue-performance-cache-identity",
+                str(cache_identity),
+                "--operation-set-id",
+                "cli_queue_observation_feedback",
+                "--out",
+                str(out),
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    selected = payload["selected_operations"][0]
+    feedback = selected["params"]["dynamic_sparse_observation_feedback"]
+    assert payload["selection_source"] == "dynamic_sparse_observation_feedback"
+    assert payload["observation_feedback"]["selectable_observation_count"] == 1
+    assert selected["unit_id"] == "packet_member_queue"
+    assert feedback["queue_id"] == "queue_gate_feedback"
+    assert feedback["saved_bytes"] == 64
+    assert selected["score_claim"] is False
+
+
+def test_dynamic_sparse_gate_compiler_hint_cli_accepts_materializer_feedback(
+    tmp_path: Path,
+) -> None:
+    manifest = tmp_path / "candidate_manifest.json"
+    out = tmp_path / "hint.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "target_kind": "packet_member_recompress_v1",
+                "materializer_id": "packet_member_recompress_adapter",
+                "candidate_id": "candidate_manifest_cli",
+                "selected_member_name": "payload.bin",
+                "source_archive": {"sha256": "d" * 64, "bytes": 144},
+                "candidate_archive": {"sha256": "e" * 64, "bytes": 100},
+                "selected_compression": {
+                    "source_archive_bytes": 144,
+                    "candidate_archive_bytes": 100,
+                    "saved_bytes": 44,
+                },
+                "runtime_consumption_proof_write": {"sha256": "f" * 64},
+                "receiver_contract_satisfied": True,
+                "inflate_parity_satisfied": True,
+                "score_claim": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert (
+        gate_cli.main(
+            [
+                "--materializer-feedback",
+                str(manifest),
+                "--operation-set-id",
+                "cli_materializer_feedback",
+                "--out",
+                str(out),
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    selected = payload["selected_operations"][0]
+    assert payload["selection_source"] == "dynamic_sparse_materializer_feedback"
+    assert payload["materializer_feedback"]["normalized_observation_count"] == 1
+    assert selected["unit_id"] == "payload.bin"
+    assert selected["candidate_saved_bytes"] == 44
+    assert selected["score_claim"] is False
