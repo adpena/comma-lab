@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from tac.local_acceleration.mlx_acquisition_batch import (
@@ -214,9 +216,7 @@ def _review_packet(
             "dead_or_family_falsification_allowed": False,
             "measured_config_retirement_allowed": status == "measured_config_retired",
         },
-        "reactivation_criteria": [
-            "provide a byte-closed implementation change before redispatch"
-        ],
+        "reactivation_criteria": ["provide a byte-closed implementation change before redispatch"],
     }
     row.update(overrides)
     return row
@@ -259,12 +259,8 @@ def _mlx_selection(**overrides: object) -> dict[str, object]:
         "full_video_denominator": 600,
         "normalized_full_video_scorer_gain_vs_baseline": 0.00002,
         "projected_full_video_delta_vs_baseline_score": -0.00002,
-        "break_even_added_bytes_from_normalized_full_video_gain": (
-            0.00002 / CONTEST_RATE_SCORE_PER_BYTE
-        ),
-        "normalized_full_video_byte_budget_margin_vs_break_even": (
-            0.00002 / CONTEST_RATE_SCORE_PER_BYTE
-        ),
+        "break_even_added_bytes_from_normalized_full_video_gain": (0.00002 / CONTEST_RATE_SCORE_PER_BYTE),
+        "normalized_full_video_byte_budget_margin_vs_break_even": (0.00002 / CONTEST_RATE_SCORE_PER_BYTE),
         "added_archive_bytes": 0,
         "calibrated_min_mlx_gap_for_spend_triage": 0.00001,
         "prediction_field": "ll_predicted_delta_vs_baseline_score",
@@ -277,9 +273,7 @@ def _mlx_selection(**overrides: object) -> dict[str, object]:
         "candidate_generation_only": True,
         "archive_materialization_required": True,
         "requires_exact_auth_eval_before_score_claim": True,
-        "allowed_use": (
-            "candidate_generation_filter_after_strict_effective_mlx_spend_triage_gate"
-        ),
+        "allowed_use": ("candidate_generation_filter_after_strict_effective_mlx_spend_triage_gate"),
         "evidence_grade": "macOS-MLX-research-signal",
         "evidence_tag": "[macOS-MLX research-signal]",
         "score_axis": "[macOS-MLX research-signal]",
@@ -289,9 +283,7 @@ def _mlx_selection(**overrides: object) -> dict[str, object]:
                 "schema": "ll_effective_mlx_spend_triage_gate.v1",
                 "status": "strict_pass",
                 "mlx_exact_eval_spend_triage_allowed": True,
-                "allowed_use": (
-                    "local_exact_eval_spend_triage_filter_after_all_gates"
-                ),
+                "allowed_use": ("local_exact_eval_spend_triage_filter_after_all_gates"),
             },
             "response_validation_status": "passed",
             "torch_parity_status": "strict_pass",
@@ -429,9 +421,7 @@ def test_action_functional_preserves_operation_set_compiler_hint() -> None:
                 "target_kind": "archive_section_entropy_recode_v1",
                 "archive_section": "decoder_blob",
                 "materializer": "archive_section_entropy_recode_adapter",
-                "receiver_contract_kind": (
-                    "family_agnostic_archive_section_entropy_recode"
-                ),
+                "receiver_contract_kind": ("family_agnostic_archive_section_entropy_recode"),
             }
         )
     )
@@ -439,20 +429,14 @@ def test_action_functional_preserves_operation_set_compiler_hint() -> None:
     cell = action["cells"][0]
 
     assert cell["operation_set_compiler"]["operation_set_id"] == "compiled_hint"
-    assert cell["operation_set_compiler"]["target_kind"] == (
-        "archive_section_entropy_recode_v1"
-    )
+    assert cell["operation_set_compiler"]["target_kind"] == ("archive_section_entropy_recode_v1")
     assert action["water_bucket"]["selected_count"] == 1
     selected = action["water_bucket"]["selected_cells"][0]
     assert selected["operation_set_compiler"]["operation_set_id"] == "compiled_hint"
-    assert selected["operation_set_target_kind"] == (
-        "archive_section_entropy_recode_v1"
-    )
+    assert selected["operation_set_target_kind"] == ("archive_section_entropy_recode_v1")
     assert selected["target_kind"] == "archive_section_entropy_recode_v1"
     assert selected["materializer_id"] == "archive_section_entropy_recode_adapter"
-    assert selected["receiver_contract_kind"] == (
-        "family_agnostic_archive_section_entropy_recode"
-    )
+    assert selected["receiver_contract_kind"] == ("family_agnostic_archive_section_entropy_recode")
     assert cell["score_claim"] is False
     assert action["score_claim"] is False
 
@@ -465,9 +449,7 @@ def test_action_functional_preserves_explicit_target_metadata_for_compiler() -> 
     action = build_discrete_scorer_action_functional([atom])
     cell = action["cells"][0]
 
-    assert cell["operation_set_target_kind"] == (
-        "archive_section_entropy_recode_v1"
-    )
+    assert cell["operation_set_target_kind"] == ("archive_section_entropy_recode_v1")
     assert cell["operation_set_params"] == {"section_name": "decoder_blob"}
     assert action["score_claim"] is False
 
@@ -513,12 +495,8 @@ def test_inverse_scorer_surface_preserves_operation_compiler_metadata() -> None:
     action = build_discrete_scorer_action_functional(atoms)
     cell = action["cells"][0]
 
-    assert atoms[0]["operation_set_compiler"]["operation_set_id"] == (
-        "inverse_surface_compiler"
-    )
-    assert cell["operation_set_compiler"]["operation_set_id"] == (
-        "inverse_surface_compiler"
-    )
+    assert atoms[0]["operation_set_compiler"]["operation_set_id"] == ("inverse_surface_compiler")
+    assert cell["operation_set_compiler"]["operation_set_id"] == ("inverse_surface_compiler")
     assert cell["operation_set_target_kind"] == "archive_section_entropy_recode_v1"
     assert cell["operation_set_params"] == {"section_name": "decoder_blob"}
     assert cell["score_claim"] is False
@@ -568,15 +546,9 @@ def test_byte_shaving_plan_producer_preserves_compiler_and_target_metadata() -> 
     action = build_discrete_scorer_action_functional(opset_atoms)
     opset_cell = action["cells"][0]
 
-    assert opset_atoms[0]["operation_set_compiler"]["operation_set_id"] == (
-        "producer_compiled_set"
-    )
-    assert opset_atoms[0]["source_provenance"]["operation_set_compiler"][
-        "operation_set_id"
-    ] == "producer_compiled_set"
-    assert opset_cell["operation_set_compiler"]["operation_set_id"] == (
-        "producer_compiled_set"
-    )
+    assert opset_atoms[0]["operation_set_compiler"]["operation_set_id"] == ("producer_compiled_set")
+    assert opset_atoms[0]["source_provenance"]["operation_set_compiler"]["operation_set_id"] == "producer_compiled_set"
+    assert opset_cell["operation_set_compiler"]["operation_set_id"] == ("producer_compiled_set")
 
     ranked_plan = {
         "schema": "byte_shaving_campaign_plan.v1",
@@ -590,9 +562,7 @@ def test_byte_shaving_plan_producer_preserves_compiler_and_target_metadata() -> 
                 "expected_score_gain": 0.0001,
                 "quality_cost_score": 0.0,
                 "recommended_operation_family": "section_entropy_recode",
-                "recommended_operation_target_kind": (
-                    "archive_section_entropy_recode_v1"
-                ),
+                "recommended_operation_target_kind": ("archive_section_entropy_recode_v1"),
                 "recommended_operation_params": {"section_name": "decoder_blob"},
                 **_planning_false_authority(),
             }
@@ -603,14 +573,10 @@ def test_byte_shaving_plan_producer_preserves_compiler_and_target_metadata() -> 
     ranked_action = build_discrete_scorer_action_functional(ranked_atoms)
     ranked_cell = ranked_action["cells"][0]
 
-    assert ranked_cell["operation_set_target_kind"] == (
-        "archive_section_entropy_recode_v1"
-    )
+    assert ranked_cell["operation_set_target_kind"] == ("archive_section_entropy_recode_v1")
     assert ranked_cell["operation_set_operation_family"] == "section_entropy_recode"
     assert ranked_cell["operation_set_params"] == {"section_name": "decoder_blob"}
-    assert ranked_atoms[0]["source_provenance"]["recommended_operation_params"] == {
-        "section_name": "decoder_blob"
-    }
+    assert ranked_atoms[0]["source_provenance"]["recommended_operation_params"] == {"section_name": "decoder_blob"}
 
 
 def test_mlx_acquisition_batch_compiler_hint_survives_to_action_cell() -> None:
@@ -643,24 +609,13 @@ def test_mlx_acquisition_batch_compiler_hint_survives_to_action_cell() -> None:
     cell = action["cells"][0]
     provenance = cell["source_provenance"]
 
-    assert operation_set["operation_set_compiler"]["operation_set_id"].endswith(
-        "_compiled"
-    )
+    assert operation_set["operation_set_compiler"]["operation_set_id"].endswith("_compiled")
     assert {
-        operation["target_kind"]
-        for operation in operation_set["operation_set_compiler"][
-            "selected_operations"
-        ]
+        operation["target_kind"] for operation in operation_set["operation_set_compiler"]["selected_operations"]
     } == {"archive_section_entropy_recode_v1", "tensor_factorize_v1"}
-    assert atoms[0]["operation_set_compiler"] == operation_set[
-        "operation_set_compiler"
-    ]
-    assert cell["operation_set_compiler"] == operation_set[
-        "operation_set_compiler"
-    ]
-    assert provenance["operation_set_compiler"] == operation_set[
-        "operation_set_compiler"
-    ]
+    assert atoms[0]["operation_set_compiler"] == operation_set["operation_set_compiler"]
+    assert cell["operation_set_compiler"] == operation_set["operation_set_compiler"]
+    assert provenance["operation_set_compiler"] == operation_set["operation_set_compiler"]
     assert cell["score_claim"] is False
     assert provenance["score_claim"] is False
     assert action["score_claim"] is False
@@ -738,9 +693,7 @@ def test_materializer_observation_matches_compiler_target_and_materializer() -> 
                     "unit_id": "renderer_bin_header_elide",
                     "target_kind": "packet_member_zip_header_elide_v1",
                     "materializer": "packet_member_zip_header_elide_adapter",
-                    "receiver_contract_kind": (
-                        "packet_member_zip_header_elide_receiver_proof.v1"
-                    ),
+                    "receiver_contract_kind": ("packet_member_zip_header_elide_receiver_proof.v1"),
                     "candidate_saved_bytes": saved_bytes,
                 }
             ],
@@ -784,9 +737,7 @@ def test_materializer_observation_matches_compiler_target_and_materializer() -> 
     action = build_discrete_scorer_action_functional([atom], observations=[observation])
     cell = action["cells"][0]
 
-    assert normalized["source_observation_schema"] == (
-        "family_agnostic_materializer_empirical_observation.v1"
-    )
+    assert normalized["source_observation_schema"] == ("family_agnostic_materializer_empirical_observation.v1")
     assert normalized["target_kind"] == "packet_member_zip_header_elide_v1"
     assert normalized["materializer_id"] == "packet_member_zip_header_elide_adapter"
     assert normalized["portability_contract"]["requires_gpu"] is False
@@ -794,9 +745,7 @@ def test_materializer_observation_matches_compiler_target_and_materializer() -> 
     assert normalized["observed_rate_gain"] == pytest.approx(observed_rate_gain)
     assert normalized["rate_positive"] is True
     assert cell["best_observation_id"] == "obs_header_elide_renderer_bin"
-    assert cell["best_observation_kind"] == (
-        "family_agnostic_materializer_empirical_observation"
-    )
+    assert cell["best_observation_kind"] == ("family_agnostic_materializer_empirical_observation")
     assert cell["priority"]["expected_score_gain"] == pytest.approx(observed_rate_gain)
     assert cell["materializer_archive_delta_feedback"]["observation_count"] == 1
     assert cell["materializer_archive_delta_feedback"]["rate_positive_count"] == 1
@@ -821,9 +770,7 @@ def test_receiver_negative_materializer_sweep_blocks_matching_water_bucket() -> 
                     "unit_id": "decoder_packed_brotli",
                     "target_kind": "archive_section_entropy_recode_v1",
                     "materializer": "archive_section_entropy_recode_adapter",
-                    "receiver_contract_kind": (
-                        "family_agnostic_archive_section_entropy_recode"
-                    ),
+                    "receiver_contract_kind": ("family_agnostic_archive_section_entropy_recode"),
                     "candidate_saved_bytes": saved_bytes,
                 }
             ],
@@ -891,9 +838,7 @@ def test_acquisition_plan_blocks_mixed_receiver_negative_materializer_feedback()
                     "unit_id": "decoder_packed_brotli",
                     "target_kind": "archive_section_entropy_recode_v1",
                     "materializer": "archive_section_entropy_recode_adapter",
-                    "receiver_contract_kind": (
-                        "family_agnostic_archive_section_entropy_recode"
-                    ),
+                    "receiver_contract_kind": ("family_agnostic_archive_section_entropy_recode"),
                     "candidate_saved_bytes": saved_bytes,
                 }
             ],
@@ -1044,16 +989,12 @@ def test_materializer_chain_realized_cost_blocks_matching_water_bucket() -> None
     assert observations[0]["observed_rate_gain"] == 0.0
     assert observations[0]["rate_positive"] is False
     assert observations[0]["materializer_rate_outcome"] == "realized_cost"
-    assert observations[0]["signal_semantics"] == (
-        "successful_quality_spend_not_byte_saving_progress"
-    )
+    assert observations[0]["signal_semantics"] == ("successful_quality_spend_not_byte_saving_progress")
     assert direct_observations[0]["source_unit_ids"] == [
         "atom_materializer_delta",
         "inverse_action_atom_materializer_delta",
     ]
-    assert direct_observations[0]["materializer_id"] == (
-        "inverse_scorer_cell_candidate_adapter"
-    )
+    assert direct_observations[0]["materializer_id"] == ("inverse_scorer_cell_candidate_adapter")
     assert cell["best_observation_id"] == observations[0]["observation_id"]
     assert cell["priority"]["expected_score_gain"] == 0.0
     assert cell["water_bucket_selectable"] is False
@@ -1192,9 +1133,7 @@ def test_action_surface_terms_model_scope_interactions_and_fragility() -> None:
 
 
 def test_observation_requires_axis_candidate_runtime_and_cache_identity() -> None:
-    assert normalize_inverse_steganalysis_observation(_observation())["schema"] == (
-        OBSERVATION_SCHEMA
-    )
+    assert normalize_inverse_steganalysis_observation(_observation())["schema"] == (OBSERVATION_SCHEMA)
 
     for missing_key, message in [
         ("candidate_id", "candidate_id"),
@@ -1208,20 +1147,14 @@ def test_observation_requires_axis_candidate_runtime_and_cache_identity() -> Non
             normalize_inverse_steganalysis_observation(row)
 
     with pytest.raises(InverseSteganalysisAcquisitionError, match="runtime_identity"):
-        normalize_inverse_steganalysis_observation(
-            _observation(runtime_identity={"note": "not identity"})
-        )
+        normalize_inverse_steganalysis_observation(_observation(runtime_identity={"note": "not identity"}))
     with pytest.raises(InverseSteganalysisAcquisitionError, match="cache_identity"):
-        normalize_inverse_steganalysis_observation(
-            _observation(cache_identity={"note": "not identity"})
-        )
+        normalize_inverse_steganalysis_observation(_observation(cache_identity={"note": "not identity"}))
 
     with pytest.raises(InverseSteganalysisAcquisitionError, match="contest auth evidence"):
         normalize_inverse_steganalysis_observation(_observation(axis="[contest-CUDA]"))
     with pytest.raises(InverseSteganalysisAcquisitionError, match="contest auth evidence"):
-        normalize_inverse_steganalysis_observation(
-            _observation(resource_kind="contest_exact_eval")
-        )
+        normalize_inverse_steganalysis_observation(_observation(resource_kind="contest_exact_eval"))
 
 
 def test_calibrated_observations_rank_acquisition_candidates() -> None:
@@ -1276,9 +1209,7 @@ def test_calibrated_observations_rank_acquisition_candidates() -> None:
 
 
 def test_local_proxy_observations_never_become_promotion_or_rank_authority() -> None:
-    observation = normalize_inverse_steganalysis_observation(
-        _observation(axis="[macOS-CPU advisory]")
-    )
+    observation = normalize_inverse_steganalysis_observation(_observation(axis="[macOS-CPU advisory]"))
     priority = compute_acquisition_priority(_atom(), observation)
     plan = build_inverse_steganalysis_acquisition_plan(
         [_atom()],
@@ -1299,9 +1230,7 @@ def test_local_proxy_observations_never_become_promotion_or_rank_authority() -> 
         InverseSteganalysisAcquisitionError,
         match="rank_or_kill_eligible=truthy",
     ):
-        normalize_inverse_steganalysis_observation(
-            _observation(rank_or_kill_eligible=True)
-        )
+        normalize_inverse_steganalysis_observation(_observation(rank_or_kill_eligible=True))
 
 
 def test_mlx_effective_spend_triage_selection_becomes_false_authority_atoms() -> None:
@@ -1359,15 +1288,11 @@ def test_byte_shaving_surface_becomes_family_agnostic_action_atoms() -> None:
     assert top_atom["scope_axis"] == "full_video"
     assert top_atom["resource_kind"] == "local_mlx"
     assert top_atom["second_order_interaction_effect"] > 0.0
-    assert provenance["schema"] == (
-        "inverse_steganalysis_byte_shaving_operation_set_provenance.v1"
-    )
+    assert provenance["schema"] == ("inverse_steganalysis_byte_shaving_operation_set_provenance.v1")
     assert provenance["source_path"] == "artifacts/family_surface.json"
     assert "section_entropy_recode" in provenance["operation_families"]
     assert "factorize_tensor" in provenance["operation_families"]
-    assert provenance["active_interactions"][0]["interaction_id"] == (
-        "shared_hnerv_boostnerv_overlay_header"
-    )
+    assert provenance["active_interactions"][0]["interaction_id"] == ("shared_hnerv_boostnerv_overlay_header")
     assert provenance["chosen_operation_sequence"]
     assert action["water_bucket"]["selected_count"] >= 1
     assert action["cells"][0]["source_provenance"]["score_claim"] is False
@@ -1385,9 +1310,7 @@ def test_byte_shaving_campaign_plan_bridge_preserves_operation_sets() -> None:
     )
 
     assert atoms
-    assert atoms[0]["source_provenance"]["source_plan_schema"] == (
-        "byte_shaving_campaign_plan.v1"
-    )
+    assert atoms[0]["source_provenance"]["source_plan_schema"] == ("byte_shaving_campaign_plan.v1")
     assert atoms[0]["source_provenance"]["operation_set_id"].startswith("opset_")
     assert atoms[0]["source_provenance"]["partial_materialization_allowed"] is False
     assert atoms[0]["score_claim"] is False
@@ -1547,9 +1470,7 @@ def test_queue_performance_observations_calibrate_acquisition_denominator() -> N
     assert observations[0]["step_id"] == "materialize"
     assert observations[0]["run_count"] == 2
     assert observations[0]["artifact_bytes"] == 2_250_001
-    assert top["best_observation_id"] == (
-        "queue_perf_byte_shave_queue_candidate_a_materialize"
-    )
+    assert top["best_observation_id"] == ("queue_perf_byte_shave_queue_candidate_a_materialize")
     assert top["priority"]["elapsed_seconds"] == pytest.approx(3.5)
     assert top["priority"]["artifact_bytes"] == 2_250_001
     assert top["priority"]["resource_kind"] == "local_mlx"
@@ -1604,21 +1525,11 @@ def test_queue_performance_candidate_map_can_expand_bundle_steps() -> None:
         "candidate_a",
         "candidate_b",
     ]
-    assert observations[0]["observation_id"] == (
-        "queue_perf_byte_shave_queue_bundle_materialize_candidate_a"
-    )
-    assert observations[1]["observation_id"] == (
-        "queue_perf_byte_shave_queue_bundle_materialize_candidate_b"
-    )
-    assert cells_by_candidate["candidate_a"]["best_observation_id"] == (
-        observations[0]["observation_id"]
-    )
-    assert cells_by_candidate["candidate_b"]["best_observation_id"] == (
-        observations[1]["observation_id"]
-    )
-    assert cells_by_candidate["candidate_a"]["priority"]["elapsed_seconds"] == pytest.approx(
-        4.25
-    )
+    assert observations[0]["observation_id"] == ("queue_perf_byte_shave_queue_bundle_materialize_candidate_a")
+    assert observations[1]["observation_id"] == ("queue_perf_byte_shave_queue_bundle_materialize_candidate_b")
+    assert cells_by_candidate["candidate_a"]["best_observation_id"] == (observations[0]["observation_id"])
+    assert cells_by_candidate["candidate_b"]["best_observation_id"] == (observations[1]["observation_id"])
+    assert cells_by_candidate["candidate_a"]["priority"]["elapsed_seconds"] == pytest.approx(4.25)
     assert cells_by_candidate["candidate_b"]["priority"]["artifact_bytes"] == 8192
 
 
@@ -1682,9 +1593,7 @@ def test_queue_performance_observation_matches_inverse_action_source_unit() -> N
     assert observations[0]["source_unit_ids"] == [source_unit_id]
     assert observations[0]["source_selection_ids"] == ["compiled_direct_selection"]
     assert cell["candidate_id"] == "candidate_parent"
-    assert cell["best_observation_id"] == (
-        "queue_perf_materializer_queue_packetir_opset_materialize"
-    )
+    assert cell["best_observation_id"] == ("queue_perf_materializer_queue_packetir_opset_materialize")
     assert cell["priority"]["elapsed_seconds"] == pytest.approx(1.25)
     assert cell["priority"]["artifact_bytes"] == 4096
 
@@ -1705,9 +1614,7 @@ def test_queue_observation_health_blocker_suppresses_water_bucket_cell() -> None
             "schema": "experiment_queue_performance_summary.v1",
             "queue_id": "materializer_queue",
             "event_count": 1,
-            "candidate_id_by_experiment": {
-                "packetir_opset": ["candidate_parent"]
-            },
+            "candidate_id_by_experiment": {"packetir_opset": ["candidate_parent"]},
             "by_resource_kind": {},
             "by_step": {
                 "packetir_opset.materialize": {
@@ -1738,9 +1645,7 @@ def test_queue_observation_health_blocker_suppresses_water_bucket_cell() -> None
                         ],
                         "receiver_verification": {
                             "receiver_contract_satisfied": False,
-                            "blockers": [
-                                "archive_section_entropy_recode_receiver_contract_not_satisfied"
-                            ],
+                            "blockers": ["archive_section_entropy_recode_receiver_contract_not_satisfied"],
                         },
                     }
                 ],
@@ -1779,18 +1684,14 @@ def test_queue_observation_health_blocker_suppresses_water_bucket_cell() -> None
         "experiment_queue_observation_blocked_steps:1",
         "queue_observation_artifact_postcondition_failed:candidate.json",
         "queue_observation_receiver_contract_unsatisfied:candidate.json",
-        "queue_observation_materializer_readiness_blocker:"
-        "runtime_consumption_proof_not_passed",
+        "queue_observation_materializer_readiness_blocker:runtime_consumption_proof_not_passed",
         "queue_observation_receiver_verification_blocker:"
         "archive_section_entropy_recode_receiver_contract_not_satisfied",
     ]
     assert observations[1]["receiver_contract_satisfied"] is False
     assert observations[1]["readiness_blockers"] == [
         "runtime_consumption_proof_not_passed",
-        (
-            "receiver_verification:"
-            "archive_section_entropy_recode_receiver_contract_not_satisfied"
-        ),
+        ("receiver_verification:archive_section_entropy_recode_receiver_contract_not_satisfied"),
     ]
     assert cell["best_observation_kind"] == "queue_observation_health_blocker"
     assert cell["priority"]["expected_score_gain"] == 0.0
@@ -1882,15 +1783,9 @@ def test_queue_observation_health_blocker_matches_precise_source_unit() -> None:
             "schema": "experiment_queue_performance_summary.v1",
             "queue_id": "materializer_queue",
             "event_count": 1,
-            "candidate_id_by_experiment": {
-                "packetir_opset": ["candidate_parent"]
-            },
-            "source_unit_ids_by_experiment": {
-                "packetir_opset": [source_unit_id]
-            },
-            "source_selection_ids_by_experiment": {
-                "packetir_opset": ["compiled_direct_selection"]
-            },
+            "candidate_id_by_experiment": {"packetir_opset": ["candidate_parent"]},
+            "source_unit_ids_by_experiment": {"packetir_opset": [source_unit_id]},
+            "source_selection_ids_by_experiment": {"packetir_opset": ["compiled_direct_selection"]},
             "by_resource_kind": {},
             "by_step": {
                 "packetir_opset.materialize": {
@@ -1962,16 +1857,10 @@ def test_queue_observation_health_blocker_matches_precise_source_unit() -> None:
         observations=observations,
     )
     cells = {cell["atom_id"]: cell for cell in action["cells"]}
-    health = next(
-        row
-        for row in observations
-        if row["observation_kind"] == "queue_observation_health_blocker"
-    )
+    health = next(row for row in observations if row["observation_kind"] == "queue_observation_health_blocker")
 
     assert health["source_unit_ids"] == [source_unit_id]
-    assert cells["atom_direct"]["best_observation_kind"] == (
-        "queue_observation_health_blocker"
-    )
+    assert cells["atom_direct"]["best_observation_kind"] == ("queue_observation_health_blocker")
     assert cells["atom_direct"]["priority"]["expected_score_gain"] == 0.0
     assert cells["atom_other"]["best_observation_kind"] == "queue_performance_step"
     assert cells["atom_other"]["priority"]["expected_score_gain"] > 0.0
@@ -1996,15 +1885,9 @@ def test_queue_observation_receiver_negative_materializer_artifact_blocks_water_
             "schema": "experiment_queue_performance_summary.v1",
             "queue_id": "materializer_queue",
             "event_count": 1,
-            "candidate_id_by_experiment": {
-                "packetir_opset": ["candidate_parent"]
-            },
-            "source_unit_ids_by_experiment": {
-                "packetir_opset": [source_unit_id]
-            },
-            "source_selection_ids_by_experiment": {
-                "packetir_opset": ["compiled_direct_selection"]
-            },
+            "candidate_id_by_experiment": {"packetir_opset": ["candidate_parent"]},
+            "source_unit_ids_by_experiment": {"packetir_opset": [source_unit_id]},
+            "source_selection_ids_by_experiment": {"packetir_opset": ["compiled_direct_selection"]},
             "by_resource_kind": {},
             "by_step": {
                 "packetir_opset.materialize": {
@@ -2037,13 +1920,9 @@ def test_queue_observation_receiver_negative_materializer_artifact_blocks_water_
                         "candidate_id": "candidate_parent",
                         "target_kind": "archive_section_entropy_recode_v1",
                         "materializer_id": "archive_section_entropy_recode_adapter",
-                        "receiver_contract_kind": (
-                            "family_agnostic_archive_section_entropy_recode"
-                        ),
+                        "receiver_contract_kind": ("family_agnostic_archive_section_entropy_recode"),
                         "receiver_contract_satisfied": False,
-                        "readiness_blockers": [
-                            "section_length_changed_requires_runtime_consumption_proof"
-                        ],
+                        "readiness_blockers": ["section_length_changed_requires_runtime_consumption_proof"],
                         "serialized_archive_delta_status": "realized_saving",
                         "serialized_archive_delta_realized_saved_bytes": 64,
                         "serialized_archive_delta_savings_realized": True,
@@ -2062,9 +1941,7 @@ def test_queue_observation_receiver_negative_materializer_artifact_blocks_water_
                         "candidate_id": "candidate_parent",
                         "target_kind": "archive_section_entropy_recode_v1",
                         "materializer_id": "archive_section_entropy_recode_adapter",
-                        "receiver_contract_kind": (
-                            "family_agnostic_archive_section_entropy_recode"
-                        ),
+                        "receiver_contract_kind": ("family_agnostic_archive_section_entropy_recode"),
                         "receiver_contract_satisfied": False,
                         "receiver_verification": {
                             "receiver_contract_satisfied": False,
@@ -2074,7 +1951,7 @@ def test_queue_observation_receiver_negative_materializer_artifact_blocks_water_
                             "bytes": 960,
                             "sha256": "f" * 64,
                         },
-                    }
+                    },
                 ],
             }
         ],
@@ -2096,9 +1973,7 @@ def test_queue_observation_receiver_negative_materializer_artifact_blocks_water_
                     "unit_id": "decoder_blob",
                     "target_kind": "archive_section_entropy_recode_v1",
                     "materializer": "archive_section_entropy_recode_adapter",
-                    "receiver_contract_kind": (
-                        "family_agnostic_archive_section_entropy_recode"
-                    ),
+                    "receiver_contract_kind": ("family_agnostic_archive_section_entropy_recode"),
                 }
             ],
         },
@@ -2113,9 +1988,7 @@ def test_queue_observation_receiver_negative_materializer_artifact_blocks_water_
     action = build_discrete_scorer_action_functional([atom], observations=observations)
     cell = action["cells"][0]
     materializer_observations = [
-        row
-        for row in observations
-        if row["observation_kind"] == MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND
+        row for row in observations if row["observation_kind"] == MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND
     ]
     assert len(materializer_observations) == 1
     materializer_observation = materializer_observations[0]
@@ -2126,21 +1999,14 @@ def test_queue_observation_receiver_negative_materializer_artifact_blocks_water_
     assert materializer_observation["source_unit_ids"] == [source_unit_id]
     assert "receiver_contract_not_satisfied" in materializer_observation["readiness_blockers"]
     assert (
-        "receiver_verification:runtime_consumption_proof_not_passed"
-        in materializer_observation["readiness_blockers"]
+        "receiver_verification:runtime_consumption_proof_not_passed" in materializer_observation["readiness_blockers"]
     )
     assert cell["materializer_archive_delta_blocked"] is True
     assert cell["water_bucket_selectable"] is False
     assert cell["priority"]["expected_score_gain"] == 0.0
-    assert "receiver_negative_materializer_success" in (
-        cell["materializer_archive_delta_feedback"]["blockers"]
-    )
-    assert "rate_negative_materializer_success" not in (
-        cell["materializer_archive_delta_feedback"]["blockers"]
-    )
-    assert (
-        cell["materializer_archive_delta_feedback"]["realized_saved_bytes_sum"] == 64
-    )
+    assert "receiver_negative_materializer_success" in (cell["materializer_archive_delta_feedback"]["blockers"])
+    assert "rate_negative_materializer_success" not in (cell["materializer_archive_delta_feedback"]["blockers"])
+    assert cell["materializer_archive_delta_feedback"]["realized_saved_bytes_sum"] == 64
     assert action["integral_totals"]["materializer_archive_delta_blocked_cell_count"] == 1
     assert action["score_claim"] is False
 
@@ -2158,9 +2024,7 @@ def test_queue_materializer_delta_reads_family_local_archive_delta_fields() -> N
                     "resource_kind": "local_cpu",
                     "target_kind": "packet_member_recompress_v1",
                     "materializer_id": "packet_member_recompress_adapter",
-                    "receiver_contract_kind": (
-                        "family_agnostic_packet_member_recompress"
-                    ),
+                    "receiver_contract_kind": ("family_agnostic_packet_member_recompress"),
                     "expected_artifacts": [
                         {
                             "path": "packet_recompress_manifest.json",
@@ -2168,9 +2032,7 @@ def test_queue_materializer_delta_reads_family_local_archive_delta_fields() -> N
                             "candidate_id": "candidate_packet",
                             "target_kind": "packet_member_recompress_v1",
                             "materializer_id": "packet_member_recompress_adapter",
-                            "receiver_contract_kind": (
-                                "family_agnostic_packet_member_recompress"
-                            ),
+                            "receiver_contract_kind": ("family_agnostic_packet_member_recompress"),
                             "receiver_contract_satisfied": True,
                             "serialized_archive_delta_status": "realized_saving",
                             "selected_compression_saved_bytes": 75,
@@ -2192,9 +2054,7 @@ def test_queue_materializer_delta_reads_family_local_archive_delta_fields() -> N
     )
 
     materializer_observations = [
-        row
-        for row in observations
-        if row["observation_kind"] == MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND
+        row for row in observations if row["observation_kind"] == MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND
     ]
     assert len(materializer_observations) == 1
     row = materializer_observations[0]
@@ -2205,6 +2065,245 @@ def test_queue_materializer_delta_reads_family_local_archive_delta_fields() -> N
     assert row["rate_positive"] is True
     assert row["receiver_contract_satisfied"] is True
     assert row["score_claim"] is False
+
+
+def test_queue_observation_reads_succeeded_materializer_observation_jsonl(
+    tmp_path,
+) -> None:
+    observation_jsonl = tmp_path / "observations.jsonl"
+    observation_jsonl.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_materializer_empirical_observation.v1",
+                "observation_kind": ("family_agnostic_materializer_empirical_observation"),
+                "observation_id": "obs_packet_recompress_success",
+                "candidate_id": "sweep_packet_recompress_success",
+                "axis": "[local-materializer-proof]",
+                "runtime_identity": {
+                    "runtime_contract_sha256": "a" * 64,
+                    "scorer_version": ("family_agnostic_materializer_empirical_sweep.v1"),
+                },
+                "cache_identity": {"cache_sha256": "b" * 64},
+                "target_kind": "packet_member_recompress_v1",
+                "materializer_id": "packet_member_recompress_adapter",
+                "receiver_contract_kind": ("family_agnostic_packet_member_recompress"),
+                "saved_bytes": 75,
+                "observed_rate_gain": CONTEST_RATE_SCORE_PER_BYTE * 75,
+                "observed_score_gain": CONTEST_RATE_SCORE_PER_BYTE * 75,
+                "artifact_bytes": 425,
+                "resource_kind": "local_cpu",
+                "rate_positive": True,
+                "receiver_contract_satisfied": True,
+                "candidate_archive_sha256": "f" * 64,
+                **_planning_false_authority(),
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    observations = observations_from_queue_observation(
+        {
+            "schema": "experiment_queue_observation.v1",
+            "queue_id": "materializer_queue",
+            "healthy": True,
+            "succeeded_artifact_steps": [
+                {
+                    "experiment_id": "packet_recompress",
+                    "step_id": "materialize",
+                    "status": "succeeded",
+                    "resource_kind": "local_cpu",
+                    "candidate_ids": ["candidate_packet"],
+                    "source_unit_ids": ["packet_payload_bin"],
+                    "source_selection_ids": ["selection_packet_payload_bin"],
+                    "expected_artifacts": [
+                        {
+                            "path": str(observation_jsonl),
+                            "exists": True,
+                            "postcondition_type": "jsonl_false_authority",
+                        }
+                    ],
+                }
+            ],
+            **_planning_false_authority(),
+        },
+        runtime_identity={"runtime_tree_sha256": "d" * 64},
+        cache_identity={"cache_sha256": "e" * 64},
+        source_path=str(tmp_path / "queue_observation.json"),
+    )
+    atom = _atom(
+        "candidate_packet",
+        atom_id="atom_packet_recompress",
+        fragility_penalty=0.0,
+        uncertainty=0.0,
+        operation_set_compiler={
+            "schema": "inverse_action_operation_set_compiler_hint.v1",
+            "operation_set_id": "packet_recompress_group",
+            "selected_operations": [
+                {
+                    "unit_id": "packet_payload_bin",
+                    "target_kind": "packet_member_recompress_v1",
+                    "materializer": "packet_member_recompress_adapter",
+                    "receiver_contract_kind": ("family_agnostic_packet_member_recompress"),
+                    "candidate_saved_bytes": 75,
+                }
+            ],
+        },
+    )
+    action = build_discrete_scorer_action_functional([atom], observations=observations)
+    materializer_observations = [
+        row for row in observations if row["observation_kind"] == "family_agnostic_materializer_empirical_observation"
+    ]
+
+    assert len(materializer_observations) == 1
+    row = materializer_observations[0]
+    assert row["candidate_id"] == "sweep_packet_recompress_success"
+    assert row["candidate_ids"] == [
+        "sweep_packet_recompress_success",
+        "candidate_packet",
+    ]
+    assert row["source_unit_ids"] == ["packet_payload_bin"]
+    assert row["source_selection_ids"] == ["selection_packet_payload_bin"]
+    assert row["expected_artifact_paths"] == [str(observation_jsonl)]
+    assert row["saved_bytes"] == 75
+    assert row["rate_positive"] is True
+    assert row["receiver_contract_satisfied"] is True
+    assert action["cells"][0]["materializer_archive_delta_feedback"]["rate_positive_count"] == 1
+    assert action["score_claim"] is False
+
+
+def test_queue_observation_deduplicates_materializer_sweep_json_and_jsonl(
+    tmp_path,
+) -> None:
+    materializer_row = {
+        "schema": "family_agnostic_materializer_empirical_observation.v1",
+        "observation_kind": "family_agnostic_materializer_empirical_observation",
+        "observation_id": "obs_packet_recompress_success",
+        "candidate_id": "sweep_packet_recompress_success",
+        "axis": "[local-materializer-proof]",
+        "target_kind": "packet_member_recompress_v1",
+        "materializer_id": "packet_member_recompress_adapter",
+        "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+        "saved_bytes": 75,
+        "observed_rate_gain": CONTEST_RATE_SCORE_PER_BYTE * 75,
+        "observed_score_gain": CONTEST_RATE_SCORE_PER_BYTE * 75,
+        "artifact_bytes": 425,
+        "resource_kind": "local_cpu",
+        "rate_positive": True,
+        "receiver_contract_satisfied": True,
+        "candidate_archive_sha256": "f" * 64,
+        **_planning_false_authority(),
+    }
+    sweep_json = tmp_path / "sweep.json"
+    observations_jsonl = tmp_path / "observations.jsonl"
+    sweep_json.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_materializer_empirical_sweep.v1",
+                "observations": [materializer_row],
+                **_planning_false_authority(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    observations_jsonl.write_text(json.dumps(materializer_row) + "\n", encoding="utf-8")
+
+    observations = observations_from_queue_observation(
+        {
+            "schema": "experiment_queue_observation.v1",
+            "queue_id": "materializer_queue",
+            "healthy": True,
+            "succeeded_artifact_steps": [
+                {
+                    "experiment_id": "packet_recompress",
+                    "step_id": "materialize",
+                    "status": "succeeded",
+                    "resource_kind": "local_cpu",
+                    "candidate_ids": ["candidate_packet"],
+                    "source_unit_ids": ["packet_payload_bin"],
+                    "source_selection_ids": ["selection_packet_payload_bin"],
+                    "expected_artifacts": [
+                        {"path": str(sweep_json), "exists": True},
+                        {
+                            "path": str(observations_jsonl),
+                            "exists": True,
+                            "postcondition_type": "jsonl_false_authority",
+                        },
+                    ],
+                }
+            ],
+            **_planning_false_authority(),
+        },
+        runtime_identity={"runtime_tree_sha256": "d" * 64},
+        cache_identity={"cache_sha256": "e" * 64},
+        source_path=str(tmp_path / "queue_observation.json"),
+    )
+
+    materializer_observations = [
+        row for row in observations if row["observation_kind"] == "family_agnostic_materializer_empirical_observation"
+    ]
+    assert len(materializer_observations) == 1
+    row = materializer_observations[0]
+    assert row["candidate_id"] == "sweep_packet_recompress_success"
+    assert row["saved_bytes"] == 75
+    assert row["expected_artifact_paths"] == [
+        str(sweep_json),
+        str(observations_jsonl),
+    ]
+
+
+def test_queue_observation_rejects_truthy_authority_in_materializer_jsonl(
+    tmp_path,
+) -> None:
+    observation_jsonl = tmp_path / "observations.jsonl"
+    observation_jsonl.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_materializer_empirical_observation.v1",
+                "observation_id": "obs_bad_authority",
+                "candidate_id": "bad_authority",
+                "axis": "[local-materializer-proof]",
+                "target_kind": "packet_member_recompress_v1",
+                "materializer_id": "packet_member_recompress_adapter",
+                "saved_bytes": 1,
+                "artifact_bytes": 1,
+                **_planning_false_authority(),
+                "score_claim": True,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        InverseSteganalysisAcquisitionError,
+        match=r"queue materializer observation artifact .*score_claim",
+    ):
+        observations_from_queue_observation(
+            {
+                "schema": "experiment_queue_observation.v1",
+                "queue_id": "materializer_queue",
+                "healthy": True,
+                "succeeded_artifact_steps": [
+                    {
+                        "experiment_id": "packet_recompress",
+                        "step_id": "materialize",
+                        "status": "succeeded",
+                        "candidate_ids": ["candidate_packet"],
+                        "expected_artifacts": [
+                            {
+                                "path": str(observation_jsonl),
+                                "exists": True,
+                                "postcondition_type": "jsonl_false_authority",
+                            }
+                        ],
+                    }
+                ],
+                **_planning_false_authority(),
+            },
+            runtime_identity={"runtime_tree_sha256": "d" * 64},
+            cache_identity={"cache_sha256": "e" * 64},
+            source_path=str(tmp_path / "queue_observation.json"),
+        )
 
 
 def test_queue_health_feedback_groups_repeated_blockers_by_source_selection() -> None:
@@ -2223,15 +2322,9 @@ def test_queue_health_feedback_groups_repeated_blockers_by_source_selection() ->
             "schema": "experiment_queue_performance_summary.v1",
             "queue_id": "materializer_queue",
             "event_count": 2,
-            "candidate_id_by_experiment": {
-                "packetir_opset": ["candidate_parent"]
-            },
-            "source_unit_ids_by_experiment": {
-                "packetir_opset": [source_unit_id]
-            },
-            "source_selection_ids_by_experiment": {
-                "packetir_opset": ["compiled_direct_selection"]
-            },
+            "candidate_id_by_experiment": {"packetir_opset": ["candidate_parent"]},
+            "source_unit_ids_by_experiment": {"packetir_opset": [source_unit_id]},
+            "source_selection_ids_by_experiment": {"packetir_opset": ["compiled_direct_selection"]},
             "by_resource_kind": {},
             "by_step": {
                 "packetir_opset.materialize": {
@@ -2304,17 +2397,13 @@ def test_queue_health_feedback_groups_repeated_blockers_by_source_selection() ->
     assert action["observation_feedback"]["queue_health_group_priors"] == root_feedback
     assert root_feedback["observation_count"] == 2
     assert root_feedback["repeated_group_count"] == 1
-    assert root_feedback["groups"][0]["group_key"] == (
-        "source_selection_ids:compiled_direct_selection"
-    )
+    assert root_feedback["groups"][0]["group_key"] == ("source_selection_ids:compiled_direct_selection")
     assert root_feedback["groups"][0]["observation_count"] == 2
     assert root_feedback["groups"][0]["hard_blocking_observation_count"] == 2
     assert cell_feedback["groups"] == root_feedback["groups"]
     assert cell_feedback["source_unit_ids"] == [source_unit_id]
     assert cell_feedback["source_selection_ids"] == ["compiled_direct_selection"]
-    assert cell["queue_health_group_ids"] == [
-        "source_selection_ids:compiled_direct_selection"
-    ]
+    assert cell["queue_health_group_ids"] == ["source_selection_ids:compiled_direct_selection"]
     assert cell["queue_health_repeat_count"] == 2
     assert cell["queue_health_penalty_applied"] is True
     assert root_feedback["score_claim"] is False
@@ -2337,9 +2426,7 @@ def test_repeated_queue_health_group_penalizes_related_materializer_only() -> No
             "schema": "experiment_queue_performance_summary.v1",
             "queue_id": "materializer_queue",
             "event_count": 2,
-            "candidate_id_by_experiment": {
-                "failed_opset": ["failed_candidate"]
-            },
+            "candidate_id_by_experiment": {"failed_opset": ["failed_candidate"]},
             "by_resource_kind": {},
             "by_step": {
                 "failed_opset.materialize": {
@@ -2436,14 +2523,10 @@ def test_repeated_queue_health_group_penalizes_related_materializer_only() -> No
     assert related["queue_health_blocked"] is False
     assert related["queue_health_feedback"]["blocks_water_bucket"] is False
     assert related["queue_health_penalty_applied"] is True
-    assert related["priority"]["queue_health_penalty_multiplier"] == pytest.approx(
-        1.0 / 3.0
-    )
+    assert related["priority"]["queue_health_penalty_multiplier"] == pytest.approx(1.0 / 3.0)
     assert unrelated["queue_health_group_ids"] == []
     assert unrelated["queue_health_penalty_applied"] is False
-    assert unrelated["priority"]["expected_score_gain"] > related["priority"][
-        "expected_score_gain"
-    ]
+    assert unrelated["priority"]["expected_score_gain"] > related["priority"]["expected_score_gain"]
     assert unrelated["water_bucket_selectable"] is True
 
 
@@ -2462,9 +2545,7 @@ def test_queue_observation_global_blocker_suppresses_mapped_candidates() -> None
             "schema": "experiment_queue_performance_summary.v1",
             "queue_id": "materializer_queue",
             "event_count": 1,
-            "candidate_id_by_experiment": {
-                "candidate_a": ["candidate_a"]
-            },
+            "candidate_id_by_experiment": {"candidate_a": ["candidate_a"]},
             "by_resource_kind": {},
             "by_step": {
                 "candidate_a.materialize": {
@@ -2490,15 +2571,9 @@ def test_queue_observation_global_blocker_suppresses_mapped_candidates() -> None
         observations=observations,
     )
 
-    assert observations[-1]["observation_kind"] == (
-        "queue_observation_global_health_blocker"
-    )
-    assert observations[-1]["queue_observation_blockers"] == [
-        "experiment_queue_observation_state_missing"
-    ]
-    assert action["cells"][0]["best_observation_kind"] == (
-        "queue_observation_global_health_blocker"
-    )
+    assert observations[-1]["observation_kind"] == ("queue_observation_global_health_blocker")
+    assert observations[-1]["queue_observation_blockers"] == ["experiment_queue_observation_state_missing"]
+    assert action["cells"][0]["best_observation_kind"] == ("queue_observation_global_health_blocker")
     assert action["cells"][0]["priority"]["expected_score_gain"] == 0.0
 
 
@@ -2702,18 +2777,11 @@ def test_paired_exact_auth_calibration_demotes_regressed_measured_config() -> No
     assert observations[0]["observation_kind"] == "paired_exact_auth_calibration"
     assert observations[0]["observed_score_gain"] == 0.0
     assert observations[0]["calibration_error"] == pytest.approx(
-        (0.19380912393883232 - 0.192028283)
-        + (0.2279696105246996 - 0.205330029)
+        (0.19380912393883232 - 0.192028283) + (0.2279696105246996 - 0.205330029)
     )
-    assert calibration["pair_status"] == (
-        "paired_exact_auth_regressed_vs_axis_baselines"
-    )
-    assert calibration["axis_rows"]["contest_cpu"]["score_delta_status"] == (
-        "regresses_vs_axis_baseline"
-    )
-    assert calibration["axis_rows"]["contest_cuda"]["score_delta_status"] == (
-        "regresses_vs_axis_baseline"
-    )
+    assert calibration["pair_status"] == ("paired_exact_auth_regressed_vs_axis_baselines")
+    assert calibration["axis_rows"]["contest_cpu"]["score_delta_status"] == ("regresses_vs_axis_baseline")
+    assert calibration["axis_rows"]["contest_cuda"]["score_delta_status"] == ("regresses_vs_axis_baseline")
     assert calibration["score_claim"] is False
     assert calibration["promotion_eligible"] is False
     assert calibration["rank_or_kill_eligible"] is False
@@ -2722,9 +2790,7 @@ def test_paired_exact_auth_calibration_demotes_regressed_measured_config() -> No
     assert calibration.get("method_family_retired") is not True
     assert cell["best_observation_id"] == observations[0]["observation_id"]
     assert cell["best_observation_kind"] == "paired_exact_auth_calibration"
-    assert cell["exact_auth_calibration"]["pair_status"] == (
-        "paired_exact_auth_regressed_vs_axis_baselines"
-    )
+    assert cell["exact_auth_calibration"]["pair_status"] == ("paired_exact_auth_regressed_vs_axis_baselines")
     assert cell["priority"]["expected_score_gain"] == 0.0
     assert action["observation_feedback"]["exact_auth_calibration_count"] == 1
     assert action["water_bucket"]["selected_count"] == 0
@@ -2822,9 +2888,7 @@ def test_discrete_action_functional_water_fills_positive_euler_cells() -> None:
     )
 
     assert functional["schema"] == ACTION_FUNCTIONAL_SCHEMA
-    assert functional["math_model"]["representation"] == (
-        "discrete_riemann_sum_with_second_order_interactions"
-    )
+    assert functional["math_model"]["representation"] == ("discrete_riemann_sum_with_second_order_interactions")
     assert functional["integral_totals"]["cell_count"] == 3
     assert functional["integral_totals"]["blocked_cell_count"] == 1
     assert functional["integral_totals"]["second_order_interaction_effect_sum"] == pytest.approx(0.0002)
@@ -2832,10 +2896,7 @@ def test_discrete_action_functional_water_fills_positive_euler_cells() -> None:
     assert functional["water_bucket"]["selected_cells"][0]["atom_id"] == "atom_high"
     assert functional["water_bucket"]["selected_water_fill_cost_bytes"] == 100
     assert functional["cells"][0]["euler_lagrange_residual"] > 0
-    assert all(
-        row["atom_id"] != "atom_blocked"
-        for row in functional["water_bucket"]["selected_cells"]
-    )
+    assert all(row["atom_id"] != "atom_blocked" for row in functional["water_bucket"]["selected_cells"])
     for key, value in PROXY_FALSE_AUTHORITY_FIELDS.items():
         assert functional[key] is value
 
@@ -2893,9 +2954,7 @@ def test_water_bucket_uses_portfolio_search_not_scalar_greedy() -> None:
         "atom_portfolio_b",
     ]
     assert bucket["selected_water_fill_cost_bytes"] == 100
-    assert bucket["selected_expected_score_gain"] > bucket[
-        "greedy_baseline_expected_score_gain"
-    ]
+    assert bucket["selected_expected_score_gain"] > bucket["greedy_baseline_expected_score_gain"]
     assert bucket["selected_lagrangian_gain"] > 0.0
     assert bucket["score_claim"] is False
     assert bucket["ready_for_exact_eval_dispatch"] is False
@@ -2925,8 +2984,6 @@ def test_discrete_action_functional_uses_canonical_contest_rate_denominator() ->
 
     assert CONTEST_RATE_DENOM_BYTES == CANONICAL_RATE_DENOM_BYTES == 37_545_489
     assert pytest.approx(25.0 / 37_545_489) == CONTEST_RATE_SCORE_PER_BYTE
-    assert canonical["math_model"]["lambda_rate"] == pytest.approx(
-        CONTEST_RATE_SCORE_PER_BYTE
-    )
+    assert canonical["math_model"]["lambda_rate"] == pytest.approx(CONTEST_RATE_SCORE_PER_BYTE)
     assert canonical["water_bucket"]["selected_count"] == 0
     assert stale["water_bucket"]["selected_count"] == 1

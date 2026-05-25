@@ -127,20 +127,9 @@ def test_observer_surfaces_running_step_log_tail_and_artifacts(tmp_path: Path) -
     assert running["log_tail"] == ["second"]
     assert running["expected_artifacts"][0]["exists"] is True
     assert running["expected_artifacts"][0]["json_schema"] == "artifact.v1"
-    assert (
-        running["expected_artifacts"][0]["serialized_archive_delta_status"]
-        == "realized_cost"
-    )
-    assert (
-        running["expected_artifacts"][0][
-            "serialized_archive_delta_realized_saved_bytes"
-        ]
-        == -1764
-    )
-    assert (
-        running["expected_artifacts"][0]["serialized_archive_delta_savings_realized"]
-        is False
-    )
+    assert running["expected_artifacts"][0]["serialized_archive_delta_status"] == "realized_cost"
+    assert running["expected_artifacts"][0]["serialized_archive_delta_realized_saved_bytes"] == -1764
+    assert running["expected_artifacts"][0]["serialized_archive_delta_savings_realized"] is False
     assert running["expected_artifacts"][0]["postcondition_passed"] is True
     markdown = render_observation_markdown(observation)
     assert "observer_test" in markdown
@@ -189,9 +178,7 @@ def test_observer_marks_existing_artifact_failed_when_postcondition_fails(
     assert artifact_record["json_schema"] == "wrong.v1"
     assert artifact_record["postcondition_passed"] is False
     assert observation["healthy"] is False
-    assert observation["blockers"] == [
-        "experiment_queue_observation_artifact_postcondition_failures:1"
-    ]
+    assert observation["blockers"] == ["experiment_queue_observation_artifact_postcondition_failures:1"]
     assert observation["blocker_count"] == 1
     markdown = render_observation_markdown(observation)
     assert "0/1" in markdown
@@ -302,10 +289,7 @@ def test_observer_surfaces_read_only_performance_telemetry(
     assert performance["telemetry_only"] is True
     assert performance["score_claim"] is False
     assert performance["by_resource_kind"]["local_cpu"]["elapsed_seconds_mean"] == 2.5
-    assert (
-        performance["by_resource_kind"]["local_cpu"]["dominant_resource_kind"]
-        == "local_cpu"
-    )
+    assert performance["by_resource_kind"]["local_cpu"]["dominant_resource_kind"] == "local_cpu"
     assert runtime_policy["schema"] == "scheduler_runtime_policy.v1"
     assert runtime_policy["advisory_only"] is True
     assert runtime_policy["score_claim"] is False
@@ -461,9 +445,7 @@ def test_observer_preserves_materializer_metadata_for_recovery_grouping(
     failed = observation["failed_steps"][0]
 
     assert len(observation["queue_sha256"]) == 64
-    assert observation["state_watermark"]["schema"] == (
-        "experiment_queue_state_watermark.v1"
-    )
+    assert observation["state_watermark"]["schema"] == ("experiment_queue_state_watermark.v1")
     assert failed["target_kind"] == "archive_section_entropy_recode_v1"
     assert failed["materializer_id"] == "entropy_adapter"
     assert failed["receiver_contract_kind"] == "archive_section_receiver_v1"
@@ -479,9 +461,7 @@ def test_observer_preserves_materializer_metadata_for_recovery_grouping(
         "runtime_consumption_proof_not_passed",
         "archive_section_entropy_recode_receiver_contract_not_satisfied",
     ]
-    assert artifact_record["receiver_verification"]["blockers"] == [
-        "runtime_consumption_proof_not_passed"
-    ]
+    assert artifact_record["receiver_verification"]["blockers"] == ["runtime_consumption_proof_not_passed"]
     assert artifact_record["candidate_archive"]["bytes"] == 143
     assert artifact_record["section_recode_saved_bytes"] == 66
     assert artifact_record["serialized_archive_delta_status"] == "realized_saving"
@@ -497,15 +477,11 @@ def test_observer_preserves_materializer_metadata_for_recovery_grouping(
 
     assert recovery_plan["recovery_required"] is False
     assert recovery_plan["maintenance_recommended"] is True
-    assert recovery_plan["actions"][0]["action"] == (
-        "record_materializer_receiver_feedback"
-    )
+    assert recovery_plan["actions"][0]["action"] == ("record_materializer_receiver_feedback")
     assert recovery_plan["source_queue_sha256"] == observation["queue_sha256"]
     assert recovery_plan["source_state_watermark"] == observation["state_watermark"]
     assert groups[0]["scope_kind"] == "materializer_receiver"
-    assert groups[0]["scope_value"] == (
-        "entropy_adapter:archive_section_receiver_v1"
-    )
+    assert groups[0]["scope_value"] == ("entropy_adapter:archive_section_receiver_v1")
     assert groups[0]["target_kinds"] == ["archive_section_entropy_recode_v1"]
     assert groups[0]["source_selection_ids"] == ["selection-a"]
 
@@ -656,12 +632,104 @@ def test_observer_health_marks_succeeded_step_with_missing_artifact(
     failed_step = observation["succeeded_artifact_failure_steps"][0]
     failed_artifact = failed_step["expected_artifacts"][0]
     assert observation["healthy"] is False
-    assert "experiment_queue_observation_artifact_postcondition_failures:1" in (
-        observation["blockers"]
-    )
+    assert "experiment_queue_observation_artifact_postcondition_failures:1" in (observation["blockers"])
     assert failed_step["step_id"] == "smoke"
     assert failed_artifact["exists"] is False
     assert failed_artifact["postcondition_passed"] is False
+
+
+def test_observer_surfaces_succeeded_materializer_feedback_artifact(
+    tmp_path: Path,
+) -> None:
+    observation_jsonl = tmp_path / "observations.jsonl"
+    observation_jsonl.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_materializer_empirical_observation.v1",
+                "observation_id": "obs_packet_recompress_success",
+                "candidate_id": "candidate_packet",
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "promotable": False,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "observer_test",
+        "controls": {"mode": "running", "max_concurrency": {"local_cpu": 1}},
+        "experiments": [
+            {
+                "id": "materializer_sweep",
+                "status": "queued",
+                "priority": 1,
+                "metadata": {
+                    "candidate_ids": ["candidate_packet"],
+                    "source_unit_ids": ["packet_payload_bin"],
+                    "source_selection_ids": ["selection_packet_payload_bin"],
+                },
+                "steps": [
+                    {
+                        "id": "sweep",
+                        "kind": "command",
+                        "command": ["python", "tools/run_family_agnostic_materializer_sweep.py"],
+                        "resources": {"kind": "local_cpu"},
+                        "postconditions": [
+                            {
+                                "type": "jsonl_false_authority",
+                                "path": observation_jsonl.as_posix(),
+                                "schema_equals": ("family_agnostic_materializer_empirical_observation.v1"),
+                                "require_nonempty": True,
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-25T06:00:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'materializer_sweep'
+              AND step_id = 'sweep'
+            """,
+            (json.dumps({"command": ["python", "tools/run_family_agnostic_materializer_sweep.py"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+    )
+
+    assert observation["healthy"] is True
+    assert observation["succeeded_artifact_failure_steps"] == []
+    succeeded = observation["succeeded_artifact_steps"][0]
+    artifact = succeeded["expected_artifacts"][0]
+    assert succeeded["candidate_ids"] == ["candidate_packet"]
+    assert succeeded["source_unit_ids"] == ["packet_payload_bin"]
+    assert artifact["path"] == "observations.jsonl"
+    assert artifact["postcondition_type"] == "jsonl_false_authority"
+    assert artifact["postcondition_schema_equals"] == (
+        "family_agnostic_materializer_empirical_observation.v1"
+    )
+    assert artifact["postcondition_passed"] is True
 
 
 def test_observer_health_marks_missing_state_fail_closed(tmp_path: Path) -> None:

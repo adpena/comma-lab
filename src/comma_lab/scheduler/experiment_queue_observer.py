@@ -24,6 +24,8 @@ from comma_lab.scheduler.experiment_queue import (
 from tac.optimization.materializer_feedback import materializer_archive_delta
 
 OBSERVATION_SCHEMA = "experiment_queue_observation.v1"
+FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA = "family_agnostic_materializer_empirical_observation.v1"
+FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA = "family_agnostic_materializer_empirical_sweep.v1"
 
 
 def _utc_now() -> str:
@@ -101,11 +103,13 @@ def _matching_processes(
     for proc in processes:
         command = str(proc.get("command") or "")
         if any(needle in command for needle in real_needles):
-            out.append({
-                "pid": str(proc.get("pid") or ""),
-                "etime": str(proc.get("etime") or ""),
-                "command": command,
-            })
+            out.append(
+                {
+                    "pid": str(proc.get("pid") or ""),
+                    "etime": str(proc.get("etime") or ""),
+                    "command": command,
+                }
+            )
     return out
 
 
@@ -144,11 +148,7 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
                 if key in payload:
                     record[key] = payload[key]
             if isinstance(payload.get("readiness_blockers"), list):
-                record["readiness_blockers"] = [
-                    str(item)
-                    for item in payload["readiness_blockers"]
-                    if str(item)
-                ]
+                record["readiness_blockers"] = [str(item) for item in payload["readiness_blockers"] if str(item)]
             receiver = payload.get("receiver_verification")
             if isinstance(receiver, Mapping):
                 record["receiver_verification"] = {
@@ -165,9 +165,7 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
                 }
                 receiver_blockers = receiver.get("blockers")
                 if isinstance(receiver_blockers, list):
-                    record["receiver_verification"]["blockers"] = [
-                        str(item) for item in receiver_blockers if str(item)
-                    ]
+                    record["receiver_verification"]["blockers"] = [str(item) for item in receiver_blockers if str(item)]
             candidate_archive = payload.get("candidate_archive")
             if isinstance(candidate_archive, Mapping):
                 record["candidate_archive"] = {
@@ -178,18 +176,10 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
             delta = payload.get("serialized_archive_delta")
             if isinstance(delta, Mapping):
                 record["serialized_archive_delta_status"] = delta.get("status")
-                record["serialized_archive_delta_realized_saved_bytes"] = delta.get(
-                    "realized_saved_bytes"
-                )
-                record["serialized_archive_delta_savings_realized"] = delta.get(
-                    "savings_realized"
-                )
-                record["serialized_archive_delta_source_archive_bytes"] = delta.get(
-                    "source_archive_bytes"
-                )
-                record["serialized_archive_delta_candidate_archive_bytes"] = (
-                    delta.get("candidate_archive_bytes")
-                )
+                record["serialized_archive_delta_realized_saved_bytes"] = delta.get("realized_saved_bytes")
+                record["serialized_archive_delta_savings_realized"] = delta.get("savings_realized")
+                record["serialized_archive_delta_source_archive_bytes"] = delta.get("source_archive_bytes")
+                record["serialized_archive_delta_candidate_archive_bytes"] = delta.get("candidate_archive_bytes")
             materializer_delta = materializer_archive_delta(payload)
             if materializer_delta is not None:
                 selected_key = materializer_delta.get("selected_materialization_key")
@@ -197,37 +187,27 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
                 if selected_key:
                     prefix = str(selected_key)
                     if f"{prefix}_saved_bytes" not in record:
-                        record[f"{prefix}_saved_bytes"] = materializer_delta.get(
-                            "realized_saved_bytes"
-                        )
+                        record[f"{prefix}_saved_bytes"] = materializer_delta.get("realized_saved_bytes")
                     if f"{prefix}_source_archive_bytes" not in record:
-                        record[f"{prefix}_source_archive_bytes"] = materializer_delta.get(
-                            "source_archive_bytes"
-                        )
+                        record[f"{prefix}_source_archive_bytes"] = materializer_delta.get("source_archive_bytes")
                     if f"{prefix}_candidate_archive_bytes" not in record:
-                        record[f"{prefix}_candidate_archive_bytes"] = materializer_delta.get(
-                            "candidate_archive_bytes"
-                        )
+                        record[f"{prefix}_candidate_archive_bytes"] = materializer_delta.get("candidate_archive_bytes")
                 if record.get("serialized_archive_delta_realized_saved_bytes") is None:
-                    record["serialized_archive_delta_realized_saved_bytes"] = (
-                        materializer_delta.get("realized_saved_bytes")
+                    record["serialized_archive_delta_realized_saved_bytes"] = materializer_delta.get(
+                        "realized_saved_bytes"
                     )
                 if record.get("serialized_archive_delta_source_archive_bytes") is None:
-                    record["serialized_archive_delta_source_archive_bytes"] = (
-                        materializer_delta.get("source_archive_bytes")
+                    record["serialized_archive_delta_source_archive_bytes"] = materializer_delta.get(
+                        "source_archive_bytes"
                     )
                 if record.get("serialized_archive_delta_candidate_archive_bytes") is None:
-                    record["serialized_archive_delta_candidate_archive_bytes"] = (
-                        materializer_delta.get("candidate_archive_bytes")
+                    record["serialized_archive_delta_candidate_archive_bytes"] = materializer_delta.get(
+                        "candidate_archive_bytes"
                     )
                 if record.get("serialized_archive_delta_savings_realized") is None:
-                    record["serialized_archive_delta_savings_realized"] = (
-                        materializer_delta.get("savings_realized")
-                    )
+                    record["serialized_archive_delta_savings_realized"] = materializer_delta.get("savings_realized")
                 if record.get("serialized_archive_delta_status") is None:
-                    record["serialized_archive_delta_status"] = (
-                        materializer_delta.get("status")
-                    )
+                    record["serialized_archive_delta_status"] = materializer_delta.get("status")
             score = payload.get("score")
             if isinstance(score, Mapping):
                 record["score"] = {
@@ -264,9 +244,7 @@ def _experiment_metadata_lookup(
         if not isinstance(experiment, Mapping):
             continue
         metadata = experiment.get("metadata")
-        out[str(experiment.get("id") or "")] = (
-            metadata if isinstance(metadata, Mapping) else {}
-        )
+        out[str(experiment.get("id") or "")] = metadata if isinstance(metadata, Mapping) else {}
     return out
 
 
@@ -349,9 +327,7 @@ def _queue_state_watermark(
         "event_count": int(events["event_count"] or 0) if events else 0,
         "max_event_id": int(events["max_event_id"] or 0) if events else 0,
         "step_state_count": int(steps["step_state_count"] or 0) if steps else 0,
-        "max_step_updated_at_utc": (
-            str(steps["max_step_updated_at_utc"] or "") if steps else ""
-        ),
+        "max_step_updated_at_utc": (str(steps["max_step_updated_at_utc"] or "") if steps else ""),
         "control_mode": str(control["mode"] or "") if control else "",
         "control_updated_at_utc": str(control["updated_at_utc"] or "") if control else "",
     }
@@ -374,6 +350,8 @@ def _expected_artifacts(
             path = repo_root / path
         record = _path_artifact_record(path, repo_root=repo_root)
         record["postcondition_type"] = condition.get("type")
+        if "schema_equals" in condition:
+            record["postcondition_schema_equals"] = condition.get("schema_equals")
         try:
             record["postcondition_passed"] = _condition_passes(
                 condition,
@@ -477,11 +455,7 @@ def _step_observation(
         )
         _extend_unique(
             observation["expected_artifact_paths"],
-            [
-                artifact.get("path")
-                for artifact in observation["expected_artifacts"]
-                if isinstance(artifact, Mapping)
-            ],
+            [artifact.get("path") for artifact in observation["expected_artifacts"] if isinstance(artifact, Mapping)],
         )
         _extend_unique(
             observation["expected_artifact_paths"],
@@ -516,6 +490,28 @@ def _step_observation(
     if log_path is not None and log_path.exists():
         observation["log_tail"] = _tail_text(log_path, max_lines=tail_lines)
     return observation
+
+
+def _step_has_materializer_feedback_artifact(
+    step_observation: Mapping[str, Any],
+) -> bool:
+    for artifact in step_observation.get("expected_artifacts") or []:
+        if not isinstance(artifact, Mapping):
+            continue
+        if artifact.get("exists") is not True:
+            continue
+        if (
+            artifact.get("postcondition_type") == "jsonl_false_authority"
+            and artifact.get("postcondition_schema_equals")
+            == FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA
+        ):
+            return True
+        if artifact.get("json_schema") in {
+            FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA,
+            FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA,
+        }:
+            return True
+    return False
 
 
 def observe_experiment_queue(
@@ -613,6 +609,7 @@ def observe_experiment_queue(
     active_steps: list[dict[str, Any]] = []
     health_steps: list[dict[str, Any]] = []
     succeeded_artifact_failure_steps: list[dict[str, Any]] = []
+    succeeded_artifact_steps: list[dict[str, Any]] = []
     for step_state in summary.get("steps", []):
         if not isinstance(step_state, Mapping):
             continue
@@ -632,11 +629,10 @@ def observe_experiment_queue(
             tail_lines=0 if status == "succeeded" else tail_lines,
         )
         if status == "succeeded":
+            if _step_has_materializer_feedback_artifact(step_observation):
+                succeeded_artifact_steps.append(step_observation)
             artifacts = step_observation.get("expected_artifacts") or []
-            if any(
-                isinstance(item, Mapping) and item.get("postcondition_passed") is False
-                for item in artifacts
-            ):
+            if any(isinstance(item, Mapping) and item.get("postcondition_passed") is False for item in artifacts):
                 succeeded_artifact_failure_steps.append(step_observation)
                 health_steps.append(step_observation)
             continue
@@ -692,12 +688,12 @@ def observe_experiment_queue(
         "failed_steps": failed,
         "queued_steps": queued,
         "blocked_steps": blocked,
+        "succeeded_artifact_steps": succeeded_artifact_steps,
         "succeeded_artifact_failure_steps": succeeded_artifact_failure_steps,
         "orphaned_steps": orphaned,
         "suggested_commands": {
             "refresh": (
-                f".venv/bin/python tools/experiment_queue.py --queue "
-                f"<queue-path> observe --tail-lines {tail_lines}"
+                f".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines {tail_lines}"
             ),
             "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
             "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
@@ -741,18 +737,10 @@ def _observation_blockers(
         orphan_count = 0
     if orphan_count > 0:
         blockers.append(f"experiment_queue_observation_orphaned_steps:{orphan_count}")
-    failed_steps = [
-        step
-        for step in active_steps
-        if isinstance(step, Mapping) and step.get("status") == "failed"
-    ]
+    failed_steps = [step for step in active_steps if isinstance(step, Mapping) and step.get("status") == "failed"]
     if failed_steps:
         blockers.append(f"experiment_queue_observation_failed_steps:{len(failed_steps)}")
-    blocked_steps = [
-        step
-        for step in active_steps
-        if isinstance(step, Mapping) and step.get("status") == "blocked"
-    ]
+    blocked_steps = [step for step in active_steps if isinstance(step, Mapping) and step.get("status") == "blocked"]
     if blocked_steps:
         blockers.append(f"experiment_queue_observation_blocked_steps:{len(blocked_steps)}")
     artifact_failures = 0
@@ -772,9 +760,7 @@ def _observation_blockers(
             and artifact.get("postcondition_passed") is False
         )
     if artifact_failures:
-        blockers.append(
-            f"experiment_queue_observation_artifact_postcondition_failures:{artifact_failures}"
-        )
+        blockers.append(f"experiment_queue_observation_artifact_postcondition_failures:{artifact_failures}")
     return blockers
 
 
@@ -809,11 +795,7 @@ def render_observation_markdown(observation: Mapping[str, Any]) -> str:
         if not isinstance(step, Mapping):
             continue
         artifacts = step.get("expected_artifacts") or []
-        passed = sum(
-            1
-            for item in artifacts
-            if isinstance(item, Mapping) and item.get("postcondition_passed")
-        )
+        passed = sum(1 for item in artifacts if isinstance(item, Mapping) and item.get("postcondition_passed"))
         log_path = step.get("log_path") or ""
         lines.append(
             "| {status} | `{exp}` | `{step}` | `{log}` | {existing}/{total} | {pids} |".format(
@@ -856,9 +838,7 @@ def _runtime_policy_markdown_summary(value: object) -> dict[str, Any]:
         "advisory_only": value.get("advisory_only"),
         "score_claim": value.get("score_claim"),
         "recommended_max_concurrency": value.get("recommended_max_concurrency"),
-        "recommended_timeout_seconds_by_resource": value.get(
-            "recommended_timeout_seconds_by_resource"
-        ),
+        "recommended_timeout_seconds_by_resource": value.get("recommended_timeout_seconds_by_resource"),
     }
 
 

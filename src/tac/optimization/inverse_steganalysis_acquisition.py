@@ -14,6 +14,7 @@ import math
 import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from tac.local_acceleration.mlx_acquisition_batch import (
@@ -56,33 +57,17 @@ PRIORITY_SCHEMA = "inverse_steganalysis_acquisition_priority.v1"
 ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
 ACTION_CELL_SCHEMA = "inverse_steganalysis_action_cell.v1"
 QUEUE_HEALTH_FEEDBACK_SCHEMA = "inverse_steganalysis_queue_health_feedback.v1"
-MATERIALIZER_ARCHIVE_DELTA_FEEDBACK_SCHEMA = (
-    "inverse_steganalysis_materializer_archive_delta_feedback.v1"
-)
+MATERIALIZER_ARCHIVE_DELTA_FEEDBACK_SCHEMA = "inverse_steganalysis_materializer_archive_delta_feedback.v1"
 INVERSE_SCORER_SURFACE_SCHEMA = "scorer_inverse_decision_surface.v1"
-BYTE_SHAVING_OPERATION_SET_PROVENANCE_SCHEMA = (
-    "inverse_steganalysis_byte_shaving_operation_set_provenance.v1"
-)
-BYTE_SHAVING_UNIT_PROVENANCE_SCHEMA = (
-    "inverse_steganalysis_byte_shaving_ranked_unit_provenance.v1"
-)
-MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA = (
-    "mlx_effective_spend_triage_candidate_selection.v1"
-)
-MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_ROW_SCHEMA = (
-    "mlx_effective_spend_triage_candidate_row.v1"
-)
-MLX_EFFECTIVE_SPEND_TRIAGE_PROVENANCE_SCHEMA = (
-    "inverse_steganalysis_mlx_effective_spend_triage_row_provenance.v1"
-)
-MLX_ACQUISITION_BATCH_PROVENANCE_SCHEMA = (
-    "inverse_steganalysis_mlx_acquisition_batch_operation_set_provenance.v1"
-)
+BYTE_SHAVING_OPERATION_SET_PROVENANCE_SCHEMA = "inverse_steganalysis_byte_shaving_operation_set_provenance.v1"
+BYTE_SHAVING_UNIT_PROVENANCE_SCHEMA = "inverse_steganalysis_byte_shaving_ranked_unit_provenance.v1"
+MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA = "mlx_effective_spend_triage_candidate_selection.v1"
+MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_ROW_SCHEMA = "mlx_effective_spend_triage_candidate_row.v1"
+MLX_EFFECTIVE_SPEND_TRIAGE_PROVENANCE_SCHEMA = "inverse_steganalysis_mlx_effective_spend_triage_row_provenance.v1"
+MLX_ACQUISITION_BATCH_PROVENANCE_SCHEMA = "inverse_steganalysis_mlx_acquisition_batch_operation_set_provenance.v1"
 TOOL = "tac.optimization.inverse_steganalysis_acquisition"
 CONTEST_RATE_DENOM_BYTES = CANONICAL_RATE_DENOM_BYTES
-CONTEST_RATE_SCORE_PER_BYTE = CANONICAL_RATE_MULTIPLIER / float(
-    CANONICAL_RATE_DENOM_BYTES
-)
+CONTEST_RATE_SCORE_PER_BYTE = CANONICAL_RATE_MULTIPLIER / float(CANONICAL_RATE_DENOM_BYTES)
 MLX_EVIDENCE_GRADE = "macOS-MLX-research-signal"
 MLX_EVIDENCE_TAG = "[macOS-MLX research-signal]"
 QUEUE_HEALTH_BLOCKER_OBSERVATION_KINDS = frozenset(
@@ -92,15 +77,17 @@ QUEUE_HEALTH_BLOCKER_OBSERVATION_KINDS = frozenset(
     }
 )
 MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND = "materializer_chain_archive_delta"
-FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_KIND = (
-    "family_agnostic_materializer_empirical_observation"
-)
+FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA = "family_agnostic_materializer_empirical_observation.v1"
+FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA = "family_agnostic_materializer_empirical_sweep.v1"
+FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_KIND = "family_agnostic_materializer_empirical_observation"
 MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KINDS = frozenset(
     {
         MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND,
         FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_KIND,
     }
 )
+QUEUE_MATERIALIZER_OBSERVATION_ARTIFACT_MAX_BYTES = 16 * 1024 * 1024
+QUEUE_MATERIALIZER_OBSERVATION_ARTIFACT_MAX_ROWS = 4096
 
 ALLOWED_SCALES = frozenset(
     {
@@ -253,7 +240,9 @@ def normalize_inverse_steganalysis_atom(row: Mapping[str, Any]) -> dict[str, Any
         ),
         "calibration_error": _float(row.get("calibration_error", 0.0), "calibration_error", minimum=0.0),
         "elapsed_seconds": _float_or_none(row.get("elapsed_seconds"), "elapsed_seconds", minimum=0.0, exclusive=True),
-        "artifact_bytes": _int(row.get("artifact_bytes", row.get("source_artifact_bytes", 0)), "artifact_bytes", minimum=0),
+        "artifact_bytes": _int(
+            row.get("artifact_bytes", row.get("source_artifact_bytes", 0)), "artifact_bytes", minimum=0
+        ),
         "resource_kind": _resource(row.get("resource_kind", "local_cpu")),
         "source_provenance": _optional_mapping(row.get("source_provenance"), "source_provenance"),
         "operation_set_compiler": _optional_mapping(
@@ -291,6 +280,20 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
     axis = _text(_first(row.get("axis"), row.get("score_axis")), "axis")
     axis_normalized = _token(axis).replace("_", "-")
     resource_kind = _resource(row.get("resource_kind", "local_cpu"))
+    saved_bytes = _optional_int(row.get("saved_bytes"), "saved_bytes")
+    observed_rate_gain = _float_or_none(
+        row.get("observed_rate_gain"),
+        "observed_rate_gain",
+        minimum=0.0,
+    )
+    explicit_rate_positive = row.get("rate_positive")
+    rate_positive = explicit_rate_positive is True or (
+        explicit_rate_positive is None
+        and saved_bytes is not None
+        and saved_bytes > 0
+        and observed_rate_gain is not None
+        and observed_rate_gain > 0.0
+    )
     if _looks_like_contest_auth_axis(axis_normalized) or resource_kind == "contest_exact_eval":
         raise InverseSteganalysisAcquisitionError(
             "inverse-steganalysis observations must not masquerade as contest "
@@ -305,13 +308,9 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
         "axis": axis,
         "axis_normalized": axis_normalized,
         "target_kind": _optional_text(row.get("target_kind")),
-        "materializer_id": _optional_text(
-            _first(row.get("materializer_id"), row.get("materializer"))
-        ),
+        "materializer_id": _optional_text(_first(row.get("materializer_id"), row.get("materializer"))),
         "portability_contract": (
-            dict(row["portability_contract"])
-            if isinstance(row.get("portability_contract"), Mapping)
-            else None
+            dict(row["portability_contract"]) if isinstance(row.get("portability_contract"), Mapping) else None
         ),
         "receiver_contract_kind": _optional_text(row.get("receiver_contract_kind")),
         "source_path": _optional_text(row.get("source_path")),
@@ -322,14 +321,10 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
         "performance_summary_schema": _optional_text(row.get("performance_summary_schema")),
         "queue_observation_schema": _optional_text(row.get("queue_observation_schema")),
         "queue_observation_health": (
-            None
-            if row.get("queue_observation_health") is None
-            else bool(row.get("queue_observation_health"))
+            None if row.get("queue_observation_health") is None else bool(row.get("queue_observation_health"))
         ),
         "queue_observation_status": _optional_text(row.get("queue_observation_status")),
-        "queue_observation_blockers": _list_strings(
-            row.get("queue_observation_blockers")
-        ),
+        "queue_observation_blockers": _list_strings(row.get("queue_observation_blockers")),
         "archive_delta_status": _optional_text(row.get("archive_delta_status")),
         "archive_delta_bytes": _optional_int(
             row.get("archive_delta_bytes"),
@@ -356,9 +351,7 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
         "savings_realized": row.get("savings_realized") is True,
         "inflate_parity_satisfied": row.get("inflate_parity_satisfied") is True,
         "quality_spend_allowed": row.get("quality_spend_allowed") is True,
-        "materializer_rate_outcome": _optional_text(
-            row.get("materializer_rate_outcome")
-        ),
+        "materializer_rate_outcome": _optional_text(row.get("materializer_rate_outcome")),
         "signal_semantics": _optional_text(row.get("signal_semantics")),
         "readiness_blockers": _list_strings(row.get("readiness_blockers")),
         "dispatch_blockers": _list_strings(row.get("dispatch_blockers")),
@@ -371,13 +364,9 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
         "run_count": _optional_int(row.get("run_count"), "run_count", minimum=0),
         "success_count": _optional_int(row.get("success_count"), "success_count", minimum=0),
         "failure_count": _optional_int(row.get("failure_count"), "failure_count", minimum=0),
-        "saved_bytes": _optional_int(row.get("saved_bytes"), "saved_bytes"),
-        "observed_rate_gain": _float_or_none(
-            row.get("observed_rate_gain"),
-            "observed_rate_gain",
-            minimum=0.0,
-        ),
-        "rate_positive": row.get("rate_positive") is True,
+        "saved_bytes": saved_bytes,
+        "observed_rate_gain": observed_rate_gain,
+        "rate_positive": rate_positive,
         "receiver_contract_satisfied": row.get("receiver_contract_satisfied") is True,
         "artifact_record_count": _optional_int(
             row.get("artifact_record_count"),
@@ -411,7 +400,9 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
             minimum=0.0,
         ),
         "elapsed_seconds": _float_or_none(row.get("elapsed_seconds"), "elapsed_seconds", minimum=0.0, exclusive=True),
-        "artifact_bytes": _int(_first(row.get("artifact_bytes"), row.get("source_artifact_bytes"), 0), "artifact_bytes", minimum=0),
+        "artifact_bytes": _int(
+            _first(row.get("artifact_bytes"), row.get("source_artifact_bytes"), 0), "artifact_bytes", minimum=0
+        ),
         "resource_kind": resource_kind,
         "candidate_generation_only": True,
         "planning_only": True,
@@ -421,9 +412,7 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
     }
     if row.get("exact_auth_calibration") is not None:
         if not isinstance(row.get("exact_auth_calibration"), Mapping):
-            raise InverseSteganalysisAcquisitionError(
-                "exact_auth_calibration must be an object"
-            )
+            raise InverseSteganalysisAcquisitionError("exact_auth_calibration must be an object")
         out["exact_auth_calibration"] = dict(row["exact_auth_calibration"])
     return _false_authority(
         out,
@@ -451,17 +440,13 @@ def observations_from_queue_performance_summary(
 
     _reject_truthy_authority(summary, label="queue performance summary")
     if summary.get("schema") != QUEUE_PERFORMANCE_SUMMARY_SCHEMA:
-        raise InverseSteganalysisAcquisitionError(
-            f"summary schema must be {QUEUE_PERFORMANCE_SUMMARY_SCHEMA}"
-        )
+        raise InverseSteganalysisAcquisitionError(f"summary schema must be {QUEUE_PERFORMANCE_SUMMARY_SCHEMA}")
     queue_id = _text(summary.get("queue_id"), "summary.queue_id")
     by_step = summary.get("by_step")
     if not isinstance(by_step, Mapping):
         raise InverseSteganalysisAcquisitionError("summary.by_step must be an object")
     embedded_lookup = _parse_candidate_lookup(
-        summary.get("candidate_id_by_experiment")
-        if summary.get("candidate_id_by_experiment") is not None
-        else None,
+        summary.get("candidate_id_by_experiment") if summary.get("candidate_id_by_experiment") is not None else None,
         label="summary.candidate_id_by_experiment",
     )
     explicit_lookup = _parse_candidate_lookup(
@@ -506,13 +491,9 @@ def observations_from_queue_performance_summary(
         candidate_ids = candidate_lookup.get(experiment_id)
         if candidate_ids is None:
             raise InverseSteganalysisAcquisitionError(
-                "summary.candidate_id_by_experiment missing experiment "
-                f"{experiment_id!r}"
+                f"summary.candidate_id_by_experiment missing experiment {experiment_id!r}"
             )
-        base_observation_id = (
-            f"queue_perf_{_slug(queue_id)}_"
-            f"{_slug(experiment_id)}_{_slug(step_id)}"
-        )
+        base_observation_id = f"queue_perf_{_slug(queue_id)}_{_slug(experiment_id)}_{_slug(step_id)}"
         for candidate_id in candidate_ids:
             observation_id = base_observation_id
             if len(candidate_ids) > 1:
@@ -544,9 +525,7 @@ def observations_from_queue_performance_summary(
                         "success_count": bucket.get("success_count"),
                         "failure_count": bucket.get("failure_count"),
                         "artifact_record_count": bucket.get("artifact_record_count"),
-                        "artifact_record_raw_bytes_mean": bucket.get(
-                            "artifact_record_raw_bytes_mean"
-                        ),
+                        "artifact_record_raw_bytes_mean": bucket.get("artifact_record_raw_bytes_mean"),
                     }
                 )
             )
@@ -572,9 +551,7 @@ def observations_from_queue_observation(
 
     _reject_truthy_authority(observation, label="queue observation")
     if observation.get("schema") != QUEUE_OBSERVATION_SCHEMA:
-        raise InverseSteganalysisAcquisitionError(
-            f"queue observation schema must be {QUEUE_OBSERVATION_SCHEMA}"
-        )
+        raise InverseSteganalysisAcquisitionError(f"queue observation schema must be {QUEUE_OBSERVATION_SCHEMA}")
     queue_id = _text(observation.get("queue_id"), "queue_observation.queue_id")
     explicit_lookup = _parse_candidate_lookup(
         candidate_id_by_experiment,
@@ -603,9 +580,7 @@ def observations_from_queue_observation(
             )
         )
     elif performance is not None:
-        raise InverseSteganalysisAcquisitionError(
-            "queue_observation.performance must be an object when present"
-        )
+        raise InverseSteganalysisAcquisitionError("queue_observation.performance must be an object when present")
     candidate_lookup = _merge_candidate_lookup(
         performance_lookup,
         explicit_lookup,
@@ -624,9 +599,7 @@ def observations_from_queue_observation(
     health_rows_before = len(observations)
     for section, kind in health_sections:
         for step in _sequence_of_mappings(observation.get(section)):
-            if section == "orphaned_steps" and not _orphaned_step_blocks_queue(
-                step
-            ):
+            if section == "orphaned_steps" and not _orphaned_step_blocks_queue(step):
                 continue
             observations.extend(
                 _queue_health_observations_for_step(
@@ -658,6 +631,20 @@ def observations_from_queue_observation(
                 runtime_identity=runtime_identity,
                 cache_identity=cache_identity,
                 candidate_lookup=candidate_lookup,
+            )
+        )
+    for step in _sequence_of_mappings(observation.get("succeeded_artifact_steps")):
+        observations.extend(
+            _queue_materializer_delta_observations_for_observed_step(
+                step,
+                queue_id=queue_id,
+                section="succeeded_artifact_steps",
+                axis=axis,
+                source_path=source_path,
+                runtime_identity=runtime_identity,
+                cache_identity=cache_identity,
+                candidate_lookup=candidate_lookup,
+                performance_identity=performance_identity,
             )
         )
     return observations
@@ -743,11 +730,7 @@ def observations_from_materializer_chain_manifest(
         "candidate_archive_sha256",
     )
     rate_positive = realized_saved_bytes > 0 and status == "realized_saving"
-    observed_rate_gain = (
-        CONTEST_RATE_SCORE_PER_BYTE * float(realized_saved_bytes)
-        if rate_positive
-        else 0.0
-    )
+    observed_rate_gain = CONTEST_RATE_SCORE_PER_BYTE * float(realized_saved_bytes) if rate_positive else 0.0
     selected_cells = (
         _sequence_of_mappings(candidate_manifest.get("selected_cells"))
         if isinstance(candidate_manifest, Mapping)
@@ -760,20 +743,12 @@ def observations_from_materializer_chain_manifest(
             {
                 "candidate_id": _first(
                     manifest.get("candidate_id"),
-                    (
-                        f"materializer_chain_{candidate_archive_sha256[:12]}"
-                        if candidate_archive_sha256
-                        else None
-                    ),
+                    (f"materializer_chain_{candidate_archive_sha256[:12]}" if candidate_archive_sha256 else None),
                     "materializer_chain_unknown_candidate",
                 ),
                 "atom_id": _first(
                     manifest.get("atom_id"),
-                    (
-                        f"materializer_chain_{candidate_archive_sha256[:12]}"
-                        if candidate_archive_sha256
-                        else None
-                    ),
+                    (f"materializer_chain_{candidate_archive_sha256[:12]}" if candidate_archive_sha256 else None),
                 ),
             }
         ]
@@ -806,9 +781,7 @@ def observations_from_materializer_chain_manifest(
     observations: list[dict[str, Any]] = []
     for index, cell in enumerate(selected_cells):
         atom_id = _optional_text(cell.get("atom_id"))
-        candidate_id = _optional_text(cell.get("candidate_id")) or _optional_text(
-            manifest.get("candidate_id")
-        )
+        candidate_id = _optional_text(cell.get("candidate_id")) or _optional_text(manifest.get("candidate_id"))
         if candidate_id is None:
             candidate_id = (
                 f"materializer_chain_{candidate_archive_sha256[:12]}"
@@ -828,9 +801,7 @@ def observations_from_materializer_chain_manifest(
             normalize_inverse_steganalysis_observation(
                 {
                     "observation_id": (
-                        "materializer_chain_delta_"
-                        f"{_slug(candidate_id)}_"
-                        f"{_slug(atom_id or str(index))}"
+                        f"materializer_chain_delta_{_slug(candidate_id)}_{_slug(atom_id or str(index))}"
                     ),
                     "observation_kind": MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND,
                     "candidate_id": candidate_id,
@@ -873,20 +844,15 @@ def observations_from_materializer_chain_manifest(
                     "observed_score_gain": observed_rate_gain,
                     "rate_positive": rate_positive,
                     "savings_realized": delta.get("savings_realized") is True,
-                    "quality_spend_allowed": manifest.get("quality_spend_allowed")
-                    is True,
+                    "quality_spend_allowed": manifest.get("quality_spend_allowed") is True,
                     "materializer_rate_outcome": status,
                     "signal_semantics": (
                         "realized_archive_saving"
                         if rate_positive
                         else "successful_quality_spend_not_byte_saving_progress"
                     ),
-                    "receiver_contract_satisfied": (
-                        manifest.get("receiver_contract_satisfied") is True
-                    ),
-                    "inflate_parity_satisfied": (
-                        manifest.get("inflate_parity_satisfied") is True
-                    ),
+                    "receiver_contract_satisfied": (manifest.get("receiver_contract_satisfied") is True),
+                    "inflate_parity_satisfied": (manifest.get("inflate_parity_satisfied") is True),
                     "archive_delta_status": status,
                     "archive_delta_bytes": archive_delta_bytes,
                     "source_archive_bytes": source_archive_bytes,
@@ -897,9 +863,7 @@ def observations_from_materializer_chain_manifest(
                     "resource_kind": "local_cpu",
                     "candidate_ids": [candidate_id],
                     "source_unit_ids": source_unit_ids,
-                    "source_selection_ids": _list_strings(
-                        cell.get("source_selection_ids")
-                    ),
+                    "source_selection_ids": _list_strings(cell.get("source_selection_ids")),
                     "expected_artifact_paths": expected_artifact_paths,
                     "readiness_blockers": readiness_blockers,
                     "dispatch_blockers": dispatch_blockers,
@@ -930,14 +894,10 @@ def paired_exact_auth_calibration_observations_from_review_packets(
         raise InverseSteganalysisAcquisitionError("packets must be a sequence")
     packet_rows = [dict(packet) for packet in packets]
     if len(packet_rows) != 2:
-        raise InverseSteganalysisAcquisitionError(
-            "paired exact-auth calibration requires exactly two review packets"
-        )
+        raise InverseSteganalysisAcquisitionError("paired exact-auth calibration requires exactly two review packets")
     paths = [str(path) for path in (packet_paths or [])]
     if packet_paths is not None and len(paths) != len(packet_rows):
-        raise InverseSteganalysisAcquisitionError(
-            "packet_paths length must match packets length"
-        )
+        raise InverseSteganalysisAcquisitionError("packet_paths length must match packets length")
 
     by_axis = {_review_packet_axis(packet): packet for packet in packet_rows}
     if set(by_axis) != {"contest_cpu", "contest_cuda"}:
@@ -958,14 +918,8 @@ def paired_exact_auth_calibration_observations_from_review_packets(
         )
         for axis, packet in sorted(by_axis.items())
     }
-    regression_penalty = sum(
-        max(0.0, float(row["delta_vs_axis_baseline"]))
-        for row in axis_rows.values()
-    )
-    improvement_gain = sum(
-        max(0.0, -float(row["delta_vs_axis_baseline"]))
-        for row in axis_rows.values()
-    )
+    regression_penalty = sum(max(0.0, float(row["delta_vs_axis_baseline"])) for row in axis_rows.values())
+    improvement_gain = sum(max(0.0, -float(row["delta_vs_axis_baseline"])) for row in axis_rows.values())
     observed_score_gain = 0.0 if regression_penalty > 0.0 else improvement_gain
     pair_status = (
         "paired_exact_auth_regressed_vs_axis_baselines"
@@ -1004,19 +958,11 @@ def paired_exact_auth_calibration_observations_from_review_packets(
             "axis_rows": axis_rows,
             "regression_penalty_sum": regression_penalty,
             "improvement_gain_sum": improvement_gain,
-            "observed_score_gain_policy": (
-                "zero_when_any_exact_auth_axis_regresses_vs_baseline"
-            ),
+            "observed_score_gain_policy": ("zero_when_any_exact_auth_axis_regresses_vs_baseline"),
             "runtime_identity": runtime_identity,
             "cache_identity": cache_identity,
-            "packet_paths": [
-                path_by_axis[axis]
-                for axis in ("contest_cpu", "contest_cuda")
-                if path_by_axis.get(axis)
-            ],
-            "allowed_use": (
-                "planner_calibration_only_measured_config_not_family_retirement"
-            ),
+            "packet_paths": [path_by_axis[axis] for axis in ("contest_cpu", "contest_cuda") if path_by_axis.get(axis)],
+            "allowed_use": ("planner_calibration_only_measured_config_not_family_retirement"),
         },
         "exact_auth_calibration_is_planning_only",
         "does_not_convert_cpu_to_cuda_or_cuda_to_cpu",
@@ -1033,11 +979,7 @@ def compute_acquisition_priority(
 ) -> dict[str, Any]:
     """Compute score-gain priority normalized by time, artifact bytes, resource."""
 
-    atom_row = (
-        dict(atom)
-        if atom.get("schema") == ATOM_SCHEMA
-        else normalize_inverse_steganalysis_atom(atom)
-    )
+    atom_row = dict(atom) if atom.get("schema") == ATOM_SCHEMA else normalize_inverse_steganalysis_atom(atom)
     obs_row = None
     if observation is not None:
         obs_row = (
@@ -1099,17 +1041,12 @@ def compute_acquisition_priority(
         )
     )
     resource_multiplier = RESOURCE_MULTIPLIERS.get(resource_kind, DEFAULT_RESOURCE_MULTIPLIER)
-    queue_health_blocked = (
-        obs_row is not None and _is_queue_health_blocker_observation(obs_row)
-    )
-    archive_delta_blocked = (
-        obs_row is not None and _materializer_archive_delta_blocks_water_bucket(obs_row)
-    )
+    queue_health_blocked = obs_row is not None and _is_queue_health_blocker_observation(obs_row)
+    archive_delta_blocked = obs_row is not None and _materializer_archive_delta_blocks_water_bucket(obs_row)
     expected_gain = (
         0.0
         if queue_health_blocked or archive_delta_blocked
-        else max(0.0, base_gain - calibration_penalty - fragility_penalty)
-        + uncertainty_bonus
+        else max(0.0, base_gain - calibration_penalty - fragility_penalty) + uncertainty_bonus
     )
     artifact_gb = max(artifact_bytes / 1_000_000_000.0, MIN_ARTIFACT_GB)
     terms = AcquisitionPriorityTerms(
@@ -1155,11 +1092,9 @@ def build_inverse_steganalysis_acquisition_plan(
             candidate_obs,
             atom=atom,
         )
-        materializer_archive_delta_feedback = (
-            _materializer_archive_delta_feedback_for_observations(
-                candidate_obs,
-                atom=atom,
-            )
+        materializer_archive_delta_feedback = _materializer_archive_delta_feedback_for_observations(
+            candidate_obs,
+            atom=atom,
         )
         priority = _apply_queue_health_feedback_to_priority(
             compute_acquisition_priority(atom, best_obs),
@@ -1177,12 +1112,8 @@ def build_inverse_steganalysis_acquisition_plan(
                     "best_observation_id": None if best_obs is None else best_obs["observation_id"],
                     "observation_count": len(candidate_obs),
                     "queue_health_feedback": queue_health_feedback,
-                    "materializer_archive_delta_feedback": (
-                        materializer_archive_delta_feedback
-                    ),
-                    "queue_health_blocked": bool(
-                        queue_health_feedback["blocks_water_bucket"]
-                    ),
+                    "materializer_archive_delta_feedback": (materializer_archive_delta_feedback),
+                    "queue_health_blocked": bool(queue_health_feedback["blocks_water_bucket"]),
                     "materializer_archive_delta_blocked": bool(
                         materializer_archive_delta_feedback["blocks_water_bucket"]
                     ),
@@ -1219,13 +1150,9 @@ def build_inverse_steganalysis_acquisition_plan(
             "summary": {
                 "atom_count": len(ranked),
                 "observation_count": len(obs_rows),
-                "queue_health_blocked_count": sum(
-                    1 for row in ranked if row.get("queue_health_blocked") is True
-                ),
+                "queue_health_blocked_count": sum(1 for row in ranked if row.get("queue_health_blocked") is True),
                 "materializer_archive_delta_blocked_count": sum(
-                    1
-                    for row in ranked
-                    if row.get("materializer_archive_delta_blocked") is True
+                    1 for row in ranked if row.get("materializer_archive_delta_blocked") is True
                 ),
                 "top_atom_id": None if not ranked else ranked[0]["atom_id"],
                 "top_candidate_id": None if not ranked else ranked[0]["candidate_id"],
@@ -1287,11 +1214,9 @@ def build_discrete_scorer_action_functional(
             matched_observations,
             atom=atom,
         )
-        materializer_archive_delta_feedback = (
-            _materializer_archive_delta_feedback_for_observations(
-                matched_observations,
-                atom=atom,
-            )
+        materializer_archive_delta_feedback = _materializer_archive_delta_feedback_for_observations(
+            matched_observations,
+            atom=atom,
         )
         priority = _apply_queue_health_feedback_to_priority(
             compute_acquisition_priority(atom, best_obs),
@@ -1313,14 +1238,8 @@ def build_discrete_scorer_action_functional(
         residual = marginal_utility - lambda_rate
         guard = dict(atom["discontinuity_guard"])
         queue_health_blocked = bool(queue_health_feedback["blocks_water_bucket"])
-        materializer_archive_delta_blocked = bool(
-            materializer_archive_delta_feedback["blocks_water_bucket"]
-        )
-        blocked = (
-            bool(guard.get("blocked"))
-            or queue_health_blocked
-            or materializer_archive_delta_blocked
-        )
+        materializer_archive_delta_blocked = bool(materializer_archive_delta_feedback["blocks_water_bucket"])
+        blocked = bool(guard.get("blocked")) or queue_health_blocked or materializer_archive_delta_blocked
         if blocked:
             blocked_cells += 1
         if queue_health_blocked:
@@ -1359,35 +1278,22 @@ def build_discrete_scorer_action_functional(
                     "discontinuity_guard": guard,
                     "queue_health_feedback": queue_health_feedback,
                     "queue_health_blocked": queue_health_blocked,
-                    "materializer_archive_delta_feedback": (
-                        materializer_archive_delta_feedback
-                    ),
-                    "materializer_archive_delta_blocked": (
-                        materializer_archive_delta_blocked
-                    ),
+                    "materializer_archive_delta_feedback": (materializer_archive_delta_feedback),
+                    "materializer_archive_delta_blocked": (materializer_archive_delta_blocked),
                     "queue_health_group_ids": queue_health_feedback["group_ids"],
-                    "queue_health_repeat_count": queue_health_feedback[
-                        "repeated_observation_count"
-                    ],
-                    "queue_health_penalty_applied": queue_health_feedback[
-                        "queue_health_penalty_applied"
-                    ],
+                    "queue_health_repeat_count": queue_health_feedback["repeated_observation_count"],
+                    "queue_health_penalty_applied": queue_health_feedback["queue_health_penalty_applied"],
                     "best_observation_id": None if best_obs is None else best_obs["observation_id"],
-                    "best_observation_kind": (
-                        None if best_obs is None else best_obs.get("observation_kind")
-                    ),
+                    "best_observation_kind": (None if best_obs is None else best_obs.get("observation_kind")),
                     "exact_auth_calibration": (
                         best_obs.get("exact_auth_calibration")
-                        if isinstance(best_obs, Mapping)
-                        and isinstance(best_obs.get("exact_auth_calibration"), Mapping)
+                        if isinstance(best_obs, Mapping) and isinstance(best_obs.get("exact_auth_calibration"), Mapping)
                         else None
                     ),
                     "source_provenance": atom.get("source_provenance"),
                     "operation_set_compiler": atom.get("operation_set_compiler"),
                     "operation_set_target_kind": atom.get("operation_set_target_kind"),
-                    "operation_set_operation_family": atom.get(
-                        "operation_set_operation_family"
-                    ),
+                    "operation_set_operation_family": atom.get("operation_set_operation_family"),
                     "operation_set_params": atom.get("operation_set_params"),
                     "priority": priority,
                 },
@@ -1438,16 +1344,12 @@ def build_discrete_scorer_action_functional(
             },
             "observation_feedback": _observation_feedback_summary(obs_rows),
             "queue_health_feedback": _queue_health_feedback_for_observations(obs_rows),
-            "materializer_archive_delta_feedback": (
-                _materializer_archive_delta_feedback_for_observations(obs_rows)
-            ),
+            "materializer_archive_delta_feedback": (_materializer_archive_delta_feedback_for_observations(obs_rows)),
             "integral_totals": {
                 "cell_count": len(cells),
                 "blocked_cell_count": blocked_cells,
                 "queue_health_blocked_cell_count": queue_health_blocked_cells,
-                "materializer_archive_delta_blocked_cell_count": (
-                    materializer_archive_delta_blocked_cells
-                ),
+                "materializer_archive_delta_blocked_cell_count": (materializer_archive_delta_blocked_cells),
                 "first_order_marginal_effect_sum": total_first_order,
                 "second_order_interaction_effect_sum": total_second_order,
                 "synergy_effect_sum": total_synergy,
@@ -1456,9 +1358,7 @@ def build_discrete_scorer_action_functional(
                 "expected_score_gain_sum": total_expected_gain,
                 "net_action_gain_after_fragility": max(
                     0.0,
-                    total_first_order
-                    + total_second_order
-                    - total_fragility_penalty,
+                    total_first_order + total_second_order - total_fragility_penalty,
                 ),
             },
             "water_bucket": water_bucket,
@@ -1515,9 +1415,7 @@ def action_atoms_from_byte_shaving_campaign_plan(
 
     _reject_truthy_authority(plan, label="byte-shaving campaign plan")
     if plan.get("schema") != BYTE_SHAVING_CAMPAIGN_PLAN_SCHEMA:
-        raise InverseSteganalysisAcquisitionError(
-            f"plan schema must be {BYTE_SHAVING_CAMPAIGN_PLAN_SCHEMA}"
-        )
+        raise InverseSteganalysisAcquisitionError(f"plan schema must be {BYTE_SHAVING_CAMPAIGN_PLAN_SCHEMA}")
     if elapsed_seconds is not None:
         elapsed_seconds = _float(
             elapsed_seconds,
@@ -1554,9 +1452,7 @@ def action_atoms_from_byte_shaving_campaign_plan(
 
     ranked_units = _sequence_of_mappings(plan.get("ranked_units"))
     if not ranked_units:
-        raise InverseSteganalysisAcquisitionError(
-            "byte-shaving plan must contain operation_set_ladder or ranked_units"
-        )
+        raise InverseSteganalysisAcquisitionError("byte-shaving plan must contain operation_set_ladder or ranked_units")
     for index, unit in enumerate(ranked_units):
         atoms.append(
             normalize_inverse_steganalysis_atom(
@@ -1587,9 +1483,7 @@ def action_atoms_from_inverse_scorer_surface(
 
     _reject_truthy_authority(surface, label="inverse scorer decision surface")
     if surface.get("schema") != INVERSE_SCORER_SURFACE_SCHEMA:
-        raise InverseSteganalysisAcquisitionError(
-            f"surface schema must be {INVERSE_SCORER_SURFACE_SCHEMA}"
-        )
+        raise InverseSteganalysisAcquisitionError(f"surface schema must be {INVERSE_SCORER_SURFACE_SCHEMA}")
     cells = surface.get("cells")
     if not isinstance(cells, list) or not cells:
         raise InverseSteganalysisAcquisitionError("surface.cells must be a non-empty list")
@@ -1693,9 +1587,7 @@ def action_atoms_from_mlx_acquisition_batch(
     if artifact_bytes is not None:
         artifact_bytes = _int(artifact_bytes, "artifact_bytes", minimum=0)
     atoms: list[dict[str, Any]] = []
-    for index, operation_set in enumerate(
-        _sequence_of_mappings(normalized_batch.get("operation_sets"))
-    ):
+    for index, operation_set in enumerate(_sequence_of_mappings(normalized_batch.get("operation_sets"))):
         atoms.append(
             normalize_inverse_steganalysis_atom(
                 _action_atom_from_mlx_acquisition_operation_set(
@@ -1723,50 +1615,31 @@ def _validated_mlx_effective_spend_triage_rows(
     )
     if selection.get("schema") != MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA:
         raise InverseSteganalysisAcquisitionError(
-            "selection schema must be "
-            f"{MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA}"
+            f"selection schema must be {MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA}"
         )
     if selection.get("candidate_generation_only") is not True:
-        raise InverseSteganalysisAcquisitionError(
-            "MLX selection candidate_generation_only must be true"
-        )
+        raise InverseSteganalysisAcquisitionError("MLX selection candidate_generation_only must be true")
     if selection.get("archive_materialization_required") is not True:
-        raise InverseSteganalysisAcquisitionError(
-            "MLX selection archive_materialization_required must be true"
-        )
+        raise InverseSteganalysisAcquisitionError("MLX selection archive_materialization_required must be true")
     if selection.get("requires_exact_auth_eval_before_score_claim") is not True:
-        raise InverseSteganalysisAcquisitionError(
-            "MLX selection must require exact auth eval before score claim"
-        )
+        raise InverseSteganalysisAcquisitionError("MLX selection must require exact auth eval before score claim")
     if selection.get("evidence_grade") != MLX_EVIDENCE_GRADE:
-        raise InverseSteganalysisAcquisitionError(
-            f"MLX selection evidence_grade must be {MLX_EVIDENCE_GRADE}"
-        )
+        raise InverseSteganalysisAcquisitionError(f"MLX selection evidence_grade must be {MLX_EVIDENCE_GRADE}")
     if selection.get("evidence_tag") != MLX_EVIDENCE_TAG:
-        raise InverseSteganalysisAcquisitionError(
-            f"MLX selection evidence_tag must be {MLX_EVIDENCE_TAG}"
-        )
+        raise InverseSteganalysisAcquisitionError(f"MLX selection evidence_tag must be {MLX_EVIDENCE_TAG}")
     if selection.get("score_axis") != MLX_EVIDENCE_TAG:
-        raise InverseSteganalysisAcquisitionError(
-            f"MLX selection score_axis must be {MLX_EVIDENCE_TAG}"
-        )
+        raise InverseSteganalysisAcquisitionError(f"MLX selection score_axis must be {MLX_EVIDENCE_TAG}")
 
     gates = selection.get("gates")
     if not isinstance(gates, Mapping):
         raise InverseSteganalysisAcquisitionError("MLX selection gates must be an object")
     effective_gate = gates.get("effective_mlx_spend_triage_gate")
     if not isinstance(effective_gate, Mapping):
-        raise InverseSteganalysisAcquisitionError(
-            "MLX selection effective_mlx_spend_triage_gate missing"
-        )
+        raise InverseSteganalysisAcquisitionError("MLX selection effective_mlx_spend_triage_gate missing")
     if effective_gate.get("status") != "strict_pass":
-        raise InverseSteganalysisAcquisitionError(
-            "MLX effective spend-triage gate must be strict_pass"
-        )
+        raise InverseSteganalysisAcquisitionError("MLX effective spend-triage gate must be strict_pass")
     if effective_gate.get("mlx_exact_eval_spend_triage_allowed") is not True:
-        raise InverseSteganalysisAcquisitionError(
-            "MLX effective spend-triage gate must allow spend triage"
-        )
+        raise InverseSteganalysisAcquisitionError("MLX effective spend-triage gate must allow spend triage")
     for key, label in (
         ("torch_parity_status", "MLX parity gate"),
         ("score_calibration_status", "MLX score calibration gate"),
@@ -1777,60 +1650,38 @@ def _validated_mlx_effective_spend_triage_rows(
 
     policy = selection.get("selection_policy")
     if not isinstance(policy, Mapping):
-        raise InverseSteganalysisAcquisitionError(
-            "MLX selection selection_policy must be an object"
-        )
+        raise InverseSteganalysisAcquisitionError("MLX selection selection_policy must be an object")
     if policy.get("planning_value_accessor") != "scorer_response_planning_value_for_target":
-        raise InverseSteganalysisAcquisitionError(
-            "MLX selection must use scorer_response_planning_value_for_target"
-        )
+        raise InverseSteganalysisAcquisitionError("MLX selection must use scorer_response_planning_value_for_target")
     if policy.get("planning_value_scope") != "normalized_full_video":
-        raise InverseSteganalysisAcquisitionError(
-            "MLX selection planning_value_scope must be normalized_full_video"
-        )
+        raise InverseSteganalysisAcquisitionError("MLX selection planning_value_scope must be normalized_full_video")
     if policy.get("require_singleton_windows") is not True:
-        raise InverseSteganalysisAcquisitionError(
-            "MLX selection must require singleton windows"
-        )
+        raise InverseSteganalysisAcquisitionError("MLX selection must require singleton windows")
 
     rows = selection.get("selected_rows")
     if not isinstance(rows, list) or not rows:
-        raise InverseSteganalysisAcquisitionError(
-            "MLX selection selected_rows must be a non-empty list"
-        )
+        raise InverseSteganalysisAcquisitionError("MLX selection selected_rows must be a non-empty list")
     validated: list[dict[str, Any]] = []
     for index, row in enumerate(rows):
         if not isinstance(row, Mapping):
-            raise InverseSteganalysisAcquisitionError(
-                f"MLX selection row {index} must be an object"
-            )
+            raise InverseSteganalysisAcquisitionError(f"MLX selection row {index} must be an object")
         label = f"MLX selection row {index}"
         _reject_truthy_authority(row, label=label)
         _require_explicit_false_authority(row, label=label)
         if row.get("schema") != MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_ROW_SCHEMA:
             raise InverseSteganalysisAcquisitionError(f"{label} schema mismatch")
         if row.get("candidate_generation_only") is not True:
-            raise InverseSteganalysisAcquisitionError(
-                f"{label} candidate_generation_only must be true"
-            )
+            raise InverseSteganalysisAcquisitionError(f"{label} candidate_generation_only must be true")
         if row.get("archive_materialization_required") is not True:
-            raise InverseSteganalysisAcquisitionError(
-                f"{label} archive_materialization_required must be true"
-            )
+            raise InverseSteganalysisAcquisitionError(f"{label} archive_materialization_required must be true")
         if row.get("requires_exact_auth_eval_before_score_claim") is not True:
-            raise InverseSteganalysisAcquisitionError(
-                f"{label} must require exact auth eval before score claim"
-            )
+            raise InverseSteganalysisAcquisitionError(f"{label} must require exact auth eval before score claim")
         if row.get("selection_basis") != "normalized_full_video_mlx_singleton_response_gain":
             raise InverseSteganalysisAcquisitionError(
                 f"{label} selection_basis must be normalized_full_video_mlx_singleton_response_gain"
             )
-        if row.get("selection_planning_value_accessor") != (
-            "scorer_response_planning_value_for_target"
-        ):
-            raise InverseSteganalysisAcquisitionError(
-                f"{label} must use scorer_response_planning_value_for_target"
-            )
+        if row.get("selection_planning_value_accessor") != ("scorer_response_planning_value_for_target"):
+            raise InverseSteganalysisAcquisitionError(f"{label} must use scorer_response_planning_value_for_target")
         if row.get("selection_planning_value_scope") != "normalized_full_video":
             raise InverseSteganalysisAcquisitionError(
                 f"{label} selection_planning_value_scope must be normalized_full_video"
@@ -1838,18 +1689,12 @@ def _validated_mlx_effective_spend_triage_rows(
         normalized_gain = _mlx_selection_score_gain(row, label=label)
         projected_delta = _mlx_selection_projected_delta(row, label=label)
         if projected_delta >= 0.0:
-            raise InverseSteganalysisAcquisitionError(
-                f"{label} projected full-video delta must be negative"
-            )
+            raise InverseSteganalysisAcquisitionError(f"{label} projected full-video delta must be negative")
         margin = _mlx_selection_byte_margin(row, label=label)
         if margin < 0.0:
-            raise InverseSteganalysisAcquisitionError(
-                f"{label} normalized full-video margin must be non-negative"
-            )
+            raise InverseSteganalysisAcquisitionError(f"{label} normalized full-video margin must be non-negative")
         if normalized_gain <= 0.0:
-            raise InverseSteganalysisAcquisitionError(
-                f"{label} normalized full-video gain must be positive"
-            )
+            raise InverseSteganalysisAcquisitionError(f"{label} normalized full-video gain must be positive")
         _validate_mlx_selection_row_geometry_and_identity(
             row,
             label=label,
@@ -1892,9 +1737,11 @@ def _action_atom_from_mlx_effective_spend_triage_row(
         f"{label}.added_archive_bytes",
     )
     added_bytes = max(0, math.ceil(added_archive_bytes or 0.0))
-    saved_bytes = max(0, math.ceil(abs(added_archive_bytes or 0.0))) if (
-        added_archive_bytes is not None and added_archive_bytes < 0.0
-    ) else 0
+    saved_bytes = (
+        max(0, math.ceil(abs(added_archive_bytes or 0.0)))
+        if (added_archive_bytes is not None and added_archive_bytes < 0.0)
+        else 0
+    )
     row_artifact_bytes = artifact_bytes
     if row_artifact_bytes is None:
         row_artifact_bytes = max(1, added_bytes, saved_bytes)
@@ -1916,43 +1763,23 @@ def _action_atom_from_mlx_effective_spend_triage_row(
             "pair_indices": pair_indices,
             "archive_sha256": row.get("archive_sha256"),
             "raw_sha256": row.get("raw_sha256"),
-            "source_inflated_outputs_aggregate_sha256": row.get(
-                "source_inflated_outputs_aggregate_sha256"
-            ),
-            "source_candidate_cache_array_sha256": row.get(
-                "source_candidate_cache_array_sha256"
-            ),
-            "source_reference_cache_array_sha256": row.get(
-                "source_reference_cache_array_sha256"
-            ),
-            "window_baseline_candidate_cache_array_sha256": row.get(
-                "window_baseline_candidate_cache_array_sha256"
-            ),
-            "window_baseline_reference_cache_array_sha256": row.get(
-                "window_baseline_reference_cache_array_sha256"
-            ),
+            "source_inflated_outputs_aggregate_sha256": row.get("source_inflated_outputs_aggregate_sha256"),
+            "source_candidate_cache_array_sha256": row.get("source_candidate_cache_array_sha256"),
+            "source_reference_cache_array_sha256": row.get("source_reference_cache_array_sha256"),
+            "window_baseline_candidate_cache_array_sha256": row.get("window_baseline_candidate_cache_array_sha256"),
+            "window_baseline_reference_cache_array_sha256": row.get("window_baseline_reference_cache_array_sha256"),
             "evidence_grade": selection.get("evidence_grade"),
             "evidence_tag": selection.get("evidence_tag"),
             "score_axis": selection.get("score_axis"),
             "selection_basis": row.get("selection_basis"),
-            "selection_planning_value_accessor": row.get(
-                "selection_planning_value_accessor"
-            ),
-            "selection_planning_value_scope": row.get(
-                "selection_planning_value_scope"
-            ),
+            "selection_planning_value_accessor": row.get("selection_planning_value_accessor"),
+            "selection_planning_value_scope": row.get("selection_planning_value_scope"),
             "normalized_full_video_scorer_gain_vs_baseline": normalized_gain,
             "projected_full_video_delta_vs_baseline_score": projected_delta,
             "normalized_full_video_byte_budget_margin_vs_break_even": _mlx_selection_byte_margin(row, label=label),
-            "observed_scorer_gain_vs_baseline": row.get(
-                "observed_scorer_gain_vs_baseline"
-            ),
-            "observed_delta_vs_baseline_score": row.get(
-                "observed_delta_vs_baseline_score"
-            ),
-            "byte_budget_margin_vs_break_even": row.get(
-                "byte_budget_margin_vs_break_even"
-            ),
+            "observed_scorer_gain_vs_baseline": row.get("observed_scorer_gain_vs_baseline"),
+            "observed_delta_vs_baseline_score": row.get("observed_delta_vs_baseline_score"),
+            "byte_budget_margin_vs_break_even": row.get("byte_budget_margin_vs_break_even"),
             "calibrated_min_mlx_gap_for_spend_triage": calibrated_gap,
             "prediction_field": row.get("prediction_field"),
             "predicted_delta_vs_baseline_score": predicted_delta,
@@ -2039,20 +1866,14 @@ def _validate_mlx_selection_row_geometry_and_identity(
 ) -> None:
     denominator = _int(row.get("full_video_denominator"), f"{label}.full_video_denominator", minimum=1)
     if denominator != 600:
-        raise InverseSteganalysisAcquisitionError(
-            f"{label} full_video_denominator must be 600"
-        )
+        raise InverseSteganalysisAcquisitionError(f"{label} full_video_denominator must be 600")
     pair_indices = _mlx_selection_pair_indices(row, label=label)
     window = _range(row.get("source_pair_window"), f"{label}.source_pair_window")
     if pair_indices is None or window is None:
-        raise InverseSteganalysisAcquisitionError(
-            f"{label} pair_indices and source_pair_window are required"
-        )
+        raise InverseSteganalysisAcquisitionError(f"{label} pair_indices and source_pair_window are required")
     expected = list(range(window[0], window[1] + 1))
     if pair_indices != expected:
-        raise InverseSteganalysisAcquisitionError(
-            f"{label} pair_indices must match source_pair_window"
-        )
+        raise InverseSteganalysisAcquisitionError(f"{label} pair_indices must match source_pair_window")
     observed_gain = _float_or_none(
         row.get("observed_scorer_gain_vs_baseline"),
         f"{label}.observed_scorer_gain_vs_baseline",
@@ -2064,9 +1885,7 @@ def _validate_mlx_selection_row_geometry_and_identity(
         and "normalized_full_video_scorer_gain_vs_baseline" in row
         and not math.isclose(normalized_gain, observed_gain / denominator, rel_tol=1e-9, abs_tol=1e-12)
     ):
-        raise InverseSteganalysisAcquisitionError(
-            f"{label} normalized gain inconsistent with full_video_denominator"
-        )
+        raise InverseSteganalysisAcquisitionError(f"{label} normalized gain inconsistent with full_video_denominator")
     observed_delta = _float_or_none(
         row.get("observed_delta_vs_baseline_score"),
         f"{label}.observed_delta_vs_baseline_score",
@@ -2076,9 +1895,7 @@ def _validate_mlx_selection_row_geometry_and_identity(
         and "projected_full_video_delta_vs_baseline_score" in row
         and not math.isclose(projected_delta, observed_delta / denominator, rel_tol=1e-9, abs_tol=1e-12)
     ):
-        raise InverseSteganalysisAcquisitionError(
-            f"{label} projected delta inconsistent with full_video_denominator"
-        )
+        raise InverseSteganalysisAcquisitionError(f"{label} projected delta inconsistent with full_video_denominator")
     added_bytes = _float_or_none(
         row.get("added_archive_bytes"),
         f"{label}.added_archive_bytes",
@@ -2099,18 +1916,14 @@ def _validate_mlx_selection_row_geometry_and_identity(
             rel_tol=1e-9,
             abs_tol=1e-9,
         ):
-            raise InverseSteganalysisAcquisitionError(
-                f"{label} break-even bytes inconsistent with normalized gain"
-            )
+            raise InverseSteganalysisAcquisitionError(f"{label} break-even bytes inconsistent with normalized gain")
         if added_bytes is not None and not math.isclose(
             margin,
             break_even_bytes - added_bytes,
             rel_tol=1e-9,
             abs_tol=1e-9,
         ):
-            raise InverseSteganalysisAcquisitionError(
-                f"{label} byte budget margin inconsistent with added bytes"
-            )
+            raise InverseSteganalysisAcquisitionError(f"{label} byte budget margin inconsistent with added bytes")
     for key in (
         "archive_sha256",
         "raw_sha256",
@@ -2146,15 +1959,9 @@ def _action_atom_from_inverse_cell(
     cell_id = _text(cell.get("cell_id"), "cell.cell_id")
     source_candidates = cell.get("source_candidate_ids")
     source_candidate_id = (
-        str(source_candidates[0])
-        if isinstance(source_candidates, list) and source_candidates
-        else None
+        str(source_candidates[0]) if isinstance(source_candidates, list) and source_candidates else None
     )
-    candidate_id = (
-        default_candidate_id
-        or source_candidate_id
-        or f"inverse_surface_candidate_{_slug(cell_id)}"
-    )
+    candidate_id = default_candidate_id or source_candidate_id or f"inverse_surface_candidate_{_slug(cell_id)}"
     decision_class = _text(
         cell.get("decision_surface_class"),
         "cell.decision_surface_class",
@@ -2211,9 +2018,7 @@ def _action_atom_from_inverse_cell(
         "uncertainty": spread,
         "calibration_error": spread * 0.25,
         "elapsed_seconds": elapsed_seconds,
-        "artifact_bytes": (
-            artifact_bytes if artifact_bytes is not None else max(1, saved_bytes)
-        ),
+        "artifact_bytes": (artifact_bytes if artifact_bytes is not None else max(1, saved_bytes)),
         "resource_kind": resource_kind,
         "operation_set_compiler": _optional_mapping(
             cell.get("operation_set_compiler"),
@@ -2261,9 +2066,7 @@ def _action_atom_from_byte_shaving_operation_set(
         "operation_set.operation_set_id",
     )
     candidate_id = (
-        default_candidate_id
-        or _optional_text(plan.get("candidate_id"))
-        or f"byte_shaving_{_slug(operation_set_id)}"
+        default_candidate_id or _optional_text(plan.get("candidate_id")) or f"byte_shaving_{_slug(operation_set_id)}"
     )
     unit_kinds = ordered_unique(
         str(operation.get("unit_kind") or "")
@@ -2376,8 +2179,7 @@ def _action_atom_from_mlx_acquisition_operation_set(
     )
     selected_operations = _sequence_of_mappings(operation_set.get("selected_operations"))
     unit_kinds = ordered_unique(
-        str(operation.get("unit_kind") or "scorer_response_row")
-        for operation in selected_operations
+        str(operation.get("unit_kind") or "scorer_response_row") for operation in selected_operations
     )
     pair_indices = _byte_shaving_pair_indices(operation_set)
     saved_bytes = _int(
@@ -2441,8 +2243,7 @@ def _action_atom_from_mlx_acquisition_operation_set(
         "calibration_error": uncertainty * 0.25,
         "elapsed_seconds": elapsed_seconds,
         "artifact_bytes": row_artifact_bytes,
-        "resource_kind": resource_kind
-        or str(operation_set.get("resource_kind") or "local_mlx"),
+        "resource_kind": resource_kind or str(operation_set.get("resource_kind") or "local_mlx"),
         "operation_set_compiler": _optional_mapping(
             operation_set.get("operation_set_compiler"),
             "mlx_operation_set.operation_set_compiler",
@@ -2511,9 +2312,7 @@ def _action_atom_from_byte_shaving_ranked_unit(
         "frequency_band": str(unit.get("recommended_operation_family") or unit_kind),
         "byte_range": _source_span_byte_range(source_span),
         "coherence_group": str(
-            unit.get("recommended_operation_family")
-            or unit.get("unit_kind")
-            or "byte_shaving_unit"
+            unit.get("recommended_operation_family") or unit.get("unit_kind") or "byte_shaving_unit"
         ),
         "sparsity_prior": _byte_shaving_sparsity_prior([unit_kind]),
         "predicted_segnet_gain": 0.0,
@@ -2588,50 +2387,30 @@ def _byte_shaving_operation_set_provenance(
             "operation_set_rank": operation_set.get("operation_set_rank"),
             "selected_unit_ids": _list_strings(operation_set.get("selected_unit_ids")),
             "operation_families": _list_strings(operation_set.get("operation_families")),
-            "chosen_operation_sequence": _sequence_of_mappings(
-                operation_set.get("chosen_operation_sequence")
-            ),
-            "chosen_operation_sequence_source": operation_set.get(
-                "chosen_operation_sequence_source"
-            ),
+            "chosen_operation_sequence": _sequence_of_mappings(operation_set.get("chosen_operation_sequence")),
+            "chosen_operation_sequence_source": operation_set.get("chosen_operation_sequence_source"),
             "operation_set_compiler": _optional_mapping(
                 operation_set.get("operation_set_compiler"),
                 "operation_set.operation_set_compiler",
             ),
-            "selected_operations": _sequence_of_mappings(
-                operation_set.get("selected_operations")
-            ),
-            "active_interactions": _sequence_of_mappings(
-                operation_set.get("active_interactions")
-            ),
+            "selected_operations": _sequence_of_mappings(operation_set.get("selected_operations")),
+            "active_interactions": _sequence_of_mappings(operation_set.get("active_interactions")),
             "candidate_saved_bytes": operation_set.get("candidate_saved_bytes"),
             "base_saved_bytes": operation_set.get("base_saved_bytes"),
-            "interaction_extra_saved_bytes": operation_set.get(
-                "interaction_extra_saved_bytes"
-            ),
-            "interaction_shared_overhead_bytes": operation_set.get(
-                "interaction_shared_overhead_bytes"
-            ),
+            "interaction_extra_saved_bytes": operation_set.get("interaction_extra_saved_bytes"),
+            "interaction_shared_overhead_bytes": operation_set.get("interaction_shared_overhead_bytes"),
             "quality_cost_score": operation_set.get("quality_cost_score"),
             "interaction_delta_score": operation_set.get("interaction_delta_score"),
             "expected_delta_score": operation_set.get("expected_delta_score"),
             "expected_score_gain": expected_gain,
             "first_order_marginal_effect": first_order,
             "second_order_interaction_effect": second_order,
-            "partial_materialization_allowed": operation_set.get(
-                "partial_materialization_allowed"
-            ),
+            "partial_materialization_allowed": operation_set.get("partial_materialization_allowed"),
             "dispatch_blockers": _list_strings(operation_set.get("dispatch_blockers")),
             "source_signal_refs": _sequence_of_mappings(plan.get("source_signal_refs")),
-            "scorer_response_refs": _sequence_of_mappings(
-                plan.get("scorer_response_refs")
-            ),
-            "inverse_scorer_surface_refs": _sequence_of_mappings(
-                plan.get("inverse_scorer_surface_refs")
-            ),
-            "mlx_calibration_refs": _sequence_of_mappings(
-                plan.get("mlx_calibration_refs")
-            ),
+            "scorer_response_refs": _sequence_of_mappings(plan.get("scorer_response_refs")),
+            "inverse_scorer_surface_refs": _sequence_of_mappings(plan.get("inverse_scorer_surface_refs")),
+            "mlx_calibration_refs": _sequence_of_mappings(plan.get("mlx_calibration_refs")),
             "allowed_use": "inverse_steganalysis_planning_rank_only",
             "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
         },
@@ -2663,35 +2442,19 @@ def _mlx_acquisition_operation_set_provenance(
             "selected_unit_ids": _list_strings(operation_set.get("selected_unit_ids")),
             "operation_families": _list_strings(operation_set.get("operation_families")),
             "source_families": _list_strings(operation_set.get("source_families")),
-            "source_family_classes": _list_strings(
-                operation_set.get("source_family_classes")
-            ),
-            "representation_contracts": _sequence_of_mappings(
-                operation_set.get("representation_contracts")
-            ),
-            "receiver_contract_kinds": _list_strings(
-                operation_set.get("receiver_contract_kinds")
-            ),
-            "materializer_contract_kinds": _list_strings(
-                operation_set.get("materializer_contract_kinds")
-            ),
+            "source_family_classes": _list_strings(operation_set.get("source_family_classes")),
+            "representation_contracts": _sequence_of_mappings(operation_set.get("representation_contracts")),
+            "receiver_contract_kinds": _list_strings(operation_set.get("receiver_contract_kinds")),
+            "materializer_contract_kinds": _list_strings(operation_set.get("materializer_contract_kinds")),
             "operation_portability": operation_set.get("operation_portability"),
             "operation_set_compiler": _optional_mapping(
                 operation_set.get("operation_set_compiler"),
                 "mlx_operation_set.operation_set_compiler",
             ),
-            "selected_operations": _sequence_of_mappings(
-                operation_set.get("selected_operations")
-            ),
-            "chosen_operation_sequence": _sequence_of_mappings(
-                operation_set.get("chosen_operation_sequence")
-            ),
-            "chosen_operation_sequence_source": operation_set.get(
-                "chosen_operation_sequence_source"
-            ),
-            "active_interactions": _sequence_of_mappings(
-                operation_set.get("active_interactions")
-            ),
+            "selected_operations": _sequence_of_mappings(operation_set.get("selected_operations")),
+            "chosen_operation_sequence": _sequence_of_mappings(operation_set.get("chosen_operation_sequence")),
+            "chosen_operation_sequence_source": operation_set.get("chosen_operation_sequence_source"),
+            "active_interactions": _sequence_of_mappings(operation_set.get("active_interactions")),
             "row_refs": _sequence_of_mappings(operation_set.get("row_refs")),
             "pair_indices": _int_list(operation_set.get("pair_indices"), "pair_indices"),
             "candidate_saved_bytes": operation_set.get("candidate_saved_bytes"),
@@ -2732,12 +2495,8 @@ def _byte_shaving_unit_provenance(
             "expected_score_gain": expected_gain,
             "recommended_operation_id": unit.get("recommended_operation_id"),
             "recommended_operation_family": unit.get("recommended_operation_family"),
-            "recommended_operation_materializer": unit.get(
-                "recommended_operation_materializer"
-            ),
-            "recommended_operation_target_kind": unit.get(
-                "recommended_operation_target_kind"
-            ),
+            "recommended_operation_materializer": unit.get("recommended_operation_materializer"),
+            "recommended_operation_target_kind": unit.get("recommended_operation_target_kind"),
             "recommended_operation_params": _optional_mapping(
                 unit.get("recommended_operation_params"),
                 "ranked_unit.recommended_operation_params",
@@ -2751,9 +2510,7 @@ def _byte_shaving_unit_provenance(
             "master_gradient_signal": unit.get("master_gradient_signal"),
             "engineered_correction_signal": unit.get("engineered_correction_signal"),
             "canonical_equation_provenance": unit.get("canonical_equation_provenance"),
-            "candidate_trust_region_blockers": _list_strings(
-                unit.get("candidate_trust_region_blockers")
-            ),
+            "candidate_trust_region_blockers": _list_strings(unit.get("candidate_trust_region_blockers")),
             "dispatch_blockers": _list_strings(unit.get("dispatch_blockers")),
             "allowed_use": "inverse_steganalysis_planning_rank_only",
             "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
@@ -2806,9 +2563,7 @@ def _byte_shaving_second_order_gain(operation_set: Mapping[str, Any]) -> float:
         )
         for interaction in _sequence_of_mappings(operation_set.get("active_interactions"))
     )
-    return direct_gain + quality_gain + (
-        CONTEST_RATE_SCORE_PER_BYTE * float(extra_saved - overhead)
-    )
+    return direct_gain + quality_gain + (CONTEST_RATE_SCORE_PER_BYTE * float(extra_saved - overhead))
 
 
 def _byte_shaving_scale(unit_kinds: Sequence[str]) -> str:
@@ -2989,11 +2744,7 @@ def _byte_shaving_discontinuity_risk(
     unit_kinds: Sequence[str],
 ) -> float:
     blocker_text = " ".join(str(blocker).lower() for blocker in blockers)
-    if (
-        "fragile" in blocker_text
-        or "discontinuity" in blocker_text
-        or "parity_failed" in blocker_text
-    ):
+    if "fragile" in blocker_text or "discontinuity" in blocker_text or "parity_failed" in blocker_text:
         return 0.8
     if "missing" in blocker_text or "materializer_gap" in blocker_text:
         return 0.45
@@ -3005,7 +2756,11 @@ def _byte_shaving_discontinuity_risk(
 
 
 def _sequence_of_mappings(value: Any) -> list[dict[str, Any]]:
-    return [dict(item) for item in value if isinstance(item, Mapping)] if isinstance(value, Sequence) and not isinstance(value, str | bytes) else []
+    return (
+        [dict(item) for item in value if isinstance(item, Mapping)]
+        if isinstance(value, Sequence) and not isinstance(value, str | bytes)
+        else []
+    )
 
 
 def _list_strings(value: Any) -> list[str]:
@@ -3110,9 +2865,7 @@ def _add_compiler_feedback_target_ids(ids: set[str], atom: Mapping[str, Any]) ->
     target_kind = _optional_text(compiler.get("target_kind"))
     if target_kind:
         ids.add(target_kind)
-    materializer = _optional_text(
-        _first(compiler.get("materializer_id"), compiler.get("materializer"))
-    )
+    materializer = _optional_text(_first(compiler.get("materializer_id"), compiler.get("materializer")))
     if materializer:
         ids.add(materializer)
     receiver_contract_kind = _optional_text(compiler.get("receiver_contract_kind"))
@@ -3124,9 +2877,7 @@ def _add_compiler_feedback_target_ids(ids: set[str], atom: Mapping[str, Any]) ->
         target_kind = _optional_text(operation.get("target_kind"))
         if target_kind:
             ids.add(target_kind)
-        materializer = _optional_text(
-            _first(operation.get("materializer_id"), operation.get("materializer"))
-        )
+        materializer = _optional_text(_first(operation.get("materializer_id"), operation.get("materializer")))
         if materializer:
             ids.add(materializer)
         receiver_contract_kind = _optional_text(operation.get("receiver_contract_kind"))
@@ -3232,12 +2983,8 @@ def _observation_feedback_summary(
                                 else {}
                             )
                         ),
-                        "regression_penalty_sum": calibration.get(
-                            "regression_penalty_sum"
-                        ),
-                        "improvement_gain_sum": calibration.get(
-                            "improvement_gain_sum"
-                        ),
+                        "regression_penalty_sum": calibration.get("regression_penalty_sum"),
+                        "improvement_gain_sum": calibration.get("improvement_gain_sum"),
                         "packet_paths": calibration.get("packet_paths") or [],
                     },
                     "exact_auth_calibration_ref_is_planning_metadata_only",
@@ -3250,9 +2997,7 @@ def _observation_feedback_summary(
             "observation_kind_counts": dict(sorted(kind_counts.items())),
             "exact_auth_calibration_count": len(exact_auth_refs),
             "exact_auth_calibration_refs": exact_auth_refs,
-            "queue_health_group_priors": _queue_health_feedback_for_observations(
-                observations
-            ),
+            "queue_health_group_priors": _queue_health_feedback_for_observations(observations),
             "materializer_archive_delta_feedback": (
                 _materializer_archive_delta_feedback_for_observations(observations)
             ),
@@ -3267,21 +3012,13 @@ def _is_queue_health_blocker_observation(row: Mapping[str, Any]) -> bool:
 
 
 def _is_materializer_archive_delta_observation(row: Mapping[str, Any]) -> bool:
-    return str(row.get("observation_kind") or "") in (
-        MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KINDS
-    )
+    return str(row.get("observation_kind") or "") in (MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KINDS)
 
 
 def _materializer_archive_delta_blocks_water_bucket(row: Mapping[str, Any]) -> bool:
-    return (
-        _is_materializer_archive_delta_observation(row)
-        and (
-            row.get("receiver_contract_satisfied") is not True
-            or (
-                row.get("rate_positive") is not True
-                and row.get("quality_spend_allowed") is not True
-            )
-        )
+    return _is_materializer_archive_delta_observation(row) and (
+        row.get("receiver_contract_satisfied") is not True
+        or (row.get("rate_positive") is not True and row.get("quality_spend_allowed") is not True)
     )
 
 
@@ -3291,31 +3028,17 @@ def _materializer_archive_delta_feedback_for_observations(
     atom: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     rows = _merge_materializer_archive_delta_observations(
-        [
-            dict(row)
-            for row in observations
-            if _is_materializer_archive_delta_observation(row)
-        ]
+        [dict(row) for row in observations if _is_materializer_archive_delta_observation(row)]
     )
-    blocking_rows = [
-        row
-        for row in rows
-        if _materializer_archive_delta_blocks_water_bucket(row)
-    ]
-    realized_values = [
-        int(row["saved_bytes"])
-        for row in rows
-        if row.get("saved_bytes") is not None
-    ]
+    blocking_rows = [row for row in rows if _materializer_archive_delta_blocks_water_bucket(row)]
+    realized_values = [int(row["saved_bytes"]) for row in rows if row.get("saved_bytes") is not None]
     blockers: list[str] = []
     if any(row.get("rate_positive") is not True for row in blocking_rows):
         blockers.append("rate_negative_materializer_success")
     if any(row.get("receiver_contract_satisfied") is not True for row in blocking_rows):
         blockers.append("receiver_negative_materializer_success")
     observed_ids = [_optional_text(row.get("observation_id")) for row in rows]
-    blocking_ids = [
-        _optional_text(row.get("observation_id")) for row in blocking_rows
-    ]
+    blocking_ids = [_optional_text(row.get("observation_id")) for row in blocking_rows]
     source_unit_ids: list[str] = []
     source_selection_ids: list[str] = []
     candidate_ids: list[str] = []
@@ -3343,9 +3066,7 @@ def _materializer_archive_delta_feedback_for_observations(
             "min_realized_saved_bytes": min(realized_values) if realized_values else None,
             "max_realized_saved_bytes": max(realized_values) if realized_values else None,
             "blocks_water_bucket": bool(blocking_rows),
-            "quality_spend_allowed": any(
-                row.get("quality_spend_allowed") is True for row in rows
-            ),
+            "quality_spend_allowed": any(row.get("quality_spend_allowed") is True for row in rows),
             "blockers": blockers,
             "candidate_ids": candidate_ids,
             "source_unit_ids": source_unit_ids,
@@ -3365,11 +3086,7 @@ def _queue_health_feedback_for_observations(
     *,
     atom: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    health_rows = [
-        dict(row)
-        for row in observations
-        if _is_queue_health_blocker_observation(row)
-    ]
+    health_rows = [dict(row) for row in observations if _is_queue_health_blocker_observation(row)]
     hard_blocking_ids = {
         str(row.get("observation_id"))
         for row in health_rows
@@ -3429,22 +3146,12 @@ def _queue_health_feedback_for_observations(
                 "observation_count": observation_count,
                 "hard_blocking_observation_count": hard_blocking_observation_count,
                 "repeated": observation_count > 1,
-                "blocks_water_bucket": (
-                    observation_count > 0
-                    if atom is None
-                    else hard_blocking_observation_count > 0
-                ),
+                "blocks_water_bucket": (observation_count > 0 if atom is None else hard_blocking_observation_count > 0),
             }
         )
     repeated_groups = [group for group in groups if group["repeated"]]
-    repeated_observation_count = sum(
-        int(group["observation_count"]) for group in repeated_groups
-    )
-    blocks_water_bucket = (
-        bool(health_rows)
-        if atom is None
-        else any(group["blocks_water_bucket"] for group in groups)
-    )
+    repeated_observation_count = sum(int(group["observation_count"]) for group in repeated_groups)
+    blocks_water_bucket = bool(health_rows) if atom is None else any(group["blocks_water_bucket"] for group in groups)
     if blocks_water_bucket:
         planning_penalty_multiplier = 0.0
     elif repeated_observation_count:
@@ -3469,15 +3176,10 @@ def _queue_health_feedback_for_observations(
             "repeated_group_count": len(repeated_groups),
             "repeated_observation_count": repeated_observation_count,
             "global_blocker_count": sum(
-                1
-                for row in health_rows
-                if row.get("observation_kind")
-                == "queue_observation_global_health_blocker"
+                1 for row in health_rows if row.get("observation_kind") == "queue_observation_global_health_blocker"
             ),
             "step_blocker_count": sum(
-                1
-                for row in health_rows
-                if row.get("observation_kind") == "queue_observation_health_blocker"
+                1 for row in health_rows if row.get("observation_kind") == "queue_observation_health_blocker"
             ),
             "blocks_water_bucket": blocks_water_bucket,
             "recovery_required": bool(health_rows),
@@ -3496,9 +3198,7 @@ def _queue_health_feedback_for_observations(
 
 
 def _queue_health_feedback_group_key(row: Mapping[str, Any]) -> str:
-    materializer = _optional_text(
-        _first(row.get("materializer_id"), row.get("materializer"))
-    )
+    materializer = _optional_text(_first(row.get("materializer_id"), row.get("materializer")))
     receiver_contract_kind = _optional_text(row.get("receiver_contract_kind"))
     target_kind = _optional_text(row.get("target_kind"))
     if materializer and receiver_contract_kind:
@@ -3534,9 +3234,7 @@ def _queue_health_observation_hard_blocks_atom(
 ) -> bool:
     if row.get("observation_kind") == "queue_observation_global_health_blocker":
         return True
-    if _optional_text(row.get("candidate_id")) == _optional_text(
-        atom.get("candidate_id")
-    ):
+    if _optional_text(row.get("candidate_id")) == _optional_text(atom.get("candidate_id")):
         return True
     atom_targets = _atom_feedback_target_ids(atom)
     for key in (
@@ -3590,9 +3288,7 @@ def _apply_materializer_archive_delta_feedback_to_priority(
     ):
         out[key] = 0.0
     out["materializer_archive_delta_blocked"] = True
-    out["materializer_archive_delta_blocker_count"] = int(
-        materializer_feedback.get("blocking_observation_count") or 0
-    )
+    out["materializer_archive_delta_blocker_count"] = int(materializer_feedback.get("blocking_observation_count") or 0)
     return out
 
 
@@ -3608,9 +3304,7 @@ def _extend_unique(out: list[str], values: Sequence[Any]) -> None:
 def _false_authority(row: Mapping[str, Any], *blockers: str) -> dict[str, Any]:
     return apply_proxy_evidence_boundary(
         dict(row),
-        dispatch_blockers=ordered_unique(
-            ("inverse_steganalysis_acquisition_false_authority_only", *blockers)
-        ),
+        dispatch_blockers=ordered_unique(("inverse_steganalysis_acquisition_false_authority_only", *blockers)),
     )
 
 
@@ -3624,9 +3318,7 @@ def _require_explicit_false_authority(row: Mapping[str, Any], *, label: str) -> 
         "promotable",
     ):
         if row.get(key) is not False:
-            raise InverseSteganalysisAcquisitionError(
-                f"{label} {key} must be explicit false"
-            )
+            raise InverseSteganalysisAcquisitionError(f"{label} {key} must be explicit false")
 
 
 def _reject_truthy_authority(row: Mapping[str, Any], *, label: str) -> None:
@@ -3638,10 +3330,22 @@ def _reject_truthy_authority(row: Mapping[str, Any], *, label: str) -> None:
 
 
 def _predicted_effects(row: Mapping[str, Any]) -> dict[str, float]:
-    seg = _float(row.get("predicted_segnet_gain", row.get("predicted_segnet_score_gain", 0.0)), "predicted_segnet_gain", minimum=0.0)
-    pose = _float(row.get("predicted_posenet_gain", row.get("predicted_posenet_score_gain", 0.0)), "predicted_posenet_gain", minimum=0.0)
-    rate_gain = _float(row.get("predicted_rate_gain", row.get("predicted_rate_score_gain", 0.0)), "predicted_rate_gain", minimum=0.0)
-    rate_cost = _float(row.get("predicted_rate_cost", row.get("predicted_rate_score_cost", 0.0)), "predicted_rate_cost", minimum=0.0)
+    seg = _float(
+        row.get("predicted_segnet_gain", row.get("predicted_segnet_score_gain", 0.0)),
+        "predicted_segnet_gain",
+        minimum=0.0,
+    )
+    pose = _float(
+        row.get("predicted_posenet_gain", row.get("predicted_posenet_score_gain", 0.0)),
+        "predicted_posenet_gain",
+        minimum=0.0,
+    )
+    rate_gain = _float(
+        row.get("predicted_rate_gain", row.get("predicted_rate_score_gain", 0.0)), "predicted_rate_gain", minimum=0.0
+    )
+    rate_cost = _float(
+        row.get("predicted_rate_cost", row.get("predicted_rate_score_cost", 0.0)), "predicted_rate_cost", minimum=0.0
+    )
     explicit = _float_or_none(row.get("predicted_score_gain"), "predicted_score_gain", minimum=0.0)
     delta = _float_or_none(row.get("predicted_delta_vs_baseline_score"), "predicted_delta_vs_baseline_score")
     return {
@@ -3649,7 +3353,9 @@ def _predicted_effects(row: Mapping[str, Any]) -> dict[str, float]:
         "predicted_posenet_gain": pose,
         "predicted_rate_gain": rate_gain,
         "predicted_rate_cost": rate_cost,
-        "predicted_score_gain": explicit if explicit is not None else (max(0.0, -delta) if delta is not None else max(0.0, seg + pose + rate_gain - rate_cost)),
+        "predicted_score_gain": explicit
+        if explicit is not None
+        else (max(0.0, -delta) if delta is not None else max(0.0, seg + pose + rate_gain - rate_cost)),
     }
 
 
@@ -3717,9 +3423,7 @@ def _cell_measure(atom: Mapping[str, Any]) -> dict[str, Any]:
         "region_area": region_area,
         "component_count": component_count,
         "water_fill_cost_bytes": water_fill_cost_bytes,
-        "water_fill_cost_bytes_semantics": (
-            "planner_budget_cost_not_serialized_savings"
-        ),
+        "water_fill_cost_bytes_semantics": ("planner_budget_cost_not_serialized_savings"),
     }
 
 
@@ -3754,13 +3458,9 @@ def _water_bucket_fill(
     selected = [_water_bucket_selection_row(row) for row in selected_rows]
     used_bytes = sum(int(row["water_fill_cost_bytes"]) for row in selected)
     expected_gain = sum(float(row["expected_score_gain"]) for row in selected)
-    selected_lagrangian_gain = sum(
-        float(row["portfolio_objective_gain"]) for row in selected
-    )
+    selected_lagrangian_gain = sum(float(row["portfolio_objective_gain"]) for row in selected)
     strategy = (
-        "positive_residual_unbounded_select_all"
-        if total_byte_budget is None
-        else "bounded_lagrangian_portfolio_search"
+        "positive_residual_unbounded_select_all" if total_byte_budget is None else "bounded_lagrangian_portfolio_search"
     )
     return {
         "schema": "inverse_steganalysis_water_bucket_plan.v1",
@@ -3775,9 +3475,7 @@ def _water_bucket_fill(
         "greedy_baseline_selected_count": len(greedy_selected),
         "greedy_baseline_water_fill_cost_bytes": greedy_used_bytes,
         "greedy_baseline_expected_score_gain": greedy_expected_gain,
-        "greedy_baseline_atom_ids": [
-            str(row["atom_id"]) for row in greedy_selected
-        ],
+        "greedy_baseline_atom_ids": [str(row["atom_id"]) for row in greedy_selected],
         "selected_cells": selected,
         "score_claim": False,
         "promotion_eligible": False,
@@ -3789,9 +3487,7 @@ def _water_bucket_fill(
 def _water_bucket_selection_row(row: Mapping[str, Any]) -> dict[str, Any]:
     measure = row.get("measure")
     if not isinstance(measure, Mapping):
-        raise InverseSteganalysisAcquisitionError(
-            "water bucket cell measure missing"
-        )
+        raise InverseSteganalysisAcquisitionError("water bucket cell measure missing")
     cost = int(measure["water_fill_cost_bytes"])
     lambda_rate = float(row["lambda_rate"])
     expected_gain = float(row["expected_score_gain"])
@@ -3803,9 +3499,7 @@ def _water_bucket_selection_row(row: Mapping[str, Any]) -> dict[str, Any]:
         "scope_axis": row["scope_axis"],
         "component": row["component"],
         "water_fill_cost_bytes": cost,
-        "water_fill_cost_bytes_semantics": (
-            "planner_budget_cost_not_serialized_savings"
-        ),
+        "water_fill_cost_bytes_semantics": ("planner_budget_cost_not_serialized_savings"),
         "expected_score_gain": expected_gain,
         "euler_lagrange_residual": row["euler_lagrange_residual"],
         "portfolio_objective_gain": expected_gain - lambda_rate * float(cost),
@@ -3966,11 +3660,7 @@ def _region_area(value: Any) -> float:
 def action_surface_terms(atom: Mapping[str, Any]) -> dict[str, Any]:
     """Return the domain-math/action terms from a normalized or raw atom."""
 
-    row = (
-        dict(atom)
-        if atom.get("schema") == ATOM_SCHEMA
-        else normalize_inverse_steganalysis_atom(atom)
-    )
+    row = dict(atom) if atom.get("schema") == ATOM_SCHEMA else normalize_inverse_steganalysis_atom(atom)
     return {
         "scope_axis": row["scope_axis"],
         "first_order_marginal_effect": row["first_order_marginal_effect"],
@@ -3995,9 +3685,7 @@ def _interaction_kind(value: float) -> str:
 def _split_performance_step_key(value: Any) -> tuple[str, str]:
     text = _text(value, "performance bucket key")
     if "." not in text:
-        raise InverseSteganalysisAcquisitionError(
-            "performance bucket key must be experiment_id.step_id"
-        )
+        raise InverseSteganalysisAcquisitionError("performance bucket key must be experiment_id.step_id")
     experiment_id, step_id = text.split(".", 1)
     return _text(experiment_id, "performance experiment_id"), _text(
         step_id,
@@ -4023,18 +3711,11 @@ def _parse_candidate_lookup(
             raw_value,
             (str, bytes, bytearray),
         ):
-            values = tuple(
-                _text(value, f"{label}[{key!r}][{index}]")
-                for index, value in enumerate(raw_value)
-            )
+            values = tuple(_text(value, f"{label}[{key!r}][{index}]") for index, value in enumerate(raw_value))
             if not values:
-                raise InverseSteganalysisAcquisitionError(
-                    f"{label}[{key!r}] must not be empty"
-                )
+                raise InverseSteganalysisAcquisitionError(f"{label}[{key!r}] must not be empty")
         else:
-            raise InverseSteganalysisAcquisitionError(
-                f"{label}[{key!r}] must be a string or list"
-            )
+            raise InverseSteganalysisAcquisitionError(f"{label}[{key!r}] must be a string or list")
         lookup[key] = values
     return lookup
 
@@ -4050,8 +3731,7 @@ def _merge_candidate_lookup(
         existing = out.get(key)
         if existing is not None and existing != values:
             raise InverseSteganalysisAcquisitionError(
-                "candidate_id_by_experiment conflicts with "
-                f"{conflict_label}[{key!r}]"
+                f"candidate_id_by_experiment conflicts with {conflict_label}[{key!r}]"
             )
         out[key] = values
     return out
@@ -4080,9 +3760,7 @@ def _performance_identity_by_experiment(
         else None,
         label="performance.source_selection_ids_by_experiment",
     )
-    experiment_ids = set(work_ids) | set(backlog_keys) | set(source_unit_ids) | set(
-        source_selection_ids
-    )
+    experiment_ids = set(work_ids) | set(backlog_keys) | set(source_unit_ids) | set(source_selection_ids)
     out: dict[str, dict[str, list[str]]] = {}
     for experiment_id in experiment_ids:
         out[experiment_id] = {
@@ -4108,6 +3786,60 @@ def _parse_single_value_lookup(
         key = _text(raw_key, f"{label} key")
         out[key] = (_text(raw_value, f"{label}[{key!r}]"),)
     return out
+
+
+def _queue_materializer_delta_observations_for_observed_step(
+    step: Mapping[str, Any],
+    *,
+    queue_id: str,
+    section: str,
+    axis: str,
+    source_path: str | None,
+    runtime_identity: Mapping[str, Any],
+    cache_identity: Mapping[str, Any],
+    candidate_lookup: Mapping[str, tuple[str, ...]],
+    performance_identity: Mapping[str, Mapping[str, list[str]]],
+) -> list[dict[str, Any]]:
+    experiment_id = _text(step.get("experiment_id"), f"{section}.experiment_id")
+    step_id = _text(step.get("step_id"), f"{section}.step_id")
+    candidate_ids = _queue_step_candidate_ids(
+        step,
+        experiment_id=experiment_id,
+        candidate_lookup=candidate_lookup,
+        section=section,
+    )
+    identity = performance_identity.get(experiment_id, {})
+    return _queue_materializer_delta_observations_for_step(
+        step,
+        queue_id=queue_id,
+        experiment_id=experiment_id,
+        step_id=step_id,
+        candidate_ids=candidate_ids,
+        axis=axis,
+        source_path=source_path,
+        runtime_identity=runtime_identity,
+        cache_identity=cache_identity,
+        resource_kind=_resource(step.get("resource_kind") or "local_cpu"),
+        work_ids=ordered_unique([*_list_strings(step.get("work_ids")), *(identity.get("work_ids") or [])]),
+        backlog_keys=ordered_unique(
+            [
+                *_list_strings(step.get("backlog_keys")),
+                *(identity.get("backlog_keys") or []),
+            ]
+        ),
+        source_unit_ids=ordered_unique(
+            [
+                *_list_strings(step.get("source_unit_ids")),
+                *(identity.get("source_unit_ids") or []),
+            ]
+        ),
+        source_selection_ids=ordered_unique(
+            [
+                *_list_strings(step.get("source_selection_ids")),
+                *(identity.get("source_selection_ids") or []),
+            ]
+        ),
+    )
 
 
 def _queue_health_observations_for_step(
@@ -4147,20 +3879,27 @@ def _queue_health_observations_for_step(
     receiver_contract_satisfied = _queue_step_receiver_contract_satisfied(step)
     resource_kind = _resource(step.get("resource_kind") or "local_cpu")
     identity = performance_identity.get(experiment_id, {})
-    work_ids = list(identity.get("work_ids") or [])
-    backlog_keys = list(identity.get("backlog_keys") or [])
-    source_unit_ids = list(identity.get("source_unit_ids") or [])
-    source_selection_ids = list(identity.get("source_selection_ids") or [])
+    work_ids = ordered_unique([*_list_strings(step.get("work_ids")), *(identity.get("work_ids") or [])])
+    backlog_keys = ordered_unique([*_list_strings(step.get("backlog_keys")), *(identity.get("backlog_keys") or [])])
+    source_unit_ids = ordered_unique(
+        [
+            *_list_strings(step.get("source_unit_ids")),
+            *(identity.get("source_unit_ids") or []),
+        ]
+    )
+    source_selection_ids = ordered_unique(
+        [
+            *_list_strings(step.get("source_selection_ids")),
+            *(identity.get("source_selection_ids") or []),
+        ]
+    )
     elapsed_seconds = _float_or_none(
         step.get("timeout_seconds"),
         f"{section}.timeout_seconds",
         minimum=0.0,
         exclusive=True,
     )
-    base_observation_id = (
-        f"queue_obs_{_slug(queue_id)}_{_slug(experiment_id)}_"
-        f"{_slug(step_id)}_{_slug(kind)}"
-    )
+    base_observation_id = f"queue_obs_{_slug(queue_id)}_{_slug(experiment_id)}_{_slug(step_id)}_{_slug(kind)}"
     out: list[dict[str, Any]] = []
     for candidate_id in candidate_ids:
         observation_id = base_observation_id
@@ -4176,12 +3915,8 @@ def _queue_health_observations_for_step(
                     "source_path": source_path,
                     "queue_id": queue_id,
                     "target_kind": _optional_text(step.get("target_kind")),
-                    "materializer_id": _optional_text(
-                        _first(step.get("materializer_id"), step.get("materializer"))
-                    ),
-                    "receiver_contract_kind": _optional_text(
-                        step.get("receiver_contract_kind")
-                    ),
+                    "materializer_id": _optional_text(_first(step.get("materializer_id"), step.get("materializer"))),
+                    "receiver_contract_kind": _optional_text(step.get("receiver_contract_kind")),
                     "experiment_id": experiment_id,
                     "step_id": step_id,
                     "queue_observation_schema": QUEUE_OBSERVATION_SCHEMA,
@@ -4229,6 +3964,216 @@ def _queue_health_observations_for_step(
     return out
 
 
+def _resolve_queue_artifact_path(
+    path_text: str,
+    *,
+    source_path: str | None,
+) -> Path:
+    path = Path(path_text).expanduser()
+    if path.is_absolute():
+        return path
+    if source_path:
+        source = Path(source_path).expanduser()
+        source_parent = source.parent if source.name else source
+        candidate = source_parent / path
+        if candidate.exists():
+            return candidate.resolve(strict=False)
+    return path.resolve(strict=False)
+
+
+def _queue_materializer_empirical_rows_from_artifact(
+    artifact_path: str,
+    *,
+    source_path: str | None,
+) -> list[dict[str, Any]]:
+    path = _resolve_queue_artifact_path(artifact_path, source_path=source_path)
+    if not path.is_file():
+        return []
+    try:
+        size = path.stat().st_size
+    except OSError as exc:
+        raise InverseSteganalysisAcquisitionError(
+            f"queue materializer observation artifact unreadable: {artifact_path}: {exc}"
+        ) from exc
+    if size > QUEUE_MATERIALIZER_OBSERVATION_ARTIFACT_MAX_BYTES:
+        raise InverseSteganalysisAcquisitionError(
+            f"queue materializer observation artifact exceeds byte cap: {artifact_path} ({size} bytes)"
+        )
+    if path.suffix == ".jsonl":
+        return _queue_materializer_empirical_rows_from_jsonl(path, artifact_path)
+    if path.suffix == ".json":
+        return _queue_materializer_empirical_rows_from_json(path, artifact_path)
+    return []
+
+
+def _queue_materializer_empirical_rows_from_jsonl(
+    path: Path,
+    display_path: str,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            for line_index, raw_line in enumerate(handle, start=1):
+                if line_index > QUEUE_MATERIALIZER_OBSERVATION_ARTIFACT_MAX_ROWS:
+                    raise InverseSteganalysisAcquisitionError(
+                        f"queue materializer observation artifact exceeds row cap: {display_path}"
+                    )
+                line = raw_line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    raise InverseSteganalysisAcquisitionError(
+                        f"queue materializer observation artifact has invalid JSONL: {display_path}:{line_index}: {exc}"
+                    ) from exc
+                if not isinstance(payload, Mapping):
+                    raise InverseSteganalysisAcquisitionError(
+                        f"queue materializer observation artifact row must be an object: {display_path}:{line_index}"
+                    )
+                if payload.get("schema") == FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA:
+                    rows.append(dict(payload))
+    except OSError as exc:
+        raise InverseSteganalysisAcquisitionError(
+            f"queue materializer observation artifact unreadable: {display_path}: {exc}"
+        ) from exc
+    return rows
+
+
+def _queue_materializer_empirical_rows_from_json(
+    path: Path,
+    display_path: str,
+) -> list[dict[str, Any]]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise InverseSteganalysisAcquisitionError(
+            f"queue materializer observation artifact has invalid JSON: {display_path}: {exc}"
+        ) from exc
+    if not isinstance(payload, Mapping):
+        return []
+    schema = payload.get("schema")
+    if schema == FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA:
+        return [dict(payload)]
+    if schema != FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA:
+        return []
+    observations = payload.get("observations")
+    if not isinstance(observations, Sequence) or isinstance(
+        observations,
+        (bytes, bytearray, str),
+    ):
+        raise InverseSteganalysisAcquisitionError(
+            f"queue materializer sweep artifact observations must be a list: {display_path}"
+        )
+    if len(observations) > QUEUE_MATERIALIZER_OBSERVATION_ARTIFACT_MAX_ROWS:
+        raise InverseSteganalysisAcquisitionError(f"queue materializer sweep artifact exceeds row cap: {display_path}")
+    rows: list[dict[str, Any]] = []
+    for index, row in enumerate(observations, start=1):
+        if not isinstance(row, Mapping):
+            raise InverseSteganalysisAcquisitionError(
+                f"queue materializer sweep observation row must be an object: {display_path}:observations[{index}]"
+            )
+        if row.get("schema") != FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA:
+            raise InverseSteganalysisAcquisitionError(
+                f"queue materializer sweep observation row has unexpected schema: {display_path}:observations[{index}]"
+            )
+        rows.append(dict(row))
+    return rows
+
+
+def _queue_materializer_empirical_observations_from_artifact(
+    artifact: Mapping[str, Any],
+    *,
+    artifact_path: str,
+    artifact_index: int,
+    queue_id: str,
+    experiment_id: str,
+    step_id: str,
+    candidate_ids: Sequence[str],
+    axis: str,
+    source_path: str | None,
+    runtime_identity: Mapping[str, Any],
+    cache_identity: Mapping[str, Any],
+    resource_kind: str,
+    work_ids: Sequence[str],
+    backlog_keys: Sequence[str],
+    source_unit_ids: Sequence[str],
+    source_selection_ids: Sequence[str],
+) -> list[dict[str, Any]]:
+    rows = _queue_materializer_empirical_rows_from_artifact(
+        artifact_path,
+        source_path=source_path,
+    )
+    out: list[dict[str, Any]] = []
+    for row_index, raw_row in enumerate(rows):
+        label = f"queue materializer observation artifact {artifact_path}[{row_index}]"
+        _reject_truthy_authority(raw_row, label=label)
+        _require_explicit_false_authority(raw_row, label=label)
+        row = dict(raw_row)
+        candidate_id = _optional_text(row.get("candidate_id"))
+        if candidate_id is None:
+            candidate_id = next((item for item in candidate_ids if item), None)
+        if candidate_id is None:
+            candidate_id = (
+                f"queue_materializer_empirical_{_slug(queue_id)}_"
+                f"{_slug(experiment_id)}_{_slug(step_id)}_"
+                f"{artifact_index:04d}_{row_index:04d}"
+            )
+        row.setdefault(
+            "observation_id",
+            (
+                f"queue_materializer_empirical_{_slug(queue_id)}_"
+                f"{_slug(experiment_id)}_{_slug(step_id)}_"
+                f"{artifact_index:04d}_{row_index:04d}"
+            ),
+        )
+        row.setdefault(
+            "observation_kind",
+            FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_KIND,
+        )
+        row["candidate_id"] = candidate_id
+        row.setdefault("axis", axis)
+        row.setdefault("source_path", artifact_path or source_path)
+        row.setdefault("queue_id", queue_id)
+        row.setdefault("experiment_id", experiment_id)
+        row.setdefault("step_id", step_id)
+        row.setdefault("runtime_identity", dict(runtime_identity))
+        row.setdefault("cache_identity", dict(cache_identity))
+        row.setdefault("resource_kind", resource_kind)
+        row["candidate_ids"] = ordered_unique(
+            [
+                *_list_strings(row.get("candidate_ids")),
+                candidate_id,
+                *_list_strings(artifact.get("candidate_ids")),
+                *candidate_ids,
+            ]
+        )
+        row["work_ids"] = ordered_unique([*_list_strings(row.get("work_ids")), *work_ids])
+        row["backlog_keys"] = ordered_unique([*_list_strings(row.get("backlog_keys")), *backlog_keys])
+        row["source_unit_ids"] = ordered_unique([*_list_strings(row.get("source_unit_ids")), *source_unit_ids])
+        row["source_selection_ids"] = ordered_unique(
+            [
+                *_list_strings(row.get("source_selection_ids")),
+                *source_selection_ids,
+            ]
+        )
+        row["expected_artifact_paths"] = ordered_unique(
+            [*_list_strings(row.get("expected_artifact_paths")), artifact_path]
+        )
+        if row.get("materializer_rate_outcome") is None:
+            row["materializer_rate_outcome"] = row.get("archive_delta_status")
+        if row.get("archive_delta_status") is None:
+            row["archive_delta_status"] = row.get("materializer_rate_outcome")
+        if row.get("signal_semantics") is None:
+            row["signal_semantics"] = (
+                "realized_archive_saving"
+                if row.get("rate_positive") is True
+                else "receiver_or_rate_blocked_materializer_feedback"
+            )
+        out.append(normalize_inverse_steganalysis_observation(row))
+    return out
+
+
 def _queue_materializer_delta_observations_for_step(
     step: Mapping[str, Any],
     *,
@@ -4248,6 +4193,28 @@ def _queue_materializer_delta_observations_for_step(
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for artifact_index, artifact in enumerate(_sequence_of_mappings(step.get("expected_artifacts"))):
+        artifact_path = _optional_text(artifact.get("path"))
+        if artifact_path:
+            out.extend(
+                _queue_materializer_empirical_observations_from_artifact(
+                    artifact,
+                    artifact_path=artifact_path,
+                    artifact_index=artifact_index,
+                    queue_id=queue_id,
+                    experiment_id=experiment_id,
+                    step_id=step_id,
+                    candidate_ids=candidate_ids,
+                    axis=axis,
+                    source_path=source_path,
+                    runtime_identity=runtime_identity,
+                    cache_identity=cache_identity,
+                    resource_kind=resource_kind,
+                    work_ids=work_ids,
+                    backlog_keys=backlog_keys,
+                    source_unit_ids=source_unit_ids,
+                    source_selection_ids=source_selection_ids,
+                )
+            )
         delta_status = _optional_text(artifact.get("serialized_archive_delta_status"))
         saved_bytes = _optional_int(
             _first(
@@ -4290,24 +4257,14 @@ def _queue_materializer_delta_observations_for_step(
                 delta_status = "realized_saving"
             elif saved_bytes < 0:
                 delta_status = "realized_cost"
-        savings_realized = (
-            artifact.get("serialized_archive_delta_savings_realized") is True
-            or saved_bytes > 0
-        )
-        rate_positive = (
-            saved_bytes > 0
-            and delta_status == "realized_saving"
-            and savings_realized
-        )
+        savings_realized = artifact.get("serialized_archive_delta_savings_realized") is True or saved_bytes > 0
+        rate_positive = saved_bytes > 0 and delta_status == "realized_saving" and savings_realized
         receiver_contract_satisfied = _artifact_receiver_contract_satisfied(artifact)
         readiness_blockers = ordered_unique(
             [
                 *_list_strings(artifact.get("readiness_blockers")),
                 *(
-                    [
-                        f"receiver_verification:{item}"
-                        for item in _list_strings(receiver.get("blockers"))
-                    ]
+                    [f"receiver_verification:{item}" for item in _list_strings(receiver.get("blockers"))]
                     if isinstance(receiver, Mapping)
                     else []
                 ),
@@ -4329,9 +4286,7 @@ def _queue_materializer_delta_observations_for_step(
                 artifact.get("selected_payload_candidate_archive_bytes"),
                 artifact.get("selected_elision_candidate_archive_bytes"),
                 artifact.get("factorization_candidate_archive_bytes"),
-                candidate_archive.get("bytes")
-                if isinstance(candidate_archive, Mapping)
-                else None,
+                candidate_archive.get("bytes") if isinstance(candidate_archive, Mapping) else None,
             ),
             "candidate_archive_bytes",
             minimum=0,
@@ -4340,10 +4295,8 @@ def _queue_materializer_delta_observations_for_step(
             candidate_archive.get("sha256") if isinstance(candidate_archive, Mapping) else None,
             "candidate_archive_sha256",
         )
-        artifact_path = _optional_text(artifact.get("path"))
         base_observation_id = (
-            f"queue_materializer_delta_{_slug(queue_id)}_{_slug(experiment_id)}_"
-            f"{_slug(step_id)}_{artifact_index:04d}"
+            f"queue_materializer_delta_{_slug(queue_id)}_{_slug(experiment_id)}_{_slug(step_id)}_{artifact_index:04d}"
         )
         artifact_candidate_ids = tuple(
             dict.fromkeys(
@@ -4380,14 +4333,10 @@ def _queue_materializer_delta_observations_for_step(
                         "receiver_contract_kind": receiver_contract_kind,
                         "saved_bytes": saved_bytes,
                         "observed_rate_gain": (
-                            CONTEST_RATE_SCORE_PER_BYTE * float(saved_bytes)
-                            if rate_positive
-                            else 0.0
+                            CONTEST_RATE_SCORE_PER_BYTE * float(saved_bytes) if rate_positive else 0.0
                         ),
                         "observed_score_gain": (
-                            CONTEST_RATE_SCORE_PER_BYTE * float(saved_bytes)
-                            if rate_positive
-                            else 0.0
+                            CONTEST_RATE_SCORE_PER_BYTE * float(saved_bytes) if rate_positive else 0.0
                         ),
                         "rate_positive": rate_positive,
                         "savings_realized": savings_realized,
@@ -4401,9 +4350,7 @@ def _queue_materializer_delta_observations_for_step(
                         "archive_delta_status": delta_status,
                         "source_archive_bytes": _optional_int(
                             _first(
-                                artifact.get(
-                                    "serialized_archive_delta_source_archive_bytes"
-                                ),
+                                artifact.get("serialized_archive_delta_source_archive_bytes"),
                                 artifact.get("section_recode_source_archive_bytes"),
                                 artifact.get("selected_compression_source_archive_bytes"),
                                 artifact.get("selected_merge_source_archive_bytes"),
@@ -4453,7 +4400,7 @@ def _materializer_archive_delta_merge_key(row: Mapping[str, Any]) -> str:
     target_kind = _optional_text(row.get("target_kind"))
     materializer_id = _optional_text(row.get("materializer_id"))
     receiver_contract_kind = _optional_text(row.get("receiver_contract_kind"))
-    identity = candidate_sha or artifact_path or _optional_text(row.get("observation_id"))
+    identity = candidate_sha or _optional_text(row.get("observation_id")) or artifact_path
     if identity is None:
         identity = _sha256_json_value(dict(row))
     return "|".join(
@@ -4511,9 +4458,7 @@ def _merge_materializer_archive_delta_observations(
         for field in ("observed_rate_gain", "observed_score_gain"):
             current_float = _float_or_none(existing.get(field), field, minimum=0.0)
             incoming_float = _float_or_none(row_dict.get(field), field, minimum=0.0)
-            if incoming_float is not None and (
-                current_float is None or incoming_float > current_float
-            ):
+            if incoming_float is not None and (current_float is None or incoming_float > current_float):
                 existing[field] = incoming_float
         for field in ("source_archive_bytes", "candidate_archive_bytes", "artifact_bytes"):
             current = _optional_int(existing.get(field), field, minimum=0)
@@ -4534,11 +4479,7 @@ def _merge_materializer_archive_delta_observations(
 
 
 def _merge_saved_bytes(*values: Any) -> int | None:
-    parsed = [
-        parsed_value
-        for value in values
-        if (parsed_value := _optional_int(value, "saved_bytes")) is not None
-    ]
+    parsed = [parsed_value for value in values if (parsed_value := _optional_int(value, "saved_bytes")) is not None]
     if not parsed:
         return None
     positive = [value for value in parsed if value > 0]
@@ -4571,8 +4512,7 @@ def _queue_global_health_observations(
     )
     if not candidate_ids:
         raise InverseSteganalysisAcquisitionError(
-            "unhealthy queue observation has global blockers but no candidate identity; "
-            "pass candidate_id_by_experiment"
+            "unhealthy queue observation has global blockers but no candidate identity; pass candidate_id_by_experiment"
         )
     blockers = _list_strings(observation.get("blockers"))
     out: list[dict[str, Any]] = []
@@ -4580,10 +4520,7 @@ def _queue_global_health_observations(
         out.append(
             normalize_inverse_steganalysis_observation(
                 {
-                    "observation_id": (
-                        f"queue_obs_{_slug(queue_id)}_global_health_"
-                        f"{_slug(candidate_id)}"
-                    ),
+                    "observation_id": (f"queue_obs_{_slug(queue_id)}_global_health_{_slug(candidate_id)}"),
                     "observation_kind": "queue_observation_global_health_blocker",
                     "candidate_id": candidate_id,
                     "axis": axis,
@@ -4616,18 +4553,11 @@ def _queue_observation_has_blocking_global_health(
     observation: Mapping[str, Any],
 ) -> bool:
     blockers = _list_strings(observation.get("blockers"))
-    if any(
-        blocker
-        for blocker in blockers
-        if not blocker.startswith("experiment_queue_observation_orphaned_steps")
-    ):
+    if any(blocker for blocker in blockers if not blocker.startswith("experiment_queue_observation_orphaned_steps")):
         return True
     orphaned_steps = _sequence_of_mappings(observation.get("orphaned_steps"))
     if not orphaned_steps:
-        return any(
-            blocker.startswith("experiment_queue_observation_orphaned_steps")
-            for blocker in blockers
-        )
+        return any(blocker.startswith("experiment_queue_observation_orphaned_steps") for blocker in blockers)
     return any(_orphaned_step_blocks_queue(step) for step in orphaned_steps)
 
 
@@ -4641,6 +4571,9 @@ def _queue_step_candidate_ids(
     mapped = candidate_lookup.get(experiment_id)
     if mapped:
         return mapped
+    step_candidate_ids = tuple(dict.fromkeys(_list_strings(step.get("candidate_ids"))))
+    if step_candidate_ids:
+        return step_candidate_ids
     artifact_candidate_ids = tuple(
         dict.fromkeys(
             _text(artifact.get("candidate_id"), f"{section}.artifact.candidate_id")
@@ -4677,17 +4610,11 @@ def _queue_step_health_blockers(
             path = _optional_text(artifact.get("path")) or "unknown"
             blockers.append(f"queue_observation_receiver_contract_unsatisfied:{path}")
         for readiness_blocker in _list_strings(artifact.get("readiness_blockers")):
-            blockers.append(
-                "queue_observation_materializer_readiness_blocker:"
-                f"{readiness_blocker}"
-            )
+            blockers.append(f"queue_observation_materializer_readiness_blocker:{readiness_blocker}")
         receiver = artifact.get("receiver_verification")
         if isinstance(receiver, Mapping):
             for receiver_blocker in _list_strings(receiver.get("blockers")):
-                blockers.append(
-                    "queue_observation_receiver_verification_blocker:"
-                    f"{receiver_blocker}"
-                )
+                blockers.append(f"queue_observation_receiver_verification_blocker:{receiver_blocker}")
     return ordered_unique(blockers)
 
 
@@ -4697,10 +4624,7 @@ def _queue_step_materializer_readiness_blockers(step: Mapping[str, Any]) -> list
         blockers.extend(_list_strings(artifact.get("readiness_blockers")))
         receiver = artifact.get("receiver_verification")
         if isinstance(receiver, Mapping):
-            blockers.extend(
-                f"receiver_verification:{item}"
-                for item in _list_strings(receiver.get("blockers"))
-            )
+            blockers.extend(f"receiver_verification:{item}" for item in _list_strings(receiver.get("blockers")))
     return ordered_unique(blockers)
 
 
@@ -4723,8 +4647,7 @@ def _queue_step_expected_artifact_paths(step: Mapping[str, Any]) -> list[str]:
     return [
         path
         for path in (
-            _optional_text(artifact.get("path"))
-            for artifact in _sequence_of_mappings(step.get("expected_artifacts"))
+            _optional_text(artifact.get("path")) for artifact in _sequence_of_mappings(step.get("expected_artifacts"))
         )
         if path is not None
     ]
@@ -4804,22 +4727,14 @@ def _decision_surface_risk(decision_class: str) -> float:
 
 def _review_packet_axis(packet: Mapping[str, Any]) -> str:
     if packet.get("schema") != "tac_result_review_packet_v1":
-        raise InverseSteganalysisAcquisitionError(
-            "review packet schema must be tac_result_review_packet_v1"
-        )
+        raise InverseSteganalysisAcquisitionError("review packet schema must be tac_result_review_packet_v1")
     axis = _text(packet.get("score_axis"), "review_packet.score_axis")
     if axis not in {"contest_cpu", "contest_cuda"}:
-        raise InverseSteganalysisAcquisitionError(
-            f"unsupported review packet score_axis {axis!r}"
-        )
+        raise InverseSteganalysisAcquisitionError(f"unsupported review packet score_axis {axis!r}")
     if axis == "contest_cpu" and packet.get("exact_cpu_evidence") is not True:
-        raise InverseSteganalysisAcquisitionError(
-            "contest_cpu review packet must have exact_cpu_evidence=true"
-        )
+        raise InverseSteganalysisAcquisitionError("contest_cpu review packet must have exact_cpu_evidence=true")
     if axis == "contest_cuda" and packet.get("exact_cuda_evidence") is not True:
-        raise InverseSteganalysisAcquisitionError(
-            "contest_cuda review packet must have exact_cuda_evidence=true"
-        )
+        raise InverseSteganalysisAcquisitionError("contest_cuda review packet must have exact_cuda_evidence=true")
     return axis
 
 
@@ -4835,17 +4750,11 @@ def _validate_paired_exact_auth_packets(by_axis: Mapping[str, Mapping[str, Any]]
     for axis, packet in sorted(by_axis.items()):
         _validate_exact_auth_packet_for_calibration(packet, axis=axis)
         if _review_packet_archive_sha(packet) != archive_sha:
-            raise InverseSteganalysisAcquisitionError(
-                "paired exact-auth packets must share archive_sha256"
-            )
+            raise InverseSteganalysisAcquisitionError("paired exact-auth packets must share archive_sha256")
         if _review_packet_archive_bytes(packet) != archive_bytes:
-            raise InverseSteganalysisAcquisitionError(
-                "paired exact-auth packets must share archive_bytes"
-            )
+            raise InverseSteganalysisAcquisitionError("paired exact-auth packets must share archive_bytes")
         if _review_packet_n_samples(packet) != n_samples:
-            raise InverseSteganalysisAcquisitionError(
-                "paired exact-auth packets must share n_samples"
-            )
+            raise InverseSteganalysisAcquisitionError("paired exact-auth packets must share n_samples")
         packet_runtime_content = _runtime_custody_text(
             packet,
             "runtime_content_tree_sha256",
@@ -4863,60 +4772,38 @@ def _validate_exact_auth_packet_for_calibration(
     axis: str,
 ) -> None:
     if packet.get("score_claim") is not False:
-        raise InverseSteganalysisAcquisitionError(
-            f"{axis} review packet score_claim must be false"
-        )
+        raise InverseSteganalysisAcquisitionError(f"{axis} review packet score_claim must be false")
     for key in ("promotion_eligible", "rank_or_kill_eligible", "ready_for_exact_eval_dispatch"):
         if packet.get(key) is not False:
-            raise InverseSteganalysisAcquisitionError(
-                f"{axis} review packet {key} must be false"
-            )
+            raise InverseSteganalysisAcquisitionError(f"{axis} review packet {key} must be false")
     if packet.get("family_falsified") is True or packet.get("method_family_retired") is True:
-        raise InverseSteganalysisAcquisitionError(
-            f"{axis} review packet must not retire a family"
-        )
+        raise InverseSteganalysisAcquisitionError(f"{axis} review packet must not retire a family")
     status = _text(
         packet.get("measured_config_status"),
         f"{axis}.measured_config_status",
     )
     if status.startswith("indeterminate"):
-        raise InverseSteganalysisAcquisitionError(
-            f"{axis} review packet status is indeterminate"
-        )
+        raise InverseSteganalysisAcquisitionError(f"{axis} review packet status is indeterminate")
     baseline = packet.get("baseline_score")
     if baseline is None:
-        raise InverseSteganalysisAcquisitionError(
-            f"{axis} review packet baseline_score is required"
-        )
+        raise InverseSteganalysisAcquisitionError(f"{axis} review packet baseline_score is required")
     _float(baseline, f"{axis}.baseline_score", minimum=0.0)
     _float(packet.get("canonical_score"), f"{axis}.canonical_score", minimum=0.0)
     recompute = _packet_mapping(packet, "score_recomputation")
     if recompute.get("available") is not True:
-        raise InverseSteganalysisAcquisitionError(
-            f"{axis} score recomputation must be available"
-        )
+        raise InverseSteganalysisAcquisitionError(f"{axis} score recomputation must be available")
     if recompute.get("matches_reported") is not True:
-        raise InverseSteganalysisAcquisitionError(
-            f"{axis} score recomputation must match reported score"
-        )
+        raise InverseSteganalysisAcquisitionError(f"{axis} score recomputation must match reported score")
     audit = _packet_mapping(packet, "engineering_forensic_audit")
     if audit.get("engineering_or_config_bug_found") is True:
-        raise InverseSteganalysisAcquisitionError(
-            f"{axis} engineering forensic audit has blockers"
-        )
+        raise InverseSteganalysisAcquisitionError(f"{axis} engineering forensic audit has blockers")
     if audit.get("score_formula_reviewed") is not True:
-        raise InverseSteganalysisAcquisitionError(
-            f"{axis} engineering forensic audit must review score formula"
-        )
+        raise InverseSteganalysisAcquisitionError(f"{axis} engineering forensic audit must review score formula")
     if audit.get("archive_runtime_closure_reviewed") is not True:
-        raise InverseSteganalysisAcquisitionError(
-            f"{axis} engineering forensic audit must review runtime closure"
-        )
+        raise InverseSteganalysisAcquisitionError(f"{axis} engineering forensic audit must review runtime closure")
     claim = _packet_mapping(packet, "dispatch_claim_state")
     if claim.get("terminal_status_recorded") is not True:
-        raise InverseSteganalysisAcquisitionError(
-            f"{axis} review packet must have a terminal dispatch claim"
-        )
+        raise InverseSteganalysisAcquisitionError(f"{axis} review packet must have a terminal dispatch claim")
     _runtime_custody_text(packet, "runtime_content_tree_sha256", required=True)
     _runtime_custody_text(packet, "inflated_output_aggregate_sha256", required=True)
 
@@ -4962,9 +4849,7 @@ def _runtime_custody_text(
     custody = _packet_mapping(packet, "runtime_custody")
     value = _optional_text(custody.get(key))
     if required and value is None:
-        raise InverseSteganalysisAcquisitionError(
-            f"review_packet.runtime_custody.{key} is required"
-        )
+        raise InverseSteganalysisAcquisitionError(f"review_packet.runtime_custody.{key} is required")
     if value is not None and key.endswith("sha256"):
         _sha256_value(value, f"review_packet.runtime_custody.{key}")
     return value
