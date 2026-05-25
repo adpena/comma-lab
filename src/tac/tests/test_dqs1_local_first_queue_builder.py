@@ -20,6 +20,7 @@ from src.comma_lab.scheduler.dqs1_local_first_queue import (
 )
 from src.comma_lab.scheduler.experiment_queue import ExperimentQueueError, load_queue_definition
 from src.tac.optimization.local_cpu_contest_drift import EUREKA_FALSE_AUTHORITY_FIELDS
+from tools import build_dqs1_local_first_queue as queue_cli
 from tools.harvest_dqs1_local_first_result import _write_json as write_harvest_json
 
 
@@ -65,6 +66,47 @@ def _row(candidate_id: str, selected_pair_indices: list[int]) -> dict[str, objec
             "selected_pair_indices": selected_pair_indices,
         },
     }
+
+
+def _mlx_dqs1_observation_row(
+    *,
+    candidate_id: str = "pairset_drop_one_rank023_pair0440",
+    raw_output_or_cache_sha256: str = "c" * 64,
+    sweep_config_id: str = "dqs1_local_first_macos_cpu_advisory",
+    source_schema: str | None = "dqs1_local_first_harvest.v1",
+) -> dict[str, object]:
+    row: dict[str, object] = {
+        "schema": "mlx_dynamic_sweep_observation.v1",
+        **_false_authority(),
+        "candidate_id": candidate_id,
+        "sweep_config_id": sweep_config_id,
+        "optimization_pass_id": "local_cpu_advisory_harvest",
+        "family": "decoder_q_pairset_drop_one",
+        "observed_axis": "macos_cpu_advisory",
+        "evidence_tag": "[macOS-CPU advisory only]",
+        "observed_score_or_delta": 0.1919,
+        "archive_sha256": "a" * 64,
+        "runtime_sha256": "b" * 64,
+        "raw_output_or_cache_sha256": raw_output_or_cache_sha256,
+        "component_deltas": {
+            "segnet_delta": -0.0001,
+            "posenet_delta": 0.0,
+            "rate_delta": -0.00002,
+        },
+        "score_delta_vs_baseline": -0.00012,
+        "archive_byte_delta_vs_baseline": -4,
+        "selected_pair_indices": [1, 2, 440],
+    }
+    if source_schema is not None:
+        row["source_schema"] = source_schema
+    return row
+
+
+def _write_jsonl(path: Path, rows: list[dict[str, object]]) -> None:
+    path.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
 
 
 def _write_summary(repo: Path) -> Path:
@@ -463,6 +505,169 @@ def test_dqs1_queue_builder_stamps_materializer_feedback_bridge(
         experiment["metadata"]["materializer_feedback_bridge"] == bridge
         for experiment in result.queue["experiments"]
     )
+
+
+def test_dqs1_queue_builder_stamps_harvest_observations_into_feedback_bridge(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+    materializer_feedback = {
+        "schema": "family_agnostic_materializer_empirical_sweep.v1",
+        **_false_authority(),
+        "observations": [
+            {
+                "schema": "family_agnostic_materializer_empirical_observation.v1",
+                **_false_authority(),
+                "observation_id": "packet_member_recompress_no_delta",
+                "candidate_id": "packet_member_recompress_no_delta",
+                "target_kind": "packet_member_recompress_v1",
+                "saved_bytes": 0,
+                "rate_positive": False,
+                "receiver_contract_satisfied": True,
+            }
+        ],
+    }
+    dqs1_observation = {
+        "schema": "mlx_dynamic_sweep_observation.v1",
+        **_false_authority(),
+        "candidate_id": "pairset_drop_one_rank023_pair0440",
+        "source_schema": "dqs1_local_first_harvest.v1",
+        "sweep_config_id": "dqs1_local_first_macos_cpu_advisory",
+        "family": "decoder_q_pairset_drop_one",
+        "observed_axis": "macos_cpu_advisory",
+        "observed_score_or_delta": 0.1919,
+        "score_delta_vs_baseline": -0.00012,
+        "archive_byte_delta_vs_baseline": -4,
+        "selected_pair_indices": [1, 2, 440],
+        "component_deltas": {
+            "segnet_delta": -0.0001,
+            "posenet_delta": 0.0,
+            "rate_delta": -0.00002,
+        },
+        "source_artifact_path": "results/drop_rank023_pair0440/local_cpu_advisory.json",
+        "planner_artifact_path": ".omx/research/dqs1_local_first_harvest.json",
+        "observed_at_utc": "2026-05-25T12:30:00Z",
+    }
+    worse_duplicate_observation = {
+        **dqs1_observation,
+        "observed_score_or_delta": 0.1922,
+        "score_delta_vs_baseline": 0.0002,
+        "archive_byte_delta_vs_baseline": -4,
+        "planner_artifact_path": (
+            ".omx/research/dqs1_local_first_harvest_worse_duplicate.json"
+        ),
+        "observed_at_utc": "2026-05-25T12:31:00Z",
+    }
+
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="results",
+        candidate_limit=2,
+        materializer_feedback_payloads=(materializer_feedback,),
+        materializer_feedback_source_paths=("materializer_feedback.json",),
+        dqs1_observations=(worse_duplicate_observation, dqs1_observation),
+        dqs1_observation_source_paths=("dqs1_observations.jsonl",),
+    )
+
+    bridge = result.materializer_feedback_bridge
+    assert bridge is not None
+    assert bridge["dqs1_observation_source_paths"] == ["dqs1_observations.jsonl"]
+    assert bridge["observed_dqs1_candidate_count"] == 1
+    assert bridge["observed_dqs1_observation_count"] == 2
+    assert bridge["best_observed_dqs1_candidate"]["candidate_id"] == (
+        "pairset_drop_one_rank023_pair0440"
+    )
+    assert bridge["best_observed_dqs1_candidate"]["outcome"] == (
+        "local_advisory_improved"
+    )
+    assert bridge["dqs1_harvest_outcome_counts"] == {
+        "local_advisory_improved": 1,
+        "local_advisory_regressed": 1,
+        "flat_or_byte_only": 0,
+    }
+    assert bridge["recommended_next_action"] == (
+        "continue_dqs1_pairset_composition_from_positive_harvest_signal"
+    )
+    planned = bridge["planned_dqs1_candidates"][0]
+    assert planned["candidate_id"] == "pairset_drop_one_rank023_pair0440"
+    assert planned["source"] == "dqs1_local_first_harvest_observation"
+    assert planned["score_delta_vs_baseline"] == -0.00012
+    assert planned["score_claim"] is False
+    assert all(
+        experiment["metadata"]["materializer_feedback_bridge"] == bridge
+        for experiment in result.queue["experiments"]
+    )
+
+
+def test_dqs1_queue_builder_rejects_truthy_harvest_observation_authority(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+    dqs1_observation = {
+        "schema": "mlx_dynamic_sweep_observation.v1",
+        **_false_authority(),
+        "candidate_id": "pairset_drop_one_rank023_pair0440",
+        "source_schema": "dqs1_local_first_harvest.v1",
+        "sweep_config_id": "dqs1_local_first_macos_cpu_advisory",
+        "score_claim": True,
+    }
+
+    with pytest.raises(ExperimentQueueError, match="score_claim"):
+        build_queue_from_action_summary(
+            summary,
+            repo_root=tmp_path,
+            results_root="results",
+            dqs1_observations=(dqs1_observation,),
+            dqs1_observation_source_paths=("dqs1_observations.jsonl",),
+        )
+
+
+def test_dqs1_queue_cli_loader_dedupes_cumulative_observation_jsonls(
+    tmp_path: Path,
+) -> None:
+    first = tmp_path / "first.jsonl"
+    second = tmp_path / "second.jsonl"
+    duplicate = _mlx_dqs1_observation_row()
+    novel = _mlx_dqs1_observation_row(
+        candidate_id="pairset_drop_one_rank024_pair0112",
+        raw_output_or_cache_sha256="d" * 64,
+    )
+    _write_jsonl(first, [duplicate])
+    _write_jsonl(second, [duplicate, novel])
+
+    rows = queue_cli._load_dqs1_observations([str(first), str(second)])
+
+    assert [row["candidate_id"] for row in rows] == [
+        "pairset_drop_one_rank023_pair0440",
+        "pairset_drop_one_rank024_pair0112",
+    ]
+
+
+def test_dqs1_queue_cli_loader_rejects_nonlocal_or_nonjsonl_observations(
+    tmp_path: Path,
+) -> None:
+    missing = tmp_path / "missing.jsonl"
+    with pytest.raises(queue_cli.ExperimentQueueError, match="does not exist"):
+        queue_cli._load_dqs1_observations([str(missing)])
+
+    summary = tmp_path / "summary.json"
+    summary.write_text("{}", encoding="utf-8")
+    with pytest.raises(queue_cli.ExperimentQueueError, match="must be JSONL rows"):
+        queue_cli._load_dqs1_observations([str(summary)])
+
+    nonlocal_path = tmp_path / "contest_axis_dynamic.jsonl"
+    _write_jsonl(
+        nonlocal_path,
+        [
+            _mlx_dqs1_observation_row(
+                source_schema=None,
+                sweep_config_id="contest_cpu_exact_candidate",
+            )
+        ],
+    )
+    with pytest.raises(queue_cli.ExperimentQueueError, match="non-local-first DQS1"):
+        queue_cli._load_dqs1_observations([str(nonlocal_path)])
 
 
 def test_dqs1_queue_builder_accepts_local_io_concurrency(

@@ -196,12 +196,17 @@ def test_tranche_queue_build_args_forward_materializer_feedback() -> None:
             "experiments/results/header_elide/sweep.json",
             "--materializer-feedback",
             "experiments/results/recompress/sweep.json",
+            "--dqs1-observation-jsonl",
+            ".omx/research/dqs1_local_first_harvest_observations_prior.jsonl",
         ]
     )
 
     built = tranche._queue_build_common_args(
         args,
         results_root=tranche.Path("experiments/results/dqs1_local_first"),
+        dqs1_observation_jsonl=(
+            tranche.Path(".omx/research/dqs1_local_first_harvest_observations_round.jsonl"),
+        ),
     )
 
     assert built.count("--materializer-feedback") == 2
@@ -209,6 +214,15 @@ def test_tranche_queue_build_args_forward_materializer_feedback() -> None:
     second = built.index("--materializer-feedback", first + 1)
     assert built[first + 1] == "experiments/results/header_elide/sweep.json"
     assert built[second + 1] == "experiments/results/recompress/sweep.json"
+    assert built.count("--dqs1-observation-jsonl") == 2
+    prior = built.index("--dqs1-observation-jsonl")
+    current = built.index("--dqs1-observation-jsonl", prior + 1)
+    assert built[prior + 1] == (
+        ".omx/research/dqs1_local_first_harvest_observations_prior.jsonl"
+    )
+    assert built[current + 1] == (
+        ".omx/research/dqs1_local_first_harvest_observations_round.jsonl"
+    )
 
 
 def test_tranche_proactive_cleanup_move_is_not_gated_by_mlx_cache_flag(

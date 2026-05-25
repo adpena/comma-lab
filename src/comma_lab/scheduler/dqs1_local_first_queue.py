@@ -1362,6 +1362,8 @@ def build_queue_from_action_summary(
     scheduler_proactive_cleanup_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
     materializer_feedback_payloads: tuple[dict[str, Any], ...] = (),
     materializer_feedback_source_paths: tuple[str, ...] = (),
+    dqs1_observations: tuple[dict[str, Any], ...] = (),
+    dqs1_observation_source_paths: tuple[str, ...] = (),
 ) -> Dqs1QueueBuildResult:
     selections = select_dqs1_local_first_candidates(
         action_summary_path,
@@ -1372,12 +1374,17 @@ def build_queue_from_action_summary(
         skip_completed_local_advisory=skip_completed_local_advisory,
         candidate_limit=candidate_limit,
     )
-    materializer_feedback_bridge = build_dqs1_materializer_feedback_bridge(
-        materializer_feedback_payloads=materializer_feedback_payloads,
-        materializer_feedback_source_paths=materializer_feedback_source_paths,
-        planned_dqs1_candidate_ids=tuple(selection.candidate_id for selection in selections),
-        candidate_limit=candidate_limit,
-    )
+    try:
+        materializer_feedback_bridge = build_dqs1_materializer_feedback_bridge(
+            materializer_feedback_payloads=materializer_feedback_payloads,
+            materializer_feedback_source_paths=materializer_feedback_source_paths,
+            planned_dqs1_candidate_ids=tuple(selection.candidate_id for selection in selections),
+            candidate_limit=candidate_limit,
+            dqs1_observations=dqs1_observations,
+            dqs1_observation_source_paths=dqs1_observation_source_paths,
+        )
+    except ValueError as exc:
+        raise ExperimentQueueError(str(exc)) from exc
     return Dqs1QueueBuildResult(
         queue=build_dqs1_local_first_queue_from_selections(
             selections,

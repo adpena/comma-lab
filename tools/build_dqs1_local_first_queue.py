@@ -29,7 +29,15 @@ from comma_lab.scheduler.dqs1_local_first_queue import (  # noqa: E402
     build_queue_from_action_summary,
     find_latest_cross_family_action_summary,
 )
+from tac.optimization.mlx_dynamic_sweep_observations import (  # noqa: E402
+    MLXDynamicSweepObservationError,
+    load_observation_rows,
+    observation_duplicate_key,
+)
 from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
+
+DQS1_OBSERVATION_SOURCE_SCHEMA = "dqs1_local_first_harvest.v1"
+DQS1_OBSERVATION_SWEEP_CONFIG_ID = "dqs1_local_first_macos_cpu_advisory"
 
 
 def _json_print(payload: object) -> None:
@@ -156,6 +164,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="optional path for the derived DQS1 materializer-feedback bridge JSON",
     )
     parser.add_argument(
+        "--dqs1-observation-jsonl",
+        "--dqs1-observations",
+        action="append",
+        default=[],
+        dest="dqs1_observation_jsonl",
+        help=(
+            "DQS1 local-first harvest observation JSONL to stamp onto the "
+            "materializer-feedback bridge as false-authority follow-up context. "
+            "May repeat. Cumulative snapshots are deduplicated by observation identity."
+        ),
+    )
+    parser.add_argument(
         "--overwrite-materializer-feedback-bridge",
         action="store_true",
         help="allow replacing --materializer-feedback-bridge-out if it exists",
@@ -238,6 +258,45 @@ def _load_materializer_feedback(path_values: list[str]) -> tuple[dict[str, objec
     return tuple(payloads)
 
 
+def _load_dqs1_observations(path_values: list[str]) -> tuple[dict[str, object], ...]:
+    rows: list[dict[str, object]] = []
+    seen: set[tuple[tuple[str, str | None], ...]] = set()
+    for value in path_values:
+        path = Path(value)
+        if not path.is_absolute():
+            path = REPO_ROOT / path
+        if not path.exists():
+            raise ExperimentQueueError(f"{path}: observation JSONL does not exist")
+        if path.suffix != ".jsonl":
+            raise ExperimentQueueError(
+                f"{path}: DQS1 observations must be JSONL rows; "
+                "build harvest observations before queue ingestion"
+            )
+        try:
+            loaded = load_observation_rows(path)
+        except OSError as exc:
+            raise ExperimentQueueError(f"{path}: cannot read observation JSONL") from exc
+        except MLXDynamicSweepObservationError as exc:
+            raise ExperimentQueueError(f"{path}: invalid observation JSONL: {exc}") from exc
+        if not loaded:
+            raise ExperimentQueueError(f"{path}: observation JSONL has no rows")
+        for row in loaded:
+            if (
+                row.get("source_schema") != DQS1_OBSERVATION_SOURCE_SCHEMA
+                or row.get("sweep_config_id") != DQS1_OBSERVATION_SWEEP_CONFIG_ID
+            ):
+                raise ExperimentQueueError(
+                    f"{path}: non-local-first DQS1 observation row refused "
+                    f"for candidate {row.get('candidate_id')!r}"
+                )
+            key = observation_duplicate_key(row)
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append(row)
+    return tuple(rows)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     action_summary = (
@@ -248,6 +307,7 @@ def main(argv: list[str] | None = None) -> int:
     materializer_feedback_payloads = _load_materializer_feedback(
         args.materializer_feedback
     )
+    dqs1_observations = _load_dqs1_observations(args.dqs1_observation_jsonl)
     result = build_queue_from_action_summary(
         action_summary,
         repo_root=REPO_ROOT,
@@ -280,6 +340,8 @@ def main(argv: list[str] | None = None) -> int:
         candidate_limit=args.candidate_limit,
         materializer_feedback_payloads=materializer_feedback_payloads,
         materializer_feedback_source_paths=tuple(args.materializer_feedback),
+        dqs1_observations=dqs1_observations,
+        dqs1_observation_source_paths=tuple(args.dqs1_observation_jsonl),
         local_cpu_concurrency=args.local_cpu_concurrency,
         local_io_concurrency=args.local_io_concurrency,
         include_mlx_local_advisory_debug=args.include_mlx_local_advisory_debug,
@@ -362,6 +424,13 @@ def main(argv: list[str] | None = None) -> int:
                     if result.materializer_feedback_bridge is None
                     else result.materializer_feedback_bridge.get(
                         "recommended_next_action"
+                    )
+                ),
+                "materializer_feedback_bridge_observed_dqs1_candidate_count": (
+                    None
+                    if result.materializer_feedback_bridge is None
+                    else result.materializer_feedback_bridge.get(
+                        "observed_dqs1_candidate_count"
                     )
                 ),
             }

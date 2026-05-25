@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import sys
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -309,18 +310,29 @@ def _frontier_scores() -> tuple[dict[str, float], dict[str, Any]]:
     return scores, payload
 
 
-def _queue_build_common_args(args: argparse.Namespace, *, results_root: Path) -> list[str]:
+def _queue_build_common_args(
+    args: argparse.Namespace,
+    *,
+    results_root: Path,
+    dqs1_observation_jsonl: Sequence[str | Path] = (),
+) -> list[str]:
     completed_args: list[str] = []
     for completed_root in _completed_results_roots(args):
         completed_args.extend(["--completed-results-root", completed_root])
     materializer_feedback_args: list[str] = []
     for feedback_path in args.materializer_feedback:
         materializer_feedback_args.extend(["--materializer-feedback", feedback_path])
+    dqs1_observation_args: list[str] = []
+    for observation_path in [*args.dqs1_observation_jsonl, *dqs1_observation_jsonl]:
+        dqs1_observation_args.extend(
+            ["--dqs1-observation-jsonl", _display_path(observation_path)]
+        )
     base_args = [
         "--results-root",
         str(results_root),
         *completed_args,
         *materializer_feedback_args,
+        *dqs1_observation_args,
         "--candidate-limit",
         str(args.queue_candidate_limit),
         "--local-cpu-concurrency",
@@ -707,6 +719,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "into generated DQS1 local-first queues"
         ),
     )
+    parser.add_argument(
+        "--dqs1-observation-jsonl",
+        "--dqs1-observations",
+        action="append",
+        default=[],
+        dest="dqs1_observation_jsonl",
+        help=(
+            "existing DQS1 local-first harvest observation JSONL to forward into "
+            "generated queue feedback bridges; current-round harvest observations "
+            "are added automatically after each harvest."
+        ),
+    )
     parser.add_argument("--portfolio-root", default=None)
     parser.add_argument("--incumbent-score", default=None)
     parser.add_argument(
@@ -972,7 +996,11 @@ def main(argv: list[str] | None = None) -> int:
                 queue_sha,
                 "--queue-id",
                 str(queue_storage_payload.get("queue_id") or "dqs1_pairset_local_first"),
-                *_queue_build_common_args(args, results_root=results_root),
+                *_queue_build_common_args(
+                    args,
+                    results_root=results_root,
+                    dqs1_observation_jsonl=(observation_jsonl,),
+                ),
             ]
         )
         queue_payload = _json_from_stdout(queue_result, label="queue rebuild")
