@@ -798,7 +798,80 @@ def test_materializer_observation_matches_compiler_target_and_materializer() -> 
         "family_agnostic_materializer_empirical_observation"
     )
     assert cell["priority"]["expected_score_gain"] == pytest.approx(observed_rate_gain)
+    assert cell["materializer_archive_delta_feedback"]["observation_count"] == 1
+    assert cell["materializer_archive_delta_feedback"]["rate_positive_count"] == 1
+    assert cell["materializer_archive_delta_feedback"]["blocks_water_bucket"] is False
     assert cell["score_claim"] is False
+    assert action["score_claim"] is False
+
+
+def test_receiver_negative_materializer_sweep_blocks_matching_water_bucket() -> None:
+    saved_bytes = 66
+    observed_rate_gain = CONTEST_RATE_SCORE_PER_BYTE * float(saved_bytes)
+    atom = _atom(
+        "candidate_parent",
+        atom_id="atom_receiver_negative_sweep",
+        fragility_penalty=0.0,
+        uncertainty=0.0,
+        operation_set_compiler={
+            "schema": "inverse_action_operation_set_compiler_hint.v1",
+            "operation_set_id": "section_recode_group",
+            "selected_operations": [
+                {
+                    "unit_id": "decoder_packed_brotli",
+                    "target_kind": "archive_section_entropy_recode_v1",
+                    "materializer": "archive_section_entropy_recode_adapter",
+                    "receiver_contract_kind": (
+                        "family_agnostic_archive_section_entropy_recode"
+                    ),
+                    "candidate_saved_bytes": saved_bytes,
+                }
+            ],
+        },
+    )
+    observation = {
+        "schema": "family_agnostic_materializer_empirical_observation.v1",
+        "observation_kind": "family_agnostic_materializer_empirical_observation",
+        "observation_id": "receiver_negative_archive_section_obs",
+        "candidate_id": "receiver_negative_archive_section_candidate",
+        "axis": "[local-materializer-receiver-feedback]",
+        "runtime_identity": {
+            "runtime_contract_sha256": "a" * 64,
+            "scorer_version": "family_agnostic_materializer_empirical_sweep.v1",
+        },
+        "cache_identity": {"cache_sha256": "b" * 64},
+        "target_kind": "archive_section_entropy_recode_v1",
+        "materializer_id": "archive_section_entropy_recode_adapter",
+        "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+        "saved_bytes": saved_bytes,
+        "observed_rate_gain": observed_rate_gain,
+        "observed_score_gain": observed_rate_gain,
+        "artifact_bytes": 143,
+        "resource_kind": "local_cpu",
+        "rate_positive": True,
+        "receiver_contract_satisfied": False,
+        "readiness_blockers": [
+            "section_length_changed_requires_runtime_consumption_proof",
+            "runtime_consumption_proof_not_passed",
+        ],
+        "source_unit_ids": ["decoder_packed_brotli"],
+        "source_selection_ids": ["opset_combo_0001"],
+        **_planning_false_authority(),
+    }
+
+    action = build_discrete_scorer_action_functional([atom], observations=[observation])
+    cell = action["cells"][0]
+    feedback = cell["materializer_archive_delta_feedback"]
+
+    assert cell["water_bucket_selectable"] is False
+    assert cell["materializer_archive_delta_blocked"] is True
+    assert feedback["observation_count"] == 1
+    assert feedback["rate_positive_count"] == 1
+    assert feedback["rate_nonpositive_count"] == 0
+    assert feedback["realized_saved_bytes_sum"] == saved_bytes
+    assert "receiver_negative_materializer_success" in feedback["blockers"]
+    assert "rate_negative_materializer_success" not in feedback["blockers"]
+    assert action["water_bucket"]["selected_count"] == 0
     assert action["score_claim"] is False
 
 
@@ -885,7 +958,7 @@ def test_materializer_chain_realized_cost_blocks_matching_water_bucket() -> None
     )
     action = build_discrete_scorer_action_functional(
         [atom, unrelated_atom],
-        observations=observations,
+        observations=[*observations, *direct_observations],
     )
     cells_by_atom = {cell["atom_id"]: cell for cell in action["cells"]}
     cell = cells_by_atom["atom_materializer_delta"]
@@ -914,6 +987,7 @@ def test_materializer_chain_realized_cost_blocks_matching_water_bucket() -> None
     assert unrelated_cell["materializer_archive_delta_blocked"] is False
     assert unrelated_cell["water_bucket_selectable"] is True
     assert feedback["blocks_water_bucket"] is True
+    assert feedback["observation_count"] == 1
     assert feedback["realized_saved_bytes_sum"] == -1764
     assert "rate_negative_materializer_success" in feedback["blockers"]
     assert action["integral_totals"]["materializer_archive_delta_blocked_cell_count"] == 1
@@ -1974,6 +2048,7 @@ def test_queue_observation_receiver_negative_materializer_artifact_blocks_water_
 
     assert materializer_observation["receiver_contract_satisfied"] is False
     assert materializer_observation["rate_positive"] is True
+    assert materializer_observation["saved_bytes"] == 64
     assert materializer_observation["source_unit_ids"] == [source_unit_id]
     assert "receiver_contract_not_satisfied" in materializer_observation["readiness_blockers"]
     assert (
@@ -1984,6 +2059,12 @@ def test_queue_observation_receiver_negative_materializer_artifact_blocks_water_
     assert cell["water_bucket_selectable"] is False
     assert "receiver_negative_materializer_success" in (
         cell["materializer_archive_delta_feedback"]["blockers"]
+    )
+    assert "rate_negative_materializer_success" not in (
+        cell["materializer_archive_delta_feedback"]["blockers"]
+    )
+    assert (
+        cell["materializer_archive_delta_feedback"]["realized_saved_bytes_sum"] == 64
     )
     assert action["integral_totals"]["materializer_archive_delta_blocked_cell_count"] == 1
     assert action["score_claim"] is False

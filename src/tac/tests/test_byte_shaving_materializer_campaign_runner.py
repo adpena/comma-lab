@@ -633,9 +633,13 @@ def test_materializer_campaign_runner_emits_receiver_negative_observation_sweep(
     assert sweep["schema"] == runner.FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA
     assert sweep["receiver_negative_count"] == 1
     assert sweep["observation_count"] == 1
+    assert sweep["rate_positive_count"] == 1
+    assert sweep["rate_nonpositive_count"] == 0
     assert row["schema"] == runner.FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA
     assert row["candidate_id"] == "inverse_action_receiver_negative_unit"
-    assert row["rate_positive"] is False
+    assert row["saved_bytes"] == 66
+    assert row["rate_positive"] is True
+    assert row["observed_rate_gain"] > 0.0
     assert row["receiver_contract_satisfied"] is False
     assert row["observed_score_gain"] == 0.0
     assert row["score_claim"] is False

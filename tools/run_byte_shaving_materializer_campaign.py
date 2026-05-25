@@ -73,6 +73,10 @@ from tac.optimization.proxy_candidate_contract import (  # noqa: E402
     truthy_authority_field_violations,
 )
 from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
+from tac.score_composition import (  # noqa: E402
+    CANONICAL_RATE_DENOM_BYTES,
+    CANONICAL_RATE_MULTIPLIER,
+)
 
 RUN_SCHEMA = "byte_shaving_materializer_campaign_run.v1"
 RUN_CONFIG_SCHEMA = "byte_shaving_materializer_campaign_run_config.v1"
@@ -106,6 +110,9 @@ MAX_AUTO_DISCOVERED_MATERIALIZER_CHAIN_MANIFEST_BYTES = 8 * 1024 * 1024
 MAX_AUTO_DISCOVERED_RECEIVER_FEEDBACK_MANIFESTS = 128
 MAX_AUTO_DISCOVERED_RECEIVER_FEEDBACK_MANIFEST_BYTES = 8 * 1024 * 1024
 RECEIVER_NEGATIVE_MATERIALIZER_AXIS = "[local-materializer-receiver advisory]"
+CONTEST_RATE_SCORE_PER_BYTE = CANONICAL_RATE_MULTIPLIER / float(
+    CANONICAL_RATE_DENOM_BYTES
+)
 QUEUE_FEEDBACK_REPLAN_REQUIRED_FALSE_FIELDS = tuple(
     dict.fromkeys(
         (
@@ -605,6 +612,10 @@ def _materializer_receiver_feedback_row(
         "cache_sha256",
         candidate_sha or source_sha or _sha256_json(dict(manifest)),
     )
+    rate_positive = saved_bytes > 0
+    observed_rate_gain = (
+        CONTEST_RATE_SCORE_PER_BYTE * float(saved_bytes) if rate_positive else 0.0
+    )
     return _false_authority_payload(
         {
             "schema": FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA,
@@ -635,9 +646,9 @@ def _materializer_receiver_feedback_row(
             "candidate_archive_bytes": candidate_bytes,
             "artifact_bytes": candidate_bytes or source_bytes or 0,
             "saved_bytes": saved_bytes,
-            "observed_rate_gain": 0.0,
+            "observed_rate_gain": observed_rate_gain,
             "observed_score_gain": 0.0,
-            "rate_positive": False,
+            "rate_positive": rate_positive,
             "receiver_contract_satisfied": False,
             "receiver_verification_blockers": receiver_blockers,
             "readiness_blockers": list(
@@ -790,6 +801,7 @@ def _write_materializer_receiver_feedback_sweep(
     blockers = []
     if len(rows) >= MAX_AUTO_DISCOVERED_RECEIVER_FEEDBACK_MANIFESTS:
         blockers.append("materializer_receiver_feedback_manifest_limit_reached")
+    rate_positive_count = sum(1 for row in rows if row.get("rate_positive") is True)
     output = run_dir / "materializer_receiver_feedback_observations.json"
     _write_json(
         output,
@@ -801,8 +813,8 @@ def _write_materializer_receiver_feedback_sweep(
                 "run_dir": _display_path(run_dir),
                 "archive_count": len(rows),
                 "observation_count": len(rows),
-                "rate_positive_count": 0,
-                "rate_nonpositive_count": len(rows),
+                "rate_positive_count": rate_positive_count,
+                "rate_nonpositive_count": len(rows) - rate_positive_count,
                 "receiver_negative_count": len(rows),
                 "planner_feedback": {
                     "schema": "family_agnostic_materializer_planner_feedback.v1",

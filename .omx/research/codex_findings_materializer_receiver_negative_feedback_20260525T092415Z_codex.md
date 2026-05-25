@@ -51,16 +51,19 @@ Local queue-owned materializer proof artifact:
 
 - Compact tracked summary:
   `.omx/research/codex_receiver_negative_queue_feedback_20260525T092415Z_summary.json`
-- `.omx/research/codex_receiver_negative_queue_feedback_20260525T092804Z/materializer_receiver_feedback_observations.json`
+- `.omx/research/codex_receiver_negative_queue_feedback_20260525T094050Z/materializer_receiver_feedback_observations.json`
 - Schema: `family_agnostic_materializer_empirical_sweep.v1`
 - Observation count: 1 merged receiver-negative row
+- Preserved rate signal: 66 saved bytes, rate-positive, receiver-negative
 - Allowed feedback path:
-  `.omx/research/codex_receiver_negative_queue_feedback_20260525T092804Z/queue_feedback_replan_request.json`
+  `.omx/research/codex_receiver_negative_queue_feedback_20260525T094050Z/queue_feedback_replan_request.json`
 - The feedback request includes the generated sweep as `--observation` and
   remains false authority.
 - Executing that feedback request wrote
-  `.omx/research/codex_receiver_negative_queue_feedback_20260525T092804Z/inverse_steganalysis_action_functional.feedback.json`
-  with 1 cell, 1 blocked cell, 0 selected cells, and false authority.
+  `.omx/research/codex_receiver_negative_queue_feedback_20260525T094050Z/inverse_steganalysis_action_functional.feedback.json`
+  with 1 cell, 1 blocked cell, 0 selected cells, 66 realized saved bytes, and
+  false authority. The archive-delta blocker is
+  `receiver_negative_materializer_success`, not rate-negative feedback.
 
 ```bash
 .venv/bin/python -m ruff check \
@@ -104,7 +107,7 @@ PYTHONPATH=. .venv/bin/pytest \
   -q
 ```
 
-Result: 146 passed after the preflight bug fix.
+Result: 147 passed after the empirical-delta merge fix.
 
 ## Next Integration
 

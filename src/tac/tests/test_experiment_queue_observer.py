@@ -406,6 +406,11 @@ def test_observer_preserves_materializer_metadata_for_recovery_grouping(
                     "bytes": 143,
                     "sha256": "a" * 64,
                 },
+                "section_recode": {
+                    "source_archive_bytes": 209,
+                    "candidate_archive_bytes": 143,
+                    "saved_bytes": 66,
+                },
             }
         ),
         encoding="utf-8",
@@ -478,6 +483,10 @@ def test_observer_preserves_materializer_metadata_for_recovery_grouping(
         "runtime_consumption_proof_not_passed"
     ]
     assert artifact_record["candidate_archive"]["bytes"] == 143
+    assert artifact_record["section_recode_saved_bytes"] == 66
+    assert artifact_record["serialized_archive_delta_status"] == "realized_saving"
+    assert artifact_record["serialized_archive_delta_realized_saved_bytes"] == 66
+    assert artifact_record["serialized_archive_delta_savings_realized"] is True
 
     recovery_plan = build_queue_observation_recovery_plan(
         observation,

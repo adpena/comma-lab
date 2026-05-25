@@ -189,6 +189,47 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
                 record["serialized_archive_delta_candidate_archive_bytes"] = (
                     delta.get("candidate_archive_bytes")
                 )
+            section_recode = payload.get("section_recode")
+            if isinstance(section_recode, Mapping):
+                saved_bytes = section_recode.get("saved_bytes")
+                if "section_recode_saved_bytes" not in record:
+                    record["section_recode_saved_bytes"] = saved_bytes
+                if "section_recode_source_archive_bytes" not in record:
+                    record["section_recode_source_archive_bytes"] = section_recode.get(
+                        "source_archive_bytes"
+                    )
+                if "section_recode_candidate_archive_bytes" not in record:
+                    record["section_recode_candidate_archive_bytes"] = (
+                        section_recode.get("candidate_archive_bytes")
+                    )
+                if record.get("serialized_archive_delta_realized_saved_bytes") is None:
+                    record["serialized_archive_delta_realized_saved_bytes"] = saved_bytes
+                if record.get("serialized_archive_delta_source_archive_bytes") is None:
+                    record["serialized_archive_delta_source_archive_bytes"] = (
+                        section_recode.get("source_archive_bytes")
+                    )
+                if record.get("serialized_archive_delta_candidate_archive_bytes") is None:
+                    record["serialized_archive_delta_candidate_archive_bytes"] = (
+                        section_recode.get("candidate_archive_bytes")
+                    )
+                if record.get("serialized_archive_delta_savings_realized") is None:
+                    try:
+                        record["serialized_archive_delta_savings_realized"] = (
+                            int(saved_bytes) > 0
+                        )
+                    except (TypeError, ValueError):
+                        pass
+                if record.get("serialized_archive_delta_status") is None:
+                    try:
+                        saved_int = int(saved_bytes)
+                    except (TypeError, ValueError):
+                        saved_int = 0
+                    if saved_int > 0:
+                        record["serialized_archive_delta_status"] = "realized_saving"
+                    elif saved_int < 0:
+                        record["serialized_archive_delta_status"] = "realized_cost"
+                    else:
+                        record["serialized_archive_delta_status"] = "no_realized_delta"
             score = payload.get("score")
             if isinstance(score, Mapping):
                 record["score"] = {

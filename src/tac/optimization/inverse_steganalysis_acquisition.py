@@ -92,6 +92,15 @@ QUEUE_HEALTH_BLOCKER_OBSERVATION_KINDS = frozenset(
     }
 )
 MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND = "materializer_chain_archive_delta"
+FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_KIND = (
+    "family_agnostic_materializer_empirical_observation"
+)
+MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KINDS = frozenset(
+    {
+        MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND,
+        FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_KIND,
+    }
+)
 
 ALLOWED_SCALES = frozenset(
     {
@@ -3114,9 +3123,10 @@ def _observation_feedback_target_ids(observation: Mapping[str, Any]) -> set[str]
 
 
 def _observation_requires_target_intersection(observation: Mapping[str, Any]) -> bool:
-    if observation.get("observation_kind") not in {
+    observation_kind = str(observation.get("observation_kind") or "")
+    if observation_kind not in {
         "queue_observation_health_blocker",
-        MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND,
+        *MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KINDS,
     }:
         return False
     for key in (
@@ -3217,9 +3227,8 @@ def _is_queue_health_blocker_observation(row: Mapping[str, Any]) -> bool:
 
 
 def _is_materializer_archive_delta_observation(row: Mapping[str, Any]) -> bool:
-    return (
-        str(row.get("observation_kind") or "")
-        == MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND
+    return str(row.get("observation_kind") or "") in (
+        MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KINDS
     )
 
 
@@ -3241,11 +3250,13 @@ def _materializer_archive_delta_feedback_for_observations(
     *,
     atom: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    rows = [
-        dict(row)
-        for row in observations
-        if _is_materializer_archive_delta_observation(row)
-    ]
+    rows = _merge_materializer_archive_delta_observations(
+        [
+            dict(row)
+            for row in observations
+            if _is_materializer_archive_delta_observation(row)
+        ]
+    )
     blocking_rows = [
         row
         for row in rows
@@ -4178,7 +4189,10 @@ def _queue_materializer_delta_observations_for_step(
     for artifact_index, artifact in enumerate(_sequence_of_mappings(step.get("expected_artifacts"))):
         delta_status = _optional_text(artifact.get("serialized_archive_delta_status"))
         saved_bytes = _optional_int(
-            artifact.get("serialized_archive_delta_realized_saved_bytes"),
+            _first(
+                artifact.get("serialized_archive_delta_realized_saved_bytes"),
+                artifact.get("section_recode_saved_bytes"),
+            ),
             "serialized_archive_delta_realized_saved_bytes",
         )
         has_receiver_signal = "receiver_contract_satisfied" in artifact
@@ -4205,7 +4219,15 @@ def _queue_materializer_delta_observations_for_step(
             continue
         if saved_bytes is None:
             saved_bytes = 0
-        savings_realized = artifact.get("serialized_archive_delta_savings_realized") is True
+        if delta_status is None:
+            if saved_bytes > 0:
+                delta_status = "realized_saving"
+            elif saved_bytes < 0:
+                delta_status = "realized_cost"
+        savings_realized = (
+            artifact.get("serialized_archive_delta_savings_realized") is True
+            or saved_bytes > 0
+        )
         rate_positive = (
             saved_bytes > 0
             and delta_status == "realized_saving"
@@ -4235,7 +4257,10 @@ def _queue_materializer_delta_observations_for_step(
         candidate_archive_bytes = _optional_int(
             _first(
                 artifact.get("serialized_archive_delta_candidate_archive_bytes"),
-                candidate_archive.get("bytes") if isinstance(candidate_archive, Mapping) else None,
+                artifact.get("section_recode_candidate_archive_bytes"),
+                candidate_archive.get("bytes")
+                if isinstance(candidate_archive, Mapping)
+                else None,
             ),
             "candidate_archive_bytes",
             minimum=0,
@@ -4304,7 +4329,12 @@ def _queue_materializer_delta_observations_for_step(
                         ),
                         "archive_delta_status": delta_status,
                         "source_archive_bytes": _optional_int(
-                            artifact.get("serialized_archive_delta_source_archive_bytes"),
+                            _first(
+                                artifact.get(
+                                    "serialized_archive_delta_source_archive_bytes"
+                                ),
+                                artifact.get("section_recode_source_archive_bytes"),
+                            ),
                             "source_archive_bytes",
                             minimum=0,
                         ),
@@ -4326,7 +4356,7 @@ def _queue_materializer_delta_observations_for_step(
                     }
                 )
             )
-    return _merge_queue_materializer_delta_observations(out)
+    return _merge_materializer_archive_delta_observations(out)
 
 
 _QUEUE_MATERIALIZER_DELTA_MERGE_SEQUENCE_KEYS = (
@@ -4340,7 +4370,7 @@ _QUEUE_MATERIALIZER_DELTA_MERGE_SEQUENCE_KEYS = (
 )
 
 
-def _queue_materializer_delta_merge_key(row: Mapping[str, Any]) -> str:
+def _materializer_archive_delta_merge_key(row: Mapping[str, Any]) -> str:
     artifact_path = _optional_text(_first(*_list_strings(row.get("expected_artifact_paths"))))
     candidate_sha = _optional_text(row.get("candidate_archive_sha256"))
     candidate_id = _optional_text(row.get("candidate_id"))
@@ -4373,13 +4403,13 @@ def _sha256_json_value(value: Mapping[str, Any]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-def _merge_queue_materializer_delta_observations(
+def _merge_materializer_archive_delta_observations(
     rows: Sequence[Mapping[str, Any]],
 ) -> list[dict[str, Any]]:
     merged: dict[str, dict[str, Any]] = {}
     for row in rows:
         row_dict = dict(row)
-        key = _queue_materializer_delta_merge_key(row_dict)
+        key = _materializer_archive_delta_merge_key(row_dict)
         existing = merged.get(key)
         if existing is None:
             merged[key] = row_dict
@@ -4399,14 +4429,17 @@ def _merge_queue_materializer_delta_observations(
             existing["rate_positive"] = True
         if row_dict.get("savings_realized") is True:
             existing["savings_realized"] = True
-        for field in (
-            "saved_bytes",
-            "observed_rate_gain",
-            "observed_score_gain",
-            "source_archive_bytes",
-            "candidate_archive_bytes",
-            "artifact_bytes",
-        ):
+        saved_bytes = _merge_saved_bytes(existing.get("saved_bytes"), row_dict.get("saved_bytes"))
+        if saved_bytes is not None:
+            existing["saved_bytes"] = saved_bytes
+        for field in ("observed_rate_gain", "observed_score_gain"):
+            current_float = _float_or_none(existing.get(field), field, minimum=0.0)
+            incoming_float = _float_or_none(row_dict.get(field), field, minimum=0.0)
+            if incoming_float is not None and (
+                current_float is None or incoming_float > current_float
+            ):
+                existing[field] = incoming_float
+        for field in ("source_archive_bytes", "candidate_archive_bytes", "artifact_bytes"):
             current = _optional_int(existing.get(field), field, minimum=0)
             incoming = _optional_int(row_dict.get(field), field, minimum=0)
             if incoming is not None and (current is None or incoming > current):
@@ -4422,6 +4455,20 @@ def _merge_queue_materializer_delta_observations(
             ):
                 existing[field] = value
     return list(merged.values())
+
+
+def _merge_saved_bytes(*values: Any) -> int | None:
+    parsed = [
+        parsed_value
+        for value in values
+        if (parsed_value := _optional_int(value, "saved_bytes")) is not None
+    ]
+    if not parsed:
+        return None
+    positive = [value for value in parsed if value > 0]
+    if positive:
+        return max(positive)
+    return min(parsed)
 
 
 def _artifact_receiver_contract_satisfied(artifact: Mapping[str, Any]) -> bool:
