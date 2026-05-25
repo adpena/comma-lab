@@ -1126,6 +1126,32 @@ def _renderer_payload_dfl1_parity_context(
     return out
 
 
+def _renderer_payload_dfl1_parity_followup_blockers(
+    work_row: Mapping[str, Any],
+) -> list[str]:
+    if work_row.get("target_kind") != RENDERER_PAYLOAD_DFL1_TARGET_KIND:
+        return []
+    context = work_row.get("renderer_payload_dfl1_parity_context")
+    if not isinstance(context, Mapping):
+        return ["renderer_payload_dfl1_parity_context_missing"]
+    blockers: list[str] = []
+    for key in (
+        "source_archive",
+        "candidate_archive",
+        "source_runtime_dir",
+        "candidate_runtime_dir",
+    ):
+        if _context_string_any(context, (key,)) is None:
+            blockers.append(f"renderer_payload_dfl1_parity_context_missing:{key}")
+    file_list = _context_string_any(context, ("file_list",))
+    file_list_entries = _string_list_context_value(context, "file_list_entries")
+    if file_list is None and not file_list_entries:
+        blockers.append(
+            "renderer_payload_dfl1_parity_context_missing:file_list_or_entries"
+        )
+    return ordered_unique(blockers)
+
+
 def _command_flag_values(command: Sequence[str], flags: set[str]) -> list[str]:
     values: list[str] = []
     index = 0
@@ -2849,6 +2875,8 @@ def _renderer_payload_dfl1_parity_followup_step(
 ) -> dict[str, Any] | None:
     if work_row.get("target_kind") != RENDERER_PAYLOAD_DFL1_TARGET_KIND:
         return None
+    if _renderer_payload_dfl1_parity_followup_blockers(work_row):
+        return None
     context = work_row.get("renderer_payload_dfl1_parity_context")
     if not isinstance(context, Mapping):
         return None
@@ -2913,8 +2941,56 @@ def _renderer_payload_dfl1_parity_followup_step(
             {
                 "type": "json_equals",
                 "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "full_frame_file_list_claim",
+                "equals": True,
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
                 "key": "full_frame_inflate_output_parity_claim",
                 "equals": True,
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "output_bytes_match",
+                "equals": True,
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "output_sha256_match",
+                "equals": True,
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "output_manifest_sha256_match",
+                "equals": True,
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "cmp_equal",
+                "equals": True,
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "blockers",
+                "equals": [],
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "score_claim",
+                "equals": False,
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "ready_for_exact_eval_dispatch",
+                "equals": False,
             },
         ],
         "telemetry": {
@@ -3065,6 +3141,23 @@ def build_materializer_execution_queue(
                     "materializer exact-readiness follow-up path outside "
                     f"scheduler workload root: {handoff_dir} not under {expected_output_root}"
                 )
+            if (
+                row.get("target_kind") == RENDERER_PAYLOAD_DFL1_TARGET_KIND
+                and not _renderer_payload_dfl1_parity_followup_blockers(row)
+            ):
+                dfl1_context = row.get("renderer_payload_dfl1_parity_context")
+                assert isinstance(dfl1_context, Mapping)
+                raw_parity_output_dir = _context_string_any(dfl1_context, ("output_dir",))
+                parity_dir = (
+                    _resolve_repo_path(raw_parity_output_dir, repo_root=repo)
+                    if raw_parity_output_dir is not None
+                    else handoff_dir / "renderer_payload_dfl1_shell_parity"
+                )
+                if not _path_under_root(parity_dir, expected_output_root):
+                    raise ExperimentQueueError(
+                        "materializer DFL1 parity artifact path outside scheduler "
+                        f"workload root: {parity_dir} not under {expected_output_root}"
+                    )
 
     resource_limits: dict[str, int] = {}
     for key, value in (resource_concurrency or {}).items():
@@ -3100,6 +3193,15 @@ def build_materializer_execution_queue(
         exact_readiness_followup_enabled = include_exact_readiness_followup and exact_readiness_skip_reason is None
         if exact_readiness_followup_enabled:
             used_resource_kinds.add("local_cpu")
+        dfl1_parity_followup_requested = (
+            exact_readiness_followup_enabled
+            and row.get("target_kind") == RENDERER_PAYLOAD_DFL1_TARGET_KIND
+        )
+        dfl1_parity_followup_blockers = (
+            _renderer_payload_dfl1_parity_followup_blockers(row)
+            if dfl1_parity_followup_requested
+            else []
+        )
         steps = [
             {
                 "id": MATERIALIZER_EXECUTION_STEP_ID,
@@ -3165,6 +3267,16 @@ def build_materializer_execution_queue(
                 "exact_readiness_followup_requested": bool(include_exact_readiness_followup),
                 "exact_readiness_followup_enabled": bool(exact_readiness_followup_enabled),
                 "exact_readiness_followup_skipped_reason": exact_readiness_skip_reason,
+                "renderer_payload_dfl1_parity_followup_requested": bool(
+                    dfl1_parity_followup_requested
+                ),
+                "renderer_payload_dfl1_parity_followup_enabled": bool(
+                    dfl1_parity_followup_requested
+                    and not dfl1_parity_followup_blockers
+                ),
+                "renderer_payload_dfl1_parity_followup_blockers": (
+                    dfl1_parity_followup_blockers
+                ),
                 "candidate_saved_bytes_sum": row.get("candidate_saved_bytes_sum"),
                 "expected_score_gain_sum": row.get("expected_score_gain_sum"),
                 "allowed_use": "local_materializer_proof_chain_only",

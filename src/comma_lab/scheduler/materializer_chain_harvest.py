@@ -397,12 +397,6 @@ def _apply_renderer_payload_dfl1_sidecar_parity_proofs(
     repo_root: Path,
 ) -> dict[str, Any]:
     proofs = [_resolve_path(ref, repo_root=repo_root) for ref in proof_refs]
-    if not proofs:
-        return {
-            "proof_count": 0,
-            "applied_candidate_count": 0,
-            "rows": [],
-        }
     rows = [
         row
         for row in source_queue.get("top_k") or []
@@ -422,6 +416,12 @@ def _apply_renderer_payload_dfl1_sidecar_parity_proofs(
             "proof_path": None,
             "blockers": [],
         }
+        if not proofs:
+            row_report["blockers"] = [
+                "renderer_payload_dfl1_parity_proof_missing"
+            ]
+            report_rows.append(row_report)
+            continue
         for proof_path in proofs:
             proof_report = _renderer_payload_dfl1_sidecar_parity_overlay(
                 row,

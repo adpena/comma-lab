@@ -899,6 +899,13 @@ def test_exact_readiness_bridge_blocks_dfl1_without_full_frame_parity(
         chain_manifest_paths=[manifest_path],
     )
     _write_json(source_queue_out, harvest_result["source_queue"])
+    sidecar = harvest_result["report"]["renderer_payload_dfl1_sidecar_parity"]
+    assert sidecar["proof_count"] == 0
+    assert sidecar["candidate_count"] == 1
+    assert sidecar["applied_candidate_count"] == 0
+    assert sidecar["rows"][0]["blockers"] == [
+        "renderer_payload_dfl1_parity_proof_missing"
+    ]
 
     bridge = run_exact_readiness_bridge_for_harvested_queue(
         repo_root=repo,

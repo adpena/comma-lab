@@ -3565,11 +3565,27 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
         for index in range(len(parity_step["command"]) - 1)
     ]
     assert "--full-frame-file-list-claim" in parity_step["command"]
-    assert parity_step["postconditions"][1] == {
+    assert parity_step["postconditions"][2] == {
         "type": "json_equals",
         "path": proof_path,
         "key": "full_frame_inflate_output_parity_claim",
         "equals": True,
+    }
+    assert {
+        condition["key"]: condition["equals"]
+        for condition in parity_step["postconditions"]
+        if condition.get("type") == "json_equals"
+    } == {
+        "schema": "shell_inflate_parity_proof_v2",
+        "full_frame_file_list_claim": True,
+        "full_frame_inflate_output_parity_claim": True,
+        "output_bytes_match": True,
+        "output_sha256_match": True,
+        "output_manifest_sha256_match": True,
+        "cmp_equal": True,
+        "blockers": [],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
     }
     assert harvest_step["requires"] == [MATERIALIZER_DFL1_PARITY_STEP_ID]
     assert harvest_step["timeout_seconds"] == 600
@@ -3584,6 +3600,114 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
     assert dispatch_step["timeout_seconds"] == 600
     assert materialize_step["id"] == MATERIALIZER_EXECUTION_STEP_ID
     assert execution_queue["controls"]["max_concurrency"]["local_io_heavy"] == 1
+    metadata = execution_queue["experiments"][0]["metadata"]
+    assert metadata["renderer_payload_dfl1_parity_followup_requested"] is True
+    assert metadata["renderer_payload_dfl1_parity_followup_enabled"] is True
+    assert metadata["renderer_payload_dfl1_parity_followup_blockers"] == []
+
+
+def test_materializer_execution_queue_records_missing_dfl1_parity_context(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "renderer_payload_candidate.zip"
+    out_manifest = tmp_path / "renderer_payload_candidate.json"
+    runtime = tmp_path / "runtime"
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "backlog_key": "renderer_payload_dfl1_fixture",
+                "unit_kind": "packet_member",
+                "operation_family": "native_renderer_payload",
+                "target_kind": RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+                "materializer_id": RENDERER_PAYLOAD_DFL1_MATERIALIZER,
+            },
+        ],
+    }
+    work_queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts={
+            "renderer_payload_dfl1_fixture": {
+                "archive_path": str(archive),
+                "source_runtime_dir": str(runtime),
+                "member_names": ["renderer.bin"],
+                "output_archive": str(output),
+                "output_manifest": str(out_manifest),
+            },
+        },
+    )
+
+    execution_queue = build_materializer_execution_queue(
+        work_queue,
+        queue_id="dfl1_missing_parity_context",
+        repo_root=tmp_path,
+        include_exact_readiness_followup=True,
+    )
+
+    steps = execution_queue["experiments"][0]["steps"]
+    assert MATERIALIZER_DFL1_PARITY_STEP_ID not in {step["id"] for step in steps}
+    metadata = execution_queue["experiments"][0]["metadata"]
+    assert metadata["renderer_payload_dfl1_parity_followup_requested"] is True
+    assert metadata["renderer_payload_dfl1_parity_followup_enabled"] is False
+    assert metadata["renderer_payload_dfl1_parity_followup_blockers"] == [
+        "renderer_payload_dfl1_parity_context_missing:file_list_or_entries"
+    ]
+
+
+def test_materializer_execution_queue_rejects_dfl1_parity_output_outside_workload_root(
+    tmp_path: Path,
+) -> None:
+    workload = tmp_path / "workload"
+    archive = tmp_path / "source.zip"
+    output = workload / "renderer_payload_candidate.zip"
+    out_manifest = workload / "renderer_payload_candidate.json"
+    runtime = tmp_path / "runtime"
+    file_list = tmp_path / "file_list.txt"
+    outside_parity = tmp_path / "outside_parity"
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "backlog_key": "renderer_payload_dfl1_fixture",
+                "unit_kind": "packet_member",
+                "operation_family": "native_renderer_payload",
+                "target_kind": RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+                "materializer_id": RENDERER_PAYLOAD_DFL1_MATERIALIZER,
+            },
+        ],
+    }
+    work_queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts={
+            "renderer_payload_dfl1_fixture": {
+                "archive_path": str(archive),
+                "source_runtime_dir": str(runtime),
+                "full_frame_file_list": str(file_list),
+                "renderer_payload_dfl1_inflate_parity_output_dir": str(outside_parity),
+                "output_archive": str(output),
+                "output_manifest": str(out_manifest),
+            },
+        },
+    )
+
+    with pytest.raises(
+        ExperimentQueueError,
+        match="DFL1 parity artifact path outside scheduler workload root",
+    ):
+        build_materializer_execution_queue(
+            work_queue,
+            queue_id="dfl1_bad_parity_output_root",
+            repo_root=tmp_path,
+            include_scheduler_preflight=True,
+            scheduler_results_root=str(workload),
+            scheduler_storage_expected_workload_root=str(workload),
+            scheduler_proactive_cleanup_execute=True,
+            scheduler_proactive_cleanup_action="delete",
+            include_exact_readiness_followup=True,
+        )
 
 
 def test_materializer_execution_queue_skips_exact_followup_for_planning_only_rows(
