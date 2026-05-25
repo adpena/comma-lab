@@ -1,0 +1,171 @@
+{
+  "candidate_archive": {
+    "bytes": 179883,
+    "member_bytes": 179783,
+    "member_name": "x",
+    "member_sha256": "b77a04cbe603e07c17d0b88d8dd5c51cb0387655ea54082899e56c1e64d03a3c",
+    "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/candidate_archive.zip",
+    "sha256": "1a3cdd42accfde6429c53b44d1590bf17910ee7975332dd990edf105f9445da5"
+  },
+  "candidate_archive_custody": {
+    "blockers": [],
+    "bytes": 179883,
+    "exists": true,
+    "member_name": "x",
+    "member_sha256": "b77a04cbe603e07c17d0b88d8dd5c51cb0387655ea54082899e56c1e64d03a3c",
+    "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/candidate_archive.zip",
+    "sha256": "1a3cdd42accfde6429c53b44d1590bf17910ee7975332dd990edf105f9445da5"
+  },
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "candidate_inflate_output_parity_missing",
+    "exact_auth_eval_required_before_score_claim",
+    "inflate_parity_output_paths_not_matched",
+    "inflate_parity_output_contract_empty",
+    "inflate_parity_output_bytes_not_identical",
+    "candidate_inflate_runtime_failed"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
+  "inflate_parity_satisfied": false,
+  "inflate_parity_verification": {
+    "blockers": [
+      "candidate_inflate_output_parity_missing",
+      "inflate_parity_output_paths_not_matched",
+      "inflate_parity_output_contract_empty",
+      "inflate_parity_output_bytes_not_identical",
+      "candidate_inflate_runtime_failed"
+    ],
+    "candidate_archive_sha256": "1a3cdd42accfde6429c53b44d1590bf17910ee7975332dd990edf105f9445da5",
+    "candidate_member_sha256": "b77a04cbe603e07c17d0b88d8dd5c51cb0387655ea54082899e56c1e64d03a3c",
+    "charged_bits_changed": false,
+    "cleared_blockers": [],
+    "contest_cuda_auth_eval": false,
+    "deployment_target": "desktop_research",
+    "descriptor_packet_sha256": "ee4f39362f15a7c7e69784dad7aebd47a4e5292a40ec5160d062ea2eee650085",
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "optimizer_candidate_queue_is_planning_only",
+      "requires_exact_eval_readiness_gate",
+      "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+      "requires_non_proxy_score_evidence_before_promotion",
+      "candidate_inflate_output_parity_missing",
+      "inflate_parity_output_paths_not_matched",
+      "inflate_parity_output_contract_empty",
+      "inflate_parity_output_bytes_not_identical",
+      "candidate_inflate_runtime_failed"
+    ],
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "inflate_parity_satisfied": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "proof_schema": "inverse_scorer_cell_inflate_parity_probe_v1",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "inverse_scorer_cell_inflate_parity_verification_v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "source_archive_sha256": "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5",
+    "source_candidate_manifest": {
+      "path": "",
+      "provided_inline": true,
+      "sha256": ""
+    },
+    "target_modes": [
+      "contest_exact_eval_planning"
+    ]
+  },
+  "inverse_scorer_cell_descriptor": {
+    "json_bytes": 1613,
+    "json_sha256": "3cfb66cc8abb53176ad14794e74c584d83c7e78f28e1590c27b15678e292917c",
+    "magic": "IAS1",
+    "packet_bytes": 1621,
+    "packet_offset": 178162,
+    "packet_sha256": "ee4f39362f15a7c7e69784dad7aebd47a4e5292a40ec5160d062ea2eee650085",
+    "schema": "inverse_scorer_cell_descriptor_v1",
+    "selected_atom_ids": [
+      "inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+    ],
+    "selected_cell_count": 1
+  },
+  "materializer_id": "inverse_scorer_cell_candidate_adapter",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "readiness_blockers": [
+    "candidate_inflate_output_parity_missing",
+    "exact_auth_eval_required_before_score_claim",
+    "inflate_parity_output_paths_not_matched",
+    "inflate_parity_output_contract_empty",
+    "inflate_parity_output_bytes_not_identical",
+    "candidate_inflate_runtime_failed"
+  ],
+  "ready_for_archive_preflight": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "inverse_scorer_cell_receiver.v1",
+  "receiver_contract_kind": "inverse_scorer_coordinate_candidate",
+  "receiver_contract_satisfied": true,
+  "receiver_verification": {
+    "blockers": [],
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "deployment_target": "desktop_research",
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "optimizer_candidate_queue_is_planning_only",
+      "requires_exact_eval_readiness_gate",
+      "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+      "requires_non_proxy_score_evidence_before_promotion"
+    ],
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "proof_candidate_archive_sha256": "1a3cdd42accfde6429c53b44d1590bf17910ee7975332dd990edf105f9445da5",
+    "proof_candidate_member_sha256": "b77a04cbe603e07c17d0b88d8dd5c51cb0387655ea54082899e56c1e64d03a3c",
+    "proof_descriptor_packet_sha256": "ee4f39362f15a7c7e69784dad7aebd47a4e5292a40ec5160d062ea2eee650085",
+    "proof_schema": "inverse_scorer_cell_receiver_proof_v1",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "receiver_contract_id": "inverse_scorer_cell_receiver.v1",
+    "receiver_contract_kind": "inverse_scorer_coordinate_candidate",
+    "receiver_contract_satisfied": true,
+    "schema": "inverse_scorer_cell_receiver_verification_v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "target_modes": [
+      "contest_exact_eval_planning"
+    ]
+  },
+  "schema": "inverse_scorer_cell_candidate_receiver_verified_v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_candidate_manifest": {
+    "bytes": 7728,
+    "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/candidate_manifest.json",
+    "provided_inline": false,
+    "sha256": "d29b2e85e0b07192dc379c80e31cd6f0ff3428b46fd315cb540479c6b52ddf52"
+  },
+  "source_candidate_schema": "inverse_scorer_cell_candidate_v1",
+  "target_kind": "inverse_scorer_cell_candidate_v1",
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ]
+}

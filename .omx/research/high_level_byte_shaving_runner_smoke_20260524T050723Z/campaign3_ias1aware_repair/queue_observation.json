@@ -1,0 +1,813 @@
+{
+  "auto_parallelism": {
+    "idle_declared_resources": {},
+    "local_only": {
+      "max_parallel": 19,
+      "resource_limits": {
+        "local_cpu": 18,
+        "local_mlx": 1
+      }
+    },
+    "used_resource_kinds": [
+      "local_cpu",
+      "local_mlx"
+    ],
+    "with_cloud": {
+      "max_parallel": 19,
+      "resource_limits": {
+        "local_cpu": 18,
+        "local_mlx": 1
+      }
+    }
+  },
+  "blocked_steps": [],
+  "blocker_count": 0,
+  "blockers": [],
+  "definition_drift": {
+    "changed_step_count": 0,
+    "changed_steps": [],
+    "missing_hash_step_count": 0,
+    "missing_hash_steps": [],
+    "missing_step_count": 0,
+    "missing_steps": [],
+    "read_only": true,
+    "schema": "experiment_queue_definition_drift.v1"
+  },
+  "failed_steps": [],
+  "generated_at_utc": "2026-05-25T05:37:07Z",
+  "healthy": true,
+  "mode": "running",
+  "observe_read_only": true,
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "performance": {
+    "backlog_key_by_experiment": {
+      "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter": "materializer_work_queue_required:inverse_scorer_cell_candidate_v1:scorer_inverse_surface_cell:materialize_inverse_scorer_cell_candidate:inverse_scorer_cell_candidate_adapter"
+    },
+    "by_backlog_key": {
+      "materializer_work_queue_required:inverse_scorer_cell_candidate_v1:scorer_inverse_surface_cell:materialize_inverse_scorer_cell_candidate:inverse_scorer_cell_candidate_adapter": {
+        "artifact_record_bytes_mean": 190643.33333333334,
+        "artifact_record_bytes_sum": 571930,
+        "artifact_record_count": 10,
+        "artifact_record_raw_bytes_mean": 194083.66666666666,
+        "artifact_record_raw_bytes_sum": 582251,
+        "backlog_keys": [
+          "materializer_work_queue_required:inverse_scorer_cell_candidate_v1:scorer_inverse_surface_cell:materialize_inverse_scorer_cell_candidate:inverse_scorer_cell_candidate_adapter"
+        ],
+        "candidate_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 114.42904562497279,
+        "elapsed_seconds_mean": 38.31793948600534,
+        "elapsed_seconds_min": 0.26219704101094976,
+        "elapsed_seconds_sum": 114.95381845801603,
+        "experiment_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 3714.6666666666665,
+        "log_bytes_sum": 11144,
+        "resource_kind_counts": {
+          "local_cpu": 2,
+          "local_mlx": 1
+        },
+        "run_count": 3,
+        "source_selection_ids": [
+          "combo_0001",
+          "top_0001",
+          "top_0002"
+        ],
+        "source_unit_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain"
+        ],
+        "success_count": 3,
+        "work_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ]
+      }
+    },
+    "by_experiment": {
+      "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter": {
+        "artifact_record_bytes_mean": 190643.33333333334,
+        "artifact_record_bytes_sum": 571930,
+        "artifact_record_count": 10,
+        "artifact_record_raw_bytes_mean": 194083.66666666666,
+        "artifact_record_raw_bytes_sum": 582251,
+        "backlog_keys": [
+          "materializer_work_queue_required:inverse_scorer_cell_candidate_v1:scorer_inverse_surface_cell:materialize_inverse_scorer_cell_candidate:inverse_scorer_cell_candidate_adapter"
+        ],
+        "candidate_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 114.42904562497279,
+        "elapsed_seconds_mean": 38.31793948600534,
+        "elapsed_seconds_min": 0.26219704101094976,
+        "elapsed_seconds_sum": 114.95381845801603,
+        "experiment_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 3714.6666666666665,
+        "log_bytes_sum": 11144,
+        "resource_kind_counts": {
+          "local_cpu": 2,
+          "local_mlx": 1
+        },
+        "run_count": 3,
+        "source_selection_ids": [
+          "combo_0001",
+          "top_0001",
+          "top_0002"
+        ],
+        "source_unit_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain"
+        ],
+        "success_count": 3,
+        "work_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ]
+      }
+    },
+    "by_resource_kind": {
+      "local_cpu": {
+        "artifact_record_bytes_mean": 16054.0,
+        "artifact_record_bytes_sum": 32108,
+        "artifact_record_count": 6,
+        "artifact_record_raw_bytes_mean": 16054.0,
+        "artifact_record_raw_bytes_sum": 32108,
+        "backlog_keys": [
+          "materializer_work_queue_required:inverse_scorer_cell_candidate_v1:scorer_inverse_surface_cell:materialize_inverse_scorer_cell_candidate:inverse_scorer_cell_candidate_adapter"
+        ],
+        "candidate_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.262575792032294,
+        "elapsed_seconds_mean": 0.26238641652162187,
+        "elapsed_seconds_min": 0.26219704101094976,
+        "elapsed_seconds_sum": 0.5247728330432437,
+        "experiment_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 411.5,
+        "log_bytes_sum": 823,
+        "resource_kind_counts": {
+          "local_cpu": 2
+        },
+        "run_count": 2,
+        "source_selection_ids": [
+          "combo_0001",
+          "top_0001",
+          "top_0002"
+        ],
+        "source_unit_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "harvest_materializer_chains"
+        ],
+        "success_count": 2,
+        "work_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ]
+      },
+      "local_mlx": {
+        "artifact_record_bytes_mean": 539822.0,
+        "artifact_record_bytes_sum": 539822,
+        "artifact_record_count": 4,
+        "artifact_record_raw_bytes_mean": 550143.0,
+        "artifact_record_raw_bytes_sum": 550143,
+        "backlog_keys": [
+          "materializer_work_queue_required:inverse_scorer_cell_candidate_v1:scorer_inverse_surface_cell:materialize_inverse_scorer_cell_candidate:inverse_scorer_cell_candidate_adapter"
+        ],
+        "candidate_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 114.42904562497279,
+        "elapsed_seconds_mean": 114.42904562497279,
+        "elapsed_seconds_min": 114.42904562497279,
+        "elapsed_seconds_sum": 114.42904562497279,
+        "experiment_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 10321.0,
+        "log_bytes_sum": 10321,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "combo_0001",
+          "top_0001",
+          "top_0002"
+        ],
+        "source_unit_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "step_ids": [
+          "materialize_local_proof_chain"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ]
+      }
+    },
+    "by_source_selection_id": {
+      "combo_0001": {
+        "artifact_record_bytes_mean": 190643.33333333334,
+        "artifact_record_bytes_sum": 571930,
+        "artifact_record_count": 10,
+        "artifact_record_raw_bytes_mean": 194083.66666666666,
+        "artifact_record_raw_bytes_sum": 582251,
+        "backlog_keys": [
+          "materializer_work_queue_required:inverse_scorer_cell_candidate_v1:scorer_inverse_surface_cell:materialize_inverse_scorer_cell_candidate:inverse_scorer_cell_candidate_adapter"
+        ],
+        "candidate_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 114.42904562497279,
+        "elapsed_seconds_mean": 38.31793948600534,
+        "elapsed_seconds_min": 0.26219704101094976,
+        "elapsed_seconds_sum": 114.95381845801603,
+        "experiment_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 3714.6666666666665,
+        "log_bytes_sum": 11144,
+        "resource_kind_counts": {
+          "local_cpu": 2,
+          "local_mlx": 1
+        },
+        "run_count": 3,
+        "source_selection_ids": [
+          "combo_0001",
+          "top_0001",
+          "top_0002"
+        ],
+        "source_unit_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain"
+        ],
+        "success_count": 3,
+        "work_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ]
+      },
+      "top_0001": {
+        "artifact_record_bytes_mean": 190643.33333333334,
+        "artifact_record_bytes_sum": 571930,
+        "artifact_record_count": 10,
+        "artifact_record_raw_bytes_mean": 194083.66666666666,
+        "artifact_record_raw_bytes_sum": 582251,
+        "backlog_keys": [
+          "materializer_work_queue_required:inverse_scorer_cell_candidate_v1:scorer_inverse_surface_cell:materialize_inverse_scorer_cell_candidate:inverse_scorer_cell_candidate_adapter"
+        ],
+        "candidate_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 114.42904562497279,
+        "elapsed_seconds_mean": 38.31793948600534,
+        "elapsed_seconds_min": 0.26219704101094976,
+        "elapsed_seconds_sum": 114.95381845801603,
+        "experiment_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 3714.6666666666665,
+        "log_bytes_sum": 11144,
+        "resource_kind_counts": {
+          "local_cpu": 2,
+          "local_mlx": 1
+        },
+        "run_count": 3,
+        "source_selection_ids": [
+          "combo_0001",
+          "top_0001",
+          "top_0002"
+        ],
+        "source_unit_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain"
+        ],
+        "success_count": 3,
+        "work_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ]
+      },
+      "top_0002": {
+        "artifact_record_bytes_mean": 190643.33333333334,
+        "artifact_record_bytes_sum": 571930,
+        "artifact_record_count": 10,
+        "artifact_record_raw_bytes_mean": 194083.66666666666,
+        "artifact_record_raw_bytes_sum": 582251,
+        "backlog_keys": [
+          "materializer_work_queue_required:inverse_scorer_cell_candidate_v1:scorer_inverse_surface_cell:materialize_inverse_scorer_cell_candidate:inverse_scorer_cell_candidate_adapter"
+        ],
+        "candidate_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 114.42904562497279,
+        "elapsed_seconds_mean": 38.31793948600534,
+        "elapsed_seconds_min": 0.26219704101094976,
+        "elapsed_seconds_sum": 114.95381845801603,
+        "experiment_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 3714.6666666666665,
+        "log_bytes_sum": 11144,
+        "resource_kind_counts": {
+          "local_cpu": 2,
+          "local_mlx": 1
+        },
+        "run_count": 3,
+        "source_selection_ids": [
+          "combo_0001",
+          "top_0001",
+          "top_0002"
+        ],
+        "source_unit_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain"
+        ],
+        "success_count": 3,
+        "work_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ]
+      }
+    },
+    "by_source_unit_id": {
+      "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001": {
+        "artifact_record_bytes_mean": 190643.33333333334,
+        "artifact_record_bytes_sum": 571930,
+        "artifact_record_count": 10,
+        "artifact_record_raw_bytes_mean": 194083.66666666666,
+        "artifact_record_raw_bytes_sum": 582251,
+        "backlog_keys": [
+          "materializer_work_queue_required:inverse_scorer_cell_candidate_v1:scorer_inverse_surface_cell:materialize_inverse_scorer_cell_candidate:inverse_scorer_cell_candidate_adapter"
+        ],
+        "candidate_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 114.42904562497279,
+        "elapsed_seconds_mean": 38.31793948600534,
+        "elapsed_seconds_min": 0.26219704101094976,
+        "elapsed_seconds_sum": 114.95381845801603,
+        "experiment_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 3714.6666666666665,
+        "log_bytes_sum": 11144,
+        "resource_kind_counts": {
+          "local_cpu": 2,
+          "local_mlx": 1
+        },
+        "run_count": 3,
+        "source_selection_ids": [
+          "combo_0001",
+          "top_0001",
+          "top_0002"
+        ],
+        "source_unit_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain"
+        ],
+        "success_count": 3,
+        "work_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ]
+      },
+      "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000": {
+        "artifact_record_bytes_mean": 190643.33333333334,
+        "artifact_record_bytes_sum": 571930,
+        "artifact_record_count": 10,
+        "artifact_record_raw_bytes_mean": 194083.66666666666,
+        "artifact_record_raw_bytes_sum": 582251,
+        "backlog_keys": [
+          "materializer_work_queue_required:inverse_scorer_cell_candidate_v1:scorer_inverse_surface_cell:materialize_inverse_scorer_cell_candidate:inverse_scorer_cell_candidate_adapter"
+        ],
+        "candidate_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 114.42904562497279,
+        "elapsed_seconds_mean": 38.31793948600534,
+        "elapsed_seconds_min": 0.26219704101094976,
+        "elapsed_seconds_sum": 114.95381845801603,
+        "experiment_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 3714.6666666666665,
+        "log_bytes_sum": 11144,
+        "resource_kind_counts": {
+          "local_cpu": 2,
+          "local_mlx": 1
+        },
+        "run_count": 3,
+        "source_selection_ids": [
+          "combo_0001",
+          "top_0001",
+          "top_0002"
+        ],
+        "source_unit_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain"
+        ],
+        "success_count": 3,
+        "work_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ]
+      }
+    },
+    "by_step": {
+      "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter.build_exact_eval_dispatch_plan": {
+        "artifact_record_bytes_mean": 4440.0,
+        "artifact_record_bytes_sum": 4440,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 4440.0,
+        "artifact_record_raw_bytes_sum": 4440,
+        "backlog_keys": [
+          "materializer_work_queue_required:inverse_scorer_cell_candidate_v1:scorer_inverse_surface_cell:materialize_inverse_scorer_cell_candidate:inverse_scorer_cell_candidate_adapter"
+        ],
+        "candidate_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.262575792032294,
+        "elapsed_seconds_mean": 0.262575792032294,
+        "elapsed_seconds_min": 0.262575792032294,
+        "elapsed_seconds_sum": 0.262575792032294,
+        "experiment_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 242.0,
+        "log_bytes_sum": 242,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "combo_0001",
+          "top_0001",
+          "top_0002"
+        ],
+        "source_unit_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ]
+      },
+      "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter.harvest_materializer_chains": {
+        "artifact_record_bytes_mean": 27668.0,
+        "artifact_record_bytes_sum": 27668,
+        "artifact_record_count": 4,
+        "artifact_record_raw_bytes_mean": 27668.0,
+        "artifact_record_raw_bytes_sum": 27668,
+        "backlog_keys": [
+          "materializer_work_queue_required:inverse_scorer_cell_candidate_v1:scorer_inverse_surface_cell:materialize_inverse_scorer_cell_candidate:inverse_scorer_cell_candidate_adapter"
+        ],
+        "candidate_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.26219704101094976,
+        "elapsed_seconds_mean": 0.26219704101094976,
+        "elapsed_seconds_min": 0.26219704101094976,
+        "elapsed_seconds_sum": 0.26219704101094976,
+        "experiment_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 581.0,
+        "log_bytes_sum": 581,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "combo_0001",
+          "top_0001",
+          "top_0002"
+        ],
+        "source_unit_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "step_ids": [
+          "harvest_materializer_chains"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ]
+      },
+      "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter.materialize_local_proof_chain": {
+        "artifact_record_bytes_mean": 539822.0,
+        "artifact_record_bytes_sum": 539822,
+        "artifact_record_count": 4,
+        "artifact_record_raw_bytes_mean": 550143.0,
+        "artifact_record_raw_bytes_sum": 550143,
+        "backlog_keys": [
+          "materializer_work_queue_required:inverse_scorer_cell_candidate_v1:scorer_inverse_surface_cell:materialize_inverse_scorer_cell_candidate:inverse_scorer_cell_candidate_adapter"
+        ],
+        "candidate_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 114.42904562497279,
+        "elapsed_seconds_mean": 114.42904562497279,
+        "elapsed_seconds_min": 114.42904562497279,
+        "elapsed_seconds_sum": 114.42904562497279,
+        "experiment_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 10321.0,
+        "log_bytes_sum": 10321,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "source_selection_ids": [
+          "combo_0001",
+          "top_0001",
+          "top_0002"
+        ],
+        "source_unit_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "step_ids": [
+          "materialize_local_proof_chain"
+        ],
+        "success_count": 1,
+        "work_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ]
+      }
+    },
+    "by_work_id": {
+      "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter": {
+        "artifact_record_bytes_mean": 190643.33333333334,
+        "artifact_record_bytes_sum": 571930,
+        "artifact_record_count": 10,
+        "artifact_record_raw_bytes_mean": 194083.66666666666,
+        "artifact_record_raw_bytes_sum": 582251,
+        "backlog_keys": [
+          "materializer_work_queue_required:inverse_scorer_cell_candidate_v1:scorer_inverse_surface_cell:materialize_inverse_scorer_cell_candidate:inverse_scorer_cell_candidate_adapter"
+        ],
+        "candidate_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 114.42904562497279,
+        "elapsed_seconds_mean": 38.31793948600534,
+        "elapsed_seconds_min": 0.26219704101094976,
+        "elapsed_seconds_sum": 114.95381845801603,
+        "experiment_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 3714.6666666666665,
+        "log_bytes_sum": 11144,
+        "resource_kind_counts": {
+          "local_cpu": 2,
+          "local_mlx": 1
+        },
+        "run_count": 3,
+        "source_selection_ids": [
+          "combo_0001",
+          "top_0001",
+          "top_0002"
+        ],
+        "source_unit_ids": [
+          "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "step_ids": [
+          "build_exact_eval_dispatch_plan",
+          "harvest_materializer_chains",
+          "materialize_local_proof_chain"
+        ],
+        "success_count": 3,
+        "work_ids": [
+          "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+        ]
+      }
+    },
+    "candidate_id_by_experiment": {
+      "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter": [
+        "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+        "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001"
+      ]
+    },
+    "event_count": 3,
+    "promotion_eligible": false,
+    "queue_id": "high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3_ias1aware_repair",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_performance_summary.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_selection_ids_by_experiment": {
+      "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter": [
+        "combo_0001",
+        "top_0001",
+        "top_0002"
+      ]
+    },
+    "source_unit_ids_by_experiment": {
+      "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter": [
+        "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+        "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001"
+      ]
+    },
+    "telemetry_only": true,
+    "work_id_by_experiment": {
+      "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter": "materializer_work_materializer_work_queue_required_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+    }
+  },
+  "queue_id": "high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3_ias1aware_repair",
+  "queue_sha256": "b4d5b99fbb3828586fd3d0055ab32986a0b389b1e948d1ad388b6f99b2041d29",
+  "queued_steps": [],
+  "ready_steps": [],
+  "running_steps": [],
+  "runtime_policy": {
+    "advisory_only": true,
+    "apply_requires_explicit_call": true,
+    "backpressure": {
+      "local_io_heavy": {
+        "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+        "recommended_concurrency": 4
+      }
+    },
+    "current_max_concurrency": {
+      "local_cpu": 18,
+      "local_mlx": 1
+    },
+    "dispatch_attempted": false,
+    "generated_from_schema": "experiment_queue_performance_summary.v1",
+    "gpu_launched": false,
+    "input_event_count": 3,
+    "machine_capacity": {
+      "local_cpu": 18,
+      "local_io_heavy": 4,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3_ias1aware_repair",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_max_concurrency": {
+      "local_cpu": 18,
+      "local_mlx": 1
+    },
+    "recommended_timeout_seconds_by_resource": {
+      "local_cpu": 30,
+      "local_mlx": 344
+    },
+    "resource_policies": {
+      "local_cpu": {
+        "advisory_only": true,
+        "concurrency_reason": "use_detected_local_cpu_capacity",
+        "current_concurrency": 18,
+        "current_timeout_seconds_max": null,
+        "elapsed_seconds_p50": 0.262575792032294,
+        "elapsed_seconds_p95": 0.262575792032294,
+        "observed_failure_count": 0,
+        "observed_run_count": 2,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 18,
+        "recommended_timeout_seconds": 30,
+        "resource_kind": "local_cpu",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      },
+      "local_mlx": {
+        "advisory_only": true,
+        "concurrency_reason": "single_local_accelerator_default",
+        "current_concurrency": 1,
+        "current_timeout_seconds_max": null,
+        "elapsed_seconds_p50": 114.42904562497279,
+        "elapsed_seconds_p95": 114.42904562497279,
+        "observed_failure_count": 0,
+        "observed_run_count": 1,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 1,
+        "recommended_timeout_seconds": 344,
+        "resource_kind": "local_mlx",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      }
+    },
+    "schema": "scheduler_runtime_policy.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "telemetry_only": true
+  },
+  "schema": "experiment_queue_observation.v1",
+  "state": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair/materializer_execution_queue.sqlite",
+  "state_watermark": {
+    "control_mode": "running",
+    "control_updated_at_utc": "2026-05-25T05:30:11Z",
+    "event_count": 14,
+    "max_event_id": 14,
+    "max_step_updated_at_utc": "2026-05-25T05:32:47Z",
+    "queue_id": "high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3_ias1aware_repair",
+    "schema": "experiment_queue_state_watermark.v1",
+    "state_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair/materializer_execution_queue.sqlite",
+    "step_state_count": 3
+  },
+  "status_counts": {
+    "succeeded": 3
+  },
+  "step_count": 3,
+  "succeeded_artifact_failure_steps": [],
+  "suggested_commands": {
+    "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
+    "refresh": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines 20",
+    "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
+    "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute"
+  }
+}

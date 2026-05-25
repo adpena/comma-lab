@@ -1,0 +1,238 @@
+{
+  "artifacts": {
+    "candidate_manifest": {
+      "bytes": 7728,
+      "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/candidate_manifest.json",
+      "sha256": "d29b2e85e0b07192dc379c80e31cd6f0ff3428b46fd315cb540479c6b52ddf52"
+    },
+    "inflate_parity_probe": {
+      "bytes": 5602,
+      "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/inflate_parity_probe.json",
+      "sha256": "a433699805e4b6e0440a5bd7d3865fbd014e8b1e09c63b4f9723b8f3d97d70d1"
+    },
+    "receiver_proof": {
+      "bytes": 3830,
+      "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/receiver_proof.json",
+      "sha256": "00d01e8650d663582ae598acb17cfdd1b8de3e08fec8ccf0fa1abcb046479936"
+    },
+    "runtime_adapter_manifest": {
+      "bytes": 4085,
+      "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/runtime_adapter_manifest.json",
+      "sha256": "732dac855662885635fa7868106f63d5c2cba785ae9440f84aba9b5c86efce7b"
+    },
+    "verified_candidate": {
+      "bytes": 7199,
+      "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/verified_candidate.json",
+      "sha256": "7cfa4e68e73e56eb29d900d3caf9163cd2a50ba5234e9bad3c6826aa91ad1d33"
+    }
+  },
+  "byte_closed_candidate_emitted": true,
+  "candidate_archive": {
+    "bytes": 179883,
+    "member_bytes": 179783,
+    "member_name": "x",
+    "member_sha256": "b77a04cbe603e07c17d0b88d8dd5c51cb0387655ea54082899e56c1e64d03a3c",
+    "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/candidate_archive.zip",
+    "sha256": "1a3cdd42accfde6429c53b44d1590bf17910ee7975332dd990edf105f9445da5"
+  },
+  "candidate_archive_bytes": 179883,
+  "candidate_archive_sha256": "1a3cdd42accfde6429c53b44d1590bf17910ee7975332dd990edf105f9445da5",
+  "candidate_member_sha256": "b77a04cbe603e07c17d0b88d8dd5c51cb0387655ea54082899e56c1e64d03a3c",
+  "candidate_runtime_adapter_blocker_cleared": true,
+  "chain_steps": [
+    {
+      "archive": {
+        "bytes": 179883,
+        "member_bytes": 179783,
+        "member_name": "x",
+        "member_sha256": "b77a04cbe603e07c17d0b88d8dd5c51cb0387655ea54082899e56c1e64d03a3c",
+        "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/candidate_archive.zip",
+        "sha256": "1a3cdd42accfde6429c53b44d1590bf17910ee7975332dd990edf105f9445da5"
+      },
+      "artifact": {
+        "bytes": 7728,
+        "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/candidate_manifest.json",
+        "sha256": "d29b2e85e0b07192dc379c80e31cd6f0ff3428b46fd315cb540479c6b52ddf52"
+      },
+      "schema": "inverse_scorer_cell_candidate_v1",
+      "status": "succeeded",
+      "step_id": "materialize_candidate"
+    },
+    {
+      "artifact": {
+        "bytes": 4085,
+        "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/runtime_adapter_manifest.json",
+        "sha256": "732dac855662885635fa7868106f63d5c2cba785ae9440f84aba9b5c86efce7b"
+      },
+      "readiness_blockers": [],
+      "runtime_tree_sha256": "38ea54a596a4af06a380857abf6cf1c4e3251535243aeb09179bc9b777d40ea9",
+      "schema": "inverse_scorer_cell_runtime_adapter_v1",
+      "status": "succeeded",
+      "step_id": "build_runtime_adapter"
+    },
+    {
+      "artifact": {
+        "bytes": 3830,
+        "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/receiver_proof.json",
+        "sha256": "00d01e8650d663582ae598acb17cfdd1b8de3e08fec8ccf0fa1abcb046479936"
+      },
+      "blockers": [],
+      "ready_for_exact_eval_runtime": false,
+      "ready_for_receiver_verification": true,
+      "schema": "inverse_scorer_cell_receiver_proof_v1",
+      "status": "succeeded",
+      "step_id": "build_receiver_proof"
+    },
+    {
+      "artifact": {
+        "bytes": 5602,
+        "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/inflate_parity_probe.json",
+        "sha256": "a433699805e4b6e0440a5bd7d3865fbd014e8b1e09c63b4f9723b8f3d97d70d1"
+      },
+      "blockers": [
+        "candidate_inflate_runtime_failed"
+      ],
+      "full_frame_inflate_output_parity_claim": false,
+      "schema": "inverse_scorer_cell_inflate_parity_probe_v1",
+      "status": "succeeded",
+      "step_id": "build_inflate_parity_probe"
+    },
+    {
+      "artifact": {
+        "bytes": 7199,
+        "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/verified_candidate.json",
+        "sha256": "7cfa4e68e73e56eb29d900d3caf9163cd2a50ba5234e9bad3c6826aa91ad1d33"
+      },
+      "inflate_parity_satisfied": false,
+      "readiness_blockers": [
+        "candidate_inflate_output_parity_missing",
+        "exact_auth_eval_required_before_score_claim",
+        "inflate_parity_output_paths_not_matched",
+        "inflate_parity_output_contract_empty",
+        "inflate_parity_output_bytes_not_identical",
+        "candidate_inflate_runtime_failed"
+      ],
+      "receiver_contract_satisfied": true,
+      "schema": "inverse_scorer_cell_candidate_receiver_verified_v1",
+      "status": "succeeded",
+      "step_id": "verify_candidate_with_receiver_proof"
+    }
+  ],
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "inverse_scorer_cell_candidate_chain_is_not_dispatch_authorization",
+    "candidate_inflate_runtime_failed",
+    "candidate_inflate_output_parity_missing",
+    "exact_auth_eval_required_before_score_claim",
+    "inflate_parity_output_paths_not_matched",
+    "inflate_parity_output_contract_empty",
+    "inflate_parity_output_bytes_not_identical"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "full_frame_or_shell_parity_required": true,
+  "gpu_launched": false,
+  "inflate_parity_satisfied": false,
+  "next_required_gates": [
+    "inflate_or_full_frame_parity",
+    "contest_auth_eval"
+  ],
+  "output_dir": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "readiness_blockers": [
+    "candidate_inflate_runtime_failed",
+    "candidate_inflate_output_parity_missing",
+    "exact_auth_eval_required_before_score_claim",
+    "inflate_parity_output_paths_not_matched",
+    "inflate_parity_output_contract_empty",
+    "inflate_parity_output_bytes_not_identical"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_satisfied": true,
+  "receiver_proof_ready": true,
+  "runtime_adapter_ready": true,
+  "schema": "inverse_scorer_cell_candidate_chain_v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "serialized_archive_delta": {
+    "archive_delta_bytes": 1621,
+    "blockers": [],
+    "candidate_archive_bytes": 179883,
+    "dispatch_attempted": false,
+    "gpu_launched": false,
+    "modeled_cost_bytes": 24,
+    "modeled_saved_bytes": null,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "rate_only_control": false,
+    "ready_for_exact_eval_dispatch": false,
+    "realized_saved_bytes": -1621,
+    "require_realized_saving": false,
+    "savings_realized": false,
+    "schema": "serialized_archive_delta_contract.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_archive_bytes": 178262,
+    "status": "realized_cost"
+  },
+  "source_archive": {
+    "bytes": 178262,
+    "member_bytes": 178162,
+    "member_name": "x",
+    "member_sha256": "8e664385af0a25ec98bd02d97b697fbf0d2bb3c2d954f5aa5c95b5131330a243",
+    "path": "submissions/a1/archive.zip",
+    "sha256": "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5"
+  },
+  "source_archive_bytes": 178262,
+  "source_archive_sha256": "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5",
+  "tool_run_manifest": {
+    "argv": [
+      "--candidate-archive-template",
+      "submissions/a1/archive.zip",
+      "--inverse-action-functional",
+      ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_steganalysis_action_functional.json",
+      "--raw-contest-video-digest",
+      "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "--output-dir",
+      ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1",
+      "--selected-limit",
+      "1",
+      "--inflate-runtime-dir",
+      "submissions/a1",
+      "--source-archive-for-parity",
+      "submissions/a1/archive.zip",
+      "--inflate-timeout-seconds",
+      "300",
+      "--inflate-work-dir",
+      ".omx/tmp/ias1_a1_repair_parity_work",
+      "--fail-if-receiver-blocked",
+      "--fail-if-inflate-parity-blocked"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "0beb1450aaf7bf19fdc6c4b428dfb482d32ba67cd0e010e37b8e5a3d6d492b92",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 178262,
+        "path": "submissions/a1/archive.zip",
+        "sha256": "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5"
+      },
+      {
+        "bytes": 11336,
+        "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_steganalysis_action_functional.json",
+        "sha256": "788ba5ccd1043f009d90fb672f1a9c357c0d75bfd8f3a2a24fe95ed764e0353a"
+      }
+    ],
+    "output_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/inverse_scorer_cell_candidate_chain_manifest.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/run_inverse_scorer_cell_candidate_chain.py"
+  }
+}

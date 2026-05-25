@@ -133,7 +133,23 @@ def cmd_performance(args: argparse.Namespace) -> int:
     queue, state = _load(args)
     with connect_state_readonly(state) as conn:
         payload = queue_performance_summary(conn, queue)
-    _json_print({"state": str(state), **payload})
+    output_payload = {"state": str(state), **payload}
+    if args.output is not None:
+        try:
+            artifact = write_json_artifact(
+                args.output,
+                output_payload,
+                allow_overwrite=args.expected_output_sha256 is not None,
+                expected_existing_sha256=args.expected_output_sha256,
+            )
+        except ArtifactWriteError as exc:
+            raise ExperimentQueueError(str(exc)) from exc
+        output_payload["artifact"] = {
+            "path": artifact.path,
+            "bytes": artifact.bytes_written,
+            "sha256": artifact.sha256,
+        }
+    _json_print(output_payload)
     return 0
 
 
@@ -199,9 +215,27 @@ def cmd_observe(args: argparse.Namespace) -> int:
         include_orphans=args.include_orphans,
     )
     if args.format == "markdown":
+        if args.output is not None:
+            raise ExperimentQueueError("--output is only supported for --format json")
         print(render_observation_markdown(observation), end="")
     else:
-        _json_print({"state": str(state), **observation})
+        output_payload = {"state": str(state), **observation}
+        if args.output is not None:
+            try:
+                artifact = write_json_artifact(
+                    args.output,
+                    output_payload,
+                    allow_overwrite=args.expected_output_sha256 is not None,
+                    expected_existing_sha256=args.expected_output_sha256,
+                )
+            except ArtifactWriteError as exc:
+                raise ExperimentQueueError(str(exc)) from exc
+            output_payload["artifact"] = {
+                "path": artifact.path,
+                "bytes": artifact.bytes_written,
+                "sha256": artifact.sha256,
+            }
+        _json_print(output_payload)
     return 0
 
 
@@ -466,6 +500,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     sp.set_defaults(func=cmd_status)
 
     sp = sub.add_parser("performance", help="aggregate completed-step telemetry")
+    sp.add_argument("--output", type=Path, default=None)
+    sp.add_argument("--expected-output-sha256", default=None)
     sp.set_defaults(func=cmd_performance)
 
     sp = sub.add_parser(
@@ -488,6 +524,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     sp.add_argument("--tail-lines", type=int, default=20)
     sp.add_argument("--include-orphans", action="store_true")
     sp.add_argument("--format", choices=["json", "markdown"], default="json")
+    sp.add_argument("--output", type=Path, default=None)
+    sp.add_argument("--expected-output-sha256", default=None)
     sp.set_defaults(func=cmd_observe)
 
     sp = sub.add_parser("next")

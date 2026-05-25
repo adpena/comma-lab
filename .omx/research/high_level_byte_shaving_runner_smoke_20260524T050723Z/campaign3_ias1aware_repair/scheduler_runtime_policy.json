@@ -1,0 +1,81 @@
+{
+  "advisory_only": true,
+  "apply_requires_explicit_call": true,
+  "backpressure": {
+    "local_io_heavy": {
+      "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+      "recommended_concurrency": 4
+    }
+  },
+  "current_max_concurrency": {
+    "local_cpu": 18,
+    "local_mlx": 1
+  },
+  "dispatch_attempted": false,
+  "generated_from_schema": "experiment_queue_performance_summary.v1",
+  "gpu_launched": false,
+  "input_event_count": 3,
+  "machine_capacity": {
+    "local_cpu": 18,
+    "local_io_heavy": 4,
+    "local_mlx": 1,
+    "local_mps": 1
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3_ias1aware_repair",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_max_concurrency": {
+    "local_cpu": 18,
+    "local_mlx": 1
+  },
+  "recommended_timeout_seconds_by_resource": {
+    "local_cpu": 120,
+    "local_mlx": 458
+  },
+  "resource_policies": {
+    "local_cpu": {
+      "advisory_only": true,
+      "concurrency_reason": "use_detected_local_cpu_capacity",
+      "current_concurrency": 18,
+      "current_timeout_seconds_max": null,
+      "elapsed_seconds_p50": 0.262575792032294,
+      "elapsed_seconds_p95": 0.262575792032294,
+      "observed_failure_count": 0,
+      "observed_run_count": 2,
+      "observed_timeout_count": 0,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_concurrency": 18,
+      "recommended_timeout_seconds": 120,
+      "resource_kind": "local_cpu",
+      "score_claim": false,
+      "timeout_multiplier": 4.0
+    },
+    "local_mlx": {
+      "advisory_only": true,
+      "concurrency_reason": "single_local_accelerator_default",
+      "current_concurrency": 1,
+      "current_timeout_seconds_max": null,
+      "elapsed_seconds_p50": 114.42904562497279,
+      "elapsed_seconds_p95": 114.42904562497279,
+      "observed_failure_count": 0,
+      "observed_run_count": 1,
+      "observed_timeout_count": 0,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_concurrency": 1,
+      "recommended_timeout_seconds": 458,
+      "resource_kind": "local_mlx",
+      "score_claim": false,
+      "timeout_multiplier": 4.0
+    }
+  },
+  "schema": "scheduler_runtime_policy.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "telemetry_only": true
+}

@@ -1,0 +1,88 @@
+{
+  "blockers": [],
+  "candidate_archive_sha256": "c2872929006be5666d7f90106006cd21482b7186f7de31fbfd18308c78d13f4d",
+  "candidate_manifest": {
+    "bytes": 8029,
+    "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware/candidate_manifest.json",
+    "provided_inline": false,
+    "sha256": "0bd81f48e70b78faf2676537040d2eb114a7fc3d042c5419d8e2e6ab93e6af51"
+  },
+  "candidate_member_sha256": "7fd2ca2a800d1757ae0cfb53e65c89f81372e753108f377cf56ca91b53a0b608",
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "descriptor_consumption": {
+    "blockers": [],
+    "descriptor_json_sha256": "68b523b537b79661ef3a40a22ebac8a11147088ec91b7bf8241a0f3047250fca",
+    "descriptor_packet_sha256": "596fe5648f6cde8060ea1f3b8a77175a1717575ff76b62f5676d5506c79419ce",
+    "member_bytes": 180256,
+    "packet_at_member_tail": true,
+    "packet_bytes": 1764,
+    "packet_offset": 178492,
+    "parse_error": "",
+    "passed": true,
+    "raw_contest_video_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "schema": "inverse_scorer_cell_descriptor_consumption_v1",
+    "selected_atom_ids": [
+      "inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+    ]
+  },
+  "descriptor_packet_sha256": "596fe5648f6cde8060ea1f3b8a77175a1717575ff76b62f5676d5506c79419ce",
+  "descriptor_receiver_contract_satisfied": true,
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "inflate_runtime_consumption_proof_missing",
+    "full_frame_inflate_output_parity_required_before_promotion",
+    "exact_auth_eval_required_before_score_claim"
+  ],
+  "exact_cuda_auth_eval": false,
+  "exact_runtime_blockers": [
+    "inflate_runtime_consumption_proof_missing",
+    "full_frame_inflate_output_parity_required_before_promotion",
+    "exact_auth_eval_required_before_score_claim"
+  ],
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "raw_contest_video_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_exact_eval_runtime": false,
+  "ready_for_receiver_verification": true,
+  "receiver_contract_id": "inverse_scorer_cell_receiver.v1",
+  "receiver_contract_kind": "inverse_scorer_coordinate_candidate",
+  "runtime_adapter_blockers": [],
+  "runtime_adapter_manifest": {
+    "bytes": 4099,
+    "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware/runtime_adapter_manifest.json",
+    "provided_inline": false,
+    "sha256": "da345420726e1422e2cc7274ca6628d078aaa0d4d0a4e64e259e285b772a5736"
+  },
+  "runtime_consumption_probe": {
+    "blockers": [],
+    "descriptor_consumption_passed": true,
+    "exact_auth_eval_executed": false,
+    "full_frame_output_parity_proven": false,
+    "passed": true,
+    "probe_kind": "canonical_ias1_descriptor_parse_and_digest",
+    "schema": "inverse_scorer_cell_runtime_consumption_probe_v1",
+    "scorer_executed": false
+  },
+  "runtime_tree_sha256": "38ea54a596a4af06a380857abf6cf1c4e3251535243aeb09179bc9b777d40ea9",
+  "schema": "inverse_scorer_cell_receiver_proof_v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selected_atom_ids": [
+    "inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+  ],
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ]
+}

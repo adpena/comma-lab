@@ -3088,6 +3088,164 @@ def test_experiment_queue_cli_validate_reports_auto_parallelism(tmp_path: Path) 
     }
 
 
+def test_experiment_queue_cli_observe_and_performance_write_output(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    queue_path = tmp_path / "queue.json"
+    state = tmp_path / "queue.sqlite"
+    observe_output = tmp_path / "observation.json"
+    performance_output = tmp_path / "performance.json"
+    queue_path.write_text(
+        json.dumps(
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "cli_observe_output",
+                "controls": {"mode": "running", "max_concurrency": {"local_cpu": 1}},
+                "experiments": [
+                    {
+                        "id": "candidate",
+                        "steps": [
+                            {
+                                "id": "materialize",
+                                "resources": {"kind": "local_cpu"},
+                                "command": [sys.executable, "-c", "print('ok')"],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    init = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "experiment_queue.py"),
+            "--queue",
+            str(queue_path),
+            "--state",
+            str(state),
+            "init",
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert init.returncode == 0, init.stderr
+
+    observe = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "experiment_queue.py"),
+            "--queue",
+            str(queue_path),
+            "--state",
+            str(state),
+            "observe",
+            "--output",
+            str(observe_output),
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert observe.returncode == 0, observe.stderr
+    observe_stdout = json.loads(observe.stdout)
+    observe_payload = json.loads(observe_output.read_text(encoding="utf-8"))
+    assert observe_stdout["artifact"]["path"] == str(observe_output)
+    assert observe_payload["schema"] == "experiment_queue_observation.v1"
+    assert observe_payload["status_counts"] == {"queued": 1}
+
+    performance = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "experiment_queue.py"),
+            "--queue",
+            str(queue_path),
+            "--state",
+            str(state),
+            "performance",
+            "--output",
+            str(performance_output),
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert performance.returncode == 0, performance.stderr
+    performance_stdout = json.loads(performance.stdout)
+    performance_payload = json.loads(performance_output.read_text(encoding="utf-8"))
+    assert performance_stdout["artifact"]["path"] == str(performance_output)
+    assert performance_payload["schema"] == "experiment_queue_performance_summary.v1"
+    assert performance_payload["event_count"] == 0
+
+    refused = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "experiment_queue.py"),
+            "--queue",
+            str(queue_path),
+            "--state",
+            str(state),
+            "observe",
+            "--output",
+            str(observe_output),
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert refused.returncode == 2
+    assert "refusing to overwrite existing artifact" in refused.stderr
+
+    expected_sha = hashlib.sha256(observe_output.read_bytes()).hexdigest()
+    allowed = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "experiment_queue.py"),
+            "--queue",
+            str(queue_path),
+            "--state",
+            str(state),
+            "observe",
+            "--output",
+            str(observe_output),
+            "--expected-output-sha256",
+            expected_sha,
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert allowed.returncode == 0, allowed.stderr
+
+    markdown_refused = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "experiment_queue.py"),
+            "--queue",
+            str(queue_path),
+            "--state",
+            str(state),
+            "observe",
+            "--format",
+            "markdown",
+            "--output",
+            str(tmp_path / "observation.md"),
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert markdown_refused.returncode == 2
+    assert "--output is only supported for --format json" in markdown_refused.stderr
+
+
 def test_experiment_queue_worker_stops_cleanly_between_steps(tmp_path: Path) -> None:
     queue = _queue(tmp_path)
     with connect_state(tmp_path / "queue.sqlite") as conn:

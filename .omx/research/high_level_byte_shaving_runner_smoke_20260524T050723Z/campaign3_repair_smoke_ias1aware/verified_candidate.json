@@ -1,0 +1,152 @@
+{
+  "candidate_archive": {
+    "bytes": 180356,
+    "member_bytes": 180256,
+    "member_name": "x",
+    "member_sha256": "7fd2ca2a800d1757ae0cfb53e65c89f81372e753108f377cf56ca91b53a0b608",
+    "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware/candidate_archive.zip",
+    "sha256": "c2872929006be5666d7f90106006cd21482b7186f7de31fbfd18308c78d13f4d"
+  },
+  "candidate_archive_custody": {
+    "blockers": [],
+    "bytes": 180356,
+    "exists": true,
+    "member_name": "x",
+    "member_sha256": "7fd2ca2a800d1757ae0cfb53e65c89f81372e753108f377cf56ca91b53a0b608",
+    "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware/candidate_archive.zip",
+    "sha256": "c2872929006be5666d7f90106006cd21482b7186f7de31fbfd18308c78d13f4d"
+  },
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "exact_auth_eval_required_before_score_claim"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
+  "inflate_parity_satisfied": true,
+  "inflate_parity_verification": {
+    "blockers": [],
+    "candidate_archive_sha256": "c2872929006be5666d7f90106006cd21482b7186f7de31fbfd18308c78d13f4d",
+    "candidate_member_sha256": "7fd2ca2a800d1757ae0cfb53e65c89f81372e753108f377cf56ca91b53a0b608",
+    "charged_bits_changed": false,
+    "cleared_blockers": [
+      "candidate_inflate_output_parity_missing"
+    ],
+    "contest_cuda_auth_eval": false,
+    "deployment_target": "desktop_research",
+    "descriptor_packet_sha256": "596fe5648f6cde8060ea1f3b8a77175a1717575ff76b62f5676d5506c79419ce",
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "optimizer_candidate_queue_is_planning_only",
+      "requires_exact_eval_readiness_gate",
+      "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+      "requires_non_proxy_score_evidence_before_promotion"
+    ],
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "inflate_parity_satisfied": true,
+    "promotable": false,
+    "promotion_eligible": false,
+    "proof_schema": "inverse_scorer_cell_inflate_parity_probe_v1",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "inverse_scorer_cell_inflate_parity_verification_v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "source_archive_sha256": "3c4e15bfe7ae1004ad23e89a52c2836e609c1f99e25b58f45c01747226705d59",
+    "source_candidate_manifest": {
+      "path": "",
+      "provided_inline": true,
+      "sha256": ""
+    },
+    "target_modes": [
+      "contest_exact_eval_planning"
+    ]
+  },
+  "inverse_scorer_cell_descriptor": {
+    "json_bytes": 1756,
+    "json_sha256": "68b523b537b79661ef3a40a22ebac8a11147088ec91b7bf8241a0f3047250fca",
+    "magic": "IAS1",
+    "packet_bytes": 1764,
+    "packet_offset": 178492,
+    "packet_sha256": "596fe5648f6cde8060ea1f3b8a77175a1717575ff76b62f5676d5506c79419ce",
+    "schema": "inverse_scorer_cell_descriptor_v1",
+    "selected_atom_ids": [
+      "inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+    ],
+    "selected_cell_count": 1
+  },
+  "materializer_id": "inverse_scorer_cell_candidate_adapter",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "readiness_blockers": [
+    "exact_auth_eval_required_before_score_claim"
+  ],
+  "ready_for_archive_preflight": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "inverse_scorer_cell_receiver.v1",
+  "receiver_contract_kind": "inverse_scorer_coordinate_candidate",
+  "receiver_contract_satisfied": true,
+  "receiver_verification": {
+    "blockers": [],
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "deployment_target": "desktop_research",
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "optimizer_candidate_queue_is_planning_only",
+      "requires_exact_eval_readiness_gate",
+      "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+      "requires_non_proxy_score_evidence_before_promotion"
+    ],
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "proof_candidate_archive_sha256": "c2872929006be5666d7f90106006cd21482b7186f7de31fbfd18308c78d13f4d",
+    "proof_candidate_member_sha256": "7fd2ca2a800d1757ae0cfb53e65c89f81372e753108f377cf56ca91b53a0b608",
+    "proof_descriptor_packet_sha256": "596fe5648f6cde8060ea1f3b8a77175a1717575ff76b62f5676d5506c79419ce",
+    "proof_schema": "inverse_scorer_cell_receiver_proof_v1",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "receiver_contract_id": "inverse_scorer_cell_receiver.v1",
+    "receiver_contract_kind": "inverse_scorer_coordinate_candidate",
+    "receiver_contract_satisfied": true,
+    "schema": "inverse_scorer_cell_receiver_verification_v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "target_modes": [
+      "contest_exact_eval_planning"
+    ]
+  },
+  "schema": "inverse_scorer_cell_candidate_receiver_verified_v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_candidate_manifest": {
+    "bytes": 8029,
+    "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware/candidate_manifest.json",
+    "provided_inline": false,
+    "sha256": "0bd81f48e70b78faf2676537040d2eb114a7fc3d042c5419d8e2e6ab93e6af51"
+  },
+  "source_candidate_schema": "inverse_scorer_cell_candidate_v1",
+  "target_kind": "inverse_scorer_cell_candidate_v1",
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ]
+}

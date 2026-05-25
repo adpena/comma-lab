@@ -1,0 +1,118 @@
+{
+  "schema": "campaign3_ias1aware_materializer_repair_execution_summary.v1",
+  "generated_by": "codex",
+  "generated_at_utc": "2026-05-25T05:37:07Z",
+  "lane_id": "codex_materializer_context_repair_execute_20260525",
+  "source_context": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/materializer_contexts_campaign3.json",
+  "repaired_context": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/materializer_contexts_campaign3_ias1aware_repair.json",
+  "raw_contest_video_digest": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
+  "raw_contest_video_digest_source": "sha256(upstream/videos/0.mkv)",
+  "selected_template": {
+    "archive": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_candidate_append_tail_top32_ias1aware_20260523T1930Z/submission_dir/archive.zip",
+    "runtime_dir": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_candidate_append_tail_top32_ias1aware_20260523T1930Z/submission_dir",
+    "reason": "IAS-aware receiver/runtime preserves strict single-member archive validity and accepts the inverse-action append-tail payload."
+  },
+  "negative_controls": [
+    {
+      "label": "a1_template",
+      "chain_manifest": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/inverse_scorer_cell_candidate_chain_manifest.json",
+      "receiver_contract_satisfied": true,
+      "inflate_parity_satisfied": false,
+      "candidate_returncode": 1,
+      "primary_blocker": "candidate_inflate_runtime_failed",
+      "failure_signature": "brotli.error: brotli: decoder failed"
+    },
+    {
+      "label": "dqs1_top32_non_ias_runtime",
+      "chain_manifest": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_dqs1_top32/inverse_scorer_cell_candidate_chain_manifest.json",
+      "receiver_contract_satisfied": true,
+      "inflate_parity_satisfied": false,
+      "candidate_returncode": 1,
+      "primary_blocker": "candidate_inflate_runtime_failed",
+      "failure_signature": "DQS1 payload length mismatch: expected 75, got 1814"
+    }
+  ],
+  "queue_execution": {
+    "run_dir": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair",
+    "queue": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair/materializer_execution_queue.runtime_policy.json",
+    "state": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair/materializer_execution_queue.sqlite",
+    "state_committed": false,
+    "state_signal_artifacts": [
+      ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair/queue_observation.json",
+      ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair/queue_performance_summary.json"
+    ],
+    "observation": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair/queue_observation.json",
+    "performance_summary": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair/queue_performance_summary.json",
+    "status_counts": {
+      "succeeded": 3
+    },
+    "healthy": true,
+    "blocker_count": 0,
+    "orphaned_step_count": 0,
+    "definition_drift_changed_step_count": 0,
+    "success_count": 3,
+    "failure_count": 0,
+    "materialize_local_proof_chain_elapsed_seconds": 114.42904562497279,
+    "harvest_materializer_chains_elapsed_seconds": 0.26219704101094976,
+    "build_exact_eval_dispatch_plan_elapsed_seconds": 0.262575792032294
+  },
+  "successful_chain": {
+    "chain_manifest": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair/inverse_cell_chain/inverse_scorer_cell_candidate_chain_manifest.json",
+    "candidate_archive": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair/inverse_cell_chain/candidate_archive.zip",
+    "source_archive_sha256": "3c4e15bfe7ae1004ad23e89a52c2836e609c1f99e25b58f45c01747226705d59",
+    "candidate_archive_sha256": "7b352567cc0c0c45e609df9217be1a5cc422ba6fc3fdad556c1dd1570db11f04",
+    "candidate_archive_bytes": 180356,
+    "byte_closed_candidate_emitted": true,
+    "receiver_contract_satisfied": true,
+    "inflate_parity_satisfied": true,
+    "inflate_parity_probe": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair/inverse_cell_chain/inflate_parity_probe.json",
+    "inflate_parity_probe_blockers": [],
+    "source_inflate_returncode": 0,
+    "candidate_inflate_returncode": 0,
+    "output_contract_paths_match": true,
+    "output_contract_nonempty": true,
+    "output_bytes_identical": true,
+    "differing_path_count": 0,
+    "readiness_blockers": [
+      "exact_auth_eval_required_before_score_claim"
+    ],
+    "next_required_gates": [
+      "contest_auth_eval"
+    ]
+  },
+  "exact_eval_handoff": {
+    "harvest_report": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair/inverse_cell_chain/exact_eval_handoff/harvest_report.json",
+    "accepted_manifest_count": 1,
+    "source_queue_candidate_count": 1,
+    "source_queue_dispatch_ready_count": 0,
+    "dispatch_plan": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair/inverse_cell_chain/exact_eval_handoff/dispatch_plan.json",
+    "dispatch_queue": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair/inverse_cell_chain/exact_eval_handoff/dispatch_queue.json",
+    "dispatch_queue_mode": "paused",
+    "dispatch_blockers": [
+      "optimizer_candidate_queue_is_planning_only",
+      "requires_exact_eval_readiness_gate",
+      "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+      "requires_non_proxy_score_evidence_before_promotion",
+      "dispatch_plan_is_not_score_authority",
+      "lane_claim_step_must_succeed_before_dispatch_step",
+      "contest_auth_eval_result_required_before_score_claim"
+    ],
+    "ready_for_exact_eval_dispatch": false
+  },
+  "scheduler_policy": {
+    "policy": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair/scheduler_runtime_policy.json",
+    "recommended_timeout_seconds_by_resource": {
+      "local_cpu": 120,
+      "local_mlx": 458
+    },
+    "note": "The queue step keeps definition-compatible hashes; the inflate command itself carries --inflate-timeout-seconds 7200."
+  },
+  "false_authority_contract": {
+    "score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "dispatch_attempted": false,
+    "gpu_launched": false
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "candidate_archive": {
+    "bytes": 179883,
+    "member_bytes": 179783,
+    "member_name": "x",
+    "member_sha256": "b77a04cbe603e07c17d0b88d8dd5c51cb0387655ea54082899e56c1e64d03a3c",
+    "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/candidate_archive.zip",
+    "sha256": "1a3cdd42accfde6429c53b44d1590bf17910ee7975332dd990edf105f9445da5"
+  },
+  "candidate_manifest": {
+    "bytes": 7728,
+    "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_a1/candidate_manifest.json",
+    "provided_inline": false,
+    "sha256": "d29b2e85e0b07192dc379c80e31cd6f0ff3428b46fd315cb540479c6b52ddf52"
+  },
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "descriptor_consumption": {
+    "blockers": [],
+    "descriptor_json_sha256": "3cfb66cc8abb53176ad14794e74c584d83c7e78f28e1590c27b15678e292917c",
+    "descriptor_packet_sha256": "ee4f39362f15a7c7e69784dad7aebd47a4e5292a40ec5160d062ea2eee650085",
+    "member_bytes": 179783,
+    "packet_at_member_tail": true,
+    "packet_bytes": 1621,
+    "packet_offset": 178162,
+    "parse_error": "",
+    "passed": true,
+    "raw_contest_video_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "schema": "inverse_scorer_cell_descriptor_consumption_v1",
+    "selected_atom_ids": [
+      "inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+    ]
+  },
+  "descriptor_receiver_contract_satisfied": true,
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "inverse_scorer_cell_runtime_adapter_is_not_score_authority",
+    "inflate_runtime_consumption_proof_missing",
+    "full_frame_inflate_output_parity_required_before_promotion",
+    "exact_auth_eval_required_before_score_claim"
+  ],
+  "exact_cuda_auth_eval": false,
+  "exact_runtime_blockers": [
+    "inflate_runtime_consumption_proof_missing",
+    "full_frame_inflate_output_parity_required_before_promotion",
+    "exact_auth_eval_required_before_score_claim"
+  ],
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "readiness_blockers": [],
+  "ready_for_descriptor_receiver": true,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_exact_eval_runtime": false,
+  "receiver_contract_id": "inverse_scorer_cell_receiver.v1",
+  "receiver_contract_kind": "inverse_scorer_coordinate_candidate",
+  "receiver_contract_satisfied": true,
+  "runtime_adapter_kind": "canonical_ias1_descriptor_receiver",
+  "runtime_consumption_probe": {
+    "blockers": [],
+    "descriptor_consumption_passed": true,
+    "exact_auth_eval_executed": false,
+    "full_frame_output_parity_proven": false,
+    "passed": true,
+    "probe_kind": "canonical_ias1_descriptor_parse_and_digest",
+    "schema": "inverse_scorer_cell_runtime_consumption_probe_v1",
+    "scorer_executed": false
+  },
+  "runtime_source_manifest": {
+    "files": [
+      {
+        "bytes": 58022,
+        "path": "src/tac/optimization/inverse_scorer_cell_materializer.py",
+        "sha256": "b80b3891a1ad944391a8500c2e70982124533ed75346380addc7a9121fe0fb50"
+      }
+    ],
+    "runtime_content_tree_sha256": "38ea54a596a4af06a380857abf6cf1c4e3251535243aeb09179bc9b777d40ea9",
+    "runtime_source_tree_sha256": "38ea54a596a4af06a380857abf6cf1c4e3251535243aeb09179bc9b777d40ea9",
+    "schema": "inverse_scorer_cell_runtime_adapter_source_v1"
+  },
+  "runtime_tree_sha256": "38ea54a596a4af06a380857abf6cf1c4e3251535243aeb09179bc9b777d40ea9",
+  "schema": "inverse_scorer_cell_runtime_adapter_v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ]
+}

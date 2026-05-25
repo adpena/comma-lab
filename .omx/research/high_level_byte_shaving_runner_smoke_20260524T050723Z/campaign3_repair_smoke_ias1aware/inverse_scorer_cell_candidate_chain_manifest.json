@@ -1,0 +1,220 @@
+{
+  "artifacts": {
+    "candidate_manifest": {
+      "bytes": 8029,
+      "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware/candidate_manifest.json",
+      "sha256": "0bd81f48e70b78faf2676537040d2eb114a7fc3d042c5419d8e2e6ab93e6af51"
+    },
+    "inflate_parity_probe": {
+      "bytes": 6031,
+      "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware/inflate_parity_probe.json",
+      "sha256": "d3f0557522329a96c7040af20d53a4d737fc578bdbeadd91013beb52fbc85f62"
+    },
+    "receiver_proof": {
+      "bytes": 3844,
+      "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware/receiver_proof.json",
+      "sha256": "a9f361a581e6739644fab12a50b35f0a276104c5e938cf97e7d73e036de4fa34"
+    },
+    "runtime_adapter_manifest": {
+      "bytes": 4099,
+      "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware/runtime_adapter_manifest.json",
+      "sha256": "da345420726e1422e2cc7274ca6628d078aaa0d4d0a4e64e259e285b772a5736"
+    },
+    "verified_candidate": {
+      "bytes": 6339,
+      "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware/verified_candidate.json",
+      "sha256": "28d69640ed61facf0d357bf905d3932a709950edfbc7ba7d06b93c7aa42a5968"
+    }
+  },
+  "byte_closed_candidate_emitted": true,
+  "candidate_archive": {
+    "bytes": 180356,
+    "member_bytes": 180256,
+    "member_name": "x",
+    "member_sha256": "7fd2ca2a800d1757ae0cfb53e65c89f81372e753108f377cf56ca91b53a0b608",
+    "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware/candidate_archive.zip",
+    "sha256": "c2872929006be5666d7f90106006cd21482b7186f7de31fbfd18308c78d13f4d"
+  },
+  "candidate_archive_bytes": 180356,
+  "candidate_archive_sha256": "c2872929006be5666d7f90106006cd21482b7186f7de31fbfd18308c78d13f4d",
+  "candidate_member_sha256": "7fd2ca2a800d1757ae0cfb53e65c89f81372e753108f377cf56ca91b53a0b608",
+  "candidate_runtime_adapter_blocker_cleared": true,
+  "chain_steps": [
+    {
+      "archive": {
+        "bytes": 180356,
+        "member_bytes": 180256,
+        "member_name": "x",
+        "member_sha256": "7fd2ca2a800d1757ae0cfb53e65c89f81372e753108f377cf56ca91b53a0b608",
+        "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware/candidate_archive.zip",
+        "sha256": "c2872929006be5666d7f90106006cd21482b7186f7de31fbfd18308c78d13f4d"
+      },
+      "artifact": {
+        "bytes": 8029,
+        "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware/candidate_manifest.json",
+        "sha256": "0bd81f48e70b78faf2676537040d2eb114a7fc3d042c5419d8e2e6ab93e6af51"
+      },
+      "schema": "inverse_scorer_cell_candidate_v1",
+      "status": "succeeded",
+      "step_id": "materialize_candidate"
+    },
+    {
+      "artifact": {
+        "bytes": 4099,
+        "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware/runtime_adapter_manifest.json",
+        "sha256": "da345420726e1422e2cc7274ca6628d078aaa0d4d0a4e64e259e285b772a5736"
+      },
+      "readiness_blockers": [],
+      "runtime_tree_sha256": "38ea54a596a4af06a380857abf6cf1c4e3251535243aeb09179bc9b777d40ea9",
+      "schema": "inverse_scorer_cell_runtime_adapter_v1",
+      "status": "succeeded",
+      "step_id": "build_runtime_adapter"
+    },
+    {
+      "artifact": {
+        "bytes": 3844,
+        "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware/receiver_proof.json",
+        "sha256": "a9f361a581e6739644fab12a50b35f0a276104c5e938cf97e7d73e036de4fa34"
+      },
+      "blockers": [],
+      "ready_for_exact_eval_runtime": false,
+      "ready_for_receiver_verification": true,
+      "schema": "inverse_scorer_cell_receiver_proof_v1",
+      "status": "succeeded",
+      "step_id": "build_receiver_proof"
+    },
+    {
+      "artifact": {
+        "bytes": 6031,
+        "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware/inflate_parity_probe.json",
+        "sha256": "d3f0557522329a96c7040af20d53a4d737fc578bdbeadd91013beb52fbc85f62"
+      },
+      "blockers": [],
+      "full_frame_inflate_output_parity_claim": true,
+      "schema": "inverse_scorer_cell_inflate_parity_probe_v1",
+      "status": "succeeded",
+      "step_id": "build_inflate_parity_probe"
+    },
+    {
+      "artifact": {
+        "bytes": 6339,
+        "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware/verified_candidate.json",
+        "sha256": "28d69640ed61facf0d357bf905d3932a709950edfbc7ba7d06b93c7aa42a5968"
+      },
+      "inflate_parity_satisfied": true,
+      "readiness_blockers": [
+        "exact_auth_eval_required_before_score_claim"
+      ],
+      "receiver_contract_satisfied": true,
+      "schema": "inverse_scorer_cell_candidate_receiver_verified_v1",
+      "status": "succeeded",
+      "step_id": "verify_candidate_with_receiver_proof"
+    }
+  ],
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "inverse_scorer_cell_candidate_chain_is_not_dispatch_authorization",
+    "exact_auth_eval_required_before_score_claim"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "full_frame_or_shell_parity_required": false,
+  "gpu_launched": false,
+  "inflate_parity_satisfied": true,
+  "next_required_gates": [
+    "contest_auth_eval"
+  ],
+  "output_dir": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "readiness_blockers": [
+    "exact_auth_eval_required_before_score_claim"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_satisfied": true,
+  "receiver_proof_ready": true,
+  "runtime_adapter_ready": true,
+  "schema": "inverse_scorer_cell_candidate_chain_v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "serialized_archive_delta": {
+    "archive_delta_bytes": 1764,
+    "blockers": [],
+    "candidate_archive_bytes": 180356,
+    "dispatch_attempted": false,
+    "gpu_launched": false,
+    "modeled_cost_bytes": 24,
+    "modeled_saved_bytes": null,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "rate_only_control": false,
+    "ready_for_exact_eval_dispatch": false,
+    "realized_saved_bytes": -1764,
+    "require_realized_saving": false,
+    "savings_realized": false,
+    "schema": "serialized_archive_delta_contract.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_archive_bytes": 178592,
+    "status": "realized_cost"
+  },
+  "source_archive": {
+    "bytes": 178592,
+    "member_bytes": 178492,
+    "member_name": "x",
+    "member_sha256": "3cc8e09d7cf601de79570199426d9fe5cc50fd1b6a2c707f1c266d6f76f1d8e5",
+    "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_candidate_append_tail_top32_ias1aware_20260523T1930Z/submission_dir/archive.zip",
+    "sha256": "3c4e15bfe7ae1004ad23e89a52c2836e609c1f99e25b58f45c01747226705d59"
+  },
+  "source_archive_bytes": 178592,
+  "source_archive_sha256": "3c4e15bfe7ae1004ad23e89a52c2836e609c1f99e25b58f45c01747226705d59",
+  "tool_run_manifest": {
+    "argv": [
+      "--candidate-archive-template",
+      "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_candidate_append_tail_top32_ias1aware_20260523T1930Z/submission_dir/archive.zip",
+      "--inverse-action-functional",
+      ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_steganalysis_action_functional.json",
+      "--raw-contest-video-digest",
+      "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "--output-dir",
+      ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware",
+      "--selected-limit",
+      "1",
+      "--inflate-runtime-dir",
+      "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_candidate_append_tail_top32_ias1aware_20260523T1930Z/submission_dir",
+      "--source-archive-for-parity",
+      "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_candidate_append_tail_top32_ias1aware_20260523T1930Z/submission_dir/archive.zip",
+      "--inflate-timeout-seconds",
+      "7200",
+      "--inflate-work-dir",
+      ".omx/tmp/ias1aware_campaign3_repair_parity_work",
+      "--fail-if-receiver-blocked",
+      "--fail-if-inflate-parity-blocked"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "36637b6a99f01b92db029b9b59a2939ca44ca72113d6ff50c7917f63a72f4a83",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 178592,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_candidate_append_tail_top32_ias1aware_20260523T1930Z/submission_dir/archive.zip",
+        "sha256": "3c4e15bfe7ae1004ad23e89a52c2836e609c1f99e25b58f45c01747226705d59"
+      },
+      {
+        "bytes": 11336,
+        "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/inverse_steganalysis_action_functional.json",
+        "sha256": "788ba5ccd1043f009d90fb672f1a9c357c0d75bfd8f3a2a24fe95ed764e0353a"
+      }
+    ],
+    "output_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_repair_smoke_ias1aware/inverse_scorer_cell_candidate_chain_manifest.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/run_inverse_scorer_cell_candidate_chain.py"
+  }
+}
