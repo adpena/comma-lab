@@ -2,25 +2,45 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 import zipfile
 from pathlib import Path
 
 import pytest
 
+from comma_lab.scheduler.byte_shaving_materializer_registry import (
+    ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+    PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+    TENSOR_FACTORIZE_TARGET_KIND,
+)
 from comma_lab.scheduler.frontier_rate_attack_bootstrap import (
     BOOTSTRAP_SCHEMA,
     FrontierRateAttackBootstrapError,
     archive_record,
     build_frontier_rate_attack_payloads,
+    parse_archive_spec,
     resolve_current_frontier_archive,
 )
 from tac.repo_io import sha256_file
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
-def _write_zip(path: Path, *, member: str = "x", payload: bytes = b"payload") -> None:
+
+AUTHORITY_KEYS = (
+    "score_claim",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "ready_for_exact_eval_dispatch",
+)
+
+
+def _write_archive(path: Path, *, member_name: str = "renderer.bin") -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as archive:
-        archive.writestr(member, payload)
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(member_name, b"frontier-bytes")
+    return path
 
 
 def _write_json(path: Path, payload: object) -> None:
@@ -28,70 +48,151 @@ def _write_json(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def test_build_frontier_rate_attack_queue_compiles_packet_sweeps(tmp_path: Path) -> None:
-    first = tmp_path / "archives" / "frontier" / "archive.zip"
-    second = tmp_path / "archives" / "pr110" / "archive.zip"
-    _write_zip(first, payload=b"frontier-bytes")
-    _write_zip(second, payload=b"pr110-bytes")
-    records = [
-        archive_record(label="current_cpu", archive_path=first, repo_root=tmp_path, source_kind="test"),
-        archive_record(label="pr110_base", archive_path=second, repo_root=tmp_path, source_kind="test"),
-    ]
+def _assert_false_authority(payload: dict[str, object]) -> None:
+    for key in AUTHORITY_KEYS:
+        assert payload[key] is False
+
+
+def test_frontier_bootstrap_builds_queue_with_experiment_metadata(tmp_path: Path) -> None:
+    archive_path = _write_archive(tmp_path / "archive.zip")
+    record = archive_record(
+        label="frontier",
+        archive_path=archive_path,
+        repo_root=tmp_path,
+        source_kind="unit_test",
+    )
 
     payloads = build_frontier_rate_attack_payloads(
         repo_root=tmp_path,
-        queue_id="frontier_attack_test",
-        archive_records=records,
+        queue_id="frontier_final_rate_attack_unit",
+        archive_records=[record],
         results_root=tmp_path / "results",
-        local_cpu_concurrency=3,
+        target_kinds=(
+            PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+            PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        ),
+        include_optional_target_blockers=True,
+        local_cpu_concurrency=2,
     )
 
-    assert payloads["bootstrap"]["schema"] == BOOTSTRAP_SCHEMA
-    assert payloads["bootstrap"]["archive_count"] == 2
-    assert payloads["bootstrap"]["executable_target_kinds"] == [
-        "packet_member_zip_header_elide_v1",
-        "packet_member_recompress_v1",
-    ]
-    assert {row["target_kind"] for row in payloads["bootstrap"]["target_omissions"]} == {
-        "archive_section_entropy_recode_v1",
-        "tensor_factorize_v1",
-    }
+    bootstrap = payloads["bootstrap"]
     queue = payloads["queue"]
+    backlog = payloads["backlog"]
+    contexts = payloads["contexts"]
+    _assert_false_authority(record)
+    _assert_false_authority(bootstrap)
+    assert bootstrap["schema"] == BOOTSTRAP_SCHEMA
+    assert bootstrap["executable_target_count"] == 2
+    assert bootstrap["experiment_count"] == 2
     assert queue["schema"] == "experiment_queue.v1"
-    assert queue["controls"]["max_concurrency"]["local_cpu"] == 3
-    commands = [
-        step["command"]
-        for experiment in queue["experiments"]
-        for step in experiment["steps"]
-    ]
-    assert len(commands) == 2
-    assert all("tools/run_family_agnostic_materializer_sweep.py" in command for command in commands)
-    assert all("current_cpu=archives/frontier/archive.zip" in command for command in commands)
-    assert all("pr110_base=archives/pr110/archive.zip" in command for command in commands)
-    assert all("--observation-jsonl" in command for command in commands)
+    assert queue["controls"]["max_concurrency"] == {"local_cpu": 2}
+    assert backlog["backlog_row_count"] == 2
+    assert len(contexts["rows"]) == 2
+
+    omitted = {row["target_kind"]: row for row in bootstrap["target_omissions"]}
+    assert ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND in omitted
+    assert TENSOR_FACTORIZE_TARGET_KIND in omitted
+    assert omitted[ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND]["score_claim"] is False
+
+    for experiment in queue["experiments"]:
+        metadata = experiment["metadata"]["frontier_rate_attack_bootstrap"]
+        assert metadata["schema"] == BOOTSTRAP_SCHEMA
+        assert metadata["archive_labels"] == ["frontier"]
+        assert metadata["target_kinds"] == [
+            PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+            PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        ]
+        assert metadata["score_claim"] is False
+        assert metadata["ready_for_exact_eval_dispatch"] is False
+
+
+def test_frontier_bootstrap_cli_writes_valid_queue(tmp_path: Path) -> None:
+    archive_path = _write_archive(tmp_path / "archive.zip")
+    output_dir = tmp_path / "out"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "tools/build_frontier_final_rate_attack_queue.py",
+            "--no-current-frontier",
+            "--archive",
+            f"frontier={archive_path}",
+            "--output-dir",
+            str(output_dir),
+            "--results-root",
+            str(tmp_path / "results"),
+            "--queue-id",
+            "frontier_final_rate_attack_unit",
+            "--target-kind",
+            PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+            "--no-optional-target-blockers",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    queue_path = output_dir / "experiment_queue.json"
+    bootstrap_path = output_dir / "frontier_rate_attack_bootstrap.json"
+    assert queue_path.exists()
+    assert bootstrap_path.exists()
+    bootstrap = json.loads(bootstrap_path.read_text(encoding="utf-8"))
+    assert bootstrap["archive_count"] == 1
+    assert bootstrap["archives"][0]["sha256"] == sha256_file(archive_path)
+
+    validate = subprocess.run(
+        [
+            sys.executable,
+            "tools/experiment_queue.py",
+            "--queue",
+            str(queue_path),
+            "validate",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert validate.returncode == 0, validate.stderr
+
+
+def test_frontier_bootstrap_parse_archive_spec_checks_sha_and_members(
+    tmp_path: Path,
+) -> None:
+    archive_path = _write_archive(tmp_path / "candidate.zip", member_name="masks.mkv")
+
+    record = parse_archive_spec(f"candidate={archive_path}", repo_root=tmp_path)
+
+    assert record["label"] == "candidate"
+    assert record["sha256"] == sha256_file(archive_path)
+    assert record["zip_member_count"] == 1
+    assert record["zip_members"][0]["name"] == "masks.mkv"
+    _assert_false_authority(record)
 
 
 def test_resolve_current_frontier_archive_from_auth_request(tmp_path: Path) -> None:
-    archive = tmp_path / "experiments" / "results" / "candidate" / "submission_dir" / "archive.zip"
-    _write_zip(archive, payload=b"frontier")
+    archive = _write_archive(
+        tmp_path / "experiments" / "results" / "candidate" / "submission_dir" / "archive.zip"
+    )
     digest = sha256_file(archive)
-    pointer = {
-        "our_local_frontier_contest_cpu": {
-            "archive_sha256": digest,
-            "score": 0.123,
-            "evidence_grade": "[contest-CPU]",
-            "hardware_substrate": "linux_x86_64_cpu",
-            "measured_at_utc": "2026-05-25T00:00:00Z",
-            "extra": {"archive_bytes": archive.stat().st_size},
-        }
-    }
     pointer_path = tmp_path / ".omx" / "state" / "canonical_frontier_pointer.json"
-    _write_json(pointer_path, pointer)
-    request = {
-        "archive_path": archive.as_posix(),
-        "archive_sha256": digest,
-        "archive_size_bytes": archive.stat().st_size,
-    }
+    _write_json(
+        pointer_path,
+        {
+            "our_local_frontier_contest_cpu": {
+                "archive_sha256": digest,
+                "score": 0.123,
+                "evidence_grade": "[contest-CPU]",
+                "hardware_substrate": "linux_x86_64_cpu",
+                "measured_at_utc": "2026-05-25T00:00:00Z",
+                "extra": {"archive_bytes": archive.stat().st_size},
+            }
+        },
+    )
     request_path = (
         tmp_path
         / "experiments"
@@ -100,7 +201,14 @@ def test_resolve_current_frontier_archive_from_auth_request(tmp_path: Path) -> N
         / "job"
         / "modal_cpu_auth_eval_local_request.json"
     )
-    _write_json(request_path, request)
+    _write_json(
+        request_path,
+        {
+            "archive_path": archive.as_posix(),
+            "archive_sha256": digest,
+            "archive_size_bytes": archive.stat().st_size,
+        },
+    )
 
     resolution = resolve_current_frontier_archive(
         repo_root=tmp_path,
@@ -109,7 +217,9 @@ def test_resolve_current_frontier_archive_from_auth_request(tmp_path: Path) -> N
     )
 
     assert resolution["archive_sha256"] == digest
-    assert resolution["archive_record"]["path"] == "experiments/results/candidate/submission_dir/archive.zip"
+    assert resolution["archive_record"]["path"] == (
+        "experiments/results/candidate/submission_dir/archive.zip"
+    )
     assert resolution["match"]["request_path"] == (
         "experiments/results/modal_auth_eval_cpu/job/modal_cpu_auth_eval_local_request.json"
     )
@@ -118,10 +228,12 @@ def test_resolve_current_frontier_archive_from_auth_request(tmp_path: Path) -> N
 def test_resolve_current_frontier_archive_fails_closed_on_duplicate_matches(
     tmp_path: Path,
 ) -> None:
-    first = tmp_path / "experiments" / "results" / "candidate_a" / "submission_dir" / "archive.zip"
-    second = tmp_path / "experiments" / "results" / "candidate_b" / "submission_dir" / "archive.zip"
-    _write_zip(first, payload=b"same")
-    _write_zip(second, payload=b"same")
+    first = _write_archive(
+        tmp_path / "experiments" / "results" / "candidate_a" / "submission_dir" / "archive.zip"
+    )
+    second = _write_archive(
+        tmp_path / "experiments" / "results" / "candidate_b" / "submission_dir" / "archive.zip"
+    )
     digest = sha256_file(first)
     assert sha256_file(second) == digest
     pointer_path = tmp_path / ".omx" / "state" / "canonical_frontier_pointer.json"
