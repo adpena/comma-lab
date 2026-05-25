@@ -567,6 +567,13 @@ def test_source_video_rgb_yuv6_loss_surface_records_preprocess_coupling() -> Non
 
 
 def test_pr95_optimizer_descriptor_drives_stage8_partition() -> None:
+    stage2 = stage_smoke_config(2)
+
+    assert stage2.stage_module == "stage2_v331_softplus"
+    assert stage2.optimizer_descriptor_id == "pr95_stage2_adamw_baseline_mlx"
+    assert stage2.optimizer.use_muon is False
+    assert stage2.optimizer.adamw_lr == 1e-3
+
     stage = stage_smoke_config(8)
 
     assert stage.optimizer_descriptor_id == "pr95_stage8_muon_adamw_mlx"
@@ -591,6 +598,18 @@ def test_pr95_optimizer_descriptor_drives_stage8_partition() -> None:
             8,
             optimizer_descriptor_id="pr95_langevin_stage8_polish_descriptor_only",
         )
+
+
+def test_pr95_stage2_control_descriptor_is_source_video_softplus_refinement() -> None:
+    stage = stage_smoke_config(2)
+
+    assert stage.stage_module == "stage2_v331_softplus"
+    assert stage.optimizer_descriptor_id == "pr95_stage2_adamw_baseline_mlx"
+    assert stage.optimizer.use_muon is False
+    assert stage.optimizer.adamw_lr == 1e-3
+    assert stage.optimizer_backend_status == (
+        PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY
+    )
 
 
 def test_byte_closed_smoke_archive_is_deterministic_and_not_exact_ready(tmp_path: Path) -> None:

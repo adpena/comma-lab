@@ -597,7 +597,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help=(
             "Apply a canonical PR95 MLX control profile. "
-            "full_pr95_source_video_runtime emits stage 1/5/8, full PR95 "
+            "full_pr95_source_video_runtime emits stage 1/2/5/8, full PR95 "
             "dimensions, source-video RGB+YUV6 timing loss, and PR95 runtime "
             "consumption proof requests."
         ),
@@ -713,7 +713,9 @@ def _apply_control_profile(args: argparse.Namespace) -> None:
     if args.control_profile is None:
         return
     if args.control_profile == CONTROL_PROFILE_FULL_SOURCE_VIDEO_RUNTIME:
-        args.stages = [1, 5, 8]
+        # PR 95 published 8-stage curriculum: current MLX control covers the
+        # source-faithful Stage 1/2/5/8 timing spine.
+        args.stages = [1, 2, 5, 8]
         args.batch_size = 1
         args.synthetic_pairs = 1
         args.base_channels = 36

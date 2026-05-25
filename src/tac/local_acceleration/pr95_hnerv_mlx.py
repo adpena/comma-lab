@@ -70,11 +70,13 @@ PR95_ARCHIVE_N_QUANT = 127
 
 PR95_STAGE_MODULES: dict[int, str] = {
     1: "stage1_v328_ce",
+    2: "stage2_v331_softplus",
     5: "stage5_c1a_l7",
     8: "stage8_muon_finetune",
 }
 PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS: dict[int, str] = {
     1: "pr95_stage1_adamw_baseline_mlx",
+    2: "pr95_stage2_adamw_baseline_mlx",
     5: "pr95_stage5_adamw_baseline_mlx",
     8: "pr95_stage8_muon_adamw_mlx",
 }
@@ -1174,7 +1176,10 @@ def pr95_default_optimizer_descriptor_id(stage_index: int) -> str:
     try:
         return PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS[int(stage_index)]
     except KeyError as exc:
-        raise ValueError("supported PR95 MLX timing stages are 1, 5, and 8") from exc
+        supported = sorted(PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS)
+        raise ValueError(
+            f"supported PR95 MLX timing stages are {supported}"
+        ) from exc
 
 
 def pr95_mlx_optimizer_descriptor_row(descriptor_id: str) -> dict[str, Any]:
@@ -1331,7 +1336,10 @@ def stage_smoke_config(
     """Return the PR95-shaped optimizer switch for synthetic MLX timing stages."""
 
     if stage_index not in PR95_STAGE_MODULES:
-        raise ValueError("supported PR95 MLX timing stages are 1, 5, and 8")
+        supported = sorted(PR95_STAGE_MODULES)
+        raise ValueError(
+            f"supported PR95 MLX timing stages are {supported}"
+        )
     descriptor_id = optimizer_descriptor_id or pr95_default_optimizer_descriptor_id(
         stage_index
     )
