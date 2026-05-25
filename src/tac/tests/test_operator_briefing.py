@@ -3190,6 +3190,7 @@ def test_operator_briefing_surfaces_frontier_feedback_cycle_autopolicy(
             "selected_candidate_ids": [
                 "pairset_drop_two_a",
                 "pairset_drop_many_k004_a",
+                "pairset_geometry_lowimpact_k003_a",
             ],
             "materializer_feedback_payload_count": 2,
             "dqs1_observation_count": 0,
@@ -3316,6 +3317,7 @@ def test_operator_briefing_surfaces_frontier_feedback_cycle_autopolicy(
         "dqs1_expand_beyond_drop_two_near_boundary"
     ]
     assert summary["latest_eureka_refresh"]["selected_drop_many_candidate_count"] == 1
+    assert summary["latest_eureka_refresh"]["selected_geometry_candidate_count"] == 1
     assert summary["latest_eureka_refresh"]["eureka_pairset_profile_active"] is True
     assert summary["latest_eureka_refresh"]["eureka_drop_many_counts"] == [3, 4, 6, 8]
     text = mod._format_frontier_feedback_cycle_summary()
@@ -3323,6 +3325,7 @@ def test_operator_briefing_surfaces_frontier_feedback_cycle_autopolicy(
     assert "eureka_hints: 0" in text
     assert "latest eureka refresh:" in text
     assert "selected_drop_many: 1" in text
+    assert "selected_geometry: 1" in text
 
 
 def test_operator_briefing_blocks_frontier_feedback_cycle_authority_leak(

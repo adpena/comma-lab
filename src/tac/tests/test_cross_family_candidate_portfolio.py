@@ -83,6 +83,16 @@ def _pairset_acquisition() -> dict[str, object]:
                 "rate_delta": 0.00001,
                 "predicted_score_mean": 0.192028948816,
                 "predicted_score_source": "source_selector_inherited_non_authoritative",
+                "distortion_repair_budget_from_rate_savings": {
+                    "schema": "decoder_q_pairset_rate_saved_distortion_repair_budget.v1",
+                    "active": True,
+                    "saved_bytes_vs_source_selector": 4,
+                    "score_budget": 0.000001,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
             }
         ],
     }
@@ -357,6 +367,14 @@ def test_portfolio_fuses_mlx_pairset_and_outside_class_without_authority(
         "mlx_decoder_q",
     }
     assert all(row["score_claim"] is False for row in portfolio["ranked_rows"])
+    pairset = next(
+        row
+        for row in portfolio["ranked_rows"]
+        if row["candidate_id"] == "pairset_diversity_k002"
+    )
+    assert pairset["source_metadata"][
+        "distortion_repair_budget_from_rate_savings"
+    ]["score_budget"] == 0.000001
     assert all(
         row["ready_for_exact_eval_dispatch"] is False
         for row in portfolio["ranked_rows"]

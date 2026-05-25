@@ -461,6 +461,9 @@ def _pairset_candidate_rows(
                     "acquisition_operation": row.get("acquisition_operation"),
                     "acquisition_score": row.get("acquisition_score"),
                     "predicted_score_source": row.get("predicted_score_source"),
+                    "distortion_repair_budget_from_rate_savings": row.get(
+                        "distortion_repair_budget_from_rate_savings"
+                    ),
                 },
             )
         )

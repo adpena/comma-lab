@@ -23,6 +23,12 @@ from tac.optimization.dqs1_materializer_feedback_bridge import (
     DQS1_OBSERVATION_SOURCE_SCHEMA,
     DQS1_OBSERVATION_SWEEP_CONFIG_ID,
 )
+from tac.optimization.pair_frame_scorer_geometry_lattice import (
+    REQUEST_SCHEMA as PAIR_FRAME_GEOMETRY_REQUEST_SCHEMA,
+)
+from tac.optimization.pair_frame_scorer_geometry_lattice import (
+    SCHEMA as PAIR_FRAME_GEOMETRY_LATTICE_SCHEMA,
+)
 from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
 
 SCHEMA = "decoder_q_pairset_acquisition.v1"
@@ -638,6 +644,80 @@ def _observed_candidate_ids_from_dqs1_observations(
     return out
 
 
+def _pair_frame_geometry_requests(
+    lattice: Mapping[str, Any] | None,
+    *,
+    best_pair_set: set[int],
+) -> list[dict[str, Any]]:
+    if lattice is None:
+        return []
+    if lattice.get("schema") != PAIR_FRAME_GEOMETRY_LATTICE_SCHEMA:
+        raise DecoderQPairsetAcquisitionError("pair-frame geometry lattice schema mismatch")
+    try:
+        require_no_truthy_authority_fields(
+            lattice,
+            context="decoder_q_pairset_acquisition.pair_frame_geometry_lattice",
+        )
+    except ValueError as exc:
+        raise DecoderQPairsetAcquisitionError(str(exc)) from exc
+    raw_requests = lattice.get("queue_executable_pairset_drop_requests")
+    if not isinstance(raw_requests, list):
+        raise DecoderQPairsetAcquisitionError(
+            "pair-frame geometry lattice missing queue_executable_pairset_drop_requests[]"
+        )
+    out: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for index, request in enumerate(raw_requests):
+        if not isinstance(request, Mapping):
+            raise DecoderQPairsetAcquisitionError(
+                f"pair-frame geometry request {index} must be object"
+            )
+        try:
+            require_no_truthy_authority_fields(
+                request,
+                context=f"decoder_q_pairset_acquisition.pair_frame_geometry_request[{index}]",
+            )
+        except ValueError as exc:
+            raise DecoderQPairsetAcquisitionError(str(exc)) from exc
+        if request.get("schema") != PAIR_FRAME_GEOMETRY_REQUEST_SCHEMA:
+            raise DecoderQPairsetAcquisitionError(
+                f"pair-frame geometry request {index} schema mismatch"
+            )
+        if request.get("queue_executable") is not True:
+            raise DecoderQPairsetAcquisitionError(
+                f"pair-frame geometry request {index} is not queue executable"
+            )
+        candidate_id = str(request.get("candidate_id") or "")
+        if not candidate_id:
+            raise DecoderQPairsetAcquisitionError(
+                f"pair-frame geometry request {index} missing candidate_id"
+            )
+        if candidate_id in seen_ids:
+            raise DecoderQPairsetAcquisitionError(
+                f"duplicate pair-frame geometry candidate_id: {candidate_id}"
+            )
+        seen_ids.add(candidate_id)
+        selected = _canonical_pair_indices(
+            request.get("selected_pair_indices") or (),
+            label=f"{candidate_id} selected_pair_indices",
+        )
+        selected_set = set(selected)
+        if not selected_set.issubset(best_pair_set):
+            raise DecoderQPairsetAcquisitionError(
+                f"{candidate_id} selected_pair_indices leave the source selector universe"
+            )
+        dropped = _canonical_pair_indices(
+            request.get("dropped_pair_indices") or (),
+            label=f"{candidate_id} dropped_pair_indices",
+        )
+        if not set(dropped).issubset(best_pair_set) or selected_set & set(dropped):
+            raise DecoderQPairsetAcquisitionError(
+                f"{candidate_id} dropped_pair_indices inconsistent with source selector"
+            )
+        out.append(dict(request))
+    return out
+
+
 def build_decoder_q_pairset_acquisition_plan(
     selector_pareto: dict[str, Any],
     *,
@@ -653,6 +733,7 @@ def build_decoder_q_pairset_acquisition_plan(
     dqs1_observations: Sequence[Mapping[str, Any]] | None = None,
     include_observed_candidates: bool = False,
     eureka_planning: Mapping[str, Any] | None = None,
+    pair_frame_geometry_lattice: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build local-only DQS1 pair-set acquisition candidates from selector Pareto rows."""
 
@@ -691,6 +772,10 @@ def build_decoder_q_pairset_acquisition_plan(
         drop_many_counts if drop_many_counts is not None else profile_drop_many_counts,
         max_count=max(0, len(best_order) - 1),
         eureka_active=eureka_expand_beyond_drop_two,
+    )
+    geometry_requests = _pair_frame_geometry_requests(
+        pair_frame_geometry_lattice,
+        best_pair_set=best_pair_set,
     )
 
     rows: list[dict[str, Any]] = []
@@ -798,6 +883,30 @@ def build_decoder_q_pairset_acquisition_plan(
                 },
             )
 
+        rank_by_pair = {pair: rank for rank, pair in enumerate(best_order, start=1)}
+        for request in geometry_requests:
+            dropped = sorted(int(pair) for pair in request["dropped_pair_indices"])
+            add_row(
+                str(request["candidate_id"]),
+                str(request.get("selector_kind") or "pair_frame_geometry_low_impact_drop_many"),
+                request["selected_pair_indices"],
+                best,
+                operation={
+                    "op": "pair_frame_geometry_low_impact_drop_many",
+                    "dropped_pair_indices": dropped,
+                    "dropped_pair_ranks": [rank_by_pair[pair] for pair in dropped],
+                    "source_lattice_schema": PAIR_FRAME_GEOMETRY_LATTICE_SCHEMA,
+                    "source_request_schema": PAIR_FRAME_GEOMETRY_REQUEST_SCHEMA,
+                    "generation_policy": request.get("generation_policy"),
+                    "geometry_coverage": request.get("geometry_coverage"),
+                    "queue_executable": True,
+                    "queue_family": request.get("queue_family"),
+                    "rate_distortion_policy": (
+                        "geometry_low_impact_drop_probe_with_repair_budget_false_authority"
+                    ),
+                },
+            )
+
     swap_count = 0
     if max_swap_in > 0 and len(best_order) > 1:
         drop_pair = best_order[-1]
@@ -890,7 +999,43 @@ def build_decoder_q_pairset_acquisition_plan(
             for row in ranked
             if row["selector_kind"] == "drop_many_beam_pairwise_interaction_waterfill"
         ),
+        "pair_frame_geometry_candidate_count": sum(
+            1
+            for row in ranked
+            if row["selector_kind"] == "pair_frame_geometry_low_impact_drop_many"
+        ),
     }
+
+    eureka_blocked_family_requests = [
+        {
+            "family": "within_selected_set_mask_feather_probe",
+            "blocker": (
+                "requires receiver/materializer support for "
+                "non-pair-drop mask semantics"
+            ),
+            **FALSE_ACQUISITION_AUTHORITY,
+        },
+        {
+            "family": "inverse_scorer_null_direction_masked_variant",
+            "blocker": (
+                "requires inverse-scorer action cell to runtime "
+                "materializer binding"
+            ),
+            **FALSE_ACQUISITION_AUTHORITY,
+        },
+    ]
+    if not geometry_requests:
+        eureka_blocked_family_requests.insert(
+            0,
+            {
+                "family": "global_low_impact_full_pair_drop_probe",
+                "blocker": (
+                    "requires pair-frame scorer-geometry lattice binding "
+                    "before full-board pair/frame drops are queue-executable"
+                ),
+                **FALSE_ACQUISITION_AUTHORITY,
+            },
+        )
 
     return {
         "schema": SCHEMA,
@@ -945,32 +1090,32 @@ def build_decoder_q_pairset_acquisition_plan(
                     if eureka_expand_beyond_drop_two
                     else None
                 ),
-                "blocked_family_requests": [
-                    {
-                        "family": "global_low_impact_full_pair_drop_probe",
-                        "blocker": (
-                            "requires pair-frame scorer-geometry lattice binding "
-                            "before full-board pair/frame drops are queue-executable"
-                        ),
-                        **FALSE_ACQUISITION_AUTHORITY,
-                    },
-                    {
-                        "family": "within_selected_set_mask_feather_probe",
-                        "blocker": (
-                            "requires receiver/materializer support for "
-                            "non-pair-drop mask semantics"
-                        ),
-                        **FALSE_ACQUISITION_AUTHORITY,
-                    },
-                    {
-                        "family": "inverse_scorer_null_direction_masked_variant",
-                        "blocker": (
-                            "requires inverse-scorer action cell to runtime "
-                            "materializer binding"
-                        ),
-                        **FALSE_ACQUISITION_AUTHORITY,
-                    },
+                "executable_families_this_pass": [
+                    *(
+                        ["dqs1_pairset_drop_many_local_first"]
+                        if eureka_expand_beyond_drop_two
+                        else []
+                    ),
+                    *(
+                        ["global_low_impact_full_pair_drop_probe"]
+                        if geometry_requests
+                        else []
+                    ),
                 ],
+                "blocked_family_requests": eureka_blocked_family_requests,
+                **FALSE_ACQUISITION_AUTHORITY,
+            },
+            "pair_frame_geometry_lattice": {
+                "schema": "decoder_q_pairset_pair_frame_geometry_lattice_binding.v1",
+                "active": bool(geometry_requests),
+                "source_schema": (
+                    pair_frame_geometry_lattice.get("schema")
+                    if isinstance(pair_frame_geometry_lattice, Mapping)
+                    else None
+                ),
+                "queue_executable_request_count": len(geometry_requests),
+                "candidate_count": summary["pair_frame_geometry_candidate_count"],
+                "allowed_use": "local_dqs1_pairset_drop_start_generation_only",
                 **FALSE_ACQUISITION_AUTHORITY,
             },
             "observation_skip": {
@@ -988,6 +1133,7 @@ def build_decoder_q_pairset_acquisition_plan(
         "source_selector_summary": {
             "selector_candidate_count": len(selectors),
             "best_selected_pair_count": len(best_order),
+            "best_rank_order_pair_indices": list(best_order),
             "best_selected_pair_indices": sorted(best_order),
         },
         "summary": summary,

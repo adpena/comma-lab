@@ -1563,6 +1563,9 @@ def _frontier_feedback_refresh_row(path: Path) -> dict[str, object]:
         "selected_drop_many_candidate_count": sum(
             1 for candidate_id in selected_candidate_ids if "drop_many" in candidate_id
         ),
+        "selected_geometry_candidate_count": sum(
+            1 for candidate_id in selected_candidate_ids if "geometry" in candidate_id
+        ),
         "materializer_feedback_payload_count": _safe_int(
             payload.get("materializer_feedback_payload_count")
         ),
@@ -1801,6 +1804,7 @@ def _format_frontier_feedback_cycle_summary() -> str:
                 f"  queue: {latest_refresh.get('queue_path') or '-'}",
                 f"  selected: {latest_refresh.get('selected_candidate_count')}",
                 f"  selected_drop_many: {latest_refresh.get('selected_drop_many_candidate_count', 0)}",
+                f"  selected_geometry: {latest_refresh.get('selected_geometry_candidate_count', 0)}",
                 f"  dqs1_observations: {latest_refresh.get('dqs1_observation_count')}",
                 f"  eureka_signals: {latest_refresh.get('eureka_signal_count', 0)}",
                 f"  eureka_hints: {latest_refresh.get('eureka_planner_hint_count', 0)}",
@@ -1825,6 +1829,7 @@ def _format_frontier_feedback_cycle_summary() -> str:
                 f"  path: {latest_eureka_refresh.get('path')}",
                 f"  queue: {latest_eureka_refresh.get('queue_path') or '-'}",
                 f"  selected_drop_many: {latest_eureka_refresh.get('selected_drop_many_candidate_count', 0)}",
+                f"  selected_geometry: {latest_eureka_refresh.get('selected_geometry_candidate_count', 0)}",
                 f"  eureka_drop_many_counts: {latest_eureka_refresh.get('eureka_drop_many_counts', [])}",
             ]
         )

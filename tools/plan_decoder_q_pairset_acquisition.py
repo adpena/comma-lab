@@ -173,6 +173,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--pair-frame-geometry-lattice-json",
+        type=Path,
+        help=(
+            "pair_frame_scorer_geometry_lattice.v1 JSON. Queue-executable "
+            "low-impact pair-drop requests become normal DQS1 acquisition rows."
+        ),
+    )
+    parser.add_argument(
         "--dqs1-observation-jsonl",
         "--dqs1-observations",
         action="append",
@@ -300,6 +308,11 @@ def main(argv: list[str] | None = None) -> int:
             dqs1_observations=dqs1_observations,
             include_observed_candidates=args.include_observed_dqs1_candidate,
             eureka_planning=_load_eureka_planning(args.eureka_planning_json),
+            pair_frame_geometry_lattice=(
+                None
+                if args.pair_frame_geometry_lattice_json is None
+                else load_json_object(args.pair_frame_geometry_lattice_json)
+            ),
         )
         write_json(args.json_out, plan)
         if args.md_out is not None:
@@ -321,6 +334,9 @@ def main(argv: list[str] | None = None) -> int:
                 "recommended_acquisition_id": plan["summary"]["recommended_acquisition_id"],
                 "drop_many_candidate_count": plan["summary"][
                     "drop_many_candidate_count"
+                ],
+                "pair_frame_geometry_candidate_count": plan["summary"][
+                    "pair_frame_geometry_candidate_count"
                 ],
                 "score_claim": False,
                 "promotion_eligible": False,
