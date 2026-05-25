@@ -53721,6 +53721,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "codex_dfl1_parity_queue_execution_20260525",
+      "name": "DFL1 parity queue execution bridge",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimizer/materializer_chain_harvest.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/renderer_payload_dfl1_shell_parity_20260525T012946Z/materializer_manifest.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "py_compile_ruff_191_focused_tests_real_shell_parity_20260525T0137Z"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_renderer_payload_dfl1_real_shell_parity_20260525T013225Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -53730,5 +53771,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T01:29:35Z"
+  "updated_at": "2026-05-25T01:36:40Z"
 }

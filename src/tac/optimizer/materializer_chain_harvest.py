@@ -374,7 +374,7 @@ def _renderer_payload_dfl1_harvest_fields(
         fields["full_frame_inflate_parity_proven"] = (
             parity_verification.get("full_frame_inflate_parity_satisfied") is True
         )
-        proof_path = _string_or_none(parity_verification.get("proof_path"))
+        proof_path = _nonempty_string(parity_verification.get("proof_path"))
         if proof_path is not None:
             fields["renderer_payload_dfl1_inflate_parity_proof_path"] = proof_path
         proof_sha = _string_or_none(parity_verification.get("proof_sha256"))
@@ -383,7 +383,7 @@ def _renderer_payload_dfl1_harvest_fields(
         fields["renderer_payload_dfl1_inflate_parity_satisfied"] = (
             parity_verification.get("full_frame_inflate_parity_satisfied") is True
         )
-        proof_path = _string_or_none(parity_verification.get("proof_path"))
+        proof_path = _nonempty_string(parity_verification.get("proof_path"))
         if proof_path is not None:
             fields["renderer_payload_dfl1_full_frame_inflate_parity_proof_path"] = (
                 proof_path
@@ -785,6 +785,12 @@ def _non_negative_int(value: Any) -> int | None:
 def _string_or_none(value: Any) -> str | None:
     if isinstance(value, str) and value.strip():
         return value.strip().lower()
+    return None
+
+
+def _nonempty_string(value: Any) -> str | None:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
     return None
 
 
