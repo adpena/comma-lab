@@ -292,6 +292,22 @@ def test_materializer_campaign_runner_executes_queue_cli_in_process(
     assert payload["queue_id"] == "in_process_queue_cli_fixture"
 
 
+def test_materializer_campaign_runner_defaults_to_low_local_poll_interval(
+    tmp_path: Path,
+) -> None:
+    args = runner.parse_args(["--plan", str(tmp_path / "plan.json")])
+
+    assert args.poll_interval_seconds == runner.DEFAULT_LOCAL_QUEUE_POLL_INTERVAL_SECONDS
+    assert (
+        args.queue_feedback_replan_followup_poll_interval_seconds
+        == runner.DEFAULT_LOCAL_QUEUE_POLL_INTERVAL_SECONDS
+    )
+    assert (
+        args.queue_observation_recovery_poll_interval_seconds
+        == runner.DEFAULT_LOCAL_QUEUE_POLL_INTERVAL_SECONDS
+    )
+
+
 def test_materializer_campaign_runner_builds_queue_owned_followup_command(
     tmp_path: Path,
 ) -> None:
@@ -1485,6 +1501,8 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
             "2",
             "--idle-sleep-seconds",
             "0",
+            "--poll-interval-seconds",
+            "0",
             "--max-idle-cycles",
             "1",
             "--execute",
@@ -1497,6 +1515,8 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
             "1",
             "--queue-feedback-replan-followup-max-parallel",
             "1",
+            "--queue-feedback-replan-followup-poll-interval-seconds",
+            "0",
         ]
     )
 
@@ -2595,6 +2615,7 @@ def test_materializer_campaign_runner_poison_summary_with_nested_authority() -> 
 
 def test_materializer_campaign_runner_executes_no_paid_packet_member_handoff(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     run_dir = tmp_path / "campaign"
     state_path = tmp_path / "materializer_execution_queue.sqlite"
@@ -2603,6 +2624,22 @@ def test_materializer_campaign_runner_executes_no_paid_packet_member_handoff(
 
     plan.write_text(json.dumps(_packet_member_recompress_plan()), encoding="utf-8")
     _write_packet_archive(source_archive)
+
+    subprocess_run = runner.subprocess.run
+
+    def fail_runner_subprocess_run(*_args: object, **_kwargs: object) -> object:
+        command = _args[0] if _args else None
+        if isinstance(command, list) and len(command) > 1:
+            executable = Path(str(command[0])).resolve(strict=False)
+            script = str(command[1])
+            if (
+                executable == Path(runner.sys.executable).resolve(strict=False)
+                and script in runner.IN_PROCESS_TOOL_MODULE_BY_RELATIVE_SCRIPT
+            ):
+                raise AssertionError("runner-owned control tools should execute in-process")
+        return subprocess_run(*_args, **_kwargs)
+
+    monkeypatch.setattr(runner.subprocess, "run", fail_runner_subprocess_run)
 
     result = runner.main(
         [
@@ -2633,6 +2670,8 @@ def test_materializer_campaign_runner_executes_no_paid_packet_member_handoff(
             "2",
             "--idle-sleep-seconds",
             "0",
+            "--poll-interval-seconds",
+            "0",
             "--max-idle-cycles",
             "1",
             "--execute",
@@ -2657,6 +2696,15 @@ def test_materializer_campaign_runner_executes_no_paid_packet_member_handoff(
     assert summary["build"]["materializer_work_queue_executable_row_count"] == 1
     assert summary["worker"]["success_count"] == 3
     assert summary["worker"]["failure_count"] == 0
+    worker_commands = [
+        command["command"]
+        for command in summary["commands"]
+        if "run-worker" in command["command"]
+    ]
+    assert worker_commands
+    worker_command = worker_commands[-1]
+    poll_index = worker_command.index("--poll-interval-seconds")
+    assert float(worker_command[poll_index + 1]) == 0.0
 
     execution_queue = json.loads(
         (run_dir / "materializer_execution_queue.runtime_policy.json").read_text(encoding="utf-8")
@@ -3517,6 +3565,17 @@ def test_materializer_campaign_queue_observation_recovery_autopolicy_rewinds_sou
     assert payload["worker"]["success_count"] == 1
     assert payload["source_observation_after"]["healthy"] is True
     assert len(commands) >= 5
+    worker_commands = [
+        result.command
+        for result in commands
+        if "run-worker" in result.command
+    ]
+    assert worker_commands
+    worker_command = worker_commands[-1]
+    poll_index = worker_command.index("--poll-interval-seconds")
+    assert worker_command[poll_index + 1] == str(
+        runner.DEFAULT_LOCAL_QUEUE_POLL_INTERVAL_SECONDS
+    )
     with connect_state(source_state_path) as conn:
         rows = conn.execute(
             """

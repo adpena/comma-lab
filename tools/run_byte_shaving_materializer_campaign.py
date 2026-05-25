@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import hashlib
+import importlib
 import io
 import json
 import subprocess
@@ -116,6 +117,14 @@ MAX_AUTO_DISCOVERED_MATERIALIZER_CHAIN_MANIFESTS = 128
 MAX_AUTO_DISCOVERED_MATERIALIZER_CHAIN_MANIFEST_BYTES = 8 * 1024 * 1024
 MAX_AUTO_DISCOVERED_RECEIVER_FEEDBACK_MANIFESTS = 128
 MAX_AUTO_DISCOVERED_RECEIVER_FEEDBACK_MANIFEST_BYTES = 8 * 1024 * 1024
+DEFAULT_LOCAL_QUEUE_POLL_INTERVAL_SECONDS = 0.005
+IN_PROCESS_TOOL_MODULE_BY_RELATIVE_SCRIPT = {
+    "tools/build_byte_shaving_campaign_queue.py": "tools.build_byte_shaving_campaign_queue",
+    "tools/build_inverse_steganalysis_action_functional.py": "tools.build_inverse_steganalysis_action_functional",
+    "tools/build_mlx_acquisition_batch.py": "tools.build_mlx_acquisition_batch",
+    "tools/experiment_queue.py": "tools.experiment_queue",
+    "tools/plan_byte_shaving_campaign.py": "tools.plan_byte_shaving_campaign",
+}
 RECEIVER_NEGATIVE_MATERIALIZER_AXIS = "[local-materializer-receiver advisory]"
 CONTEST_RATE_SCORE_PER_BYTE = CANONICAL_RATE_MULTIPLIER / float(
     CANONICAL_RATE_DENOM_BYTES
@@ -269,7 +278,7 @@ def _normalize_config_defaults(
 
 def _run(command: list[str], *, check: bool = True) -> CommandResult:
     started = time.monotonic()
-    result = _run_in_process_experiment_queue_command(
+    result = _run_in_process_tool_command(
         command,
         started_monotonic=started,
     )
@@ -295,7 +304,7 @@ def _run(command: list[str], *, check: bool = True) -> CommandResult:
     return result
 
 
-def _run_in_process_experiment_queue_command(
+def _run_in_process_tool_command(
     command: Sequence[str],
     *,
     started_monotonic: float | None = None,
@@ -313,17 +322,24 @@ def _run_in_process_experiment_queue_command(
         if script_path.is_absolute()
         else REPO_ROOT / script_path
     ).resolve(strict=False)
-    if resolved_script != (REPO_ROOT / "tools" / "experiment_queue.py").resolve(strict=False):
+    module_name = None
+    for relative_script, candidate_module in IN_PROCESS_TOOL_MODULE_BY_RELATIVE_SCRIPT.items():
+        if resolved_script == (REPO_ROOT / relative_script).resolve(strict=False):
+            module_name = candidate_module
+            break
+    if module_name is None:
         return None
-
-    from tools import experiment_queue as experiment_queue_cli
 
     stdout = io.StringIO()
     stderr = io.StringIO()
     started = time.monotonic() if started_monotonic is None else started_monotonic
     try:
         with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-            returncode = int(experiment_queue_cli.main(command_items[2:]))
+            module = importlib.import_module(module_name)
+            main = getattr(module, "main", None)
+            if not callable(main):
+                return None
+            returncode = int(main(command_items[2:]))
     except SystemExit as exc:
         code = exc.code
         returncode = int(code) if isinstance(code, int) else 2
@@ -339,6 +355,19 @@ def _run_in_process_experiment_queue_command(
         stdout=stdout.getvalue(),
         stderr=stderr.getvalue(),
         elapsed_seconds=time.monotonic() - started,
+    )
+
+
+def _run_in_process_experiment_queue_command(
+    command: Sequence[str],
+    *,
+    started_monotonic: float | None = None,
+) -> CommandResult | None:
+    """Compatibility wrapper for older tests and forensic notebooks."""
+
+    return _run_in_process_tool_command(
+        command,
+        started_monotonic=started_monotonic,
     )
 
 
@@ -1861,6 +1890,8 @@ def _queue_feedback_replan_followup_execution_payload(
             str(args.queue_feedback_replan_followup_max_parallel),
             "--idle-sleep-seconds",
             str(args.queue_feedback_replan_followup_idle_sleep_seconds),
+            "--poll-interval-seconds",
+            str(args.queue_feedback_replan_followup_poll_interval_seconds),
             "--max-idle-cycles",
             str(args.queue_feedback_replan_followup_max_idle_cycles),
             "--noncanonical-state-rationale",
@@ -2065,6 +2096,8 @@ def _queue_observation_recovery_execution_payload(
             str(args.queue_observation_recovery_max_parallel),
             "--idle-sleep-seconds",
             str(args.queue_observation_recovery_idle_sleep_seconds),
+            "--poll-interval-seconds",
+            str(args.queue_observation_recovery_poll_interval_seconds),
             "--max-idle-cycles",
             str(args.queue_observation_recovery_max_idle_cycles),
             "--noncanonical-state-rationale",
@@ -3236,6 +3269,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-parallel", type=int, default=0)
     parser.add_argument("--max-experiments", type=int, default=None)
     parser.add_argument("--idle-sleep-seconds", type=float, default=0.0)
+    parser.add_argument(
+        "--poll-interval-seconds",
+        type=float,
+        default=DEFAULT_LOCAL_QUEUE_POLL_INTERVAL_SECONDS,
+        help=(
+            "active subprocess poll interval for the local materializer worker; "
+            "lower than experiment_queue's generic default because campaign "
+            "materializer steps are often short local micro-commands"
+        ),
+    )
     parser.add_argument("--max-idle-cycles", type=int, default=1)
     parser.add_argument("--tail-lines", type=int, default=20)
     parser.add_argument(
@@ -3264,6 +3307,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--queue-feedback-replan-followup-max-steps", type=int, default=1)
     parser.add_argument("--queue-feedback-replan-followup-max-parallel", type=int, default=1)
     parser.add_argument("--queue-feedback-replan-followup-idle-sleep-seconds", type=float, default=0.0)
+    parser.add_argument(
+        "--queue-feedback-replan-followup-poll-interval-seconds",
+        type=float,
+        default=DEFAULT_LOCAL_QUEUE_POLL_INTERVAL_SECONDS,
+    )
     parser.add_argument("--queue-feedback-replan-followup-max-idle-cycles", type=int, default=1)
     parser.add_argument("--queue-feedback-replan-followup-tail-lines", type=int, default=20)
     parser.add_argument(
@@ -3292,6 +3340,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--queue-observation-recovery-max-steps", type=int, default=8)
     parser.add_argument("--queue-observation-recovery-max-parallel", type=int, default=1)
     parser.add_argument("--queue-observation-recovery-idle-sleep-seconds", type=float, default=0.0)
+    parser.add_argument(
+        "--queue-observation-recovery-poll-interval-seconds",
+        type=float,
+        default=DEFAULT_LOCAL_QUEUE_POLL_INTERVAL_SECONDS,
+    )
     parser.add_argument("--queue-observation-recovery-max-idle-cycles", type=int, default=1)
     parser.add_argument("--queue-observation-recovery-tail-lines", type=int, default=20)
     parser.add_argument("--queue-feedback-replan-policy-iteration", type=int, default=0)
@@ -4686,6 +4739,8 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--campaign-plan-max-k must be >= 1")
     if args.max_steps < 1:
         raise SystemExit("--max-steps must be >= 1")
+    if args.poll_interval_seconds < 0:
+        raise SystemExit("--poll-interval-seconds must be non-negative")
     if args.queue_feedback_replan_followup_max_steps < 1:
         raise SystemExit("--queue-feedback-replan-followup-max-steps must be >= 1")
     if args.queue_feedback_replan_followup_max_parallel < 1:
@@ -4694,6 +4749,8 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--queue-feedback-replan-followup-max-idle-cycles must be >= 1")
     if args.queue_feedback_replan_followup_idle_sleep_seconds < 0:
         raise SystemExit("--queue-feedback-replan-followup-idle-sleep-seconds must be non-negative")
+    if args.queue_feedback_replan_followup_poll_interval_seconds < 0:
+        raise SystemExit("--queue-feedback-replan-followup-poll-interval-seconds must be non-negative")
     if args.queue_feedback_replan_followup_tail_lines < 0:
         raise SystemExit("--queue-feedback-replan-followup-tail-lines must be non-negative")
     if args.queue_observation_recovery_max_steps < 1:
@@ -4704,6 +4761,8 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--queue-observation-recovery-max-idle-cycles must be >= 1")
     if args.queue_observation_recovery_idle_sleep_seconds < 0:
         raise SystemExit("--queue-observation-recovery-idle-sleep-seconds must be non-negative")
+    if args.queue_observation_recovery_poll_interval_seconds < 0:
+        raise SystemExit("--queue-observation-recovery-poll-interval-seconds must be non-negative")
     if args.queue_observation_recovery_tail_lines < 0:
         raise SystemExit("--queue-observation-recovery-tail-lines must be non-negative")
     if args.queue_feedback_replan_policy_iteration < 0:
@@ -4957,6 +5016,8 @@ def main(argv: list[str] | None = None) -> int:
             str(args.max_parallel),
             "--idle-sleep-seconds",
             str(args.idle_sleep_seconds),
+            "--poll-interval-seconds",
+            str(args.poll_interval_seconds),
             "--max-idle-cycles",
             str(args.max_idle_cycles),
         ],
