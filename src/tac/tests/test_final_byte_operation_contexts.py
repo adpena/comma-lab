@@ -755,6 +755,7 @@ def test_final_byte_context_compiler_blocks_dfl1_missing_parity_identity(
     assert payload["blocked_context_count"] == 1
     assert payload["rows"][0]["context_blockers"] == [
         "materializer_context_missing:renderer_payload_dfl1_source_runtime_dir",
+        "materializer_context_missing:renderer_payload_dfl1_candidate_runtime_dir",
         "materializer_context_missing:renderer_payload_dfl1_full_frame_file_list_or_entries",
         "materializer_context_missing:renderer_payload_dfl1_expected_full_frame_file_list_sha256",
         "materializer_context_missing:renderer_payload_dfl1_expected_full_frame_entry_count",
@@ -763,6 +764,51 @@ def test_final_byte_context_compiler_blocks_dfl1_missing_parity_identity(
     context = payload["rows"][0]["context"]
     assert context["score_claim"] is False
     assert context["ready_for_exact_eval_dispatch"] is False
+
+
+def test_final_byte_context_compiler_blocks_duplicate_dfl1_file_list_entries(
+    tmp_path: Path,
+) -> None:
+    artifact_map = {
+        "schema": "final_byte_artifact_map.fixture.v1",
+        "artifacts": {
+            RENDERER_PAYLOAD_DFL1_TARGET_KIND: {
+                "archive_path": str(tmp_path / "packet_source.zip"),
+                "packet_member_manifest": str(tmp_path / "members.json"),
+                "renderer_payload_dfl1_source_runtime_dir": str(
+                    tmp_path / "source_runtime"
+                ),
+                "candidate_runtime_dir": str(tmp_path / "candidate_runtime"),
+                "file_list_entries": ["0.raw", "0.raw"],
+                "expected_full_frame_file_list_sha256": "d" * 64,
+                "expected_full_frame_entry_count": 2,
+                "full_frame_file_list_source": "fixture_full_file_list",
+                "member_names": ["renderer.bin"],
+                "payload_member_name": "p",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    payload = build_final_byte_operation_contexts(
+        _renderer_payload_dfl1_backlog(),
+        artifact_map=artifact_map,
+        repo_root=tmp_path,
+        default_output_root=tmp_path / "out",
+    )
+
+    assert payload["blocked_context_count"] == 1
+    assert (
+        "materializer_context_duplicate:renderer_payload_dfl1_full_frame_file_list_entries"
+        in payload["rows"][0]["context_blockers"]
+    )
 
 
 def test_final_byte_context_compiler_uses_inline_operation_params(

@@ -84,6 +84,9 @@ from comma_lab.scheduler.experiment_queue import (
     _condition_passes,
     load_queue_definition,
 )
+from comma_lab.scheduler.final_byte_operation_contexts import (
+    build_final_byte_operation_contexts,
+)
 from comma_lab.scheduler.staircase_dag import (
     STORAGE_PREFLIGHT_DEPENDENCY_SCHEMA,
     build_staircase_dag_from_experiment_queue,
@@ -1291,6 +1294,147 @@ def test_packet_ir_operation_set_lowers_to_materializer_backlog_rows(
     work_row = packet_only["materializer_work_queue"]["rows"][0]
     assert packet_ir["operation_set_id"] in work_row["source_packet_ir_operation_set_ids"]
     assert "packetir_operation_set_requires_materializer_contexts" in work_row["packet_ir_blocker_counts"]
+
+
+def test_inverse_action_dfl1_packet_ir_context_reaches_executable_work_queue(
+    tmp_path: Path,
+) -> None:
+    expected_sha = hashlib.sha256(b"0.raw\n").hexdigest()
+    action = {
+        "schema": "inverse_steganalysis_discrete_action_functional.v1",
+        "cells": [
+            {
+                "atom_id": "compiled_renderer_payload_dfl1",
+                "operation_set_compiler": {
+                    "schema": "inverse_action_operation_set_compiler_hint.v1",
+                    "operation_set_id": "compiled_renderer_payload_dfl1_set",
+                    "candidate_saved_bytes": 64,
+                    "selected_operations": [
+                        {
+                            "unit_id": "compiled_renderer_payload_dfl1_unit",
+                            "target_kind": RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+                            "archive_path": str(tmp_path / "source_packet.zip"),
+                            "output_archive": str(tmp_path / "candidate_packet.zip"),
+                            "output_manifest": str(tmp_path / "candidate_packet.json"),
+                            "payload_member_name": "p",
+                            "renderer_payload_dfl1_source_runtime_dir": str(
+                                tmp_path / "source_runtime"
+                            ),
+                            "renderer_payload_dfl1_candidate_runtime_dir": str(
+                                tmp_path / "candidate_runtime"
+                            ),
+                            "renderer_payload_dfl1_full_frame_file_list_entries": [
+                                "0.raw"
+                            ],
+                            "renderer_payload_dfl1_expected_full_frame_file_list_sha256": expected_sha,
+                            "renderer_payload_dfl1_expected_full_frame_entry_count": 1,
+                            "renderer_payload_dfl1_full_frame_file_list_source": (
+                                "inline_inverse_action_fixture"
+                            ),
+                        }
+                    ],
+                },
+            }
+        ],
+        "water_bucket": {
+            "selected_cells": [
+                {
+                    "atom_id": "compiled_renderer_payload_dfl1",
+                    "candidate_id": "candidate_dfl1",
+                    "scope_axis": "packet_member",
+                    "component": "rate",
+                    "water_fill_cost_bytes": 64,
+                    "expected_score_gain": 0.0002,
+                    "euler_lagrange_residual": 0.0001,
+                }
+            ]
+        },
+        **_false_authority(),
+    }
+    surface = build_signal_surface_from_inverse_action_functional(action)
+    plan = build_byte_shaving_campaign_plan(surface, max_k=1)
+    packet_ir = plan["packet_ir_operation_sets"][0]
+    rows = lower_packetir_operation_set_to_backlog_rows(packet_ir)
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "backlog_row_count": len(rows),
+        "rows": rows,
+        **_false_authority(),
+    }
+
+    context_payload = build_final_byte_operation_contexts(
+        backlog,
+        artifact_map=None,
+        repo_root=tmp_path,
+        default_output_root=tmp_path / "out",
+    )
+    assert context_payload["blocked_context_count"] == 0
+    context = context_payload["rows"][0]["context"]
+    assert context["renderer_payload_dfl1_source_runtime_dir"] == str(
+        tmp_path / "source_runtime"
+    )
+    assert context["renderer_payload_dfl1_candidate_runtime_dir"] == str(
+        tmp_path / "candidate_runtime"
+    )
+    assert context["renderer_payload_dfl1_full_frame_file_list_entries"] == [
+        "0.raw"
+    ]
+    assert (
+        context["renderer_payload_dfl1_expected_full_frame_file_list_sha256"]
+        == expected_sha
+    )
+    assert context["renderer_payload_dfl1_expected_full_frame_entry_count"] == 1
+    assert (
+        context["renderer_payload_dfl1_full_frame_file_list_source"]
+        == "inline_inverse_action_fixture"
+    )
+
+    work_queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts=materializer_contexts_from_payload(context_payload),
+        source_plan_path="plan.json",
+    )
+    assert work_queue["executable_row_count"] == 1
+    work_row = work_queue["rows"][0]
+    assert work_row["target_kind"] == RENDERER_PAYLOAD_DFL1_TARGET_KIND
+    assert work_row["renderer_payload_dfl1_parity_context"] == {
+        "source_archive": str(tmp_path / "source_packet.zip"),
+        "candidate_archive": str(tmp_path / "candidate_packet.zip"),
+        "source_runtime_dir": str(tmp_path / "source_runtime"),
+        "candidate_runtime_dir": str(tmp_path / "candidate_runtime"),
+        "expected_full_frame_file_list_sha256": expected_sha,
+        "full_frame_file_list_source": "inline_inverse_action_fixture",
+        "expected_full_frame_entry_count": 1,
+        "file_list_entries": ["0.raw"],
+    }
+
+    execution_queue = build_materializer_execution_queue(
+        work_queue,
+        queue_id="inverse_action_dfl1_packet_ir_context_fixture",
+        repo_root=tmp_path,
+        lane_id="lane_inverse_action_dfl1_packet_ir_context_fixture",
+        step_timeout_seconds=300,
+        include_exact_readiness_followup=True,
+    )
+    steps = execution_queue["experiments"][0]["steps"]
+    assert [step["id"] for step in steps[:3]] == [
+        MATERIALIZER_EXECUTION_STEP_ID,
+        MATERIALIZER_DFL1_PARITY_STEP_ID,
+        MATERIALIZER_HARVEST_STEP_ID,
+    ]
+    parity_command = steps[1]["command"]
+    assert ["--file-list-entry", "0.raw"] in [
+        parity_command[index : index + 2] for index in range(len(parity_command) - 1)
+    ]
+    assert ["--expected-full-frame-file-list-sha256", expected_sha] in [
+        parity_command[index : index + 2] for index in range(len(parity_command) - 1)
+    ]
+    assert ["--expected-full-frame-entry-count", "1"] in [
+        parity_command[index : index + 2] for index in range(len(parity_command) - 1)
+    ]
+    assert work_row["score_claim"] is False
+    assert work_row["ready_for_exact_eval_dispatch"] is False
 
 
 def test_direct_mlx_compiler_hint_reaches_materializer_work_queue(
@@ -3706,11 +3850,58 @@ def test_materializer_execution_queue_records_missing_dfl1_parity_context(
     assert metadata["renderer_payload_dfl1_parity_followup_requested"] is True
     assert metadata["renderer_payload_dfl1_parity_followup_enabled"] is False
     assert metadata["renderer_payload_dfl1_parity_followup_blockers"] == [
+        "renderer_payload_dfl1_parity_context_missing:candidate_runtime_dir",
         "renderer_payload_dfl1_parity_context_missing:file_list_or_entries",
         "renderer_payload_dfl1_parity_context_missing:expected_full_frame_file_list_sha256",
         "renderer_payload_dfl1_parity_context_missing:expected_full_frame_entry_count",
         "renderer_payload_dfl1_parity_context_missing:full_frame_file_list_source",
     ]
+
+
+def test_materializer_execution_queue_requires_dfl1_parity_followup_when_strict(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "renderer_payload_candidate.zip"
+    out_manifest = tmp_path / "renderer_payload_candidate.json"
+    runtime = tmp_path / "runtime"
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "backlog_key": "renderer_payload_dfl1_fixture",
+                "unit_kind": "packet_member",
+                "operation_family": "native_renderer_payload",
+                "target_kind": RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+                "materializer_id": RENDERER_PAYLOAD_DFL1_MATERIALIZER,
+            },
+        ],
+    }
+    work_queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts={
+            "renderer_payload_dfl1_fixture": {
+                "archive_path": str(archive),
+                "source_runtime_dir": str(runtime),
+                "member_names": ["renderer.bin"],
+                "output_archive": str(output),
+                "output_manifest": str(out_manifest),
+            },
+        },
+    )
+
+    with pytest.raises(
+        ExperimentQueueError,
+        match="renderer_payload_dfl1 parity follow-up is required but blocked",
+    ):
+        build_materializer_execution_queue(
+            work_queue,
+            queue_id="dfl1_missing_required_parity_context",
+            repo_root=tmp_path,
+            include_exact_readiness_followup=True,
+            require_renderer_payload_dfl1_parity_followup=True,
+        )
 
 
 def test_materializer_execution_queue_rejects_dfl1_parity_output_outside_workload_root(
@@ -4709,6 +4900,7 @@ def test_byte_shaving_campaign_queue_cli_wires_generated_dfl1_parity_followup(
             "--materializer-execution-queue-out",
             str(execution_queue),
             "--include-materializer-exact-readiness-followup",
+            "--require-renderer-payload-dfl1-parity-followup",
             "--repo-root",
             str(tmp_path),
             "--candidate-limit",
@@ -4724,6 +4916,10 @@ def test_byte_shaving_campaign_queue_cli_wires_generated_dfl1_parity_followup(
     assert stdout["materializer_contexts_blocked_count"] == 0
     execution_summary = stdout["materializer_execution_queue"]
     assert execution_summary["experiment_count"] == 1
+    assert (
+        execution_summary["renderer_payload_dfl1_parity_followup_required"]
+        is True
+    )
     assert (
         execution_summary["renderer_payload_dfl1_parity_followup_requested_count"]
         == 1

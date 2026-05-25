@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 import zipfile
 from pathlib import Path
@@ -730,6 +731,7 @@ def test_materializer_campaign_runner_generates_renderer_payload_parity_context(
     source_runtime = tmp_path / "source_runtime"
     candidate_runtime = tmp_path / "candidate_runtime"
     file_list = tmp_path / "file_list.txt"
+    file_list.write_text("0.raw\ncontrol.raw\n", encoding="utf-8")
     parity_output = run_dir / "parity"
     args = runner.parse_args(
         [
@@ -747,16 +749,6 @@ def test_materializer_campaign_runner_generates_renderer_payload_parity_context(
             str(candidate_runtime),
             "--renderer-payload-dfl1-full-frame-file-list",
             str(file_list),
-            "--renderer-payload-dfl1-full-frame-file-list-entry",
-            "0.raw",
-            "--renderer-payload-dfl1-full-frame-file-list-entry",
-            "control.raw",
-            "--renderer-payload-dfl1-expected-full-frame-file-list-sha256",
-            "f" * 64,
-            "--renderer-payload-dfl1-expected-full-frame-entry-count",
-            "2",
-            "--renderer-payload-dfl1-full-frame-file-list-source",
-            "fixture_full_file_list",
             "--renderer-payload-dfl1-inflate-parity-output-dir",
             str(parity_output),
             "--run-dir",
@@ -778,18 +770,14 @@ def test_materializer_campaign_runner_generates_renderer_payload_parity_context(
         candidate_runtime
     )
     assert renderer["renderer_payload_dfl1_full_frame_file_list"] == str(file_list)
-    assert renderer["renderer_payload_dfl1_full_frame_file_list_entries"] == [
-        "0.raw",
-        "control.raw",
-    ]
+    assert "renderer_payload_dfl1_full_frame_file_list_entries" not in renderer
     assert (
         renderer["renderer_payload_dfl1_expected_full_frame_file_list_sha256"]
-        == "f" * 64
+        == hashlib.sha256(file_list.read_bytes()).hexdigest()
     )
     assert renderer["renderer_payload_dfl1_expected_full_frame_entry_count"] == 2
-    assert (
-        renderer["renderer_payload_dfl1_full_frame_file_list_source"]
-        == "fixture_full_file_list"
+    assert renderer["renderer_payload_dfl1_full_frame_file_list_source"] == str(
+        file_list
     )
     assert renderer["renderer_payload_dfl1_inflate_parity_output_dir"] == str(
         parity_output
@@ -817,14 +805,10 @@ def test_materializer_campaign_runner_dfl1_artifact_map_builds_parity_followup(
             str(tmp_path / "renderer_payload_candidate.json"),
             "--renderer-payload-dfl1-source-runtime-dir",
             str(tmp_path / "source_runtime"),
+            "--renderer-payload-dfl1-candidate-runtime-dir",
+            str(tmp_path / "candidate_runtime"),
             "--renderer-payload-dfl1-full-frame-file-list-entry",
             "0.raw",
-            "--renderer-payload-dfl1-expected-full-frame-file-list-sha256",
-            "e" * 64,
-            "--renderer-payload-dfl1-expected-full-frame-entry-count",
-            "1",
-            "--renderer-payload-dfl1-full-frame-file-list-source",
-            "fixture_single_entry_full_list",
             "--renderer-payload-dfl1-inflate-parity-output-dir",
             str(run_dir / "parity"),
             "--run-dir",
@@ -837,6 +821,12 @@ def test_materializer_campaign_runner_dfl1_artifact_map_builds_parity_followup(
         generated_action_functional_path=None,
     )
     assert generated is not None
+    queue_command = runner._build_queue_command(
+        args,
+        run_dir=run_dir,
+        generated_materializer_artifact_map=generated,
+    )
+    assert "--require-renderer-payload-dfl1-parity-followup" in queue_command
     backlog = {
         "schema": "byte_shaving_materializer_backlog.v1",
         "rows": [
@@ -883,7 +873,8 @@ def test_materializer_campaign_runner_dfl1_artifact_map_builds_parity_followup(
         parity_step["command"][index : index + 2]
         for index in range(len(parity_step["command"]) - 1)
     ]
-    assert ["--expected-full-frame-file-list-sha256", "e" * 64] in [
+    expected_sha = hashlib.sha256(b"0.raw\n").hexdigest()
+    assert ["--expected-full-frame-file-list-sha256", expected_sha] in [
         parity_step["command"][index : index + 2]
         for index in range(len(parity_step["command"]) - 1)
     ]
@@ -891,7 +882,10 @@ def test_materializer_campaign_runner_dfl1_artifact_map_builds_parity_followup(
         parity_step["command"][index : index + 2]
         for index in range(len(parity_step["command"]) - 1)
     ]
-    assert ["--full-frame-file-list-source", "fixture_single_entry_full_list"] in [
+    assert [
+        "--full-frame-file-list-source",
+        "inline_renderer_payload_dfl1_full_frame_file_list_entries",
+    ] in [
         parity_step["command"][index : index + 2]
         for index in range(len(parity_step["command"]) - 1)
     ]
@@ -900,6 +894,38 @@ def test_materializer_campaign_runner_dfl1_artifact_map_builds_parity_followup(
     assert execution_queue["experiments"][0]["metadata"][
         "renderer_payload_dfl1_parity_followup_enabled"
     ] is True
+
+
+def test_materializer_campaign_runner_rejects_dfl1_file_list_identity_mismatch(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    run_dir.mkdir()
+    file_list = tmp_path / "file_list.txt"
+    file_list.write_text("0.raw\n", encoding="utf-8")
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--packet-member-target-kind",
+            runner.RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+            "--packet-member-archive-path",
+            str(tmp_path / "packet_source.zip"),
+            "--renderer-payload-dfl1-full-frame-file-list",
+            str(file_list),
+            "--renderer-payload-dfl1-expected-full-frame-file-list-sha256",
+            "e" * 64,
+            "--run-dir",
+            str(run_dir),
+        ]
+    )
+
+    with pytest.raises(SystemExit, match="does not match the provided full-frame"):
+        runner._write_generated_materializer_artifact_map(
+            args,
+            run_dir=run_dir,
+            generated_action_functional_path=None,
+        )
 
 
 def test_materializer_campaign_runner_rejects_dfl1_parity_flags_for_other_packet_targets(

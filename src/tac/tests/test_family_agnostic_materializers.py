@@ -27,6 +27,7 @@ from tac.optimization.family_agnostic_materializers import (
     materialize_renderer_payload_dfl1_candidate,
     materialize_tensor_factorize_candidate,
     parse_renderer_payload_dfl1_payload,
+    verify_renderer_payload_dfl1_full_frame_inflate_parity_proof,
     verify_runtime_consumption_proof,
 )
 from tac.optimization.packet_member_merge_receiver import (
@@ -703,6 +704,60 @@ def test_runtime_consumption_proof_verifier_binds_target_materializer_and_receiv
     assert "runtime_consumption_proof_receiver_contract_kind_mismatch" in (
         verification["blockers"]
     )
+
+
+def test_renderer_payload_dfl1_parity_verifier_rejects_forged_identity_booleans(
+    tmp_path: Path,
+) -> None:
+    source_sha = "1" * 64
+    candidate_sha = "2" * 64
+    expected_file_list_sha = sha256_bytes(b"0.raw\n1.raw\n")
+    forged_file_list_sha = sha256_bytes(b"0.raw\n")
+    proof = {
+        "schema": "shell_inflate_parity_proof_v2",
+        "full_frame_file_list_claim": True,
+        "full_frame_inflate_output_parity_claim": True,
+        "full_frame_file_list_source": "forged_fixture",
+        "expected_full_frame_file_list_sha256": expected_file_list_sha,
+        "expected_full_frame_entry_count": 2,
+        "full_frame_file_list_sha256_match": True,
+        "full_frame_entry_count_match": True,
+        "output_bytes_match": True,
+        "output_sha256_match": True,
+        "output_manifest_sha256_match": True,
+        "cmp_equal": True,
+        "blockers": [],
+        "left": {
+            "label": "source",
+            "archive_sha256": source_sha,
+            "submission_tree_sha256": "3" * 64,
+            "output_manifest_sha256": "4" * 64,
+        },
+        "right": {
+            "label": "candidate",
+            "archive_sha256": candidate_sha,
+            "submission_tree_sha256": "3" * 64,
+            "output_manifest_sha256": "4" * 64,
+        },
+        "file_list_sha256": forged_file_list_sha,
+        "file_list_entry_count": 1,
+        "output_count": 1,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    verification = verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
+        full_frame_inflate_parity_proof=proof,
+        required_source_archive_sha256=source_sha,
+        required_candidate_archive_sha256=candidate_sha,
+        repo_root=tmp_path,
+    )
+
+    assert verification["full_frame_inflate_parity_satisfied"] is False
+    assert "shell_inflate_parity_file_list_sha256_mismatch" in verification["blockers"]
+    assert "shell_inflate_parity_entry_count_mismatch" in verification["blockers"]
 
 
 def test_packet_member_merge_materializer_requires_cooperative_receiver(

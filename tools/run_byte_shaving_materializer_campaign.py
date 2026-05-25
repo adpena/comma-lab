@@ -43,7 +43,6 @@ from comma_lab.scheduler.experiment_queue import (  # noqa: E402
     DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
     DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
     QUEUE_SCHEMA,
-    default_state_path,
     load_queue_definition,
     normalize_queue_definition,
 )
@@ -1915,6 +1914,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--proactive-cleanup-cold-store-root", action="append", default=[])
     parser.add_argument("--proactive-cleanup-cold-store-reserve-gb", type=float, default=40.0)
     parser.add_argument("--exact-readiness-require-ready", action="store_true")
+    parser.add_argument(
+        "--require-renderer-payload-dfl1-parity-followup",
+        action="store_true",
+        help=(
+            "forward a fail-closed DFL1 shell-inflate parity requirement to the "
+            "materializer execution queue builder"
+        ),
+    )
     parser.add_argument("--exact-eval-dispatch-require-authorized", action="store_true")
     parser.add_argument("--exact-eval-dispatch-provider", choices=("lightning", "vastai"), default="lightning")
     parser.add_argument("--exact-eval-dispatch-label-prefix", default="materializer_exact_eval")
@@ -2299,6 +2306,14 @@ def _build_queue_command(
         command.append("--overwrite-output")
     if args.exact_readiness_require_ready:
         command.append("--materializer-exact-readiness-followup-require-ready")
+    if (
+        args.require_renderer_payload_dfl1_parity_followup
+        or (
+            generated_materializer_artifact_map is not None
+            and args.packet_member_target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND
+        )
+    ):
+        command.append("--require-renderer-payload-dfl1-parity-followup")
     if args.exact_eval_dispatch_require_authorized:
         command.append("--materializer-exact-eval-dispatch-require-authorized")
     if args.include_storage_preflight:
@@ -2537,6 +2552,79 @@ def _add_string_list_context_value(
         context[key] = parsed
 
 
+def _ordered_dfl1_file_list_entries(values: Sequence[Any]) -> tuple[str, ...]:
+    entries = tuple(str(value).strip() for value in values if str(value).strip())
+    if not entries:
+        raise SystemExit(
+            "--renderer-payload-dfl1-full-frame-file-list-entry must include "
+            "at least one non-empty entry"
+        )
+    return entries
+
+
+def _file_list_identity_from_entries(entries: Sequence[Any]) -> tuple[str, int]:
+    ordered = _ordered_dfl1_file_list_entries(entries)
+    payload = ("\n".join(ordered) + "\n").encode("utf-8")
+    return hashlib.sha256(payload).hexdigest(), len(ordered)
+
+
+def _renderer_payload_dfl1_full_frame_identity(
+    args: argparse.Namespace,
+) -> tuple[str | None, int | None, str | None]:
+    expected_sha = _canonical_sha256_arg(
+        args.renderer_payload_dfl1_expected_full_frame_file_list_sha256,
+        flag="--renderer-payload-dfl1-expected-full-frame-file-list-sha256",
+    )
+    expected_count = _positive_optional_int(
+        args.renderer_payload_dfl1_expected_full_frame_entry_count,
+        flag="--renderer-payload-dfl1-expected-full-frame-entry-count",
+    )
+    source = str(args.renderer_payload_dfl1_full_frame_file_list_source or "").strip()
+    source = source or None
+    measured_sha: str | None = None
+    measured_count: int | None = None
+    measured_source: str | None = None
+    if args.renderer_payload_dfl1_full_frame_file_list is not None:
+        file_list_path = _resolve(args.renderer_payload_dfl1_full_frame_file_list)
+        if not file_list_path.is_file():
+            raise SystemExit(
+                "--renderer-payload-dfl1-full-frame-file-list does not exist: "
+                f"{file_list_path}"
+            )
+        measured_sha = _sha256_file(file_list_path)
+        measured_count = len(
+            _ordered_dfl1_file_list_entries(
+                file_list_path.read_text(encoding="utf-8").splitlines()
+            )
+        )
+        measured_source = _display_path(file_list_path)
+    elif args.renderer_payload_dfl1_full_frame_file_list_entry:
+        measured_sha, measured_count = _file_list_identity_from_entries(
+            args.renderer_payload_dfl1_full_frame_file_list_entry
+        )
+        measured_source = "inline_renderer_payload_dfl1_full_frame_file_list_entries"
+
+    if expected_sha is not None and measured_sha is not None and expected_sha != measured_sha:
+        raise SystemExit(
+            "--renderer-payload-dfl1-expected-full-frame-file-list-sha256 "
+            "does not match the provided full-frame file list"
+        )
+    if (
+        expected_count is not None
+        and measured_count is not None
+        and expected_count != measured_count
+    ):
+        raise SystemExit(
+            "--renderer-payload-dfl1-expected-full-frame-entry-count does not "
+            "match the provided full-frame file list"
+        )
+    return (
+        expected_sha or measured_sha,
+        expected_count or measured_count,
+        source or measured_source,
+    )
+
+
 def _renderer_payload_dfl1_parity_artifact_args_used(
     args: argparse.Namespace,
 ) -> bool:
@@ -2751,6 +2839,9 @@ def _build_packet_member_artifact_context(args: argparse.Namespace) -> dict[str,
     if args.packet_member_allow_overwrite:
         context["allow_overwrite"] = True
     if args.packet_member_target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND:
+        expected_sha, expected_count, file_list_source = (
+            _renderer_payload_dfl1_full_frame_identity(args)
+        )
         _add_path_context_value(
             context,
             "renderer_payload_dfl1_source_runtime_dir",
@@ -2771,24 +2862,15 @@ def _build_packet_member_artifact_context(args: argparse.Namespace) -> dict[str,
             "renderer_payload_dfl1_full_frame_file_list_entries",
             args.renderer_payload_dfl1_full_frame_file_list_entry,
         )
-        expected_sha = _canonical_sha256_arg(
-            args.renderer_payload_dfl1_expected_full_frame_file_list_sha256,
-            flag="--renderer-payload-dfl1-expected-full-frame-file-list-sha256",
-        )
         if expected_sha:
             context["renderer_payload_dfl1_expected_full_frame_file_list_sha256"] = (
                 expected_sha
             )
-        _add_positive_int_context_value(
-            context,
-            "renderer_payload_dfl1_expected_full_frame_entry_count",
-            args.renderer_payload_dfl1_expected_full_frame_entry_count,
-            flag="--renderer-payload-dfl1-expected-full-frame-entry-count",
-        )
-        file_list_source = str(
-            args.renderer_payload_dfl1_full_frame_file_list_source or ""
-        ).strip()
-        if file_list_source:
+        if expected_count is not None:
+            context["renderer_payload_dfl1_expected_full_frame_entry_count"] = (
+                expected_count
+            )
+        if file_list_source is not None:
             context["renderer_payload_dfl1_full_frame_file_list_source"] = (
                 file_list_source
             )
@@ -3319,7 +3401,9 @@ def main(argv: list[str] | None = None) -> int:
     commands.append(build_result)
     queue = load_queue_definition(execution_queue)
     state_path = (
-        _resolve(args.queue_state) if args.queue_state is not None else default_state_path(REPO_ROOT, queue["queue_id"])
+        _resolve(args.queue_state)
+        if args.queue_state is not None
+        else run_dir / "materializer_execution_queue.sqlite"
     )
 
     for command in (

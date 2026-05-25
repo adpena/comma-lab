@@ -342,6 +342,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--require-renderer-payload-dfl1-parity-followup",
+        action="store_true",
+        help=(
+            "fail queue construction when a renderer-payload DFL1 exact-readiness "
+            "row cannot include the full-frame shell-inflate parity follow-up"
+        ),
+    )
+    parser.add_argument(
         "--materializer-exact-eval-dispatch-require-authorized",
         action="store_true",
         help="make generated dispatch-plan step exit nonzero if no row is authorized",
@@ -581,6 +589,9 @@ def main(argv: list[str] | None = None) -> int:
                 include_exact_readiness_followup=(
                     args.include_materializer_exact_readiness_followup
                 ),
+                require_renderer_payload_dfl1_parity_followup=(
+                    args.require_renderer_payload_dfl1_parity_followup
+                ),
                 exact_readiness_followup_require_ready=(
                     args.materializer_exact_readiness_followup_require_ready
                 ),
@@ -620,6 +631,9 @@ def main(argv: list[str] | None = None) -> int:
             ],
             "exact_readiness_followup": bool(
                 args.include_materializer_exact_readiness_followup
+            ),
+            "renderer_payload_dfl1_parity_followup_required": bool(
+                args.require_renderer_payload_dfl1_parity_followup
             ),
             **_dfl1_parity_followup_summary(materializer_execution_queue),
         }

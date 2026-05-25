@@ -59,6 +59,15 @@ def _string_list(value: Any) -> list[str]:
     return []
 
 
+def _raw_string_list(value: Any) -> list[str]:
+    if isinstance(value, (str, int)):
+        text = str(value).strip()
+        return [text] if text else []
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray, str)):
+        return [str(item).strip() for item in value if str(item).strip()]
+    return []
+
+
 def _int_mapping(value: Any) -> dict[str, int]:
     if not isinstance(value, Mapping):
         return {}
@@ -212,7 +221,11 @@ def _output_paths(
     default_output_root: Path | None,
 ) -> tuple[str | None, str | None]:
     output_archive = _text(hints.get("output_archive"))
-    json_out = _text(hints.get("json_out")) or _text(hints.get("manifest_out"))
+    json_out = (
+        _text(hints.get("json_out"))
+        or _text(hints.get("manifest_out"))
+        or _text(hints.get("output_manifest"))
+    )
     if output_archive is not None:
         if json_out is None:
             json_out = Path(output_archive).with_suffix(".json").as_posix()
@@ -457,19 +470,22 @@ def _packet_member_context_row(
                 "full_frame_file_list",
             ):
                 context[str(file_list_key)] = file_list
-        file_list_entries = ordered_unique(
-            [
-                *_string_list(
-                    hints.get("renderer_payload_dfl1_full_frame_file_list_entries")
-                ),
-                *_string_list(hints.get("full_frame_file_list_entries")),
-                *_string_list(hints.get("file_list_entries")),
-                *_string_list(hints.get("file_list_entry")),
-            ]
-        )
+        raw_file_list_entries = [
+            *_raw_string_list(
+                hints.get("renderer_payload_dfl1_full_frame_file_list_entries")
+            ),
+            *_raw_string_list(hints.get("full_frame_file_list_entries")),
+            *_raw_string_list(hints.get("file_list_entries")),
+            *_raw_string_list(hints.get("file_list_entry")),
+        ]
+        file_list_entries = ordered_unique(raw_file_list_entries)
         if file_list_entries:
             context["renderer_payload_dfl1_full_frame_file_list_entries"] = file_list_entries
             context["full_frame_file_list_entries"] = file_list_entries
+        if len(raw_file_list_entries) != len(file_list_entries):
+            blockers.append(
+                "materializer_context_duplicate:renderer_payload_dfl1_full_frame_file_list_entries"
+            )
         parity_output_dir = _first_text(
             hints,
             (
@@ -522,6 +538,10 @@ def _packet_member_context_row(
         if source_runtime is None:
             blockers.append(
                 "materializer_context_missing:renderer_payload_dfl1_source_runtime_dir"
+            )
+        if candidate_runtime is None:
+            blockers.append(
+                "materializer_context_missing:renderer_payload_dfl1_candidate_runtime_dir"
             )
         if file_list is None and not file_list_entries:
             blockers.append(

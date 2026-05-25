@@ -2139,6 +2139,18 @@ def verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
     file_list_entry_count = proof.get("file_list_entry_count")
     if not isinstance(file_list_entry_count, int) or file_list_entry_count < 1:
         blockers.append("shell_inflate_parity_file_list_entry_count_invalid")
+    actual_file_list_sha = _clean_str(proof.get("file_list_sha256"))
+    if expected_file_list_sha is not None:
+        if not actual_file_list_sha:
+            blockers.append("shell_inflate_parity_file_list_sha256_missing")
+        elif actual_file_list_sha != expected_file_list_sha:
+            blockers.append("shell_inflate_parity_file_list_sha256_mismatch")
+    if (
+        isinstance(expected_entry_count, int)
+        and isinstance(file_list_entry_count, int)
+        and file_list_entry_count != expected_entry_count
+    ):
+        blockers.append("shell_inflate_parity_entry_count_mismatch")
     output_count = proof.get("output_count")
     if not isinstance(output_count, int) or output_count != file_list_entry_count:
         blockers.append("shell_inflate_parity_output_count_invalid")
@@ -2152,7 +2164,7 @@ def verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
         "proof_schema": proof.get("schema"),
         "full_frame_inflate_parity_satisfied": not blockers,
         "file_list_entry_count": file_list_entry_count,
-        "file_list_sha256": _clean_str(proof.get("file_list_sha256")),
+        "file_list_sha256": actual_file_list_sha,
         "full_frame_file_list_source": full_frame_source,
         "expected_full_frame_file_list_sha256": expected_file_list_sha,
         "expected_full_frame_entry_count": expected_entry_count,

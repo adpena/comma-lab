@@ -729,6 +729,8 @@ def test_inverse_action_compiler_hint_lowers_to_family_packet_ir() -> None:
     assert bridge["compiled_operation_set_count"] == 1
     assert bridge["high_level_operation_compiler_required_count"] == 0
     assert bridge["queue_consumable_portfolio_row_count"] == 1
+    assert bridge["packetir_lowering_ready_portfolio_row_count"] == 1
+    assert bridge["executable_work_ready_portfolio_row_count"] == 0
     assert bridge["queue_consumable_packet_ir_operation_set_ids"] == [
         packet_ir["operation_set_id"]
     ]
@@ -906,6 +908,19 @@ def test_inverse_action_compiler_hint_lowers_registered_targets_and_aliases() ->
     assert "packet_member_merge_source_runtime_dir" in operation_by_source_unit(
         "compiled_packet_merge"
     )["required_context_fields"]
+    assert operation_by_source_unit("compiled_renderer_payload_dfl1")[
+        "required_context_fields"
+    ] == [
+        "archive_path",
+        "output_archive",
+        "output_manifest",
+        "renderer_payload_dfl1_source_runtime_dir",
+        "renderer_payload_dfl1_candidate_runtime_dir",
+        "renderer_payload_dfl1_full_frame_file_list_or_entries",
+        "renderer_payload_dfl1_expected_full_frame_file_list_sha256",
+        "renderer_payload_dfl1_expected_full_frame_entry_count",
+        "renderer_payload_dfl1_full_frame_file_list_source",
+    ]
     for unit_id, _input_target_kind, _extra, expected_target_kind, *_ in target_specs:
         operation = operation_by_source_unit(unit_id)
         expected_executable = (
@@ -930,6 +945,91 @@ def test_inverse_action_compiler_hint_lowers_registered_targets_and_aliases() ->
     assert bridge["queue_consumable_packet_ir_operation_set_count"] == 1
     assert bridge["score_claim"] is False
     assert bridge["ready_for_exact_eval_dispatch"] is False
+
+
+def test_inverse_action_dfl1_compiler_hint_preserves_parity_identity_params() -> None:
+    payload = _inverse_action_payload()
+    payload["cells"] = [
+        {
+            "atom_id": "compiled_renderer_payload_dfl1",
+            "operation_set_compiler": {
+                "schema": "inverse_action_operation_set_compiler_hint.v1",
+                "operation_set_id": "compiled_renderer_payload_dfl1_set",
+                "candidate_saved_bytes": 64,
+                "selected_operations": [
+                    {
+                        "unit_id": "compiled_renderer_payload_dfl1_unit",
+                        "target_kind": "renderer_payload_dfl1_v1",
+                        "archive_path": "source_packet.zip",
+                        "output_archive": "candidate_packet.zip",
+                        "output_manifest": "candidate_packet.json",
+                        "payload_member_name": "p",
+                        "renderer_payload_dfl1_source_runtime_dir": "source_runtime",
+                        "renderer_payload_dfl1_candidate_runtime_dir": (
+                            "candidate_runtime"
+                        ),
+                        "renderer_payload_dfl1_full_frame_file_list_entries": [
+                            "0.raw"
+                        ],
+                        "renderer_payload_dfl1_expected_full_frame_file_list_sha256": "a"
+                        * 64,
+                        "renderer_payload_dfl1_expected_full_frame_entry_count": 1,
+                        "renderer_payload_dfl1_full_frame_file_list_source": (
+                            "inline_fixture_entries"
+                        ),
+                    }
+                ],
+            },
+        }
+    ]
+    payload["water_bucket"]["selected_cells"][0]["atom_id"] = (
+        "compiled_renderer_payload_dfl1"
+    )
+
+    surface = build_signal_surface_from_inverse_action_functional(payload)
+    plan = build_byte_shaving_campaign_plan(surface, max_k=1)
+    packet_ir = plan["packet_ir_operation_sets"][0]
+    operation = packet_ir["operations"][0]
+
+    assert operation["target_kind"] == "renderer_payload_dfl1_v1"
+    assert operation["materializer_executable"] is True
+    assert operation["required_context_fields"] == list(
+        INVERSE_ACTION_COMPILER_TARGET_REQUIRED_CONTEXT_FIELDS[
+            "renderer_payload_dfl1_v1"
+        ]
+    )
+    assert operation["params"]["archive_path"] == "source_packet.zip"
+    assert operation["params"]["output_archive"] == "candidate_packet.zip"
+    assert operation["params"]["output_manifest"] == "candidate_packet.json"
+    assert operation["params"]["payload_member_name"] == "p"
+    assert (
+        operation["params"]["renderer_payload_dfl1_source_runtime_dir"]
+        == "source_runtime"
+    )
+    assert (
+        operation["params"]["renderer_payload_dfl1_candidate_runtime_dir"]
+        == "candidate_runtime"
+    )
+    assert operation["params"][
+        "renderer_payload_dfl1_full_frame_file_list_entries"
+    ] == ["0.raw"]
+    assert (
+        operation["params"][
+            "renderer_payload_dfl1_expected_full_frame_file_list_sha256"
+        ]
+        == "a" * 64
+    )
+    assert (
+        operation["params"]["renderer_payload_dfl1_expected_full_frame_entry_count"]
+        == 1
+    )
+    assert (
+        operation["params"]["renderer_payload_dfl1_full_frame_file_list_source"]
+        == "inline_fixture_entries"
+    )
+    assert plan["materialization_bridge"]["queue_consumable_packet_ir_operation_set_count"] == 1
+    assert plan["score_claim"] is False
+    assert plan["ready_for_exact_eval_dispatch"] is False
 
 
 def test_mlx_placeholder_provenance_defers_to_compiler_hint() -> None:
@@ -1001,6 +1101,78 @@ def test_mlx_placeholder_provenance_defers_to_compiler_hint() -> None:
     } == {"archive_section_entropy_recode_v1", "packet_member_recompress_v1"}
     assert bridge["score_claim"] is False
     assert bridge["ready_for_exact_eval_dispatch"] is False
+
+
+def test_inverse_action_compiler_hint_overrides_stale_concrete_provenance() -> None:
+    payload = _inverse_action_payload()
+    payload["cells"] = [
+        {
+            "atom_id": "stale_concrete_provenance",
+            "source_provenance": {
+                "schema": (
+                    "inverse_steganalysis_byte_shaving_operation_set_provenance.v1"
+                ),
+                "operation_set_id": "stale_source_set",
+                "candidate_saved_bytes": 128,
+                "selected_operations": [
+                    {
+                        "unit_id": "stale_tensor",
+                        "unit_kind": "tensor",
+                        "operation_family": "factorize_tensor",
+                        "target_kind": "tensor_factorize_v1",
+                        "candidate_saved_bytes": 128,
+                    }
+                ],
+            },
+            "operation_set_compiler": {
+                "schema": "inverse_action_operation_set_compiler_hint.v1",
+                "operation_set_id": "fresh_compiler_set",
+                "candidate_saved_bytes": 384,
+                "operation_portability": "family_agnostic",
+                "selected_operations": [
+                    {
+                        "unit_id": "fresh_decoder_blob",
+                        "target_kind": "archive_section_entropy_recode_v1",
+                        "archive_section": "decoder_blob",
+                        "candidate_saved_bytes": 384,
+                    }
+                ],
+            },
+        }
+    ]
+    payload["water_bucket"]["selected_cells"][0]["atom_id"] = "stale_concrete_provenance"
+
+    surface = build_signal_surface_from_inverse_action_functional(payload)
+    plan = build_byte_shaving_campaign_plan(surface, max_k=1)
+    packet_ir = plan["packet_ir_operation_sets"][0]
+    bridge = plan["materialization_bridge"]
+
+    assert surface["water_bucket_materialization_portfolio"]["actuation_modes"] == [
+        "compiled_operation_set"
+    ]
+    assert bridge["source_provenance_operation_set_count"] == 0
+    assert bridge["compiled_operation_set_count"] == 1
+    assert packet_ir["source_operation_set_id"] == "opset_combo_0001"
+    assert [operation["target_kind"] for operation in packet_ir["operations"]] == [
+        "archive_section_entropy_recode_v1"
+    ]
+    assert [
+        unit["operations"][0]["target_kind"] for unit in surface["units"]
+    ] == ["archive_section_entropy_recode_v1"]
+    assert bridge["score_claim"] is False
+    assert bridge["ready_for_exact_eval_dispatch"] is False
+
+
+def test_inverse_action_cells_require_unique_atom_ids() -> None:
+    payload = _inverse_action_payload()
+    payload["cells"] = [
+        {"atom_id": "duplicate_atom"},
+        {"atom_id": "duplicate_atom"},
+    ]
+    payload["water_bucket"]["selected_cells"][0]["atom_id"] = "duplicate_atom"
+
+    with pytest.raises(ByteShavingCampaignError, match="unique atom_id"):
+        build_signal_surface_from_inverse_action_functional(payload)
 
 
 def test_direct_mlx_spend_triage_compiler_hint_lowers_to_packet_ir() -> None:

@@ -135,6 +135,12 @@ OPERATION_SET_ENFORCED_SOURCE_BLOCKERS = OPERATION_SET_CLEARABLE_SOURCE_BLOCKERS
 }
 OPERATION_PARAM_HINT_KEYS = (
     "archive_section",
+    "archive_path",
+    "source_archive",
+    "output_archive",
+    "output_manifest",
+    "json_out",
+    "manifest_out",
     "section_name",
     "target_section",
     "target_sections",
@@ -143,6 +149,20 @@ OPERATION_PARAM_HINT_KEYS = (
     "member_name",
     "member_names",
     "payload_member_name",
+    "renderer_payload_dfl1_source_runtime_dir",
+    "renderer_payload_dfl1_inflate_runtime_dir",
+    "renderer_payload_dfl1_candidate_runtime_dir",
+    "renderer_payload_dfl1_full_frame_file_list",
+    "renderer_payload_dfl1_full_frame_file_list_entries",
+    "renderer_payload_dfl1_expected_full_frame_file_list_sha256",
+    "renderer_payload_dfl1_expected_full_frame_entry_count",
+    "renderer_payload_dfl1_full_frame_file_list_source",
+    "renderer_payload_dfl1_inflate_parity_output_dir",
+    "full_frame_file_list",
+    "full_frame_file_list_entries",
+    "expected_full_frame_file_list_sha256",
+    "expected_full_frame_entry_count",
+    "full_frame_file_list_source",
     "tensor_name",
     "tensor_path",
     "tensor_manifest",
@@ -1136,7 +1156,7 @@ def _renderer_payload_dfl1_parity_context(
         ("source_archive", archive_path),
         ("candidate_archive", output_archive),
         ("source_runtime_dir", source_runtime),
-        ("candidate_runtime_dir", candidate_runtime or source_runtime),
+        ("candidate_runtime_dir", candidate_runtime),
         ("file_list", file_list),
         ("output_dir", output_dir),
         ("expected_full_frame_file_list_sha256", expected_file_list_sha),
@@ -3119,6 +3139,7 @@ def build_materializer_execution_queue(
     scheduler_proactive_cleanup_cold_store_roots: Sequence[str] = (),
     scheduler_proactive_cleanup_cold_store_reserve_gb: float = 40.0,
     include_exact_readiness_followup: bool = False,
+    require_renderer_payload_dfl1_parity_followup: bool = False,
     exact_readiness_followup_require_ready: bool = False,
     exact_eval_dispatch_require_authorized: bool = False,
     exact_eval_dispatch_provider: str = "lightning",
@@ -3158,6 +3179,11 @@ def build_materializer_execution_queue(
     if include_scheduler_preflight and not scheduler_proactive_cleanup_execute:
         raise ExperimentQueueError(
             "scheduler_proactive_cleanup_execute must be true when scheduler preflight gates materializer execution"
+        )
+    if require_renderer_payload_dfl1_parity_followup and not include_exact_readiness_followup:
+        raise ExperimentQueueError(
+            "require_renderer_payload_dfl1_parity_followup requires "
+            "include_exact_readiness_followup"
         )
 
     queue_id = str(queue_id or "").strip()
@@ -3295,6 +3321,16 @@ def build_materializer_execution_queue(
             if dfl1_parity_followup_requested
             else []
         )
+        if (
+            require_renderer_payload_dfl1_parity_followup
+            and dfl1_parity_followup_requested
+            and dfl1_parity_followup_blockers
+        ):
+            raise ExperimentQueueError(
+                "renderer_payload_dfl1 parity follow-up is required but blocked for "
+                f"{row.get('work_id') or row.get('backlog_key') or experiment_id}: "
+                + ", ".join(dfl1_parity_followup_blockers)
+            )
         steps = [
             {
                 "id": MATERIALIZER_EXECUTION_STEP_ID,

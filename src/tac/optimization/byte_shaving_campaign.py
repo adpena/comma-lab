@@ -164,6 +164,7 @@ INVERSE_ACTION_EXECUTABLE_COMPILER_TARGETS: frozenset[str] = frozenset(
         "archive_section_entropy_recode_v1",
         "packet_member_merge_v1",
         "packet_member_recompress_v1",
+        "packet_member_zip_header_elide_v1",
         "renderer_payload_dfl1_v1",
         "tensor_factorize_v1",
     }
@@ -226,6 +227,12 @@ INVERSE_ACTION_COMPILER_TARGET_REQUIRED_CONTEXT_FIELDS: dict[str, tuple[str, ...
         "archive_path",
         "output_archive",
         "output_manifest",
+        "renderer_payload_dfl1_source_runtime_dir",
+        "renderer_payload_dfl1_candidate_runtime_dir",
+        "renderer_payload_dfl1_full_frame_file_list_or_entries",
+        "renderer_payload_dfl1_expected_full_frame_file_list_sha256",
+        "renderer_payload_dfl1_expected_full_frame_entry_count",
+        "renderer_payload_dfl1_full_frame_file_list_source",
     ),
     "tensor_quantize_v1": (
         "archive_path",
@@ -255,6 +262,7 @@ INVERSE_ACTION_COMPILER_TARGET_REQUIRED_CONTEXT_FIELDS: dict[str, tuple[str, ...
 }
 INVERSE_ACTION_IMPLICIT_COMPILER_PARAM_KEYS: tuple[str, ...] = (
     "archive_section",
+    "archive_path",
     "section_name",
     "target_section",
     "target_sections",
@@ -262,6 +270,26 @@ INVERSE_ACTION_IMPLICIT_COMPILER_PARAM_KEYS: tuple[str, ...] = (
     "packet_member",
     "packet_member_manifest",
     "member_name",
+    "payload_member_name",
+    "source_archive",
+    "output_archive",
+    "output_manifest",
+    "json_out",
+    "manifest_out",
+    "renderer_payload_dfl1_source_runtime_dir",
+    "renderer_payload_dfl1_inflate_runtime_dir",
+    "renderer_payload_dfl1_candidate_runtime_dir",
+    "renderer_payload_dfl1_full_frame_file_list",
+    "renderer_payload_dfl1_full_frame_file_list_entries",
+    "renderer_payload_dfl1_expected_full_frame_file_list_sha256",
+    "renderer_payload_dfl1_expected_full_frame_entry_count",
+    "renderer_payload_dfl1_full_frame_file_list_source",
+    "renderer_payload_dfl1_inflate_parity_output_dir",
+    "full_frame_file_list",
+    "full_frame_file_list_entries",
+    "expected_full_frame_file_list_sha256",
+    "expected_full_frame_entry_count",
+    "full_frame_file_list_source",
     "tensor_name",
     "tensor_path",
     "tensor_manifest",
@@ -1781,6 +1809,11 @@ def _inverse_action_portfolio_row_links(
                     if str(item.get("source_operation_set_id") or "")
                 ],
                 "packet_ir_lowering_ready": bool(matched_packet_ir),
+                "executable_work_ready": False,
+                "executable_work_ready_blockers": [
+                    "requires_materializer_work_queue_context_generation",
+                    "requires_materializer_work_queue_execution_probe",
+                ],
                 "queue_consumable": (
                     actuation_mode
                     in {
@@ -1922,6 +1955,22 @@ def build_inverse_action_materialization_bridge(
         "portfolio_row_count": len(portfolio_rows),
         "water_bucket_materialization_portfolios": portfolios,
         "portfolio_row_bridge_links": portfolio_row_links,
+        "packetir_lowering_ready_portfolio_row_count": sum(
+            1 for link in portfolio_row_links if link["packet_ir_lowering_ready"]
+        ),
+        "packetir_lowering_ready_packet_ir_operation_set_count": len(
+            queue_consumable_packet_ir_operation_set_ids
+        ),
+        "packetir_lowering_ready_packet_ir_operation_set_ids": (
+            queue_consumable_packet_ir_operation_set_ids
+        ),
+        "executable_work_ready_portfolio_row_count": 0,
+        "executable_work_ready_packet_ir_operation_set_count": 0,
+        "executable_work_ready_packet_ir_operation_set_ids": [],
+        "executable_work_ready_blockers": [
+            "materializer_context_generation_required_after_packetir_lowering",
+            "materializer_work_queue_execution_probe_required",
+        ],
         "queue_consumable_portfolio_row_count": sum(
             1 for link in portfolio_row_links if link["queue_consumable"]
         ),
@@ -2477,11 +2526,23 @@ def build_signal_surface_from_inverse_action_functional(
         raise ByteShavingCampaignError(str(exc)) from exc
     water_bucket = _mapping(action_payload.get("water_bucket"))
     selected_cells = [item for item in _as_list(water_bucket.get("selected_cells")) if isinstance(item, Mapping)]
-    full_cells_by_atom = {
-        str(item.get("atom_id") or ""): item
-        for item in _as_list(action_payload.get("cells"))
-        if isinstance(item, Mapping)
-    }
+    full_cells_by_atom: dict[str, Mapping[str, Any]] = {}
+    duplicate_atom_ids: list[str] = []
+    for item in _as_list(action_payload.get("cells")):
+        if not isinstance(item, Mapping):
+            continue
+        atom = str(item.get("atom_id") or "").strip()
+        if not atom:
+            continue
+        if atom in full_cells_by_atom:
+            duplicate_atom_ids.append(atom)
+            continue
+        full_cells_by_atom[atom] = item
+    if duplicate_atom_ids:
+        raise ByteShavingCampaignError(
+            "inverse action cells require unique atom_id values; duplicates: "
+            + ",".join(ordered_unique(duplicate_atom_ids))
+        )
     units: list[dict[str, Any]] = []
     portfolio_rows: list[dict[str, Any]] = []
     for index, selected in enumerate(selected_cells):
@@ -2489,45 +2550,6 @@ def build_signal_surface_from_inverse_action_functional(
         full_cell = full_cells_by_atom.get(atom_id, {})
         expected_gain = _finite_float(selected.get("expected_score_gain")) or 0.0
         if expected_gain <= 0.0:
-            continue
-        provenance_units = _units_from_inverse_action_source_provenance(
-            atom_id=atom_id,
-            selected=selected,
-            full_cell=full_cell,
-            source_index=index,
-            expected_gain=expected_gain,
-        )
-        if provenance_units:
-            units.extend(provenance_units)
-            portfolio_rows.append(
-                _inverse_action_portfolio_row(
-                    selected=selected,
-                    full_cell=full_cell,
-                    atom_id=atom_id,
-                    source_index=index,
-                    expected_gain=expected_gain,
-                    actuation_mode="source_provenance_operation_set",
-                    unit_ids=[str(unit["unit_id"]) for unit in provenance_units],
-                    operation_families=[
-                        str(unit.get("operation_families", [""])[0])
-                        for unit in provenance_units
-                    ],
-                    target_kinds=[
-                        str(
-                            _as_list(unit.get("operations"))[0].get("target_kind")
-                        )
-                        for unit in provenance_units
-                        if _as_list(unit.get("operations"))
-                        and isinstance(_as_list(unit.get("operations"))[0], Mapping)
-                        and _as_list(unit.get("operations"))[0].get("target_kind")
-                    ],
-                    blockers=[
-                        "requires_materializer_queue_execution",
-                        "requires_runtime_consumption_proof_before_exact_eval",
-                        "requires_exact_auth_eval_before_score_claim",
-                    ],
-                )
-            )
             continue
         compiled_provenance = _compile_inverse_action_operation_set_provenance(
             atom_id=atom_id,
@@ -2569,6 +2591,45 @@ def build_signal_surface_from_inverse_action_functional(
                     ],
                     blockers=[
                         "compiled_from_inverse_action_operation_set_compiler",
+                        "requires_materializer_queue_execution",
+                        "requires_runtime_consumption_proof_before_exact_eval",
+                        "requires_exact_auth_eval_before_score_claim",
+                    ],
+                )
+            )
+            continue
+        provenance_units = _units_from_inverse_action_source_provenance(
+            atom_id=atom_id,
+            selected=selected,
+            full_cell=full_cell,
+            source_index=index,
+            expected_gain=expected_gain,
+        )
+        if provenance_units:
+            units.extend(provenance_units)
+            portfolio_rows.append(
+                _inverse_action_portfolio_row(
+                    selected=selected,
+                    full_cell=full_cell,
+                    atom_id=atom_id,
+                    source_index=index,
+                    expected_gain=expected_gain,
+                    actuation_mode="source_provenance_operation_set",
+                    unit_ids=[str(unit["unit_id"]) for unit in provenance_units],
+                    operation_families=[
+                        str(unit.get("operation_families", [""])[0])
+                        for unit in provenance_units
+                    ],
+                    target_kinds=[
+                        str(
+                            _as_list(unit.get("operations"))[0].get("target_kind")
+                        )
+                        for unit in provenance_units
+                        if _as_list(unit.get("operations"))
+                        and isinstance(_as_list(unit.get("operations"))[0], Mapping)
+                        and _as_list(unit.get("operations"))[0].get("target_kind")
+                    ],
+                    blockers=[
                         "requires_materializer_queue_execution",
                         "requires_runtime_consumption_proof_before_exact_eval",
                         "requires_exact_auth_eval_before_score_claim",
@@ -3110,6 +3171,12 @@ def _compile_inverse_action_operation_set_provenance(
         }
         for key in (
             "archive_section",
+            "archive_path",
+            "source_archive",
+            "output_archive",
+            "output_manifest",
+            "json_out",
+            "manifest_out",
             "section_name",
             "target_section",
             "target_sections",
@@ -3117,6 +3184,7 @@ def _compile_inverse_action_operation_set_provenance(
             "packet_member",
             "packet_member_manifest",
             "member_name",
+            "payload_member_name",
             "tensor_name",
             "tensor_path",
             "tensor_manifest",
@@ -3127,6 +3195,20 @@ def _compile_inverse_action_operation_set_provenance(
             "frame_range",
             "pair_indices",
             "region_bbox",
+            "renderer_payload_dfl1_source_runtime_dir",
+            "renderer_payload_dfl1_inflate_runtime_dir",
+            "renderer_payload_dfl1_candidate_runtime_dir",
+            "renderer_payload_dfl1_full_frame_file_list",
+            "renderer_payload_dfl1_full_frame_file_list_entries",
+            "renderer_payload_dfl1_expected_full_frame_file_list_sha256",
+            "renderer_payload_dfl1_expected_full_frame_entry_count",
+            "renderer_payload_dfl1_full_frame_file_list_source",
+            "renderer_payload_dfl1_inflate_parity_output_dir",
+            "full_frame_file_list",
+            "full_frame_file_list_entries",
+            "expected_full_frame_file_list_sha256",
+            "expected_full_frame_entry_count",
+            "full_frame_file_list_source",
         ):
             value = raw_operation.get(key, compiler.get(key))
             if value is not None and key not in params:
