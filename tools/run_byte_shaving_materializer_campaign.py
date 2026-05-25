@@ -88,6 +88,9 @@ QUEUE_FEEDBACK_REPLAN_FOLLOWUP_EXECUTION_SCHEMA = (
 QUEUE_OBSERVATION_RECOVERY_EXECUTION_SCHEMA = (
     "byte_shaving_materializer_campaign_queue_observation_recovery_execution.v1"
 )
+POST_RECOVERY_FEEDBACK_REPLAN_SCHEMA = (
+    "byte_shaving_materializer_campaign_post_recovery_feedback_replan.v1"
+)
 FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA = (
     "family_agnostic_materializer_empirical_observation.v1"
 )
@@ -778,14 +781,15 @@ def _feedback_action_functional_command_hint(
     feedback_observation_paths: Sequence[str | Path] = (),
     queue_observation_paths: Sequence[str | Path] = (),
     exact_auth_calibration_inputs: Mapping[str, Any] | None = None,
+    output_stem: str = "inverse_steganalysis_action_functional.feedback",
 ) -> list[str]:
     command = [
         sys.executable,
         QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL,
         "--output",
-        _display_path(run_dir / "inverse_steganalysis_action_functional.feedback.json"),
+        _display_path(run_dir / f"{output_stem}.json"),
         "--md-out",
-        _display_path(run_dir / "inverse_steganalysis_action_functional.feedback.md"),
+        _display_path(run_dir / f"{output_stem}.md"),
         "--repo-root",
         REPO_ROOT.as_posix(),
         "--resource-kind",
@@ -862,6 +866,9 @@ def _queue_feedback_replan_request_payload(
     queue_observation_path: Path | None = None,
     queue_observation_recovery_plan_path: Path | None = None,
     queue_observation_recovery_plan: Mapping[str, Any] | None = None,
+    action_functional_output_stem: str = (
+        "inverse_steganalysis_action_functional.feedback"
+    ),
 ) -> dict[str, Any]:
     exact_auth_calibration_inputs = _feedback_exact_auth_calibration_inputs(
         args,
@@ -888,6 +895,7 @@ def _queue_feedback_replan_request_payload(
         feedback_observation_paths=feedback_observation_paths,
         queue_observation_paths=queue_observation_paths,
         exact_auth_calibration_inputs=exact_auth_calibration_inputs,
+        output_stem=action_functional_output_stem,
     )
     return _false_authority_payload(
         {
@@ -1590,6 +1598,499 @@ def _queue_observation_recovery_execution_refusal_payload(
             "commands": [],
         }
     )
+
+
+def _post_recovery_feedback_replan_run_summary(
+    *,
+    run_dir: Path,
+    summary_path: Path,
+    plan_path: Path,
+    execution_queue: Path,
+    state_path: Path,
+    queue: Mapping[str, Any],
+    queue_performance_summary_path: Path,
+    queue_performance_summary: Mapping[str, Any],
+    queue_feedback_replan_request: Mapping[str, Any],
+    queue_feedback_replan_followup_queue_path: Path,
+    queue_feedback_replan_followup_queue: Mapping[str, Any] | None,
+    queue_feedback_replan_followup_blockers: Sequence[str],
+    queue_feedback_replan_followup_policy: str,
+    queue_feedback_replan_followup_policy_enabled: bool,
+    queue_feedback_replan_followup_policy_blockers: Sequence[str],
+    queue_feedback_replan_followup_execution_requested: bool,
+    queue_feedback_replan_followup_executed: bool,
+    queue_feedback_replan_followup_execution: Mapping[str, Any] | None,
+    queue_observation_path: Path,
+    queue_observation_recovery_plan_path: Path,
+    queue_observation_recovery_plan: Mapping[str, Any],
+    exact_readiness_handoffs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    return _false_authority_payload(
+        {
+            "schema": RUN_SCHEMA,
+            "run_dir": _display_path(run_dir),
+            "source_run_path": _display_path(summary_path),
+            "plan": _display_path(plan_path),
+            "queue_id": queue.get("queue_id"),
+            "queue_path": _display_path(execution_queue),
+            "state_path": _display_path(state_path),
+            "queue_performance_summary_path": _display_path(
+                queue_performance_summary_path
+            ),
+            "performance": dict(queue_performance_summary),
+            "queue_feedback_replan_request": dict(queue_feedback_replan_request),
+            "queue_feedback_replan_ready": queue_feedback_replan_request.get(
+                "ready_for_action_functional_feedback"
+            )
+            is True,
+            "queue_feedback_replan_blockers": _as_sequence(
+                queue_feedback_replan_request.get("blockers")
+            ),
+            "queue_feedback_replan_followup_queue_path": (
+                _display_path(queue_feedback_replan_followup_queue_path)
+                if queue_feedback_replan_followup_queue is not None
+                else None
+            ),
+            "queue_feedback_replan_followup_queue_emitted": (
+                queue_feedback_replan_followup_queue is not None
+            ),
+            "queue_feedback_replan_followup_queue_blockers": list(
+                dict.fromkeys(str(item) for item in queue_feedback_replan_followup_blockers)
+            ),
+            "queue_feedback_replan_followup_policy": queue_feedback_replan_followup_policy,
+            "queue_feedback_replan_followup_execution_policy": (
+                queue_feedback_replan_followup_policy
+            ),
+            "queue_feedback_replan_followup_policy_enabled": (
+                queue_feedback_replan_followup_policy_enabled
+            ),
+            "queue_feedback_replan_followup_policy_blockers": list(
+                dict.fromkeys(
+                    str(item) for item in queue_feedback_replan_followup_policy_blockers
+                )
+            ),
+            "queue_feedback_replan_followup_execution_requested": (
+                queue_feedback_replan_followup_execution_requested
+            ),
+            "queue_feedback_replan_followup_executed": (
+                queue_feedback_replan_followup_executed
+            ),
+            "queue_feedback_replan_followup_execution_success": (
+                None
+                if queue_feedback_replan_followup_execution is None
+                else bool(queue_feedback_replan_followup_execution.get("success"))
+            ),
+            "queue_feedback_replan_followup_execution": (
+                None
+                if queue_feedback_replan_followup_execution is None
+                else dict(queue_feedback_replan_followup_execution)
+            ),
+            "queue_feedback_replan_followup_state_path": (
+                None
+                if queue_feedback_replan_followup_execution is None
+                else queue_feedback_replan_followup_execution.get("state_path")
+            ),
+            "queue_feedback_replan_followup_action_functional_path": (
+                None
+                if queue_feedback_replan_followup_execution is None
+                else queue_feedback_replan_followup_execution.get(
+                    "action_functional_output_path"
+                )
+            ),
+            "queue_observation_path": _display_path(queue_observation_path),
+            "queue_observation_recovery_plan_path": _display_path(
+                queue_observation_recovery_plan_path
+            ),
+            "queue_observation_recovery_plan": dict(queue_observation_recovery_plan),
+            "queue_observation_recovery_required": (
+                queue_observation_recovery_plan.get("recovery_required") is True
+            ),
+            "queue_observation_maintenance_recommended": (
+                queue_observation_recovery_plan.get("maintenance_recommended") is True
+            ),
+            "exact_readiness_handoff_count": len(exact_readiness_handoffs),
+            "exact_readiness_handoff_paths": [dict(item) for item in exact_readiness_handoffs],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    )
+
+
+def _post_recovery_feedback_replan_payload(
+    args: argparse.Namespace,
+    *,
+    recovery_execution: Mapping[str, Any] | None,
+    run_dir: Path,
+    commands: list[CommandResult],
+    queue: Mapping[str, Any],
+    summary_path: Path,
+    plan_path: Path,
+    execution_queue: Path,
+    state_path: Path,
+    queue_performance_summary_path: Path,
+    queue_performance_summary: Mapping[str, Any],
+    runtime_identity_path: Path | None,
+    cache_identity_path: Path | None,
+    generated_runtime_identity: bool,
+    generated_cache_identity: bool,
+    feedback_lane_id: str,
+    feedback_policy_activation: str,
+    exact_readiness_handoffs: Sequence[Mapping[str, Any]],
+    staircase_artifacts: dict[str, Any] | None,
+) -> tuple[dict[str, Any], int]:
+    blockers: list[str] = []
+    source_observation = (
+        recovery_execution.get("source_observation_after")
+        if isinstance(recovery_execution, Mapping)
+        else None
+    )
+    if not isinstance(recovery_execution, Mapping):
+        blockers.append("queue_observation_recovery_execution_missing")
+    elif recovery_execution.get("success") is not True:
+        blockers.append("queue_observation_recovery_execution_not_successful")
+    if not isinstance(source_observation, Mapping):
+        blockers.append("source_observation_after_missing")
+
+    post_observation_path = run_dir / "queue_observation_after_recovery.json"
+    post_recovery_plan_path = (
+        run_dir / "queue_observation_recovery_plan_after_recovery.json"
+    )
+    post_request_path = run_dir / "queue_feedback_replan_request_after_recovery.json"
+    post_followup_queue_path = (
+        run_dir / "queue_feedback_replan_followup_queue_after_recovery.json"
+    )
+    post_policy_path = run_dir / "queue_feedback_replan_policy_after_recovery.json"
+    post_continuation_queue_path = (
+        run_dir / "queue_feedback_replan_continuation_queue_after_recovery.json"
+    )
+
+    post_recovery_plan: dict[str, Any] | None = None
+    post_request: dict[str, Any] | None = None
+    post_followup_queue: dict[str, Any] | None = None
+    post_followup_blockers: list[str] = []
+    post_followup_policy_blockers: list[str] = []
+    post_followup_execution: dict[str, Any] | None = None
+    post_followup_execution_returncode = 0
+    post_followup_execution_attempted = False
+    post_policy: dict[str, Any] | None = None
+    post_continuation_queue: dict[str, Any] | None = None
+    post_continuation_blockers: list[str] = []
+    post_continuation_staircase_artifacts: dict[str, Any] | None = None
+    post_followup_state_path = (
+        _resolve(args.queue_feedback_replan_followup_state)
+        if args.queue_feedback_replan_followup_state is not None
+        else run_dir / "queue_feedback_replan_followup.sqlite"
+    )
+    post_continuation_state_path = (
+        run_dir / "queue_feedback_replan_continuation_queue_after_recovery.sqlite"
+    )
+
+    if not blockers and isinstance(source_observation, Mapping):
+        _write_json(post_observation_path, source_observation)
+        post_recovery_plan = build_queue_observation_recovery_plan(
+            source_observation,
+            queue_path=_display_path(execution_queue),
+            state_path=_display_path(state_path),
+            reason="post-recovery materializer queue observation replan",
+        )
+        _write_json(post_recovery_plan_path, post_recovery_plan)
+        post_request = _queue_feedback_replan_request_payload(
+            args,
+            summary_path=summary_path,
+            plan_path=plan_path,
+            queue_performance_summary_path=queue_performance_summary_path,
+            queue_performance_summary=queue_performance_summary,
+            runtime_identity_path=runtime_identity_path,
+            cache_identity_path=cache_identity_path,
+            generated_runtime_identity=generated_runtime_identity,
+            generated_cache_identity=generated_cache_identity,
+            run_dir=run_dir,
+            execution_queue=execution_queue,
+            state_path=state_path,
+            queue_observation_path=post_observation_path,
+            queue_observation_recovery_plan_path=post_recovery_plan_path,
+            queue_observation_recovery_plan=post_recovery_plan,
+            action_functional_output_stem=(
+                "inverse_steganalysis_action_functional.after_recovery"
+            ),
+        )
+        post_followup_queue, post_followup_blockers = (
+            _queue_feedback_replan_followup_queue_payload(
+                args,
+                queue_feedback_replan_request=post_request,
+                queue_feedback_replan_request_path=post_request_path,
+                run_dir=run_dir,
+                execution_queue=execution_queue,
+                state_path=state_path,
+                source_queue=queue,
+            )
+        )
+        post_request.update(
+            {
+                "queue_owned_followup_queue_path": (
+                    _display_path(post_followup_queue_path)
+                    if post_followup_queue is not None
+                    else None
+                ),
+                "queue_owned_followup_queue_emitted": post_followup_queue is not None,
+                "queue_owned_followup_queue_blockers": post_followup_blockers,
+                "source": "post_queue_observation_recovery",
+                "allowed_use": "post_recovery_next_inverse_action_replan_input_only",
+            }
+        )
+        _write_json(post_request_path, post_request)
+
+        if post_followup_queue is not None:
+            _write_json(post_followup_queue_path, post_followup_queue)
+            if staircase_artifacts is not None:
+                post_staircase = _build_queue_feedback_staircase_artifacts(
+                    args,
+                    run_dir=run_dir,
+                    parent_queue=queue,
+                    parent_queue_path=execution_queue,
+                    parent_state_path=state_path,
+                    child_queue=post_followup_queue,
+                    child_queue_path=post_followup_queue_path,
+                    artifact_stem="post_recovery_queue_feedback_replan_followup",
+                )
+                staircase_artifacts["post_recovery_feedback_child"] = post_staircase
+            if args.queue_feedback_replan_followup_policy_local_autopilot:
+                post_followup_policy_blockers = (
+                    _queue_feedback_replan_followup_local_autopolicy_blockers(
+                        post_followup_queue,
+                        run_dir=run_dir,
+                    )
+                )
+            should_execute_followup = (
+                args.execute_queue_feedback_replan_followup
+                or (
+                    args.queue_feedback_replan_followup_policy_local_autopilot
+                    and not post_followup_policy_blockers
+                )
+            )
+            if should_execute_followup:
+                post_followup_execution_attempted = True
+                (
+                    post_followup_execution,
+                    post_followup_commands,
+                    post_followup_execution_returncode,
+                ) = _queue_feedback_replan_followup_execution_payload(
+                    args,
+                    child_queue=post_followup_queue,
+                    child_queue_path=post_followup_queue_path,
+                    run_dir=run_dir,
+                    activation_policy=feedback_policy_activation,
+                )
+                commands.extend(post_followup_commands)
+            elif args.queue_feedback_replan_followup_policy_local_autopilot:
+                post_followup_execution = (
+                    _queue_feedback_replan_followup_execution_refusal_payload(
+                        blockers=(
+                            post_followup_policy_blockers
+                            or ["queue_feedback_replan_followup_policy_not_enabled"]
+                        ),
+                        child_queue_path=post_followup_queue_path,
+                        activation_policy=feedback_policy_activation,
+                    )
+                )
+        elif args.execute_queue_feedback_replan_followup:
+            post_followup_execution_returncode = 2
+            post_followup_execution = (
+                _queue_feedback_replan_followup_execution_refusal_payload(
+                    blockers=(
+                        post_followup_blockers
+                        or ["queue_feedback_replan_followup_queue_not_emitted"]
+                    ),
+                    child_queue_path=post_followup_queue_path,
+                    activation_policy=feedback_policy_activation,
+                )
+            )
+        elif args.queue_feedback_replan_followup_policy_local_autopilot:
+            post_followup_execution = (
+                _queue_feedback_replan_followup_execution_refusal_payload(
+                    blockers=(
+                        post_followup_blockers
+                        or ["queue_feedback_replan_followup_queue_not_emitted"]
+                    ),
+                    child_queue_path=post_followup_queue_path,
+                    activation_policy=feedback_policy_activation,
+                )
+            )
+
+        post_run_summary = _post_recovery_feedback_replan_run_summary(
+            run_dir=run_dir,
+            summary_path=summary_path,
+            plan_path=plan_path,
+            execution_queue=execution_queue,
+            state_path=state_path,
+            queue=queue,
+            queue_performance_summary_path=queue_performance_summary_path,
+            queue_performance_summary=queue_performance_summary,
+            queue_feedback_replan_request=post_request,
+            queue_feedback_replan_followup_queue_path=post_followup_queue_path,
+            queue_feedback_replan_followup_queue=post_followup_queue,
+            queue_feedback_replan_followup_blockers=post_followup_blockers,
+            queue_feedback_replan_followup_policy=feedback_policy_activation,
+            queue_feedback_replan_followup_policy_enabled=bool(
+                args.queue_feedback_replan_followup_policy_local_autopilot
+            ),
+            queue_feedback_replan_followup_policy_blockers=post_followup_policy_blockers,
+            queue_feedback_replan_followup_execution_requested=bool(
+                args.execute_queue_feedback_replan_followup
+                or args.queue_feedback_replan_followup_policy_local_autopilot
+            ),
+            queue_feedback_replan_followup_executed=post_followup_execution_attempted,
+            queue_feedback_replan_followup_execution=post_followup_execution,
+            queue_observation_path=post_observation_path,
+            queue_observation_recovery_plan_path=post_recovery_plan_path,
+            queue_observation_recovery_plan=post_recovery_plan,
+            exact_readiness_handoffs=exact_readiness_handoffs,
+        )
+        post_policy = build_queue_feedback_replan_policy(
+            post_run_summary,
+            feedback_followup_queue=post_followup_queue,
+            source_run_path=_display_path(summary_path),
+            iteration_index=args.queue_feedback_replan_policy_iteration,
+            max_iterations=args.queue_feedback_replan_policy_max_iterations,
+        )
+        _write_json(post_policy_path, post_policy)
+        post_continuation_queue, post_continuation_blockers = (
+            build_queue_feedback_replan_continuation_queue(
+                post_policy,
+                lane_id=feedback_lane_id,
+                source_policy_path=_display_path(post_policy_path),
+            )
+        )
+        if post_continuation_queue is not None:
+            _write_json(post_continuation_queue_path, post_continuation_queue)
+            post_continuation_staircase_artifacts = (
+                _build_queue_feedback_staircase_artifacts(
+                    args,
+                    run_dir=run_dir,
+                    parent_queue=queue,
+                    parent_queue_path=execution_queue,
+                    parent_state_path=state_path,
+                    child_queue=post_continuation_queue,
+                    child_queue_path=post_continuation_queue_path,
+                    artifact_stem="post_recovery_queue_feedback_replan_continuation",
+                )
+            )
+            if staircase_artifacts is not None:
+                staircase_artifacts["post_recovery_feedback_continuation_child"] = (
+                    post_continuation_staircase_artifacts
+                )
+
+    post_followup_execution_success = (
+        post_followup_execution is not None
+        and post_followup_execution.get("success") is True
+    )
+    post_continuation_emitted = post_continuation_queue is not None
+    payload = _false_authority_payload(
+        {
+            "schema": POST_RECOVERY_FEEDBACK_REPLAN_SCHEMA,
+            "attempted": bool(recovery_execution),
+            "triggered": not blockers,
+            "artifacts_emitted": post_policy is not None,
+            "success": (
+                post_policy is not None
+                and post_policy.get("decision")
+                == "run_next_materializer_campaign_iteration"
+                and post_followup_execution_success
+                and post_continuation_emitted
+                and post_followup_execution_returncode == 0
+            ),
+            "blockers": list(dict.fromkeys(blockers)),
+            "source_recovery_execution_success": (
+                isinstance(recovery_execution, Mapping)
+                and recovery_execution.get("success") is True
+            ),
+            "queue_observation_path": (
+                _display_path(post_observation_path) if post_observation_path.exists() else None
+            ),
+            "queue_observation_recovery_plan_path": (
+                _display_path(post_recovery_plan_path)
+                if post_recovery_plan_path.exists()
+                else None
+            ),
+            "queue_observation_recovery_plan": post_recovery_plan,
+            "queue_feedback_replan_request_path": (
+                _display_path(post_request_path) if post_request_path.exists() else None
+            ),
+            "queue_feedback_replan_request": post_request,
+            "queue_feedback_replan_followup_queue_path": (
+                _display_path(post_followup_queue_path)
+                if post_followup_queue is not None
+                else None
+            ),
+            "queue_feedback_replan_followup_state_path": (
+                _display_path(post_followup_state_path)
+                if post_followup_queue is not None
+                else None
+            ),
+            "queue_feedback_replan_followup_queue_emitted": (
+                post_followup_queue is not None
+            ),
+            "queue_feedback_replan_followup_queue_blockers": post_followup_blockers,
+            "queue_feedback_replan_followup_policy": feedback_policy_activation,
+            "queue_feedback_replan_followup_policy_enabled": bool(
+                args.queue_feedback_replan_followup_policy_local_autopilot
+            ),
+            "queue_feedback_replan_followup_policy_blockers": (
+                post_followup_policy_blockers
+            ),
+            "queue_feedback_replan_followup_execution_requested": bool(
+                args.execute_queue_feedback_replan_followup
+                or args.queue_feedback_replan_followup_policy_local_autopilot
+            ),
+            "queue_feedback_replan_followup_executed": post_followup_execution_attempted,
+            "queue_feedback_replan_followup_execution_success": (
+                None
+                if post_followup_execution is None
+                else post_followup_execution_success
+            ),
+            "queue_feedback_replan_followup_execution": post_followup_execution,
+            "queue_feedback_replan_followup_action_functional_path": (
+                None
+                if post_followup_execution is None
+                else post_followup_execution.get("action_functional_output_path")
+            ),
+            "queue_feedback_replan_policy_path": (
+                _display_path(post_policy_path) if post_policy_path.exists() else None
+            ),
+            "queue_feedback_replan_policy": post_policy,
+            "queue_feedback_replan_policy_decision": (
+                None if post_policy is None else post_policy.get("decision")
+            ),
+            "queue_feedback_replan_policy_should_continue": (
+                post_policy is not None
+                and post_policy.get("should_continue_feedback_loop") is True
+            ),
+            "queue_feedback_replan_continuation_queue_path": (
+                _display_path(post_continuation_queue_path)
+                if post_continuation_queue is not None
+                else None
+            ),
+            "queue_feedback_replan_continuation_queue_state_path": (
+                _display_path(post_continuation_state_path)
+                if post_continuation_queue is not None
+                else None
+            ),
+            "queue_feedback_replan_continuation_queue_emitted": (
+                post_continuation_emitted
+            ),
+            "queue_feedback_replan_continuation_queue_blockers": (
+                post_continuation_blockers
+            ),
+            "queue_feedback_replan_continuation_staircase_artifacts": (
+                post_continuation_staircase_artifacts
+            ),
+            "allowed_use": "post_recovery_local_feedback_replan_only",
+            "forbidden_use": "score_claim_or_promotion_or_paid_dispatch_authority",
+        }
+    )
+    return payload, post_followup_execution_returncode
 
 
 def _git_head_sha() -> str | None:
@@ -3918,6 +4419,8 @@ def main(argv: list[str] | None = None) -> int:
     queue_observation_recovery_execution_attempted = False
     queue_feedback_replan_followup_execution: dict[str, Any] | None = None
     queue_feedback_replan_followup_execution_returncode = 0
+    post_recovery_feedback_replan: dict[str, Any] | None = None
+    post_recovery_feedback_replan_returncode = 0
     queue_feedback_replan_followup_policy = _queue_feedback_replan_followup_activation_policy(args)
     queue_feedback_replan_followup_policy_blockers: list[str] = []
     queue_feedback_replan_followup_execution_attempted = False
@@ -4366,6 +4869,34 @@ def main(argv: list[str] | None = None) -> int:
                 activation_policy=queue_observation_recovery_policy,
             )
         )
+    if (
+        queue_observation_recovery_execution is not None
+        and queue_observation_recovery_execution.get("success") is True
+    ):
+        (
+            post_recovery_feedback_replan,
+            post_recovery_feedback_replan_returncode,
+        ) = _post_recovery_feedback_replan_payload(
+            args,
+            recovery_execution=queue_observation_recovery_execution,
+            run_dir=run_dir,
+            commands=commands,
+            queue=queue,
+            summary_path=summary_path,
+            plan_path=plan_path,
+            execution_queue=execution_queue,
+            state_path=state_path,
+            queue_performance_summary_path=queue_performance_summary_path,
+            queue_performance_summary=queue_performance_summary,
+            runtime_identity_path=runtime_identity_path,
+            cache_identity_path=cache_identity_path,
+            generated_runtime_identity=args.queue_performance_runtime_identity is None,
+            generated_cache_identity=args.queue_performance_cache_identity is None,
+            feedback_lane_id=feedback_lane_id,
+            feedback_policy_activation=queue_feedback_replan_followup_policy,
+            exact_readiness_handoffs=exact_readiness_handoffs,
+            staircase_artifacts=staircase_artifacts,
+        )
     (
         queue_feedback_replan_continuation_queue,
         queue_feedback_replan_continuation_queue_blockers,
@@ -4457,6 +4988,174 @@ def main(argv: list[str] | None = None) -> int:
     payload["queue_observation_recovery_staircase_artifacts"] = (
         queue_observation_recovery_staircase_artifacts
     )
+    payload["post_recovery_feedback_replan"] = post_recovery_feedback_replan
+    payload["post_recovery_feedback_replan_attempted"] = (
+        post_recovery_feedback_replan is not None
+        and post_recovery_feedback_replan.get("attempted") is True
+    )
+    payload["post_recovery_feedback_replan_triggered"] = (
+        post_recovery_feedback_replan is not None
+        and post_recovery_feedback_replan.get("triggered") is True
+    )
+    payload["post_recovery_feedback_replan_artifacts_emitted"] = (
+        post_recovery_feedback_replan is not None
+        and post_recovery_feedback_replan.get("artifacts_emitted") is True
+    )
+    payload["post_recovery_feedback_replan_success"] = (
+        None
+        if post_recovery_feedback_replan is None
+        else bool(post_recovery_feedback_replan.get("success"))
+    )
+    payload["post_recovery_feedback_replan_blockers"] = (
+        []
+        if post_recovery_feedback_replan is None
+        else post_recovery_feedback_replan.get("blockers", [])
+    )
+    payload["post_recovery_source_recovery_execution_success"] = (
+        post_recovery_feedback_replan is not None
+        and post_recovery_feedback_replan.get("source_recovery_execution_success")
+        is True
+    )
+    payload["post_recovery_queue_observation_path"] = (
+        None
+        if post_recovery_feedback_replan is None
+        else post_recovery_feedback_replan.get("queue_observation_path")
+    )
+    payload["post_recovery_queue_observation_recovery_plan_path"] = (
+        None
+        if post_recovery_feedback_replan is None
+        else post_recovery_feedback_replan.get("queue_observation_recovery_plan_path")
+    )
+    payload["post_recovery_queue_feedback_replan_request_path"] = (
+        None
+        if post_recovery_feedback_replan is None
+        else post_recovery_feedback_replan.get("queue_feedback_replan_request_path")
+    )
+    payload["post_recovery_queue_feedback_replan_policy_path"] = (
+        None
+        if post_recovery_feedback_replan is None
+        else post_recovery_feedback_replan.get("queue_feedback_replan_policy_path")
+    )
+    payload["post_recovery_queue_feedback_replan_policy_decision"] = (
+        None
+        if post_recovery_feedback_replan is None
+        else post_recovery_feedback_replan.get("queue_feedback_replan_policy_decision")
+    )
+    payload["post_recovery_queue_feedback_replan_policy_should_continue"] = (
+        post_recovery_feedback_replan is not None
+        and post_recovery_feedback_replan.get(
+            "queue_feedback_replan_policy_should_continue"
+        )
+        is True
+    )
+    payload["post_recovery_queue_feedback_replan_followup_queue_path"] = (
+        None
+        if post_recovery_feedback_replan is None
+        else post_recovery_feedback_replan.get(
+            "queue_feedback_replan_followup_queue_path"
+        )
+    )
+    payload["post_recovery_queue_feedback_replan_followup_state_path"] = (
+        None
+        if post_recovery_feedback_replan is None
+        else post_recovery_feedback_replan.get(
+            "queue_feedback_replan_followup_state_path"
+        )
+    )
+    payload["post_recovery_queue_feedback_replan_followup_queue_emitted"] = (
+        post_recovery_feedback_replan is not None
+        and post_recovery_feedback_replan.get(
+            "queue_feedback_replan_followup_queue_emitted"
+        )
+        is True
+    )
+    payload["post_recovery_queue_feedback_replan_followup_queue_blockers"] = (
+        []
+        if post_recovery_feedback_replan is None
+        else post_recovery_feedback_replan.get(
+            "queue_feedback_replan_followup_queue_blockers",
+            [],
+        )
+    )
+    payload["post_recovery_queue_feedback_replan_followup_policy_enabled"] = (
+        post_recovery_feedback_replan is not None
+        and post_recovery_feedback_replan.get(
+            "queue_feedback_replan_followup_policy_enabled"
+        )
+        is True
+    )
+    payload["post_recovery_queue_feedback_replan_followup_policy_blockers"] = (
+        []
+        if post_recovery_feedback_replan is None
+        else post_recovery_feedback_replan.get(
+            "queue_feedback_replan_followup_policy_blockers",
+            [],
+        )
+    )
+    payload["post_recovery_queue_feedback_replan_followup_execution_requested"] = (
+        post_recovery_feedback_replan is not None
+        and post_recovery_feedback_replan.get(
+            "queue_feedback_replan_followup_execution_requested"
+        )
+        is True
+    )
+    payload["post_recovery_queue_feedback_replan_followup_executed"] = (
+        post_recovery_feedback_replan is not None
+        and post_recovery_feedback_replan.get(
+            "queue_feedback_replan_followup_executed"
+        )
+        is True
+    )
+    payload["post_recovery_queue_feedback_replan_followup_execution_success"] = (
+        None
+        if post_recovery_feedback_replan is None
+        else post_recovery_feedback_replan.get(
+            "queue_feedback_replan_followup_execution_success"
+        )
+    )
+    payload["post_recovery_queue_feedback_replan_followup_action_functional_path"] = (
+        None
+        if post_recovery_feedback_replan is None
+        else post_recovery_feedback_replan.get(
+            "queue_feedback_replan_followup_action_functional_path"
+        )
+    )
+    payload["post_recovery_queue_feedback_replan_continuation_queue_path"] = (
+        None
+        if post_recovery_feedback_replan is None
+        else post_recovery_feedback_replan.get(
+            "queue_feedback_replan_continuation_queue_path"
+        )
+    )
+    payload["post_recovery_queue_feedback_replan_continuation_queue_state_path"] = (
+        None
+        if post_recovery_feedback_replan is None
+        else post_recovery_feedback_replan.get(
+            "queue_feedback_replan_continuation_queue_state_path"
+        )
+    )
+    payload["post_recovery_queue_feedback_replan_continuation_queue_emitted"] = (
+        post_recovery_feedback_replan is not None
+        and post_recovery_feedback_replan.get(
+            "queue_feedback_replan_continuation_queue_emitted"
+        )
+        is True
+    )
+    payload["post_recovery_queue_feedback_replan_continuation_queue_blockers"] = (
+        []
+        if post_recovery_feedback_replan is None
+        else post_recovery_feedback_replan.get(
+            "queue_feedback_replan_continuation_queue_blockers",
+            [],
+        )
+    )
+    payload["post_recovery_queue_feedback_replan_continuation_staircase_artifacts"] = (
+        None
+        if post_recovery_feedback_replan is None
+        else post_recovery_feedback_replan.get(
+            "queue_feedback_replan_continuation_staircase_artifacts"
+        )
+    )
     payload["queue_feedback_replan_continuation_queue_path"] = (
         _display_path(queue_feedback_replan_continuation_queue_path)
         if queue_feedback_replan_continuation_queue is not None
@@ -4482,6 +5181,7 @@ def main(argv: list[str] | None = None) -> int:
         or ssh_execute_returncode != 0
         or queue_feedback_replan_followup_execution_returncode != 0
         or queue_observation_recovery_execution_returncode != 0
+        or post_recovery_feedback_replan_returncode != 0
         else 0
     )
 

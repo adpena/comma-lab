@@ -1548,6 +1548,196 @@ def test_byte_shaving_acquisition_summary_surfaces_queue_recovery_signal(
     assert "feedback_continue=False" in text
 
 
+def test_byte_shaving_acquisition_summary_surfaces_post_recovery_replan_signal(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    root = tmp_path / ".omx" / "research"
+    campaign_dir = root / "high_level" / "campaign_post_recovery"
+    post_continuation_queue = (
+        ".omx/research/high_level/campaign_post_recovery/"
+        "queue_feedback_replan_continuation_queue_after_recovery.json"
+    )
+    post_continuation_state = (
+        ".omx/research/high_level/campaign_post_recovery/"
+        "queue_feedback_replan_continuation_queue_after_recovery.sqlite"
+    )
+    post_followup_queue = (
+        ".omx/research/high_level/campaign_post_recovery/"
+        "queue_feedback_replan_followup_queue_after_recovery.json"
+    )
+    post_followup_state = (
+        ".omx/research/high_level/campaign_post_recovery/"
+        "queue_feedback_replan_followup_queue.sqlite"
+    )
+    _write_json(
+        campaign_dir / "byte_shaving_campaign_plan.json",
+        {
+            "combination_ladder": [],
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    _write_json(
+        campaign_dir / "materializer_campaign_run.json",
+        {
+            "schema": "byte_shaving_materializer_campaign_run.v1",
+            "plan": (
+                ".omx/research/high_level/campaign_post_recovery/"
+                "byte_shaving_campaign_plan.json"
+            ),
+            "queue_id": "high_level_fixture_post_recovery",
+            "queue_path": (
+                ".omx/research/high_level/campaign_post_recovery/"
+                "materializer_execution_queue.json"
+            ),
+            "state_path": (
+                ".omx/research/high_level/campaign_post_recovery/"
+                "materializer_execution_queue.sqlite"
+            ),
+            "experiment_count": 1,
+            "queue_observation_recovery_required": True,
+            "queue_observation_recovery_queue_emitted": True,
+            "queue_observation_recovery_execution_requested": True,
+            "queue_observation_recovery_executed": True,
+            "queue_observation_recovery_execution_success": True,
+            "queue_observation_recovery_execution": {
+                "schema": (
+                    "byte_shaving_materializer_campaign_queue_observation_recovery_"
+                    "execution.v1"
+                ),
+                "success": True,
+                "blockers": [],
+                "source_observation_after": {"healthy": True, "blockers": []},
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "post_recovery_feedback_replan_triggered": True,
+            "post_recovery_feedback_replan_success": True,
+            "post_recovery_queue_observation_path": (
+                ".omx/research/high_level/campaign_post_recovery/"
+                "queue_observation_after_recovery.json"
+            ),
+            "post_recovery_queue_observation_recovery_plan_path": (
+                ".omx/research/high_level/campaign_post_recovery/"
+                "queue_observation_recovery_plan_after_recovery.json"
+            ),
+            "post_recovery_queue_feedback_replan_request_path": (
+                ".omx/research/high_level/campaign_post_recovery/"
+                "queue_feedback_replan_request_after_recovery.json"
+            ),
+            "post_recovery_queue_feedback_replan_policy_path": (
+                ".omx/research/high_level/campaign_post_recovery/"
+                "queue_feedback_replan_policy_after_recovery.json"
+            ),
+            "post_recovery_queue_feedback_replan_policy_decision": (
+                "run_next_materializer_campaign_iteration"
+            ),
+            "post_recovery_queue_feedback_replan_followup_queue_path": (
+                post_followup_queue
+            ),
+            "post_recovery_queue_feedback_replan_followup_state_path": (
+                post_followup_state
+            ),
+            "post_recovery_queue_feedback_replan_followup_queue_emitted": True,
+            "post_recovery_queue_feedback_replan_followup_executed": True,
+            "post_recovery_queue_feedback_replan_followup_execution_success": True,
+            "post_recovery_queue_feedback_replan_policy_should_continue": True,
+            "post_recovery_queue_feedback_replan_continuation_queue_path": (
+                post_continuation_queue
+            ),
+            "post_recovery_queue_feedback_replan_continuation_queue_state_path": (
+                post_continuation_state
+            ),
+            "post_recovery_queue_feedback_replan_continuation_queue_emitted": True,
+            "post_recovery_feedback_replan": {
+                "schema": (
+                    "byte_shaving_materializer_campaign_post_recovery_feedback_"
+                    "replan.v1"
+                ),
+                "triggered": True,
+                "artifacts_emitted": True,
+                "success": True,
+                "queue_feedback_replan_followup_queue_blockers": [],
+                "queue_feedback_replan_followup_policy_blockers": [],
+                "queue_feedback_replan_continuation_queue_blockers": [],
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "queue_feedback_replan_policy": {
+                "schema": "queue_feedback_replan_policy.v1",
+                "decision": "recover_queue_health",
+                "should_continue_feedback_loop": False,
+                "ready_for_queue_health_recovery": True,
+                "blockers": [],
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "build": {
+                "materializer_work_queue_executable_row_count": 1,
+                "materializer_work_queue_blocked_row_count": 0,
+                "blocked_row_count": 0,
+            },
+            "worker": {
+                "schema": "experiment_queue_worker_result.v1",
+                "failure_count": 0,
+            },
+            "observation": {"status_counts": {"queued": 1}},
+            "commands": [{"returncode": 0}],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    monkeypatch.setattr(mod, "BYTE_SHAVING_ACQUISITION_SCAN_ROOTS", (root,))
+
+    summary = mod._byte_shaving_acquisition_summary()
+    text = mod._format_byte_shaving_acquisition_summary()
+    latest = summary["latest_rows"][0]
+
+    assert summary["queue_observation_recovery_execution_success_count"] == 1
+    assert summary["post_recovery_feedback_replan_count"] == 1
+    assert summary["post_recovery_feedback_replan_success_count"] == 1
+    assert summary["post_recovery_feedback_followup_queue_count"] == 1
+    assert summary["post_recovery_feedback_followup_executed_count"] == 1
+    assert summary["post_recovery_feedback_followup_execution_success_count"] == 1
+    assert summary["post_recovery_feedback_policy_continue_count"] == 1
+    assert summary["post_recovery_feedback_continuation_queue_count"] == 1
+    assert latest["post_recovery_feedback_replan_triggered"] is True
+    assert latest["post_recovery_feedback_replan_success"] is True
+    assert latest["post_recovery_queue_feedback_replan_followup_queue_path"] == (
+        post_followup_queue
+    )
+    assert latest[
+        "post_recovery_queue_feedback_replan_continuation_queue_path"
+    ] == post_continuation_queue
+    assert latest[
+        "post_recovery_queue_feedback_replan_continuation_queue_state_path"
+    ] == post_continuation_state
+    assert latest["post_recovery_queue_feedback_replan_policy_decision"] == (
+        "run_next_materializer_campaign_iteration"
+    )
+    assert post_continuation_queue in summary["next_command"]
+    assert post_continuation_state in summary["next_command"]
+    assert summary["next_command"].endswith(" init")
+    assert post_continuation_queue in summary["observe_command"]
+    assert post_continuation_state in summary["observe_command"]
+    assert "post_recovery_replan=1" in text
+    assert "post_recovery_replan_success=1" in text
+    assert "post_recovery_feedback_queued=1" in text
+    assert "post_recovery_feedback_executed=1" in text
+    assert "post_recovery_feedback_success=1" in text
+    assert "post_recovery_continue=1" in text
+    assert "post_recovery_continuation_queued=1" in text
+    assert "post_recovery_feedback_executed=True" in text
+    assert "post_recovery_feedback_success=True" in text
+    assert "post_recovery_continue=True" in text
+    assert "post_recovery_decision=run_next_materializer_campaign_iteration" in text
+
+
 def test_byte_shaving_acquisition_summary_blocks_authority_leaks(
     tmp_path: Path,
     monkeypatch,

@@ -2532,6 +2532,271 @@ def test_queue_observation_recovery_execution_payload_runs_local_queue(
     assert commands
 
 
+def test_post_recovery_feedback_replan_emits_fresh_followup_and_continuation(
+    tmp_path: Path,
+) -> None:
+    source_queue_path = tmp_path / "source_queue.json"
+    source_state_path = tmp_path / "source_queue.sqlite"
+    recovery_queue_path = tmp_path / "recovery_queue.json"
+    recovery_state_path = tmp_path / "recovery_queue.sqlite"
+    feedback_state_path = tmp_path / "feedback_queue.sqlite"
+    plan_path = tmp_path / "plan.json"
+    contexts_path = tmp_path / "contexts.json"
+    summary_path = tmp_path / "materializer_campaign_run.json"
+    performance_path = tmp_path / "queue_performance_summary.json"
+    runtime_identity_path = tmp_path / "queue_performance_runtime_identity.json"
+    cache_identity_path = tmp_path / "queue_performance_cache_identity.json"
+    cpu_packet = tmp_path / "cpu_review_packet.json"
+    cuda_packet = tmp_path / "cuda_review_packet.json"
+    source_queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "source_queue",
+            "controls": {
+                "mode": "running",
+                "local_first": True,
+                "max_concurrency": {"local_cpu": 1},
+            },
+            "experiments": [
+                {
+                    "id": "source_exp",
+                    "lane_id": "post_recovery_feedback_fixture",
+                    "steps": [
+                        {
+                            "id": "materialize",
+                            "kind": "command",
+                            "command": [
+                                runner.sys.executable,
+                                "-c",
+                                "print('source noop')",
+                            ],
+                            "resources": {"kind": "local_cpu"},
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    source_queue_path.write_text(json.dumps(source_queue), encoding="utf-8")
+    plan_path.write_text(json.dumps(_inverse_cell_candidate_plan()), encoding="utf-8")
+    contexts_path.write_text("{}", encoding="utf-8")
+    _write_result_review_packet(cpu_packet, axis="contest_cpu")
+    _write_result_review_packet(cuda_packet, axis="contest_cuda")
+    performance_path.write_text(
+        json.dumps(
+            {
+                "schema": runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA,
+                "queue_id": "source_queue",
+                "event_count": 1,
+                "by_step": {},
+                "candidate_id_by_experiment": {},
+                "blockers": [],
+                **_false_authority(),
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    runtime_identity_path.write_text(
+        json.dumps(
+            {
+                "schema": "byte_shaving_materializer_campaign_queue_runtime_identity.v1",
+                "runtime_content_tree_sha256": "b" * 64,
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    cache_identity_path.write_text(
+        json.dumps(
+            {
+                "schema": "byte_shaving_materializer_campaign_queue_cache_identity.v1",
+                "cache_sha256": "e" * 64,
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    recovery_plan = runner.build_queue_observation_recovery_plan(
+        {
+            "schema": "experiment_queue_observation.v1",
+            "queue_id": "source_queue",
+            "healthy": False,
+            "blockers": ["experiment_queue_observation_state_missing"],
+        },
+        queue_path=str(source_queue_path),
+        state_path=str(source_state_path),
+    )
+    policy = runner.build_queue_feedback_replan_policy(
+        {
+            "schema": runner.RUN_SCHEMA,
+            "run_dir": str(tmp_path),
+            "queue_id": "source_queue",
+            "queue_path": str(source_queue_path),
+            "state_path": str(source_state_path),
+            "queue_observation_recovery_plan": recovery_plan,
+            "queue_feedback_replan_ready": True,
+            "queue_feedback_replan_blockers": [],
+            "queue_feedback_replan_followup_queue_emitted": False,
+            "queue_feedback_replan_followup_queue_blockers": [],
+            "queue_feedback_replan_followup_policy_enabled": False,
+            "queue_feedback_replan_followup_policy_blockers": [],
+            "queue_feedback_replan_followup_executed": False,
+            "queue_feedback_replan_followup_execution_success": None,
+            "exact_readiness_handoff_count": 0,
+            **_false_authority(),
+        },
+        feedback_followup_queue=None,
+    )
+    recovery_queue, blockers = runner.build_queue_observation_recovery_queue(
+        policy,
+        lane_id="post_recovery_feedback_fixture",
+        source_policy_path=str(tmp_path / "policy.json"),
+    )
+    assert blockers == []
+    assert recovery_queue is not None
+    recovery_queue_path.write_text(json.dumps(recovery_queue), encoding="utf-8")
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(plan_path),
+            "--materializer-contexts",
+            str(contexts_path),
+            "--run-dir",
+            str(tmp_path),
+            "--exact-auth-calibration-packet",
+            str(cpu_packet),
+            "--exact-auth-calibration-packet",
+            str(cuda_packet),
+            "--exact-auth-calibration-candidate-id",
+            "auto_calibration_candidate",
+            "--queue-observation-recovery-state",
+            str(recovery_state_path),
+            "--queue-observation-recovery-state-rationale",
+            "isolated unit recovery state",
+            "--queue-feedback-replan-followup-policy-local-autopilot",
+            "--queue-feedback-replan-followup-state",
+            str(feedback_state_path),
+            "--queue-feedback-replan-followup-state-rationale",
+            "isolated unit post recovery feedback state",
+            "--queue-feedback-replan-followup-max-steps",
+            "1",
+            "--queue-feedback-replan-followup-max-parallel",
+            "1",
+        ]
+    )
+    recovery_execution, recovery_commands, recovery_returncode = (
+        runner._queue_observation_recovery_execution_payload(
+            args,
+            recovery_queue=recovery_queue,
+            recovery_queue_path=recovery_queue_path,
+            recovery_queue_state_path=recovery_state_path,
+            activation_policy="local_autopilot_policy",
+        )
+    )
+    assert recovery_returncode == 0
+    assert recovery_execution["success"] is True
+
+    post_payload, post_returncode = runner._post_recovery_feedback_replan_payload(
+        args,
+        recovery_execution=recovery_execution,
+        run_dir=tmp_path,
+        commands=recovery_commands,
+        queue=source_queue,
+        summary_path=summary_path,
+        plan_path=plan_path,
+        execution_queue=source_queue_path,
+        state_path=source_state_path,
+        queue_performance_summary_path=performance_path,
+        queue_performance_summary=json.loads(performance_path.read_text(encoding="utf-8")),
+        runtime_identity_path=runtime_identity_path,
+        cache_identity_path=cache_identity_path,
+        generated_runtime_identity=True,
+        generated_cache_identity=True,
+        feedback_lane_id="post_recovery_feedback_fixture",
+        feedback_policy_activation="local_autopilot_policy",
+        exact_readiness_handoffs=[],
+        staircase_artifacts={},
+    )
+
+    assert post_returncode == 0
+    assert post_payload["schema"] == runner.POST_RECOVERY_FEEDBACK_REPLAN_SCHEMA
+    assert post_payload["triggered"] is True
+    assert post_payload["success"] is True
+    assert post_payload["score_claim"] is False
+    assert post_payload["ready_for_exact_eval_dispatch"] is False
+    assert post_payload["queue_observation_path"] == str(
+        tmp_path / "queue_observation_after_recovery.json"
+    )
+    assert post_payload["queue_observation_recovery_plan_path"] == str(
+        tmp_path / "queue_observation_recovery_plan_after_recovery.json"
+    )
+    assert post_payload["queue_feedback_replan_request_path"] == str(
+        tmp_path / "queue_feedback_replan_request_after_recovery.json"
+    )
+    assert post_payload["queue_feedback_replan_followup_queue_path"] == str(
+        tmp_path / "queue_feedback_replan_followup_queue_after_recovery.json"
+    )
+    assert post_payload["queue_feedback_replan_followup_state_path"] == str(
+        feedback_state_path
+    )
+    assert post_payload["queue_feedback_replan_followup_queue_emitted"] is True
+    assert post_payload["queue_feedback_replan_followup_executed"] is True
+    assert post_payload["queue_feedback_replan_followup_execution_success"] is True
+    assert post_payload["queue_feedback_replan_followup_action_functional_path"] == str(
+        tmp_path / "inverse_steganalysis_action_functional.after_recovery.json"
+    )
+    assert post_payload["queue_feedback_replan_policy_path"] == str(
+        tmp_path / "queue_feedback_replan_policy_after_recovery.json"
+    )
+    assert post_payload["queue_feedback_replan_policy_decision"] == (
+        "run_next_materializer_campaign_iteration"
+    )
+    assert post_payload["queue_feedback_replan_continuation_queue_path"] == str(
+        tmp_path / "queue_feedback_replan_continuation_queue_after_recovery.json"
+    )
+    assert post_payload["queue_feedback_replan_continuation_queue_state_path"] == str(
+        tmp_path / "queue_feedback_replan_continuation_queue_after_recovery.sqlite"
+    )
+    assert post_payload["queue_feedback_replan_continuation_queue_emitted"] is True
+    post_request = json.loads(
+        (tmp_path / "queue_feedback_replan_request_after_recovery.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert post_request["source"] == "post_queue_observation_recovery"
+    assert post_request["queue_observation_path"] == str(
+        tmp_path / "queue_observation_after_recovery.json"
+    )
+    assert post_request["queue_observation_recovery_required"] is False
+    command = post_request["command_template"]
+    assert "--queue-observation" in command
+    assert str(tmp_path / "inverse_steganalysis_action_functional.after_recovery.json") in command
+    assert str(tmp_path / "inverse_steganalysis_action_functional.feedback.json") not in command
+    post_followup = json.loads(
+        (tmp_path / "queue_feedback_replan_followup_queue_after_recovery.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert post_followup["controls"]["mode"] == "paused"
+    assert post_followup["experiments"][0]["steps"][0]["resources"] == {
+        "kind": "local_cpu"
+    }
+    post_continuation = json.loads(
+        (
+            tmp_path / "queue_feedback_replan_continuation_queue_after_recovery.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert post_continuation["controls"]["mode"] == "paused"
+    assert post_continuation["experiments"][0]["lane_id"] == (
+        "post_recovery_feedback_fixture"
+    )
+
+
 def test_materializer_campaign_feedback_followup_local_autopolicy_guard(
     tmp_path: Path,
 ) -> None:

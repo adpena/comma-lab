@@ -1697,6 +1697,11 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
         if isinstance(recovery_execution.get("source_observation_after"), dict)
         else {}
     )
+    post_recovery = (
+        payload.get("post_recovery_feedback_replan")
+        if isinstance(payload.get("post_recovery_feedback_replan"), dict)
+        else {}
+    )
     recovery_policy_blockers = _unique_strings(
         payload.get("queue_observation_recovery_policy_blockers")
         if isinstance(payload.get("queue_observation_recovery_policy_blockers"), list)
@@ -1841,6 +1846,189 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
         "queue_observation_recovery_source_observation_blockers": (
             recovery_source_after_blockers
         ),
+        "post_recovery_feedback_replan_triggered": (
+            payload.get("post_recovery_feedback_replan_triggered") is True
+            or post_recovery.get("triggered") is True
+        ),
+        "post_recovery_feedback_replan_attempted": (
+            payload.get("post_recovery_feedback_replan_attempted") is True
+            or post_recovery.get("attempted") is True
+        ),
+        "post_recovery_feedback_replan_artifacts_emitted": (
+            payload.get("post_recovery_feedback_replan_artifacts_emitted") is True
+            or post_recovery.get("artifacts_emitted") is True
+        ),
+        "post_recovery_feedback_replan_success": (
+            payload.get("post_recovery_feedback_replan_success") is True
+            or post_recovery.get("success") is True
+        ),
+        "post_recovery_feedback_replan_blocker_count": len(
+            payload.get("post_recovery_feedback_replan_blockers")
+            if isinstance(payload.get("post_recovery_feedback_replan_blockers"), list)
+            else post_recovery.get("blockers")
+            if isinstance(post_recovery.get("blockers"), list)
+            else []
+        ),
+        "post_recovery_source_recovery_execution_success": (
+            payload.get("post_recovery_source_recovery_execution_success") is True
+            or post_recovery.get("source_recovery_execution_success") is True
+        ),
+        "post_recovery_queue_observation_path": str(
+            payload.get("post_recovery_queue_observation_path")
+            or post_recovery.get("queue_observation_path")
+            or ""
+        ),
+        "post_recovery_queue_observation_recovery_plan_path": str(
+            payload.get("post_recovery_queue_observation_recovery_plan_path")
+            or post_recovery.get("queue_observation_recovery_plan_path")
+            or ""
+        ),
+        "post_recovery_queue_feedback_replan_request_path": str(
+            payload.get("post_recovery_queue_feedback_replan_request_path")
+            or post_recovery.get("queue_feedback_replan_request_path")
+            or ""
+        ),
+        "post_recovery_queue_feedback_replan_policy_path": str(
+            payload.get("post_recovery_queue_feedback_replan_policy_path")
+            or post_recovery.get("queue_feedback_replan_policy_path")
+            or ""
+        ),
+        "post_recovery_queue_feedback_replan_policy_decision": str(
+            payload.get("post_recovery_queue_feedback_replan_policy_decision")
+            or post_recovery.get("queue_feedback_replan_policy_decision")
+            or ""
+        ),
+        "post_recovery_queue_feedback_replan_policy_should_continue": (
+            payload.get("post_recovery_queue_feedback_replan_policy_should_continue")
+            is True
+            or post_recovery.get("queue_feedback_replan_policy_should_continue")
+            is True
+        ),
+        "post_recovery_queue_feedback_replan_followup_queue_path": str(
+            payload.get("post_recovery_queue_feedback_replan_followup_queue_path")
+            or post_recovery.get("queue_feedback_replan_followup_queue_path")
+            or ""
+        ),
+        "post_recovery_queue_feedback_replan_followup_state_path": str(
+            payload.get("post_recovery_queue_feedback_replan_followup_state_path")
+            or post_recovery.get("queue_feedback_replan_followup_state_path")
+            or ""
+        ),
+        "post_recovery_queue_feedback_replan_followup_queue_emitted": (
+            payload.get("post_recovery_queue_feedback_replan_followup_queue_emitted")
+            is True
+            or post_recovery.get("queue_feedback_replan_followup_queue_emitted")
+            is True
+        ),
+        "post_recovery_queue_feedback_replan_followup_queue_blocker_count": len(
+            payload.get(
+                "post_recovery_queue_feedback_replan_followup_queue_blockers"
+            )
+            if isinstance(
+                payload.get(
+                    "post_recovery_queue_feedback_replan_followup_queue_blockers"
+                ),
+                list,
+            )
+            else post_recovery.get("queue_feedback_replan_followup_queue_blockers")
+            if isinstance(
+                post_recovery.get("queue_feedback_replan_followup_queue_blockers"),
+                list,
+            )
+            else []
+        ),
+        "post_recovery_queue_feedback_replan_followup_policy_enabled": (
+            payload.get("post_recovery_queue_feedback_replan_followup_policy_enabled")
+            is True
+            or post_recovery.get("queue_feedback_replan_followup_policy_enabled")
+            is True
+        ),
+        "post_recovery_queue_feedback_replan_followup_policy_blocker_count": len(
+            payload.get("post_recovery_queue_feedback_replan_followup_policy_blockers")
+            if isinstance(
+                payload.get(
+                    "post_recovery_queue_feedback_replan_followup_policy_blockers"
+                ),
+                list,
+            )
+            else post_recovery.get("queue_feedback_replan_followup_policy_blockers")
+            if isinstance(
+                post_recovery.get("queue_feedback_replan_followup_policy_blockers"),
+                list,
+            )
+            else []
+        ),
+        "post_recovery_queue_feedback_replan_followup_execution_requested": (
+            payload.get(
+                "post_recovery_queue_feedback_replan_followup_execution_requested"
+            )
+            is True
+            or post_recovery.get("queue_feedback_replan_followup_execution_requested")
+            is True
+        ),
+        "post_recovery_queue_feedback_replan_followup_executed": (
+            payload.get("post_recovery_queue_feedback_replan_followup_executed")
+            is True
+            or post_recovery.get("queue_feedback_replan_followup_executed") is True
+        ),
+        "post_recovery_queue_feedback_replan_followup_execution_success": (
+            payload.get(
+                "post_recovery_queue_feedback_replan_followup_execution_success"
+            )
+            is True
+            or post_recovery.get("queue_feedback_replan_followup_execution_success")
+            is True
+        ),
+        "post_recovery_queue_feedback_replan_followup_action_functional_path": str(
+            payload.get(
+                "post_recovery_queue_feedback_replan_followup_action_functional_path"
+            )
+            or post_recovery.get("queue_feedback_replan_followup_action_functional_path")
+            or ""
+        ),
+        "post_recovery_queue_feedback_replan_continuation_queue_path": str(
+            payload.get(
+                "post_recovery_queue_feedback_replan_continuation_queue_path"
+            )
+            or post_recovery.get("queue_feedback_replan_continuation_queue_path")
+            or ""
+        ),
+        "post_recovery_queue_feedback_replan_continuation_queue_state_path": str(
+            payload.get(
+                "post_recovery_queue_feedback_replan_continuation_queue_state_path"
+            )
+            or post_recovery.get(
+                "queue_feedback_replan_continuation_queue_state_path"
+            )
+            or ""
+        ),
+        "post_recovery_queue_feedback_replan_continuation_queue_emitted": (
+            payload.get(
+                "post_recovery_queue_feedback_replan_continuation_queue_emitted"
+            )
+            is True
+            or post_recovery.get("queue_feedback_replan_continuation_queue_emitted")
+            is True
+        ),
+        "post_recovery_queue_feedback_replan_continuation_queue_blocker_count": len(
+            payload.get(
+                "post_recovery_queue_feedback_replan_continuation_queue_blockers"
+            )
+            if isinstance(
+                payload.get(
+                    "post_recovery_queue_feedback_replan_continuation_queue_blockers"
+                ),
+                list,
+            )
+            else post_recovery.get("queue_feedback_replan_continuation_queue_blockers")
+            if isinstance(
+                post_recovery.get(
+                    "queue_feedback_replan_continuation_queue_blockers"
+                ),
+                list,
+            )
+            else []
+        ),
         "queue_observation_recovery_required": (
             payload.get("queue_observation_recovery_required") is True
             or feedback_policy.get("queue_observation_recovery_required") is True
@@ -1921,6 +2109,29 @@ def _experiment_queue_command(
 
 
 def _byte_shaving_acquisition_next_command(latest: dict[str, object] | None) -> str:
+    if (
+        latest
+        and latest.get("post_recovery_queue_feedback_replan_continuation_queue_emitted")
+        is True
+        and latest.get("post_recovery_queue_feedback_replan_continuation_queue_path")
+    ):
+        return _experiment_queue_command(
+            latest["post_recovery_queue_feedback_replan_continuation_queue_path"],
+            latest.get("post_recovery_queue_feedback_replan_continuation_queue_state_path"),
+            "init",
+        )
+    if (
+        latest
+        and latest.get("post_recovery_queue_feedback_replan_followup_queue_emitted")
+        is True
+        and latest.get("post_recovery_feedback_replan_success") is not True
+        and latest.get("post_recovery_queue_feedback_replan_followup_queue_path")
+    ):
+        return _experiment_queue_command(
+            latest["post_recovery_queue_feedback_replan_followup_queue_path"],
+            latest.get("post_recovery_queue_feedback_replan_followup_state_path"),
+            "init",
+        )
     if (
         latest
         and latest.get("queue_observation_recovery_queue_emitted") is True
@@ -2040,6 +2251,50 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
             for row in rows
             if row.get("queue_observation_recovery_execution_success") is True
         ),
+        "post_recovery_feedback_replan_count": sum(
+            1
+            for row in rows
+            if row.get("post_recovery_feedback_replan_triggered") is True
+        ),
+        "post_recovery_feedback_replan_success_count": sum(
+            1
+            for row in rows
+            if row.get("post_recovery_feedback_replan_success") is True
+        ),
+        "post_recovery_feedback_policy_continue_count": sum(
+            1
+            for row in rows
+            if row.get("post_recovery_queue_feedback_replan_policy_should_continue")
+            is True
+        ),
+        "post_recovery_feedback_followup_queue_count": sum(
+            1
+            for row in rows
+            if row.get("post_recovery_queue_feedback_replan_followup_queue_emitted")
+            is True
+        ),
+        "post_recovery_feedback_followup_executed_count": sum(
+            1
+            for row in rows
+            if row.get("post_recovery_queue_feedback_replan_followup_executed")
+            is True
+        ),
+        "post_recovery_feedback_followup_execution_success_count": sum(
+            1
+            for row in rows
+            if row.get(
+                "post_recovery_queue_feedback_replan_followup_execution_success"
+            )
+            is True
+        ),
+        "post_recovery_feedback_continuation_queue_count": sum(
+            1
+            for row in rows
+            if row.get(
+                "post_recovery_queue_feedback_replan_continuation_queue_emitted"
+            )
+            is True
+        ),
         "queue_observation_recovery_grouped_blocker_count": sum(
             _safe_int(row.get("queue_observation_recovery_grouped_blocker_count"))
             for row in rows
@@ -2078,6 +2333,38 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
         "latest_rows": rows[:5],
         "next_command": _byte_shaving_acquisition_next_command(latest),
         "observe_command": (
+            _experiment_queue_command(
+                latest[
+                    "post_recovery_queue_feedback_replan_continuation_queue_path"
+                ],
+                latest.get(
+                    "post_recovery_queue_feedback_replan_continuation_queue_state_path"
+                ),
+                "observe --tail-lines 20",
+            )
+            if (
+                latest
+                and latest.get(
+                    "post_recovery_queue_feedback_replan_continuation_queue_emitted"
+                )
+                is True
+                and latest.get(
+                    "post_recovery_queue_feedback_replan_continuation_queue_path"
+                )
+            )
+            else _experiment_queue_command(
+                latest["post_recovery_queue_feedback_replan_followup_queue_path"],
+                latest.get("post_recovery_queue_feedback_replan_followup_state_path"),
+                "observe --tail-lines 20",
+            )
+            if (
+                latest
+                and latest.get("post_recovery_queue_feedback_replan_followup_queue_emitted")
+                is True
+                and latest.get("post_recovery_feedback_replan_success") is not True
+                and latest.get("post_recovery_queue_feedback_replan_followup_queue_path")
+            )
+            else
             _experiment_queue_command(
                 latest["queue_observation_recovery_queue_path"],
                 latest.get("queue_observation_recovery_queue_state_path"),
@@ -2136,6 +2423,20 @@ def _format_byte_shaving_acquisition_summary() -> str:
             f"{payload['queue_observation_recovery_executed_count']} "
             "queue_recovery_success="
             f"{payload['queue_observation_recovery_execution_success_count']} "
+            "post_recovery_replan="
+            f"{payload['post_recovery_feedback_replan_count']} "
+            "post_recovery_replan_success="
+            f"{payload['post_recovery_feedback_replan_success_count']} "
+            "post_recovery_feedback_queued="
+            f"{payload['post_recovery_feedback_followup_queue_count']} "
+            "post_recovery_feedback_executed="
+            f"{payload['post_recovery_feedback_followup_executed_count']} "
+            "post_recovery_feedback_success="
+            f"{payload['post_recovery_feedback_followup_execution_success_count']} "
+            "post_recovery_continue="
+            f"{payload['post_recovery_feedback_policy_continue_count']} "
+            "post_recovery_continuation_queued="
+            f"{payload['post_recovery_feedback_continuation_queue_count']} "
             "queue_recovery_groups="
             f"{payload['queue_observation_recovery_grouped_blocker_count']} "
             "queue_recovery_repeated_groups="
@@ -2198,6 +2499,22 @@ def _format_byte_shaving_acquisition_summary() -> str:
                 f"{row.get('queue_observation_recovery_executed') is True} "
                 "queue_recovery_success="
                 f"{row.get('queue_observation_recovery_execution_success') is True} "
+                "post_recovery_replan="
+                f"{row.get('post_recovery_feedback_replan_triggered') is True} "
+                "post_recovery_replan_success="
+                f"{row.get('post_recovery_feedback_replan_success') is True} "
+                "post_recovery_feedback_queued="
+                f"{row.get('post_recovery_queue_feedback_replan_followup_queue_emitted') is True} "
+                "post_recovery_feedback_executed="
+                f"{row.get('post_recovery_queue_feedback_replan_followup_executed') is True} "
+                "post_recovery_feedback_success="
+                f"{row.get('post_recovery_queue_feedback_replan_followup_execution_success') is True} "
+                "post_recovery_decision="
+                f"{row.get('post_recovery_queue_feedback_replan_policy_decision') or '<none>'} "
+                "post_recovery_continue="
+                f"{row.get('post_recovery_queue_feedback_replan_policy_should_continue') is True} "
+                "post_recovery_continuation_queued="
+                f"{row.get('post_recovery_queue_feedback_replan_continuation_queue_emitted') is True} "
                 "queue_recovery_groups="
                 f"{row.get('queue_observation_recovery_grouped_blocker_count', 0)} "
                 "queue_recovery_repeated_groups="
@@ -4095,6 +4412,27 @@ def _dispatch_readiness() -> dict[str, object]:
             ],
             "queue_observation_recovery_execution_success_count": byte_shaving_acquisition[
                 "queue_observation_recovery_execution_success_count"
+            ],
+            "post_recovery_feedback_replan_count": byte_shaving_acquisition[
+                "post_recovery_feedback_replan_count"
+            ],
+            "post_recovery_feedback_replan_success_count": byte_shaving_acquisition[
+                "post_recovery_feedback_replan_success_count"
+            ],
+            "post_recovery_feedback_policy_continue_count": byte_shaving_acquisition[
+                "post_recovery_feedback_policy_continue_count"
+            ],
+            "post_recovery_feedback_followup_queue_count": byte_shaving_acquisition[
+                "post_recovery_feedback_followup_queue_count"
+            ],
+            "post_recovery_feedback_followup_executed_count": byte_shaving_acquisition[
+                "post_recovery_feedback_followup_executed_count"
+            ],
+            "post_recovery_feedback_followup_execution_success_count": byte_shaving_acquisition[
+                "post_recovery_feedback_followup_execution_success_count"
+            ],
+            "post_recovery_feedback_continuation_queue_count": byte_shaving_acquisition[
+                "post_recovery_feedback_continuation_queue_count"
             ],
             "local_mlx_ready_step_count": byte_shaving_acquisition[
                 "local_mlx_ready_step_count"
