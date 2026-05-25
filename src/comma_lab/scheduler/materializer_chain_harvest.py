@@ -23,6 +23,11 @@ from tac.optimization.byte_range_entropy_recode_chain import (
 from tac.optimization.byte_range_entropy_recode_chain import (
     CHAIN_SCHEMA as BYTE_RANGE_CHAIN_SCHEMA,
 )
+from tac.optimization.family_agnostic_materializers import (
+    RENDERER_PAYLOAD_DFL1_SCHEMA,
+    RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+    verify_renderer_payload_dfl1_full_frame_inflate_parity_proof,
+)
 from tac.optimization.inverse_scorer_cell_chain import (
     CHAIN_MANIFEST_NAME as INVERSE_SCORER_CELL_CHAIN_MANIFEST_NAME,
 )
@@ -49,6 +54,7 @@ from tac.optimizer.materializer_chain_harvest import (
     MaterializerChainHarvestError,
     adapt_materializer_manifest_to_candidate,
 )
+from tac.repo_io import sha256_file
 
 from .byte_shaving_campaign_queue import (
     MATERIALIZER_EXECUTION_STEP_ID,
@@ -91,6 +97,7 @@ def harvest_materializer_chain_manifests(
     experiment_queue_id: str | None = None,
     chain_manifest_paths: Sequence[str | Path] = (),
     chain_roots: Sequence[str | Path] = (),
+    renderer_payload_dfl1_inflate_parity_proofs: Sequence[str | Path] = (),
     require_succeeded_state: bool = True,
     top_k: int | None = None,
 ) -> dict[str, Any]:
@@ -144,6 +151,11 @@ def harvest_materializer_chain_manifests(
         inspected_rows.append(row)
 
     source_queue = build_candidate_queue(accepted_paths, repo_root=repo, top_k=top_k)
+    dfl1_sidecar_report = _apply_renderer_payload_dfl1_sidecar_parity_proofs(
+        source_queue,
+        renderer_payload_dfl1_inflate_parity_proofs,
+        repo_root=repo,
+    )
     accepted_rows = [row for row in inspected_rows if row["accepted"] is True]
     rejected_rows = [row for row in inspected_rows if row["accepted"] is not True]
     report = apply_proxy_evidence_boundary(
@@ -171,6 +183,7 @@ def harvest_materializer_chain_manifests(
             "source_queue_schema": source_queue["schema"],
             "source_queue_candidate_count": source_queue["n_candidates"],
             "source_queue_dispatch_ready_count": source_queue["dispatch_ready_count"],
+            "renderer_payload_dfl1_sidecar_parity": dfl1_sidecar_report,
             "score_claim": False,
             "promotion_eligible": False,
             "rank_or_kill_eligible": False,
@@ -375,6 +388,187 @@ def _validated_bridge_extra_clearable_source_blockers(
             + ",".join(sorted(not_allowed))
         )
     return extras
+
+
+def _apply_renderer_payload_dfl1_sidecar_parity_proofs(
+    source_queue: dict[str, Any],
+    proof_refs: Sequence[str | Path],
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    proofs = [_resolve_path(ref, repo_root=repo_root) for ref in proof_refs]
+    if not proofs:
+        return {
+            "proof_count": 0,
+            "applied_candidate_count": 0,
+            "rows": [],
+        }
+    rows = [
+        row
+        for row in source_queue.get("top_k") or []
+        if isinstance(row, dict) and _is_renderer_payload_dfl1_row(row)
+    ]
+    report_rows: list[dict[str, Any]] = []
+    applied_ids: set[str] = set()
+    for row in rows:
+        candidate_id = str(row.get("candidate_id") or "")
+        candidate_sha = str(
+            row.get("candidate_archive_sha256") or row.get("archive_sha256") or ""
+        ).lower()
+        source_sha = str(row.get("source_archive_sha256") or "").lower()
+        row_report = {
+            "candidate_id": candidate_id,
+            "applied": False,
+            "proof_path": None,
+            "blockers": [],
+        }
+        for proof_path in proofs:
+            proof_report = _renderer_payload_dfl1_sidecar_parity_overlay(
+                row,
+                proof_path=proof_path,
+                repo_root=repo_root,
+                required_source_archive_sha256=source_sha,
+                required_candidate_archive_sha256=candidate_sha,
+            )
+            if proof_report["applied"] is True:
+                row_report.update(proof_report)
+                applied_ids.add(candidate_id)
+                break
+            row_report["blockers"].extend(proof_report["blockers"])
+        row_report["blockers"] = ordered_unique(row_report["blockers"])
+        report_rows.append(row_report)
+    if applied_ids:
+        _mirror_dfl1_sidecar_overlay_to_queue_lists(source_queue, applied_ids)
+    return {
+        "proof_count": len(proofs),
+        "candidate_count": len(rows),
+        "applied_candidate_count": len(applied_ids),
+        "rows": report_rows,
+    }
+
+
+def _renderer_payload_dfl1_sidecar_parity_overlay(
+    row: dict[str, Any],
+    *,
+    proof_path: Path,
+    repo_root: Path,
+    required_source_archive_sha256: str,
+    required_candidate_archive_sha256: str,
+) -> dict[str, Any]:
+    rel_proof = _repo_rel_no_resolve(proof_path, repo_root)
+    blockers: list[str] = []
+    if not proof_path.is_file():
+        blockers.append(f"renderer_payload_dfl1_parity_proof_missing:{rel_proof}")
+    if proof_path.is_symlink():
+        blockers.append(f"renderer_payload_dfl1_parity_proof_is_symlink:{rel_proof}")
+    if not _path_is_repo_confined(proof_path, repo_root):
+        blockers.append(f"renderer_payload_dfl1_parity_proof_outside_repo:{rel_proof}")
+    if not required_source_archive_sha256 or not required_candidate_archive_sha256:
+        blockers.append("renderer_payload_dfl1_parity_archive_sha_missing")
+    if blockers:
+        return {
+            "applied": False,
+            "proof_path": rel_proof,
+            "blockers": blockers,
+        }
+    verification = verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
+        full_frame_inflate_parity_proof=proof_path,
+        required_source_archive_sha256=required_source_archive_sha256,
+        required_candidate_archive_sha256=required_candidate_archive_sha256,
+        repo_root=repo_root,
+    )
+    if verification.get("full_frame_inflate_parity_satisfied") is not True:
+        return {
+            "applied": False,
+            "proof_path": rel_proof,
+            "blockers": [
+                "renderer_payload_dfl1_parity_proof_not_satisfied",
+                *_text_values(verification.get("blockers")),
+            ],
+        }
+    proof_sha = sha256_file(proof_path)
+    verification = dict(verification)
+    verification["proof_path"] = rel_proof
+    verification["proof_sha256"] = proof_sha
+    row.update(
+        {
+            "full_frame_inflate_parity_verification": verification,
+            "full_frame_inflate_parity_proven": True,
+            "renderer_payload_dfl1_inflate_parity_satisfied": True,
+            "renderer_payload_dfl1_inflate_parity_proof_path": rel_proof,
+            "renderer_payload_dfl1_inflate_parity_proof_sha256": proof_sha,
+            "renderer_payload_dfl1_full_frame_inflate_parity_satisfied": True,
+            "renderer_payload_dfl1_full_frame_inflate_parity_proof_path": rel_proof,
+            "renderer_payload_dfl1_full_frame_inflate_parity_proof_sha256": proof_sha,
+        }
+    )
+    source_paths = [
+        str(item) for item in row.get("source_paths") or [] if isinstance(item, str)
+    ]
+    if rel_proof not in source_paths:
+        row["source_paths"] = [*source_paths, rel_proof]
+    return {
+        "applied": True,
+        "proof_path": rel_proof,
+        "proof_sha256": proof_sha,
+        "blockers": [],
+    }
+
+
+def _mirror_dfl1_sidecar_overlay_to_queue_lists(
+    source_queue: dict[str, Any],
+    applied_ids: set[str],
+) -> None:
+    source_by_id = {
+        str(row.get("candidate_id") or ""): row
+        for row in source_queue.get("top_k") or []
+        if isinstance(row, dict)
+    }
+    for list_name in ("top_k_forensic", "dispatch_ready"):
+        for row in source_queue.get(list_name) or []:
+            if not isinstance(row, dict):
+                continue
+            candidate_id = str(row.get("candidate_id") or "")
+            if candidate_id not in applied_ids:
+                continue
+            source = source_by_id.get(candidate_id)
+            if source is None or source is row:
+                continue
+            for key in (
+                "full_frame_inflate_parity_verification",
+                "full_frame_inflate_parity_proven",
+                "renderer_payload_dfl1_inflate_parity_satisfied",
+                "renderer_payload_dfl1_inflate_parity_proof_path",
+                "renderer_payload_dfl1_inflate_parity_proof_sha256",
+                "renderer_payload_dfl1_full_frame_inflate_parity_satisfied",
+                "renderer_payload_dfl1_full_frame_inflate_parity_proof_path",
+                "renderer_payload_dfl1_full_frame_inflate_parity_proof_sha256",
+                "source_paths",
+            ):
+                if key in source:
+                    row[key] = source[key]
+
+
+def _is_renderer_payload_dfl1_row(row: Mapping[str, Any]) -> bool:
+    return (
+        row.get("schema") == RENDERER_PAYLOAD_DFL1_SCHEMA
+        or row.get("target_kind") == RENDERER_PAYLOAD_DFL1_TARGET_KIND
+        or row.get("candidate_family") == "renderer_payload_dfl1"
+    )
+
+
+def _path_is_repo_confined(path: Path, repo_root: Path) -> bool:
+    try:
+        path.resolve(strict=False).relative_to(repo_root.resolve(strict=False))
+    except ValueError:
+        return False
+    return True
+
+
+def _text_values(value: Any) -> list[str]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
+        return []
+    return [str(item) for item in value if str(item)]
 
 
 def _require_bridge_source_queue_identity(
@@ -643,12 +837,19 @@ def _resolve_path(path: str | Path, *, repo_root: Path) -> Path:
     candidate = Path(path).expanduser()
     if not candidate.is_absolute():
         candidate = repo_root / candidate
-    return candidate.resolve(strict=False)
+    return candidate.absolute()
 
 
 def _repo_rel(path: Path, repo_root: Path) -> str:
     try:
         return path.resolve(strict=False).relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _repo_rel_no_resolve(path: Path, repo_root: Path) -> str:
+    try:
+        return path.absolute().relative_to(repo_root.absolute()).as_posix()
     except ValueError:
         return path.as_posix()
 

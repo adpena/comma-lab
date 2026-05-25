@@ -32,6 +32,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--queue-id", default=None)
     parser.add_argument("--chain-manifest", type=Path, action="append", default=[])
     parser.add_argument("--chain-root", type=Path, action="append", default=[])
+    parser.add_argument(
+        "--renderer-payload-dfl1-inflate-parity-proof",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Attach and re-verify a shell_inflate_parity_proof_v2 sidecar for "
+            "renderer_payload_dfl1 rows before exact-readiness bridging."
+        ),
+    )
     parser.add_argument("--source-queue-out", type=Path, required=True)
     parser.add_argument("--report-out", type=Path, required=True)
     parser.add_argument("--top-k", type=int, default=None)
@@ -137,6 +147,9 @@ def main(argv: list[str] | None = None) -> int:
         experiment_queue_id=args.queue_id,
         chain_manifest_paths=args.chain_manifest,
         chain_roots=args.chain_root,
+        renderer_payload_dfl1_inflate_parity_proofs=(
+            args.renderer_payload_dfl1_inflate_parity_proof
+        ),
         require_succeeded_state=not args.allow_unfinished_state,
         top_k=args.top_k,
     )

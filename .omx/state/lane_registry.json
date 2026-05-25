@@ -53730,7 +53730,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/tac/optimizer/materializer_chain_harvest.py"
+          "evidence": "dfl1_parity_queue_execution_bridge_tests_20260525T0143Z"
         },
         "real_archive_empirical": {
           "status": true,
@@ -53754,7 +53754,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_renderer_payload_dfl1_real_shell_parity_20260525T013225Z_codex.md"
+          "evidence": ".omx/research/codex_findings_dfl1_parity_queue_execution_20260525T014343Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -53771,5 +53771,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T01:36:40Z"
+  "updated_at": "2026-05-25T01:44:09Z"
 }

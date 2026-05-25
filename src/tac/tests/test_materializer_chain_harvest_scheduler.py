@@ -780,6 +780,98 @@ def test_shell_inflate_parity_proof_supports_full_frame_multi_entry_scope(
     assert proof["ready_for_exact_eval_dispatch"] is False
 
 
+def test_shell_inflate_parity_proof_fails_without_full_frame_claim(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    source = repo / "source.zip"
+    candidate = repo / "candidate.zip"
+    runtime = _write_simple_shell_runtime(repo / "runtime")
+    out_dir = repo / "parity"
+    with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+    with zipfile.ZipFile(candidate, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SHELL_PARITY_TOOL),
+            "--left-archive",
+            str(source),
+            "--left-submission-dir",
+            str(runtime),
+            "--right-archive",
+            str(candidate),
+            "--right-submission-dir",
+            str(runtime),
+            "--file-list-entry",
+            "0.mkv",
+            "--output-dir",
+            str(out_dir),
+        ],
+        check=False,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    assert proc.returncode == 1
+    proof = json.loads((out_dir / "shell_inflate_parity.json").read_text())
+    assert proof["output_sha256_match"] is True
+    assert proof["cmp_equal"] is True
+    assert proof["full_frame_inflate_output_parity_claim"] is False
+    assert proof["blockers"] == ["full_frame_file_list_claim_missing"]
+    assert not (out_dir / "scratch").exists()
+
+
+def test_shell_inflate_parity_proof_refuses_nonempty_output_dir(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    source = repo / "source.zip"
+    candidate = repo / "candidate.zip"
+    runtime = _write_simple_shell_runtime(repo / "runtime")
+    out_dir = repo / "parity"
+    out_dir.mkdir()
+    sentinel = out_dir / "sentinel.txt"
+    sentinel.write_text("preserve", encoding="utf-8")
+    with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+    with zipfile.ZipFile(candidate, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SHELL_PARITY_TOOL),
+            "--left-archive",
+            str(source),
+            "--left-submission-dir",
+            str(runtime),
+            "--right-archive",
+            str(candidate),
+            "--right-submission-dir",
+            str(runtime),
+            "--file-list-entry",
+            "0.mkv",
+            "--full-frame-file-list-claim",
+            "--output-dir",
+            str(out_dir),
+        ],
+        check=False,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    assert proc.returncode != 0
+    assert sentinel.read_text(encoding="utf-8") == "preserve"
+    assert not (out_dir / "shell_inflate_parity.json").exists()
+
+
 def test_exact_readiness_bridge_blocks_dfl1_without_full_frame_parity(
     tmp_path: Path,
 ) -> None:
@@ -825,6 +917,96 @@ def test_exact_readiness_bridge_blocks_dfl1_without_full_frame_parity(
     ) in row["blockers"]
     assert bridge["score_claim"] is False
     assert bridge["ready_for_exact_eval_dispatch"] is False
+
+
+def test_harvest_attaches_dfl1_shell_parity_sidecar(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    archive = repo / "source.zip"
+    output = repo / "candidate.zip"
+    proof = repo / "runtime_consumption_proof.json"
+    manifest_path = repo / "renderer_dfl1_candidate.json"
+    parity_dir = repo / "full_frame_parity"
+    runtime = _write_dfl1_shell_runtime(repo / "runtime")
+    file_list = repo / "file_list.txt"
+    file_list.write_text("0.mkv\n", encoding="utf-8")
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("renderer.bin", b"renderer" * 4096)
+        zf.writestr("masks.mkv", b"mask" * 4096)
+        zf.writestr("optimized_poses.pt", b"pose" * 2048)
+    manifest = materialize_renderer_payload_dfl1_candidate(
+        archive_path=archive,
+        output_archive=output,
+        runtime_consumption_proof_out=proof,
+        repo_root=REPO_ROOT,
+    )
+    manifest["candidate_id"] = "family_agnostic_renderer_payload_dfl1_sidecar"
+    _write_json(manifest_path, manifest)
+    subprocess.run(
+        [
+            sys.executable,
+            str(SHELL_PARITY_TOOL),
+            "--left-archive",
+            str(archive),
+            "--left-submission-dir",
+            str(runtime),
+            "--right-archive",
+            str(output),
+            "--right-submission-dir",
+            str(runtime),
+            "--file-list",
+            str(file_list),
+            "--full-frame-file-list-claim",
+            "--output-dir",
+            str(parity_dir),
+        ],
+        check=True,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[manifest_path],
+        renderer_payload_dfl1_inflate_parity_proofs=[
+            parity_dir / "shell_inflate_parity.json"
+        ],
+    )
+
+    sidecar = harvest_result["report"]["renderer_payload_dfl1_sidecar_parity"]
+    assert sidecar["applied_candidate_count"] == 1
+    row = harvest_result["source_queue"]["top_k"][0]
+    assert row["full_frame_inflate_parity_proven"] is True
+    assert row["renderer_payload_dfl1_inflate_parity_satisfied"] is True
+    assert row["renderer_payload_dfl1_full_frame_inflate_parity_satisfied"] is True
+    assert row["renderer_payload_dfl1_inflate_parity_proof_path"].endswith(
+        "full_frame_parity/shell_inflate_parity.json"
+    )
+    assert row["renderer_payload_dfl1_inflate_parity_proof_sha256"] == hashlib.sha256(
+        (parity_dir / "shell_inflate_parity.json").read_bytes()
+    ).hexdigest()
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+    symlink_proof = repo / "parity_link.json"
+    symlink_proof.symlink_to(parity_dir / "shell_inflate_parity.json")
+    symlink_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[manifest_path],
+        renderer_payload_dfl1_inflate_parity_proofs=[symlink_proof],
+    )
+    symlink_sidecar = symlink_result["report"]["renderer_payload_dfl1_sidecar_parity"]
+    assert symlink_sidecar["applied_candidate_count"] == 0
+    assert (
+        "renderer_payload_dfl1_parity_proof_is_symlink:parity_link.json"
+        in symlink_sidecar["rows"][0]["blockers"]
+    )
+    symlink_row = symlink_result["source_queue"]["top_k"][0]
+    assert symlink_row.get("renderer_payload_dfl1_inflate_parity_satisfied") is not True
+    assert symlink_row.get("renderer_payload_dfl1_inflate_parity_proof_path") is None
 
 
 def test_dfl1_materializer_consumes_full_frame_shell_parity_proof(

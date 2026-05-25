@@ -17,6 +17,7 @@ from comma_lab.scheduler.byte_shaving_campaign_queue import (
     MATERIALIZATION_SCHEMA,
     MATERIALIZER_BACKLOG_SCHEMA,
     MATERIALIZER_CONTEXTS_SCHEMA,
+    MATERIALIZER_DFL1_PARITY_STEP_ID,
     MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA,
     MATERIALIZER_EXECUTION_STEP_ID,
@@ -3484,6 +3485,105 @@ def test_materializer_execution_queue_can_append_exact_readiness_followups(
     assert by_node_id[f"{experiment['id']}.{MATERIALIZER_DISPATCH_PLAN_STEP_ID}"]["dependencies"] == [
         f"{experiment['id']}.{MATERIALIZER_HARVEST_STEP_ID}"
     ]
+
+
+def test_materializer_execution_queue_builds_dfl1_parity_followup(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "renderer_payload_candidate.zip"
+    out_manifest = tmp_path / "renderer_payload_candidate.json"
+    runtime = tmp_path / "runtime"
+    file_list = tmp_path / "file_list.txt"
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "backlog_key": "renderer_payload_dfl1_fixture",
+                "unit_kind": "packet_member",
+                "operation_family": "native_renderer_payload",
+                "target_kind": RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+                "materializer_id": RENDERER_PAYLOAD_DFL1_MATERIALIZER,
+            },
+        ],
+    }
+    work_queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts={
+            "renderer_payload_dfl1_fixture": {
+                "archive_path": str(archive),
+                "source_runtime_dir": str(runtime),
+                "full_frame_file_list": str(file_list),
+                "member_names": ["renderer.bin", "masks.mkv", "optimized_poses.pt"],
+                "payload_member_name": "p",
+                "output_archive": str(output),
+                "output_manifest": str(out_manifest),
+            },
+        },
+        source_plan_path="plan.json",
+    )
+
+    execution_queue = build_materializer_execution_queue(
+        work_queue,
+        queue_id="dfl1_exec_fixture",
+        repo_root=tmp_path,
+        lane_id="lane_dfl1_exec_fixture",
+        step_timeout_seconds=600,
+        include_exact_readiness_followup=True,
+    )
+
+    steps = execution_queue["experiments"][0]["steps"]
+    assert [step["id"] for step in steps] == [
+        MATERIALIZER_EXECUTION_STEP_ID,
+        MATERIALIZER_DFL1_PARITY_STEP_ID,
+        MATERIALIZER_HARVEST_STEP_ID,
+        MATERIALIZER_DISPATCH_PLAN_STEP_ID,
+    ]
+    materialize_step, parity_step, harvest_step, dispatch_step = steps
+    proof_path = (
+        "exact_eval_handoff/renderer_payload_dfl1_shell_parity/"
+        "shell_inflate_parity.json"
+    )
+    assert parity_step["requires"] == [MATERIALIZER_EXECUTION_STEP_ID]
+    assert parity_step["resources"]["kind"] == "local_io_heavy"
+    assert parity_step["timeout_seconds"] == 600
+    assert parity_step["command"][:2] == [
+        ".venv/bin/python",
+        "tools/prove_shell_inflate_parity.py",
+    ]
+    assert ["--left-archive", str(archive)] in [
+        parity_step["command"][index : index + 2]
+        for index in range(len(parity_step["command"]) - 1)
+    ]
+    assert ["--right-archive", str(output)] in [
+        parity_step["command"][index : index + 2]
+        for index in range(len(parity_step["command"]) - 1)
+    ]
+    assert ["--file-list", str(file_list)] in [
+        parity_step["command"][index : index + 2]
+        for index in range(len(parity_step["command"]) - 1)
+    ]
+    assert "--full-frame-file-list-claim" in parity_step["command"]
+    assert parity_step["postconditions"][1] == {
+        "type": "json_equals",
+        "path": proof_path,
+        "key": "full_frame_inflate_output_parity_claim",
+        "equals": True,
+    }
+    assert harvest_step["requires"] == [MATERIALIZER_DFL1_PARITY_STEP_ID]
+    assert harvest_step["timeout_seconds"] == 600
+    assert [
+        "--renderer-payload-dfl1-inflate-parity-proof",
+        proof_path,
+    ] in [
+        harvest_step["command"][index : index + 2]
+        for index in range(len(harvest_step["command"]) - 1)
+    ]
+    assert dispatch_step["requires"] == [MATERIALIZER_HARVEST_STEP_ID]
+    assert dispatch_step["timeout_seconds"] == 600
+    assert materialize_step["id"] == MATERIALIZER_EXECUTION_STEP_ID
+    assert execution_queue["controls"]["max_concurrency"]["local_io_heavy"] == 1
 
 
 def test_materializer_execution_queue_skips_exact_followup_for_planning_only_rows(

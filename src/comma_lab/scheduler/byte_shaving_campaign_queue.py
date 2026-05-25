@@ -95,6 +95,7 @@ PORTFOLIO_SCHEMA = "byte_shaving_campaign_dqs1_operator_portfolio.v1"
 TOOL_NAME = "comma_lab.scheduler.byte_shaving_campaign_queue"
 BYTE_RANGE_CHAIN_TOOL = "tools/run_byte_range_entropy_recode_chain.py"
 FAMILY_AGNOSTIC_MATERIALIZER_TOOL = "tools/run_family_agnostic_materializer.py"
+SHELL_INFLATE_PARITY_TOOL = "tools/prove_shell_inflate_parity.py"
 INVERSE_ACTION_FUNCTIONAL_TOOL = "tools/build_inverse_steganalysis_action_functional.py"
 INVERSE_SCORER_CELL_TOOL = "tools/materialize_inverse_scorer_cell_candidate.py"
 INVERSE_SCORER_CELL_CHAIN_TOOL = "tools/run_inverse_scorer_cell_candidate_chain.py"
@@ -104,6 +105,7 @@ BYTE_RANGE_CHAIN_MANIFEST = CHAIN_MANIFEST_NAME
 INVERSE_ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
 INVERSE_SCORER_CELL_CANDIDATE_SCHEMA = "inverse_scorer_cell_candidate_v1"
 MATERIALIZER_EXECUTION_STEP_ID = "materialize_local_proof_chain"
+MATERIALIZER_DFL1_PARITY_STEP_ID = "prove_renderer_payload_dfl1_shell_parity"
 MATERIALIZER_HARVEST_STEP_ID = "harvest_materializer_chains"
 MATERIALIZER_DISPATCH_PLAN_STEP_ID = "build_exact_eval_dispatch_plan"
 MATERIALIZER_HARVEST_REPORT_SCHEMA = "materializer_chain_harvest_report.v1"
@@ -165,6 +167,13 @@ def _utc_stamp() -> str:
 def _repo_rel(path: Path, repo_root: Path) -> str:
     try:
         return path.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _repo_rel_no_resolve(path: Path, repo_root: Path) -> str:
+    try:
+        return path.absolute().relative_to(repo_root.absolute()).as_posix()
     except ValueError:
         return path.as_posix()
 
@@ -1053,6 +1062,68 @@ def _context_string_any(
         if isinstance(value, str) and value.strip():
             return value.strip()
     return None
+
+
+def _renderer_payload_dfl1_parity_context(
+    context: Mapping[str, Any],
+) -> dict[str, Any]:
+    source_runtime = _context_string_any(
+        context,
+        (
+            "renderer_payload_dfl1_source_runtime_dir",
+            "renderer_payload_dfl1_inflate_runtime_dir",
+            "source_runtime_dir",
+            "inflate_runtime_dir",
+        ),
+    )
+    candidate_runtime = _context_string_any(
+        context,
+        (
+            "renderer_payload_dfl1_candidate_runtime_dir",
+            "candidate_runtime_dir",
+        ),
+    )
+    file_list = _context_string_any(
+        context,
+        (
+            "renderer_payload_dfl1_full_frame_file_list",
+            "full_frame_file_list",
+            "inflate_file_list",
+            "file_list",
+        ),
+    )
+    file_list_entries: list[str] = []
+    for key in (
+        "renderer_payload_dfl1_full_frame_file_list_entries",
+        "full_frame_file_list_entries",
+        "file_list_entries",
+        "file_list_entry",
+    ):
+        file_list_entries.extend(_string_list_context_value(context, key))
+    output_dir = _context_string_any(
+        context,
+        (
+            "renderer_payload_dfl1_inflate_parity_output_dir",
+            "full_frame_inflate_parity_output_dir",
+            "inflate_parity_output_dir",
+        ),
+    )
+    archive_path = _path_context_value(context, "archive_path")
+    output_archive = _path_context_value(context, "output_archive")
+    out: dict[str, Any] = {}
+    for key, value in (
+        ("source_archive", archive_path),
+        ("candidate_archive", output_archive),
+        ("source_runtime_dir", source_runtime),
+        ("candidate_runtime_dir", candidate_runtime or source_runtime),
+        ("file_list", file_list),
+        ("output_dir", output_dir),
+    ):
+        if value is not None:
+            out[key] = value
+    if file_list_entries:
+        out["file_list_entries"] = ordered_unique(file_list_entries)
+    return out
 
 
 def _command_flag_values(command: Sequence[str], flags: set[str]) -> list[str]:
@@ -2402,6 +2473,11 @@ def build_materializer_work_queue(
             blockers.append(f"materializer_context_missing:{backlog_key}")
         blockers = ordered_unique(blockers)
         executable = not blockers
+        dfl1_parity_context = (
+            _renderer_payload_dfl1_parity_context(context)
+            if target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND
+            else {}
+        )
         work_rows.append(
             apply_proxy_evidence_boundary(
                 {
@@ -2424,6 +2500,9 @@ def build_materializer_work_queue(
                     "command": command,
                     "postconditions": postconditions,
                     "telemetry": telemetry,
+                    "renderer_payload_dfl1_parity_context": (
+                        dfl1_parity_context or None
+                    ),
                     "resource_kind": row.get("materialization_resource_kind")
                     or suggestion.get("materialization_resource_kind")
                     or "local_cpu",
@@ -2519,6 +2598,13 @@ def _resolve_repo_path(path: str | Path, *, repo_root: Path) -> Path:
     return candidate.resolve(strict=False)
 
 
+def _resolve_repo_path_no_resolve(path: str | Path, *, repo_root: Path) -> Path:
+    candidate = Path(path).expanduser()
+    if not candidate.is_absolute():
+        candidate = repo_root / candidate
+    return candidate.absolute()
+
+
 def _materializer_chain_manifest_path(
     postconditions: Sequence[Mapping[str, Any]],
     *,
@@ -2586,9 +2672,11 @@ def _materializer_exact_readiness_followup_steps(
     queue_id: str,
     repo_root: Path,
     row_id: str,
+    work_row: Mapping[str, Any],
     postconditions: Sequence[Mapping[str, Any]],
     handoff_dir: Path,
     materializer_step_id: str,
+    step_timeout_seconds: int,
     require_ready: bool,
     dispatch_require_authorized: bool,
     dispatch_provider: str,
@@ -2607,6 +2695,21 @@ def _materializer_exact_readiness_followup_steps(
     bridge_report_path = handoff_dir / "exact_readiness_bridge_report.json"
     dispatch_plan_path = handoff_dir / "dispatch_plan.json"
     dispatch_queue_path = handoff_dir / "dispatch_queue.json"
+    dfl1_parity_step = _renderer_payload_dfl1_parity_followup_step(
+        work_row,
+        repo_root=repo_root,
+        handoff_dir=handoff_dir,
+        materializer_step_id=materializer_step_id,
+        step_timeout_seconds=step_timeout_seconds,
+    )
+    harvest_requires = [materializer_step_id]
+    dfl1_parity_proof_path: Path | None = None
+    if dfl1_parity_step is not None:
+        harvest_requires = [MATERIALIZER_DFL1_PARITY_STEP_ID]
+        dfl1_parity_proof_path = _resolve_repo_path(
+            str(dfl1_parity_step["postconditions"][0]["path"]),
+            repo_root=repo_root,
+        )
 
     harvest_command = [
         ".venv/bin/python",
@@ -2625,6 +2728,13 @@ def _materializer_exact_readiness_followup_steps(
         _repo_rel(bridge_report_path, repo_root),
         "--require-accepted",
     ]
+    if dfl1_parity_proof_path is not None:
+        harvest_command.extend(
+            [
+                "--renderer-payload-dfl1-inflate-parity-proof",
+                _repo_rel(dfl1_parity_proof_path, repo_root),
+            ]
+        )
     if require_ready:
         harvest_command.append("--exact-readiness-require-ready")
 
@@ -2653,13 +2763,18 @@ def _materializer_exact_readiness_followup_steps(
     if dispatch_require_authorized:
         dispatch_plan_command.append("--require-authorized")
 
-    return [
+    steps = []
+    if dfl1_parity_step is not None:
+        steps.append(dfl1_parity_step)
+    steps.extend(
+        [
         {
             "id": MATERIALIZER_HARVEST_STEP_ID,
             "kind": "command",
             "command": harvest_command,
-            "requires": [materializer_step_id],
+            "requires": harvest_requires,
             "resources": {"kind": "local_cpu"},
+            "timeout_seconds": step_timeout_seconds,
             "postconditions": [
                 {
                     "type": "json_equals",
@@ -2696,6 +2811,7 @@ def _materializer_exact_readiness_followup_steps(
             "command": dispatch_plan_command,
             "requires": [MATERIALIZER_HARVEST_STEP_ID],
             "resources": {"kind": "local_cpu"},
+            "timeout_seconds": step_timeout_seconds,
             "postconditions": [
                 {
                     "type": "json_equals",
@@ -2718,7 +2834,95 @@ def _materializer_exact_readiness_followup_steps(
                 "recursive": False,
             },
         },
+        ]
+    )
+    return steps
+
+
+def _renderer_payload_dfl1_parity_followup_step(
+    work_row: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    handoff_dir: Path,
+    materializer_step_id: str,
+    step_timeout_seconds: int,
+) -> dict[str, Any] | None:
+    if work_row.get("target_kind") != RENDERER_PAYLOAD_DFL1_TARGET_KIND:
+        return None
+    context = work_row.get("renderer_payload_dfl1_parity_context")
+    if not isinstance(context, Mapping):
+        return None
+    source_archive = _context_string_any(context, ("source_archive",))
+    candidate_archive = _context_string_any(context, ("candidate_archive",))
+    source_runtime = _context_string_any(context, ("source_runtime_dir",))
+    candidate_runtime = _context_string_any(context, ("candidate_runtime_dir",))
+    file_list = _context_string_any(context, ("file_list",))
+    file_list_entries = _string_list_context_value(context, "file_list_entries")
+    if (
+        source_archive is None
+        or candidate_archive is None
+        or source_runtime is None
+        or candidate_runtime is None
+        or (file_list is None and not file_list_entries)
+    ):
+        return None
+    output_dir = _context_string_any(context, ("output_dir",))
+    parity_dir = (
+        _resolve_repo_path_no_resolve(output_dir, repo_root=repo_root)
+        if output_dir is not None
+        else handoff_dir / "renderer_payload_dfl1_shell_parity"
+    )
+    proof_path = parity_dir / "shell_inflate_parity.json"
+    command = [
+        ".venv/bin/python",
+        SHELL_INFLATE_PARITY_TOOL,
+        "--left-archive",
+        source_archive,
+        "--left-submission-dir",
+        source_runtime,
+        "--right-archive",
+        candidate_archive,
+        "--right-submission-dir",
+        candidate_runtime,
+        "--full-frame-file-list-claim",
+        "--output-dir",
+        _repo_rel_no_resolve(parity_dir, repo_root),
     ]
+    if file_list is not None:
+        command.extend(["--file-list", file_list])
+    else:
+        for entry in file_list_entries:
+            command.extend(["--file-list-entry", entry])
+    input_paths = [source_archive, candidate_archive, source_runtime, candidate_runtime]
+    if file_list is not None:
+        input_paths.append(file_list)
+    return {
+        "id": MATERIALIZER_DFL1_PARITY_STEP_ID,
+        "kind": "command",
+        "command": command,
+        "requires": [materializer_step_id],
+        "resources": {"kind": "local_io_heavy"},
+        "timeout_seconds": step_timeout_seconds,
+        "postconditions": [
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "schema",
+                "equals": "shell_inflate_parity_proof_v2",
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "full_frame_inflate_output_parity_claim",
+                "equals": True,
+            },
+        ],
+        "telemetry": {
+            "artifact_paths": [_repo_rel_no_resolve(parity_dir, repo_root)],
+            "input_artifact_paths": input_paths,
+            "recursive": True,
+        },
+    }
 
 
 def build_materializer_execution_queue(
@@ -2921,9 +3125,11 @@ def build_materializer_execution_queue(
                     queue_id=queue_id,
                     repo_root=repo,
                     row_id=experiment_id,
+                    work_row=row,
                     postconditions=postconditions,
                     handoff_dir=chain_manifest_path.parent / "exact_eval_handoff",
                     materializer_step_id=MATERIALIZER_EXECUTION_STEP_ID,
+                    step_timeout_seconds=step_timeout_seconds,
                     require_ready=exact_readiness_followup_require_ready,
                     dispatch_require_authorized=exact_eval_dispatch_require_authorized,
                     dispatch_provider=exact_eval_dispatch_provider,
@@ -2932,6 +3138,12 @@ def build_materializer_execution_queue(
                     dispatch_estimated_cost_per_dispatch=(exact_eval_dispatch_estimated_cost_per_dispatch),
                 )
             )
+        for step in steps:
+            resources = step.get("resources")
+            if isinstance(resources, Mapping):
+                kind = resources.get("kind")
+                if isinstance(kind, str) and kind:
+                    used_resource_kinds.add(kind)
         metadata = apply_proxy_evidence_boundary(
             {
                 "schema": MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA,

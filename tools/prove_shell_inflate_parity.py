@@ -126,6 +126,18 @@ def _safe_extract_zip(archive_path: Path, output_dir: Path) -> None:
         archive.extractall(output_dir)
 
 
+def _prepare_output_dir(output_dir: Path) -> None:
+    if output_dir.is_symlink():
+        raise ValueError(f"refusing symlink output dir: {output_dir}")
+    if output_dir.exists():
+        if not output_dir.is_dir():
+            raise ValueError(f"output path exists and is not a directory: {output_dir}")
+        if any(output_dir.iterdir()):
+            raise ValueError(f"refusing non-empty output dir: {output_dir}")
+    else:
+        output_dir.mkdir(parents=True)
+
+
 def _submission_tree_record(path: Path) -> tuple[int, str]:
     records: list[dict[str, Any]] = []
     for child in sorted(path.rglob("*")):
@@ -269,7 +281,7 @@ def build_proof(
     file_list_entry: str | None = None,
     full_frame_file_list_claim: bool = False,
 ) -> ShellInflateParityProof:
-    output_dir.mkdir(parents=True, exist_ok=True)
+    _prepare_output_dir(output_dir)
     if not file_list_entries:
         file_list_entries = _ordered_file_list_entries([file_list_entry or "0.mkv"])
     else:
@@ -286,81 +298,82 @@ def build_proof(
     right_data = scratch / "right_data"
     left_out = scratch / "left_out"
     right_out = scratch / "right_out"
-    left = _run_inflate(
-        label="left",
-        archive=left_archive,
-        submission_dir=left_submission_dir,
-        file_list=file_list,
-        output_dir=left_out,
-        data_dir=left_data,
-        python_bin=python_bin,
-        file_list_entries=file_list_entries,
-    )
-    right = _run_inflate(
-        label="right",
-        archive=right_archive,
-        submission_dir=right_submission_dir,
-        file_list=file_list,
-        output_dir=right_out,
-        data_dir=right_data,
-        python_bin=python_bin,
-        file_list_entries=file_list_entries,
-    )
-    cmp_results = [
-        _files_equal(
-            left_out / _expected_output_basename(entry),
-            right_out / _expected_output_basename(entry),
+    try:
+        left = _run_inflate(
+            label="left",
+            archive=left_archive,
+            submission_dir=left_submission_dir,
+            file_list=file_list,
+            output_dir=left_out,
+            data_dir=left_data,
+            python_bin=python_bin,
+            file_list_entries=file_list_entries,
         )
-        for entry in file_list_entries
-    ]
-    cmp_equal = all(cmp_results)
-    output_bytes_match = all(
-        left_output.output_raw_bytes == right_output.output_raw_bytes
-        for left_output, right_output in zip(left.outputs, right.outputs, strict=True)
-    )
-    output_sha256_match = all(
-        left_output.output_raw_sha256 == right_output.output_raw_sha256
-        for left_output, right_output in zip(left.outputs, right.outputs, strict=True)
-    )
-    output_manifest_sha256_match = (
-        left.output_manifest_sha256 == right.output_manifest_sha256
-    )
-    blockers: list[str] = []
-    if not full_frame_file_list_claim:
-        blockers.append("full_frame_file_list_claim_missing")
-    if not (
-        output_bytes_match
-        and output_sha256_match
-        and output_manifest_sha256_match
-        and cmp_equal
-    ):
-        blockers.append("shell_inflate_output_parity_failed")
-    full_frame_claim = full_frame_file_list_claim and not blockers
-    proof = ShellInflateParityProof(
-        schema="shell_inflate_parity_proof_v2",
-        generated_at_utc=_utc_iso(),
-        file_list_entries=file_list_entries,
-        file_list_entry_count=len(file_list_entries),
-        file_list_sha256=_sha256_file(file_list),
-        output_count=len(file_list_entries),
-        file_list_entry=file_list_entries[0] if len(file_list_entries) == 1 else None,
-        output_basename=output_basename,
-        python_bin=python_bin,
-        left=left,
-        right=right,
-        output_bytes_match=output_bytes_match,
-        output_sha256_match=output_sha256_match,
-        output_manifest_sha256_match=output_manifest_sha256_match,
-        cmp_equal=cmp_equal,
-        full_frame_file_list_claim=full_frame_file_list_claim,
-        full_frame_inflate_output_parity_claim=full_frame_claim,
-        blockers=tuple(blockers),
-        scratch_retained=keep_scratch,
-        scratch_dir=_repo_rel(scratch),
-    )
-    if not keep_scratch:
-        shutil.rmtree(scratch)
-    return proof
+        right = _run_inflate(
+            label="right",
+            archive=right_archive,
+            submission_dir=right_submission_dir,
+            file_list=file_list,
+            output_dir=right_out,
+            data_dir=right_data,
+            python_bin=python_bin,
+            file_list_entries=file_list_entries,
+        )
+        cmp_results = [
+            _files_equal(
+                left_out / _expected_output_basename(entry),
+                right_out / _expected_output_basename(entry),
+            )
+            for entry in file_list_entries
+        ]
+        cmp_equal = all(cmp_results)
+        output_bytes_match = all(
+            left_output.output_raw_bytes == right_output.output_raw_bytes
+            for left_output, right_output in zip(left.outputs, right.outputs, strict=True)
+        )
+        output_sha256_match = all(
+            left_output.output_raw_sha256 == right_output.output_raw_sha256
+            for left_output, right_output in zip(left.outputs, right.outputs, strict=True)
+        )
+        output_manifest_sha256_match = (
+            left.output_manifest_sha256 == right.output_manifest_sha256
+        )
+        blockers: list[str] = []
+        if not full_frame_file_list_claim:
+            blockers.append("full_frame_file_list_claim_missing")
+        if not (
+            output_bytes_match
+            and output_sha256_match
+            and output_manifest_sha256_match
+            and cmp_equal
+        ):
+            blockers.append("shell_inflate_output_parity_failed")
+        full_frame_claim = full_frame_file_list_claim and not blockers
+        return ShellInflateParityProof(
+            schema="shell_inflate_parity_proof_v2",
+            generated_at_utc=_utc_iso(),
+            file_list_entries=file_list_entries,
+            file_list_entry_count=len(file_list_entries),
+            file_list_sha256=_sha256_file(file_list),
+            output_count=len(file_list_entries),
+            file_list_entry=file_list_entries[0] if len(file_list_entries) == 1 else None,
+            output_basename=output_basename,
+            python_bin=python_bin,
+            left=left,
+            right=right,
+            output_bytes_match=output_bytes_match,
+            output_sha256_match=output_sha256_match,
+            output_manifest_sha256_match=output_manifest_sha256_match,
+            cmp_equal=cmp_equal,
+            full_frame_file_list_claim=full_frame_file_list_claim,
+            full_frame_inflate_output_parity_claim=full_frame_claim,
+            blockers=tuple(blockers),
+            scratch_retained=keep_scratch,
+            scratch_dir=_repo_rel(scratch),
+        )
+    finally:
+        if not keep_scratch and scratch.exists() and not scratch.is_symlink():
+            shutil.rmtree(scratch)
 
 
 def render_markdown(proof: ShellInflateParityProof) -> str:
@@ -441,7 +454,7 @@ def main(argv: list[str] | None = None) -> int:
         encoding="utf-8",
     )
     sys.stdout.write(payload)
-    return 0 if proof.output_sha256_match and proof.cmp_equal else 1
+    return 0 if proof.full_frame_inflate_output_parity_claim else 1
 
 
 if __name__ == "__main__":
