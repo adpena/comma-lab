@@ -1,0 +1,234 @@
+# Canonical operator-authorize recipe: UNIWARD per-instance × multi-scale wavelet
+# SegNet-loss substrate first-anchor Modal T4 paid dispatch.
+#
+# Source: Probe 9 BREAKTHROUGH per `.omx/research/combined_tier_1_wave_3_uniward_multi_scale_plus_hinton_motion_aware_landed_20260525.md`.
+#
+# Probe 9 verdict POSITIVE_SIGNAL_BREAKS_THRESHOLD:
+#   min combined per-instance + multi-scale textured_avg_weight = 0.2597
+#   BREAKS the 0.5 hard threshold by Delta -0.2403 (FIRST PROBE in the entire
+#   Tier-1 distortion-axis cascade to do so).
+#   vs Probe 8 per-instance min 0.5233 = Delta -0.2636 improvement.
+#   vs CCC per-pixel 0.8062 = Delta -0.5465.
+#   22 valid per-instance segments across 4 pairs × 5 classes.
+#
+# RATE-ATTACK-MATRIX cell #3 (per-instance) × cell #21 (multi-scale wavelet)
+# COMBINED dimension D26. Per CLAUDE.md "Race-mode rigor inversion + parallel-
+# dispatch first" non-negotiable: this is the strongest UNIWARD inversion
+# signal in the Tier-1 distortion-axis probe cascade — paid Tier-2 dispatch
+# JUSTIFIED conditional on per-substrate symposium clearance (Catalog #325).
+#
+# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
+# non-negotiable + Catalog #240: this recipe is NEW and lands `research_only:
+# true` + `dispatch_enabled: false`. The operator-facing fire path is GATED on
+# the operator flipping `dispatch_enabled: true` after the per-substrate
+# symposium (Catalog #325) clears.
+#
+# Per Catalog #325 (`check_substrate_dispatch_has_per_substrate_optimal_form_
+# symposium_anchor`) + the canonical 6-step contract: this recipe's matching
+# per-substrate symposium memo at
+# `.omx/research/per_substrate_symposium_uniward_per_instance_multi_scale_
+# wavelet_segnet_20260525.md` MUST be in place + verdict PROCEED or
+# PROCEED_WITH_REVISIONS before paid dispatch fires.
+
+schema_version: 1
+name: substrate_uniward_per_instance_multi_scale_wavelet_segnet_modal_t4_dispatch
+lane_id: lane_probe_9_tier_2_dispatch_prep_uniward_per_instance_multi_scale_wavelet_segnet_20260525
+summary: |
+  UNIWARD per-instance + multi-scale wavelet SegNet-loss substrate first-anchor
+  Modal T4 paid dispatch. Probe 9 BREAKTHROUGH POSITIVE_SIGNAL_BREAKS_THRESHOLD
+  (FIRST 0.5-hard-threshold break in entire Tier-1 cascade). Substrate trains a
+  Holub-Fridrich-2014 multi-level wavelet × per-instance connected-components
+  UNIWARD-weighted SegNet loss on top of the canonical PR 101 fec6 frontier
+  archive (sha 6bae0201; contest-CPU 0.19205 per canonical frontier pointer).
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 14
+min_smoke_gpu: T4
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - contest_generalized
+  - research_substrate
+canary_status: independent_substrate
+
+# Recipe-vs-trainer-state consistency per Catalog #240: the trainer's
+# `_full_main` raises NotImplementedError at first landing (Tier-2 dispatch
+# scaffold; council-gated per Catalog #325 symposium). Recipe is
+# research_only + dispatch_enabled: false until per-substrate symposium
+# clearance lands AND trainer's `_full_main` is implemented.
+research_only: true
+dispatch_enabled: false
+dispatch_blockers:
+  - per_substrate_symposium_clearance_required_before_dispatch_enabled_flip
+  - trainer_full_main_implementation_pending_council_PROCEED_unconditional_verdict
+  - paired_cpu_cuda_modal_t4_plus_gha_linux_x86_64_required_per_CLAUDE_md_submission_auth_eval_both_axes
+
+cost_band:
+  epochs: 2000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 2.50
+  hand_calibrated_fallback_p95_usd: 7.00
+  platform_key: modal
+  gpu_key: T4
+
+# Predicted band per Probe 9 verdict's `next_action_on_POSITIVE_BREAKS_THRESHOLD`
+# field: predicted DS -0.010 to -0.025 against the PR 101 fec6 frontier
+# (canonical-frontier-pointer 0.19205 [contest-CPU]).
+predicted_score_target: 0.180
+predicted_delta: |
+  Probe 9 BREAKTHROUGH per `combined_tier_1_wave_3_*_landed_20260525.md`:
+  predicted DS -0.010 to -0.025 [predicted] from per-instance + multi-scale
+  wavelet UNIWARD-weighted SegNet loss applied to canonical PR 101 fec6
+  frontier (0.19205 [contest-CPU]; per canonical frontier pointer).
+  Operating point: PR 101 fec6 contest-CPU floor at 0.19205 -> predicted
+  band [0.180, 0.195] post-training.
+predicted_delta_basis: |
+  Probe 9 verdict JSON `next_action_on_POSITIVE_BREAKS_THRESHOLD`:
+  "STRONG empirical case for Tier-2 paid dispatch on per-instance + multi-
+  scale wavelet UNIWARD-weighted SegNet loss substrate via Vast.ai 4090
+  ($0.25/hr); estimated cost ~$2-7; predicted DS -0.010 to -0.025 [predicted]."
+literature_anchor: |
+  Holub-Fridrich-Denemark 2014 'Universal Distortion Function for
+  Steganography in an Arbitrary Domain' (UNIWARD) multi-level wavelet
+  extension; Mallat 1989 multi-resolution decomposition (Catalog #277
+  WaveletMultiScaleFallingRuleListRanker discipline); per-instance
+  connected-components segmentation via scipy.ndimage.label canonical CS
+  primitive applied to SegNet 5-class hard mask.
+
+# Predicted band validation status per Catalog #324 + #296:
+# pending_post_training because the Probe 9 [macOS-CPU advisory] anchor is
+# NOT a paired Linux x86_64 + NVIDIA empirical post-training anchor.
+# Catalog #296 Dykstra-feasibility check satisfied by literature_anchor (
+# Holub-Fridrich 2014 multi-scale wavelet + Mallat 1989 multi-resolution
+# decomposition are first-principles citations) + the canonical Probe 9
+# probe-disambiguator path at
+# `.omx/research/tier_1_distortion_axis_probes_20260521/probe_9_*_smoke.py`.
+predicted_band: [0.180, 0.195]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Catalog #324: BEFORE promotion or full-run score-band authority, measure
+  Tier-C density on the post-training UNIWARD per-instance + multi-scale
+  wavelet smoke archive and replace this pending status with
+  validated_post_training plus the artifact path. Until then the band is
+  planning-only, not dispatch/promotion authority.
+
+risk: |
+  Tier-2 paid dispatch on the Probe 9 BREAKTHROUGH signal. Per CLAUDE.md
+  "Substrate MUST be at OPTIMAL FORM before paid empirical dispatch" + the
+  canonical 6-step recipe under Catalog #325:
+
+  1. FREE local macOS-CPU smoke -- LANDED (Probe 9 verdict JSON; 1.52s elapsed)
+  2. Falsifiable signal -- POSITIVE_SIGNAL_BREAKS_THRESHOLD at 0.2597 vs
+     predicted 0.5 hard threshold (Δ -0.2403)
+  3. Canonical equation reference -- candidate
+     uniward_per_instance_multi_scale_wavelet_combined_v1 QUEUED for
+     RATIFY-N per Catalog #344
+  4. Verdict landed in commit batch -- COMBINED-TIER-1-WAVE-3 landing memo +
+     Catalog #313 row registered via canonical helper
+  5. Operator priority queue re-routed -- THIS recipe is the canonical
+     re-route from Probe 9 BREAKTHROUGH; flip dispatch_enabled: true ONLY
+     after per-substrate symposium PROCEED clearance (Catalog #325)
+
+  RISKS:
+   * Probe 9 evidence is [macOS-CPU advisory] non-promotable; paired
+     contest-CUDA + contest-CPU REQUIRED before promotion per CLAUDE.md
+     "Submission auth eval — BOTH CPU AND CUDA" non-negotiable.
+   * predicted_band is design-time; Catalog #324 phantom_random_init bug
+     class precedent (C6 IBPS predicted [0.113, 0.163] -> empirical 3.04
+     = 22x outside) means predicted DS -0.010 to -0.025 carries HIGH
+     prior-variance pending post-training Tier-C re-measurement.
+   * canonical Mallat-Rao-Ballard redundancy-overlap concern (per Z8
+     symposium Mallat seat) requires per-level wavelet-basis empirical
+     anchor BEFORE archive grammar finalization.
+
+  PER CATALOG #325: this recipe is RESEARCH_ONLY + DISPATCH_DISABLED until
+  per-substrate symposium clears the 6-step canonical contract.
+
+envelope_status: |
+  FITS $7 envelope at p95 fallback (smoke ~$0.30 + full ~$2.50 p50 / $7.00 p95);
+  per RACE-ATTACK-MATRIX cell #3 + cell #21 COMBINED Tier-2 dispatch envelope
+  $2-7 per Probe 9 verdict JSON.
+
+remote_driver: scripts/remote_lane_substrate_uniward_per_instance_multi_scale_wavelet_segnet.sh
+timeout_hours: 2.0
+
+required_input_files:
+  - flag: --base-archive
+    default_path: experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+  - flag: --upstream-models
+    default_path: upstream/models/segnet.safetensors
+
+modal:
+  lane_script: scripts/remote_lane_substrate_uniward_per_instance_multi_scale_wavelet_segnet.sh
+  cost_band_trainer: experiments/train_substrate_uniward_per_instance_multi_scale_wavelet_segnet.py
+  cost_band_epochs: 2000
+  cost_band_batch_size: 16
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_uniward_per_instance_multi_scale_wavelet_segnet.py
+
+env_overrides:
+  UNIWARD_PIMS_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  UNIWARD_PIMS_BASE_ARCHIVE: /workspace/pact/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
+  UNIWARD_PIMS_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  UNIWARD_PIMS_UPSTREAM_MODELS: /workspace/pact/upstream/models/segnet.safetensors
+  UNIWARD_PIMS_OUTPUT_DIR: /workspace/pact/lane_uniward_pims_results/output
+  UNIWARD_PIMS_EPOCHS: "2000"
+  UNIWARD_PIMS_BATCH_SIZE: "16"
+  UNIWARD_PIMS_UPSTREAM_DIR: /workspace/pact/upstream
+  UNIWARD_PIMS_DEVICE: cuda
+  UNIWARD_PIMS_WAVELET_NAME: db8
+  UNIWARD_PIMS_WAVELET_LEVELS: "3"
+  UNIWARD_PIMS_SEGNET_INSTANCE_CONNECTIVITY: "4"
+  UNIWARD_PIMS_TRAINER_MODE: full
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_uniward_per_instance_multi_scale_wavelet_segnet.sh
+  - upstream/videos/0.mkv
+  - upstream/models/segnet.safetensors
+  - experiments/train_substrate_uniward_per_instance_multi_scale_wavelet_segnet.py
+  - experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
+  - tools/validate_dispatch_required_inputs.py
+  - tools/run_modal_smoke_before_full.py
+
+sentinel_files:
+  - experiments/train_substrate_uniward_per_instance_multi_scale_wavelet_segnet.py
+  - scripts/remote_lane_substrate_uniward_per_instance_multi_scale_wavelet_segnet.sh
+
+notes: |
+  Tier-2 paid dispatch PREP recipe for the Probe 9 BREAKTHROUGH (POSITIVE_
+  SIGNAL_BREAKS_THRESHOLD per `combined_tier_1_wave_3_*_landed_20260525.md`).
+  Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
+  this recipe lands research_only: true + dispatch_enabled: false until:
+
+  (A) per-substrate symposium clearance per Catalog #325 (memo at
+      `.omx/research/per_substrate_symposium_uniward_per_instance_multi_
+      scale_wavelet_segnet_20260525.md`); AND
+  (B) trainer `_full_main` implementation per the symposium-binding
+      revisions; AND
+  (C) operator explicitly flips dispatch_enabled: true + research_only: false
+      AND fires via canonical operator_authorize.py command.
+
+  Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA" non-negotiable:
+  paired Modal T4 [contest-CUDA] + GHA Linux x86_64 [contest-CPU] anchors
+  REQUIRED before promotion. First Tier-2 dispatch is CUDA-only; CPU axis
+  follow-up via separate dispatch.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": once dispatched,
+  harvest within 24h via tools/harvest_modal_calls.py.
+
+  Per Catalog #167: operator-authorize wrapper routes through
+  tools/run_modal_smoke_before_full.py (fires 100-epoch ~$0.30 Modal T4
+  smoke FIRST, validates rc=0 + auth-eval JSON + score in plausible band
+  [0.18, 0.22], then fires full 2000-epoch only on smoke-green).
+
+  Cross-ref:
+    .omx/research/combined_tier_1_wave_3_uniward_multi_scale_plus_hinton_motion_aware_landed_20260525.md
+    .omx/research/per_substrate_symposium_uniward_per_instance_multi_scale_wavelet_segnet_20260525.md
+    .omx/research/tier_1_distortion_axis_probes_20260521/probe_9_uniward_per_instance_multi_scale_wavelet_combined_verdict.json
+    .omx/research/tier_1_distortion_axis_probes_20260521/probe_9_uniward_per_instance_multi_scale_wavelet_combined_smoke.py
