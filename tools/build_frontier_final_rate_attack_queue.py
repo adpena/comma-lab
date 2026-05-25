@@ -29,8 +29,10 @@ from comma_lab.scheduler.experiment_queue import default_state_path  # noqa: E40
 from comma_lab.scheduler.frontier_rate_attack_bootstrap import (  # noqa: E402
     DEFAULT_EXECUTABLE_TARGET_KINDS,
     DEFAULT_FRONTIER_POINTER,
+    DEFAULT_OPTIONAL_TARGET_KINDS,
     FrontierRateAttackBootstrapError,
     build_frontier_rate_attack_payloads,
+    derive_archive_section_recode_manifests,
     parse_archive_spec,
     resolve_current_frontier_archive,
 )
@@ -86,6 +88,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.set_defaults(include_optional_target_blockers=True)
     parser.add_argument("--member-name", default=None)
     parser.add_argument("--section-manifest", default=None)
+    parser.add_argument(
+        "--derive-section-manifests",
+        dest="derive_section_manifests",
+        action="store_true",
+        help=(
+            "Derive per-archive parser-section manifests for archive_section_entropy_recode_v1 "
+            "instead of requiring a hand-supplied single manifest."
+        ),
+    )
+    parser.add_argument(
+        "--no-derive-section-manifests",
+        dest="derive_section_manifests",
+        action="store_false",
+        help="Keep archive_section_entropy_recode_v1 as a typed blocker unless --section-manifest is supplied.",
+    )
+    parser.set_defaults(derive_section_manifests=True)
+    parser.add_argument(
+        "--section-manifest-parser",
+        default="auto",
+        help="Parser name passed to derived HNeRV section-manifest generation.",
+    )
     parser.add_argument("--section-name", action="append", default=[])
     parser.add_argument("--tensor-manifest", default=None)
     parser.add_argument("--factorization-contract", default=None)
@@ -129,10 +152,14 @@ def _write_outputs(output_dir: Path, payloads: dict[str, Any]) -> dict[str, str]
         "materializer_work_queue": output_dir / "materializer_work_queue.json",
         "experiment_queue": output_dir / "experiment_queue.json",
     }
+    if "derived_section_manifests" in payloads:
+        paths["derived_section_manifests"] = output_dir / "derived_section_manifests.json"
     write_json_artifact(paths["materializer_contexts"], payloads["contexts"])
     write_json_artifact(paths["materializer_backlog"], payloads["backlog"])
     write_json_artifact(paths["materializer_work_queue"], payloads["work_queue"])
     write_json_artifact(paths["experiment_queue"], payloads["queue"])
+    if "derived_section_manifests" in payloads:
+        write_json_artifact(paths["derived_section_manifests"], payloads["derived_section_manifests"])
     bootstrap = dict(payloads["bootstrap"])
     bootstrap["artifacts"] = {key: _display_path(path) for key, path in paths.items() if key != "bootstrap"}
     bootstrap["operator_commands"] = {
@@ -190,6 +217,33 @@ def main(argv: list[str] | None = None) -> int:
         for spec in args.archive:
             archive_records.append(parse_archive_spec(spec, repo_root=REPO_ROOT))
         target_kinds = tuple(args.target_kind or DEFAULT_EXECUTABLE_TARGET_KINDS)
+        derived_section_manifests = None
+        section_manifest_by_archive_label: dict[str, str] = {}
+        section_names_by_archive_label: dict[str, tuple[str, ...]] = {}
+        wants_section_targets = (
+            "archive_section_entropy_recode_v1" in set(target_kinds)
+            or ("archive_section_entropy_recode_v1" in set(DEFAULT_OPTIONAL_TARGET_KINDS)
+            and args.include_optional_target_blockers)
+        )
+        if args.derive_section_manifests and args.section_manifest is None and wants_section_targets:
+            derived_section_manifests = derive_archive_section_recode_manifests(
+                archive_records=archive_records,
+                output_dir=output_dir / "derived_section_manifests",
+                repo_root=REPO_ROOT,
+                parser=args.section_manifest_parser,
+                allow_overwrite=args.allow_materializer_overwrite,
+                min_free_bytes=args.min_free_bytes,
+            )
+            for row in derived_section_manifests["rows"]:
+                label = str(row.get("archive_label") or "")
+                manifest_path = row.get("section_manifest_path")
+                if label and isinstance(manifest_path, str) and manifest_path:
+                    section_manifest_by_archive_label[label] = manifest_path
+                    section_names_by_archive_label[label] = tuple(
+                        str(name)
+                        for name in row.get("selected_section_names") or []
+                        if str(name)
+                    )
         payloads = build_frontier_rate_attack_payloads(
             repo_root=REPO_ROOT,
             queue_id=queue_id,
@@ -199,7 +253,9 @@ def main(argv: list[str] | None = None) -> int:
             include_optional_target_blockers=args.include_optional_target_blockers,
             member_name=args.member_name,
             section_manifest=args.section_manifest,
+            section_manifest_by_archive_label=section_manifest_by_archive_label,
             section_names=tuple(args.section_name),
+            section_names_by_archive_label=section_names_by_archive_label,
             tensor_manifest=args.tensor_manifest,
             factorization_contract=args.factorization_contract,
             tensor_factorize_rank=args.tensor_factorize_rank,
@@ -212,6 +268,14 @@ def main(argv: list[str] | None = None) -> int:
         )
         if frontier_resolution is not None:
             payloads["bootstrap"]["frontier_resolution"] = frontier_resolution
+        if derived_section_manifests is not None:
+            payloads["derived_section_manifests"] = derived_section_manifests
+            payloads["bootstrap"]["derived_section_manifests"] = {
+                "schema": derived_section_manifests["schema"],
+                "manifest_count": derived_section_manifests["manifest_count"],
+                "ready_manifest_count": derived_section_manifests["ready_manifest_count"],
+                "artifact": _display_path(output_dir / "derived_section_manifests.json"),
+            }
         artifact_paths = _write_outputs(output_dir, payloads)
         queue_path = Path(artifact_paths["experiment_queue"])
         if not queue_path.is_absolute():

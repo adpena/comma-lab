@@ -74,10 +74,18 @@ from .frontier_rate_attack_bootstrap import (
     BOOTSTRAP_SCHEMA as FRONTIER_RATE_ATTACK_BOOTSTRAP_SCHEMA,
 )
 from .frontier_rate_attack_bootstrap import (
+    DERIVED_SECTION_MANIFEST_BATCH_SCHEMA as FRONTIER_RATE_ATTACK_DERIVED_SECTION_MANIFEST_BATCH_SCHEMA,
+)
+from .frontier_rate_attack_bootstrap import (
+    DERIVED_SECTION_MANIFEST_SCHEMA as FRONTIER_RATE_ATTACK_DERIVED_SECTION_MANIFEST_SCHEMA,
+)
+from .frontier_rate_attack_bootstrap import (
     FRONTIER_ARCHIVE_RECORD_SCHEMA,
     FRONTIER_ARCHIVE_RESOLUTION_SCHEMA,
     FrontierRateAttackBootstrapError,
     build_frontier_rate_attack_payloads,
+    derive_archive_section_recode_manifest,
+    derive_archive_section_recode_manifests,
     resolve_current_frontier_archive,
 )
 from .frontier_rate_attack_bootstrap import (
@@ -85,6 +93,15 @@ from .frontier_rate_attack_bootstrap import (
 )
 from .frontier_rate_attack_bootstrap import (
     parse_archive_spec as parse_frontier_rate_attack_archive_spec,
+)
+from .frontier_rate_attack_feedback import (
+    DISCOVERED_MATERIALIZER_FEEDBACK_SCHEMA,
+    FRONTIER_RATE_ATTACK_FEEDBACK_REFRESH_SCHEMA,
+    MATERIALIZER_FEEDBACK_DISCOVERY_SCHEMA,
+    FrontierRateAttackFeedbackError,
+    build_frontier_rate_attack_feedback_refresh,
+    discover_materializer_feedback_payloads,
+    load_dqs1_observations,
 )
 from .local_training_harvest import (
     LOCAL_TRAINING_HARVEST_SCHEMA,
@@ -178,6 +195,7 @@ __all__ = [
     "BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID",
     "BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND",
     "BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND",
+    "DISCOVERED_MATERIALIZER_FEEDBACK_SCHEMA",
     "DISPATCH_PLAN_SCHEMA",
     "DQS1_DROP_PAIR_MATERIALIZER",
     "DQS1_PAIRSET_TARGET_KIND",
@@ -187,6 +205,9 @@ __all__ = [
     "FRONTIER_ARCHIVE_RECORD_SCHEMA",
     "FRONTIER_ARCHIVE_RESOLUTION_SCHEMA",
     "FRONTIER_RATE_ATTACK_BOOTSTRAP_SCHEMA",
+    "FRONTIER_RATE_ATTACK_DERIVED_SECTION_MANIFEST_BATCH_SCHEMA",
+    "FRONTIER_RATE_ATTACK_DERIVED_SECTION_MANIFEST_SCHEMA",
+    "FRONTIER_RATE_ATTACK_FEEDBACK_REFRESH_SCHEMA",
     "HARVEST_SCHEMA",
     "INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER",
     "INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_ID",
@@ -202,6 +223,7 @@ __all__ = [
     "MATERIALIZER_EXACT_EVAL_CONSUMER_SCHEMA",
     "MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA",
     "MATERIALIZER_EXECUTION_STEP_ID",
+    "MATERIALIZER_FEEDBACK_DISCOVERY_SCHEMA",
     "MATERIALIZER_HARVEST_STEP_ID",
     "MLX_ACQUISITION_FOLLOWUP_SCHEMA",
     "MLX_EXECUTION_QUEUE_SCHEMA",
@@ -234,6 +256,7 @@ __all__ = [
     "ExperimentQueueError",
     "ExperimentSpec",
     "FrontierRateAttackBootstrapError",
+    "FrontierRateAttackFeedbackError",
     "LocalTrainingHarvestError",
     "PlatformBudgetReport",
     "PlatformRegistry",
@@ -246,6 +269,7 @@ __all__ = [
     "assert_canonical_state_for_execution",
     "assert_no_orphaned_steps_for_execution",
     "build_frontier_rate_attack_archive_record",
+    "build_frontier_rate_attack_feedback_refresh",
     "build_frontier_rate_attack_payloads",
     "build_local_training_execution_queue",
     "build_materializer_exact_eval_consumer_queue",
@@ -265,12 +289,16 @@ __all__ = [
     "collect_exact_ready_queue_paths",
     "connect_state",
     "default_state_path",
+    "derive_archive_section_recode_manifest",
+    "derive_archive_section_recode_manifests",
     "derive_scheduler_runtime_policy",
+    "discover_materializer_feedback_payloads",
     "finalize_claimed_step_execution",
     "harvest_local_training_optimizer_candidates",
     "harvest_materializer_chain_manifests",
     "initialize_queue_state",
     "known_materializer_target_kinds",
+    "load_dqs1_observations",
     "load_queue_definition",
     "load_single_dispatch_ready_row",
     "normalize_queue_definition",

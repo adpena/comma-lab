@@ -32,6 +32,7 @@ from tac.analysis.hnerv_packet_sections import (
     validate_packet_section_manifest_batch,
 )
 from tac.hnerv_pr103_lc_ac_schema import PUBLIC_PR103_LAYOUT
+from tac.optimization.decoder_q_selective_runtime_packet import pack_dqs1_payload
 from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_SIDECAR_FORMAT_BROTLI,
     PR106SidecarPacket,
@@ -109,6 +110,50 @@ def test_pr101_fec6_manifest_records_fp11_wrapper_and_selector_sections(tmp_path
         manifest["sections"][7]["optimization_role"]
         == "sidecar_or_correction_stream"
     )
+    assert validate_packet_section_manifest(manifest) == []
+
+
+def test_pr101_fec6_manifest_records_dqs1_selective_runtime_tail(tmp_path: Path) -> None:
+    source_sidecar = b"s" * 607
+    source_payload = (
+        b"d" * PR101_DECODER_BLOB_LEN
+        + b"l" * PR101_LATENT_BLOB_LEN
+        + source_sidecar
+    )
+    selector_bits = b"\x80" * 243
+    selector_payload = FEC6_MAGIC_PREFIX + (600).to_bytes(2, "little") + selector_bits
+    dqs1_tail = pack_dqs1_payload(
+        pair_indices=[371],
+        frame_policy="pair_all_frames",
+        storage_index=26,
+        q_offset=0,
+        delta=1,
+        pair_encoding="sorted_gap_uleb",
+    )
+    payload = (
+        FP11_MAGIC_PREFIX
+        + len(source_payload).to_bytes(4, "little")
+        + source_payload
+        + len(selector_payload).to_bytes(2, "little")
+        + selector_payload
+        + dqs1_tail
+    )
+    archive = tmp_path / "pr101_fec6_dqs1.zip"
+    _stored_zip(archive, "x", payload)
+
+    manifest = build_packet_section_manifest(archive, label="PR101 FEC6 DQS1", parser=PARSER_AUTO)
+
+    assert manifest["parser_section_gate"]["ready"] is True
+    assert manifest["parser"]["name"] == PARSER_PR101_FEC6
+    assert [section["name"] for section in manifest["sections"]][-2:] == [
+        "selector_fec6_fixed_huffman_k16_bitstream",
+        "selector_dqs1_selective_runtime_tail",
+    ]
+    tail_section = manifest["sections"][-1]
+    assert tail_section["offset"] == len(payload) - len(dqs1_tail)
+    assert tail_section["length"] == len(dqs1_tail)
+    assert tail_section["optimization_role"] == "sidecar_or_correction_stream"
+    assert manifest["coverage"]["covers_payload"] is True
     assert validate_packet_section_manifest(manifest) == []
 
 

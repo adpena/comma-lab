@@ -17,13 +17,20 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+import brotli
+
+from tac.analysis.hnerv_packet_sections import (
+    PARSER_AUTO,
+    build_packet_section_manifest,
+    validate_packet_section_manifest,
+)
 from tac.optimization.byte_shaving_campaign import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
     ordered_unique,
     require_no_truthy_authority_fields,
 )
-from tac.repo_io import sha256_file
+from tac.repo_io import sha256_bytes, sha256_file, write_json_artifact
 
 from .byte_shaving_campaign_queue import (
     MATERIALIZER_BACKLOG_SCHEMA,
@@ -42,6 +49,8 @@ from .byte_shaving_materializer_registry import (
 from .experiment_queue import ExperimentQueueError, normalize_queue_definition
 
 BOOTSTRAP_SCHEMA = "frontier_final_rate_attack_bootstrap.v1"
+DERIVED_SECTION_MANIFEST_SCHEMA = "frontier_rate_attack_derived_section_manifest.v1"
+DERIVED_SECTION_MANIFEST_BATCH_SCHEMA = "frontier_rate_attack_derived_section_manifest_batch.v1"
 FRONTIER_ARCHIVE_RESOLUTION_SCHEMA = "frontier_archive_resolution.v1"
 FRONTIER_ARCHIVE_RECORD_SCHEMA = "frontier_rate_attack_archive_record.v1"
 DEFAULT_FRONTIER_POINTER = ".omx/state/canonical_frontier_pointer.json"
@@ -123,6 +132,241 @@ def _zip_member_records(path: Path) -> list[dict[str, Any]]:
     if not records:
         raise FrontierRateAttackBootstrapError(f"{path}: ZIP archive has no file members")
     return records
+
+
+def _single_member_payload(path: Path, *, member_name: str) -> bytes:
+    try:
+        with zipfile.ZipFile(path, "r") as archive:
+            return archive.read(member_name)
+    except (KeyError, zipfile.BadZipFile) as exc:
+        raise FrontierRateAttackBootstrapError(
+            f"{path}: could not read ZIP member {member_name!r}"
+        ) from exc
+
+
+def _section_brotli_probe_rows(
+    *,
+    manifest: Mapping[str, Any],
+    archive_path: Path,
+) -> list[dict[str, Any]]:
+    parser_input = manifest.get("parser_input")
+    if isinstance(parser_input, Mapping) and parser_input.get("kind") != "member_payload":
+        return [
+            {
+                "section_name": None,
+                "brotli_decompressible": False,
+                "blockers": ["section_manifest_parser_input_not_member_payload"],
+                **FALSE_AUTHORITY,
+            }
+        ]
+    member = manifest.get("member")
+    if not isinstance(member, Mapping):
+        return [
+            {
+                "section_name": None,
+                "brotli_decompressible": False,
+                "blockers": ["section_manifest_member_missing"],
+                **FALSE_AUTHORITY,
+            }
+        ]
+    member_name = str(member.get("name") or "")
+    if not member_name:
+        return [
+            {
+                "section_name": None,
+                "brotli_decompressible": False,
+                "blockers": ["section_manifest_member_name_missing"],
+                **FALSE_AUTHORITY,
+            }
+        ]
+    member_payload = _single_member_payload(archive_path, member_name=member_name)
+    sections = manifest.get("sections")
+    if not isinstance(sections, list):
+        return [
+            {
+                "section_name": None,
+                "brotli_decompressible": False,
+                "blockers": ["section_manifest_sections_missing"],
+                **FALSE_AUTHORITY,
+            }
+        ]
+    rows: list[dict[str, Any]] = []
+    for index, section in enumerate(sections):
+        if not isinstance(section, Mapping):
+            continue
+        name = str(section.get("name") or f"section_{index:04d}")
+        blockers: list[str] = []
+        try:
+            offset = int(section["offset"])
+            length = int(section["length"])
+        except (KeyError, TypeError, ValueError):
+            blockers.append("section_offset_or_length_invalid")
+            offset = 0
+            length = 0
+        expected_sha = str(section.get("sha256") or "")
+        payload = member_payload[offset : offset + length] if length > 0 else b""
+        if length < 1 or offset < 0 or offset + length > len(member_payload):
+            blockers.append("section_range_outside_member_payload")
+        elif expected_sha and sha256_bytes(payload) != expected_sha:
+            blockers.append("section_sha256_mismatch")
+        raw_sha: str | None = None
+        raw_bytes: int | None = None
+        brotli_decompressible = False
+        if not blockers:
+            try:
+                raw = brotli.decompress(payload)
+            except brotli.error:
+                blockers.append("section_not_brotli_decompressible")
+            else:
+                brotli_decompressible = True
+                raw_sha = sha256_bytes(raw)
+                raw_bytes = len(raw)
+        rows.append(
+            {
+                "section_name": name,
+                "section_index": int(section.get("index", index)),
+                "offset": offset,
+                "length": length,
+                "sha256": expected_sha or None,
+                "optimization_role": section.get("optimization_role"),
+                "brotli_decompressible": brotli_decompressible,
+                "raw_sha256": raw_sha,
+                "raw_bytes": raw_bytes,
+                "blockers": ordered_unique(blockers),
+                **FALSE_AUTHORITY,
+            }
+        )
+    return rows
+
+
+def derive_archive_section_recode_manifest(
+    *,
+    archive_record: Mapping[str, Any],
+    output_path: str | Path,
+    repo_root: str | Path,
+    parser: str = PARSER_AUTO,
+    allow_overwrite: bool = False,
+    min_free_bytes: int = 0,
+) -> dict[str, Any]:
+    """Derive a parser-section manifest and selected Brotli sections for one archive."""
+
+    require_no_truthy_authority_fields(
+        archive_record,
+        context="derive_archive_section_recode_manifest.archive_record",
+    )
+    repo = Path(repo_root)
+    label = _clean_id(str(archive_record.get("label") or "archive"), fallback="archive")
+    archive_value = archive_record.get("absolute_path") or archive_record.get("path")
+    if not isinstance(archive_value, str) or not archive_value.strip():
+        raise FrontierRateAttackBootstrapError(f"{label}: archive record path missing")
+    archive_path = _resolve_path(archive_value, repo_root=repo)
+    target = _resolve_path(output_path, repo_root=repo)
+    blockers: list[str] = []
+    manifest: dict[str, Any] | None = None
+    brotli_rows: list[dict[str, Any]] = []
+    selected_names: list[str] = []
+    try:
+        manifest = build_packet_section_manifest(
+            archive_path,
+            label=label,
+            parser=parser,
+            repo_root=repo,
+        )
+        blockers.extend(validate_packet_section_manifest(manifest, repo_root=repo))
+        brotli_rows = _section_brotli_probe_rows(
+            manifest=manifest,
+            archive_path=archive_path,
+        )
+        selected_names = [
+            str(row["section_name"])
+            for row in brotli_rows
+            if row.get("brotli_decompressible") is True and row.get("section_name")
+        ]
+        if not selected_names:
+            blockers.append("section_manifest_has_no_brotli_decompressible_sections")
+    except (ValueError, OSError, zipfile.BadZipFile) as exc:
+        blockers.append(f"section_manifest_derivation_failed:{exc}")
+    if manifest is not None:
+        manifest["frontier_rate_attack_section_recode"] = {
+            "schema": DERIVED_SECTION_MANIFEST_SCHEMA,
+            "archive_label": label,
+            "archive_sha256": archive_record.get("sha256"),
+            "selected_section_names": selected_names,
+            "brotli_probe_rows": brotli_rows,
+            "blockers": ordered_unique(blockers),
+            **FALSE_AUTHORITY,
+        }
+        write = write_json_artifact(
+            target,
+            manifest,
+            allow_overwrite=allow_overwrite,
+            min_free_bytes=min_free_bytes,
+        )
+        manifest_path: str | None = _repo_rel(target, repo)
+        manifest_sha: str | None = write.sha256
+    else:
+        manifest_path = None
+        manifest_sha = None
+    return apply_proxy_evidence_boundary(
+        {
+            "schema": DERIVED_SECTION_MANIFEST_SCHEMA,
+            "archive_label": label,
+            "archive_sha256": archive_record.get("sha256"),
+            "archive_path": archive_record.get("path"),
+            "section_manifest_path": manifest_path,
+            "section_manifest_sha256": manifest_sha,
+            "selected_section_names": selected_names,
+            "selected_section_count": len(selected_names),
+            "brotli_probe_rows": brotli_rows,
+            "blockers": ordered_unique(blockers),
+            "ready_for_materializer_target": not blockers,
+            **FALSE_AUTHORITY,
+        },
+        dispatch_blockers=(
+            ordered_unique(blockers)
+            if blockers
+            else ("frontier_rate_attack_section_recode_is_local_only",)
+        ),
+    )
+
+
+def derive_archive_section_recode_manifests(
+    *,
+    archive_records: Sequence[Mapping[str, Any]],
+    output_dir: str | Path,
+    repo_root: str | Path,
+    parser: str = PARSER_AUTO,
+    allow_overwrite: bool = False,
+    min_free_bytes: int = 0,
+) -> dict[str, Any]:
+    """Derive per-archive section manifests for frontier-rate materializer queues."""
+
+    repo = Path(repo_root)
+    root = _resolve_path(output_dir, repo_root=repo)
+    rows = [
+        derive_archive_section_recode_manifest(
+            archive_record=record,
+            output_path=root / f"{_clean_id(str(record.get('label') or index), fallback='archive')}.section_manifest.json",
+            repo_root=repo,
+            parser=parser,
+            allow_overwrite=allow_overwrite,
+            min_free_bytes=min_free_bytes,
+        )
+        for index, record in enumerate(archive_records)
+    ]
+    return apply_proxy_evidence_boundary(
+        {
+            "schema": DERIVED_SECTION_MANIFEST_BATCH_SCHEMA,
+            "generated_at_utc": _utc_now(),
+            "manifest_count": len(rows),
+            "ready_manifest_count": sum(
+                1 for row in rows if row.get("ready_for_materializer_target") is True
+            ),
+            "rows": rows,
+            **FALSE_AUTHORITY,
+        },
+        dispatch_blockers=("derived_section_manifests_are_local_materializer_inputs_only",),
+    )
 
 
 def archive_record(
@@ -490,7 +734,9 @@ def build_frontier_rate_attack_payloads(
     include_optional_target_blockers: bool = True,
     member_name: str | None = None,
     section_manifest: str | None = None,
+    section_manifest_by_archive_label: Mapping[str, str] | None = None,
     section_names: Sequence[str] = (),
+    section_names_by_archive_label: Mapping[str, Sequence[str]] | None = None,
     tensor_manifest: str | None = None,
     factorization_contract: str | None = None,
     tensor_factorize_rank: int | None = None,
@@ -522,11 +768,161 @@ def build_frontier_rate_attack_payloads(
             *(DEFAULT_OPTIONAL_TARGET_KINDS if include_optional_target_blockers else ()),
         ]
     )
+    section_manifest_map = {
+        str(key): str(value)
+        for key, value in (section_manifest_by_archive_label or {}).items()
+        if str(key) and str(value)
+    }
+    section_names_map = {
+        str(key): tuple(str(name) for name in value if str(name))
+        for key, value in (section_names_by_archive_label or {}).items()
+        if str(key)
+    }
     contexts_rows: list[dict[str, Any]] = []
     backlog_rows: list[dict[str, Any]] = []
     target_omissions: list[dict[str, Any]] = []
-    for rank, target_kind in enumerate(requested_targets, start=1):
+
+    def append_target_row(
+        *,
+        target_kind: str,
+        adapter: Mapping[str, Any],
+        backlog_key: str,
+        context: Mapping[str, Any],
+        source_records: Sequence[Mapping[str, Any]],
+    ) -> None:
+        contexts_rows.append(
+            {
+                "backlog_key": backlog_key,
+                "target_kind": target_kind,
+                "materializer_id": adapter.get("materializer_id"),
+                "context": dict(context),
+            }
+        )
+        backlog_rows.append(
+            apply_proxy_evidence_boundary(
+                {
+                    "schema": "byte_shaving_materializer_backlog_row.v1",
+                    "backlog_key": backlog_key,
+                    "backlog_rank": len(backlog_rows) + 1,
+                    "gap_class": "frontier_final_rate_attack_materializer_sweep",
+                    "unit_kind": adapter.get("unit_kind"),
+                    "operation_family": adapter.get("operation_family"),
+                    "target_kind": target_kind,
+                    "materializer_id": adapter.get("materializer_id"),
+                    "receiver_contract_id": adapter.get("receiver_contract_id"),
+                    "receiver_contract_kind": adapter.get("receiver_contract_kind"),
+                    "receiver_contract_status": "local_receiver_proof_required",
+                    "cooperative_receiver_required": adapter.get("cooperative_receiver_required"),
+                    "materialization_resource_kind": adapter.get("materialization_resource_kind")
+                    or "local_cpu",
+                    "suggested_materializer_count": 1,
+                    "suggested_materializers": [dict(adapter)],
+                    "blocked_row_count": 1,
+                    "blocked_resolution_count": 1,
+                    "selected_operation_count": len(source_records),
+                    "affected_unit_count": len(source_records),
+                    "candidate_saved_bytes_sum": 0,
+                    "expected_score_gain_sum": 0.0,
+                    "source_unit_ids": [record["label"] for record in source_records],
+                    "source_selection_ids": [record["label"] for record in source_records],
+                    "source_selection_samples": [
+                        {
+                            "selection_id": record["label"],
+                            "selection_kind": "frontier_archive",
+                            "archive_sha256": record["sha256"],
+                            "archive_bytes": record["bytes"],
+                        }
+                        for record in source_records[:8]
+                    ],
+                    **FALSE_AUTHORITY,
+                },
+                dispatch_blockers=("frontier_rate_attack_local_materializer_sweep_only",),
+            )
+        )
+
+    for target_kind in requested_targets:
         adapter = _adapter_by_target_kind(target_kind)
+        if (
+            target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
+            and section_manifest is None
+            and section_manifest_map
+        ):
+            for record in checked_records:
+                label = str(record["label"])
+                per_archive_blockers: list[str] = []
+                manifest_path = section_manifest_map.get(label)
+                per_archive_section_names = tuple(section_names_map.get(label, ()))
+                if manifest_path is None:
+                    per_archive_blockers.append(
+                        "archive_section_entropy_recode_missing_derived_section_manifest"
+                    )
+                if not per_archive_section_names:
+                    per_archive_blockers.append(
+                        "archive_section_entropy_recode_requires_brotli_decompressible_section"
+                    )
+                context = None
+                if not per_archive_blockers:
+                    context, per_archive_blockers = _target_context(
+                        target_kind=target_kind,
+                        archive_records=[record],
+                        output_root=output_root / "per_archive" / _clean_id(label),
+                        member_name=shared_member,
+                        section_manifest=manifest_path,
+                        section_names=per_archive_section_names,
+                        tensor_manifest=tensor_manifest,
+                        factorization_contract=factorization_contract,
+                        tensor_factorize_rank=tensor_factorize_rank,
+                        zip_compression_methods=zip_compression_methods,
+                        zip_compresslevels=zip_compresslevels,
+                        min_free_bytes=min_free_bytes,
+                        allow_overwrite=allow_overwrite,
+                    )
+                if per_archive_blockers:
+                    target_omissions.append(
+                        apply_proxy_evidence_boundary(
+                            {
+                                "schema": "frontier_rate_attack_target_omission.v1",
+                                "target_kind": target_kind,
+                                "archive_label": label,
+                                "materializer_id": adapter.get("materializer_id"),
+                                "blockers": ordered_unique(per_archive_blockers),
+                                **FALSE_AUTHORITY,
+                            },
+                            dispatch_blockers=per_archive_blockers,
+                        )
+                    )
+                    continue
+                assert context is not None
+                append_target_row(
+                    target_kind=target_kind,
+                    adapter=adapter,
+                    backlog_key=f"frontier_rate_attack:{target_kind}:{label}",
+                    context=context,
+                    source_records=[record],
+                )
+            continue
+        if (
+            target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
+            and section_manifest is not None
+            and len(checked_records) > 1
+        ):
+            blockers = [
+                "archive_section_entropy_recode_requires_per_archive_section_manifest_for_multi_archive_sweep"
+            ]
+            target_omissions.append(
+                apply_proxy_evidence_boundary(
+                    {
+                        "schema": "frontier_rate_attack_target_omission.v1",
+                        "target_kind": target_kind,
+                        "materializer_id": adapter.get("materializer_id"),
+                        "archive_labels": [str(record["label"]) for record in checked_records],
+                        "blockers": blockers,
+                        **FALSE_AUTHORITY,
+                    },
+                    dispatch_blockers=blockers,
+                )
+            )
+            continue
         backlog_key = f"frontier_rate_attack:{target_kind}"
         context, blockers = _target_context(
             target_kind=target_kind,
@@ -558,54 +954,12 @@ def build_frontier_rate_attack_payloads(
             )
             continue
         assert context is not None
-        contexts_rows.append(
-            {
-                "backlog_key": backlog_key,
-                "target_kind": target_kind,
-                "materializer_id": adapter.get("materializer_id"),
-                "context": context,
-            }
-        )
-        backlog_rows.append(
-            apply_proxy_evidence_boundary(
-                {
-                    "schema": "byte_shaving_materializer_backlog_row.v1",
-                    "backlog_key": backlog_key,
-                    "backlog_rank": rank,
-                    "gap_class": "frontier_final_rate_attack_materializer_sweep",
-                    "unit_kind": adapter.get("unit_kind"),
-                    "operation_family": adapter.get("operation_family"),
-                    "target_kind": target_kind,
-                    "materializer_id": adapter.get("materializer_id"),
-                    "receiver_contract_id": adapter.get("receiver_contract_id"),
-                    "receiver_contract_kind": adapter.get("receiver_contract_kind"),
-                    "receiver_contract_status": "local_receiver_proof_required",
-                    "cooperative_receiver_required": adapter.get("cooperative_receiver_required"),
-                    "materialization_resource_kind": adapter.get("materialization_resource_kind")
-                    or "local_cpu",
-                    "suggested_materializer_count": 1,
-                    "suggested_materializers": [adapter],
-                    "blocked_row_count": 1,
-                    "blocked_resolution_count": 1,
-                    "selected_operation_count": len(checked_records),
-                    "affected_unit_count": len(checked_records),
-                    "candidate_saved_bytes_sum": 0,
-                    "expected_score_gain_sum": 0.0,
-                    "source_unit_ids": [record["label"] for record in checked_records],
-                    "source_selection_ids": [record["label"] for record in checked_records],
-                    "source_selection_samples": [
-                        {
-                            "selection_id": record["label"],
-                            "selection_kind": "frontier_archive",
-                            "archive_sha256": record["sha256"],
-                            "archive_bytes": record["bytes"],
-                        }
-                        for record in checked_records[:8]
-                    ],
-                    **FALSE_AUTHORITY,
-                },
-                dispatch_blockers=("frontier_rate_attack_local_materializer_sweep_only",),
-            )
+        append_target_row(
+            target_kind=target_kind,
+            adapter=adapter,
+            backlog_key=backlog_key,
+            context=context,
+            source_records=checked_records,
         )
     if not backlog_rows:
         raise FrontierRateAttackBootstrapError(
@@ -709,11 +1063,15 @@ __all__ = [
     "DEFAULT_EXECUTABLE_TARGET_KINDS",
     "DEFAULT_FRONTIER_POINTER",
     "DEFAULT_OPTIONAL_TARGET_KINDS",
+    "DERIVED_SECTION_MANIFEST_BATCH_SCHEMA",
+    "DERIVED_SECTION_MANIFEST_SCHEMA",
     "FRONTIER_ARCHIVE_RECORD_SCHEMA",
     "FRONTIER_ARCHIVE_RESOLUTION_SCHEMA",
     "FrontierRateAttackBootstrapError",
     "archive_record",
     "build_frontier_rate_attack_payloads",
+    "derive_archive_section_recode_manifest",
+    "derive_archive_section_recode_manifests",
     "parse_archive_spec",
     "resolve_current_frontier_archive",
 ]

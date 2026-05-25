@@ -55525,6 +55525,88 @@
         }
       },
       "notes": "Wire DQS1 observation-filtered acquisition refresh into the local-first tranche runner and harden the frontier final-rate attack bootstrap module/tool so no scheduler signal remains orphaned."
+    },
+    {
+      "id": "codex_frontier_rate_attack_feedback_compiler_20260525",
+      "name": "Frontier rate attack feedback compiler",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/comma_lab/scheduler/frontier_rate_attack_feedback.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/codex_frontier_rate_attack_feedback_compiler_20260525T133356Z/feedback_refresh_report.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_frontier_rate_attack_feedback.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "review_tracker policy-check touched feedback/compiler files clean"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_frontier_rate_attack_feedback_compiler_20260525T133356Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Build a queue-owned feedback compiler that discovers frontier materializer sweep observations across target kinds and regenerates DQS1 follow-up queue surfaces without hand-picked leaf wiring."
+    },
+    {
+      "id": "codex_frontier_section_manifest_bridge_20260525",
+      "name": "Frontier section manifest bridge",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/comma_lab/scheduler/frontier_rate_attack_bootstrap.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/frontier_final_rate_attack_20260525_section_manifest_bridge/execution_report.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_frontier_rate_attack_bootstrap.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "review_tracker policy-check touched section-manifest bridge files clean"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_frontier_section_manifest_feedback_bridge_20260525T133324Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Derive per-archive parser-section manifests for frontier final-rate attacks, parse DQS1 tail packets, and fail closed when no Brotli-decompressible sections exist."
     }
   ],
   "level_rules": {
@@ -55534,5 +55616,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T13:11:24Z"
+  "updated_at": "2026-05-25T13:40:44Z"
 }

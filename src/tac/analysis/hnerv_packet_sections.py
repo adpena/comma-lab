@@ -27,6 +27,13 @@ from tac.hnerv_pr103_lc_ac_schema import (
     HnervPr103LcAcSchemaError,
     parse_pr103_lc_ac_payload,
 )
+from tac.optimization.decoder_q_selective_runtime_packet import (
+    PACKET_MAGIC as DQS1_MAGIC_PREFIX,
+)
+from tac.optimization.decoder_q_selective_runtime_packet import (
+    DecoderQSelectiveRuntimePacketError,
+    unpack_dqs1_payload,
+)
 from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_SIDECAR_MAGIC,
     parse_pr106_sidecar_packet,
@@ -152,6 +159,7 @@ PR101_FEC6_SECTION_ROLES = {
     "selector_len_u16le": "control_or_metadata",
     "selector_fec6_fixed_huffman_k16_header": "entropy_model_or_range_stream",
     "selector_fec6_fixed_huffman_k16_bitstream": "sidecar_or_correction_stream",
+    "selector_dqs1_selective_runtime_tail": "sidecar_or_correction_stream",
 }
 PR103_SECTION_ROLES = {
     "scales_fp16": "control_or_metadata",
@@ -667,7 +675,21 @@ def _parse_pr101_fec6_sections(payload: bytes) -> list[dict[str, Any]]:
         )
     selector_len = int.from_bytes(payload[selector_len_start:selector_start], "little")
     selector_end = selector_start + selector_len
+    dqs1_tail = b""
     if selector_end != len(payload):
+        dqs1_tail = payload[selector_end:]
+        if not dqs1_tail.startswith(DQS1_MAGIC_PREFIX):
+            raise HnervPacketSectionManifestError(
+                "PR101 FEC6 selector length mismatch: "
+                f"selector_len={selector_len} payload_bytes={len(payload)}"
+            )
+        try:
+            unpack_dqs1_payload(dqs1_tail)
+        except DecoderQSelectiveRuntimePacketError as exc:
+            raise HnervPacketSectionManifestError(
+                f"PR101 FEC6 DQS1 tail parse failed: {exc}"
+            ) from exc
+    if selector_end > len(payload):
         raise HnervPacketSectionManifestError(
             f"PR101 FEC6 selector length mismatch: selector_len={selector_len} payload_bytes={len(payload)}"
         )
@@ -722,6 +744,14 @@ def _parse_pr101_fec6_sections(payload: bytes) -> list[dict[str, Any]]:
             payload[selector_start + 6 : selector_end],
         ),
     ]
+    if dqs1_tail:
+        specs.append(
+            (
+                "selector_dqs1_selective_runtime_tail",
+                selector_end,
+                dqs1_tail,
+            )
+        )
     return [
         _section_record(
             index,
