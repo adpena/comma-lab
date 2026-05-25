@@ -380,6 +380,8 @@ def build_dqs1_materializer_feedback_bridge(
 
 
 __all__ = [
+    "DQS1_OBSERVATION_SOURCE_SCHEMA",
+    "DQS1_OBSERVATION_SWEEP_CONFIG_ID",
     "FALSE_AUTHORITY",
     "SCHEMA",
     "TOOL",

@@ -327,6 +327,8 @@ def _queue_build_common_args(
         dqs1_observation_args.extend(
             ["--dqs1-observation-jsonl", _display_path(observation_path)]
         )
+    if args.include_observed_dqs1_candidate:
+        dqs1_observation_args.append("--include-observed-dqs1-candidate")
     base_args = [
         "--results-root",
         str(results_root),
@@ -729,6 +731,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "existing DQS1 local-first harvest observation JSONL to forward into "
             "generated queue feedback bridges; current-round harvest observations "
             "are added automatically after each harvest."
+        ),
+    )
+    parser.add_argument(
+        "--include-observed-dqs1-candidate",
+        action="store_true",
+        help=(
+            "allow queue rebuilds to select candidates already present in DQS1 "
+            "harvest observation JSONLs; default is to suppress local reruns"
         ),
     )
     parser.add_argument("--portfolio-root", default=None)

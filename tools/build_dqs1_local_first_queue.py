@@ -29,15 +29,16 @@ from comma_lab.scheduler.dqs1_local_first_queue import (  # noqa: E402
     build_queue_from_action_summary,
     find_latest_cross_family_action_summary,
 )
+from tac.optimization.dqs1_materializer_feedback_bridge import (  # noqa: E402
+    DQS1_OBSERVATION_SOURCE_SCHEMA,
+    DQS1_OBSERVATION_SWEEP_CONFIG_ID,
+)
 from tac.optimization.mlx_dynamic_sweep_observations import (  # noqa: E402
     MLXDynamicSweepObservationError,
     load_observation_rows,
     observation_duplicate_key,
 )
 from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
-
-DQS1_OBSERVATION_SOURCE_SCHEMA = "dqs1_local_first_harvest.v1"
-DQS1_OBSERVATION_SWEEP_CONFIG_ID = "dqs1_local_first_macos_cpu_advisory"
 
 
 def _json_print(payload: object) -> None:
@@ -142,6 +143,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--include-completed-local-advisory",
         action="store_true",
         help="do not skip candidates whose local_cpu_advisory.json already exists",
+    )
+    parser.add_argument(
+        "--include-observed-dqs1-candidate",
+        action="store_true",
+        help=(
+            "do not skip candidates already present in DQS1 local-first harvest "
+            "observation JSONLs; intended only for explicit replay/debug"
+        ),
     )
     parser.add_argument(
         "--candidate-limit",
@@ -342,6 +351,7 @@ def main(argv: list[str] | None = None) -> int:
         materializer_feedback_source_paths=tuple(args.materializer_feedback),
         dqs1_observations=dqs1_observations,
         dqs1_observation_source_paths=tuple(args.dqs1_observation_jsonl),
+        skip_observed_dqs1_candidates=not args.include_observed_dqs1_candidate,
         local_cpu_concurrency=args.local_cpu_concurrency,
         local_io_concurrency=args.local_io_concurrency,
         include_mlx_local_advisory_debug=args.include_mlx_local_advisory_debug,

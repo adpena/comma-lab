@@ -198,6 +198,7 @@ def test_tranche_queue_build_args_forward_materializer_feedback() -> None:
             "experiments/results/recompress/sweep.json",
             "--dqs1-observation-jsonl",
             ".omx/research/dqs1_local_first_harvest_observations_prior.jsonl",
+            "--include-observed-dqs1-candidate",
         ]
     )
 
@@ -223,6 +224,7 @@ def test_tranche_queue_build_args_forward_materializer_feedback() -> None:
     assert built[current + 1] == (
         ".omx/research/dqs1_local_first_harvest_observations_round.jsonl"
     )
+    assert "--include-observed-dqs1-candidate" in built
 
 
 def test_tranche_proactive_cleanup_move_is_not_gated_by_mlx_cache_flag(

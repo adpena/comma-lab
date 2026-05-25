@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from hashlib import sha256
@@ -12,6 +13,8 @@ from typing import Any
 from comma_lab.storage_tiers import DEFAULT_RESERVE_FREE_GB
 from tac.optimization.decoder_q_constants import FEC6_PAIR_COUNT
 from tac.optimization.dqs1_materializer_feedback_bridge import (
+    DQS1_OBSERVATION_SOURCE_SCHEMA,
+    DQS1_OBSERVATION_SWEEP_CONFIG_ID,
     build_dqs1_materializer_feedback_bridge,
 )
 from tac.optimization.local_cpu_contest_drift import (
@@ -20,6 +23,7 @@ from tac.optimization.local_cpu_contest_drift import (
     LocalCPUContestDriftError,
     require_eureka_false_authority,
 )
+from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
 
 from .experiment_queue import QUEUE_SCHEMA, ExperimentQueueError, normalize_queue_definition
 from .storage_preflight import (
@@ -455,6 +459,56 @@ def _completion_roots(results_root: str, completed_results_roots: tuple[str, ...
     return tuple(out)
 
 
+def _dqs1_observation_outcome_label(row: Mapping[str, Any]) -> str:
+    score_delta = row.get("score_delta_vs_baseline")
+    if (
+        isinstance(score_delta, int | float)
+        and not isinstance(score_delta, bool)
+        and math.isfinite(float(score_delta))
+    ):
+        if float(score_delta) < 0.0:
+            return "local_advisory_improved"
+        if float(score_delta) > 0.0:
+            return "local_advisory_regressed"
+    byte_delta = row.get("archive_byte_delta_vs_baseline")
+    if isinstance(byte_delta, int) and not isinstance(byte_delta, bool):
+        if byte_delta < 0:
+            return "archive_bytes_reduced_no_score_improvement"
+        if byte_delta > 0:
+            return "archive_bytes_increased_no_score_improvement"
+    return "flat_local_advisory"
+
+
+def _observed_dqs1_candidate_skips(
+    dqs1_observations: tuple[dict[str, Any], ...],
+) -> dict[str, dict[str, str]]:
+    observed: dict[str, dict[str, str]] = {}
+    for row in dqs1_observations:
+        if not isinstance(row, Mapping):
+            continue
+        require_no_truthy_authority_fields(
+            row,
+            context="dqs1_local_first_queue.observation_skip",
+        )
+        if (
+            row.get("source_schema") != DQS1_OBSERVATION_SOURCE_SCHEMA
+            or row.get("sweep_config_id") != DQS1_OBSERVATION_SWEEP_CONFIG_ID
+        ):
+            continue
+        candidate_id = str(row.get("candidate_id") or "").strip()
+        if not candidate_id:
+            continue
+        observed.setdefault(
+            candidate_id,
+            {
+                "candidate_id": candidate_id,
+                "reason": "dqs1_harvest_observation_exists",
+                "observation_outcome": _dqs1_observation_outcome_label(row),
+            },
+        )
+    return observed
+
+
 def _candidate_completed_in_roots(
     *,
     repo_root: Path,
@@ -613,6 +667,8 @@ def select_dqs1_local_first_candidate(
     completed_results_roots: tuple[str, ...] = (),
     exclude_candidate_ids: set[str] | None = None,
     skip_completed_local_advisory: bool = True,
+    dqs1_observations: tuple[dict[str, Any], ...] = (),
+    skip_observed_dqs1_candidates: bool = True,
 ) -> Dqs1QueueSelection:
     return select_dqs1_local_first_candidates(
         action_summary_path,
@@ -622,6 +678,8 @@ def select_dqs1_local_first_candidate(
         exclude_candidate_ids=exclude_candidate_ids,
         skip_completed_local_advisory=skip_completed_local_advisory,
         candidate_limit=1,
+        dqs1_observations=dqs1_observations,
+        skip_observed_dqs1_candidates=skip_observed_dqs1_candidates,
     )[0]
 
 
@@ -634,6 +692,8 @@ def select_dqs1_local_first_candidates(
     exclude_candidate_ids: set[str] | None = None,
     skip_completed_local_advisory: bool = True,
     candidate_limit: int = 1,
+    dqs1_observations: tuple[dict[str, Any], ...] = (),
+    skip_observed_dqs1_candidates: bool = True,
 ) -> tuple[Dqs1QueueSelection, ...]:
     if isinstance(candidate_limit, bool) or not isinstance(candidate_limit, int) or candidate_limit <= 0:
         raise ExperimentQueueError("candidate_limit must be a positive integer")
@@ -650,6 +710,11 @@ def select_dqs1_local_first_candidates(
     portfolio_path = _resolve_portfolio_path(summary_path, summary, repo_root=Path(repo_root))
     excluded = exclude_candidate_ids or set()
     completion_roots = _completion_roots(results_root, completed_results_roots)
+    observed_candidates = (
+        _observed_dqs1_candidate_skips(dqs1_observations)
+        if skip_observed_dqs1_candidates
+        else {}
+    )
     skipped: list[dict[str, str]] = []
 
     sorted_actions = sorted(
@@ -674,6 +739,9 @@ def select_dqs1_local_first_candidates(
         if current_candidate_id in excluded:
             skipped.append({"candidate_id": current_candidate_id, "reason": "explicitly_excluded"})
             continue
+        if current_candidate_id in observed_candidates:
+            skipped.append(dict(observed_candidates[current_candidate_id]))
+            continue
         if skip_completed_local_advisory:
             completed_root = _candidate_completed_in_roots(
                 repo_root=Path(repo_root),
@@ -695,6 +763,19 @@ def select_dqs1_local_first_candidates(
         metadata = row.get("source_metadata")
         if not isinstance(metadata, dict):
             raise ExperimentQueueError(f"{current_candidate_id}: missing source_metadata")
+        selection_metadata = dict(metadata)
+        if observed_candidates:
+            selection_metadata["dqs1_observation_acquisition_skip"] = {
+                "schema": "dqs1_observation_acquisition_skip.v1",
+                "active": True,
+                "observed_candidate_count": len(observed_candidates),
+                "skip_reason": "dqs1_harvest_observation_exists",
+                "allowed_use": "local_first_queue_rerun_suppression_only",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
         selections.append(
             Dqs1QueueSelection(
                 candidate_id=current_candidate_id,
@@ -705,7 +786,7 @@ def select_dqs1_local_first_candidates(
                 ),
                 action_summary_path=summary_path,
                 portfolio_path=portfolio_path,
-                source_metadata=dict(metadata),
+                source_metadata=selection_metadata,
                 operator_action_rank=(
                     int(action["operator_action_rank"])
                     if isinstance(action.get("operator_action_rank"), int)
@@ -1167,6 +1248,7 @@ def build_dqs1_local_first_queue(
                 "metadata": {
                     "schema": "dqs1_local_first_experiment_metadata.v1",
                     "source_metadata": selection.source_metadata,
+                    "skipped_candidates": list(selection.skipped_candidates),
                     "action_summary_path": str(selection.action_summary_path),
                     "portfolio_path": str(selection.portfolio_path),
                     "selected_pair_indices": list(selection.selected_pair_indices),
@@ -1364,17 +1446,20 @@ def build_queue_from_action_summary(
     materializer_feedback_source_paths: tuple[str, ...] = (),
     dqs1_observations: tuple[dict[str, Any], ...] = (),
     dqs1_observation_source_paths: tuple[str, ...] = (),
+    skip_observed_dqs1_candidates: bool = True,
 ) -> Dqs1QueueBuildResult:
-    selections = select_dqs1_local_first_candidates(
-        action_summary_path,
-        repo_root=repo_root,
-        results_root=results_root,
-        completed_results_roots=completed_results_roots,
-        exclude_candidate_ids=exclude_candidate_ids,
-        skip_completed_local_advisory=skip_completed_local_advisory,
-        candidate_limit=candidate_limit,
-    )
     try:
+        selections = select_dqs1_local_first_candidates(
+            action_summary_path,
+            repo_root=repo_root,
+            results_root=results_root,
+            completed_results_roots=completed_results_roots,
+            exclude_candidate_ids=exclude_candidate_ids,
+            skip_completed_local_advisory=skip_completed_local_advisory,
+            candidate_limit=candidate_limit,
+            dqs1_observations=dqs1_observations,
+            skip_observed_dqs1_candidates=skip_observed_dqs1_candidates,
+        )
         materializer_feedback_bridge = build_dqs1_materializer_feedback_bridge(
             materializer_feedback_payloads=materializer_feedback_payloads,
             materializer_feedback_source_paths=materializer_feedback_source_paths,

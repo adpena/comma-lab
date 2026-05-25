@@ -442,6 +442,46 @@ def test_dqs1_queue_builder_can_emit_multiple_local_first_candidates(
     )
 
 
+def test_dqs1_queue_builder_skips_candidates_with_harvest_observations(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+    observed = _mlx_dqs1_observation_row()
+
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="results",
+        candidate_limit=1,
+        dqs1_observations=(observed,),
+        dqs1_observation_source_paths=("dqs1_observations.jsonl",),
+    )
+
+    assert result.selection.candidate_id == "pairset_drop_one_rank024_pair0112"
+    assert result.selection.skipped_candidates == (
+        {
+            "candidate_id": "pairset_drop_one_rank023_pair0440",
+            "reason": "dqs1_harvest_observation_exists",
+            "observation_outcome": "local_advisory_improved",
+        },
+    )
+    skip_policy = result.selection.source_metadata["dqs1_observation_acquisition_skip"]
+    assert skip_policy["schema"] == "dqs1_observation_acquisition_skip.v1"
+    assert skip_policy["score_claim"] is False
+    assert skip_policy["ready_for_exact_eval_dispatch"] is False
+    metadata = result.queue["experiments"][0]["metadata"]
+    assert metadata["skipped_candidates"] == list(result.selection.skipped_candidates)
+    assert metadata["materializer_feedback_bridge"]["observed_dqs1_candidate_count"] == 1
+    assert metadata["materializer_feedback_bridge"]["planned_dqs1_candidates"] == [
+        {
+            **_false_authority(),
+            "candidate_id": "pairset_drop_one_rank024_pair0112",
+            "planned_rank": 0,
+            "source": "dqs1_local_first_queue_selection",
+        }
+    ]
+
+
 def test_dqs1_queue_builder_stamps_materializer_feedback_bridge(
     tmp_path: Path,
 ) -> None:
@@ -568,6 +608,7 @@ def test_dqs1_queue_builder_stamps_harvest_observations_into_feedback_bridge(
         materializer_feedback_source_paths=("materializer_feedback.json",),
         dqs1_observations=(worse_duplicate_observation, dqs1_observation),
         dqs1_observation_source_paths=("dqs1_observations.jsonl",),
+        skip_observed_dqs1_candidates=False,
     )
 
     bridge = result.materializer_feedback_bridge
