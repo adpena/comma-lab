@@ -539,6 +539,58 @@ def test_frontier_feedback_compiler_turns_eureka_near_misses_into_beyond_drop_tw
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
 
+    artifacts = write_frontier_refresh_artifacts(
+        output_dir=tmp_path / "refresh_artifacts",
+        report=report,
+        repo_root=tmp_path,
+    )
+    assert artifacts["local_cpu_eureka_planning"].endswith(
+        "local_cpu_eureka_planning.json"
+    )
+    artifact_payload = json.loads(
+        (tmp_path / artifacts["local_cpu_eureka_planning"]).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert artifact_payload["planner_hint_count"] == 1
+
+
+def test_frontier_feedback_eureka_default_discovers_research_root(
+    tmp_path: Path,
+) -> None:
+    action_summary = _write_action_summary(tmp_path)
+    research_root = tmp_path / ".omx" / "research"
+    _write_json(
+        research_root
+        / "local_cpu_contest_drift_eureka_pairset_drop_two_r013_009_p0327_0459_20260525T131428Z.json",
+        _eureka_signal(),
+    )
+
+    discovery = discover_local_cpu_eureka_planning_signals(repo_root=tmp_path)
+
+    assert discovery["active"] is True
+    assert discovery["frontier_artifact_roots"] == [".omx/research"]
+    assert discovery["signal_count"] == 1
+    assert discovery["planner_hint_count"] == 1
+    _assert_false_authority(discovery)
+
+    report = build_frontier_rate_attack_feedback_refresh(
+        repo_root=tmp_path,
+        action_summary_path=action_summary,
+        results_root=str(tmp_path / "results"),
+        queue_id="frontier_feedback_default_eureka_unit",
+        candidate_limit=1,
+    )
+
+    eureka = report["local_cpu_eureka_planning"]
+    assert eureka["active"] is True
+    assert eureka["signal_count"] == 1
+    assert report["queue"]["experiments"][0]["metadata"][
+        "frontier_feedback_eureka_planning"
+    ]["planner_hint_count"] == 1
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+
 
 def test_component_marginal_bundle_auto_discovers_drop_many_greedy_verdict(
     tmp_path: Path,
@@ -993,6 +1045,13 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
             "dispatch_blockers": ["exact_cpu_cuda_auth_eval_required"],
         },
     )
+    _write_json(
+        tmp_path
+        / ".omx"
+        / "research"
+        / "local_cpu_contest_drift_eureka_pairset_drop_two_r013_009_p0327_0459_20260525T131428Z.json",
+        _eureka_signal(),
+    )
     acquisition = _write_json(
         tmp_path / "pairset_acquisition.json",
         {
@@ -1080,6 +1139,8 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
             str(action_summary),
             "--frontier-artifact-root",
             str(artifact_root),
+            "--frontier-artifact-root",
+            str(tmp_path / ".omx" / "research"),
             "--autopilot-result-json",
             str(autopilot_result),
             "--pairset-acquisition",
@@ -1127,6 +1188,12 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
         )
     )
     assert cycle_report["schema"] == "frontier_rate_attack_feedback_cycle.v1"
+    assert cycle_report["post_followup_eureka_planning"]["payload"][
+        "signal_count"
+    ] == 1
+    assert (
+        output_dir / "post_followup_local_cpu_eureka_planning.json"
+    ).is_file()
     component = cycle_report["post_harvest_refresh"]["pairset_component_marginal"]
     assert component["schema"] == "frontier_rate_attack_pairset_component_marginal_bundle.v1"
     assert component["active"] is True

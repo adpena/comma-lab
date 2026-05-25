@@ -1538,6 +1538,29 @@ def _authority_truthy(payload: dict[str, object]) -> list[str]:
     return bad
 
 
+def _authority_truthy_recursive(value: object, *, prefix: str = "") -> list[str]:
+    authority_keys = {
+        "score_claim",
+        "score_claim_valid",
+        "promotion_eligible",
+        "rank_or_kill_eligible",
+        "ready_for_exact_eval_dispatch",
+        "dispatch_attempted",
+        "gpu_launched",
+    }
+    bad: list[str] = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            child_path = f"{prefix}.{key}" if prefix else str(key)
+            if key in authority_keys and child is True:
+                bad.append(child_path)
+            bad.extend(_authority_truthy_recursive(child, prefix=child_path))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            bad.extend(_authority_truthy_recursive(child, prefix=f"{prefix}[{index}]"))
+    return bad
+
+
 def _frontier_feedback_refresh_row(path: Path) -> dict[str, object]:
     payload = _load_json_file(path)
     rel = _repo_rel(path)
@@ -1549,7 +1572,7 @@ def _frontier_feedback_refresh_row(path: Path) -> dict[str, object]:
             "error": payload["_error"],
             **_false_authority_fields(),
         }
-    bad_authority = _authority_truthy(payload)
+    bad_authority = _authority_truthy_recursive(payload)
     eureka_payload = (
         payload.get("local_cpu_eureka_planning")
         if isinstance(payload.get("local_cpu_eureka_planning"), dict)
@@ -1647,7 +1670,7 @@ def _frontier_feedback_cycle_row(path: Path) -> dict[str, object]:
             "error": payload["_error"],
             **_false_authority_fields(),
         }
-    bad_authority = _authority_truthy(payload)
+    bad_authority = _authority_truthy_recursive(payload)
     if bad_authority:
         return {
             "kind": "frontier_feedback_cycle",
@@ -1690,7 +1713,30 @@ def _frontier_feedback_cycle_row(path: Path) -> dict[str, object]:
         if isinstance(post, dict) and isinstance(post.get("artifacts"), dict)
         else {}
     )
-    if harvest_count and isinstance(post, dict) and post_artifacts.get("dqs1_followup_queue"):
+    campaign = (
+        payload.get("campaign_execution")
+        if isinstance(payload.get("campaign_execution"), dict)
+        else {}
+    )
+    campaign_waves = (
+        campaign.get("waves") if isinstance(campaign.get("waves"), list) else []
+    )
+    latest_campaign_wave = (
+        campaign_waves[-1] if campaign_waves and isinstance(campaign_waves[-1], dict) else {}
+    )
+    latest_campaign_refresh = (
+        latest_campaign_wave.get("refresh")
+        if isinstance(latest_campaign_wave.get("refresh"), dict)
+        else {}
+    )
+    latest_campaign_artifacts = (
+        latest_campaign_refresh.get("artifacts")
+        if isinstance(latest_campaign_refresh.get("artifacts"), dict)
+        else {}
+    )
+    if latest_campaign_artifacts.get("dqs1_followup_queue"):
+        status = "CAMPAIGN_QUEUE_READY"
+    elif harvest_count and isinstance(post, dict) and post_artifacts.get("dqs1_followup_queue"):
         status = "POST_HARVEST_QUEUE_READY"
     elif artifacts.get("dqs1_followup_queue") and validate.get("valid") is True:
         status = "READY_LOCAL_EXECUTION"
@@ -1717,6 +1763,11 @@ def _frontier_feedback_cycle_row(path: Path) -> dict[str, object]:
             or ""
         ),
         "post_harvest_queue_path": str(post_artifacts.get("dqs1_followup_queue") or ""),
+        "campaign_wave_count": _safe_int(campaign.get("completed_additional_wave_count")),
+        "campaign_stop_reason": str(campaign.get("stop_reason") or ""),
+        "latest_campaign_queue_path": str(
+            latest_campaign_artifacts.get("dqs1_followup_queue") or ""
+        ),
         **_false_authority_fields(),
     }
 
@@ -1732,7 +1783,7 @@ def _frontier_feedback_cycle_execute_command(latest: dict[str, object] | None) -
         return (
             f".venv/bin/python {FRONTIER_FEEDBACK_CYCLE_TOOL} "
             "--frontier-artifact-root .omx/research "
-            "--candidate-limit 4 --execute-followup "
+            "--candidate-limit 4 --execute-followup --campaign-waves 4 "
             "--max-candidates 4 --max-steps-per-candidate 8"
         )
     return f".venv/bin/python {FRONTIER_FEEDBACK_CYCLE_TOOL} --help"
@@ -1770,8 +1821,11 @@ def _frontier_feedback_cycle_summary() -> dict[str, object]:
     if error_rows:
         status = "BLOCKED"
         reason = f"{len(error_rows)} frontier feedback artifact(s) failed safe loading"
-    elif latest_cycle and latest_cycle.get("status") == "POST_HARVEST_QUEUE_READY":
-        status = "POST_HARVEST_QUEUE_READY"
+    elif latest_cycle and latest_cycle.get("status") in {
+        "CAMPAIGN_QUEUE_READY",
+        "POST_HARVEST_QUEUE_READY",
+    }:
+        status = str(latest_cycle.get("status"))
         reason = "latest cycle harvested local observations and emitted the next queue"
     elif latest_cycle and latest_cycle.get("status") == "READY_LOCAL_EXECUTION":
         status = "READY_LOCAL_EXECUTION"
@@ -1795,7 +1849,9 @@ def _frontier_feedback_cycle_summary() -> dict[str, object]:
             1 for row in cycle_rows if row.get("status") == "READY_LOCAL_EXECUTION"
         ),
         "post_harvest_queue_count": sum(
-            1 for row in cycle_rows if row.get("status") == "POST_HARVEST_QUEUE_READY"
+            1
+            for row in cycle_rows
+            if row.get("status") in {"CAMPAIGN_QUEUE_READY", "POST_HARVEST_QUEUE_READY"}
         ),
         "latest_cycle": latest_cycle or {},
         "latest_refresh": latest_refresh or {},
@@ -1829,6 +1885,9 @@ def _format_frontier_feedback_cycle_summary() -> str:
                 f"  initial_selected: {latest_cycle.get('initial_selected_candidate_count')}",
                 f"  harvest_paths: {latest_cycle.get('harvest_path_count')}",
                 f"  post_queue: {latest_cycle.get('post_harvest_queue_path') or '-'}",
+                f"  campaign_waves: {latest_cycle.get('campaign_wave_count', 0)}",
+                f"  campaign_stop: {latest_cycle.get('campaign_stop_reason') or '-'}",
+                f"  campaign_queue: {latest_cycle.get('latest_campaign_queue_path') or '-'}",
             ]
         )
     latest_refresh = payload.get("latest_refresh")

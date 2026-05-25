@@ -32,6 +32,9 @@ ensure_repo_imports(REPO_ROOT)
 from comma_lab.artifact_retention import DEFAULT_RETENTION_KINDS  # noqa: E402
 from comma_lab.scheduler.dqs1_local_first_harvest import DEFAULT_QUEUE_PATH  # noqa: E402
 from comma_lab.scheduler.dqs1_local_first_queue import DEFAULT_RESULTS_ROOT  # noqa: E402
+from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
+    discover_local_cpu_eureka_planning_signals,
+)
 from comma_lab.storage_tiers import (  # noqa: E402
     DEFAULT_RESERVE_FREE_GB,
     StorageTierError,
@@ -468,6 +471,51 @@ def _queue_build_common_args(
     return [*base_args, *preflight_args]
 
 
+def _round_eureka_planning_paths(
+    *,
+    args: argparse.Namespace,
+    output_root: Path,
+    refresh_stamp: str,
+) -> tuple[list[Path], dict[str, Any] | None]:
+    paths = [_resolve(path) for path in args.eureka_planning_json]
+    if not args.eureka_planning:
+        return paths, None
+
+    eureka_planning = discover_local_cpu_eureka_planning_signals(
+        repo_root=REPO_ROOT,
+        frontier_artifact_roots=tuple(args.frontier_artifact_root),
+    )
+    output_root.mkdir(parents=True, exist_ok=True)
+    output_path = output_root / f"local_cpu_eureka_planning_{refresh_stamp}.json"
+    try:
+        write_json_artifact(output_path, eureka_planning)
+    except ArtifactWriteError as exc:
+        raise RuntimeError(f"{output_path}: failed to persist eureka planning: {exc}") from exc
+    paths.append(output_path)
+    return paths, {
+        "schema": "dqs1_tranche_local_cpu_eureka_planning_refresh.v1",
+        "active": bool(eureka_planning.get("active")),
+        "json_out": str(output_path),
+        "frontier_artifact_roots": eureka_planning.get("frontier_artifact_roots"),
+        "signal_count": eureka_planning.get("signal_count"),
+        "planner_hint_count": eureka_planning.get("planner_hint_count"),
+        "best_projected_gap_vs_auth_frontier": eureka_planning.get(
+            "best_projected_gap_vs_auth_frontier"
+        ),
+        "best_conservative_gap_vs_auth_frontier": eureka_planning.get(
+            "best_conservative_gap_vs_auth_frontier"
+        ),
+        "allowed_use": "tranche_pairset_acquisition_prior_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+
+
 def _refresh_pairset_acquisition(
     *,
     args: argparse.Namespace,
@@ -488,6 +536,11 @@ def _refresh_pairset_acquisition(
     output_root.mkdir(parents=True, exist_ok=True)
     json_out = output_root / f"dqs1_pairset_acquisition_observation_filtered_{refresh_stamp}.json"
     md_out = json_out.with_suffix(".md")
+    eureka_planning_paths, eureka_planning_payload = _round_eureka_planning_paths(
+        args=args,
+        output_root=output_root,
+        refresh_stamp=refresh_stamp,
+    )
 
     def acquisition_command(
         *,
@@ -520,6 +573,8 @@ def _refresh_pairset_acquisition(
             extra=dqs1_observation_jsonl,
         ):
             command.extend(["--dqs1-observation-jsonl", observation_path])
+        for eureka_path in eureka_planning_paths:
+            command.extend(["--eureka-planning-json", _display_path(eureka_path)])
         if args.include_observed_dqs1_candidate:
             command.append("--include-observed-dqs1-candidate")
         if pair_frame_geometry_lattice is not None:
@@ -626,6 +681,8 @@ def _refresh_pairset_acquisition(
         "command": command,
         "elapsed_seconds": result.elapsed_seconds,
         "stdout": stdout_payload,
+        "local_cpu_eureka_planning": eureka_planning_payload,
+        "eureka_planning_json": [str(path) for path in eureka_planning_paths],
         "pair_frame_geometry_lattice": geometry_payload,
         "observation_jsonl": _dqs1_observation_path_values(
             args,
@@ -1046,6 +1103,34 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             "family-agnostic materializer feedback sweep/observation JSON to forward "
             "into generated DQS1 local-first queues"
+        ),
+    )
+    parser.add_argument(
+        "--frontier-artifact-root",
+        action="append",
+        default=[],
+        help=(
+            "Artifact root scanned for local CPU eureka planning, DQS1 harvest "
+            "observations, and feedback signals. Defaults to .omx/research when omitted."
+        ),
+    )
+    parser.add_argument(
+        "--eureka-planning",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "auto-discover local CPU eureka planning and feed it into pairset "
+            "acquisition refreshes so beyond-drop-two/drop-many probes are not manual"
+        ),
+    )
+    parser.add_argument(
+        "--eureka-planning-json",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "additional frontier feedback refresh/cycle/eureka planning JSON to "
+            "feed into pairset acquisition refreshes"
         ),
     )
     parser.add_argument(

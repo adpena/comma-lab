@@ -48,6 +48,9 @@ def test_tranche_parse_args_accepts_post_training_candidate_inputs() -> None:
     assert args.refresh_pairset_geometry_pair_component_xray == []
     assert args.refresh_pairset_geometry_drop_counts == "3,4,6,8,12,16"
     assert args.refresh_pairset_geometry_max_requests == 32
+    assert args.eureka_planning is True
+    assert args.frontier_artifact_root == []
+    assert args.eureka_planning_json == []
 
 
 def test_tranche_portfolio_directory_names_include_harvest_count() -> None:
@@ -275,6 +278,7 @@ def test_tranche_refresh_pairset_acquisition_uses_prior_and_round_observations(
             "--refresh-pairset-max-swap-in",
             "3",
             "--no-refresh-pairset-geometry-lattice",
+            "--no-eureka-planning",
         ]
     )
 
@@ -359,6 +363,7 @@ def test_tranche_refresh_pairset_acquisition_binds_geometry_lattice(
             "3,4",
             "--refresh-pairset-geometry-max-requests",
             "9",
+            "--no-eureka-planning",
         ]
     )
 
@@ -395,6 +400,95 @@ def test_tranche_refresh_pairset_acquisition_binds_geometry_lattice(
     assert geometry["geometry_coverage"] == 1.0
     assert geometry["frame_pair_curriculum"] == str(curriculum)
     assert geometry["pair_component_xrays"] == [str(xray)]
+
+
+def test_tranche_refresh_pairset_acquisition_feeds_eureka_planning(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    selector_root = tmp_path / "selector_pareto"
+    selector_root.mkdir(parents=True)
+    (selector_root / "latest_selector_pareto.json").write_text("{}", encoding="utf-8")
+    output_root = tmp_path / "refreshed_pairset"
+    calls: list[list[str]] = []
+
+    def fake_run(command: list[str], *, check: bool = True) -> tranche.CommandResult:
+        calls.append(command)
+        return tranche.CommandResult(
+            command=command,
+            returncode=0,
+            stdout=json.dumps(
+                {
+                    "candidate_count": 9,
+                    "unfiltered_candidate_count": 9,
+                    "suppressed_observed_candidate_count": 0,
+                    "drop_many_candidate_count": 4,
+                }
+            ),
+            stderr="",
+            elapsed_seconds=0.01,
+        )
+
+    monkeypatch.setattr(tranche, "_run", fake_run)
+    monkeypatch.setattr(tranche, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(
+        tranche,
+        "discover_local_cpu_eureka_planning_signals",
+        lambda **_: {
+            "schema": "frontier_rate_attack_local_cpu_eureka_discovery.v1",
+            "active": True,
+            "frontier_artifact_roots": [".omx/research"],
+            "signal_count": 2,
+            "planner_hint_count": 1,
+            "best_projected_gap_vs_auth_frontier": 0.000001,
+            "best_conservative_gap_vs_auth_frontier": 0.000004,
+            "planner_hints": [
+                {
+                    "schema": "frontier_rate_attack_local_cpu_eureka_planner_hint.v1",
+                    "hint_id": "dqs1_expand_beyond_drop_two_near_boundary",
+                    "pairset_acquisition_profile": {
+                        "active": True,
+                        "drop_many_counts": [3, 4, 6, 8],
+                        "max_drop_many": 96,
+                    },
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    args = tranche.parse_args(
+        [
+            "--pairset-acquisition-refresh-root",
+            str(output_root),
+            "--frontier-artifact-root",
+            str(tmp_path / ".omx" / "research"),
+            "--no-refresh-pairset-geometry-lattice",
+        ]
+    )
+
+    _, payload = tranche._refresh_pairset_acquisition(
+        args=args,
+        pairset_acquisition_root=tmp_path,
+        refresh_stamp="20260525T030405Z",
+        dqs1_observation_jsonl=(),
+    )
+
+    command = calls[0]
+    assert "--eureka-planning-json" in command
+    eureka_path = Path(command[command.index("--eureka-planning-json") + 1])
+    assert eureka_path.name == "local_cpu_eureka_planning_20260525T030405Z.json"
+    resolved_eureka_path = eureka_path if eureka_path.is_absolute() else tmp_path / eureka_path
+    assert resolved_eureka_path.is_file()
+    assert payload["local_cpu_eureka_planning"]["active"] is True
+    assert payload["local_cpu_eureka_planning"]["planner_hint_count"] == 1
+    assert payload["eureka_planning_json"] == [str(resolved_eureka_path)]
 
 
 def test_tranche_proactive_cleanup_move_is_not_gated_by_mlx_cache_flag(

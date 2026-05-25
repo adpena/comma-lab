@@ -57,6 +57,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="optional harvest JSON output path",
     )
     parser.add_argument(
+        "--candidate-id",
+        default=None,
+        help="candidate experiment id to harvest from a multi-candidate queue",
+    )
+    parser.add_argument(
         "--exact-auth-request-out",
         type=Path,
         default=None,
@@ -102,6 +107,7 @@ def main(argv: list[str] | None = None) -> int:
         kwargs = {
             "queue_path": args.queue,
             "repo_root": REPO_ROOT,
+            "candidate_id": args.candidate_id,
             "timestamp": args.timestamp,
             "reroute_observe_only": args.reroute_observe_only,
             "output_queue_path": args.queue if args.write_queue else None,

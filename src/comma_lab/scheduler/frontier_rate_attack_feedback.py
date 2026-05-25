@@ -739,10 +739,16 @@ def discover_local_cpu_eureka_planning_signals(
     """
 
     repo = Path(repo_root)
+    explicit_roots = bool(frontier_artifact_roots)
+    roots: Sequence[str | Path] = (
+        frontier_artifact_roots if explicit_roots else (repo / ".omx" / "research",)
+    )
     paths: list[Path] = []
     seen_paths: set[str] = set()
-    for value in frontier_artifact_roots:
+    for value in roots:
         root = _resolve_path(value, repo_root=repo)
+        if not root.exists() and not explicit_roots:
+            continue
         for path in _eureka_signal_paths(root, max_files=max_files_per_root):
             key = path.resolve(strict=False).as_posix()
             if key in seen_paths:
@@ -765,7 +771,19 @@ def discover_local_cpu_eureka_planning_signals(
                 }
             )
             continue
-        row = _eureka_gap_row(payload, path=path, repo_root=repo)
+        try:
+            row = _eureka_gap_row(payload, path=path, repo_root=repo)
+        except FrontierRateAttackFeedbackError as exc:
+            if explicit_roots:
+                raise
+            ignored.append(
+                {
+                    "path": _repo_rel(path, repo),
+                    "reason": str(exc),
+                    **FALSE_AUTHORITY,
+                }
+            )
+            continue
         key = (
             str(row.get("candidate_id") or ""),
             str(row.get("candidate_archive_sha256") or ""),
@@ -789,7 +807,7 @@ def discover_local_cpu_eureka_planning_signals(
         "active": bool(rows),
         "frontier_artifact_roots": [
             _repo_rel(_resolve_path(root, repo_root=repo), repo)
-            for root in frontier_artifact_roots
+            for root in roots
         ],
         "signal_count": len(rows),
         "duplicate_signal_count": duplicate_count,

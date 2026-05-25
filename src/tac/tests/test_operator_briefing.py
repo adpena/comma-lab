@@ -3763,6 +3763,132 @@ def test_operator_briefing_blocks_frontier_feedback_cycle_authority_leak(
     assert summary["score_claim"] is False
 
 
+def test_operator_briefing_blocks_nested_frontier_feedback_cycle_authority_leak(
+    tmp_path: Path,
+) -> None:
+    mod = _load_briefing_module()
+    path = _write_json(
+        tmp_path / "frontier_rate_attack_feedback_cycle.json",
+        {
+            "schema": "frontier_rate_attack_feedback_cycle.v1",
+            "initial_refresh": {
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "post_followup_eureka_planning": {
+                "payload": {
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": True,
+                }
+            },
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+        },
+    )
+
+    row = mod._frontier_feedback_cycle_row(path)
+
+    assert row["status"] == "BLOCKED_AUTHORITY_LEAK"
+    assert (
+        "truthy_authority:post_followup_eureka_planning.payload.ready_for_exact_eval_dispatch"
+        in row["blockers"]
+    )
+
+
+def test_operator_briefing_surfaces_campaign_wave_frontier_feedback_queue(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    cycle_dir = tmp_path / "cycle"
+    post_queue = cycle_dir / "post_harvest_refresh" / "dqs1_followup_queue.json"
+    campaign_queue = (
+        cycle_dir / "campaign_wave_002" / "refresh" / "dqs1_followup_queue.json"
+    )
+    _write_json(
+        cycle_dir / "frontier_rate_attack_feedback_cycle.json",
+        {
+            "schema": "frontier_rate_attack_feedback_cycle.v1",
+            "initial_refresh": {
+                "artifacts": {"dqs1_followup_queue": str(cycle_dir / "initial.json")},
+                "selected_candidate_ids": ["pairset_a", "pairset_b"],
+                "queue_validate": {"valid": True},
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "harvest_signal": {
+                "harvest_path_count": 2,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "post_harvest_refresh": {
+                "artifacts": {"dqs1_followup_queue": str(post_queue)},
+                "selected_candidate_ids": ["pairset_c"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "campaign_execution": {
+                "requested_wave_count": 3,
+                "completed_additional_wave_count": 1,
+                "stop_reason": "wave_limit_reached",
+                "waves": [
+                    {
+                        "wave_index": 2,
+                        "refresh": {
+                            "artifacts": {"dqs1_followup_queue": str(campaign_queue)},
+                            "selected_candidate_ids": ["pairset_d"],
+                            "score_claim": False,
+                            "promotion_eligible": False,
+                            "rank_or_kill_eligible": False,
+                            "ready_for_exact_eval_dispatch": False,
+                        },
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "rank_or_kill_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+        },
+    )
+    monkeypatch.setattr(mod, "FRONTIER_FEEDBACK_SCAN_ROOTS", (tmp_path,))
+
+    summary = mod._frontier_feedback_cycle_summary()
+
+    assert summary["status"] == "CAMPAIGN_QUEUE_READY"
+    assert summary["latest_cycle"]["campaign_wave_count"] == 1
+    assert summary["latest_cycle"]["latest_campaign_queue_path"] == str(campaign_queue)
+    assert "--campaign-waves 4" in summary["next_command"]
+    assert summary["ready_for_exact_eval_dispatch"] is False
+    assert summary["score_claim"] is False
+
+
 def test_operator_briefing_surfaces_inverse_scorer_chain_readiness(
     tmp_path: Path,
     monkeypatch,

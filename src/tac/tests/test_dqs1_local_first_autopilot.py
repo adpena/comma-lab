@@ -120,3 +120,56 @@ def test_free_disk_probe_accepts_uncreated_external_results_root(
     free_gb = autopilot._free_disk_gb(nested)
 
     assert free_gb > 0
+
+
+def test_succeeded_candidate_ids_survive_active_batch_tail() -> None:
+    queue = {
+        "experiments": [
+            {"id": "candidate_done"},
+            {"id": "candidate_queued"},
+            {"id": "candidate_partial"},
+        ],
+    }
+    summary = {
+        "steps": [
+            {
+                "experiment_id": "candidate_done",
+                "step_id": "materialize",
+                "status": "succeeded",
+            },
+            {
+                "experiment_id": "candidate_done",
+                "step_id": "local_cpu_advisory",
+                "status": "succeeded",
+            },
+            {
+                "experiment_id": "candidate_queued",
+                "step_id": "materialize",
+                "status": "queued",
+            },
+            {
+                "experiment_id": "candidate_partial",
+                "step_id": "materialize",
+                "status": "succeeded",
+            },
+            {
+                "experiment_id": "candidate_partial",
+                "step_id": "local_cpu_advisory",
+                "status": "queued",
+            },
+        ]
+    }
+
+    assert autopilot._succeeded_candidate_ids(
+        queue,
+        summary,
+        already_harvested=set(),
+    ) == ["candidate_done"]
+    assert (
+        autopilot._succeeded_candidate_ids(
+            queue,
+            summary,
+            already_harvested={"candidate_done"},
+        )
+        == []
+    )

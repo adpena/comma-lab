@@ -300,6 +300,32 @@ def _has_active_work(summary: dict[str, Any]) -> bool:
     return any(int(counts.get(status) or 0) > 0 for status in ("queued", "running", "failed", "blocked"))
 
 
+def _succeeded_candidate_ids(
+    queue: dict[str, Any],
+    summary: dict[str, Any],
+    *,
+    already_harvested: set[str],
+) -> list[str]:
+    statuses_by_experiment: dict[str, list[str]] = {}
+    for step in summary.get("steps") or []:
+        if not isinstance(step, dict):
+            continue
+        experiment_id = str(step.get("experiment_id") or "")
+        if not experiment_id:
+            continue
+        statuses_by_experiment.setdefault(experiment_id, []).append(
+            str(step.get("status") or "")
+        )
+    out: list[str] = []
+    for candidate_id in candidate_experiment_ids(queue):
+        if candidate_id in already_harvested:
+            continue
+        statuses = statuses_by_experiment.get(candidate_id) or []
+        if statuses and all(status == "succeeded" for status in statuses):
+            out.append(candidate_id)
+    return out
+
+
 def _compact_queue_summary(summary: dict[str, Any]) -> dict[str, Any]:
     """Keep autopilot output readable even when queue state has many orphans."""
 
@@ -414,6 +440,7 @@ def main(argv: list[str] | None = None) -> int:
     rounds: list[dict[str, Any]] = []
     total_steps = 0
     candidates_harvested = 0
+    harvested_candidate_ids: set[str] = set()
     stop_reason = "max_candidates_reached"
     try:
         while candidates_harvested < args.max_candidates and total_steps < args.max_total_steps:
@@ -469,6 +496,16 @@ def main(argv: list[str] | None = None) -> int:
                 "worker": worker,
                 "summary": _compact_queue_summary(summary),
             }
+            batch_mode = args.max_worker_experiments > 1
+            completed_ids = (
+                _succeeded_candidate_ids(
+                    queue,
+                    summary,
+                    already_harvested=harvested_candidate_ids,
+                )
+                if batch_mode
+                else []
+            )
             if worker.get("failure_count"):
                 round_record["terminal"] = "worker_failure"
                 rounds.append(round_record)
@@ -480,17 +517,18 @@ def main(argv: list[str] | None = None) -> int:
                 stop_reason = "dry_run"
                 break
             if _has_active_work(summary):
-                round_record["terminal"] = "active_work_remaining"
-                rounds.append(round_record)
-                if total_steps >= args.max_total_steps:
-                    stop_reason = "max_total_steps_reached"
-                    break
-                continue
+                if not completed_ids:
+                    round_record["terminal"] = "active_work_remaining"
+                    rounds.append(round_record)
+                    if total_steps >= args.max_total_steps:
+                        stop_reason = "max_total_steps_reached"
+                        break
+                    continue
+                round_record["active_work_remaining_after_harvest"] = True
 
             prior_queue_text = queue_path.read_text(encoding="utf-8") if queue_path.is_file() else ""
             stamp = _utc_stamp()
-            batch_mode = args.max_worker_experiments > 1
-            ids = candidate_experiment_ids(queue) if batch_mode else [""]
+            ids = completed_ids if batch_mode else [""]
             ids = ids[: max(0, args.max_candidates - candidates_harvested)]
             harvest_summaries: list[dict[str, Any]] = []
             retention_summaries: list[dict[str, Any]] = []
@@ -521,6 +559,7 @@ def main(argv: list[str] | None = None) -> int:
                     stamp=stamp,
                 )
                 candidates_harvested += 1
+                harvested_candidate_ids.add(str(harvest.harvest_record["candidate_id"]))
                 exact_request_created = exact_request_created or harvest.exact_auth_request is not None
                 rerouted = rerouted or harvest.rerouted_queue is not None
                 harvest_summaries.append(

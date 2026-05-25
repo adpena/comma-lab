@@ -194,6 +194,11 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
         path = output_dir / "pair_frame_geometry_discovery.json"
         write_json_artifact(path, pair_frame)
         artifacts["pair_frame_geometry_discovery"] = _display_path(path)
+    eureka_planning = report.get("local_cpu_eureka_planning")
+    if isinstance(eureka_planning, dict):
+        path = output_dir / "local_cpu_eureka_planning.json"
+        write_json_artifact(path, eureka_planning)
+        artifacts["local_cpu_eureka_planning"] = _display_path(path)
     bridge = report.get("materializer_feedback_bridge")
     if isinstance(bridge, dict):
         path = output_dir / "materializer_feedback_bridge.json"

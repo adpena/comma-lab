@@ -37,6 +37,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
     FrontierRateAttackFeedbackError,
     build_frontier_rate_attack_feedback_refresh,
     discover_dqs1_observation_jsonl_paths,
+    discover_local_cpu_eureka_planning_signals,
 )
 from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (  # noqa: E402
     FRONTIER_RATE_ATTACK_FEEDBACK_CYCLE_SCHEMA,
@@ -54,6 +55,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (  # noqa: E
     write_pairset_component_marginal_feedback_bundle,
 )
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY  # noqa: E402
+from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 DEFAULT_BASELINE_ADVISORY = (
     "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/"
@@ -73,6 +75,14 @@ def _effective_raw_retention_execute(args: argparse.Namespace) -> bool:
 
 def _display_path(path: str | Path) -> str:
     return repo_rel(path, REPO_ROOT)
+
+
+def _is_under_repo(path: str | Path) -> bool:
+    try:
+        Path(path).resolve(strict=False).relative_to(REPO_ROOT.resolve(strict=False))
+    except ValueError:
+        return False
+    return True
 
 
 def _action_summary_path(value: str) -> Path | None:
@@ -359,6 +369,21 @@ def _autopilot_command(
     return command
 
 
+def _harvest_payload_has_exact_request(harvest_paths: tuple[Path, ...]) -> bool:
+    for path in harvest_paths:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        if payload.get("exact_auth_request_path") or payload.get("exact_auth_request"):
+            return True
+        if payload.get("recommended_action") == "dispatch_exact_auth_anchor":
+            return True
+    return False
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, default=None)
@@ -474,6 +499,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-total-steps", type=int, default=None)
     parser.add_argument("--max-steps-per-candidate", type=int, default=8)
     parser.add_argument("--max-worker-experiments", type=int, default=None)
+    parser.add_argument(
+        "--campaign-waves",
+        "--waves",
+        type=int,
+        default=1,
+        help=(
+            "Run repeated queue-owned feedback waves in one invocation. Wave 1 "
+            "is the normal initial follow-up; later waves execute each refreshed "
+            "post-harvest queue, harvest it, and rebuild the next queue."
+        ),
+    )
     parser.add_argument("--min-free-disk-gb", type=float, default=40.0)
     parser.add_argument("--pairset-acquisition", default="latest")
     parser.add_argument("--pairset-acquisition-root", default=DEFAULT_RESULTS_ROOT)
@@ -534,6 +570,12 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--local-io-concurrency must be >= 1")
     if args.max_steps_per_candidate < 1:
         raise SystemExit("--max-steps-per-candidate must be >= 1")
+    if args.campaign_waves < 1:
+        raise SystemExit("--campaign-waves must be >= 1")
+    if args.campaign_waves > 1 and not args.execute_followup:
+        raise SystemExit("--campaign-waves > 1 requires --execute-followup")
+    if args.campaign_waves > 1 and args.state is not None:
+        raise SystemExit("--campaign-waves > 1 cannot use a shared explicit --state")
     stamp = utc_stamp()
     queue_id = args.queue_id or f"frontier_rate_attack_feedback_cycle_{stamp}"
     post_queue_id = args.post_harvest_queue_id or f"{queue_id}_post_harvest"
@@ -632,6 +674,9 @@ def main(argv: list[str] | None = None) -> int:
         post_report = None
         post_artifacts: dict[str, str] = {}
         post_validate = None
+        campaign_waves: list[dict[str, Any]] = []
+        campaign_stop_reason = "single_wave_only"
+        post_observations: tuple[str | Path, ...] = initial_observation_context
         if harvest_paths:
             fallback_pairset_acquisition = _pairset_acquisition_path(
                 args.pairset_acquisition,
@@ -682,6 +727,140 @@ def main(argv: list[str] | None = None) -> int:
             post_queue_path = post_artifacts.get("dqs1_followup_queue")
             if post_queue_path is not None:
                 post_validate = _validate_queue(post_queue_path)
+            campaign_stop_reason = "wave_limit_reached"
+
+            current_queue_path = post_queue_path
+            current_observations = post_observations
+            current_pairset_acquisition = post_artifacts.get(
+                "dqs1_selected_pairset_acquisition"
+            )
+            for wave_index in range(2, args.campaign_waves + 1):
+                if current_queue_path is None:
+                    campaign_stop_reason = "no_refreshed_queue_available"
+                    break
+                wave_stamp = f"{stamp}_wave{wave_index:03d}"
+                wave_dir = output_dir / f"campaign_wave_{wave_index:03d}"
+                wave_observation_dir = wave_dir / "dqs1_harvest_observations"
+                wave_component_dir = wave_dir / "component_marginal_refresh"
+                wave_refresh_dir = wave_dir / "refresh"
+                command = _autopilot_command(args=args, queue_path=current_queue_path)
+                autopilot_payload = _run(
+                    command,
+                    label=f"DQS1 local-first autopilot wave {wave_index}",
+                )
+                wave_harvest_paths = harvest_paths_from_autopilot_payload(
+                    autopilot_payload,
+                    repo_root=REPO_ROOT,
+                )
+                wave_record: dict[str, Any] = {
+                    "wave_index": wave_index,
+                    "queue_path": _display_path(current_queue_path),
+                    "autopilot_command": command,
+                    "autopilot_result": {
+                        "stop_reason": autopilot_payload.get("stop_reason"),
+                        "total_steps_started": autopilot_payload.get(
+                            "total_steps_started"
+                        ),
+                        "candidates_harvested": autopilot_payload.get(
+                            "candidates_harvested"
+                        ),
+                        "harvest_path_count": len(wave_harvest_paths),
+                        **FALSE_AUTHORITY,
+                    },
+                    **FALSE_AUTHORITY,
+                }
+                if not wave_harvest_paths:
+                    wave_record["terminal"] = "no_harvest"
+                    campaign_waves.append(wave_record)
+                    campaign_stop_reason = "no_harvest"
+                    break
+                fallback_pairset_acquisition = _pairset_acquisition_path(
+                    args.pairset_acquisition,
+                    root=args.pairset_acquisition_root,
+                )
+                pairset_acquisition = select_pairset_acquisition_for_harvests(
+                    harvest_paths=wave_harvest_paths,
+                    repo_root=REPO_ROOT,
+                    preferred_pairset_acquisition_path=current_pairset_acquisition,
+                    fallback_pairset_acquisition_path=fallback_pairset_acquisition,
+                )
+                wave_observation_bundle = write_dqs1_harvest_observation_bundle(
+                    harvest_paths=wave_harvest_paths,
+                    repo_root=REPO_ROOT,
+                    pairset_acquisition_path=pairset_acquisition,
+                    baseline_advisory_path=args.baseline_advisory,
+                    baseline_archive_size_bytes=args.baseline_archive_size_bytes,
+                    baseline_candidate_id=args.baseline_candidate_id,
+                    output_dir=wave_observation_dir,
+                    stamp=wave_stamp,
+                )
+                next_observations = (
+                    *current_observations,
+                    wave_observation_bundle["observation_jsonl"],
+                )
+                wave_component_marginal = _write_component_marginal_bundle(
+                    args=args,
+                    output_dir=wave_component_dir,
+                    stamp=wave_stamp,
+                    dqs1_observation_paths=next_observations,
+                )
+                wave_action_summary_path = _component_action_summary_path(
+                    wave_component_marginal
+                )
+                wave_report = _build_refresh(
+                    args=args,
+                    queue_id=f"{post_queue_id}_wave{wave_index:03d}",
+                    dqs1_observation_paths=next_observations,
+                    action_summary_path=wave_action_summary_path,
+                )
+                wave_artifacts = write_frontier_refresh_artifacts(
+                    output_dir=wave_refresh_dir,
+                    report=wave_report,
+                    repo_root=REPO_ROOT,
+                )
+                wave_queue_path = wave_artifacts.get("dqs1_followup_queue")
+                wave_validate = (
+                    None if wave_queue_path is None else _validate_queue(wave_queue_path)
+                )
+                wave_record.update(
+                    {
+                        "harvest_paths": [
+                            _display_path(path) for path in wave_harvest_paths
+                        ],
+                        "observation_bundle": wave_observation_bundle,
+                        "component_marginal": wave_component_marginal,
+                        "refresh": {
+                            "artifacts": wave_artifacts,
+                            "selected_candidate_ids": wave_report.get(
+                                "selected_candidate_ids"
+                            ),
+                            "queue_summary": wave_report.get("queue_summary"),
+                            "queue_validate": wave_validate,
+                            **FALSE_AUTHORITY,
+                        },
+                    }
+                )
+                campaign_waves.append(wave_record)
+                current_observations = next_observations
+                current_queue_path = wave_queue_path
+                current_pairset_acquisition = wave_artifacts.get(
+                    "dqs1_selected_pairset_acquisition"
+                )
+                if _harvest_payload_has_exact_request(wave_harvest_paths):
+                    campaign_stop_reason = "exact_auth_anchor_request_created"
+                    break
+
+        post_followup_eureka_root_values: list[str] = list(args.frontier_artifact_root)
+        if _is_under_repo(output_dir):
+            post_followup_eureka_root_values.append(str(REPO_ROOT / ".omx" / "research"))
+        post_followup_eureka_root_values.append(str(output_dir))
+        post_followup_eureka_roots = tuple(dict.fromkeys(post_followup_eureka_root_values))
+        post_followup_eureka_planning = discover_local_cpu_eureka_planning_signals(
+            repo_root=REPO_ROOT,
+            frontier_artifact_roots=post_followup_eureka_roots,
+        )
+        post_followup_eureka_path = output_dir / "post_followup_local_cpu_eureka_planning.json"
+        write_json_artifact(post_followup_eureka_path, post_followup_eureka_planning)
 
         payload = {
             "schema": FRONTIER_RATE_ATTACK_FEEDBACK_CYCLE_SCHEMA,
@@ -692,6 +871,9 @@ def main(argv: list[str] | None = None) -> int:
                 "selected_candidate_ids": initial_report.get("selected_candidate_ids"),
                 "queue_summary": initial_report.get("queue_summary"),
                 "retention_policy": initial_report.get("retention_policy"),
+                "local_cpu_eureka_planning": initial_report.get(
+                    "local_cpu_eureka_planning"
+                ),
                 "pairset_component_marginal": initial_component_marginal,
                 "queue_validate": initial_validate,
                 **FALSE_AUTHORITY,
@@ -703,6 +885,11 @@ def main(argv: list[str] | None = None) -> int:
                 "observation_bundle": observation_bundle,
                 **FALSE_AUTHORITY,
             },
+            "post_followup_eureka_planning": {
+                "path": _display_path(post_followup_eureka_path),
+                "payload": post_followup_eureka_planning,
+                **FALSE_AUTHORITY,
+            },
             "post_harvest_refresh": None
             if post_report is None
             else {
@@ -710,8 +897,19 @@ def main(argv: list[str] | None = None) -> int:
                 "selected_candidate_ids": post_report.get("selected_candidate_ids"),
                 "queue_summary": post_report.get("queue_summary"),
                 "retention_policy": post_report.get("retention_policy"),
+                "local_cpu_eureka_planning": post_report.get(
+                    "local_cpu_eureka_planning"
+                ),
                 "pairset_component_marginal": post_component_marginal,
                 "queue_validate": post_validate,
+                **FALSE_AUTHORITY,
+            },
+            "campaign_execution": {
+                "requested_wave_count": args.campaign_waves,
+                "executed_followup": bool(args.execute_followup),
+                "completed_additional_wave_count": len(campaign_waves),
+                "stop_reason": campaign_stop_reason,
+                "waves": campaign_waves,
                 **FALSE_AUTHORITY,
             },
             "integration_edges": [
@@ -721,6 +919,8 @@ def main(argv: list[str] | None = None) -> int:
                 "dynamic_observation_jsonl_to_pairset_component_marginal_model",
                 "pairset_component_marginal_model_to_queue_owned_local_first_actions",
                 "dynamic_observation_jsonl_to_refreshed_dqs1_queue",
+                "local_cpu_eureka_signal_to_default_feedback_refresh",
+                "post_followup_eureka_signal_to_next_acquisition_hint",
             ],
             "allowed_use": "local_queue_owned_frontier_feedback_iteration_only",
             "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
@@ -729,6 +929,7 @@ def main(argv: list[str] | None = None) -> int:
         report_path = write_cycle_report(output_dir=output_dir, payload=payload)
     except (
         ExperimentQueueError,
+        ArtifactWriteError,
         FrontierRateAttackFeedbackError,
         FrontierRateAttackFeedbackCycleError,
         OSError,

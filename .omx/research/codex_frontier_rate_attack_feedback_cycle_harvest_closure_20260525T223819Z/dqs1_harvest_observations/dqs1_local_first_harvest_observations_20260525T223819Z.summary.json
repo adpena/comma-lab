@@ -1,0 +1,233 @@
+{
+  "allowed_use": "macos_cpu_advisory_replanning_signal_only",
+  "best_local_advisory": {
+    "candidate_id": "pairset_drop_one_rank007_pair0059",
+    "component_deltas": {
+      "posenet_delta": 0.0,
+      "rate_delta": -6.658589531277626e-07,
+      "segnet_delta": 1.9999999999950613e-06
+    },
+    "observed_score": 0.19204028295713674,
+    "score_delta_vs_baseline": 1.3341410468603598e-06,
+    "source_artifact_path": "/Volumes/VertigoDataTier/pact_experiments/frontier_rate_attack_feedback_cycle_20260525T221326Z/materialized/drop_rank007_pair0059/local_cpu_advisory.json"
+  },
+  "candidate_generation_only": true,
+  "component_delta_baseline_policy": "local_top32_advisory_scorer_components_with_gap_uleb_archive_size_override",
+  "evidence_grade": "macOS-CPU-advisory",
+  "evidence_tag": "[macOS-CPU advisory only]",
+  "jsonl_path": ".omx/research/codex_frontier_rate_attack_feedback_cycle_harvest_closure_20260525T223819Z/dqs1_harvest_observations/dqs1_local_first_harvest_observations_20260525T223819Z.jsonl",
+  "jsonl_sha256": "9d42d126fb139bcfc94308c8a4c717ec9ae7c26310164df6caae0a7fc67f2603",
+  "observation_only": true,
+  "observation_summary": {
+    "allowed_use": "mlx_dynamic_sweep_replanning_summary_only",
+    "by_candidate_config_pass_family": {
+      "pairset_drop_one_rank007_pair0059|dqs1_local_first_macos_cpu_advisory|local_cpu_advisory_harvest|decoder_q_pairset_drop_one": {
+        "component_delta_sums": {
+          "posenet_delta": 0.0,
+          "rate_delta": -6.658589531277626e-07,
+          "segnet_delta": 1.9999999999950613e-06
+        },
+        "evidence_tags": [
+          "[macOS-CPU advisory only]"
+        ],
+        "latest_observed_at_utc": "2026-05-25T22:37:00Z",
+        "observed_axes": [
+          "macos_cpu_advisory"
+        ],
+        "observed_score_or_delta_latest": 0.19204028295713674,
+        "observed_score_or_delta_max": 0.19204028295713674,
+        "observed_score_or_delta_min": 0.19204028295713674,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "row_count": 1,
+        "score_claim": false,
+        "score_claim_valid": false
+      },
+      "pairset_drop_one_rank008_pair0496|dqs1_local_first_macos_cpu_advisory|local_cpu_advisory_harvest|decoder_q_pairset_drop_one": {
+        "component_delta_sums": {
+          "posenet_delta": 0.0,
+          "rate_delta": -6.658589531277626e-07,
+          "segnet_delta": 1.9999999999950613e-06
+        },
+        "evidence_tags": [
+          "[macOS-CPU advisory only]"
+        ],
+        "latest_observed_at_utc": "2026-05-25T22:37:00Z",
+        "observed_axes": [
+          "macos_cpu_advisory"
+        ],
+        "observed_score_or_delta_latest": 0.19204028295713674,
+        "observed_score_or_delta_max": 0.19204028295713674,
+        "observed_score_or_delta_min": 0.19204028295713674,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "row_count": 1,
+        "score_claim": false,
+        "score_claim_valid": false
+      }
+    },
+    "by_candidate_id": {
+      "pairset_drop_one_rank007_pair0059": {
+        "component_delta_sums": {
+          "posenet_delta": 0.0,
+          "rate_delta": -6.658589531277626e-07,
+          "segnet_delta": 1.9999999999950613e-06
+        },
+        "evidence_tags": [
+          "[macOS-CPU advisory only]"
+        ],
+        "latest_observed_at_utc": "2026-05-25T22:37:00Z",
+        "observed_axes": [
+          "macos_cpu_advisory"
+        ],
+        "observed_score_or_delta_latest": 0.19204028295713674,
+        "observed_score_or_delta_max": 0.19204028295713674,
+        "observed_score_or_delta_min": 0.19204028295713674,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "row_count": 1,
+        "score_claim": false,
+        "score_claim_valid": false
+      },
+      "pairset_drop_one_rank008_pair0496": {
+        "component_delta_sums": {
+          "posenet_delta": 0.0,
+          "rate_delta": -6.658589531277626e-07,
+          "segnet_delta": 1.9999999999950613e-06
+        },
+        "evidence_tags": [
+          "[macOS-CPU advisory only]"
+        ],
+        "latest_observed_at_utc": "2026-05-25T22:37:00Z",
+        "observed_axes": [
+          "macos_cpu_advisory"
+        ],
+        "observed_score_or_delta_latest": 0.19204028295713674,
+        "observed_score_or_delta_max": 0.19204028295713674,
+        "observed_score_or_delta_min": 0.19204028295713674,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "row_count": 1,
+        "score_claim": false,
+        "score_claim_valid": false
+      }
+    },
+    "by_family": {
+      "decoder_q_pairset_drop_one": {
+        "component_delta_sums": {
+          "posenet_delta": 0.0,
+          "rate_delta": -1.3317179062555251e-06,
+          "segnet_delta": 3.9999999999901226e-06
+        },
+        "evidence_tags": [
+          "[macOS-CPU advisory only]"
+        ],
+        "latest_observed_at_utc": "2026-05-25T22:37:00Z",
+        "observed_axes": [
+          "macos_cpu_advisory"
+        ],
+        "observed_score_or_delta_latest": 0.19204028295713674,
+        "observed_score_or_delta_max": 0.19204028295713674,
+        "observed_score_or_delta_min": 0.19204028295713674,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "row_count": 2,
+        "score_claim": false,
+        "score_claim_valid": false
+      }
+    },
+    "by_optimization_pass_id": {
+      "local_cpu_advisory_harvest": {
+        "component_delta_sums": {
+          "posenet_delta": 0.0,
+          "rate_delta": -1.3317179062555251e-06,
+          "segnet_delta": 3.9999999999901226e-06
+        },
+        "evidence_tags": [
+          "[macOS-CPU advisory only]"
+        ],
+        "latest_observed_at_utc": "2026-05-25T22:37:00Z",
+        "observed_axes": [
+          "macos_cpu_advisory"
+        ],
+        "observed_score_or_delta_latest": 0.19204028295713674,
+        "observed_score_or_delta_max": 0.19204028295713674,
+        "observed_score_or_delta_min": 0.19204028295713674,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "row_count": 2,
+        "score_claim": false,
+        "score_claim_valid": false
+      }
+    },
+    "by_sweep_config_id": {
+      "dqs1_local_first_macos_cpu_advisory": {
+        "component_delta_sums": {
+          "posenet_delta": 0.0,
+          "rate_delta": -1.3317179062555251e-06,
+          "segnet_delta": 3.9999999999901226e-06
+        },
+        "evidence_tags": [
+          "[macOS-CPU advisory only]"
+        ],
+        "latest_observed_at_utc": "2026-05-25T22:37:00Z",
+        "observed_axes": [
+          "macos_cpu_advisory"
+        ],
+        "observed_score_or_delta_latest": 0.19204028295713674,
+        "observed_score_or_delta_max": 0.19204028295713674,
+        "observed_score_or_delta_min": 0.19204028295713674,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "row_count": 2,
+        "score_claim": false,
+        "score_claim_valid": false
+      }
+    },
+    "candidate_generation_only": true,
+    "evidence_grade": "macOS-CPU-advisory",
+    "evidence_grades": [
+      "macOS-CPU-advisory"
+    ],
+    "evidence_tag": "[macOS-CPU advisory only]",
+    "evidence_tags": [
+      "[macOS-CPU advisory only]"
+    ],
+    "observation_only": true,
+    "producer": "tac.optimization.mlx_dynamic_sweep_observations",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "row_count": 2,
+    "row_schema": "mlx_dynamic_sweep_observation.v1",
+    "schema": "mlx_dynamic_sweep_observations.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "summary_schema": "mlx_dynamic_sweep_observation_summary.v1"
+  },
+  "observed_axis": "macos_cpu_advisory",
+  "producer": "tac.optimization.dqs1_local_first_harvest_observations",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "row_count": 2,
+  "schema": "dqs1_local_first_harvest_observations.v1",
+  "score_claim": false,
+  "score_claim_valid": false
+}
