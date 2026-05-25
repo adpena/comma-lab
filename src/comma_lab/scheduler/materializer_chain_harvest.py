@@ -136,7 +136,11 @@ def harvest_materializer_chain_manifests(
             "accepted": False,
             "blockers": [],
         }
-        state_blockers = _state_blockers(row, require_succeeded_state=require_succeeded_state)
+        state_blockers = _state_blockers(
+            row,
+            require_succeeded_state=require_succeeded_state,
+            state_filter_active=experiment_queue_state_path is not None,
+        )
         if state_blockers:
             row["blockers"] = state_blockers
             inspected_rows.append(row)
@@ -813,12 +817,15 @@ def _state_blockers(
     row: Mapping[str, Any],
     *,
     require_succeeded_state: bool,
+    state_filter_active: bool,
 ) -> list[str]:
     if not require_succeeded_state:
         return []
     state_rows = row.get("state_rows")
     work_id = row.get("work_id")
     if not isinstance(work_id, str) or not work_id:
+        if state_filter_active:
+            return ["experiment_queue_state_work_id_missing_for_manifest"]
         return []
     if not isinstance(state_rows, list) or not state_rows:
         return [f"experiment_queue_state_missing:{work_id}"]

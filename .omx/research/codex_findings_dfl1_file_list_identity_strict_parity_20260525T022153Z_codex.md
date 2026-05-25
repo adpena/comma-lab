@@ -37,6 +37,12 @@ enter exact-readiness follow-up without the DFL1 shell-inflate parity proof.
 - The materialization bridge now separates PacketIR-lowering readiness from
   executable work readiness, so "queue consumable" cannot be mistaken for a
   proved executable materializer row.
+- The follow-up adversarial audit found five additional fail-open edges:
+  forged parity-proof booleans were trusted without direct value comparison,
+  explicit chain manifests could bypass queue-state provenance when a state
+  file was supplied, generated execution could fall back to a shared queue DB,
+  DFL1 parity could reuse the source runtime as candidate runtime implicitly,
+  and duplicate full-frame file-list entries could be silently deduped.
 
 ## Landed integration
 
@@ -56,6 +62,16 @@ enter exact-readiness follow-up without the DFL1 shell-inflate parity proof.
   duplicate action-cell `atom_id` values fail closed, and PacketIR bridge
   summaries expose explicit `packetir_lowering_ready_*` and
   `executable_work_ready_*` counters.
+- DFL1 full-frame parity verification now directly compares actual
+  `file_list_sha256` and `file_list_entry_count` against the expected proof
+  values, independent of proof-supplied boolean flags.
+- DFL1 final-byte contexts reject duplicate full-frame file-list entries and
+  require an explicit candidate runtime for parity-bearing exact-readiness
+  flows.
+- Materializer campaign execution now defaults to a run-local
+  `materializer_execution_queue.sqlite` when `--queue-state` is omitted.
+- Harvest with an explicit experiment queue state now rejects explicit
+  chain-manifest inputs that have no queue work-id provenance.
 
 ## Verification
 
@@ -65,6 +81,8 @@ enter exact-readiness follow-up without the DFL1 shell-inflate parity proof.
   passed: 167 tests.
 - `.venv/bin/python -m pytest src/tac/tests/test_family_agnostic_materializers.py src/tac/tests/test_materializer_chain_harvest_scheduler.py src/tac/tests/test_optimizer_exact_readiness.py -q`
   passed: 130 tests.
+- `PYTHONPATH=. .venv/bin/pytest src/tac/tests/test_family_agnostic_materializers.py src/tac/tests/test_final_byte_operation_contexts.py src/tac/tests/test_byte_shaving_campaign.py src/tac/tests/test_byte_shaving_campaign_queue.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_materializer_chain_harvest_scheduler.py -q`
+  passed after the follow-up adversarial audit fixes: 239 tests.
 - `.venv/bin/python -m py_compile tools/build_byte_shaving_campaign_queue.py tools/run_byte_shaving_materializer_campaign.py`
   passed.
 - `.venv/bin/python tools/lane_maturity.py validate` passed: 1299 lanes.

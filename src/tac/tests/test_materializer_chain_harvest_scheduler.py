@@ -1399,6 +1399,28 @@ def test_harvest_requires_succeeded_state_for_work_queue_rows(
     ]
 
 
+def test_harvest_rejects_explicit_manifest_without_state_provenance_when_state_supplied(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _chain_manifest(tmp_path / "external")
+    state = _state_path(repo, status="succeeded")
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+        experiment_queue_state_path=state,
+        experiment_queue_id="materializer_execution_queue",
+    )
+
+    assert result["report"]["accepted_manifest_count"] == 0
+    assert result["source_queue"]["n_candidates"] == 0
+    assert result["report"]["rows"][0]["blockers"] == [
+        "experiment_queue_state_work_id_missing_for_manifest"
+    ]
+
+
 def test_harvest_validates_manifest_even_when_state_succeeded(
     tmp_path: Path,
 ) -> None:
