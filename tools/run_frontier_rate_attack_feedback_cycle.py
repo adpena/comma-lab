@@ -45,6 +45,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (  # noqa: E
     json_text,
     repo_rel,
     resolve_repo_path,
+    select_pairset_acquisition_for_harvests,
     utc_stamp,
     write_cycle_report,
     write_dqs1_harvest_observation_bundle,
@@ -157,6 +158,7 @@ def _build_refresh(
         repo_root=REPO_ROOT,
         frontier_artifact_roots=tuple(args.frontier_artifact_root),
         materializer_feedback_paths=tuple(args.materializer_feedback),
+        pair_frame_geometry_paths=tuple(args.pair_frame_geometry_lattice),
         dqs1_observation_paths=dqs1_observation_paths,
         action_summary_path=_action_summary_path(args.action_summary),
         results_root=args.results_root,
@@ -242,6 +244,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--frontier-artifact-root", action="append", default=[])
     parser.add_argument("--materializer-feedback", action="append", default=[])
+    parser.add_argument("--pair-frame-geometry-lattice", action="append", default=[])
     parser.add_argument(
         "--dqs1-observation-jsonl",
         "--dqs1-observations",
@@ -448,9 +451,17 @@ def main(argv: list[str] | None = None) -> int:
         post_artifacts: dict[str, str] = {}
         post_validate = None
         if harvest_paths:
-            pairset_acquisition = _pairset_acquisition_path(
+            fallback_pairset_acquisition = _pairset_acquisition_path(
                 args.pairset_acquisition,
                 root=args.pairset_acquisition_root,
+            )
+            pairset_acquisition = select_pairset_acquisition_for_harvests(
+                harvest_paths=harvest_paths,
+                repo_root=REPO_ROOT,
+                preferred_pairset_acquisition_path=initial_artifacts.get(
+                    "dqs1_selected_pairset_acquisition"
+                ),
+                fallback_pairset_acquisition_path=fallback_pairset_acquisition,
             )
             observation_bundle = write_dqs1_harvest_observation_bundle(
                 harvest_paths=harvest_paths,

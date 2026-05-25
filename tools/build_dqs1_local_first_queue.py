@@ -29,6 +29,9 @@ from comma_lab.scheduler.dqs1_local_first_queue import (  # noqa: E402
     build_queue_from_action_summary,
     find_latest_cross_family_action_summary,
 )
+from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
+    discover_pair_frame_geometry_queue_requests,
+)
 from tac.optimization.dqs1_materializer_feedback_bridge import (  # noqa: E402
     DQS1_OBSERVATION_SOURCE_SCHEMA,
     DQS1_OBSERVATION_SWEEP_CONFIG_ID,
@@ -166,6 +169,28 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "family-agnostic materializer feedback sweep/observation JSON to stamp "
             "onto the DQS1 queue as false-authority replanning context. May repeat."
         ),
+    )
+    parser.add_argument(
+        "--pair-frame-geometry-lattice",
+        action="append",
+        default=[],
+        help=(
+            "pair_frame_scorer_geometry_lattice JSON whose queue-executable "
+            "requests should be selected before ordinary portfolio rows. May repeat."
+        ),
+    )
+    parser.add_argument(
+        "--selected-pairset-acquisition-out",
+        default=None,
+        help=(
+            "optional JSON sidecar path for the exact selected acquisition index "
+            "to pass into DQS1 harvest observation canonicalization"
+        ),
+    )
+    parser.add_argument(
+        "--overwrite-selected-pairset-acquisition",
+        action="store_true",
+        help="allow replacing --selected-pairset-acquisition-out if it exists",
     )
     parser.add_argument(
         "--materializer-feedback-bridge-out",
@@ -336,6 +361,12 @@ def main(argv: list[str] | None = None) -> int:
         args.materializer_feedback
     )
     dqs1_observations = _load_dqs1_observations(args.dqs1_observation_jsonl)
+    pair_frame_requests, pair_frame_source_paths, _pair_frame_discovery = (
+        discover_pair_frame_geometry_queue_requests(
+            repo_root=REPO_ROOT,
+            pair_frame_geometry_paths=tuple(args.pair_frame_geometry_lattice),
+        )
+    )
     result = build_queue_from_action_summary(
         action_summary,
         repo_root=REPO_ROOT,
@@ -371,6 +402,8 @@ def main(argv: list[str] | None = None) -> int:
         dqs1_observations=dqs1_observations,
         dqs1_observation_source_paths=tuple(args.dqs1_observation_jsonl),
         skip_observed_dqs1_candidates=not args.include_observed_dqs1_candidate,
+        additional_queue_requests=pair_frame_requests,
+        additional_queue_request_source_paths=pair_frame_source_paths,
         local_cpu_concurrency=args.local_cpu_concurrency,
         local_io_concurrency=args.local_io_concurrency,
         include_mlx_local_advisory_debug=args.include_mlx_local_advisory_debug,
@@ -414,6 +447,22 @@ def main(argv: list[str] | None = None) -> int:
                 feedback_bridge_out,
                 result.materializer_feedback_bridge,
                 allow_overwrite=bool(args.overwrite_materializer_feedback_bridge),
+                min_free_bytes=int(max(args.min_free_gb, 0.0) * (1024**3)),
+            )
+        except ArtifactWriteError as exc:
+            print(f"FATAL: {exc}", file=sys.stderr)
+            return 2
+    selected_acquisition_out = (
+        None
+        if args.selected_pairset_acquisition_out is None
+        else Path(args.selected_pairset_acquisition_out)
+    )
+    if selected_acquisition_out is not None and result.selected_pairset_acquisition is not None:
+        try:
+            write_json_artifact(
+                selected_acquisition_out,
+                result.selected_pairset_acquisition,
+                allow_overwrite=bool(args.overwrite_selected_pairset_acquisition),
                 min_free_bytes=int(max(args.min_free_gb, 0.0) * (1024**3)),
             )
         except ArtifactWriteError as exc:

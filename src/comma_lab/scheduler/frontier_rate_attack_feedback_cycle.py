@@ -19,6 +19,7 @@ from typing import Any
 from tac.optimization.dqs1_local_first_harvest_observations import (
     build_harvest_observation_summary,
     build_observation_rows_from_harvests,
+    load_pairset_acquisition_index,
     render_markdown_summary,
     write_observation_jsonl,
 )
@@ -80,6 +81,52 @@ def load_json_object(path: str | Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise FrontierRateAttackFeedbackCycleError(f"{target}: expected JSON object")
     return payload
+
+
+def _candidate_ids_from_harvests(harvest_paths: Sequence[Path]) -> set[str]:
+    candidate_ids: set[str] = set()
+    for path in harvest_paths:
+        payload = load_json_object(path)
+        try:
+            require_no_truthy_authority_fields(
+                payload,
+                context=f"frontier_rate_attack_feedback_cycle.harvest[{path}]",
+            )
+        except ValueError as exc:
+            raise FrontierRateAttackFeedbackCycleError(str(exc)) from exc
+        candidate_id = str(payload.get("candidate_id") or "").strip()
+        if candidate_id:
+            candidate_ids.add(candidate_id)
+    return candidate_ids
+
+
+def select_pairset_acquisition_for_harvests(
+    *,
+    harvest_paths: Sequence[str | Path],
+    repo_root: str | Path,
+    preferred_pairset_acquisition_path: str | Path | None,
+    fallback_pairset_acquisition_path: str | Path,
+) -> Path:
+    """Prefer the queue-selected acquisition sidecar when it covers harvests."""
+
+    repo = Path(repo_root)
+    fallback = resolve_repo_path(fallback_pairset_acquisition_path, repo_root=repo)
+    if preferred_pairset_acquisition_path is None:
+        return fallback
+    resolved_harvests = _unique_paths(
+        resolve_repo_path(path, repo_root=repo) for path in harvest_paths
+    )
+    harvested_candidate_ids = _candidate_ids_from_harvests(resolved_harvests)
+    if not harvested_candidate_ids:
+        return fallback
+    preferred = resolve_repo_path(preferred_pairset_acquisition_path, repo_root=repo)
+    try:
+        preferred_index = load_pairset_acquisition_index(preferred)
+    except Exception:
+        return fallback
+    if harvested_candidate_ids.issubset(set(preferred_index)):
+        return preferred
+    return fallback
 
 
 def _unique_paths(paths: Iterable[Path]) -> tuple[Path, ...]:
@@ -186,6 +233,16 @@ def write_frontier_refresh_artifacts(
         path = out / "materializer_feedback_discovery.json"
         write_json_artifact(path, dict(discovery))
         artifacts["materializer_feedback_discovery"] = repo_rel(path, repo_root)
+    pair_frame = report.get("pair_frame_geometry_discovery")
+    if isinstance(pair_frame, Mapping):
+        path = out / "pair_frame_geometry_discovery.json"
+        write_json_artifact(path, dict(pair_frame))
+        artifacts["pair_frame_geometry_discovery"] = repo_rel(path, repo_root)
+    selected_acquisition = report.get("selected_pairset_acquisition")
+    if isinstance(selected_acquisition, Mapping):
+        path = out / "dqs1_selected_pairset_acquisition.json"
+        write_json_artifact(path, dict(selected_acquisition))
+        artifacts["dqs1_selected_pairset_acquisition"] = repo_rel(path, repo_root)
     bridge = report.get("materializer_feedback_bridge")
     if isinstance(bridge, Mapping):
         path = out / "materializer_feedback_bridge.json"
@@ -284,6 +341,10 @@ def write_dqs1_harvest_observation_bundle(
         "schema": FRONTIER_RATE_ATTACK_DQS1_OBSERVATION_BUNDLE_SCHEMA,
         "created_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "harvest_paths": [repo_rel(path, repo) for path in resolved_harvests],
+        "pairset_acquisition_path": repo_rel(
+            resolve_repo_path(pairset_acquisition_path, repo_root=repo),
+            repo,
+        ),
         "observation_jsonl": repo_rel(jsonl_path, repo),
         "observation_summary_json": repo_rel(summary_path, repo),
         "observation_markdown": repo_rel(markdown_path, repo),
@@ -320,6 +381,7 @@ __all__ = [
     "load_json_object",
     "repo_rel",
     "resolve_repo_path",
+    "select_pairset_acquisition_for_harvests",
     "utc_stamp",
     "write_cycle_report",
     "write_dqs1_harvest_observation_bundle",

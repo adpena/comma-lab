@@ -19,6 +19,8 @@ from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (
     AUTOPILOT_RESULT_SCHEMA,
     FrontierRateAttackFeedbackCycleError,
     harvest_paths_from_autopilot_payload,
+    select_pairset_acquisition_for_harvests,
+    write_frontier_refresh_artifacts,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -270,6 +272,43 @@ def _write_materializer_feedback(root: Path) -> Path:
     return sweep
 
 
+def _pair_frame_geometry_lattice(
+    *,
+    candidate_id: str = "pairset_geometry_lowimpact_k003_habcdef1234",
+    selected_pair_indices: list[int] | None = None,
+) -> dict[str, object]:
+    selected = selected_pair_indices or [1, 2, 112, 233, 440]
+    return {
+        "schema": "pair_frame_scorer_geometry_lattice.v1",
+        **_false_authority(),
+        "summary": {
+            "queue_executable_request_count": 1,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "queue_executable_pairset_drop_requests": [
+            {
+                "schema": "pair_frame_geometry_queue_executable_drop_request.v1",
+                **_false_authority(),
+                "candidate_id": candidate_id,
+                "selector_kind": "pair_frame_geometry_low_impact_drop_many",
+                "dropped_pair_indices": [3, 4, 5],
+                "selected_pair_indices": selected,
+                "selected_pair_count": len(selected),
+                "geometry_covered_dropped_pair_count": 3,
+                "geometry_coverage": 1.0,
+                "queue_executable": True,
+                "queue_family": "dqs1_pairset_local_first",
+                "operator_next_action": "materialize_pairset_archive_and_run_local_controls",
+                "allowed_use": "queue_executable_local_dqs1_pairset_drop_probe_only",
+                "forbidden_use": "score_claim_or_dispatch_or_promotion_authority",
+            }
+        ],
+    }
+
+
 def _dqs1_observation_row(
     *,
     candidate_id: str = "pairset_drop_one_rank023_pair0440",
@@ -425,6 +464,89 @@ def test_frontier_feedback_compiler_turns_eureka_near_misses_into_beyond_drop_tw
     assert report["ready_for_exact_eval_dispatch"] is False
 
 
+def test_frontier_feedback_compiler_promotes_pair_frame_geometry_requests_to_queue(
+    tmp_path: Path,
+) -> None:
+    action_summary = _write_action_summary(tmp_path)
+    lattice_path = _write_json(
+        tmp_path / "frontier_artifacts" / "pair_frame_scorer_geometry_lattice.json",
+        _pair_frame_geometry_lattice(),
+    )
+
+    report = build_frontier_rate_attack_feedback_refresh(
+        repo_root=tmp_path,
+        pair_frame_geometry_paths=(lattice_path,),
+        action_summary_path=action_summary,
+        results_root=str(tmp_path / "results"),
+        queue_id="frontier_feedback_pair_frame_unit",
+        candidate_limit=2,
+    )
+
+    assert report["pair_frame_geometry_queue_request_count"] == 1
+    discovery = report["pair_frame_geometry_discovery"]
+    assert discovery["queue_executable_request_count"] == 1
+    assert discovery["discovered_lattices"][0]["candidate_ids"] == [
+        "pairset_geometry_lowimpact_k003_habcdef1234"
+    ]
+    assert report["selected_candidate_ids"] == [
+        "pairset_geometry_lowimpact_k003_habcdef1234",
+        "pairset_drop_one_rank023_pair0440",
+    ]
+    geometry_experiment = report["queue"]["experiments"][0]
+    assert geometry_experiment["metadata"]["source_metadata"][
+        "queue_source_kind"
+    ] == "pair_frame_scorer_geometry_lattice"
+    selected_acquisition = report["selected_pairset_acquisition"]
+    assert selected_acquisition["schema"] == "dqs1_selected_pairset_acquisition.v1"
+    assert selected_acquisition["candidate_count"] == 2
+    assert selected_acquisition["candidates"][0]["candidate_id"] == (
+        "pairset_geometry_lowimpact_k003_habcdef1234"
+    )
+    assert selected_acquisition["candidates"][0]["selector_kind"] == (
+        "pair_frame_geometry_low_impact_drop_many"
+    )
+    assert geometry_experiment["metadata"]["selected_pair_indices"] == [
+        1,
+        2,
+        112,
+        233,
+        440,
+    ]
+    plan_packet = {
+        step["id"]: step["command"] for step in geometry_experiment["steps"]
+    }["plan_packet"]
+    assert plan_packet[-1] == "1,2,112,233,440"
+    artifacts = write_frontier_refresh_artifacts(
+        output_dir=tmp_path / "refresh_artifacts",
+        report=report,
+        repo_root=tmp_path,
+    )
+    assert artifacts["dqs1_selected_pairset_acquisition"].endswith(
+        "dqs1_selected_pairset_acquisition.json"
+    )
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_frontier_feedback_pair_frame_geometry_discovery_rejects_authority_leak(
+    tmp_path: Path,
+) -> None:
+    payload = _pair_frame_geometry_lattice()
+    request = payload["queue_executable_pairset_drop_requests"][0]  # type: ignore[index]
+    assert isinstance(request, dict)
+    request["score_claim"] = True
+    lattice_path = _write_json(
+        tmp_path / "pair_frame_scorer_geometry_lattice.json",
+        payload,
+    )
+
+    with pytest.raises(FrontierRateAttackFeedbackError, match="score_claim"):
+        build_frontier_rate_attack_feedback_refresh(
+            repo_root=tmp_path,
+            pair_frame_geometry_paths=(lattice_path,),
+        )
+
+
 def test_frontier_feedback_eureka_discovery_rejects_authority_leak(
     tmp_path: Path,
 ) -> None:
@@ -470,6 +592,57 @@ def test_frontier_feedback_compiler_fails_closed_on_truthy_authority(
             repo_root=tmp_path,
             frontier_artifact_roots=(artifact_root,),
         )
+
+
+def test_feedback_cycle_prefers_selected_pairset_acquisition_for_geometry_harvest(
+    tmp_path: Path,
+) -> None:
+    candidate_id = "pairset_geometry_lowimpact_k003_habcdef1234"
+    harvest = _write_json(
+        tmp_path / ".omx" / "research" / "dqs1_local_first_harvest.json",
+        {
+            "schema": "dqs1_local_first_harvest.v1",
+            **_false_authority(),
+            "candidate_id": candidate_id,
+            "local_cpu_advisory_path": "results/geometry/local_cpu_advisory.json",
+            "harvested_at_utc": "20260525T010203Z",
+            "authority": "false_authority_dqs1_local_first_harvest",
+        },
+    )
+    preferred = _write_json(
+        tmp_path / "refresh" / "dqs1_selected_pairset_acquisition.json",
+        {
+            "schema": "dqs1_selected_pairset_acquisition.v1",
+            **_false_authority(),
+            "candidates": [
+                {
+                    "candidate_id": candidate_id,
+                    "acquisition_id": candidate_id,
+                    "selector_id": candidate_id,
+                    "selector_kind": "pair_frame_geometry_low_impact_drop_many",
+                    "selected_pair_indices": [1, 2, 112],
+                    "selected_pair_count": 3,
+                    "acquisition_operation": {
+                        "op": "pair_frame_geometry_low_impact_drop_many"
+                    },
+                    **_false_authority(),
+                }
+            ],
+        },
+    )
+    fallback = _write_json(
+        tmp_path / "pairset_acquisition.json",
+        {"schema": "decoder_q_pairset_acquisition.v1", "candidates": []},
+    )
+
+    selected = select_pairset_acquisition_for_harvests(
+        harvest_paths=(harvest,),
+        repo_root=tmp_path,
+        preferred_pairset_acquisition_path=preferred,
+        fallback_pairset_acquisition_path=fallback,
+    )
+
+    assert selected == preferred.resolve()
 
 
 def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> None:

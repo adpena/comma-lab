@@ -33,11 +33,23 @@ from tac.optimization.mlx_dynamic_sweep_observations import (
 )
 from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
 
-from .dqs1_local_first_queue import DEFAULT_QUEUE_ID, DEFAULT_RESULTS_ROOT, build_queue_from_action_summary
+from .dqs1_local_first_queue import (
+    DEFAULT_QUEUE_ID,
+    DEFAULT_RESULTS_ROOT,
+    PAIR_FRAME_GEOMETRY_QUEUE_REQUEST_SCHEMA,
+    build_queue_from_action_summary,
+)
 from .experiment_queue import ExperimentQueueError, normalize_queue_definition
 
 FEEDBACK_REFRESH_SCHEMA = "frontier_rate_attack_feedback_refresh.v1"
 FRONTIER_RATE_ATTACK_FEEDBACK_REFRESH_SCHEMA = FEEDBACK_REFRESH_SCHEMA
+PAIR_FRAME_GEOMETRY_DISCOVERY_SCHEMA = (
+    "frontier_rate_attack_pair_frame_geometry_discovery.v1"
+)
+DISCOVERED_PAIR_FRAME_GEOMETRY_SCHEMA = (
+    "frontier_rate_attack_discovered_pair_frame_geometry_lattice.v1"
+)
+PAIR_FRAME_GEOMETRY_LATTICE_SCHEMA = "pair_frame_scorer_geometry_lattice.v1"
 MATERIALIZER_FEEDBACK_DISCOVERY_SCHEMA = (
     "frontier_rate_attack_materializer_feedback_discovery.v1"
 )
@@ -186,6 +198,171 @@ def _payload_from_materializer_feedback_path(path: Path) -> dict[str, Any] | Non
         context="frontier_rate_attack_feedback.materializer_payload",
     )
     return payload
+
+
+def _pair_frame_geometry_paths(root: Path, *, max_files: int) -> list[Path]:
+    if root.is_file():
+        return [root]
+    if not root.exists():
+        raise FrontierRateAttackFeedbackError(
+            f"pair-frame geometry root does not exist: {root}"
+        )
+    candidates: list[Path] = []
+    scanned_files = 0
+    patterns = (
+        "*pair_frame*geometry*lattice*.json",
+        "*pair_frame_lattice*.json",
+    )
+    seen: set[str] = set()
+    for pattern in patterns:
+        for path in sorted(root.rglob(pattern)):
+            if not path.is_file():
+                continue
+            scanned_files += 1
+            if scanned_files > max_files:
+                raise FrontierRateAttackFeedbackError(
+                    f"{root}: pair-frame geometry discovery exceeded max_files={max_files}"
+                )
+            key = path.resolve(strict=False).as_posix()
+            if key in seen:
+                continue
+            seen.add(key)
+            candidates.append(path)
+    return candidates
+
+
+def _pair_frame_geometry_requests(payload: Mapping[str, Any], *, path: Path) -> list[dict[str, Any]]:
+    if payload.get("schema") != PAIR_FRAME_GEOMETRY_LATTICE_SCHEMA:
+        return []
+    require_no_truthy_authority_fields(
+        payload,
+        context=f"{path} pair-frame geometry lattice",
+    )
+    requests = payload.get("queue_executable_pairset_drop_requests")
+    if not isinstance(requests, list):
+        return []
+    out: list[dict[str, Any]] = []
+    for index, request in enumerate(requests):
+        if not isinstance(request, Mapping):
+            continue
+        if request.get("schema") != PAIR_FRAME_GEOMETRY_QUEUE_REQUEST_SCHEMA:
+            continue
+        require_no_truthy_authority_fields(
+            request,
+            context=f"{path} pair-frame geometry request[{index}]",
+        )
+        if request.get("queue_executable") is not True:
+            continue
+        out.append(dict(request))
+    return out
+
+
+def discover_pair_frame_geometry_queue_requests(
+    *,
+    repo_root: str | Path,
+    frontier_artifact_roots: Sequence[str | Path] = (),
+    pair_frame_geometry_paths: Sequence[str | Path] = (),
+    max_files_per_root: int = 256,
+) -> tuple[tuple[dict[str, Any], ...], tuple[str, ...], dict[str, Any]]:
+    """Discover queue-executable pair-frame geometry requests.
+
+    These requests are local DQS1 starts, not scorer authority.  Discovery is
+    deliberately conservative: only typed lattice JSONs with false authority and
+    typed queue-executable request rows are forwarded to the queue builder.
+    """
+
+    repo = Path(repo_root)
+    paths: list[Path] = []
+    seen_paths: set[str] = set()
+    for value in pair_frame_geometry_paths:
+        path = _resolve_path(value, repo_root=repo)
+        if path.as_posix() not in seen_paths:
+            seen_paths.add(path.as_posix())
+            paths.append(path)
+    for value in frontier_artifact_roots:
+        root = _resolve_path(value, repo_root=repo)
+        for path in _pair_frame_geometry_paths(root, max_files=max_files_per_root):
+            if path.as_posix() in seen_paths:
+                continue
+            seen_paths.add(path.as_posix())
+            paths.append(path)
+
+    requests: list[dict[str, Any]] = []
+    source_paths: list[str] = []
+    discovered: list[dict[str, Any]] = []
+    ignored: list[dict[str, Any]] = []
+    seen_request_ids: set[str] = set()
+    duplicate_request_count = 0
+    for path in paths:
+        rel_path = _repo_rel(path, repo)
+        payload = _load_json(path)
+        try:
+            path_requests = _pair_frame_geometry_requests(payload, path=path)
+        except ValueError as exc:
+            raise FrontierRateAttackFeedbackError(f"{path}: {exc}") from exc
+        if not path_requests:
+            ignored.append(
+                {
+                    "path": rel_path,
+                    "reason": "no_queue_executable_pair_frame_geometry_requests",
+                    **FALSE_AUTHORITY,
+                }
+            )
+            continue
+        unique_requests: list[dict[str, Any]] = []
+        for request in path_requests:
+            request_id = str(request.get("candidate_id") or "")
+            if request_id in seen_request_ids:
+                duplicate_request_count += 1
+                continue
+            seen_request_ids.add(request_id)
+            unique_requests.append(request)
+        if not unique_requests:
+            ignored.append(
+                {
+                    "path": rel_path,
+                    "reason": "duplicate_pair_frame_geometry_requests",
+                    **FALSE_AUTHORITY,
+                }
+            )
+            continue
+        requests.extend(unique_requests)
+        source_paths.extend([rel_path] * len(unique_requests))
+        discovered.append(
+            {
+                "schema": DISCOVERED_PAIR_FRAME_GEOMETRY_SCHEMA,
+                "path": rel_path,
+                "request_count": len(unique_requests),
+                "candidate_ids": [
+                    str(request.get("candidate_id")) for request in unique_requests
+                ],
+                "drop_counts": [
+                    len(request.get("dropped_pair_indices") or [])
+                    for request in unique_requests
+                ],
+                **FALSE_AUTHORITY,
+            }
+        )
+
+    discovery = {
+        "schema": PAIR_FRAME_GEOMETRY_DISCOVERY_SCHEMA,
+        "frontier_artifact_roots": [
+            _repo_rel(_resolve_path(root, repo_root=repo), repo)
+            for root in frontier_artifact_roots
+        ],
+        "explicit_pair_frame_geometry_paths": [
+            _repo_rel(_resolve_path(path, repo_root=repo), repo)
+            for path in pair_frame_geometry_paths
+        ],
+        "scanned_candidate_path_count": len(paths),
+        "discovered_lattice_count": len(discovered),
+        "queue_executable_request_count": len(requests),
+        "duplicate_request_count": duplicate_request_count,
+        "discovered_lattices": discovered,
+        "ignored_lattices": ignored,
+        **FALSE_AUTHORITY,
+    }
+    return tuple(requests), tuple(source_paths), discovery
 
 
 def _materializer_observation_key(row: Mapping[str, Any]) -> tuple[str, ...]:
@@ -709,6 +886,7 @@ def build_frontier_rate_attack_feedback_refresh(
     repo_root: str | Path,
     frontier_artifact_roots: Sequence[str | Path] = (),
     materializer_feedback_paths: Sequence[str | Path] = (),
+    pair_frame_geometry_paths: Sequence[str | Path] = (),
     dqs1_observation_paths: Sequence[str | Path] = (),
     action_summary_path: str | Path | None = None,
     results_root: str = DEFAULT_RESULTS_ROOT,
@@ -738,6 +916,13 @@ def build_frontier_rate_attack_feedback_refresh(
         frontier_artifact_roots=frontier_artifact_roots,
         materializer_feedback_paths=materializer_feedback_paths,
     )
+    pair_frame_requests, pair_frame_source_paths, pair_frame_discovery = (
+        discover_pair_frame_geometry_queue_requests(
+            repo_root=repo,
+            frontier_artifact_roots=frontier_artifact_roots,
+            pair_frame_geometry_paths=pair_frame_geometry_paths,
+        )
+    )
     eureka_planning = discover_local_cpu_eureka_planning_signals(
         repo_root=repo,
         frontier_artifact_roots=frontier_artifact_roots,
@@ -748,6 +933,7 @@ def build_frontier_rate_attack_feedback_refresh(
     )
     queue_payload: dict[str, Any] | None = None
     bridge: dict[str, Any] | None = None
+    selected_pairset_acquisition: dict[str, Any] | None = None
     selected_candidate_ids: list[str] = []
     if action_summary_path is not None:
         result = build_queue_from_action_summary(
@@ -761,6 +947,8 @@ def build_frontier_rate_attack_feedback_refresh(
             dqs1_observations=dqs1_observations,
             dqs1_observation_source_paths=dqs1_source_paths,
             skip_observed_dqs1_candidates=skip_observed_dqs1_candidates,
+            additional_queue_requests=pair_frame_requests,
+            additional_queue_request_source_paths=pair_frame_source_paths,
             local_cpu_concurrency=local_cpu_concurrency,
             local_io_concurrency=local_io_concurrency,
             include_raw_retention_plan=include_raw_retention_plan,
@@ -783,6 +971,7 @@ def build_frontier_rate_attack_feedback_refresh(
                 if isinstance(metadata, dict):
                     metadata["frontier_feedback_eureka_planning"] = eureka_planning
         bridge = result.materializer_feedback_bridge
+        selected_pairset_acquisition = result.selected_pairset_acquisition
         selected_candidate_ids = [selection.candidate_id for selection in result.selections]
     else:
         try:
@@ -800,6 +989,9 @@ def build_frontier_rate_attack_feedback_refresh(
         "schema": FEEDBACK_REFRESH_SCHEMA,
         "generated_at_utc": _utc_now(),
         "discovery": discovery,
+        "pair_frame_geometry_discovery": pair_frame_discovery,
+        "pair_frame_geometry_request_source_paths": list(pair_frame_source_paths),
+        "pair_frame_geometry_queue_request_count": len(pair_frame_requests),
         "local_cpu_eureka_planning": eureka_planning,
         "materializer_feedback_source_paths": list(source_paths),
         "materializer_feedback_payload_count": len(payloads),
@@ -813,6 +1005,7 @@ def build_frontier_rate_attack_feedback_refresh(
         "queue_id": queue_id if queue_payload is not None else None,
         "results_root": results_root,
         "selected_candidate_ids": selected_candidate_ids,
+        "selected_pairset_acquisition": selected_pairset_acquisition,
         "materializer_feedback_bridge": bridge,
         "queue_summary": None if queue_payload is None else _queue_summary(queue_payload),
         "queue": queue_payload,
@@ -844,9 +1037,11 @@ __all__ = [
     "LOCAL_CPU_EUREKA_PAIRSET_PROFILE_SCHEMA",
     "LOCAL_CPU_EUREKA_PLANNER_HINT_SCHEMA",
     "MATERIALIZER_FEEDBACK_DISCOVERY_SCHEMA",
+    "PAIR_FRAME_GEOMETRY_DISCOVERY_SCHEMA",
     "FrontierRateAttackFeedbackError",
     "build_frontier_rate_attack_feedback_refresh",
     "discover_local_cpu_eureka_planning_signals",
     "discover_materializer_feedback_payloads",
+    "discover_pair_frame_geometry_queue_requests",
     "load_dqs1_observations",
 ]

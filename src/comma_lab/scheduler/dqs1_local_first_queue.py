@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import math
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from hashlib import sha256
@@ -89,6 +89,10 @@ _SAFE_ACTION_SUMMARY_SCHEMAS = {
     "pairset_component_marginal_canonicalization_summary.v1",
     "cross_family_candidate_portfolio_action_summary.v1",
 }
+PAIR_FRAME_GEOMETRY_QUEUE_REQUEST_SCHEMA = (
+    "pair_frame_geometry_queue_executable_drop_request.v1"
+)
+SELECTED_PAIRSET_ACQUISITION_SCHEMA = "dqs1_selected_pairset_acquisition.v1"
 
 
 @dataclass(frozen=True)
@@ -109,6 +113,7 @@ class Dqs1QueueBuildResult:
     selection: Dqs1QueueSelection
     selections: tuple[Dqs1QueueSelection, ...] = field(default_factory=tuple)
     materializer_feedback_bridge: dict[str, Any] | None = None
+    selected_pairset_acquisition: dict[str, Any] | None = None
 
 
 def _json_load(path: Path) -> dict[str, Any]:
@@ -366,6 +371,182 @@ def _selected_pair_indices(row: dict[str, Any], *, candidate_id: str) -> tuple[i
             f"{candidate_id}: selected_pair_indices out of range 0..{FEC6_PAIR_COUNT - 1}: {out_of_range}"
         )
     return pairs
+
+
+def _selection_acquisition_operation(selection: Dqs1QueueSelection) -> dict[str, Any]:
+    metadata = selection.source_metadata
+    operation = metadata.get("acquisition_operation")
+    if isinstance(operation, Mapping):
+        return dict(operation)
+    request = metadata.get("pair_frame_geometry_request")
+    if isinstance(request, Mapping):
+        request_operation = request.get("acquisition_operation")
+        if isinstance(request_operation, Mapping):
+            return dict(request_operation)
+        selector_kind = str(
+            request.get("selector_kind") or "pair_frame_geometry_queue_request"
+        )
+        return {
+            "op": selector_kind,
+            "source_schema": request.get("schema"),
+            "source_lattice_path": metadata.get(
+                "pair_frame_geometry_request_source_path"
+            ),
+        }
+    selector_kind = str(metadata.get("selector_kind") or "queue_action_summary")
+    return {
+        "op": selector_kind,
+        "source_schema": metadata.get("schema"),
+    }
+
+
+def _selection_selector_kind(selection: Dqs1QueueSelection) -> str:
+    metadata = selection.source_metadata
+    request = metadata.get("pair_frame_geometry_request")
+    if isinstance(request, Mapping) and isinstance(request.get("selector_kind"), str):
+        return str(request["selector_kind"])
+    if isinstance(metadata.get("selector_kind"), str):
+        return str(metadata["selector_kind"])
+    if isinstance(metadata.get("queue_source_kind"), str):
+        return str(metadata["queue_source_kind"])
+    operation = _selection_acquisition_operation(selection)
+    if isinstance(operation.get("op"), str) and operation["op"]:
+        return str(operation["op"])
+    return "queue_action_summary"
+
+
+def _repo_rel_path(path: Path, *, repo_root: Path) -> str:
+    resolved = path.resolve(strict=False)
+    repo = repo_root.resolve()
+    if _path_under_root(resolved, repo):
+        return resolved.relative_to(repo).as_posix()
+    return path.as_posix()
+
+
+def build_selected_pairset_acquisition(
+    selections: Sequence[Dqs1QueueSelection],
+    *,
+    repo_root: str | Path,
+    action_summary_path: str | Path,
+) -> dict[str, Any]:
+    """Build the acquisition sidecar harvest canonicalization expects."""
+
+    repo = Path(repo_root)
+    summary_path = Path(action_summary_path)
+    if not summary_path.is_absolute():
+        summary_path = repo / summary_path
+    rows: list[dict[str, Any]] = []
+    for selection in selections:
+        rows.append(
+            {
+                "candidate_id": selection.candidate_id,
+                "acquisition_id": selection.candidate_id,
+                "selector_id": selection.candidate_id,
+                "selector_kind": _selection_selector_kind(selection),
+                "selected_pair_count": len(selection.selected_pair_indices),
+                "selected_pair_indices": list(selection.selected_pair_indices),
+                "acquisition_operation": _selection_acquisition_operation(selection),
+                "source_metadata": dict(selection.source_metadata),
+                "source_action_summary_path": _repo_rel_path(
+                    summary_path,
+                    repo_root=repo,
+                ),
+                "source_portfolio_path": _repo_rel_path(
+                    selection.portfolio_path,
+                    repo_root=repo,
+                ),
+                "allowed_use": "dqs1_local_first_harvest_observation_canonicalization",
+                "forbidden_use": (
+                    "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+                ),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        )
+    return {
+        "schema": SELECTED_PAIRSET_ACQUISITION_SCHEMA,
+        "compatible_schema": "decoder_q_pairset_acquisition.v1",
+        "candidate_count": len(rows),
+        "candidates": rows,
+        "source_action_summary_path": _repo_rel_path(summary_path, repo_root=repo),
+        "allowed_use": "dqs1_local_first_harvest_observation_canonicalization",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _pair_frame_geometry_selection_metadata(
+    request: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    source_path: Path,
+    request_index: int,
+) -> tuple[str, dict[str, Any], tuple[int, ...]]:
+    """Validate a pair-frame geometry request and adapt it to queue metadata."""
+
+    if request.get("schema") != PAIR_FRAME_GEOMETRY_QUEUE_REQUEST_SCHEMA:
+        raise ExperimentQueueError(
+            "pair-frame geometry request schema mismatch: "
+            f"{request.get('schema')!r}"
+        )
+    require_no_truthy_authority_fields(
+        request,
+        context=f"pair_frame_geometry_request[{request_index}]",
+    )
+    if request.get("queue_executable") is not True:
+        raise ExperimentQueueError(
+            f"pair-frame geometry request[{request_index}] is not queue_executable"
+        )
+    if request.get("operator_next_action") != SAFE_OPERATOR_ACTION:
+        raise ExperimentQueueError(
+            f"pair-frame geometry request[{request_index}] has unsupported "
+            "operator_next_action"
+        )
+    queue_family = request.get("queue_family")
+    if queue_family not in {None, DEFAULT_QUEUE_ID, "dqs1_pairset_local_first"}:
+        raise ExperimentQueueError(
+            f"pair-frame geometry request[{request_index}] targets unsupported "
+            f"queue_family={queue_family!r}"
+        )
+    candidate_id = request.get("candidate_id")
+    if not isinstance(candidate_id, str) or not _PAIRSET_CANDIDATE_RE.match(candidate_id):
+        raise ExperimentQueueError(
+            f"pair-frame geometry request[{request_index}] has unsupported "
+            f"candidate_id={candidate_id!r}"
+        )
+    selected = request.get("selected_pair_indices")
+    metadata_probe = {
+        "source_metadata": {
+            "selected_pair_indices": selected,
+            "selected_pair_count": request.get("selected_pair_count"),
+        }
+    }
+    pairs = _selected_pair_indices(metadata_probe, candidate_id=candidate_id)
+    source_rel = (
+        source_path.resolve(strict=False).relative_to(repo_root.resolve()).as_posix()
+        if _path_under_root(source_path.resolve(strict=False), repo_root.resolve())
+        else source_path.as_posix()
+    )
+    metadata = {
+        "schema": "dqs1_pair_frame_geometry_queue_request_metadata.v1",
+        "queue_source_kind": "pair_frame_scorer_geometry_lattice",
+        "pair_frame_geometry_request_source_path": source_rel,
+        "pair_frame_geometry_request": dict(request),
+        "selected_pair_count": len(pairs),
+        "selected_pair_indices": list(pairs),
+        "allowed_use": "local_first_queue_selection_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    return candidate_id, metadata, pairs
 
 
 def _candidate_completed_locally(
@@ -749,6 +930,8 @@ def select_dqs1_local_first_candidates(
     candidate_limit: int = 1,
     dqs1_observations: tuple[dict[str, Any], ...] = (),
     skip_observed_dqs1_candidates: bool = True,
+    additional_queue_requests: tuple[dict[str, Any], ...] = (),
+    additional_queue_request_source_paths: tuple[str, ...] = (),
 ) -> tuple[Dqs1QueueSelection, ...]:
     if isinstance(candidate_limit, bool) or not isinstance(candidate_limit, int) or candidate_limit <= 0:
         raise ExperimentQueueError("candidate_limit must be a positive integer")
@@ -777,6 +960,58 @@ def select_dqs1_local_first_candidates(
         key=lambda action: int(action.get("operator_action_rank", 10**9)),
     )
     selections: list[Dqs1QueueSelection] = []
+    for request_index, request in enumerate(additional_queue_requests):
+        source_path_value = (
+            additional_queue_request_source_paths[request_index]
+            if request_index < len(additional_queue_request_source_paths)
+            else request.get("source_geometry_lattice_path")
+        )
+        source_path = (
+            Path(repo_root) / source_path_value
+            if isinstance(source_path_value, str) and not Path(source_path_value).is_absolute()
+            else Path(source_path_value or summary_path)
+        )
+        current_candidate_id, selection_metadata, selected_pairs = (
+            _pair_frame_geometry_selection_metadata(
+                request,
+                repo_root=Path(repo_root),
+                source_path=source_path,
+                request_index=request_index,
+            )
+        )
+        if current_candidate_id in excluded:
+            skipped.append({"candidate_id": current_candidate_id, "reason": "explicitly_excluded"})
+            continue
+        if current_candidate_id in observed_candidates:
+            skipped.append(dict(observed_candidates[current_candidate_id]))
+            continue
+        if skip_completed_local_advisory:
+            completed_root = _candidate_completed_in_roots(
+                repo_root=Path(repo_root),
+                results_roots=completion_roots,
+                candidate_id=current_candidate_id,
+            )
+            if completed_root is not None:
+                skip_row = {"candidate_id": current_candidate_id, "reason": "local_advisory_exists"}
+                if len(completion_roots) > 1:
+                    skip_row["completed_results_root"] = completed_root
+                skipped.append(skip_row)
+                continue
+        selections.append(
+            Dqs1QueueSelection(
+                candidate_id=current_candidate_id,
+                candidate_slug=candidate_slug(current_candidate_id),
+                selected_pair_indices=selected_pairs,
+                action_summary_path=summary_path,
+                portfolio_path=source_path,
+                source_metadata=selection_metadata,
+                operator_action_rank=None,
+                skipped_candidates=tuple(skipped),
+            )
+        )
+        if len(selections) >= candidate_limit:
+            return tuple(selections)
+
     for action in sorted_actions:
         candidate_id_value = action.get("candidate_id")
         if not isinstance(candidate_id_value, str):
@@ -1537,6 +1772,8 @@ def build_queue_from_action_summary(
     dqs1_observations: tuple[dict[str, Any], ...] = (),
     dqs1_observation_source_paths: tuple[str, ...] = (),
     skip_observed_dqs1_candidates: bool = True,
+    additional_queue_requests: tuple[dict[str, Any], ...] = (),
+    additional_queue_request_source_paths: tuple[str, ...] = (),
 ) -> Dqs1QueueBuildResult:
     try:
         selections = select_dqs1_local_first_candidates(
@@ -1549,6 +1786,8 @@ def build_queue_from_action_summary(
             candidate_limit=candidate_limit,
             dqs1_observations=dqs1_observations,
             skip_observed_dqs1_candidates=skip_observed_dqs1_candidates,
+            additional_queue_requests=additional_queue_requests,
+            additional_queue_request_source_paths=additional_queue_request_source_paths,
         )
         materializer_feedback_bridge = build_dqs1_materializer_feedback_bridge(
             materializer_feedback_payloads=materializer_feedback_payloads,
@@ -1560,6 +1799,11 @@ def build_queue_from_action_summary(
         )
     except ValueError as exc:
         raise ExperimentQueueError(str(exc)) from exc
+    selected_pairset_acquisition = build_selected_pairset_acquisition(
+        selections,
+        repo_root=repo_root,
+        action_summary_path=action_summary_path,
+    )
     return Dqs1QueueBuildResult(
         queue=build_dqs1_local_first_queue_from_selections(
             selections,
@@ -1611,4 +1855,5 @@ def build_queue_from_action_summary(
         selection=selections[0],
         selections=selections,
         materializer_feedback_bridge=materializer_feedback_bridge,
+        selected_pairset_acquisition=selected_pairset_acquisition,
     )

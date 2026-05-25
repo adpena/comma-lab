@@ -1519,6 +1519,51 @@ def test_dqs1_queue_builder_routes_group_pairset_candidates(tmp_path: Path) -> N
     )
 
 
+def test_dqs1_queue_builder_accepts_pair_frame_geometry_queue_requests(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+    request = {
+        **_false_authority(),
+        "schema": "pair_frame_geometry_queue_executable_drop_request.v1",
+        "candidate_id": "pairset_geometry_lowimpact_k003_habcdef1234",
+        "selector_kind": "pair_frame_geometry_low_impact_drop_many",
+        "dropped_pair_indices": [3, 4, 5],
+        "selected_pair_indices": [1, 2, 112, 233, 440],
+        "selected_pair_count": 5,
+        "geometry_covered_dropped_pair_count": 3,
+        "geometry_coverage": 1.0,
+        "queue_executable": True,
+        "queue_family": "dqs1_pairset_local_first",
+        "operator_next_action": "materialize_pairset_archive_and_run_local_controls",
+    }
+
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="results",
+        additional_queue_requests=(request,),
+        additional_queue_request_source_paths=("pair_frame_lattice.json",),
+    )
+
+    assert result.selection.candidate_id == "pairset_geometry_lowimpact_k003_habcdef1234"
+    assert result.selected_pairset_acquisition is not None
+    assert result.selected_pairset_acquisition["candidate_count"] == 1
+    assert result.selected_pairset_acquisition["candidates"][0]["candidate_id"] == (
+        "pairset_geometry_lowimpact_k003_habcdef1234"
+    )
+    experiment = result.queue["experiments"][0]
+    assert experiment["metadata"]["source_metadata"]["queue_source_kind"] == (
+        "pair_frame_scorer_geometry_lattice"
+    )
+    assert experiment["metadata"]["source_metadata"][
+        "pair_frame_geometry_request_source_path"
+    ] == "pair_frame_lattice.json"
+    steps = {step["id"]: step["command"] for step in experiment["steps"]}
+    assert steps["plan_packet"][-1] == "1,2,112,233,440"
+    assert experiment["metadata"]["score_claim"] is False
+
+
 def test_dqs1_queue_builder_threads_runtime_overrides(tmp_path: Path) -> None:
     summary = _write_summary(tmp_path)
 

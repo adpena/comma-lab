@@ -75,6 +75,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Explicit family-agnostic materializer sweep/observation JSON or JSONL. May repeat.",
     )
     parser.add_argument(
+        "--pair-frame-geometry-lattice",
+        action="append",
+        default=[],
+        help=(
+            "Explicit pair-frame scorer-geometry lattice JSON whose "
+            "queue-executable requests should seed the DQS1 follow-up queue. "
+            "May repeat."
+        ),
+    )
+    parser.add_argument(
         "--dqs1-observation-jsonl",
         "--dqs1-observations",
         action="append",
@@ -174,6 +184,11 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
         path = output_dir / "materializer_feedback_discovery.json"
         write_json_artifact(path, discovery)
         artifacts["materializer_feedback_discovery"] = _display_path(path)
+    pair_frame = report.get("pair_frame_geometry_discovery")
+    if isinstance(pair_frame, dict):
+        path = output_dir / "pair_frame_geometry_discovery.json"
+        write_json_artifact(path, pair_frame)
+        artifacts["pair_frame_geometry_discovery"] = _display_path(path)
     bridge = report.get("materializer_feedback_bridge")
     if isinstance(bridge, dict):
         path = output_dir / "materializer_feedback_bridge.json"
@@ -233,6 +248,7 @@ def main(argv: list[str] | None = None) -> int:
             repo_root=REPO_ROOT,
             frontier_artifact_roots=tuple(args.frontier_artifact_root),
             materializer_feedback_paths=tuple(args.materializer_feedback),
+            pair_frame_geometry_paths=tuple(args.pair_frame_geometry_lattice),
             dqs1_observation_paths=tuple(args.dqs1_observation_jsonl),
             action_summary_path=action_summary_path,
             results_root=args.results_root,
@@ -273,6 +289,9 @@ def main(argv: list[str] | None = None) -> int:
                 "artifacts": artifacts,
                 "materializer_feedback_payload_count": report.get(
                     "materializer_feedback_payload_count"
+                ),
+                "pair_frame_geometry_queue_request_count": report.get(
+                    "pair_frame_geometry_queue_request_count"
                 ),
                 "dqs1_observation_count": report.get("dqs1_observation_count"),
                 "selected_candidate_ids": report.get("selected_candidate_ids"),

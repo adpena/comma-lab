@@ -1,0 +1,95 @@
+{
+  "archive_packet": {
+    "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/pr95_public_archive.zip",
+    "archive_zip_sha256": "000e1273f0a01a5581fb51253457dbae0b68b87f80d345866ba435351609a65f",
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "gpu_launched": false,
+    "latent_shape": [
+      1,
+      28
+    ],
+    "member_bytes": 230231,
+    "member_compress_type": 0,
+    "member_name": "0.bin",
+    "member_sha256": "6a973efacfda879c81ec3dd9a113e767efddb7c894565d3055d609afab92173b",
+    "meta": {
+      "base_channels": 36,
+      "eval_size": [
+        384,
+        512
+      ],
+      "latent_dim": 28,
+      "n_pairs": 1
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "pr95_hnerv_public_archive_packet.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_pr": 95,
+    "state_dict_tensor_count": 28,
+    "submission": "hnerv_muon"
+  },
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "exact_readiness_refusal": {
+    "blockers": [
+      "runtime_consumption_smoke_is_not_score_authority",
+      "full_frame_inflate_parity_against_source_runtime_not_run",
+      "requires_exact_cpu_cuda_auth_eval_before_score_claim"
+    ],
+    "ready": false,
+    "schema": "exact_readiness_refusal.v1"
+  },
+  "expected_raw_bytes": 6104016,
+  "file_list": "/Users/adpena/Projects/pact/.omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/runtime_consumption_work/file_list.txt",
+  "full_frame_inflate_parity": false,
+  "generated_utc": "2026-05-25T17:27:55.831341+00:00",
+  "gpu_launched": false,
+  "inflate_sh": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+  "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "raw_output_bytes": 6104016,
+  "raw_output_path": "/Users/adpena/Projects/pact/.omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/runtime_consumption_work/raw/0.raw",
+  "raw_output_sha256": "72bf544a3e63c184639e80bbec57e467c857bc34f3ec76caf7d4f96c77e5355a",
+  "ready_for_exact_eval_dispatch": false,
+  "returncode": 0,
+  "runtime_consumption_proven": true,
+  "runtime_files": [
+    {
+      "bytes": 811,
+      "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh",
+      "sha256": "0cb9c3df78ad870cadd2ac6d46007b6c1aeb6a61c76b7800ae74a00addafb885"
+    },
+    {
+      "bytes": 2158,
+      "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.py",
+      "sha256": "fdc1e9af70a8f6b47f84c3978a29cb872dbc3dbdc6c123bda72ea494221a0e26"
+    },
+    {
+      "bytes": 2197,
+      "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+      "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+    },
+    {
+      "bytes": 7455,
+      "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/codec.py",
+      "sha256": "63d3ffd03c514fa5841fbf75a3eac87cc76ed40f68e0d68db50cd7cda517266f"
+    }
+  ],
+  "schema": "pr95_hnerv_public_runtime_consumption_proof.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "source_pr": 95,
+  "staged_member": "/Users/adpena/Projects/pact/.omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/runtime_consumption_work/data/0.bin",
+  "started_utc": "2026-05-25T17:27:55.305290+00:00",
+  "stderr_tail": "",
+  "stdout_tail": "Inflating 0.mkv ... saved 2 frames\n",
+  "submission": "hnerv_muon",
+  "work_dir": "/Users/adpena/Projects/pact/.omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/runtime_consumption_work"
+}
