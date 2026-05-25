@@ -1,13 +1,17 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import contextlib
 import copy
 import hashlib
 import importlib.util
+import io
 import json
 import subprocess
 import sys
 import zipfile
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 import brotli
@@ -121,9 +125,62 @@ from tac.optimization.inverse_steganalysis_operation_set_compiler import (
     packet_ir_operation_set_from_compiler_hint,
 )
 from tac.packet_compiler.deterministic_compiler import PACKET_IR_OPERATION_SET_SCHEMA
+from tools import build_byte_shaving_campaign_queue as queue_cli
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = REPO_ROOT / "tools" / "build_byte_shaving_campaign_queue.py"
+
+
+@dataclass(frozen=True)
+class _CliResult:
+    args: list[str]
+    returncode: int
+    stdout: str
+    stderr: str
+
+
+def _run_cli(main: Callable[[list[str] | None], int], argv: list[str]) -> _CliResult:
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+        try:
+            raw_returncode = main(argv)
+        except SystemExit as exc:
+            code = exc.code
+            if code is None:
+                returncode = 0
+            elif isinstance(code, int):
+                returncode = code
+            else:
+                returncode = 1
+                print(str(code), file=sys.stderr)
+        else:
+            returncode = int(raw_returncode or 0)
+    return _CliResult(
+        args=list(argv),
+        returncode=returncode,
+        stdout=stdout.getvalue(),
+        stderr=stderr.getvalue(),
+    )
+
+
+def _run_queue_tool(
+    args: list[str],
+    *,
+    check: bool,
+    text: bool,
+    capture_output: bool,
+) -> _CliResult:
+    if not text or not capture_output:
+        raise AssertionError("test CLI helper only supports captured text output")
+    if len(args) < 2 or args[0] != sys.executable or Path(args[1]) != TOOL:
+        raise AssertionError(f"unexpected queue tool command: {args!r}")
+    result = _run_cli(queue_cli.main, [str(item) for item in args[2:]])
+    if check and result.returncode != 0:
+        raise AssertionError(
+            f"CLI failed with {result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+    return result
 
 
 def _write_single_member_zip(path: Path, *, payload: bytes = b"base-payload") -> None:
@@ -4900,7 +4957,7 @@ def test_byte_shaving_campaign_queue_cli_writes_dqs1_queue(tmp_path: Path) -> No
     queue = tmp_path / "queue.json"
     plan_path.write_text(json.dumps(_pair_drop_plan()), encoding="utf-8")
 
-    result = subprocess.run(
+    result = _run_queue_tool(
         [
             sys.executable,
             str(TOOL),
@@ -5014,7 +5071,7 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
         encoding="utf-8",
     )
 
-    result = subprocess.run(
+    result = _run_queue_tool(
         [
             sys.executable,
             str(TOOL),
@@ -5153,7 +5210,7 @@ def test_byte_shaving_campaign_queue_cli_generates_materializer_contexts_from_ar
         encoding="utf-8",
     )
 
-    result = subprocess.run(
+    result = _run_queue_tool(
         [
             sys.executable,
             str(TOOL),
@@ -5257,7 +5314,7 @@ def test_byte_shaving_campaign_queue_cli_wires_generated_dfl1_parity_followup(
         encoding="utf-8",
     )
 
-    result = subprocess.run(
+    result = _run_queue_tool(
         [
             sys.executable,
             str(TOOL),
@@ -5523,7 +5580,7 @@ def test_inverse_action_compiler_hint_runs_family_agnostic_materializer(
         encoding="utf-8",
     )
 
-    result = subprocess.run(
+    result = _run_queue_tool(
         [
             sys.executable,
             str(TOOL),
@@ -5698,7 +5755,7 @@ def test_byte_shaving_campaign_queue_cli_generates_contexts_from_inline_compiler
     plan = build_byte_shaving_campaign_plan(signal, max_k=1)
     plan_path.write_text(json.dumps(plan), encoding="utf-8")
 
-    result = subprocess.run(
+    result = _run_queue_tool(
         [
             sys.executable,
             str(TOOL),
@@ -5821,7 +5878,7 @@ def test_byte_shaving_campaign_queue_cli_generates_inverse_scorer_contexts_and_s
         encoding="utf-8",
     )
 
-    result = subprocess.run(
+    result = _run_queue_tool(
         [
             sys.executable,
             str(TOOL),
@@ -5973,7 +6030,7 @@ def test_byte_shaving_campaign_queue_cli_generates_inverse_scorer_chain_context_
         encoding="utf-8",
     )
 
-    result = subprocess.run(
+    result = _run_queue_tool(
         [
             sys.executable,
             str(TOOL),
