@@ -55230,14 +55230,14 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_family_runtime_proof_schema_hardening_20260525T120220Z_codex.md"
+          "evidence": ".omx/research/codex_findings_receiver_runtime_proof_schema_hardening_20260525T120353Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "superseded_by=codex_receiver_runtime_proof_schema_hardening_20260525; same proof-hardening signal consolidated to avoid duplicate memos"
     },
     {
       "id": "codex_receiver_runtime_proof_schema_hardening_20260525",
@@ -55288,5 +55288,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T12:04:57Z"
+  "updated_at": "2026-05-25T12:05:43Z"
 }
