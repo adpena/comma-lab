@@ -55443,6 +55443,47 @@
         }
       },
       "notes": "Use canonical DQS1 harvest observation JSONL as queue acquisition skip signal so local-first replans do not rerun already observed candidates when roots move; false-authority only."
+    },
+    {
+      "id": "codex_dqs1_acquisition_observation_filter_20260525",
+      "name": "DQS1 acquisition observation filter",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/decoder_q_pairset_acquisition.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/codex_dqs1_acquisition_observation_filter_20260525T125955Z/dqs1_pairset_local_first.filtered_acquisition_queue.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_decoder_q_pairset_acquisition.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_dqs1_acquisition_observation_filter_20260525T125955Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Filter canonical DQS1 harvest observations during pairset acquisition-plan generation so planner, portfolio, and queue do not drift; false-authority only."
     }
   ],
   "level_rules": {
@@ -55452,5 +55493,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T12:51:39Z"
+  "updated_at": "2026-05-25T13:02:35Z"
 }

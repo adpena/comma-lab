@@ -18,6 +18,11 @@ from tac.optimization.decoder_q_selective_runtime_packet import (
     affected_frames_for_pairs,
     choose_dqs1_pair_encoding,
 )
+from tac.optimization.dqs1_materializer_feedback_bridge import (
+    DQS1_OBSERVATION_SOURCE_SCHEMA,
+    DQS1_OBSERVATION_SWEEP_CONFIG_ID,
+)
+from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
 
 SCHEMA = "decoder_q_pairset_acquisition.v1"
 CANDIDATE_SCHEMA = "decoder_q_pairset_acquisition_candidate.v1"
@@ -400,6 +405,33 @@ def _bounded_drop_two_pairs(rank_order_pairs: Sequence[int], *, limit: int) -> l
     return out
 
 
+def _observed_candidate_ids_from_dqs1_observations(
+    observations: Sequence[Mapping[str, Any]] | None,
+) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for index, row in enumerate(observations or ()):
+        if not isinstance(row, Mapping):
+            continue
+        try:
+            require_no_truthy_authority_fields(
+                row,
+                context=f"decoder_q_pairset_acquisition.observation[{index}]",
+            )
+        except ValueError as exc:
+            raise DecoderQPairsetAcquisitionError(str(exc)) from exc
+        if (
+            row.get("source_schema") != DQS1_OBSERVATION_SOURCE_SCHEMA
+            or row.get("sweep_config_id") != DQS1_OBSERVATION_SWEEP_CONFIG_ID
+        ):
+            continue
+        candidate_id = str(row.get("candidate_id") or "").strip()
+        if candidate_id and candidate_id not in seen:
+            out.append(candidate_id)
+            seen.add(candidate_id)
+    return out
+
+
 def build_decoder_q_pairset_acquisition_plan(
     selector_pareto: dict[str, Any],
     *,
@@ -410,6 +442,8 @@ def build_decoder_q_pairset_acquisition_plan(
     max_drop_two: int = 128,
     max_swap_in: int = 32,
     diversity_weight: float = 0.15,
+    dqs1_observations: Sequence[Mapping[str, Any]] | None = None,
+    include_observed_candidates: bool = False,
 ) -> dict[str, Any]:
     """Build local-only DQS1 pair-set acquisition candidates from selector Pareto rows."""
 
@@ -425,6 +459,10 @@ def build_decoder_q_pairset_acquisition_plan(
 
     rows: list[dict[str, Any]] = []
     seen_pair_sets: set[tuple[int, ...]] = set()
+    observed_candidate_ids = _observed_candidate_ids_from_dqs1_observations(
+        dqs1_observations
+    )
+    observed_candidate_id_set = set(observed_candidate_ids)
 
     def add_row(
         acquisition_id: str,
@@ -538,8 +576,21 @@ def build_decoder_q_pairset_acquisition_plan(
                 operation={"op": "diversity_spaced", "k": k, "universe_pair_count": len(universe)},
             )
 
+    unfiltered_candidate_count = len(rows)
+    suppressed_observed_candidate_ids: list[str] = []
+    if include_observed_candidates:
+        filtered_rows = rows
+    else:
+        filtered_rows = []
+        for row in rows:
+            acquisition_id = str(row.get("acquisition_id") or row.get("selector_id") or "")
+            if acquisition_id in observed_candidate_id_set:
+                suppressed_observed_candidate_ids.append(acquisition_id)
+                continue
+            filtered_rows.append(row)
+
     ranked = sorted(
-        rows,
+        filtered_rows,
         key=lambda row: (
             -float(row["acquisition_score"]),
             int(row["payload_bytes"]),
@@ -551,7 +602,13 @@ def build_decoder_q_pairset_acquisition_plan(
         row["rank_kind"] = "sorted_local_acquisition_rank"
 
     summary = {
+        "unfiltered_candidate_count": unfiltered_candidate_count,
         "candidate_count": len(ranked),
+        "observed_dqs1_candidate_count": len(observed_candidate_ids),
+        "observed_dqs1_candidate_ids": observed_candidate_ids,
+        "suppressed_observed_candidate_count": len(suppressed_observed_candidate_ids),
+        "suppressed_observed_candidate_ids": suppressed_observed_candidate_ids,
+        "include_observed_candidates": bool(include_observed_candidates),
         "recommended_acquisition_id": ranked[0]["acquisition_id"] if ranked else None,
         "prefix_candidate_count": sum(1 for row in ranked if row["selector_kind"] == "prefix_variant"),
         "drop_one_candidate_count": sum(1 for row in ranked if row["selector_kind"] == "drop_one_from_best"),
@@ -582,6 +639,16 @@ def build_decoder_q_pairset_acquisition_plan(
             "max_drop_two": max_drop_two,
             "max_swap_in": max_swap_in,
             "diversity_weight": diversity_weight,
+            "observation_skip": {
+                "schema": "dqs1_pairset_acquisition_observation_skip.v1",
+                "active": bool(observed_candidate_ids)
+                and not bool(include_observed_candidates),
+                "observed_candidate_count": len(observed_candidate_ids),
+                "suppressed_candidate_count": len(suppressed_observed_candidate_ids),
+                "include_observed_candidates": bool(include_observed_candidates),
+                "allowed_use": "local_pairset_acquisition_rerun_suppression_only",
+                **FALSE_ACQUISITION_AUTHORITY,
+            },
             "ranking": "acquisition_score_desc_payload_bytes_asc_selector_id_asc",
         },
         "source_selector_summary": {

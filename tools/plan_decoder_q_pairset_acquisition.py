@@ -25,6 +25,15 @@ from tac.optimization.decoder_q_pairset_acquisition import (
     load_json_object,
     write_json,
 )
+from tac.optimization.dqs1_materializer_feedback_bridge import (
+    DQS1_OBSERVATION_SOURCE_SCHEMA,
+    DQS1_OBSERVATION_SWEEP_CONFIG_ID,
+)
+from tac.optimization.mlx_dynamic_sweep_observations import (
+    MLXDynamicSweepObservationError,
+    load_observation_rows,
+    observation_duplicate_key,
+)
 
 
 def _parse_csv_ints(text: str | None) -> list[int] | None:
@@ -44,6 +53,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-drop-two", type=int, default=128)
     parser.add_argument("--max-swap-in", type=int, default=32)
     parser.add_argument("--diversity-weight", type=float, default=0.15)
+    parser.add_argument(
+        "--dqs1-observation-jsonl",
+        "--dqs1-observations",
+        action="append",
+        default=[],
+        dest="dqs1_observation_jsonl",
+        help=(
+            "DQS1 local-first harvest observation JSONL used to suppress already "
+            "observed acquisition candidates. May repeat."
+        ),
+    )
+    parser.add_argument(
+        "--include-observed-dqs1-candidate",
+        action="store_true",
+        help="keep observed DQS1 candidates in the acquisition plan for explicit replay/debug",
+    )
     parser.add_argument("--json-out", type=Path, required=True)
     parser.add_argument("--md-out", type=Path)
     return parser.parse_args(argv)
@@ -91,10 +116,57 @@ def _render_markdown(plan: dict[str, object]) -> str:
     return "\n".join(lines)
 
 
+def _load_dqs1_observations(path_values: list[str]) -> tuple[dict[str, object], ...]:
+    rows: list[dict[str, object]] = []
+    seen: set[tuple[tuple[str, str | None], ...]] = set()
+    for value in path_values:
+        path = Path(value)
+        if not path.is_absolute():
+            path = REPO_ROOT / path
+        if not path.exists():
+            raise DecoderQPairsetAcquisitionError(
+                f"{path}: observation JSONL does not exist"
+            )
+        if path.suffix != ".jsonl":
+            raise DecoderQPairsetAcquisitionError(
+                f"{path}: DQS1 observations must be JSONL rows"
+            )
+        try:
+            loaded = load_observation_rows(path)
+        except OSError as exc:
+            raise DecoderQPairsetAcquisitionError(
+                f"{path}: cannot read observation JSONL"
+            ) from exc
+        except MLXDynamicSweepObservationError as exc:
+            raise DecoderQPairsetAcquisitionError(
+                f"{path}: invalid observation JSONL: {exc}"
+            ) from exc
+        if not loaded:
+            raise DecoderQPairsetAcquisitionError(
+                f"{path}: observation JSONL has no rows"
+            )
+        for row in loaded:
+            if (
+                row.get("source_schema") != DQS1_OBSERVATION_SOURCE_SCHEMA
+                or row.get("sweep_config_id") != DQS1_OBSERVATION_SWEEP_CONFIG_ID
+            ):
+                raise DecoderQPairsetAcquisitionError(
+                    f"{path}: non-local-first DQS1 observation row refused "
+                    f"for candidate {row.get('candidate_id')!r}"
+                )
+            key = observation_duplicate_key(row)
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append(row)
+    return tuple(rows)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
         selector_pareto = load_json_object(args.selector_pareto)
+        dqs1_observations = _load_dqs1_observations(args.dqs1_observation_jsonl)
         plan = build_decoder_q_pairset_acquisition_plan(
             selector_pareto,
             frame_policy=args.frame_policy,
@@ -104,6 +176,8 @@ def main(argv: list[str] | None = None) -> int:
             max_drop_two=args.max_drop_two,
             max_swap_in=args.max_swap_in,
             diversity_weight=args.diversity_weight,
+            dqs1_observations=dqs1_observations,
+            include_observed_candidates=args.include_observed_dqs1_candidate,
         )
         write_json(args.json_out, plan)
         if args.md_out is not None:
@@ -118,6 +192,10 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "json_out": str(args.json_out),
                 "candidate_count": plan["summary"]["candidate_count"],
+                "unfiltered_candidate_count": plan["summary"]["unfiltered_candidate_count"],
+                "suppressed_observed_candidate_count": plan["summary"][
+                    "suppressed_observed_candidate_count"
+                ],
                 "recommended_acquisition_id": plan["summary"]["recommended_acquisition_id"],
                 "score_claim": False,
                 "promotion_eligible": False,

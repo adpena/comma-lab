@@ -89,6 +89,31 @@ def _selector_pareto() -> dict[str, object]:
     }
 
 
+def _dqs1_observation(candidate_id: str, *, score_delta: float = -0.0001) -> dict[str, object]:
+    return {
+        "schema": "mlx_dynamic_sweep_observation.v1",
+        **_false_authority(),
+        "candidate_id": candidate_id,
+        "source_schema": "dqs1_local_first_harvest.v1",
+        "sweep_config_id": "dqs1_local_first_macos_cpu_advisory",
+        "optimization_pass_id": "local_cpu_advisory_harvest",
+        "family": "decoder_q_pairset_drop",
+        "observed_axis": "macos_cpu_advisory",
+        "evidence_tag": "[macOS-CPU advisory only]",
+        "observed_score_or_delta": 0.1919,
+        "score_delta_vs_baseline": score_delta,
+        "archive_byte_delta_vs_baseline": -4,
+        "archive_sha256": "a" * 64,
+        "runtime_sha256": "b" * 64,
+        "raw_output_or_cache_sha256": "c" * 64,
+        "component_deltas": {
+            "segnet_delta": -0.0001,
+            "posenet_delta": 0.0,
+            "rate_delta": -0.00002,
+        },
+    }
+
+
 def _large_selector_pareto(pair_count: int = 32) -> dict[str, object]:
     pairs = list(range(pair_count))
     return {
@@ -242,6 +267,53 @@ def test_pairset_acquisition_defaults_include_dense_response_tail() -> None:
     )
 
 
+def test_pairset_acquisition_suppresses_observed_dqs1_candidates() -> None:
+    plan = build_decoder_q_pairset_acquisition_plan(
+        _selector_pareto(),
+        prefix_ks=[1, 2, 4],
+        diversity_ks=[2, 4],
+        max_drop_two=10,
+        max_swap_in=3,
+        dqs1_observations=(
+            _dqs1_observation("pairset_prefix_k004"),
+            _dqs1_observation("pairset_drop_one_rank001_pair0010", score_delta=0.0002),
+        ),
+    )
+
+    ids = [row["acquisition_id"] for row in plan["candidates"]]  # type: ignore[index]
+    assert "pairset_prefix_k004" not in ids
+    assert "pairset_drop_one_rank001_pair0010" not in ids
+    assert plan["summary"]["observed_dqs1_candidate_count"] == 2
+    assert plan["summary"]["suppressed_observed_candidate_count"] == 2
+    assert plan["summary"]["candidate_count"] == plan["summary"]["unfiltered_candidate_count"] - 2
+    policy = plan["selection_policy"]["observation_skip"]
+    assert policy["schema"] == "dqs1_pairset_acquisition_observation_skip.v1"
+    assert policy["active"] is True
+    assert policy["score_claim"] is False
+    assert policy["ready_for_exact_eval_dispatch"] is False
+    assert [row["acquisition_rank"] for row in plan["candidates"]] == list(  # type: ignore[index]
+        range(1, len(plan["candidates"]) + 1)  # type: ignore[arg-type]
+    )
+
+
+def test_pairset_acquisition_replay_can_include_observed_dqs1_candidates() -> None:
+    plan = build_decoder_q_pairset_acquisition_plan(
+        _selector_pareto(),
+        prefix_ks=[1, 2, 4],
+        diversity_ks=[2, 4],
+        max_drop_two=10,
+        max_swap_in=3,
+        dqs1_observations=(_dqs1_observation("pairset_prefix_k004"),),
+        include_observed_candidates=True,
+    )
+
+    ids = {row["acquisition_id"] for row in plan["candidates"]}  # type: ignore[index]
+    assert "pairset_prefix_k004" in ids
+    assert plan["summary"]["observed_dqs1_candidate_count"] == 1
+    assert plan["summary"]["suppressed_observed_candidate_count"] == 0
+    assert plan["selection_policy"]["observation_skip"]["active"] is False
+
+
 def test_pairset_acquisition_preserves_selector_metadata_and_valid_pairs() -> None:
     plan = _small_plan()
 
@@ -294,12 +366,25 @@ def test_pairset_acquisition_rejects_authority_and_bad_pairs() -> None:
     with pytest.raises(DecoderQPairsetAcquisitionError, match="duplicates"):
         build_decoder_q_pairset_acquisition_plan(duplicate_pairs)
 
+    authoritative_observation = _dqs1_observation("pairset_prefix_k004")
+    authoritative_observation["score_claim"] = True
+    with pytest.raises(DecoderQPairsetAcquisitionError, match="score_claim"):
+        build_decoder_q_pairset_acquisition_plan(
+            _selector_pareto(),
+            dqs1_observations=(authoritative_observation,),
+        )
+
 
 def test_pairset_acquisition_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     selector_path = tmp_path / "selector_pareto.json"
+    observations_path = tmp_path / "dqs1_observations.jsonl"
     json_out = tmp_path / "pairset_acquisition.json"
     md_out = tmp_path / "pairset_acquisition.md"
     selector_path.write_text(json.dumps(_selector_pareto()), encoding="utf-8")
+    observations_path.write_text(
+        json.dumps(_dqs1_observation("pairset_prefix_k004"), sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
     completed = subprocess.run(
         [
@@ -315,6 +400,8 @@ def test_pairset_acquisition_cli_writes_json_and_markdown(tmp_path: Path) -> Non
             "3",
             "--max-swap-in",
             "2",
+            "--dqs1-observation-jsonl",
+            str(observations_path),
             "--json-out",
             str(json_out),
             "--md-out",
@@ -331,9 +418,13 @@ def test_pairset_acquisition_cli_writes_json_and_markdown(tmp_path: Path) -> Non
     assert stdout_payload["promotion_eligible"] is False
     assert stdout_payload["ready_for_exact_eval_dispatch"] is False
     assert stdout_payload["dispatch_attempted"] is False
+    assert stdout_payload["suppressed_observed_candidate_count"] == 1
     payload = json.loads(json_out.read_text(encoding="utf-8"))
     assert payload["schema"] == SCHEMA
     assert payload["summary"]["candidate_count"] > 0
+    assert "pairset_prefix_k004" not in {
+        row["acquisition_id"] for row in payload["candidates"]
+    }
     markdown = md_out.read_text(encoding="utf-8")
     assert "Decoder-Q Pair-Set Acquisition Plan" in markdown
     assert "planning-only local pair-set acquisition" in markdown
