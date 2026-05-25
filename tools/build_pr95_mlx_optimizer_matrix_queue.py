@@ -44,7 +44,13 @@ from tac.repo_io import ArtifactWriteError, read_json, write_json_artifact  # no
 
 MATRIX_SCHEMA = "pr95_hnerv_mlx_optimizer_matrix_queue.v1"
 CONTROL_PROFILE_FULL_SOURCE_VIDEO_RUNTIME = "full_pr95_source_video_runtime"
-CONTROL_PROFILE_CHOICES = (CONTROL_PROFILE_FULL_SOURCE_VIDEO_RUNTIME,)
+CONTROL_PROFILE_STAGE158_SOURCE_VIDEO_TIMING_LADDER = (
+    "stage158_source_video_timing_ladder"
+)
+CONTROL_PROFILE_CHOICES = (
+    CONTROL_PROFILE_FULL_SOURCE_VIDEO_RUNTIME,
+    CONTROL_PROFILE_STAGE158_SOURCE_VIDEO_TIMING_LADDER,
+)
 
 
 def _utc_now() -> str:
@@ -327,6 +333,7 @@ def build_pr95_mlx_optimizer_matrix_queue(
     seeds: list[int],
     descriptor_ids: list[str] | None,
     steps: int,
+    step_counts: list[int] | None,
     batch_size: int,
     synthetic_pairs: int,
     base_channels: int,
@@ -363,6 +370,13 @@ def build_pr95_mlx_optimizer_matrix_queue(
 
     selected_stages = _stage_indices(stages)
     selected_seeds = list(dict.fromkeys(int(seed) for seed in seeds))
+    selected_step_counts = (
+        list(dict.fromkeys(int(value) for value in step_counts))
+        if step_counts
+        else [int(steps)]
+    )
+    if any(value < 1 for value in selected_step_counts):
+        raise ExperimentQueueError("all step counts must be >= 1")
     source_video_config_requested = (
         write_source_video_preprocess_smoke or train_on_source_video_pairs
     )
@@ -409,96 +423,119 @@ def build_pr95_mlx_optimizer_matrix_queue(
                 )
                 continue
             for seed in selected_seeds:
-                matrix_cell_id = _matrix_cell_id(
-                    stage=stage,
-                    descriptor_id=descriptor_id,
-                    seed=seed,
-                    steps=steps,
-                    batch_size=batch_size,
-                    synthetic_pairs=synthetic_pairs,
-                    base_channels=base_channels,
-                    latent_dim=latent_dim,
-                    write_source_video_preprocess_smoke=(
-                        write_source_video_preprocess_smoke
-                    ),
-                    train_on_source_video_pairs=train_on_source_video_pairs,
-                    source_video_loss_surface=source_video_loss_surface,
-                    source_video_path=source_video_path,
-                    source_video_upstream_dir=source_video_upstream_dir,
-                    source_video_pair_indices=selected_source_video_pair_indices,
-                    source_video_output_hw=source_video_output_hw,
-                    source_video_gradient_shape=source_video_gradient_shape,
-                )
-                if matrix_cell_id in seen_cell_ids:
-                    raise ExperimentQueueError(
-                        f"duplicate PR95 MLX matrix cell id: {matrix_cell_id}"
-                    )
-                seen_cell_ids.add(matrix_cell_id)
-                plan_dir = _candidate_output_dir(
-                    output_root=output_root,
-                    matrix_cell_id=matrix_cell_id,
-                    stage=stage,
-                    descriptor_id=descriptor_id,
-                    seed=seed,
-                    base_channels=base_channels,
-                )
-                plan = _emit_plan(
-                    repo_root=repo_root,
-                    stage=stage,
-                    descriptor_id=descriptor_id,
-                    seed=seed,
-                    steps=steps,
-                    batch_size=batch_size,
-                    synthetic_pairs=synthetic_pairs,
-                    base_channels=base_channels,
-                    latent_dim=latent_dim,
-                    output_dir=plan_dir,
-                    write_byte_closed_smoke=write_byte_closed_smoke,
-                    write_pr95_public_archive_export=write_pr95_public_archive_export,
-                    prove_pr95_runtime_consumption=prove_pr95_runtime_consumption,
-                    write_pytorch_export_parity=write_pytorch_export_parity,
-                    pytorch_export_sample_indices=pytorch_export_sample_indices,
-                    pytorch_export_mlx_device=pytorch_export_mlx_device,
-                    write_source_faithful_preprocess_smoke=(
-                        write_source_faithful_preprocess_smoke
-                    ),
-                    write_source_video_preprocess_smoke=(
-                        write_source_video_preprocess_smoke
-                    ),
-                    train_on_source_video_pairs=train_on_source_video_pairs,
-                    source_video_loss_surface=source_video_loss_surface,
-                    source_preprocess_shape=source_preprocess_shape,
-                    source_preprocess_camera_hw=source_preprocess_camera_hw,
-                    source_preprocess_gradient_shape=source_preprocess_gradient_shape,
-                    source_video_path=source_video_path,
-                    source_video_upstream_dir=source_video_upstream_dir,
-                    source_video_pair_indices=selected_source_video_pair_indices,
-                    source_video_output_hw=source_video_output_hw,
-                    source_video_gradient_shape=source_video_gradient_shape,
-                    runtime_proof_timeout_seconds=runtime_proof_timeout_seconds,
-                    runtime_proof_max_output_bytes=runtime_proof_max_output_bytes,
-                    allow_existing_plan_dirs=allow_existing_plan_dirs,
-                )
-                plans.append(plan)
-                plan_records.append(
-                    {
-                        "matrix_cell_id": matrix_cell_id,
-                        "candidate_id": plan["candidate_id"],
-                        "stage_index": stage,
-                        "stage_module": plan["stage_module"],
-                        "seed": seed,
-                        "optimizer_descriptor_id": descriptor_id,
-                        "optimizer_config_sha256": plan["optimizer_config_sha256"],
-                        "plan": _rel(plan_dir / "plan.json", repo_root),
-                        "representation_training_plan": _rel(
-                            plan_dir / "representation_training_plan.json",
-                            repo_root,
+                for cell_steps in selected_step_counts:
+                    matrix_cell_id = _matrix_cell_id(
+                        stage=stage,
+                        descriptor_id=descriptor_id,
+                        seed=seed,
+                        steps=cell_steps,
+                        batch_size=batch_size,
+                        synthetic_pairs=synthetic_pairs,
+                        base_channels=base_channels,
+                        latent_dim=latent_dim,
+                        write_source_video_preprocess_smoke=(
+                            write_source_video_preprocess_smoke
                         ),
-                        "run_manifest": _rel(plan_dir / "manifest.json", repo_root),
-                        "queued": True,
-                        **FALSE_AUTHORITY,
-                    }
-                )
+                        train_on_source_video_pairs=train_on_source_video_pairs,
+                        source_video_loss_surface=source_video_loss_surface,
+                        source_video_path=source_video_path,
+                        source_video_upstream_dir=source_video_upstream_dir,
+                        source_video_pair_indices=(
+                            selected_source_video_pair_indices
+                        ),
+                        source_video_output_hw=source_video_output_hw,
+                        source_video_gradient_shape=source_video_gradient_shape,
+                    )
+                    if matrix_cell_id in seen_cell_ids:
+                        raise ExperimentQueueError(
+                            f"duplicate PR95 MLX matrix cell id: {matrix_cell_id}"
+                        )
+                    seen_cell_ids.add(matrix_cell_id)
+                    plan_dir = _candidate_output_dir(
+                        output_root=output_root,
+                        matrix_cell_id=matrix_cell_id,
+                        stage=stage,
+                        descriptor_id=descriptor_id,
+                        seed=seed,
+                        base_channels=base_channels,
+                    )
+                    plan = _emit_plan(
+                        repo_root=repo_root,
+                        stage=stage,
+                        descriptor_id=descriptor_id,
+                        seed=seed,
+                        steps=cell_steps,
+                        batch_size=batch_size,
+                        synthetic_pairs=synthetic_pairs,
+                        base_channels=base_channels,
+                        latent_dim=latent_dim,
+                        output_dir=plan_dir,
+                        write_byte_closed_smoke=write_byte_closed_smoke,
+                        write_pr95_public_archive_export=(
+                            write_pr95_public_archive_export
+                        ),
+                        prove_pr95_runtime_consumption=(
+                            prove_pr95_runtime_consumption
+                        ),
+                        write_pytorch_export_parity=write_pytorch_export_parity,
+                        pytorch_export_sample_indices=(
+                            pytorch_export_sample_indices
+                        ),
+                        pytorch_export_mlx_device=pytorch_export_mlx_device,
+                        write_source_faithful_preprocess_smoke=(
+                            write_source_faithful_preprocess_smoke
+                        ),
+                        write_source_video_preprocess_smoke=(
+                            write_source_video_preprocess_smoke
+                        ),
+                        train_on_source_video_pairs=train_on_source_video_pairs,
+                        source_video_loss_surface=source_video_loss_surface,
+                        source_preprocess_shape=source_preprocess_shape,
+                        source_preprocess_camera_hw=source_preprocess_camera_hw,
+                        source_preprocess_gradient_shape=(
+                            source_preprocess_gradient_shape
+                        ),
+                        source_video_path=source_video_path,
+                        source_video_upstream_dir=source_video_upstream_dir,
+                        source_video_pair_indices=(
+                            selected_source_video_pair_indices
+                        ),
+                        source_video_output_hw=source_video_output_hw,
+                        source_video_gradient_shape=source_video_gradient_shape,
+                        runtime_proof_timeout_seconds=(
+                            runtime_proof_timeout_seconds
+                        ),
+                        runtime_proof_max_output_bytes=(
+                            runtime_proof_max_output_bytes
+                        ),
+                        allow_existing_plan_dirs=allow_existing_plan_dirs,
+                    )
+                    plans.append(plan)
+                    plan_records.append(
+                        {
+                            "matrix_cell_id": matrix_cell_id,
+                            "candidate_id": plan["candidate_id"],
+                            "stage_index": stage,
+                            "stage_module": plan["stage_module"],
+                            "seed": seed,
+                            "steps": cell_steps,
+                            "optimizer_descriptor_id": descriptor_id,
+                            "optimizer_config_sha256": plan[
+                                "optimizer_config_sha256"
+                            ],
+                            "plan": _rel(plan_dir / "plan.json", repo_root),
+                            "representation_training_plan": _rel(
+                                plan_dir / "representation_training_plan.json",
+                                repo_root,
+                            ),
+                            "run_manifest": _rel(
+                                plan_dir / "manifest.json",
+                                repo_root,
+                            ),
+                            "queued": True,
+                            **FALSE_AUTHORITY,
+                        }
+                    )
 
     if not plans:
         refusal_summary = "; ".join(
@@ -531,7 +568,8 @@ def build_pr95_mlx_optimizer_matrix_queue(
         "output_root": _rel(output_root, repo_root),
         "stage_indices": selected_stages,
         "seeds": selected_seeds,
-        "steps": steps,
+        "steps": selected_step_counts[0],
+        "step_counts": selected_step_counts,
         "batch_size": batch_size,
         "synthetic_pairs": synthetic_pairs,
         "base_channels": base_channels,
@@ -564,6 +602,7 @@ def build_pr95_mlx_optimizer_matrix_queue(
         "source_video_gradient_shape": source_video_gradient_shape,
         "runtime_proof_timeout_seconds": runtime_proof_timeout_seconds,
         "runtime_proof_max_output_bytes": runtime_proof_max_output_bytes,
+        "timeout_seconds": timeout_seconds,
         "plan_count": len(plan_records),
         "refusal_count": len(refusals),
         "plans": plan_records,
@@ -623,13 +662,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Apply a canonical PR95 MLX control profile. "
             "full_pr95_source_video_runtime emits stage 1/2/3/4/5/6/7/8, full PR95 "
             "dimensions, source-video RGB+YUV6 timing loss, and PR95 runtime "
-            "consumption proof requests."
+            "consumption proof requests. stage158_source_video_timing_ladder emits "
+            "stage 1/5/8 across bounded step counts for local MLX scaling."
         ),
     )
     parser.add_argument("--stage", action="append", type=int, dest="stages")
     parser.add_argument("--seed", action="append", type=int)
     parser.add_argument("--optimizer-descriptor-id", action="append")
     parser.add_argument("--steps", type=int, default=1)
+    parser.add_argument(
+        "--step-count",
+        action="append",
+        type=int,
+        help=(
+            "Additional matrix dimension over training steps. When omitted, "
+            "--steps is used as the single step count."
+        ),
+    )
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--synthetic-pairs", type=int, default=2)
     parser.add_argument("--base-channels", type=int, default=36)
@@ -776,6 +825,29 @@ def _apply_control_profile(args: argparse.Namespace) -> None:
         if args.timeout_seconds == 0:
             args.timeout_seconds = 3600
         return
+    if args.control_profile == CONTROL_PROFILE_STAGE158_SOURCE_VIDEO_TIMING_LADDER:
+        args.stages = [1, 5, 8]
+        args.step_count = [1, 4, 16]
+        args.batch_size = 1
+        args.synthetic_pairs = 1
+        args.base_channels = 36
+        args.latent_dim = 28
+        args.write_pr95_public_archive_export = True
+        args.prove_pr95_runtime_consumption = True
+        args.write_pytorch_export_parity = True
+        if args.pytorch_export_sample_index is None:
+            args.pytorch_export_sample_index = [0]
+        args.pytorch_export_mlx_device = "cpu"
+        args.write_source_video_preprocess_smoke = True
+        args.train_on_source_video_pairs = True
+        args.source_video_loss_surface = PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
+        if args.source_video_pair_index is None:
+            args.source_video_pair_index = [0]
+        args.source_video_output_hw = "384,512"
+        args.local_mlx_concurrency = 1
+        if args.timeout_seconds == 0:
+            args.timeout_seconds = 7200
+        return
     raise ExperimentQueueError(f"unsupported control profile: {args.control_profile}")
 
 
@@ -791,6 +863,7 @@ def main(argv: list[str] | None = None) -> int:
             seeds=args.seed or [17],
             descriptor_ids=args.optimizer_descriptor_id,
             steps=args.steps,
+            step_counts=args.step_count,
             batch_size=args.batch_size,
             synthetic_pairs=args.synthetic_pairs,
             base_channels=args.base_channels,

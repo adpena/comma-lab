@@ -153,6 +153,19 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     assert "pytorch_export_forward_parity_is_local_probe_not_score_authority" in (
         manifest["exact_readiness_refusal"]["blockers"]
     )
+    assert PR95_EXPORT_FORWARD_PARITY_BLOCKER not in (
+        manifest["source_faithfulness_blockers"]
+    )
+    assert PR95_EXPORT_FORWARD_PARITY_BLOCKER not in (
+        manifest["runtime_profile"]["source_faithfulness_blockers"]
+    )
+    assert PR95_EXPORT_FORWARD_PARITY_BLOCKER not in (
+        manifest["optimizer_recipe"]["source_faithfulness_blockers"]
+    )
+    assert "blocker" not in manifest["pytorch_export_parity"]
+    assert manifest["pytorch_export_parity"]["authority_note"] == (
+        "local_mlx_pytorch_export_parity_probe_is_not_contest_auth_eval"
+    )
     assert summary["runtime_consumption_proof"]["runtime_consumption_proven"] is True
     assert summary["pytorch_export_forward_parity"][
         "pytorch_export_forward_parity_established"
@@ -251,6 +264,10 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     assert representation["pytorch_export_forward_parity"][
         "pytorch_export_forward_parity_established"
     ] is True
+    assert PR95_EXPORT_FORWARD_PARITY_BLOCKER not in (
+        representation["runtime_profile"]["source_faithfulness_blockers"]
+    )
+    assert "blocker" not in representation["pytorch_export_parity"]
     assert representation["candidate_params"]["pytorch_export_forward_parity_present"] is True
     assert representation["candidate_params"]["pytorch_export_forward_parity_requested"] is True
     assert representation["source_faithful_preprocess_smoke"][

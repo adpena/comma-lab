@@ -68,6 +68,8 @@ workspace/tools/
 # The ones below are known large files that should never be in git.
 experiments/raft_flow.pt
 experiments/results/**/*.pt
+.omx/research/**/pr95_pytorch_state_dict.pt
+.omx/research/**/runtime_consumption_work/
 
 # Generated experiment/custody roots are local by default. Preserve signal by
 # promoting compact summaries into .omx/research/, docs/, reports/, or source;

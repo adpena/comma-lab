@@ -1,0 +1,3283 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1,
+      "local_cuda": 1,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "local_training_0000_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6",
+        "device": "mlx",
+        "dispatch_packet_ready": false,
+        "generated_at_utc": "2026-05-25T19:18:33Z",
+        "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+        "optimizer_config_sha256": "8256163880e1ecb59690f128fb51e83fa33c8964b31b3990ecf165923c88334b",
+        "optimizer_descriptor_id": "pr95_stage1_adamw_baseline_mlx",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+        "pr95_1to1_reproduction_claim": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hnerv",
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "seed": 31,
+        "source_plan_schema": "representation_training_probe_plan_v1",
+        "stage_index": 1,
+        "substrate_family": "nerv_family",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 10,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_timing_smoke.py",
+            "--stage",
+            "1",
+            "--steps",
+            "1",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "31",
+            "--base-channels",
+            "36",
+            "--latent-dim",
+            "28",
+            "--optimizer-descriptor-id",
+            "pr95_stage1_adamw_baseline_mlx",
+            "--output-dir",
+            ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674",
+            "--allow-existing-output-dir",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-timeout-seconds",
+            "900.0",
+            "--runtime-proof-max-output-bytes",
+            "67108864",
+            "--write-pytorch-export-parity",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--pytorch-export-mlx-device",
+            "cpu",
+            "--pytorch-export-atol-max",
+            "0.002",
+            "--pytorch-export-atol-mean",
+            "0.0001",
+            "--pytorch-export-sample-index",
+            "0",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-output-hw",
+            "384,512",
+            "--source-video-gradient-shape",
+            "1,2,16,20,3",
+            "--source-video-pair-index",
+            "0",
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/representation_training_manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "representation_training_probe_manifest_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/representation_training_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6",
+              "key": "candidate_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 1,
+              "key": "candidate_params.stage_index",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 31,
+              "key": "seed",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_stage1_adamw_baseline_mlx",
+              "key": "candidate_params.optimizer_descriptor_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "8256163880e1ecb59690f128fb51e83fa33c8964b31b3990ecf165923c88334b",
+              "key": "candidate_params.optimizer_config_sha256",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "embedding_theta1_hidden_muon_adamw",
+              "key": "candidate_params.parameter_group_lr_policy_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+              "key": "candidate_params.parameter_group_lr_policy_sha256",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/source_video_training_target.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_training_target.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_training_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_source_video_rgb_pairs",
+              "key": "target_source.kind",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "rgb_yuv6_mse",
+              "key": "training_loss_surface",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/source_video_training_target.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/source_video_preprocess_smoke.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_loader_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_preprocess_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "gradient_probe.gradient_reachable",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "contains": "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+              "key": "exact_readiness_refusal.blockers",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/source_video_preprocess_smoke.json",
+              "type": "json_array_contains"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/source_video_preprocess_smoke.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/pr95_public_archive.zip",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/pr95_public_archive_export.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_archive_export.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proof_present",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/pr95_public_archive_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/pr95_pytorch_state_dict.pt",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/pytorch_export_forward_parity.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "pytorch_export_forward_parity_established",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/pytorch_export_forward_parity.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/runtime_consumption_proof.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_runtime_consumption_proof.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proven",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/runtime_consumption_proof.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/manifest.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/representation_training_manifest.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/source_video_training_target.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/source_video_preprocess_smoke.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/pr95_public_archive.zip",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/pr95_public_archive_export.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/pr95_pytorch_state_dict.pt",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/pytorch_export_forward_parity.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/runtime_consumption_proof.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 7200
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "local_training_0001_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6",
+        "device": "mlx",
+        "dispatch_packet_ready": false,
+        "generated_at_utc": "2026-05-25T19:18:33Z",
+        "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+        "optimizer_config_sha256": "8256163880e1ecb59690f128fb51e83fa33c8964b31b3990ecf165923c88334b",
+        "optimizer_descriptor_id": "pr95_stage1_adamw_baseline_mlx",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+        "pr95_1to1_reproduction_claim": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hnerv",
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "seed": 31,
+        "source_plan_schema": "representation_training_probe_plan_v1",
+        "stage_index": 1,
+        "substrate_family": "nerv_family",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 11,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_timing_smoke.py",
+            "--stage",
+            "1",
+            "--steps",
+            "4",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "31",
+            "--base-channels",
+            "36",
+            "--latent-dim",
+            "28",
+            "--optimizer-descriptor-id",
+            "pr95_stage1_adamw_baseline_mlx",
+            "--output-dir",
+            ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98",
+            "--allow-existing-output-dir",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-timeout-seconds",
+            "900.0",
+            "--runtime-proof-max-output-bytes",
+            "67108864",
+            "--write-pytorch-export-parity",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--pytorch-export-mlx-device",
+            "cpu",
+            "--pytorch-export-atol-max",
+            "0.002",
+            "--pytorch-export-atol-mean",
+            "0.0001",
+            "--pytorch-export-sample-index",
+            "0",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-output-hw",
+            "384,512",
+            "--source-video-gradient-shape",
+            "1,2,16,20,3",
+            "--source-video-pair-index",
+            "0",
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/representation_training_manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "representation_training_probe_manifest_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/representation_training_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6",
+              "key": "candidate_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 1,
+              "key": "candidate_params.stage_index",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 31,
+              "key": "seed",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_stage1_adamw_baseline_mlx",
+              "key": "candidate_params.optimizer_descriptor_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "8256163880e1ecb59690f128fb51e83fa33c8964b31b3990ecf165923c88334b",
+              "key": "candidate_params.optimizer_config_sha256",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "embedding_theta1_hidden_muon_adamw",
+              "key": "candidate_params.parameter_group_lr_policy_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+              "key": "candidate_params.parameter_group_lr_policy_sha256",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/source_video_training_target.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_training_target.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_training_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_source_video_rgb_pairs",
+              "key": "target_source.kind",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "rgb_yuv6_mse",
+              "key": "training_loss_surface",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/source_video_training_target.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/source_video_preprocess_smoke.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_loader_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_preprocess_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "gradient_probe.gradient_reachable",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "contains": "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+              "key": "exact_readiness_refusal.blockers",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/source_video_preprocess_smoke.json",
+              "type": "json_array_contains"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/source_video_preprocess_smoke.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/pr95_public_archive.zip",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/pr95_public_archive_export.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_archive_export.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proof_present",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/pr95_public_archive_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/pr95_pytorch_state_dict.pt",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/pytorch_export_forward_parity.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "pytorch_export_forward_parity_established",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/pytorch_export_forward_parity.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/runtime_consumption_proof.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_runtime_consumption_proof.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proven",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/runtime_consumption_proof.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/manifest.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/representation_training_manifest.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/source_video_training_target.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/source_video_preprocess_smoke.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/pr95_public_archive.zip",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/pr95_public_archive_export.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/pr95_pytorch_state_dict.pt",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/pytorch_export_forward_parity.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_1263da42dd98/runtime_consumption_proof.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 7200
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "local_training_0002_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6",
+        "device": "mlx",
+        "dispatch_packet_ready": false,
+        "generated_at_utc": "2026-05-25T19:18:33Z",
+        "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+        "optimizer_config_sha256": "8256163880e1ecb59690f128fb51e83fa33c8964b31b3990ecf165923c88334b",
+        "optimizer_descriptor_id": "pr95_stage1_adamw_baseline_mlx",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+        "pr95_1to1_reproduction_claim": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hnerv",
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "seed": 31,
+        "source_plan_schema": "representation_training_probe_plan_v1",
+        "stage_index": 1,
+        "substrate_family": "nerv_family",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 12,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_timing_smoke.py",
+            "--stage",
+            "1",
+            "--steps",
+            "16",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "31",
+            "--base-channels",
+            "36",
+            "--latent-dim",
+            "28",
+            "--optimizer-descriptor-id",
+            "pr95_stage1_adamw_baseline_mlx",
+            "--output-dir",
+            ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268",
+            "--allow-existing-output-dir",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-timeout-seconds",
+            "900.0",
+            "--runtime-proof-max-output-bytes",
+            "67108864",
+            "--write-pytorch-export-parity",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--pytorch-export-mlx-device",
+            "cpu",
+            "--pytorch-export-atol-max",
+            "0.002",
+            "--pytorch-export-atol-mean",
+            "0.0001",
+            "--pytorch-export-sample-index",
+            "0",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-output-hw",
+            "384,512",
+            "--source-video-gradient-shape",
+            "1,2,16,20,3",
+            "--source-video-pair-index",
+            "0",
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/representation_training_manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "representation_training_probe_manifest_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/representation_training_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6",
+              "key": "candidate_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 1,
+              "key": "candidate_params.stage_index",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 31,
+              "key": "seed",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_stage1_adamw_baseline_mlx",
+              "key": "candidate_params.optimizer_descriptor_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "8256163880e1ecb59690f128fb51e83fa33c8964b31b3990ecf165923c88334b",
+              "key": "candidate_params.optimizer_config_sha256",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "embedding_theta1_hidden_muon_adamw",
+              "key": "candidate_params.parameter_group_lr_policy_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+              "key": "candidate_params.parameter_group_lr_policy_sha256",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/source_video_training_target.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_training_target.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_training_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_source_video_rgb_pairs",
+              "key": "target_source.kind",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "rgb_yuv6_mse",
+              "key": "training_loss_surface",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/source_video_training_target.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/source_video_preprocess_smoke.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_loader_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_preprocess_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "gradient_probe.gradient_reachable",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "contains": "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+              "key": "exact_readiness_refusal.blockers",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/source_video_preprocess_smoke.json",
+              "type": "json_array_contains"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/source_video_preprocess_smoke.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/pr95_public_archive.zip",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/pr95_public_archive_export.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_archive_export.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proof_present",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/pr95_public_archive_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/pr95_pytorch_state_dict.pt",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/pytorch_export_forward_parity.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "pytorch_export_forward_parity_established",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/pytorch_export_forward_parity.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/runtime_consumption_proof.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_runtime_consumption_proof.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proven",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/runtime_consumption_proof.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/manifest.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/representation_training_manifest.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/source_video_training_target.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/source_video_preprocess_smoke.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/pr95_public_archive.zip",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/pr95_public_archive_export.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/pr95_pytorch_state_dict.pt",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/pytorch_export_forward_parity.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/runtime_consumption_proof.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 7200
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "local_training_0003_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6",
+        "device": "mlx",
+        "dispatch_packet_ready": false,
+        "generated_at_utc": "2026-05-25T19:18:33Z",
+        "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+        "optimizer_config_sha256": "3a48c9864f5b4750dc5a7b3252416610d938cd3d155dd4da626fe558910b5831",
+        "optimizer_descriptor_id": "pr95_stage5_adamw_baseline_mlx",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+        "pr95_1to1_reproduction_claim": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hnerv",
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "seed": 31,
+        "source_plan_schema": "representation_training_probe_plan_v1",
+        "stage_index": 5,
+        "substrate_family": "nerv_family",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 13,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_timing_smoke.py",
+            "--stage",
+            "5",
+            "--steps",
+            "1",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "31",
+            "--base-channels",
+            "36",
+            "--latent-dim",
+            "28",
+            "--optimizer-descriptor-id",
+            "pr95_stage5_adamw_baseline_mlx",
+            "--output-dir",
+            ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93",
+            "--allow-existing-output-dir",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-timeout-seconds",
+            "900.0",
+            "--runtime-proof-max-output-bytes",
+            "67108864",
+            "--write-pytorch-export-parity",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--pytorch-export-mlx-device",
+            "cpu",
+            "--pytorch-export-atol-max",
+            "0.002",
+            "--pytorch-export-atol-mean",
+            "0.0001",
+            "--pytorch-export-sample-index",
+            "0",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-output-hw",
+            "384,512",
+            "--source-video-gradient-shape",
+            "1,2,16,20,3",
+            "--source-video-pair-index",
+            "0",
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/representation_training_manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "representation_training_probe_manifest_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/representation_training_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6",
+              "key": "candidate_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 5,
+              "key": "candidate_params.stage_index",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 31,
+              "key": "seed",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_stage5_adamw_baseline_mlx",
+              "key": "candidate_params.optimizer_descriptor_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "3a48c9864f5b4750dc5a7b3252416610d938cd3d155dd4da626fe558910b5831",
+              "key": "candidate_params.optimizer_config_sha256",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "embedding_theta1_hidden_muon_adamw",
+              "key": "candidate_params.parameter_group_lr_policy_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+              "key": "candidate_params.parameter_group_lr_policy_sha256",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/source_video_training_target.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_training_target.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_training_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_source_video_rgb_pairs",
+              "key": "target_source.kind",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "rgb_yuv6_mse",
+              "key": "training_loss_surface",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/source_video_training_target.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/source_video_preprocess_smoke.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_loader_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_preprocess_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "gradient_probe.gradient_reachable",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "contains": "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+              "key": "exact_readiness_refusal.blockers",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/source_video_preprocess_smoke.json",
+              "type": "json_array_contains"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/source_video_preprocess_smoke.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/pr95_public_archive.zip",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/pr95_public_archive_export.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_archive_export.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proof_present",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/pr95_public_archive_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/pr95_pytorch_state_dict.pt",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/pytorch_export_forward_parity.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "pytorch_export_forward_parity_established",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/pytorch_export_forward_parity.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/runtime_consumption_proof.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_runtime_consumption_proof.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proven",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/runtime_consumption_proof.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/manifest.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/representation_training_manifest.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/source_video_training_target.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/source_video_preprocess_smoke.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/pr95_public_archive.zip",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/pr95_public_archive_export.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/pr95_pytorch_state_dict.pt",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/pytorch_export_forward_parity.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_2c9fd1a05e93/runtime_consumption_proof.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 7200
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "local_training_0004_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6",
+        "device": "mlx",
+        "dispatch_packet_ready": false,
+        "generated_at_utc": "2026-05-25T19:18:33Z",
+        "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+        "optimizer_config_sha256": "3a48c9864f5b4750dc5a7b3252416610d938cd3d155dd4da626fe558910b5831",
+        "optimizer_descriptor_id": "pr95_stage5_adamw_baseline_mlx",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+        "pr95_1to1_reproduction_claim": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hnerv",
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "seed": 31,
+        "source_plan_schema": "representation_training_probe_plan_v1",
+        "stage_index": 5,
+        "substrate_family": "nerv_family",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 14,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_timing_smoke.py",
+            "--stage",
+            "5",
+            "--steps",
+            "4",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "31",
+            "--base-channels",
+            "36",
+            "--latent-dim",
+            "28",
+            "--optimizer-descriptor-id",
+            "pr95_stage5_adamw_baseline_mlx",
+            "--output-dir",
+            ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995",
+            "--allow-existing-output-dir",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-timeout-seconds",
+            "900.0",
+            "--runtime-proof-max-output-bytes",
+            "67108864",
+            "--write-pytorch-export-parity",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--pytorch-export-mlx-device",
+            "cpu",
+            "--pytorch-export-atol-max",
+            "0.002",
+            "--pytorch-export-atol-mean",
+            "0.0001",
+            "--pytorch-export-sample-index",
+            "0",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-output-hw",
+            "384,512",
+            "--source-video-gradient-shape",
+            "1,2,16,20,3",
+            "--source-video-pair-index",
+            "0",
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/representation_training_manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "representation_training_probe_manifest_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/representation_training_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6",
+              "key": "candidate_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 5,
+              "key": "candidate_params.stage_index",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 31,
+              "key": "seed",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_stage5_adamw_baseline_mlx",
+              "key": "candidate_params.optimizer_descriptor_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "3a48c9864f5b4750dc5a7b3252416610d938cd3d155dd4da626fe558910b5831",
+              "key": "candidate_params.optimizer_config_sha256",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "embedding_theta1_hidden_muon_adamw",
+              "key": "candidate_params.parameter_group_lr_policy_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+              "key": "candidate_params.parameter_group_lr_policy_sha256",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/source_video_training_target.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_training_target.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_training_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_source_video_rgb_pairs",
+              "key": "target_source.kind",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "rgb_yuv6_mse",
+              "key": "training_loss_surface",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/source_video_training_target.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/source_video_preprocess_smoke.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_loader_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_preprocess_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "gradient_probe.gradient_reachable",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "contains": "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+              "key": "exact_readiness_refusal.blockers",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/source_video_preprocess_smoke.json",
+              "type": "json_array_contains"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/source_video_preprocess_smoke.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/pr95_public_archive.zip",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/pr95_public_archive_export.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_archive_export.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proof_present",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/pr95_public_archive_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/pr95_pytorch_state_dict.pt",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/pytorch_export_forward_parity.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "pytorch_export_forward_parity_established",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/pytorch_export_forward_parity.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/runtime_consumption_proof.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_runtime_consumption_proof.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proven",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/runtime_consumption_proof.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/manifest.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/representation_training_manifest.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/source_video_training_target.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/source_video_preprocess_smoke.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/pr95_public_archive.zip",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/pr95_public_archive_export.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/pr95_pytorch_state_dict.pt",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/pytorch_export_forward_parity.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_6ccca107f995/runtime_consumption_proof.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 7200
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "local_training_0005_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6",
+        "device": "mlx",
+        "dispatch_packet_ready": false,
+        "generated_at_utc": "2026-05-25T19:18:33Z",
+        "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+        "optimizer_config_sha256": "3a48c9864f5b4750dc5a7b3252416610d938cd3d155dd4da626fe558910b5831",
+        "optimizer_descriptor_id": "pr95_stage5_adamw_baseline_mlx",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+        "pr95_1to1_reproduction_claim": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hnerv",
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "seed": 31,
+        "source_plan_schema": "representation_training_probe_plan_v1",
+        "stage_index": 5,
+        "substrate_family": "nerv_family",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 15,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_timing_smoke.py",
+            "--stage",
+            "5",
+            "--steps",
+            "16",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "31",
+            "--base-channels",
+            "36",
+            "--latent-dim",
+            "28",
+            "--optimizer-descriptor-id",
+            "pr95_stage5_adamw_baseline_mlx",
+            "--output-dir",
+            ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62",
+            "--allow-existing-output-dir",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-timeout-seconds",
+            "900.0",
+            "--runtime-proof-max-output-bytes",
+            "67108864",
+            "--write-pytorch-export-parity",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--pytorch-export-mlx-device",
+            "cpu",
+            "--pytorch-export-atol-max",
+            "0.002",
+            "--pytorch-export-atol-mean",
+            "0.0001",
+            "--pytorch-export-sample-index",
+            "0",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-output-hw",
+            "384,512",
+            "--source-video-gradient-shape",
+            "1,2,16,20,3",
+            "--source-video-pair-index",
+            "0",
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/representation_training_manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "representation_training_probe_manifest_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/representation_training_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6",
+              "key": "candidate_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 5,
+              "key": "candidate_params.stage_index",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 31,
+              "key": "seed",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_stage5_adamw_baseline_mlx",
+              "key": "candidate_params.optimizer_descriptor_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "3a48c9864f5b4750dc5a7b3252416610d938cd3d155dd4da626fe558910b5831",
+              "key": "candidate_params.optimizer_config_sha256",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "embedding_theta1_hidden_muon_adamw",
+              "key": "candidate_params.parameter_group_lr_policy_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+              "key": "candidate_params.parameter_group_lr_policy_sha256",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/source_video_training_target.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_training_target.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_training_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_source_video_rgb_pairs",
+              "key": "target_source.kind",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "rgb_yuv6_mse",
+              "key": "training_loss_surface",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/source_video_training_target.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/source_video_preprocess_smoke.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_loader_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_preprocess_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "gradient_probe.gradient_reachable",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "contains": "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+              "key": "exact_readiness_refusal.blockers",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/source_video_preprocess_smoke.json",
+              "type": "json_array_contains"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/source_video_preprocess_smoke.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/pr95_public_archive.zip",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/pr95_public_archive_export.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_archive_export.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proof_present",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/pr95_public_archive_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/pr95_pytorch_state_dict.pt",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/pytorch_export_forward_parity.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "pytorch_export_forward_parity_established",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/pytorch_export_forward_parity.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/runtime_consumption_proof.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_runtime_consumption_proof.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proven",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/runtime_consumption_proof.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/manifest.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/representation_training_manifest.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/source_video_training_target.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/source_video_preprocess_smoke.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/pr95_public_archive.zip",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/pr95_public_archive_export.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/pr95_pytorch_state_dict.pt",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/pytorch_export_forward_parity.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed31_c36_ade51a80ad62/runtime_consumption_proof.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 7200
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "local_training_0006_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps1_c36_source_video_rgb_yuv6",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps1_c36_source_video_rgb_yuv6",
+        "device": "mlx",
+        "dispatch_packet_ready": false,
+        "generated_at_utc": "2026-05-25T19:18:33Z",
+        "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+        "optimizer_config_sha256": "c5d401d14216813875097611f6cb5a5582239d1b2bb1804d3bc9edd005acc3af",
+        "optimizer_descriptor_id": "pr95_stage8_muon_adamw_mlx",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+        "pr95_1to1_reproduction_claim": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hnerv",
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "seed": 31,
+        "source_plan_schema": "representation_training_probe_plan_v1",
+        "stage_index": 8,
+        "substrate_family": "nerv_family",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 16,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_timing_smoke.py",
+            "--stage",
+            "8",
+            "--steps",
+            "1",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "31",
+            "--base-channels",
+            "36",
+            "--latent-dim",
+            "28",
+            "--optimizer-descriptor-id",
+            "pr95_stage8_muon_adamw_mlx",
+            "--output-dir",
+            ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027",
+            "--allow-existing-output-dir",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-timeout-seconds",
+            "900.0",
+            "--runtime-proof-max-output-bytes",
+            "67108864",
+            "--write-pytorch-export-parity",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--pytorch-export-mlx-device",
+            "cpu",
+            "--pytorch-export-atol-max",
+            "0.002",
+            "--pytorch-export-atol-mean",
+            "0.0001",
+            "--pytorch-export-sample-index",
+            "0",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-output-hw",
+            "384,512",
+            "--source-video-gradient-shape",
+            "1,2,16,20,3",
+            "--source-video-pair-index",
+            "0",
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/representation_training_manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "representation_training_probe_manifest_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/representation_training_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps1_c36_source_video_rgb_yuv6",
+              "key": "candidate_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 8,
+              "key": "candidate_params.stage_index",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 31,
+              "key": "seed",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_stage8_muon_adamw_mlx",
+              "key": "candidate_params.optimizer_descriptor_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c5d401d14216813875097611f6cb5a5582239d1b2bb1804d3bc9edd005acc3af",
+              "key": "candidate_params.optimizer_config_sha256",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "embedding_theta1_hidden_muon_adamw",
+              "key": "candidate_params.parameter_group_lr_policy_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+              "key": "candidate_params.parameter_group_lr_policy_sha256",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/source_video_training_target.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_training_target.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_training_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_source_video_rgb_pairs",
+              "key": "target_source.kind",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "rgb_yuv6_mse",
+              "key": "training_loss_surface",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/source_video_training_target.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/source_video_preprocess_smoke.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_loader_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_preprocess_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "gradient_probe.gradient_reachable",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "contains": "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+              "key": "exact_readiness_refusal.blockers",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/source_video_preprocess_smoke.json",
+              "type": "json_array_contains"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/source_video_preprocess_smoke.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/pr95_public_archive.zip",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/pr95_public_archive_export.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_archive_export.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proof_present",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/pr95_public_archive_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/pr95_pytorch_state_dict.pt",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/pytorch_export_forward_parity.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "pytorch_export_forward_parity_established",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/pytorch_export_forward_parity.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/runtime_consumption_proof.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_runtime_consumption_proof.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proven",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/runtime_consumption_proof.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/manifest.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/representation_training_manifest.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/source_video_training_target.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/source_video_preprocess_smoke.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/pr95_public_archive.zip",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/pr95_public_archive_export.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/pr95_pytorch_state_dict.pt",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/pytorch_export_forward_parity.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_3b34ed39b027/runtime_consumption_proof.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 7200
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "local_training_0007_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps4_c36_source_video_rgb_yuv6",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps4_c36_source_video_rgb_yuv6",
+        "device": "mlx",
+        "dispatch_packet_ready": false,
+        "generated_at_utc": "2026-05-25T19:18:33Z",
+        "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+        "optimizer_config_sha256": "c5d401d14216813875097611f6cb5a5582239d1b2bb1804d3bc9edd005acc3af",
+        "optimizer_descriptor_id": "pr95_stage8_muon_adamw_mlx",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+        "pr95_1to1_reproduction_claim": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hnerv",
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "seed": 31,
+        "source_plan_schema": "representation_training_probe_plan_v1",
+        "stage_index": 8,
+        "substrate_family": "nerv_family",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 17,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_timing_smoke.py",
+            "--stage",
+            "8",
+            "--steps",
+            "4",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "31",
+            "--base-channels",
+            "36",
+            "--latent-dim",
+            "28",
+            "--optimizer-descriptor-id",
+            "pr95_stage8_muon_adamw_mlx",
+            "--output-dir",
+            ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e",
+            "--allow-existing-output-dir",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-timeout-seconds",
+            "900.0",
+            "--runtime-proof-max-output-bytes",
+            "67108864",
+            "--write-pytorch-export-parity",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--pytorch-export-mlx-device",
+            "cpu",
+            "--pytorch-export-atol-max",
+            "0.002",
+            "--pytorch-export-atol-mean",
+            "0.0001",
+            "--pytorch-export-sample-index",
+            "0",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-output-hw",
+            "384,512",
+            "--source-video-gradient-shape",
+            "1,2,16,20,3",
+            "--source-video-pair-index",
+            "0",
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/representation_training_manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "representation_training_probe_manifest_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/representation_training_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps4_c36_source_video_rgb_yuv6",
+              "key": "candidate_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 8,
+              "key": "candidate_params.stage_index",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 31,
+              "key": "seed",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_stage8_muon_adamw_mlx",
+              "key": "candidate_params.optimizer_descriptor_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c5d401d14216813875097611f6cb5a5582239d1b2bb1804d3bc9edd005acc3af",
+              "key": "candidate_params.optimizer_config_sha256",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "embedding_theta1_hidden_muon_adamw",
+              "key": "candidate_params.parameter_group_lr_policy_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+              "key": "candidate_params.parameter_group_lr_policy_sha256",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/source_video_training_target.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_training_target.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_training_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_source_video_rgb_pairs",
+              "key": "target_source.kind",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "rgb_yuv6_mse",
+              "key": "training_loss_surface",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/source_video_training_target.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/source_video_preprocess_smoke.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_loader_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_preprocess_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "gradient_probe.gradient_reachable",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "contains": "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+              "key": "exact_readiness_refusal.blockers",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/source_video_preprocess_smoke.json",
+              "type": "json_array_contains"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/source_video_preprocess_smoke.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/pr95_public_archive.zip",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/pr95_public_archive_export.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_archive_export.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proof_present",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/pr95_public_archive_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/pr95_pytorch_state_dict.pt",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/pytorch_export_forward_parity.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "pytorch_export_forward_parity_established",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/pytorch_export_forward_parity.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/runtime_consumption_proof.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_runtime_consumption_proof.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proven",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/runtime_consumption_proof.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/manifest.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/representation_training_manifest.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/source_video_training_target.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/source_video_preprocess_smoke.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/pr95_public_archive.zip",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/pr95_public_archive_export.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/pr95_pytorch_state_dict.pt",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/pytorch_export_forward_parity.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_d5a9914ed96e/runtime_consumption_proof.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 7200
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "local_training_0008_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps16_c36_source_video_rgb_yuv6",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps16_c36_source_video_rgb_yuv6",
+        "device": "mlx",
+        "dispatch_packet_ready": false,
+        "generated_at_utc": "2026-05-25T19:18:33Z",
+        "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+        "optimizer_config_sha256": "c5d401d14216813875097611f6cb5a5582239d1b2bb1804d3bc9edd005acc3af",
+        "optimizer_descriptor_id": "pr95_stage8_muon_adamw_mlx",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+        "pr95_1to1_reproduction_claim": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hnerv",
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "seed": 31,
+        "source_plan_schema": "representation_training_probe_plan_v1",
+        "stage_index": 8,
+        "substrate_family": "nerv_family",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 18,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_timing_smoke.py",
+            "--stage",
+            "8",
+            "--steps",
+            "16",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "31",
+            "--base-channels",
+            "36",
+            "--latent-dim",
+            "28",
+            "--optimizer-descriptor-id",
+            "pr95_stage8_muon_adamw_mlx",
+            "--output-dir",
+            ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e",
+            "--allow-existing-output-dir",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-timeout-seconds",
+            "900.0",
+            "--runtime-proof-max-output-bytes",
+            "67108864",
+            "--write-pytorch-export-parity",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--pytorch-export-mlx-device",
+            "cpu",
+            "--pytorch-export-atol-max",
+            "0.002",
+            "--pytorch-export-atol-mean",
+            "0.0001",
+            "--pytorch-export-sample-index",
+            "0",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-output-hw",
+            "384,512",
+            "--source-video-gradient-shape",
+            "1,2,16,20,3",
+            "--source-video-pair-index",
+            "0",
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/representation_training_manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "representation_training_probe_manifest_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/representation_training_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps16_c36_source_video_rgb_yuv6",
+              "key": "candidate_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 8,
+              "key": "candidate_params.stage_index",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 31,
+              "key": "seed",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_stage8_muon_adamw_mlx",
+              "key": "candidate_params.optimizer_descriptor_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c5d401d14216813875097611f6cb5a5582239d1b2bb1804d3bc9edd005acc3af",
+              "key": "candidate_params.optimizer_config_sha256",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "embedding_theta1_hidden_muon_adamw",
+              "key": "candidate_params.parameter_group_lr_policy_id",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+              "key": "candidate_params.parameter_group_lr_policy_sha256",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/source_video_training_target.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_training_target.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_training_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_source_video_rgb_pairs",
+              "key": "target_source.kind",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "rgb_yuv6_mse",
+              "key": "training_loss_surface",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/source_video_training_target.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/source_video_preprocess_smoke.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_loader_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_preprocess_ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "gradient_probe.gradient_reachable",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "contains": "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+              "key": "exact_readiness_refusal.blockers",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/source_video_preprocess_smoke.json",
+              "type": "json_array_contains"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/source_video_preprocess_smoke.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/pr95_public_archive.zip",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/pr95_public_archive_export.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_archive_export.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proof_present",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/pr95_public_archive_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/pr95_pytorch_state_dict.pt",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/pytorch_export_forward_parity.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "pytorch_export_forward_parity_established",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/pytorch_export_forward_parity.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/runtime_consumption_proof.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_runtime_consumption_proof.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proven",
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/runtime_consumption_proof.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/manifest.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/representation_training_manifest.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/source_video_training_target.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/source_video_preprocess_smoke.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/pr95_public_archive.zip",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/pr95_public_archive_export.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/pr95_pytorch_state_dict.pt",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/pytorch_export_forward_parity.json",
+              ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed31_c36_ad0f00f2ca8e/runtime_consumption_proof.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 7200
+        }
+      ],
+      "tags": []
+    }
+  ],
+  "queue_id": "codex_pr95_stage158_timing_ladder_20260525T191820Z",
+  "schema": "experiment_queue.v1"
+}

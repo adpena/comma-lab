@@ -1,0 +1,89 @@
+{
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "elapsed_seconds": 0.06239812506828457,
+  "exact_readiness_refusal": {
+    "blockers": [
+      "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+      "pr95_segnet_posenet_network_loss_not_wired_to_mlx",
+      "pr95_stage_hparams_and_cosine_schedules_not_all_source_matched",
+      "pr95_qat_c1a_and_resume_semantics_not_ported_to_mlx",
+      "full_frame_inflate_parity_against_source_runtime_not_run",
+      "requires_byte_closed_contest_archive_export",
+      "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+      "pytorch_export_forward_parity_is_local_probe_not_score_authority"
+    ],
+    "ready": false
+  },
+  "frame_indices": [
+    0,
+    1
+  ],
+  "frame_reader_kind": "upstream_pyav_cpu",
+  "gpu_launched": false,
+  "gradient_probe": {
+    "camera_hw": [
+      37,
+      43
+    ],
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "elapsed_seconds": 0.0018800420220941305,
+    "gpu_launched": false,
+    "gradient_reachable": true,
+    "input_shape": [
+      1,
+      2,
+      16,
+      20,
+      3
+    ],
+    "max_abs_gradient": 0.00046743344864808023,
+    "min_abs_gradient": 1e-08,
+    "nonzero_gradient_count": 1920,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "pr95_hnerv_mlx_preprocess_gradient_probe_v1",
+    "score_claim": false,
+    "score_claim_valid": false
+  },
+  "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+  "pair_indices": [
+    0
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "scorer_rgb_shape": [
+    1,
+    2,
+    384,
+    512,
+    3
+  ],
+  "source_frame_pair_shape": [
+    1,
+    2,
+    874,
+    1164,
+    3
+  ],
+  "source_video_loader_ready": true,
+  "source_video_preprocess_ready": true,
+  "upstream_dir": "upstream",
+  "video_path": "upstream/videos/0.mkv",
+  "video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
+  "yuv6_output_shape": [
+    1,
+    2,
+    192,
+    256,
+    6
+  ]
+}

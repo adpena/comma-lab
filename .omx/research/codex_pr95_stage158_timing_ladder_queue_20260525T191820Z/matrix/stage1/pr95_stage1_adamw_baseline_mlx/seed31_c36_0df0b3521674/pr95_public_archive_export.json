@@ -1,0 +1,49 @@
+{
+  "archive_zip_bytes": 230338,
+  "archive_zip_path": "/Users/adpena/Projects/pact/.omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/pr95_public_archive.zip",
+  "archive_zip_sha256": "0b53b2b179cfd3aa49183e8eb94dc606079f2d06a767a2baa11f0789b7231491",
+  "bytes": 230338,
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "exact_readiness_refusal": {
+    "blockers": [
+      "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+      "requires_exact_cpu_cuda_auth_eval_before_score_claim"
+    ],
+    "ready": false,
+    "schema": "exact_readiness_refusal.v1"
+  },
+  "gpu_launched": false,
+  "member": "0.bin",
+  "member_bytes": 230230,
+  "member_compress_type": 0,
+  "member_name": "0.bin",
+  "member_sha256": "f8417996b4266dba5f2adb7682a89e7d7d5cd439da3dcaed278969ad88f26341",
+  "parsed_latent_shape": [
+    1,
+    28
+  ],
+  "parsed_meta": {
+    "base_channels": 36,
+    "eval_size": [
+      384,
+      512
+    ],
+    "latent_dim": 28,
+    "n_pairs": 1
+  },
+  "parsed_state_dict_tensor_count": 28,
+  "path": "/Users/adpena/Projects/pact/.omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/pr95_public_archive.zip",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_proof_present": false,
+  "runtime_consumption_proof_path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_0df0b3521674/runtime_consumption_proof.json",
+  "runtime_consumption_proof_present": true,
+  "runtime_consumption_proven": true,
+  "schema": "pr95_hnerv_archive_export.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "sha256": "0b53b2b179cfd3aa49183e8eb94dc606079f2d06a767a2baa11f0789b7231491"
+}

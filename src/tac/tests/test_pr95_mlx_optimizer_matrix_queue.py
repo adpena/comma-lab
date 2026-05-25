@@ -89,6 +89,7 @@ def test_pr95_mlx_optimizer_matrix_cli_emits_queueable_plans(
     assert summary["plan_count"] == 2
     assert manifest["schema"] == "pr95_hnerv_mlx_optimizer_matrix_queue.v1"
     assert manifest["plan_count"] == 2
+    assert manifest["step_counts"] == [2]
     assert manifest["refusal_count"] == 0
     assert manifest["score_claim"] is False
     assert manifest["promotion_eligible"] is False
@@ -116,6 +117,7 @@ def test_pr95_mlx_optimizer_matrix_cli_emits_queueable_plans(
         "pr95_stage8_muon_adamw_mlx",
     }
     for row in manifest["plans"]:
+        assert row["steps"] == 2
         plan = json.loads((REPO_ROOT / row["plan"]).read_text(encoding="utf-8"))
         assert plan["score_claim"] is False
         assert plan["recommended_execution"]["resource_kind"] == "local_mlx"
@@ -310,6 +312,7 @@ def test_pr95_mlx_optimizer_matrix_full_source_video_control_profile(
         "pr95_stage8_muon_adamw_mlx",
     }
     assert manifest["batch_size"] == 1
+    assert manifest["step_counts"] == [1]
     assert manifest["synthetic_pairs"] == 1
     assert manifest["base_channels"] == 36
     assert manifest["latent_dim"] == 28
@@ -335,6 +338,104 @@ def test_pr95_mlx_optimizer_matrix_full_source_video_control_profile(
         "--write-pytorch-export-parity" in experiment["steps"][0]["command"]
         for experiment in queue["experiments"]
     )
+
+    validation = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "experiment_queue.py"),
+            "--queue",
+            str(queue_path),
+            "validate",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=120,
+    )
+
+    assert validation.returncode == 0, validation.stderr
+    assert json.loads(validation.stdout)["valid"] is True
+
+
+def test_pr95_mlx_optimizer_matrix_stage158_timing_ladder_profile(
+    tmp_path: Path,
+) -> None:
+    output_root = tmp_path / "matrix"
+    queue_path = output_root / "queue.json"
+    manifest_path = output_root / "matrix_manifest.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "build_pr95_mlx_optimizer_matrix_queue.py"),
+            "--control-profile",
+            "stage158_source_video_timing_ladder",
+            "--seed",
+            "31",
+            "--output-root",
+            str(output_root),
+            "--queue-output",
+            str(queue_path),
+            "--manifest-output",
+            str(manifest_path),
+            "--queue-id",
+            "pr95_mlx_stage158_timing_ladder_fixture",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=180,
+    )
+
+    assert result.returncode == 0, result.stderr
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    queue = json.loads(queue_path.read_text(encoding="utf-8"))
+
+    assert manifest["control_profile"] == "stage158_source_video_timing_ladder"
+    assert manifest["stage_indices"] == [1, 5, 8]
+    assert manifest["step_counts"] == [1, 4, 16]
+    assert manifest["plan_count"] == 9
+    assert {row["stage_index"] for row in manifest["plans"]} == {1, 5, 8}
+    assert {row["steps"] for row in manifest["plans"]} == {1, 4, 16}
+    assert all(
+        row["optimizer_descriptor_id"]
+        in {
+            "pr95_stage1_adamw_baseline_mlx",
+            "pr95_stage5_adamw_baseline_mlx",
+            "pr95_stage8_muon_adamw_mlx",
+        }
+        for row in manifest["plans"]
+    )
+    assert manifest["train_on_source_video_pairs"] is True
+    assert manifest["source_video_loss_surface"] == "rgb_yuv6_mse"
+    assert manifest["prove_pr95_runtime_consumption"] is True
+    assert manifest["write_pytorch_export_parity"] is True
+    assert manifest["timeout_seconds"] == 7200
+    assert len(queue["experiments"]) == 9
+    assert queue["controls"]["max_concurrency"]["local_mlx"] == 1
+    assert all(
+        "--train-on-source-video-pairs" in experiment["steps"][0]["command"]
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        "--prove-pr95-runtime-consumption" in experiment["steps"][0]["command"]
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        "--write-pytorch-export-parity" in experiment["steps"][0]["command"]
+        for experiment in queue["experiments"]
+    )
+    command_step_counts = {
+        int(
+            experiment["steps"][0]["command"][
+                experiment["steps"][0]["command"].index("--steps") + 1
+            ]
+        )
+        for experiment in queue["experiments"]
+    }
+    assert command_step_counts == {1, 4, 16}
 
     validation = subprocess.run(
         [

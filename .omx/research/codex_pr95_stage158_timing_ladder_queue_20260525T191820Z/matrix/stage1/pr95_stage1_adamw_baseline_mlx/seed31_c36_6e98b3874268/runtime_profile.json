@@ -1,0 +1,112 @@
+{
+  "candidate_id": "pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6",
+  "device": "mlx",
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "examples_per_second": 40.407624539685145,
+  "full_pr95_source_faithful_training": false,
+  "gpu_launched": false,
+  "hardware_substrate": "Darwin_arm64_mlx",
+  "kernel_fusion_strategy_id": "native_mlx_pr95_hnerv_decoder_muon_adamw_v1",
+  "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+  "local_cloud_substitution": {
+    "cloud_gpu_reference": "PR95 HNeRV Muon stage timing and reproduction lane",
+    "intended_to_replace_cloud_gpu_training": true
+  },
+  "loss_surface_weights": {
+    "rgb_mse": 0.5,
+    "yuv6_mse": 0.5
+  },
+  "operator_mix": {
+    "bilinear_resize2x": 6,
+    "conv2d": 15,
+    "linear": 1,
+    "newton_schulz5": 0,
+    "pixel_shuffle_2x": 6
+  },
+  "optimizer_config_sha256": "8256163880e1ecb59690f128fb51e83fa33c8964b31b3990ecf165923c88334b",
+  "optimizer_descriptor_id": "pr95_stage1_adamw_baseline_mlx",
+  "packet_compiler_bridge": {
+    "archive_export_schema": "pr95_hnerv_archive_export.v1",
+    "archive_export_tool": "tools/run_pr95_mlx_timing_smoke.py",
+    "blockers": [],
+    "byte_closed_contest_archive_export_path": "/Users/adpena/Projects/pact/.omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/pr95_public_archive.zip",
+    "byte_closed_contest_archive_export_present": true,
+    "byte_closed_contest_archive_export_sha256": "96eb39be52238fa5724e3bbd663219650269c007b5ec3e0cbf32c6f80a9e3468",
+    "packet_compiler_target_declared": true,
+    "runtime_consumption_proof_path": ".omx/research/codex_pr95_stage158_timing_ladder_queue_20260525T191820Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed31_c36_6e98b3874268/runtime_consumption_proof.json",
+    "runtime_consumption_proof_present": true,
+    "runtime_consumption_proof_required": true
+  },
+  "parameter_group_fingerprint_sha256": "7975265f7c2f5bb0c20007ae41fad5a7a283d070534b0bc7524d84239431d8d4",
+  "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+  "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+  "profile_id": "pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "representation_family": "hnerv",
+  "schema": "trainer_runtime_profile_observation.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "seconds_per_step": 0.024747804687649477,
+  "seed": 31,
+  "source_faithful_training": false,
+  "source_faithful_training_scope": "source_video_target_loss_only",
+  "source_faithfulness_blockers": [
+    "pr95_source_video_rgb_yuv6_preprocess_loss_is_not_full_scorer_loss",
+    "pr95_segnet_posenet_network_loss_not_wired_to_mlx",
+    "pr95_stage_hparams_and_cosine_schedules_not_all_source_matched",
+    "pr95_qat_c1a_and_resume_semantics_not_ported_to_mlx"
+  ],
+  "source_video_target_loss_training": true,
+  "source_video_training": true,
+  "stage_id": "stage1_v328_ce",
+  "stage_index": 1,
+  "state_bytes": 915944,
+  "substrate_family": "nerv_family",
+  "target_source": {
+    "frame_indices": [
+      0,
+      1
+    ],
+    "kind": "pr95_source_video_rgb_pairs",
+    "output_hw": [
+      384,
+      512
+    ],
+    "pair_indices": [
+      0
+    ],
+    "source_frame_pair_shape": [
+      1,
+      2,
+      874,
+      1164,
+      3
+    ],
+    "target_shape_n2chw": [
+      1,
+      2,
+      3,
+      384,
+      512
+    ],
+    "training_loss_surface": "rgb_yuv6_mse",
+    "upstream_dir": "upstream",
+    "video_path": "upstream/videos/0.mkv"
+  },
+  "target_source_kind": "pr95_source_video_rgb_pairs",
+  "target_yuv6_shape": [
+    1,
+    2,
+    192,
+    256,
+    6
+  ],
+  "training_backend": "mlx",
+  "training_fidelity": "source_video_rgb_yuv6_preprocess_coupled_timing_only",
+  "training_loss_surface": "rgb_yuv6_mse",
+  "yuv6_preprocess_kind": "pr95_mlx_rgb_to_yuv6_scorer_preprocess"
+}

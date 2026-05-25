@@ -1,0 +1,759 @@
+{
+  "auto_parallelism": {
+    "idle_declared_resources": {
+      "local_cpu": 1,
+      "local_cuda": 1,
+      "local_mps": 1
+    },
+    "local_only": {
+      "max_parallel": 1,
+      "resource_limits": {
+        "local_mlx": 1
+      }
+    },
+    "used_resource_kinds": [
+      "local_mlx"
+    ],
+    "with_cloud": {
+      "max_parallel": 1,
+      "resource_limits": {
+        "local_mlx": 1
+      }
+    }
+  },
+  "blocked_steps": [],
+  "blocker_count": 0,
+  "blockers": [],
+  "definition_drift": {
+    "changed_step_count": 0,
+    "changed_steps": [],
+    "missing_hash_step_count": 0,
+    "missing_hash_steps": [],
+    "missing_step_count": 0,
+    "missing_steps": [],
+    "read_only": true,
+    "schema": "experiment_queue_definition_drift.v1"
+  },
+  "failed_steps": [],
+  "generated_at_utc": "2026-05-25T19:20:03Z",
+  "healthy": true,
+  "mode": "running",
+  "observe_read_only": true,
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "performance": {
+    "backlog_key_by_experiment": {},
+    "by_backlog_key": {},
+    "by_experiment": {
+      "local_training_0000_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6": {
+        "artifact_record_bytes_mean": 1314278.0,
+        "artifact_record_bytes_sum": 1314278,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 1314278.0,
+        "artifact_record_raw_bytes_sum": 1314278,
+        "candidate_ids": [
+          "local_training_0000_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.010099041974172,
+        "elapsed_seconds_mean": 5.010099041974172,
+        "elapsed_seconds_min": 5.010099041974172,
+        "elapsed_seconds_sum": 5.010099041974172,
+        "experiment_ids": [
+          "local_training_0000_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29630.0,
+        "log_bytes_sum": 29630,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      },
+      "local_training_0001_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6": {
+        "artifact_record_bytes_mean": 1317163.0,
+        "artifact_record_bytes_sum": 1317163,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 1317163.0,
+        "artifact_record_raw_bytes_sum": 1317163,
+        "candidate_ids": [
+          "local_training_0001_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.015430875006132,
+        "elapsed_seconds_mean": 5.015430875006132,
+        "elapsed_seconds_min": 5.015430875006132,
+        "elapsed_seconds_sum": 5.015430875006132,
+        "experiment_ids": [
+          "local_training_0001_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29637.0,
+        "log_bytes_sum": 29637,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      },
+      "local_training_0002_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6": {
+        "artifact_record_bytes_mean": 1315398.0,
+        "artifact_record_bytes_sum": 1315398,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 1315398.0,
+        "artifact_record_raw_bytes_sum": 1315398,
+        "candidate_ids": [
+          "local_training_0002_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.006295833969489,
+        "elapsed_seconds_mean": 5.006295833969489,
+        "elapsed_seconds_min": 5.006295833969489,
+        "elapsed_seconds_sum": 5.006295833969489,
+        "experiment_ids": [
+          "local_training_0002_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29643.0,
+        "log_bytes_sum": 29643,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      },
+      "local_training_0003_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6": {
+        "artifact_record_bytes_mean": 1314279.0,
+        "artifact_record_bytes_sum": 1314279,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 1314279.0,
+        "artifact_record_raw_bytes_sum": 1314279,
+        "candidate_ids": [
+          "local_training_0003_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.014239209005609,
+        "elapsed_seconds_mean": 5.014239209005609,
+        "elapsed_seconds_min": 5.014239209005609,
+        "elapsed_seconds_sum": 5.014239209005609,
+        "experiment_ids": [
+          "local_training_0003_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29633.0,
+        "log_bytes_sum": 29633,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      },
+      "local_training_0004_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6": {
+        "artifact_record_bytes_mean": 1317136.0,
+        "artifact_record_bytes_sum": 1317136,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 1317136.0,
+        "artifact_record_raw_bytes_sum": 1317136,
+        "candidate_ids": [
+          "local_training_0004_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.0141885000048205,
+        "elapsed_seconds_mean": 5.0141885000048205,
+        "elapsed_seconds_min": 5.0141885000048205,
+        "elapsed_seconds_sum": 5.0141885000048205,
+        "experiment_ids": [
+          "local_training_0004_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29632.0,
+        "log_bytes_sum": 29632,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      },
+      "local_training_0005_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6": {
+        "artifact_record_bytes_mean": 1317153.0,
+        "artifact_record_bytes_sum": 1317153,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 1317153.0,
+        "artifact_record_raw_bytes_sum": 1317153,
+        "candidate_ids": [
+          "local_training_0005_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.006105666980147,
+        "elapsed_seconds_mean": 5.006105666980147,
+        "elapsed_seconds_min": 5.006105666980147,
+        "elapsed_seconds_sum": 5.006105666980147,
+        "experiment_ids": [
+          "local_training_0005_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29635.0,
+        "log_bytes_sum": 29635,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      },
+      "local_training_0006_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps1_c36_source_video_rgb_yuv6": {
+        "artifact_record_bytes_mean": 1314105.0,
+        "artifact_record_bytes_sum": 1314105,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 1314105.0,
+        "artifact_record_raw_bytes_sum": 1314105,
+        "candidate_ids": [
+          "local_training_0006_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps1_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.015155375003815,
+        "elapsed_seconds_mean": 5.015155375003815,
+        "elapsed_seconds_min": 5.015155375003815,
+        "elapsed_seconds_sum": 5.015155375003815,
+        "experiment_ids": [
+          "local_training_0006_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps1_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29559.0,
+        "log_bytes_sum": 29559,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      },
+      "local_training_0007_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps4_c36_source_video_rgb_yuv6": {
+        "artifact_record_bytes_mean": 1316978.0,
+        "artifact_record_bytes_sum": 1316978,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 1316978.0,
+        "artifact_record_raw_bytes_sum": 1316978,
+        "candidate_ids": [
+          "local_training_0007_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps4_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.009752375073731,
+        "elapsed_seconds_mean": 5.009752375073731,
+        "elapsed_seconds_min": 5.009752375073731,
+        "elapsed_seconds_sum": 5.009752375073731,
+        "experiment_ids": [
+          "local_training_0007_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps4_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29563.0,
+        "log_bytes_sum": 29563,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      },
+      "local_training_0008_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps16_c36_source_video_rgb_yuv6": {
+        "artifact_record_bytes_mean": 1316996.0,
+        "artifact_record_bytes_sum": 1316996,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 1316996.0,
+        "artifact_record_raw_bytes_sum": 1316996,
+        "candidate_ids": [
+          "local_training_0008_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps16_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.012731667025946,
+        "elapsed_seconds_mean": 5.012731667025946,
+        "elapsed_seconds_min": 5.012731667025946,
+        "elapsed_seconds_sum": 5.012731667025946,
+        "experiment_ids": [
+          "local_training_0008_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps16_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29564.0,
+        "log_bytes_sum": 29564,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_resource_kind": {
+      "local_mlx": {
+        "artifact_record_bytes_mean": 1315942.888888889,
+        "artifact_record_bytes_sum": 11843486,
+        "artifact_record_count": 81,
+        "artifact_record_raw_bytes_mean": 1315942.888888889,
+        "artifact_record_raw_bytes_sum": 11843486,
+        "candidate_ids": [
+          "local_training_0000_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6",
+          "local_training_0001_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6",
+          "local_training_0002_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6",
+          "local_training_0003_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6",
+          "local_training_0004_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6",
+          "local_training_0005_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6",
+          "local_training_0006_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps1_c36_source_video_rgb_yuv6",
+          "local_training_0007_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps4_c36_source_video_rgb_yuv6",
+          "local_training_0008_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps16_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.015430875006132,
+        "elapsed_seconds_mean": 5.011555393782651,
+        "elapsed_seconds_min": 5.006105666980147,
+        "elapsed_seconds_sum": 45.10399854404386,
+        "experiment_ids": [
+          "local_training_0000_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6",
+          "local_training_0001_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6",
+          "local_training_0002_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6",
+          "local_training_0003_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6",
+          "local_training_0004_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6",
+          "local_training_0005_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6",
+          "local_training_0006_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps1_c36_source_video_rgb_yuv6",
+          "local_training_0007_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps4_c36_source_video_rgb_yuv6",
+          "local_training_0008_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps16_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29610.666666666668,
+        "log_bytes_sum": 266496,
+        "resource_kind_counts": {
+          "local_mlx": 9
+        },
+        "run_count": 9,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 9
+      }
+    },
+    "by_source_selection_id": {},
+    "by_source_unit_id": {},
+    "by_step": {
+      "local_training_0000_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6.run_local_training": {
+        "artifact_record_bytes_mean": 1314278.0,
+        "artifact_record_bytes_sum": 1314278,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 1314278.0,
+        "artifact_record_raw_bytes_sum": 1314278,
+        "candidate_ids": [
+          "local_training_0000_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.010099041974172,
+        "elapsed_seconds_mean": 5.010099041974172,
+        "elapsed_seconds_min": 5.010099041974172,
+        "elapsed_seconds_sum": 5.010099041974172,
+        "experiment_ids": [
+          "local_training_0000_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29630.0,
+        "log_bytes_sum": 29630,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      },
+      "local_training_0001_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6.run_local_training": {
+        "artifact_record_bytes_mean": 1317163.0,
+        "artifact_record_bytes_sum": 1317163,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 1317163.0,
+        "artifact_record_raw_bytes_sum": 1317163,
+        "candidate_ids": [
+          "local_training_0001_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.015430875006132,
+        "elapsed_seconds_mean": 5.015430875006132,
+        "elapsed_seconds_min": 5.015430875006132,
+        "elapsed_seconds_sum": 5.015430875006132,
+        "experiment_ids": [
+          "local_training_0001_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29637.0,
+        "log_bytes_sum": 29637,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      },
+      "local_training_0002_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6.run_local_training": {
+        "artifact_record_bytes_mean": 1315398.0,
+        "artifact_record_bytes_sum": 1315398,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 1315398.0,
+        "artifact_record_raw_bytes_sum": 1315398,
+        "candidate_ids": [
+          "local_training_0002_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.006295833969489,
+        "elapsed_seconds_mean": 5.006295833969489,
+        "elapsed_seconds_min": 5.006295833969489,
+        "elapsed_seconds_sum": 5.006295833969489,
+        "experiment_ids": [
+          "local_training_0002_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29643.0,
+        "log_bytes_sum": 29643,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      },
+      "local_training_0003_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6.run_local_training": {
+        "artifact_record_bytes_mean": 1314279.0,
+        "artifact_record_bytes_sum": 1314279,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 1314279.0,
+        "artifact_record_raw_bytes_sum": 1314279,
+        "candidate_ids": [
+          "local_training_0003_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.014239209005609,
+        "elapsed_seconds_mean": 5.014239209005609,
+        "elapsed_seconds_min": 5.014239209005609,
+        "elapsed_seconds_sum": 5.014239209005609,
+        "experiment_ids": [
+          "local_training_0003_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29633.0,
+        "log_bytes_sum": 29633,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      },
+      "local_training_0004_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6.run_local_training": {
+        "artifact_record_bytes_mean": 1317136.0,
+        "artifact_record_bytes_sum": 1317136,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 1317136.0,
+        "artifact_record_raw_bytes_sum": 1317136,
+        "candidate_ids": [
+          "local_training_0004_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.0141885000048205,
+        "elapsed_seconds_mean": 5.0141885000048205,
+        "elapsed_seconds_min": 5.0141885000048205,
+        "elapsed_seconds_sum": 5.0141885000048205,
+        "experiment_ids": [
+          "local_training_0004_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29632.0,
+        "log_bytes_sum": 29632,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      },
+      "local_training_0005_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6.run_local_training": {
+        "artifact_record_bytes_mean": 1317153.0,
+        "artifact_record_bytes_sum": 1317153,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 1317153.0,
+        "artifact_record_raw_bytes_sum": 1317153,
+        "candidate_ids": [
+          "local_training_0005_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.006105666980147,
+        "elapsed_seconds_mean": 5.006105666980147,
+        "elapsed_seconds_min": 5.006105666980147,
+        "elapsed_seconds_sum": 5.006105666980147,
+        "experiment_ids": [
+          "local_training_0005_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29635.0,
+        "log_bytes_sum": 29635,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      },
+      "local_training_0006_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps1_c36_source_video_rgb_yuv6.run_local_training": {
+        "artifact_record_bytes_mean": 1314105.0,
+        "artifact_record_bytes_sum": 1314105,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 1314105.0,
+        "artifact_record_raw_bytes_sum": 1314105,
+        "candidate_ids": [
+          "local_training_0006_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps1_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.015155375003815,
+        "elapsed_seconds_mean": 5.015155375003815,
+        "elapsed_seconds_min": 5.015155375003815,
+        "elapsed_seconds_sum": 5.015155375003815,
+        "experiment_ids": [
+          "local_training_0006_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps1_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29559.0,
+        "log_bytes_sum": 29559,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      },
+      "local_training_0007_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps4_c36_source_video_rgb_yuv6.run_local_training": {
+        "artifact_record_bytes_mean": 1316978.0,
+        "artifact_record_bytes_sum": 1316978,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 1316978.0,
+        "artifact_record_raw_bytes_sum": 1316978,
+        "candidate_ids": [
+          "local_training_0007_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps4_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.009752375073731,
+        "elapsed_seconds_mean": 5.009752375073731,
+        "elapsed_seconds_min": 5.009752375073731,
+        "elapsed_seconds_sum": 5.009752375073731,
+        "experiment_ids": [
+          "local_training_0007_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps4_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29563.0,
+        "log_bytes_sum": 29563,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      },
+      "local_training_0008_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps16_c36_source_video_rgb_yuv6.run_local_training": {
+        "artifact_record_bytes_mean": 1316996.0,
+        "artifact_record_bytes_sum": 1316996,
+        "artifact_record_count": 9,
+        "artifact_record_raw_bytes_mean": 1316996.0,
+        "artifact_record_raw_bytes_sum": 1316996,
+        "candidate_ids": [
+          "local_training_0008_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps16_c36_source_video_rgb_yuv6"
+        ],
+        "dominant_resource_kind": "local_mlx",
+        "elapsed_seconds_max": 5.012731667025946,
+        "elapsed_seconds_mean": 5.012731667025946,
+        "elapsed_seconds_min": 5.012731667025946,
+        "elapsed_seconds_sum": 5.012731667025946,
+        "experiment_ids": [
+          "local_training_0008_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps16_c36_source_video_rgb_yuv6"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 29564.0,
+        "log_bytes_sum": 29564,
+        "resource_kind_counts": {
+          "local_mlx": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "run_local_training"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_work_id": {},
+    "candidate_id_by_experiment": {
+      "local_training_0000_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6": [
+        "local_training_0000_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6"
+      ],
+      "local_training_0001_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6": [
+        "local_training_0001_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6"
+      ],
+      "local_training_0002_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6": [
+        "local_training_0002_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6"
+      ],
+      "local_training_0003_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6": [
+        "local_training_0003_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps1_c36_source_video_rgb_yuv6"
+      ],
+      "local_training_0004_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6": [
+        "local_training_0004_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps4_c36_source_video_rgb_yuv6"
+      ],
+      "local_training_0005_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6": [
+        "local_training_0005_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed31_steps16_c36_source_video_rgb_yuv6"
+      ],
+      "local_training_0006_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps1_c36_source_video_rgb_yuv6": [
+        "local_training_0006_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps1_c36_source_video_rgb_yuv6"
+      ],
+      "local_training_0007_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps4_c36_source_video_rgb_yuv6": [
+        "local_training_0007_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps4_c36_source_video_rgb_yuv6"
+      ],
+      "local_training_0008_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps16_c36_source_video_rgb_yuv6": [
+        "local_training_0008_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed31_steps16_c36_source_video_rgb_yuv6"
+      ]
+    },
+    "event_count": 9,
+    "promotion_eligible": false,
+    "queue_id": "codex_pr95_stage158_timing_ladder_20260525T191820Z",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_performance_summary.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_selection_ids_by_experiment": {},
+    "source_unit_ids_by_experiment": {},
+    "telemetry_only": true,
+    "work_id_by_experiment": {}
+  },
+  "queue_id": "codex_pr95_stage158_timing_ladder_20260525T191820Z",
+  "queue_sha256": "edc15c63310222cb085e5cacef8984fdaab599ce808fc682e99e48287743ef84",
+  "queued_steps": [],
+  "ready_steps": [],
+  "running_steps": [],
+  "runtime_policy": {
+    "advisory_only": true,
+    "apply_requires_explicit_call": true,
+    "backpressure": {
+      "local_io_heavy": {
+        "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+        "recommended_concurrency": 4
+      }
+    },
+    "current_max_concurrency": {
+      "local_cpu": 1,
+      "local_cuda": 1,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "generated_from_schema": "experiment_queue_performance_summary.v1",
+    "gpu_launched": false,
+    "input_event_count": 9,
+    "machine_capacity": {
+      "local_cpu": 18,
+      "local_io_heavy": 4,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "codex_pr95_stage158_timing_ladder_20260525T191820Z",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_max_concurrency": {
+      "local_mlx": 1
+    },
+    "recommended_timeout_seconds_by_resource": {
+      "local_mlx": 7200
+    },
+    "resource_policies": {
+      "local_mlx": {
+        "advisory_only": true,
+        "concurrency_reason": "single_local_accelerator_default",
+        "current_concurrency": 1,
+        "current_timeout_seconds_max": 7200,
+        "dispatch_packet_ready": false,
+        "elapsed_seconds_p50": 5.012731667025946,
+        "elapsed_seconds_p95": 5.015430875006132,
+        "observed_failure_count": 0,
+        "observed_run_count": 9,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 1,
+        "recommended_timeout_seconds": 7200,
+        "resource_kind": "local_mlx",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      }
+    },
+    "schema": "scheduler_runtime_policy.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "telemetry_only": true
+  },
+  "schema": "experiment_queue_observation.v1",
+  "state": ".omx/state/experiment_queue_codex_pr95_stage158_timing_ladder_20260525T191820Z.sqlite",
+  "state_watermark": {
+    "control_mode": "running",
+    "control_updated_at_utc": "2026-05-25T19:18:55Z",
+    "event_count": 30,
+    "max_event_id": 30,
+    "max_step_updated_at_utc": "2026-05-25T19:19:41Z",
+    "queue_id": "codex_pr95_stage158_timing_ladder_20260525T191820Z",
+    "schema": "experiment_queue_state_watermark.v1",
+    "state_path": ".omx/state/experiment_queue_codex_pr95_stage158_timing_ladder_20260525T191820Z.sqlite",
+    "step_state_count": 9
+  },
+  "status_counts": {
+    "succeeded": 9
+  },
+  "step_count": 9,
+  "succeeded_artifact_failure_steps": [],
+  "succeeded_artifact_steps": [],
+  "suggested_commands": {
+    "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
+    "refresh": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines 20",
+    "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
+    "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute"
+  }
+}

@@ -366,6 +366,43 @@ def _apply_pytorch_export_parity_to_exact_readiness(
         )
 
 
+def _without_pytorch_export_parity_blockers(blockers: Any) -> list[str]:
+    if not isinstance(blockers, list):
+        return []
+    return [
+        str(blocker)
+        for blocker in blockers
+        if blocker
+        not in {
+            PR95_EXPORT_FORWARD_PARITY_BLOCKER,
+            "requires_pytorch_export_forward_parity_on_source_checkpoint",
+        }
+    ]
+
+
+def _apply_pytorch_export_parity_to_source_faithfulness(
+    manifest: dict[str, Any],
+    *,
+    pytorch_export_forward_parity_proven: bool,
+) -> None:
+    """Remove stale source-faithfulness blockers after local export parity proves."""
+
+    if not pytorch_export_forward_parity_proven:
+        return
+    for payload in (
+        manifest,
+        manifest.get("runtime_profile"),
+        manifest.get("optimizer_recipe"),
+    ):
+        if not isinstance(payload, dict):
+            continue
+        blockers = payload.get("source_faithfulness_blockers")
+        if isinstance(blockers, list):
+            payload["source_faithfulness_blockers"] = (
+                _without_pytorch_export_parity_blockers(blockers)
+            )
+
+
 def _candidate_id(
     *,
     stage: int,
@@ -1864,6 +1901,21 @@ def main(argv: list[str] | None = None) -> int:
             ),
             "pt_sha256": pytorch_export_forward_parity["pt_sha256"],
         }
+        if pytorch_export_forward_parity[
+            "pytorch_export_forward_parity_established"
+        ]:
+            manifest["pytorch_export_parity"].pop("blocker", None)
+            manifest["pytorch_export_parity"]["authority_note"] = (
+                "local_mlx_pytorch_export_parity_probe_is_not_contest_auth_eval"
+            )
+        _apply_pytorch_export_parity_to_source_faithfulness(
+            manifest,
+            pytorch_export_forward_parity_proven=(
+                pytorch_export_forward_parity[
+                    "pytorch_export_forward_parity_established"
+                ]
+            ),
+        )
         _write_json(
             output_dir / "pytorch_export_forward_parity.json",
             pytorch_export_forward_parity,
