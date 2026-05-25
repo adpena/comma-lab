@@ -1,0 +1,91 @@
+{
+  "schema": "byte_shaving_materializer_campaign_run.v1",
+  "generated_at_utc": "2026-05-25T23:15:00Z",
+  "execute": false,
+  "high_level_action_source_count": 20,
+  "plan": ".omx/research/codex_many_materializer_autonomous_portfolio_20260525T225117Z/byte_shaving_campaign_plan.compact.json",
+  "queue_id": "codex_many_materializer_autonomous_portfolio",
+  "queue_path": "",
+  "state_path": "",
+  "run_dir": ".omx/research/codex_many_materializer_autonomous_portfolio_20260525T225117Z",
+  "experiment_count": 0,
+  "build": {
+    "materializer_work_queue_executable_row_count": 0,
+    "materializer_work_queue_blocked_row_count": 19,
+    "blocked_row_count": 43,
+    "materializer_backlog_row_count": 19,
+    "packet_ir_operation_set_count": 18,
+    "queue_consumable_packet_ir_operation_set_count": 0,
+    "packet_ir_byte_closed_operation_count": 0
+  },
+  "worker": {
+    "schema": "experiment_queue_worker_result.v1",
+    "execute": false,
+    "failure_count": 0,
+    "success_count": 0,
+    "stop_reason": "planning_only_missing_artifact_context_and_receiver_runtime_proof"
+  },
+  "observation": {
+    "status_counts": {
+      "blocked": 19
+    },
+    "ready_steps": [],
+    "failed_steps": [],
+    "definition_drift": {
+      "changed_step_count": 0,
+      "missing_step_count": 0,
+      "missing_hash_step_count": 0
+    },
+    "blockers": []
+  },
+  "commands": [
+    {
+      "returncode": 0,
+      "kind": "planning_only_surface_build"
+    }
+  ],
+  "queue_feedback_replan_ready": true,
+  "queue_feedback_replan_policy_decision": "widen_inverse_candidate_generation",
+  "queue_feedback_replan_policy_should_continue": false,
+  "queue_feedback_replan_policy": {
+    "schema": "queue_feedback_replan_policy.v1",
+    "decision": "widen_inverse_candidate_generation",
+    "should_continue_feedback_loop": false,
+    "ready_for_candidate_generation_widening": true,
+    "feedback_action_functional_summary": {
+      "loaded": true,
+      "dry_no_selected_cells": false,
+      "cell_count": 19,
+      "selected_count": 19,
+      "materializer_archive_delta_blocked_cell_count": 19,
+      "score_claim": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false
+    },
+    "blockers": [
+      "requires_concrete_artifact_context",
+      "requires_receiver_runtime_consumption_proof"
+    ],
+    "score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false
+  },
+  "queue_feedback_candidate_widening_queue_emitted": true,
+  "queue_feedback_candidate_widening_queue_blockers": [
+    "requires_concrete_artifact_context",
+    "requires_receiver_runtime_consumption_proof"
+  ],
+  "queue_feedback_candidate_actuation_planning_queue_path": ".omx/research/codex_many_materializer_autonomous_portfolio_20260525T225117Z/materializer_work_queue.json",
+  "queue_feedback_candidate_actuation_planning_queue_emitted": true,
+  "queue_feedback_candidate_actuation_planning_queue_blockers": [
+    "requires_concrete_artifact_context",
+    "requires_receiver_runtime_consumption_proof"
+  ],
+  "exact_readiness_handoff_count": 0,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false
+}

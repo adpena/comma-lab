@@ -1,0 +1,98 @@
+{
+  "schema": "byte_shaving_campaign_plan.v1",
+  "campaign_id": "codex_many_materializer_autonomous_portfolio_20260525T225117Z",
+  "candidate_id": "many_materializer_registry_portfolio_planning_only",
+  "frontier_axis": "[planning-only autonomous many-materializer portfolio]",
+  "planning_only": true,
+  "combination_ladder": [
+    {
+      "combo_id": "combo_0761",
+      "unit_count": 18,
+      "expected_score_gain": 0.000011985461156199085,
+      "expected_delta_score": -0.000011985461156199085,
+      "operation_families": [
+        "section_entropy_recode",
+        "member_merge",
+        "member_recompress",
+        "native_renderer_payload",
+        "zip_header_elide",
+        "drop_pair",
+        "materialize_inverse_scorer_cell_candidate",
+        "factorize_tensor",
+        "section_header_elide",
+        "section_proceduralize",
+        "section_reorder",
+        "entropy_recode",
+        "member_reorder",
+        "compile_inverse_steganalysis_operation_set",
+        "probe_inverse_scorer_surface_cell",
+        "prune_tensor",
+        "quantize_tensor",
+        "shared_codebook_tensor"
+      ],
+      "selected_unit_ids": [
+        "materializer_registry_archive_section_section_entropy_recode_archive_section_entropy_recode_v1",
+        "materializer_registry_packet_member_member_merge_packet_member_merge_v1",
+        "materializer_registry_packet_member_member_recompress_packet_member_recompress_v1",
+        "materializer_registry_packet_member_native_renderer_payload_renderer_payload_dfl1_v1",
+        "materializer_registry_packet_member_zip_header_elide_packet_member_zip_header_elide_v1",
+        "materializer_registry_pair_drop_pair_dqs1_pairset_drop_pair",
+        "materializer_registry_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_v1",
+        "materializer_registry_tensor_factorize_tensor_tensor_factorize_v1",
+        "materializer_registry_archive_section_section_header_elide_archive_section_header_elide_v1",
+        "materializer_registry_archive_section_section_proceduralize_archive_section_proceduralize_v1",
+        "materializer_registry_archive_section_section_reorder_archive_section_reorder_v1",
+        "materializer_registry_byte_range_entropy_recode_byte_range_entropy_recode_v1",
+        "materializer_registry_packet_member_member_reorder_packet_member_reorder_v1",
+        "materializer_registry_scorer_inverse_surface_cell_compile_inverse_steganalysis_operation_set_inverse_steganalysis_high_level_operation_set_v1",
+        "materializer_registry_scorer_inverse_surface_cell_probe_inverse_scorer_surface_cell_inverse_scorer_action_functional_v1",
+        "materializer_registry_tensor_prune_tensor_tensor_prune_v1",
+        "materializer_registry_tensor_quantize_tensor_tensor_quantize_v1",
+        "materializer_registry_tensor_shared_codebook_tensor_tensor_shared_codebook_v1"
+      ],
+      "dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "score_claim": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false
+    }
+  ],
+  "materialization_bridge": {
+    "next_gate": "bind concrete artifact context, compile receiver/runtime-consumption proofs, then materialize executable local queue rows",
+    "high_level_operation_compiler_required_count": 3,
+    "packet_ir_operation_set_count": 18,
+    "packet_ir_byte_closed_operation_count": 0,
+    "queue_consumable_packet_ir_operation_set_count": 0,
+    "dispatch_blockers": [
+      "materializer_registry_portfolio_requires_concrete_artifact_context",
+      "requires_receiver_runtime_consumption_proof_before_exact_eval",
+      "requires_byte_closed_materialization_before_dispatch"
+    ]
+  },
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "byte_shaving_plan_is_planning_only",
+    "requires_byte_closed_materialization_before_dispatch",
+    "requires_runtime_consumption_proof_before_exact_eval",
+    "requires_same_runtime_locality_or_inflate_parity_check",
+    "requires_exact_auth_eval_before_score_claim",
+    "byte_shaving_signal_surface_is_planning_only",
+    "source_refs_are_not_score_authority",
+    "materializer_registry_portfolio_requires_concrete_artifact_context",
+    "requires_materializer_before_candidate_archive",
+    "requires_locality_controls_before_exact_eval"
+  ],
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false
+}

@@ -70,6 +70,13 @@ experiments/raft_flow.pt
 experiments/results/**/*.pt
 .omx/research/**/pr95_pytorch_state_dict.pt
 .omx/research/**/runtime_consumption_work/
+# Large generated materializer portfolio debug products stay local. Keep compact
+# summaries, manifests, and work queues tracked when intentionally curated.
+.omx/research/codex_many_materializer_autonomous_portfolio_*/action_summary.json
+.omx/research/codex_many_materializer_autonomous_portfolio_*/byte_shaving_campaign_plan.json
+.omx/research/codex_many_materializer_autonomous_portfolio_*/inverse_action_materialization_bridge.json
+.omx/research/codex_many_materializer_autonomous_portfolio_*/materialization.json
+.omx/research/codex_many_materializer_autonomous_portfolio_*/operator_portfolio.json
 
 # Generated experiment/custody roots are local by default. Preserve signal by
 # promoting compact summaries into .omx/research/, docs/, reports/, or source;
