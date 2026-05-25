@@ -245,6 +245,53 @@ def _write_result_review_packet(
     )
 
 
+def test_materializer_campaign_runner_executes_queue_cli_in_process(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    queue_path = tmp_path / "queue.json"
+    state_path = tmp_path / "queue.sqlite"
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "in_process_queue_cli_fixture",
+            "controls": {"mode": "paused", "max_concurrency": {"local_cpu": 1}},
+            "experiments": [
+                {
+                    "id": "exp0",
+                    "steps": [
+                        {
+                            "id": "step0",
+                            "kind": "command",
+                            "command": [runner.sys.executable, "-c", "print('noop')"],
+                            "resources": {"kind": "local_cpu"},
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    queue_path.write_text(json.dumps(queue), encoding="utf-8")
+
+    def fail_subprocess_run(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("experiment queue command should run in-process")
+
+    monkeypatch.setattr(runner.subprocess, "run", fail_subprocess_run)
+
+    result = runner._run(
+        runner._experiment_queue_command(
+            execution_queue=queue_path,
+            state_path=state_path,
+            subcommand=["validate"],
+        )
+    )
+
+    assert result.returncode == 0
+    payload = json.loads(result.stdout)
+    assert payload["valid"] is True
+    assert payload["queue_id"] == "in_process_queue_cli_fixture"
+
+
 def test_materializer_campaign_runner_builds_queue_owned_followup_command(
     tmp_path: Path,
 ) -> None:

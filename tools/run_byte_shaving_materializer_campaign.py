@@ -12,11 +12,14 @@ observation/performance artifacts. It never performs paid dispatch.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
+import io
 import json
 import subprocess
 import sys
 import time
+import traceback
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -266,23 +269,77 @@ def _normalize_config_defaults(
 
 def _run(command: list[str], *, check: bool = True) -> CommandResult:
     started = time.monotonic()
-    proc = subprocess.run(
+    result = _run_in_process_experiment_queue_command(
         command,
-        cwd=REPO_ROOT,
-        text=True,
-        capture_output=True,
-        check=False,
+        started_monotonic=started,
     )
-    result = CommandResult(
-        command=command,
-        returncode=int(proc.returncode),
-        stdout=proc.stdout,
-        stderr=proc.stderr,
+    if result is None:
+        proc = subprocess.run(
+            command,
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        result = CommandResult(
+            command=command,
+            returncode=int(proc.returncode),
+            stdout=proc.stdout,
+            stderr=proc.stderr,
+            elapsed_seconds=time.monotonic() - started,
+        )
+    if check and result.returncode != 0:
+        raise SystemExit(
+            f"command failed ({result.returncode}): {' '.join(command)}\n{result.stderr}"
+        )
+    return result
+
+
+def _run_in_process_experiment_queue_command(
+    command: Sequence[str],
+    *,
+    started_monotonic: float | None = None,
+) -> CommandResult | None:
+    command_items = [str(item) for item in command]
+    if len(command_items) < 2:
+        return None
+    interpreter = Path(command_items[0]).resolve(strict=False)
+    if interpreter != Path(sys.executable).resolve(strict=False):
+        return None
+    script = command_items[1]
+    script_path = Path(script)
+    resolved_script = (
+        script_path
+        if script_path.is_absolute()
+        else REPO_ROOT / script_path
+    ).resolve(strict=False)
+    if resolved_script != (REPO_ROOT / "tools" / "experiment_queue.py").resolve(strict=False):
+        return None
+
+    from tools import experiment_queue as experiment_queue_cli
+
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    started = time.monotonic() if started_monotonic is None else started_monotonic
+    try:
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            returncode = int(experiment_queue_cli.main(command_items[2:]))
+    except SystemExit as exc:
+        code = exc.code
+        returncode = int(code) if isinstance(code, int) else 2
+        if not isinstance(code, int) and code is not None:
+            stderr.write(str(code))
+            stderr.write("\n")
+    except Exception:
+        traceback.print_exc(file=stderr)
+        returncode = 1
+    return CommandResult(
+        command=command_items,
+        returncode=returncode,
+        stdout=stdout.getvalue(),
+        stderr=stderr.getvalue(),
         elapsed_seconds=time.monotonic() - started,
     )
-    if check and proc.returncode != 0:
-        raise SystemExit(f"command failed ({proc.returncode}): {' '.join(command)}\n{proc.stderr}")
-    return result
 
 
 def _json_from_stdout(result: CommandResult) -> dict[str, Any] | None:
