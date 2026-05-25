@@ -34,10 +34,10 @@ Initial profile from this turn:
 - after the action-functional CLI helper already present on `main`:
   `262 passed in 6.19s`
 - after this queue-builder helper:
-  `265 passed in 5.41s` including the dynamic-sparse-gate oracle proof surface
+  `265 passed in 5.28s` including the dynamic-sparse-gate oracle proof surface
   that landed immediately before this pass.
 
-Net slice improvement against the initial profile: about 30.7% wall-clock
+Net slice improvement against the initial profile: about 32.4% wall-clock
 reduction while carrying the newer 265-test proof surface.
 
 ## Verification
@@ -45,9 +45,9 @@ reduction while carrying the newer 265-test proof surface.
 - `.venv/bin/python -m ruff check src/tac/tests/test_inverse_steganalysis_action_functional_cli.py src/tac/tests/test_byte_shaving_campaign_queue.py --no-cache`
   - Result: pass
 - `PYTHONPATH=. .venv/bin/pytest src/tac/tests/test_byte_shaving_campaign_queue.py -q --durations=20 --durations-min=0.01`
-  - Result: `77 passed in 0.73s`
+  - Result: `77 passed in 0.70s`
 - `PYTHONPATH=. .venv/bin/pytest src/tac/tests/test_dynamic_sparse_gate_oracle.py src/tac/tests/test_family_agnostic_materializers.py src/tac/tests/test_experiment_queue_observer.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_inverse_steganalysis_acquisition.py src/tac/tests/test_byte_shaving_campaign_queue.py src/tac/tests/test_family_agnostic_materializer_sweep.py src/tac/tests/test_inverse_steganalysis_action_functional_cli.py -q --durations=30 --durations-min=0.01`
-  - Result: `265 passed in 5.41s`
+  - Result: `265 passed in 5.28s`
 
 ## Remaining Hotspots
 
