@@ -1,0 +1,112 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1,
+      "local_cuda": 1,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "local_training_0000_0",
+      "lane_id": "lane_hinton_distilled_scorer_surrogate_mlx_long_training_validation_20260525",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": null,
+        "device": "gpu",
+        "dispatch_packet_ready": false,
+        "generated_at_utc": "2026-05-25T21:42:57Z",
+        "pr95_1to1_reproduction_claim": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": null,
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_plan_schema": "hinton_mlx_long_training_smoke_verdict.v1",
+        "substrate_family": null,
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 10,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_hinton_mlx_long_training_smoke.py",
+            "--output-report",
+            ".omx/research/hinton_mlx_long_training_smoke_20260525/plan_only_report.json",
+            "--telemetry-path",
+            ".omx/research/hinton_mlx_long_training_smoke_20260525/executed_smoke_100ep_telemetry.jsonl",
+            "--max-frames",
+            "4",
+            "--smoke-epochs",
+            "100",
+            "--checkpoint-every-epochs",
+            "100",
+            "--hash-source-video",
+            "--execute-smoke"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/hinton_mlx_long_training_smoke_20260525/plan_only_report.json",
+              "type": "path_exists"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/hinton_mlx_long_training_smoke_20260525/plan_only_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/hinton_mlx_long_training_smoke_20260525/executed_smoke_100ep_telemetry.jsonl",
+              "type": "path_exists"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/hinton_mlx_long_training_smoke_20260525/plan_only_report.json",
+              ".omx/research/hinton_mlx_long_training_smoke_20260525/executed_smoke_100ep_telemetry.jsonl"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": []
+    }
+  ],
+  "queue_id": "hinton_mlx_long_training_smoke_20260525",
+  "schema": "experiment_queue.v1"
+}
