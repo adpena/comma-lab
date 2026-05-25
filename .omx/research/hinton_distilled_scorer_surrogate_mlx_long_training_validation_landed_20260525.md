@@ -9,7 +9,8 @@ score_claim: false
 promotion_eligible: false
 rank_or_kill_eligible: false
 ready_for_exact_eval_dispatch: false
-evidence_grade: "[macOS-MLX research-signal]"
+evidence_grade: macOS-MLX-research-signal
+evidence_tag: "[macOS-MLX research-signal]"
 ---
 
 # Hinton-distilled scorer surrogate MLX validation

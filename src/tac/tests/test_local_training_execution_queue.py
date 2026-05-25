@@ -274,6 +274,41 @@ def test_local_training_queue_accepts_output_dir_for_pr95_style_manifest(
     )
 
 
+def test_local_training_queue_compiles_hinton_mlx_smoke_plan(tmp_path: Path) -> None:
+    plan = _plan(tmp_path)
+    report = tmp_path / "hinton" / "executed_smoke_100ep_verdict.json"
+    plan["schema"] = "hinton_mlx_long_training_smoke_verdict.v1"
+    plan["candidate_id"] = "hinton_distilled_scorer_surrogate"
+    plan["representation_family"] = "hinton_distilled_scorer_surrogate"
+    plan["substrate_family"] = "pr95_mlx_hnerv_family"
+    plan["recommended_execution"]["tool"] = "tools/run_hinton_mlx_long_training_smoke.py"
+    plan["recommended_execution"]["output_manifest"] = str(report)
+    plan["recommended_execution"]["representation_manifest"] = None
+    plan["recommended_execution"]["python_command_args"] = [
+        ".venv/bin/python",
+        "tools/run_hinton_mlx_long_training_smoke.py",
+        "--output-report",
+        str(report),
+        "--execute-smoke",
+    ]
+
+    queue = build_local_training_execution_queue(
+        [plan],
+        queue_id="hinton_mlx_smoke_fixture",
+        repo_root=tmp_path,
+    )
+
+    experiment = queue["experiments"][0]
+    assert experiment["metadata"]["source_plan_schema"] == (
+        "hinton_mlx_long_training_smoke_verdict.v1"
+    )
+    assert experiment["steps"][0]["resources"]["kind"] == "local_mlx"
+    assert experiment["steps"][0]["postconditions"][0]["path"] == (
+        "hinton/executed_smoke_100ep_verdict.json"
+    )
+    assert experiment["metadata"]["score_claim"] is False
+
+
 def test_build_local_training_execution_queue_cli(tmp_path: Path) -> None:
     plan_path = tmp_path / "plan.json"
     queue_path = tmp_path / "queue.json"

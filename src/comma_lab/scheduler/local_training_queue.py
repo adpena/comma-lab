@@ -21,6 +21,7 @@ SUPPORTED_PLAN_SCHEMAS = frozenset(
         "representation_training_probe_plan_v1",
         "pr95_local_training_probe_plan_v1",
         "pr95_mlx_long_training_plan.v1",
+        "hinton_mlx_long_training_smoke_verdict.v1",
     }
 )
 FALSE_AUTHORITY: dict[str, bool] = {

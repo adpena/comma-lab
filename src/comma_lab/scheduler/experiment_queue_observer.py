@@ -32,6 +32,7 @@ FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA = "family_agnostic_mat
 FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA = "family_agnostic_materializer_empirical_sweep.v1"
 PR95_MLX_PACKAGE_SCHEMA = "pr95_mlx_pytorch_state_dict_to_contest_archive.v1"
 PR95_MLX_LONG_TRAINING_PLAN_SCHEMA = "pr95_mlx_long_training_plan.v1"
+HINTON_MLX_LONG_TRAINING_SMOKE_SCHEMA = "hinton_mlx_long_training_smoke_verdict.v1"
 FAMILY_AGNOSTIC_MATERIALIZER_CANDIDATE_SCHEMAS = frozenset(
     {
         "archive_section_entropy_recode_candidate.v1",
@@ -238,6 +239,40 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
                     }
                     if blockers and "readiness_blockers" not in record:
                         record["readiness_blockers"] = blockers
+            if record.get("json_schema") == HINTON_MLX_LONG_TRAINING_SMOKE_SCHEMA:
+                record["hinton_mlx_long_training_smoke"] = True
+                for key in (
+                    "mode",
+                    "lane_id",
+                    "operator_run_label",
+                    "source_video_sha256",
+                    "source_video_frame_count",
+                    "max_frames",
+                    "smoke_epochs",
+                    "distillation_temperature",
+                    "distillation_weight",
+                    "num_classes",
+                    "spatial_downsample_factor",
+                    "local_training_queue_signal",
+                    "paid_dispatch_authorization_signal",
+                    "ready_for_exact_eval_dispatch",
+                ):
+                    if key in payload:
+                        record[key] = payload[key]
+                verdict = payload.get("convergence_verdict")
+                if isinstance(verdict, Mapping):
+                    record["convergence_verdict"] = {
+                        key: verdict.get(key)
+                        for key in (
+                            "verdict",
+                            "initial_loss",
+                            "final_loss",
+                            "loss_reduction_percent",
+                            "oscillation_score",
+                            "smoke_epochs",
+                        )
+                        if key in verdict
+                    }
             if isinstance(payload.get("readiness_blockers"), list):
                 record["readiness_blockers"] = [str(item) for item in payload["readiness_blockers"] if str(item)]
             receiver = payload.get("receiver_verification")

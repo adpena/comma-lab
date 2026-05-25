@@ -748,6 +748,97 @@ def test_observer_surfaces_pr95_mlx_long_training_plan(
     ]
 
 
+def test_observer_surfaces_hinton_mlx_long_training_smoke(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "hinton_smoke.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "hinton_mlx_long_training_smoke_verdict.v1",
+                "mode": "executed_smoke",
+                "lane_id": "lane_hinton_mlx_smoke_test",
+                "operator_run_label": "hinton_kl_t2_smoke",
+                "source_video_sha256": "a" * 64,
+                "source_video_frame_count": 4,
+                "max_frames": 4,
+                "smoke_epochs": 100,
+                "distillation_temperature": 2.0,
+                "distillation_weight": 0.5,
+                "num_classes": 5,
+                "spatial_downsample_factor": 4,
+                "local_training_queue_signal": "LOCAL_MLX_QUEUE_READY",
+                "paid_dispatch_authorization_signal": (
+                    "PAID_DISPATCH_BLOCKED_REQUIRES_CONTEST_TEACHER_AND_CPU_CUDA_AUTH_EVAL"
+                ),
+                "convergence_verdict": {
+                    "verdict": "CONVERGES_CONSISTENTLY",
+                    "initial_loss": 0.2,
+                    "final_loss": 0.01,
+                    "loss_reduction_percent": 95.0,
+                    "oscillation_score": 0.0,
+                    "smoke_epochs": 100,
+                },
+                "readiness_blockers": [
+                    "scorer_loss_is_kl_to_mock_teacher_logits_not_contest_segnet",
+                    "no_paired_cpu_cuda_auth_eval_yet",
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "promotable": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+    queue["experiments"][0]["steps"][0]["telemetry"] = {
+        "artifact_paths": [artifact.as_posix()],
+    }
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'running',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-25T22:00:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+    )
+    artifact_record = observation["running_steps"][0]["expected_artifacts"][0]
+
+    assert artifact_record["json_schema"] == "hinton_mlx_long_training_smoke_verdict.v1"
+    assert artifact_record["hinton_mlx_long_training_smoke"] is True
+    assert artifact_record["local_training_queue_signal"] == "LOCAL_MLX_QUEUE_READY"
+    assert artifact_record["paid_dispatch_authorization_signal"].startswith(
+        "PAID_DISPATCH_BLOCKED"
+    )
+    assert artifact_record["convergence_verdict"]["verdict"] == (
+        "CONVERGES_CONSISTENTLY"
+    )
+    assert artifact_record["ready_for_exact_eval_dispatch"] is False
+    assert artifact_record["readiness_blockers"] == [
+        "scorer_loss_is_kl_to_mock_teacher_logits_not_contest_segnet",
+        "no_paired_cpu_cuda_auth_eval_yet",
+    ]
+
+
 def test_observer_real_pr95_queue_owns_drift_trace_and_package_artifacts(
     tmp_path: Path,
 ) -> None:
