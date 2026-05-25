@@ -1,17 +1,22 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import numpy as np
 import pytest
 
 from tac.optimization.dynamic_sparse_gate_oracle import (
     DynamicSparseGateOracleError,
     dynamic_sparse_skip_mixture,
+    operation_set_compiler_hint_from_channel_gate_scores,
     operation_set_compiler_hint_from_gate_scores,
 )
 from tac.optimization.inverse_steganalysis_operation_set_compiler import (
     packet_ir_operation_set_from_compiler_hint,
 )
+from tools import build_dynamic_sparse_gate_compiler_hint as gate_cli
 
 
 def test_dynamic_sparse_skip_mixture_zero_init_is_exact_noop() -> None:
@@ -82,6 +87,70 @@ def test_dynamic_sparse_gate_hint_lowers_to_packetir_false_authority() -> None:
     assert "packetir_operation_set_requires_runtime_consumption_proof" in packet_ir["blockers"]
 
 
+def test_channel_gate_hint_preserves_mudd_style_source_channel_signal() -> None:
+    coefficients = np.array(
+        [
+            [
+                [0.10, 0.20, 0.80],
+                [0.05, 0.40, 0.15],
+            ],
+            [
+                [0.20, 0.10, 0.90],
+                [0.10, 0.35, 0.20],
+            ],
+        ],
+        dtype=np.float32,
+    )
+    candidates = [
+        {
+            "unit_id": "late_value_h9",
+            "target_kind": "packet_member_recompress_v1",
+            "dynamic_gate_channel_id": "value",
+            "dynamic_gate_source_id": "h9",
+            "candidate_saved_bytes": 50,
+        },
+        {
+            "unit_id": "late_residual_h7",
+            "target_kind": "archive_section_entropy_recode_v1",
+            "dynamic_gate_channel_id": "residual",
+            "dynamic_gate_source_id": "h7",
+            "candidate_saved_bytes": 80,
+        },
+    ]
+
+    hint = operation_set_compiler_hint_from_channel_gate_scores(
+        candidates,
+        coefficients,
+        operation_set_id="mudd_sparse_topology_fixture",
+        source_ids=["x0", "h7", "h9"],
+        channel_ids=["value", "residual"],
+        max_operations=1,
+        lane_id="codex_dynamic_sparse_gate_oracle_20260525",
+        shared_projection_id="mudd_pr259_shared_w1",
+        topology_id="mudd_pr259_late_layer_subset",
+    )
+    packet_ir = packet_ir_operation_set_from_compiler_hint(
+        hint,
+        source_backlog_key="dynamic_sparse_channel_gate_backlog",
+        source_unit_ids=["late_value_h9", "late_residual_h7"],
+    )
+
+    selected = hint["selected_operations"][0]
+    nested = selected["params"]["dynamic_sparse_channel_gate"]
+    assert hint["source_schema"] == "dynamic_sparse_channel_gate_operation_selection.v1"
+    assert hint["selection_source"] == "dynamic_sparse_channel_gate_scores"
+    assert selected["unit_id"] == "late_value_h9"
+    assert selected["dynamic_gate_channel_id"] == "value"
+    assert selected["dynamic_gate_source_id"] == "h9"
+    assert nested["shared_projection_id"] == "mudd_pr259_shared_w1"
+    assert nested["topology_id"] == "mudd_pr259_late_layer_subset"
+    assert nested["abs_mean_coefficient"] == pytest.approx(0.85)
+    assert selected["score_claim"] is False
+    assert packet_ir["selected_operations"][0]["params"]["dynamic_sparse_channel_gate"][
+        "score_claim"
+    ] is False
+
+
 def test_dynamic_sparse_gate_rejects_truthy_authority() -> None:
     with pytest.raises(DynamicSparseGateOracleError, match="score_claim"):
         operation_set_compiler_hint_from_gate_scores(
@@ -89,3 +158,69 @@ def test_dynamic_sparse_gate_rejects_truthy_authority() -> None:
             np.array([1.0], dtype=np.float32),
             operation_set_id="bad_authority",
         )
+
+
+def test_channel_gate_hint_rejects_ambiguous_unkeyed_candidates() -> None:
+    with pytest.raises(DynamicSparseGateOracleError, match="len\\(channel_ids\\)"):
+        operation_set_compiler_hint_from_channel_gate_scores(
+            [{"unit_id": "too_few", "target_kind": "packet_member_recompress_v1"}],
+            np.ones((2, 2), dtype=np.float32),
+            operation_set_id="ambiguous",
+            source_ids=["x0", "h9"],
+            channel_ids=["value", "residual"],
+        )
+
+
+def test_dynamic_sparse_gate_compiler_hint_cli_writes_channel_hint(tmp_path: Path) -> None:
+    candidates = tmp_path / "candidates.json"
+    coefficients = tmp_path / "coefficients.json"
+    out = tmp_path / "hint.json"
+    candidates.write_text(
+        json.dumps(
+            {
+                "operation_candidates": [
+                    {
+                        "unit_id": "value_h9",
+                        "target_kind": "packet_member_recompress_v1",
+                        "dynamic_gate_channel_id": "value",
+                        "dynamic_gate_source_id": "h9",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    coefficients.write_text(
+        json.dumps(
+            {
+                "coefficients": [
+                    [[0.0, 0.0, 0.7], [0.0, 0.0, 0.1]],
+                    [[0.0, 0.0, 0.9], [0.0, 0.0, 0.2]],
+                ],
+                "source_ids": ["x0", "h7", "h9"],
+                "channel_ids": ["value", "residual"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert (
+        gate_cli.main(
+            [
+                "--operation-candidates",
+                str(candidates),
+                "--coefficients",
+                str(coefficients),
+                "--operation-set-id",
+                "cli_channel_gate",
+                "--out",
+                str(out),
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["schema"] == "inverse_action_operation_set_compiler_hint.v1"
+    assert payload["source_schema"] == "dynamic_sparse_channel_gate_operation_selection.v1"
+    assert payload["selected_operations"][0]["dynamic_gate_abs_mean_coefficient"] == pytest.approx(0.8)

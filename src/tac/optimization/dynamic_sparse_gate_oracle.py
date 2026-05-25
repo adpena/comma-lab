@@ -26,6 +26,9 @@ from tac.optimization.proxy_candidate_contract import (
 
 DYNAMIC_SPARSE_SKIP_MIXTURE_SCHEMA = "dynamic_sparse_skip_mixture_oracle.v1"
 DYNAMIC_SPARSE_GATE_OPERATION_SELECTION_SCHEMA = "dynamic_sparse_gate_operation_selection.v1"
+DYNAMIC_SPARSE_CHANNEL_GATE_OPERATION_SELECTION_SCHEMA = (
+    "dynamic_sparse_channel_gate_operation_selection.v1"
+)
 DEFAULT_RMS_EPSILON = 1.0e-6
 
 
@@ -211,6 +214,22 @@ def _gate_scores(coefficients: Any) -> np.ndarray:
     return np.mean(np.abs(coeff), axis=axes)
 
 
+def _channel_gate_scores(coefficients: Any) -> np.ndarray:
+    coeff = _array(coefficients, label="coefficients")
+    if coeff.ndim < 2:
+        raise DynamicSparseGateOracleError(
+            "channel coefficients must have at least channel and source dimensions"
+        )
+    if coeff.shape[-2] < 1 or coeff.shape[-1] < 1:
+        raise DynamicSparseGateOracleError(
+            "channel coefficients must include at least one channel and source"
+        )
+    if coeff.ndim == 2:
+        return np.abs(coeff)
+    axes = tuple(range(coeff.ndim - 2))
+    return np.mean(np.abs(coeff), axis=axes)
+
+
 def _operation_candidate(row: Mapping[str, Any], *, label: str) -> dict[str, Any]:
     try:
         require_no_truthy_authority_fields(row, context=label)
@@ -220,6 +239,69 @@ def _operation_candidate(row: Mapping[str, Any], *, label: str) -> dict[str, Any
     for key in FALSE_AUTHORITY:
         operation[key] = False
     return operation
+
+
+def _candidate_source_id(row: Mapping[str, Any]) -> str:
+    return str(
+        row.get("dynamic_gate_source_id")
+        or row.get("dynamic_sparse_gate_source_id")
+        or row.get("source_id")
+        or row.get("source")
+        or ""
+    )
+
+
+def _candidate_channel_id(row: Mapping[str, Any]) -> str:
+    return str(
+        row.get("dynamic_gate_channel_id")
+        or row.get("dynamic_sparse_gate_channel_id")
+        or row.get("channel_id")
+        or row.get("channel")
+        or ""
+    )
+
+
+def _channel_candidate_grid(
+    operation_candidates: Sequence[Mapping[str, Any]],
+    *,
+    channel_ids: Sequence[str],
+    source_ids: Sequence[str],
+) -> dict[tuple[int, int], Mapping[str, Any]]:
+    explicit: dict[tuple[int, int], Mapping[str, Any]] = {}
+    has_explicit_ids = any(
+        _candidate_channel_id(row) or _candidate_source_id(row)
+        for row in operation_candidates
+    )
+    if has_explicit_ids:
+        channel_index = {str(value): index for index, value in enumerate(channel_ids)}
+        source_index = {str(value): index for index, value in enumerate(source_ids)}
+        for candidate_index, row in enumerate(operation_candidates):
+            channel_id = _candidate_channel_id(row)
+            source_id = _candidate_source_id(row)
+            if channel_id not in channel_index or source_id not in source_index:
+                raise DynamicSparseGateOracleError(
+                    "operation_candidates with explicit channel/source ids must "
+                    f"match channel_ids/source_ids: index {candidate_index}"
+                )
+            key = (channel_index[channel_id], source_index[source_id])
+            if key in explicit:
+                raise DynamicSparseGateOracleError(
+                    f"duplicate operation candidate for channel/source pair {key}"
+                )
+            explicit[key] = row
+        return explicit
+
+    expected = len(channel_ids) * len(source_ids)
+    if len(operation_candidates) != expected:
+        raise DynamicSparseGateOracleError(
+            "operation_candidates without explicit channel/source ids must have "
+            "len(channel_ids) * len(source_ids) entries"
+        )
+    for flat_index, row in enumerate(operation_candidates):
+        channel_index = flat_index // len(source_ids)
+        source_index = flat_index % len(source_ids)
+        explicit[(channel_index, source_index)] = row
+    return explicit
 
 
 def operation_set_compiler_hint_from_gate_scores(
@@ -311,12 +393,138 @@ def operation_set_compiler_hint_from_gate_scores(
     }
 
 
+def operation_set_compiler_hint_from_channel_gate_scores(
+    operation_candidates: Sequence[Mapping[str, Any]],
+    coefficients: Any,
+    *,
+    operation_set_id: str,
+    source_ids: Sequence[str],
+    channel_ids: Sequence[str],
+    max_operations: int | None = None,
+    min_abs_gate: float = 0.0,
+    lane_id: str | None = None,
+    candidate_id: str | None = None,
+    coefficient_mode: str = "linear",
+    shared_projection_id: str | None = None,
+    topology_id: str | None = None,
+) -> dict[str, Any]:
+    """Convert channel/source gate coefficients into a compiler hint.
+
+    This keeps MUDD-style V/residual/VE-gate channels separate instead of
+    averaging them into one source score, preserving the useful sparse topology
+    signal for downstream materializer selection.
+    """
+
+    if not operation_set_id:
+        raise DynamicSparseGateOracleError("operation_set_id is required")
+    channel_labels = [str(item) for item in channel_ids]
+    source_labels = [str(item) for item in source_ids]
+    if not channel_labels:
+        raise DynamicSparseGateOracleError("channel_ids must include at least one channel")
+    if not source_labels:
+        raise DynamicSparseGateOracleError("source_ids must include at least one source")
+    if len(set(channel_labels)) != len(channel_labels):
+        raise DynamicSparseGateOracleError("channel_ids must be unique")
+    if len(set(source_labels)) != len(source_labels):
+        raise DynamicSparseGateOracleError("source_ids must be unique")
+
+    scores = _channel_gate_scores(coefficients)
+    if scores.shape != (len(channel_labels), len(source_labels)):
+        raise DynamicSparseGateOracleError(
+            "coefficients channel/source dimensions must match channel_ids/source_ids"
+        )
+    candidate_grid = _channel_candidate_grid(
+        operation_candidates,
+        channel_ids=channel_labels,
+        source_ids=source_labels,
+    )
+    limit = _as_nonnegative_int(max_operations, label="max_operations")
+    threshold = _as_float(min_abs_gate, label="min_abs_gate", default=0.0)
+    if threshold < 0.0:
+        raise DynamicSparseGateOracleError("min_abs_gate must be nonnegative")
+
+    ranked: list[tuple[float, float, int, int, dict[str, Any]]] = []
+    for (channel_index, source_index), raw in candidate_grid.items():
+        candidate = _operation_candidate(
+            raw,
+            label=f"operation_candidates[{channel_labels[channel_index]},{source_labels[source_index]}]",
+        )
+        score = float(scores[channel_index, source_index])
+        if score < threshold:
+            continue
+        saved = _as_float(candidate.get("candidate_saved_bytes"), label="candidate_saved_bytes", default=0.0)
+        ranked.append((score, saved, channel_index, source_index, candidate))
+    ranked.sort(key=lambda item: (-item[0], -item[1], item[2], item[3]))
+    if limit is not None:
+        ranked = ranked[:limit]
+    if not ranked:
+        raise DynamicSparseGateOracleError("no channel operation candidate survived gate selection")
+
+    selected: list[dict[str, Any]] = []
+    for rank, (score, _saved, channel_index, source_index, candidate) in enumerate(ranked):
+        channel_id = channel_labels[channel_index]
+        source_id = source_labels[source_index]
+        params = dict(candidate.get("params")) if isinstance(candidate.get("params"), Mapping) else {}
+        params["dynamic_sparse_channel_gate"] = {
+            "schema": DYNAMIC_SPARSE_CHANNEL_GATE_OPERATION_SELECTION_SCHEMA,
+            "source_id": source_id,
+            "source_index": source_index,
+            "channel_id": channel_id,
+            "channel_index": channel_index,
+            "abs_mean_coefficient": score,
+            "coefficient_mode": coefficient_mode,
+            "shared_projection_id": shared_projection_id,
+            "topology_id": topology_id,
+            **FALSE_AUTHORITY,
+        }
+        selected.append(
+            {
+                **candidate,
+                "operation_rank": rank,
+                "dynamic_gate_source_id": source_id,
+                "dynamic_gate_source_index": source_index,
+                "dynamic_gate_channel_id": channel_id,
+                "dynamic_gate_channel_index": channel_index,
+                "dynamic_gate_abs_mean_coefficient": score,
+                "params": params,
+                "blockers": ordered_unique(
+                    [
+                        *_string_list(candidate.get("blockers")),
+                        "dynamic_sparse_channel_gate_candidate_generation_only",
+                        "requires_materializer_contexts",
+                        "requires_runtime_consumption_proof_before_exact_eval",
+                    ]
+                ),
+                **FALSE_AUTHORITY,
+            }
+        )
+
+    return {
+        "schema": OPERATION_SET_COMPILER_HINT_SCHEMA,
+        "source_schema": DYNAMIC_SPARSE_CHANNEL_GATE_OPERATION_SELECTION_SCHEMA,
+        "operation_set_id": operation_set_id,
+        "lane_id": lane_id,
+        "candidate_id": candidate_id,
+        "selection_source": "dynamic_sparse_channel_gate_scores",
+        "source_ids": source_labels,
+        "channel_ids": channel_labels,
+        "shared_projection_id": shared_projection_id,
+        "topology_id": topology_id,
+        "selected_operations": selected,
+        "allowed_use": "inverse_action_compiler_planning_handoff_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 __all__ = [
+    "DYNAMIC_SPARSE_CHANNEL_GATE_OPERATION_SELECTION_SCHEMA",
     "DYNAMIC_SPARSE_GATE_OPERATION_SELECTION_SCHEMA",
     "DYNAMIC_SPARSE_SKIP_MIXTURE_SCHEMA",
     "DynamicSparseGateOracleError",
     "dynamic_sparse_skip_mixture",
     "gelu",
+    "operation_set_compiler_hint_from_channel_gate_scores",
     "operation_set_compiler_hint_from_gate_scores",
     "rms_norm",
 ]

@@ -105,6 +105,9 @@ from tac.optimization.byte_shaving_campaign import (
     build_byte_shaving_campaign_plan,
     build_signal_surface_from_inverse_action_functional,
 )
+from tac.optimization.dynamic_sparse_gate_oracle import (
+    operation_set_compiler_hint_from_channel_gate_scores,
+)
 from tac.optimization.family_agnostic_materializers import (
     ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
     PACKET_MEMBER_MERGE_SCHEMA,
@@ -576,6 +579,67 @@ def _direct_mlx_compiler_plan() -> dict[str, object]:
     action = build_discrete_scorer_action_functional(atoms, total_byte_budget=512)
     surface = build_signal_surface_from_inverse_action_functional(action)
     return build_byte_shaving_campaign_plan(surface, max_k=2)
+
+
+def _dynamic_sparse_channel_gate_compiler_plan() -> dict[str, object]:
+    hint = operation_set_compiler_hint_from_channel_gate_scores(
+        [
+            {
+                "unit_id": "mudd_value_h9_packet_member",
+                "target_kind": PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                "member_name": "mudd.bin",
+                "dynamic_gate_channel_id": "value",
+                "dynamic_gate_source_id": "h9",
+                "candidate_saved_bytes": 80,
+                "representation_family_class": "nerv_family",
+            },
+            {
+                "unit_id": "mudd_residual_h7_archive_section",
+                "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+                "archive_section": "decoder_blob",
+                "dynamic_gate_channel_id": "residual",
+                "dynamic_gate_source_id": "h7",
+                "candidate_saved_bytes": 96,
+                "representation_family_class": "non_nerv",
+            },
+        ],
+        [
+            [[0.0, 0.2, 0.9], [0.0, 0.7, 0.1]],
+            [[0.0, 0.3, 0.8], [0.0, 0.8, 0.2]],
+        ],
+        operation_set_id="dynamic_sparse_channel_gate_compiled_set",
+        source_ids=["x0", "h7", "h9"],
+        channel_ids=["value", "residual"],
+        max_operations=2,
+        lane_id="codex_dynamic_sparse_channel_gate_compiler_20260525",
+        shared_projection_id="mudd_pr259_shared_projection",
+        topology_id="mudd_pr259_late_value_residual_subset",
+    )
+    action = {
+        "schema": "inverse_steganalysis_discrete_action_functional.v1",
+        "cells": [
+            {
+                "atom_id": "dynamic_sparse_channel_gate_cell",
+                "operation_set_compiler": hint,
+            }
+        ],
+        "water_bucket": {
+            "selected_cells": [
+                {
+                    "atom_id": "dynamic_sparse_channel_gate_cell",
+                    "candidate_id": "dynamic_sparse_channel_gate_candidate",
+                    "scope_axis": "operation_set",
+                    "component": "rate",
+                    "water_fill_cost_bytes": 176,
+                    "expected_score_gain": 0.0003,
+                    "euler_lagrange_residual": 0.0001,
+                }
+            ]
+        },
+        **_false_authority(),
+    }
+    surface = build_signal_surface_from_inverse_action_functional(action)
+    return build_byte_shaving_campaign_plan(surface, max_k=1)
 
 
 def _inverse_action_high_level_backlog() -> dict[str, object]:
@@ -1595,6 +1659,44 @@ def test_direct_mlx_compiler_hint_reaches_materializer_work_queue(
     assert backlog["score_claim"] is False
     assert work_queue["score_claim"] is False
     assert work_queue["ready_for_exact_eval_dispatch"] is False
+
+
+def test_dynamic_sparse_channel_gate_hint_reaches_materializer_work_queue(
+    tmp_path: Path,
+) -> None:
+    plan = _dynamic_sparse_channel_gate_compiler_plan()
+    packet_ir = plan["packet_ir_operation_sets"][0]
+
+    compiled = compile_dqs1_byte_shaving_campaign(
+        plan,
+        repo_root=tmp_path,
+    )
+    backlog = compiled["materializer_backlog"]
+    work_queue = compiled["materializer_work_queue"]
+
+    assert packet_ir["schema"] == PACKET_IR_OPERATION_SET_SCHEMA
+    assert packet_ir["score_claim"] is False
+    assert {
+        operation["params"]["dynamic_sparse_channel_gate"]["channel_id"]
+        for operation in packet_ir["operations"]
+    } == {"value", "residual"}
+    assert compiled["packet_ir_materializer_backlog_row_count"] >= 2
+    assert work_queue["row_count"] == 2
+    assert work_queue["ready_for_exact_eval_dispatch"] is False
+    rows_by_target = {row["target_kind"]: row for row in backlog["rows"]}
+    value_gate = rows_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["operation_params"][
+        "dynamic_sparse_channel_gate"
+    ]
+    residual_gate = rows_by_target[ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND][
+        "operation_params"
+    ]["dynamic_sparse_channel_gate"]
+    assert value_gate["source_id"] == "h9"
+    assert value_gate["channel_id"] == "value"
+    assert value_gate["score_claim"] is False
+    assert residual_gate["source_id"] == "h7"
+    assert residual_gate["channel_id"] == "residual"
+    assert backlog["score_claim"] is False
+    assert work_queue["score_claim"] is False
 
 
 def test_materializer_work_queue_lowers_high_level_inverse_action_context(
