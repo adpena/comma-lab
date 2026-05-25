@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -11,16 +12,21 @@ from tac.local_acceleration import EVIDENCE_TAG_MLX
 from tac.local_acceleration.mlx_preprocess import ScorerInputBatch, write_scorer_input_cache
 from tac.local_acceleration.mlx_scorer_response import GPU_RESEARCH_SIGNAL_BLOCKER
 from tac.local_acceleration.mlx_scorer_torch_parity import (
+    CONV_ACCUMULATION_PROBE_SCHEMA_VERSION,
     FAIL_VERDICT,
+    PASS_CONV_ACCUMULATION_PROBE_VERDICT,
     PASS_SWEEP_VERDICT,
     PASS_TORCH_BATCH_INVARIANCE_VERDICT,
     PASS_VERDICT,
+    MLXConv2dAccumulationThresholds,
     MLXTorchParityThresholds,
+    build_mlx_conv2d_accumulation_probe_manifest,
     build_mlx_scorer_torch_parity_manifest,
     build_mlx_scorer_torch_parity_manifest_from_outputs,
     build_mlx_scorer_torch_parity_sweep_manifest,
     build_mlx_segnet_layer_trace_manifest,
     build_torch_segnet_batch_invariance_manifest,
+    mlx_runtime_determinism_contract,
 )
 
 REPO = Path(__file__).resolve().parents[3]
@@ -385,6 +391,154 @@ def test_torch_segnet_batch_invariance_cli_rejects_invalid_window_before_loading
     assert completed.returncode == 2
     assert "max_pairs must be >= 1" in completed.stderr
     assert not output.exists()
+
+
+def test_mlx_conv2d_accumulation_probe_exposes_kahan_and_fp64_modes() -> None:
+    rng = np.random.default_rng(20260525)
+    x = rng.normal(0.0, 0.25, size=(1, 4, 7, 8)).astype(np.float32)
+    weight = rng.normal(0.0, 0.2, size=(6, 2, 3, 3)).astype(np.float32)
+    bias = rng.normal(0.0, 0.05, size=(6,)).astype(np.float32)
+
+    manifest = build_mlx_conv2d_accumulation_probe_manifest(
+        input_nchw=x,
+        weight_oihw=weight,
+        bias=bias,
+        padding=1,
+        groups=2,
+        run_id="fixture_conv_accumulation",
+    )
+
+    assert manifest["schema_version"] == CONV_ACCUMULATION_PROBE_SCHEMA_VERSION
+    assert manifest["passed"] is True
+    assert manifest["verdict"] == PASS_CONV_ACCUMULATION_PROBE_VERDICT
+    assert manifest["score_claim"] is False
+    assert manifest["promotion_eligible"] is False
+    assert manifest["requires_exact_eval_before_promotion"] is True
+    assert manifest["conv2d_contract"]["groups"] == 2
+    modes = {row["mode"]: row for row in manifest["rows"]}
+    assert set(modes) == {
+        "optimized_mlx_conv2d",
+        "fixed_fp32",
+        "kahan_fp32",
+        "fixed_fp64",
+    }
+    assert modes["kahan_fp32"]["max_abs_delta"] <= 1.0e-4
+    assert modes["fixed_fp64"]["max_abs_delta"] <= 1.0e-5
+    assert manifest["mlx_backend"]["prng_seed_available"] is True
+    assert manifest["mlx_backend"]["deterministic_reduction_flag_available"] is False
+    assert (
+        manifest["mlx_backend"]["classification"]
+        == "framework_different_no_public_deterministic_reduction_flag"
+    )
+
+
+def test_mlx_conv2d_accumulation_probe_can_fail_tight_thresholds() -> None:
+    rng = np.random.default_rng(7)
+    x = rng.normal(0.0, 0.25, size=(1, 4, 7, 8)).astype(np.float32)
+    weight = rng.normal(0.0, 0.2, size=(6, 2, 3, 3)).astype(np.float32)
+    bias = rng.normal(0.0, 0.05, size=(6,)).astype(np.float32)
+
+    manifest = build_mlx_conv2d_accumulation_probe_manifest(
+        input_nchw=x,
+        weight_oihw=weight,
+        bias=bias,
+        padding=1,
+        groups=2,
+        thresholds=MLXConv2dAccumulationThresholds(
+            max_optimized_abs_delta=1.0e-12,
+            max_fixed_fp32_abs_delta=1.0e-12,
+            max_kahan_fp32_abs_delta=1.0e-12,
+            max_fixed_fp64_abs_delta=1.0e-12,
+        ),
+    )
+
+    assert manifest["passed"] is False
+    assert any("max_abs_delta_exceeds_threshold" in item for item in manifest["blockers"])
+
+
+def test_mlx_conv2d_accumulation_cli_rejects_gpu_without_allowance(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "conv_probe.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "probe_mlx_conv2d_accumulation.py"),
+            "--output",
+            str(output),
+            "--device",
+            "gpu",
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    assert GPU_RESEARCH_SIGNAL_BLOCKER in completed.stderr
+    assert not output.exists()
+
+
+def test_mlx_conv2d_accumulation_cli_writes_false_authority_manifest(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "conv_probe.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "probe_mlx_conv2d_accumulation.py"),
+            "--output",
+            str(output),
+            "--batch",
+            "1",
+            "--height",
+            "7",
+            "--width",
+            "8",
+            "--in-channels",
+            "4",
+            "--out-channels",
+            "6",
+            "--groups",
+            "2",
+            "--torch-num-threads",
+            "1",
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 0
+    assert output.exists()
+    stdout = json.loads(completed.stdout)
+    manifest = json.loads(output.read_text(encoding="utf-8"))
+    assert stdout["passed"] is True
+    assert manifest["verdict"] == PASS_CONV_ACCUMULATION_PROBE_VERDICT
+    assert manifest["score_claim"] is False
+    assert manifest["promotion_eligible"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert {row["mode"] for row in manifest["rows"]} == {
+        item["mode"] for item in stdout["rows"]
+    }
+
+
+def test_mlx_runtime_determinism_contract_classifies_reduction_flag_gap() -> None:
+    contract = mlx_runtime_determinism_contract(device_type="cpu")
+
+    assert contract["mlx_importable"] is True
+    assert contract["prng_seed_available"] is True
+    assert contract["prng_key_available"] is True
+    assert contract["score_claim"] is False
+    assert contract["promotion_eligible"] is False
+    assert contract["ready_for_exact_eval_dispatch"] is False
+    assert "deterministic_reduction_control_status" in contract
+    if contract["deterministic_reduction_flag_available"] is False:
+        assert contract["public_core_deterministic_attrs"] == []
+        assert contract["public_metal_deterministic_attrs"] == []
+        assert "mlx_public_deterministic_reduction_flag_not_observed" in contract["blockers"]
 
 
 def _write_test_cache_with_pair_count(path: Path, *, pair_count: int) -> Path:

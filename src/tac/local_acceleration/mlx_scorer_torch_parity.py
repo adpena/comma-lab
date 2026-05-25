@@ -18,9 +18,13 @@ from tac.local_acceleration.mlx_scorer_adapters import (
     _mlx_array_to_numpy,
     nchw_to_nhwc,
     nhwc_to_nchw,
+    run_mlx_conv2d_nchw,
     run_mlx_distortion_scorer_nchw,
+    run_mlx_reference_conv2d_nchw,
     scorer_distortion_components_numpy,
     temporary_mlx_device,
+    torch_conv2d_to_mlx,
+    torch_conv2d_to_mlx_reference,
     torch_distortion_net_to_mlx,
     torch_segnet_to_mlx,
 )
@@ -34,12 +38,15 @@ SCHEMA_VERSION = "mlx_scorer_torch_parity.v1"
 SWEEP_SCHEMA_VERSION = "mlx_scorer_torch_parity_sweep.v1"
 SEGNET_TRACE_SCHEMA_VERSION = "mlx_segnet_layer_trace.v1"
 TORCH_BATCH_INVARIANCE_SCHEMA_VERSION = "torch_segnet_batch_invariance.v1"
+CONV_ACCUMULATION_PROBE_SCHEMA_VERSION = "mlx_conv2d_accumulation_probe.v1"
 PASS_VERDICT = "PASS_MLX_TORCH_SCORER_PARITY"
 FAIL_VERDICT = "FAIL_MLX_TORCH_SCORER_PARITY"
 PASS_SWEEP_VERDICT = "PASS_MLX_TORCH_SCORER_PARITY_SWEEP"
 FAIL_SWEEP_VERDICT = "FAIL_MLX_TORCH_SCORER_PARITY_SWEEP"
 PASS_TORCH_BATCH_INVARIANCE_VERDICT = "PASS_TORCH_SEGNET_BATCH_INVARIANCE"
 FAIL_TORCH_BATCH_INVARIANCE_VERDICT = "FAIL_TORCH_SEGNET_BATCH_INVARIANCE"
+PASS_CONV_ACCUMULATION_PROBE_VERDICT = "PASS_MLX_CONV2D_ACCUMULATION_PROBE"
+FAIL_CONV_ACCUMULATION_PROBE_VERDICT = "FAIL_MLX_CONV2D_ACCUMULATION_PROBE"
 
 
 @dataclass(frozen=True)
@@ -50,6 +57,16 @@ class MLXTorchParityThresholds:
     max_segnet_logit_abs_delta: float = 1.0e-2
     max_posenet_component_abs_delta: float = 2.0e-5
     max_segnet_argmax_diff_pixels: int = 0
+
+
+@dataclass(frozen=True)
+class MLXConv2dAccumulationThresholds:
+    """Tolerances for MLX Conv2d accumulation-mode probes against PyTorch."""
+
+    max_optimized_abs_delta: float = 1.0e-3
+    max_fixed_fp32_abs_delta: float = 1.0e-4
+    max_kahan_fp32_abs_delta: float = 1.0e-4
+    max_fixed_fp64_abs_delta: float = 1.0e-5
 
 
 def build_mlx_scorer_torch_parity_manifest(
@@ -254,6 +271,7 @@ def build_mlx_scorer_torch_parity_sweep_manifest(
         "requires_exact_eval_before_promotion": True,
         "device_type": device_type,
         "gpu_research_signal_allowed": bool(allow_gpu_research_signal),
+        "mlx_backend": mlx_runtime_determinism_contract(device_type=device_type),
         "cache_dir": str(cache_dir),
         "cache_identity": _cache_identity(cache),
         "total_pair_count": total_pair_count,
@@ -269,6 +287,245 @@ def build_mlx_scorer_torch_parity_sweep_manifest(
         "authority_status": (
             "PyTorch-vs-MLX parity sweep is local implementation evidence only; "
             "paired CPU/CUDA auth eval remains required for score claims and promotion."
+        ),
+        "device_contract": {
+            "gpu_research_signal_blocker": GPU_RESEARCH_SIGNAL_BLOCKER,
+            "gpu_research_signal_required": device_type == "gpu",
+            "forbidden_uses": [
+                "score_claim",
+                "promotion",
+                "promotable",
+                "rank_or_kill",
+                "replacement_for_cpu_or_cuda_auth_eval",
+            ],
+        },
+    }
+
+
+def build_mlx_conv2d_accumulation_probe_manifest(
+    *,
+    input_nchw: np.ndarray,
+    weight_oihw: np.ndarray,
+    bias: np.ndarray | None = None,
+    stride: int | tuple[int, int] = 1,
+    padding: int | tuple[int, int] = 0,
+    dilation: int | tuple[int, int] = 1,
+    groups: int = 1,
+    device_type: str = "cpu",
+    torch_device_type: str = "cpu",
+    thresholds: MLXConv2dAccumulationThresholds | None = None,
+    run_id: str | None = None,
+    allow_gpu_research_signal: bool = False,
+    use_deterministic_algorithms: bool = True,
+    cudnn_benchmark: bool | None = None,
+    cudnn_deterministic: bool | None = None,
+    allow_tf32: bool | None = None,
+    mkldnn_enabled: bool | None = None,
+    torch_num_threads: int | None = None,
+) -> dict[str, Any]:
+    """Probe MLX Conv2d accumulation modes against a PyTorch reference.
+
+    This is a diagnostic path for the MLX scorer port. It does not change the
+    fast scorer adapter by default; it makes fixed-order, Kahan, and fp64
+    accumulation modes executable so drift hypotheses can be measured.
+    """
+
+    if device_type not in {"cpu", "gpu"}:
+        raise ValueError(f"device_type must be 'cpu' or 'gpu', got {device_type!r}")
+    if torch_device_type not in {"cpu", "cuda"}:
+        raise ValueError(
+            f"torch_device_type must be 'cpu' or 'cuda', got {torch_device_type!r}"
+        )
+    if device_type == "gpu" and not allow_gpu_research_signal:
+        raise ValueError(
+            f"{GPU_RESEARCH_SIGNAL_BLOCKER}: MLX GPU Conv2d accumulation probes "
+            "are local research-signal implementation checks only; pass "
+            "allow_gpu_research_signal=True after recording that rationale"
+        )
+    if int(groups) < 1:
+        raise ValueError(f"groups must be >= 1, got {groups}")
+    if torch_num_threads is not None and int(torch_num_threads) < 1:
+        raise ValueError(f"torch_num_threads must be >= 1 when set, got {torch_num_threads}")
+
+    import torch
+    import torch.nn.functional as F
+
+    x = np.asarray(input_nchw, dtype=np.float32)
+    weight = np.asarray(weight_oihw, dtype=np.float32)
+    if x.ndim != 4:
+        raise ValueError(f"input_nchw must have shape (N,C,H,W), got {x.shape}")
+    if weight.ndim != 4:
+        raise ValueError(f"weight_oihw must have shape (O,I,kH,kW), got {weight.shape}")
+    groups_i = int(groups)
+    out_channels, in_channels_per_group, _kernel_h, _kernel_w = weight.shape
+    expected_in_channels = int(in_channels_per_group) * groups_i
+    if int(x.shape[1]) != expected_in_channels:
+        raise ValueError(
+            f"input channels {x.shape[1]} do not match weight/groups channels "
+            f"{expected_in_channels}"
+        )
+    if int(out_channels) % groups_i != 0:
+        raise ValueError(f"out_channels {out_channels} not divisible by groups {groups_i}")
+    bias_np = None if bias is None else np.asarray(bias, dtype=np.float32)
+    if bias_np is not None and bias_np.shape != (int(out_channels),):
+        raise ValueError(f"bias must have shape ({out_channels},), got {bias_np.shape}")
+
+    stride_pair = _conv_pair(stride, label="stride")
+    padding_pair = _conv_pair(padding, label="padding")
+    dilation_pair = _conv_pair(dilation, label="dilation")
+    if stride_pair[0] < 1 or stride_pair[1] < 1:
+        raise ValueError(f"stride must be positive, got {stride_pair}")
+    if dilation_pair[0] < 1 or dilation_pair[1] < 1:
+        raise ValueError(f"dilation must be positive, got {dilation_pair}")
+    limits = thresholds or MLXConv2dAccumulationThresholds()
+
+    torch_weight = torch.from_numpy(np.array(weight, dtype=np.float32, copy=True, order="C"))
+    torch_bias = (
+        None
+        if bias_np is None
+        else torch.from_numpy(np.array(bias_np, dtype=np.float32, copy=True, order="C"))
+    )
+    torch_device = _torch_device(torch_device_type)
+    with _torch_backend_options(
+        use_deterministic_algorithms=bool(use_deterministic_algorithms),
+        cudnn_benchmark=cudnn_benchmark,
+        cudnn_deterministic=cudnn_deterministic,
+        allow_tf32=allow_tf32,
+        mkldnn_enabled=mkldnn_enabled,
+        torch_num_threads=torch_num_threads,
+    ):
+        torch_input = torch.from_numpy(np.array(x, dtype=np.float32, copy=True, order="C")).to(
+            torch_device
+        )
+        torch_output = F.conv2d(
+            torch_input,
+            torch_weight.to(torch_device),
+            None if torch_bias is None else torch_bias.to(torch_device),
+            stride=stride_pair,
+            padding=padding_pair,
+            dilation=dilation_pair,
+            groups=groups_i,
+        )
+        if torch_device.type == "cuda":
+            torch.cuda.synchronize(torch_device)
+        torch_ref = torch_output.detach().cpu().numpy().astype(np.float32, copy=True)
+        backend_metadata = _torch_backend_metadata(torch_device_type)
+
+    torch_conv = torch.nn.Conv2d(
+        expected_in_channels,
+        int(out_channels),
+        (int(weight.shape[2]), int(weight.shape[3])),
+        stride=stride_pair,
+        padding=padding_pair,
+        dilation=dilation_pair,
+        groups=groups_i,
+        bias=bias_np is not None,
+    )
+    with torch.no_grad():
+        torch_conv.weight.copy_(torch_weight)
+        if bias_np is not None and torch_conv.bias is not None:
+            torch_conv.bias.copy_(torch_bias)
+    torch_conv.eval()
+
+    with temporary_mlx_device(device_type):
+        mode_outputs = {
+            "optimized_mlx_conv2d": run_mlx_conv2d_nchw(
+                torch_conv2d_to_mlx(torch_conv),
+                x,
+            ),
+            "fixed_fp32": run_mlx_reference_conv2d_nchw(
+                torch_conv2d_to_mlx_reference(torch_conv, accumulation_mode="fixed_fp32"),
+                x,
+            ),
+            "kahan_fp32": run_mlx_reference_conv2d_nchw(
+                torch_conv2d_to_mlx_reference(torch_conv, accumulation_mode="kahan_fp32"),
+                x,
+            ),
+            "fixed_fp64": run_mlx_reference_conv2d_nchw(
+                torch_conv2d_to_mlx_reference(torch_conv, accumulation_mode="fixed_fp64"),
+                x,
+            ),
+        }
+
+    mode_thresholds = {
+        "optimized_mlx_conv2d": float(limits.max_optimized_abs_delta),
+        "fixed_fp32": float(limits.max_fixed_fp32_abs_delta),
+        "kahan_fp32": float(limits.max_kahan_fp32_abs_delta),
+        "fixed_fp64": float(limits.max_fixed_fp64_abs_delta),
+    }
+    rows = []
+    blockers: list[str] = []
+    for mode, output in mode_outputs.items():
+        summary = _array_delta_summary(torch_ref, output)
+        limit = mode_thresholds[mode]
+        max_abs_delta = summary.get("max_abs_delta")
+        exceeds = max_abs_delta is None or float(max_abs_delta) > limit
+        row_blockers = (
+            []
+            if not exceeds
+            else [f"max_abs_delta_exceeds_threshold:{max_abs_delta}>{limit}"]
+        )
+        blockers.extend(f"{mode}:{blocker}" for blocker in row_blockers)
+        rows.append(
+            {
+                "mode": mode,
+                "threshold": limit,
+                "passed": not exceeds,
+                "blockers": row_blockers,
+                **summary,
+            }
+        )
+
+    passed = not blockers
+    return {
+        "schema_version": CONV_ACCUMULATION_PROBE_SCHEMA_VERSION,
+        "run_id": run_id,
+        "verdict": (
+            PASS_CONV_ACCUMULATION_PROBE_VERDICT
+            if passed
+            else FAIL_CONV_ACCUMULATION_PROBE_VERDICT
+        ),
+        "passed": passed,
+        "blockers": blockers,
+        "thresholds": asdict(limits),
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_axis": EVIDENCE_TAG_MLX,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "comparison": "torch_conv2d_vs_mlx_accumulation_modes",
+        "device_type": device_type,
+        "torch_device_type": torch_device_type,
+        "gpu_research_signal_allowed": bool(allow_gpu_research_signal),
+        "conv2d_contract": {
+            "input_shape_nchw": list(x.shape),
+            "weight_shape_oihw": list(weight.shape),
+            "bias": bias_np is not None,
+            "stride": list(stride_pair),
+            "padding": list(padding_pair),
+            "dilation": list(dilation_pair),
+            "groups": groups_i,
+        },
+        "requested_torch_backend_options": {
+            "use_deterministic_algorithms": bool(use_deterministic_algorithms),
+            "cudnn_benchmark": cudnn_benchmark,
+            "cudnn_deterministic": cudnn_deterministic,
+            "allow_tf32": allow_tf32,
+            "mkldnn_enabled": mkldnn_enabled,
+            "torch_num_threads": None if torch_num_threads is None else int(torch_num_threads),
+        },
+        "torch_backend": backend_metadata,
+        "mlx_backend": mlx_runtime_determinism_contract(device_type=device_type),
+        "rows": rows,
+        "authority_status": (
+            "MLX Conv2d accumulation probes are local implementation diagnostics; "
+            "they do not replace contest CPU/CUDA auth eval or grant score authority."
         ),
         "device_contract": {
             "gpu_research_signal_blocker": GPU_RESEARCH_SIGNAL_BLOCKER,
@@ -368,6 +625,7 @@ def build_mlx_segnet_layer_trace_manifest(
         "requires_exact_eval_before_promotion": True,
         "device_type": device_type,
         "gpu_research_signal_allowed": bool(allow_gpu_research_signal),
+        "mlx_backend": mlx_runtime_determinism_contract(device_type=device_type),
         "cache_dir": str(cache_dir),
         "cache_identity": _cache_identity(cache),
         "start_pair": start,
@@ -661,6 +919,17 @@ def write_mlx_scorer_torch_parity_sweep_manifest(
     out.write_text(json.dumps(_jsonable(manifest), indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def write_mlx_conv2d_accumulation_probe_manifest(
+    manifest: dict[str, Any],
+    path: str | Path,
+) -> None:
+    """Write an MLX Conv2d accumulation probe manifest with stable formatting."""
+
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(_jsonable(manifest), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def build_mlx_scorer_torch_parity_manifest_from_outputs(
     *,
     torch_outputs: dict[str, Any],
@@ -746,6 +1015,11 @@ def build_mlx_scorer_torch_parity_manifest_from_outputs(
         "requires_exact_eval_before_promotion": True,
         "device_type": device_type,
         "gpu_research_signal_allowed": bool(gpu_research_signal_allowed),
+        "mlx_backend": (
+            mlx_runtime_determinism_contract(device_type=device_type)
+            if device_type in {"cpu", "gpu"}
+            else None
+        ),
         "cache_dir": cache_dir,
         "cache_identity": cache_identity,
         "start_pair": start_pair,
@@ -1185,6 +1459,81 @@ def _clear_mlx_runtime_cache() -> None:
         return
 
 
+def mlx_runtime_determinism_contract(*, device_type: str | None = None) -> dict[str, Any]:
+    """Return the MLX runtime-side determinism contract visible to Python.
+
+    MLX exposes PRNG seed/key control, but as of the installed runtime there is
+    no public deterministic-reduction flag analogous to PyTorch's
+    ``use_deterministic_algorithms``/cuDNN knobs. The parity harness records the
+    asymmetry explicitly instead of silently assuming MLX reductions are pinned.
+    """
+
+    try:
+        import mlx.core as mx
+    except ImportError:
+        return {
+            "device_type": device_type,
+            "mlx_importable": False,
+            "deterministic_reduction_flag_available": False,
+            "classification": "mlx_unavailable",
+            "blockers": ["mlx_runtime_not_importable"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    core_names = dir(mx)
+    metal = getattr(mx, "metal", None)
+    metal_names = [] if metal is None else dir(metal)
+    deterministic_names = sorted(
+        name
+        for name in core_names
+        if "determin" in name.lower()
+    )
+    metal_deterministic_names = sorted(
+        name
+        for name in metal_names
+        if "determin" in name.lower()
+    )
+    random_module = getattr(mx, "random", None)
+    reduction_blockers = (
+        []
+        if deterministic_names or metal_deterministic_names
+        else ["mlx_public_deterministic_reduction_flag_not_observed"]
+    )
+    return {
+        "device_type": device_type,
+        "mlx_importable": True,
+        "mlx_version": getattr(mx, "__version__", None),
+        "default_device": str(mx.default_device()) if hasattr(mx, "default_device") else None,
+        "deterministic_reduction_flag_available": bool(
+            deterministic_names or metal_deterministic_names
+        ),
+        "public_core_deterministic_attrs": deterministic_names,
+        "public_metal_deterministic_attrs": metal_deterministic_names,
+        "prng_seed_available": bool(
+            random_module is not None and hasattr(random_module, "seed")
+        ),
+        "prng_key_available": bool(
+            random_module is not None and hasattr(random_module, "key")
+        ),
+        "classification": (
+            "mlx_public_deterministic_reduction_controls_present"
+            if deterministic_names or metal_deterministic_names
+            else "framework_different_no_public_deterministic_reduction_flag"
+        ),
+        "deterministic_reduction_control_status": (
+            "public_control_present_verify_semantics_before_authority"
+            if deterministic_names or metal_deterministic_names
+            else "no_public_control_observed_local_probe_only"
+        ),
+        "blockers": reduction_blockers,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _pose_output_deltas(torch_outputs: dict[str, Any], mlx_outputs: dict[str, Any]) -> dict[str, float]:
     torch_pose = torch_outputs.get("posenet")
     mlx_pose = mlx_outputs.get("posenet")
@@ -1357,6 +1706,19 @@ def _torch_device(device_type: str) -> Any:
     return torch.device("cpu")
 
 
+def _conv_pair(value: int | tuple[int, int], *, label: str) -> tuple[int, int]:
+    if isinstance(value, int):
+        if value < 0:
+            raise ValueError(f"{label} must be non-negative, got {value}")
+        return (value, value)
+    if not isinstance(value, tuple) or len(value) != 2:
+        raise ValueError(f"{label} must be an int or length-2 tuple, got {value!r}")
+    out = (int(value[0]), int(value[1]))
+    if out[0] < 0 or out[1] < 0:
+        raise ValueError(f"{label} must be non-negative, got {value!r}")
+    return out
+
+
 def _torch_backend_metadata(device_type: str) -> dict[str, Any]:
     import torch
 
@@ -1431,9 +1793,12 @@ def _jsonable(value: Any) -> Any:
 
 
 __all__ = [
+    "CONV_ACCUMULATION_PROBE_SCHEMA_VERSION",
+    "FAIL_CONV_ACCUMULATION_PROBE_VERDICT",
     "FAIL_SWEEP_VERDICT",
     "FAIL_TORCH_BATCH_INVARIANCE_VERDICT",
     "FAIL_VERDICT",
+    "PASS_CONV_ACCUMULATION_PROBE_VERDICT",
     "PASS_SWEEP_VERDICT",
     "PASS_TORCH_BATCH_INVARIANCE_VERDICT",
     "PASS_VERDICT",
@@ -1441,16 +1806,20 @@ __all__ = [
     "SEGNET_TRACE_SCHEMA_VERSION",
     "SWEEP_SCHEMA_VERSION",
     "TORCH_BATCH_INVARIANCE_SCHEMA_VERSION",
+    "MLXConv2dAccumulationThresholds",
     "MLXTorchParityThresholds",
+    "build_mlx_conv2d_accumulation_probe_manifest",
     "build_mlx_scorer_torch_parity_manifest",
     "build_mlx_scorer_torch_parity_manifest_from_outputs",
     "build_mlx_scorer_torch_parity_sweep_manifest",
     "build_mlx_segnet_layer_trace_manifest",
     "build_torch_segnet_batch_invariance_manifest",
+    "mlx_runtime_determinism_contract",
     "run_mlx_segnet_layer_trace_nchw",
     "run_torch_distortion_scorer_nchw",
     "run_torch_segnet_batch_and_loop_nchw",
     "run_torch_segnet_layer_trace_nchw",
+    "write_mlx_conv2d_accumulation_probe_manifest",
     "write_mlx_scorer_torch_parity_manifest",
     "write_mlx_scorer_torch_parity_sweep_manifest",
     "write_mlx_segnet_layer_trace_manifest",

@@ -31,6 +31,7 @@ __all__ = [
     "run_mlx_mobileone_stem_nchw",
     "run_mlx_patch_embed_nchw",
     "run_mlx_posenet_nchw",
+    "run_mlx_reference_conv2d_nchw",
     "run_mlx_repmixer_block_nchw",
     "run_mlx_segmentation_head_nchw",
     "run_mlx_segnet_nchw",
@@ -42,6 +43,7 @@ __all__ = [
     "torch_batchnorm2d_to_mlx",
     "torch_conv2d_relu_to_mlx",
     "torch_conv2d_to_mlx",
+    "torch_conv2d_to_mlx_reference",
     "torch_conv_mlp_to_mlx",
     "torch_distortion_net_to_mlx",
     "torch_efficientnet_block_to_mlx",
@@ -441,6 +443,161 @@ class MLXExplicitSpatialConv2dAdapter:
         for kh, kw, channel, weight in self.terms:
             out = out + x_pad[:, kh : kh + height, kw : kw + width, channel : channel + 1] * weight
         return out if self.bias is None else out + self.bias
+
+
+class MLXReferenceConv2dAdapter:
+    """Fixed-order Conv2d reference path for MLX numerical drift probes.
+
+    This is intentionally not the fast scorer path. It exists to make MLX-side
+    accumulation order explicit when debugging PyTorch/MLX drift. It supports
+    grouped Conv2d, stride, padding, dilation, optional Kahan compensation, and
+    optional fp64 intermediate accumulation.
+    """
+
+    def __init__(
+        self,
+        torch_conv: Any,
+        *,
+        accumulation_mode: str = "fixed_fp32",
+    ):
+        import mlx.core as mx
+
+        if accumulation_mode not in {"fixed_fp32", "kahan_fp32", "fixed_fp64"}:
+            raise ValueError(
+                "accumulation_mode must be one of fixed_fp32/kahan_fp32/fixed_fp64, "
+                f"got {accumulation_mode!r}"
+            )
+        self.accumulation_mode = accumulation_mode
+        self.stride = _pair(torch_conv.stride)
+        self.padding = _pair(torch_conv.padding)
+        self.dilation = _pair(torch_conv.dilation)
+        self.groups = int(torch_conv.groups)
+        weight = _torch_tensor_to_numpy(torch_conv.weight)
+        if weight.ndim != 4:
+            raise ValueError(f"Conv2d weight must be rank-4 OIHW, got {weight.shape}")
+        out_channels, in_channels_per_group, kernel_h, kernel_w = weight.shape
+        if out_channels % self.groups != 0:
+            raise ValueError(
+                f"out_channels {out_channels} not divisible by groups {self.groups}"
+            )
+        self.out_channels = int(out_channels)
+        self.in_channels_per_group = int(in_channels_per_group)
+        self.kernel_size = (int(kernel_h), int(kernel_w))
+        self.out_channels_per_group = int(out_channels // self.groups)
+        dtype = mx.float64 if accumulation_mode == "fixed_fp64" else mx.float32
+        self.weight_groups = [
+            [
+                [
+                    mx.array(
+                        np.ascontiguousarray(
+                            weight[
+                                group_index
+                                * self.out_channels_per_group : (group_index + 1)
+                                * self.out_channels_per_group,
+                                local_channel,
+                                kh,
+                                kw,
+                            ].reshape(1, 1, 1, self.out_channels_per_group)
+                        ),
+                        dtype=dtype,
+                    )
+                    for local_channel in range(self.in_channels_per_group)
+                ]
+                for kh in range(kernel_h)
+                for kw in range(kernel_w)
+            ]
+            for group_index in range(self.groups)
+        ]
+        self.bias = (
+            None
+            if torch_conv.bias is None
+            else mx.array(
+                np.ascontiguousarray(
+                    _torch_tensor_to_numpy(torch_conv.bias).reshape(
+                        1, 1, 1, self.out_channels
+                    )
+                ),
+                dtype=dtype,
+            )
+        )
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        import mlx.core as mx
+
+        original_dtype = x_nhwc.dtype
+        accum_dtype = mx.float64 if self.accumulation_mode == "fixed_fp64" else mx.float32
+        x_work = x_nhwc.astype(accum_dtype)
+        pad_h, pad_w = self.padding
+        stride_h, stride_w = self.stride
+        dilation_h, dilation_w = self.dilation
+        kernel_h, kernel_w = self.kernel_size
+        x_pad = mx.pad(x_work, ((0, 0), (pad_h, pad_h), (pad_w, pad_w), (0, 0)))
+        batch, height_in, width_in, channels_in = x_nhwc.shape
+        expected_channels = self.groups * self.in_channels_per_group
+        if int(channels_in) != expected_channels:
+            raise ValueError(
+                f"input channels {channels_in} do not match grouped weight channels "
+                f"{expected_channels}"
+            )
+        height_out = (
+            int(height_in) + 2 * pad_h - dilation_h * (kernel_h - 1) - 1
+        ) // stride_h + 1
+        width_out = (
+            int(width_in) + 2 * pad_w - dilation_w * (kernel_w - 1) - 1
+        ) // stride_w + 1
+        if height_out < 1 or width_out < 1:
+            raise ValueError(
+                f"invalid Conv2d output shape ({height_out}, {width_out}) "
+                f"for input {(height_in, width_in)}"
+            )
+
+        group_outputs = []
+        for group_index in range(self.groups):
+            group_out = mx.zeros(
+                (batch, height_out, width_out, self.out_channels_per_group),
+                dtype=accum_dtype,
+            )
+            compensation = (
+                mx.zeros_like(group_out)
+                if self.accumulation_mode == "kahan_fp32"
+                else None
+            )
+            term_index = 0
+            for kh in range(kernel_h):
+                for kw in range(kernel_w):
+                    h0 = kh * dilation_h
+                    w0 = kw * dilation_w
+                    h1 = h0 + stride_h * height_out
+                    w1 = w0 + stride_w * width_out
+                    for local_channel in range(self.in_channels_per_group):
+                        channel = group_index * self.in_channels_per_group + local_channel
+                        term = (
+                            x_pad[
+                                :,
+                                h0:h1:stride_h,
+                                w0:w1:stride_w,
+                                channel : channel + 1,
+                            ]
+                            * self.weight_groups[group_index][term_index][local_channel]
+                        )
+                        if compensation is None:
+                            group_out = group_out + term
+                        else:
+                            y = term - compensation
+                            t = group_out + y
+                            compensation = (t - group_out) - y
+                            group_out = t
+                    term_index += 1
+            group_outputs.append(group_out)
+
+        out = (
+            group_outputs[0]
+            if len(group_outputs) == 1
+            else mx.concatenate(group_outputs, axis=-1)
+        )
+        if self.bias is not None:
+            out = out + self.bias
+        return out.astype(original_dtype)
 
 
 class MLXSegNetAdapter:
@@ -874,6 +1031,19 @@ def torch_conv2d_to_mlx(torch_conv: Any) -> Any:
     return conv
 
 
+def torch_conv2d_to_mlx_reference(
+    torch_conv: Any,
+    *,
+    accumulation_mode: str = "fixed_fp32",
+) -> MLXReferenceConv2dAdapter:
+    """Convert PyTorch ``nn.Conv2d`` to a fixed-order MLX reference adapter."""
+
+    return MLXReferenceConv2dAdapter(
+        torch_conv,
+        accumulation_mode=accumulation_mode,
+    )
+
+
 def torch_batchnorm2d_to_mlx(torch_bn: Any) -> Any:
     """Convert PyTorch ``nn.BatchNorm2d`` to an MLX-compatible adapter."""
 
@@ -1049,6 +1219,18 @@ def run_mlx_conv2d_nchw(mlx_conv: Any, x_nchw: np.ndarray) -> np.ndarray:
     import mlx.core as mx
 
     out = mlx_conv(mx.array(nchw_to_nhwc(x_nchw)))
+    return nhwc_to_nchw(_mlx_array_to_numpy(out))
+
+
+def run_mlx_reference_conv2d_nchw(
+    adapter: MLXReferenceConv2dAdapter,
+    x_nchw: np.ndarray,
+) -> np.ndarray:
+    """Run a fixed-order MLX Conv2d reference on NCHW input."""
+
+    import mlx.core as mx
+
+    out = adapter(mx.array(nchw_to_nhwc(x_nchw)))
     return nhwc_to_nchw(_mlx_array_to_numpy(out))
 
 

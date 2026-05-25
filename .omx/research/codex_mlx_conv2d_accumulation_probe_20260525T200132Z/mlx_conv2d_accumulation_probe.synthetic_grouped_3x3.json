@@ -1,0 +1,215 @@
+{
+  "authority_status": "MLX Conv2d accumulation probes are local implementation diagnostics; they do not replace contest CPU/CUDA auth eval or grant score authority.",
+  "blockers": [],
+  "candidate_generation_only": true,
+  "comparison": "torch_conv2d_vs_mlx_accumulation_modes",
+  "conv2d_contract": {
+    "bias": true,
+    "dilation": [
+      1,
+      1
+    ],
+    "groups": 2,
+    "input_shape_nchw": [
+      2,
+      4,
+      11,
+      13
+    ],
+    "padding": [
+      1,
+      1
+    ],
+    "stride": [
+      1,
+      1
+    ],
+    "weight_shape_oihw": [
+      6,
+      2,
+      3,
+      3
+    ]
+  },
+  "device_contract": {
+    "forbidden_uses": [
+      "score_claim",
+      "promotion",
+      "promotable",
+      "rank_or_kill",
+      "replacement_for_cpu_or_cuda_auth_eval"
+    ],
+    "gpu_research_signal_blocker": "mlx_gpu_scorer_response_requires_explicit_research_signal_allowance",
+    "gpu_research_signal_required": false
+  },
+  "device_type": "cpu",
+  "evidence_grade": "macOS-MLX-research-signal",
+  "evidence_tag": "[macOS-MLX research-signal]",
+  "gpu_research_signal_allowed": false,
+  "mlx_backend": {
+    "blockers": [
+      "mlx_public_deterministic_reduction_flag_not_observed"
+    ],
+    "classification": "framework_different_no_public_deterministic_reduction_flag",
+    "default_device": "Device(gpu, 0)",
+    "deterministic_reduction_control_status": "no_public_control_observed_local_probe_only",
+    "deterministic_reduction_flag_available": false,
+    "device_type": "cpu",
+    "mlx_importable": true,
+    "mlx_version": "0.31.2",
+    "prng_key_available": true,
+    "prng_seed_available": true,
+    "promotion_eligible": false,
+    "public_core_deterministic_attrs": [],
+    "public_metal_deterministic_attrs": [],
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false
+  },
+  "passed": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "requested_torch_backend_options": {
+    "allow_tf32": null,
+    "cudnn_benchmark": null,
+    "cudnn_deterministic": null,
+    "mkldnn_enabled": null,
+    "torch_num_threads": null,
+    "use_deterministic_algorithms": true
+  },
+  "requires_exact_eval_before_promotion": true,
+  "rows": [
+    {
+      "blockers": [],
+      "max_abs_delta": 8.940696716308594e-08,
+      "mean_abs_delta": 1.0819840820241364e-08,
+      "mlx_shape": [
+        2,
+        6,
+        11,
+        13
+      ],
+      "mode": "optimized_mlx_conv2d",
+      "p95_abs_delta": 2.9802322387695312e-08,
+      "p99_abs_delta": 5.960464477539063e-08,
+      "passed": true,
+      "present_in_mlx": true,
+      "present_in_torch": true,
+      "rms_delta": 1.741462865858799e-08,
+      "shape_match": true,
+      "threshold": 0.001,
+      "torch_shape": [
+        2,
+        6,
+        11,
+        13
+      ]
+    },
+    {
+      "blockers": [],
+      "max_abs_delta": 1.1920928955078125e-07,
+      "mean_abs_delta": 1.2785061707585564e-08,
+      "mlx_shape": [
+        2,
+        6,
+        11,
+        13
+      ],
+      "mode": "fixed_fp32",
+      "p95_abs_delta": 2.9802322387695312e-08,
+      "p99_abs_delta": 5.960464477539063e-08,
+      "passed": true,
+      "present_in_mlx": true,
+      "present_in_torch": true,
+      "rms_delta": 1.9903727681671956e-08,
+      "shape_match": true,
+      "threshold": 0.0001,
+      "torch_shape": [
+        2,
+        6,
+        11,
+        13
+      ]
+    },
+    {
+      "blockers": [],
+      "max_abs_delta": 8.940696716308594e-08,
+      "mean_abs_delta": 1.0033426828039831e-08,
+      "mlx_shape": [
+        2,
+        6,
+        11,
+        13
+      ],
+      "mode": "kahan_fp32",
+      "p95_abs_delta": 2.9802322387695312e-08,
+      "p99_abs_delta": 5.960464477539063e-08,
+      "passed": true,
+      "present_in_mlx": true,
+      "present_in_torch": true,
+      "rms_delta": 1.6433359398709255e-08,
+      "shape_match": true,
+      "threshold": 0.0001,
+      "torch_shape": [
+        2,
+        6,
+        11,
+        13
+      ]
+    },
+    {
+      "blockers": [],
+      "max_abs_delta": 8.940696716308594e-08,
+      "mean_abs_delta": 9.350445067796569e-09,
+      "mlx_shape": [
+        2,
+        6,
+        11,
+        13
+      ],
+      "mode": "fixed_fp64",
+      "p95_abs_delta": 2.9802322387695312e-08,
+      "p99_abs_delta": 5.960464477539063e-08,
+      "passed": true,
+      "present_in_mlx": true,
+      "present_in_torch": true,
+      "rms_delta": 1.5286836576907358e-08,
+      "shape_match": true,
+      "threshold": 1e-05,
+      "torch_shape": [
+        2,
+        6,
+        11,
+        13
+      ]
+    }
+  ],
+  "run_id": "mlx_conv2d_accumulation_probe_20260525T200132Z",
+  "schema_version": "mlx_conv2d_accumulation_probe.v1",
+  "score_axis": "[macOS-MLX research-signal]",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "thresholds": {
+    "max_fixed_fp32_abs_delta": 0.0001,
+    "max_fixed_fp64_abs_delta": 1e-05,
+    "max_kahan_fp32_abs_delta": 0.0001,
+    "max_optimized_abs_delta": 0.001
+  },
+  "torch_backend": {
+    "cuda_matmul_allow_tf32": false,
+    "cudnn_allow_tf32": true,
+    "cudnn_available": false,
+    "cudnn_benchmark": false,
+    "cudnn_deterministic": false,
+    "cudnn_version": null,
+    "deterministic_algorithms": true,
+    "device_type": "cpu",
+    "mkldnn_enabled": true,
+    "num_threads": 6,
+    "torch_cuda_version": null,
+    "torch_version": "2.11.0"
+  },
+  "torch_device_type": "cpu",
+  "verdict": "PASS_MLX_CONV2D_ACCUMULATION_PROBE"
+}
