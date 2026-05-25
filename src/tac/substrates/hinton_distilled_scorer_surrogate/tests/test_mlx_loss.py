@@ -22,6 +22,7 @@ from tac.substrates.hinton_distilled_scorer_surrogate import (  # noqa: E402
     DEFAULT_SEGNET_CLASSES,
     HintonMlxCustomLossFnConfig,
     MockTeacherLogitsProvider,
+    build_real_segnet_teacher_cache,
     hinton_distilled_kl_t2_loss,
     kl_divergence_between_softmax,
     make_hinton_custom_loss_fn,
@@ -273,6 +274,54 @@ def test_make_hinton_custom_loss_fn_distillation_term_is_nonzero() -> None:
     distill = float(with_distill(_FakeBundle(), indices, targets).item())
 
     assert distill > base
+
+
+def test_real_segnet_teacher_cache_uses_upstream_rgb_scale(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Real-teacher cache must match upstream 0..255 SegNet input scale."""
+
+    import numpy as np
+    import torch
+
+    observed: dict[str, float] = {}
+
+    class _FakeSegNet:
+        def eval(self) -> None:
+            observed["eval_called"] = 1.0
+
+        def preprocess_input(self, x: torch.Tensor) -> torch.Tensor:
+            observed["input_max"] = float(x.max().item())
+            observed["input_min"] = float(x.min().item())
+            return x[:, -1, ...]
+
+        def __call__(self, x: torch.Tensor) -> torch.Tensor:
+            b, _c, h, w = x.shape
+            return torch.zeros((b, 5, h, w), dtype=torch.float32)
+
+    def _fake_load_default_scorers(_upstream_dir: object, *, device: str) -> tuple[None, _FakeSegNet]:
+        observed["device_is_cpu"] = 1.0 if device == "cpu" else 0.0
+        return None, _FakeSegNet()
+
+    import tac.scorer
+
+    monkeypatch.setattr(tac.scorer, "load_default_scorers", _fake_load_default_scorers)
+    frames = np.array(
+        [
+            [[[0, 128, 255], [64, 32, 16]], [[255, 1, 2], [3, 4, 5]]],
+            [[[6, 7, 8], [9, 10, 11]], [[12, 13, 14], [15, 16, 17]]],
+        ],
+        dtype=np.uint8,
+    )
+
+    cache = build_real_segnet_teacher_cache(frames, upstream_dir="upstream", device="cpu")
+
+    assert observed["eval_called"] == 1.0
+    assert observed["device_is_cpu"] == 1.0
+    assert observed["input_max"] == 255.0
+    assert observed["input_min"] == 0.0
+    assert cache.frame_count == 2
+    assert cache.height == 2
+    assert cache.width == 2
+    assert cache.num_classes == 5
 
 
 def test_custom_loss_fn_canonical_signature_hash_stable() -> None:
