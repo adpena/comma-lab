@@ -149,6 +149,16 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
                 artifacts["dqs1_followup_queue"],
                 "init",
             ],
+            "run_frontier_feedback_cycle": [
+                ".venv/bin/python",
+                "tools/run_frontier_rate_attack_feedback_cycle.py",
+                "--action-summary",
+                str(report.get("action_summary_path") or "latest"),
+                "--results-root",
+                str(report.get("results_root") or DEFAULT_RESULTS_ROOT),
+                "--output-dir",
+                _display_path(output_dir.parent / f"{output_dir.name}_cycle"),
+            ],
         }
     write_json_artifact(report_path, report_to_write)
     artifacts["feedback_refresh_report"] = _display_path(report_path)

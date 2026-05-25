@@ -1,0 +1,141 @@
+{
+  "allowed_use": "local_queue_owned_frontier_feedback_iteration_only",
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "created_at_utc": "2026-05-25T13:53:23Z",
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "followup_execution": {
+    "autopilot_command": null,
+    "autopilot_result": null,
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "execute_followup": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false
+  },
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "gpu_launched": false,
+  "harvest_signal": {
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "harvest_path_count": 0,
+    "harvest_paths": [],
+    "observation_bundle": null,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false
+  },
+  "initial_refresh": {
+    "artifacts": {
+      "dqs1_followup_queue": ".omx/research/codex_frontier_rate_attack_feedback_cycle_20260525T135319Z/initial_refresh/dqs1_followup_queue.json",
+      "feedback_refresh_report": ".omx/research/codex_frontier_rate_attack_feedback_cycle_20260525T135319Z/initial_refresh/feedback_refresh_report.json",
+      "materializer_feedback_discovery": ".omx/research/codex_frontier_rate_attack_feedback_cycle_20260525T135319Z/initial_refresh/materializer_feedback_discovery.json"
+    },
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_summary": {
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "experiment_count": 4,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "promotable": false,
+      "promotion_eligible": false,
+      "queue_id": "frontier_rate_attack_feedback_cycle_20260525T135320Z",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_candidate_ids": [
+        "pairset_drop_two_r010_001_p0376_0501",
+        "pairset_drop_two_r009_005_p0459_0467",
+        "pairset_drop_two_r009_003_p0459_0479",
+        "pairset_drop_two_r005_003_p0467_0479"
+      ],
+      "step_count": 28
+    },
+    "queue_validate": {
+      "auto_parallelism": {
+        "local_only": {
+          "max_parallel": 4,
+          "resource_limits": {
+            "local_cpu": 2,
+            "local_io_heavy": 2
+          }
+        },
+        "with_cloud": {
+          "max_parallel": 4,
+          "resource_limits": {
+            "local_cpu": 2,
+            "local_io_heavy": 2
+          }
+        }
+      },
+      "elapsed_seconds": 0.9973774999962188,
+      "experiment_count": 4,
+      "queue_id": "frontier_rate_attack_feedback_cycle_20260525T135320Z",
+      "step_count": 28,
+      "valid": true
+    },
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "selected_candidate_ids": [
+      "pairset_drop_two_r010_001_p0376_0501",
+      "pairset_drop_two_r009_005_p0459_0467",
+      "pairset_drop_two_r009_003_p0459_0479",
+      "pairset_drop_two_r005_003_p0467_0479"
+    ]
+  },
+  "integration_edges": [
+    "family_materializer_feedback_to_dqs1_bridge",
+    "dqs1_batch_followup_queue_to_local_autopilot",
+    "local_autopilot_harvest_to_dynamic_observation_jsonl",
+    "dynamic_observation_jsonl_to_refreshed_dqs1_queue"
+  ],
+  "output_dir": ".omx/research/codex_frontier_rate_attack_feedback_cycle_20260525T135319Z",
+  "post_harvest_refresh": null,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "frontier_rate_attack_feedback_cycle.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false
+}

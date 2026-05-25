@@ -461,6 +461,7 @@ def build_frontier_rate_attack_feedback_refresh(
             else _repo_rel(_resolve_path(action_summary_path, repo_root=repo), repo)
         ),
         "queue_id": queue_id if queue_payload is not None else None,
+        "results_root": results_root,
         "selected_candidate_ids": selected_candidate_ids,
         "materializer_feedback_bridge": bridge,
         "queue_summary": None if queue_payload is None else _queue_summary(queue_payload),

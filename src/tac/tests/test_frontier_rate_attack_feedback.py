@@ -13,6 +13,11 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     FrontierRateAttackFeedbackError,
     build_frontier_rate_attack_feedback_refresh,
 )
+from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (
+    AUTOPILOT_RESULT_SCHEMA,
+    FrontierRateAttackFeedbackCycleError,
+    harvest_paths_from_autopilot_payload,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -57,6 +62,41 @@ def _write_jsonl(path: Path, rows: list[dict[str, object]]) -> Path:
         encoding="utf-8",
     )
     return path
+
+
+def _advisory(
+    *,
+    archive_sha256: str,
+    archive_size_bytes: int,
+    raw_sha256: str,
+    runtime_sha256: str,
+    seg: float = 0.055,
+    pose: float = 0.017,
+) -> dict[str, object]:
+    rate = archive_size_bytes / 10_000_000.0
+    score = seg + pose + rate
+    return {
+        "schema_version": "contest_auth_eval_result.v1",
+        **_false_authority(),
+        "canonical_score": score,
+        "score_recomputed_from_components": score,
+        "score_seg_contribution": seg,
+        "score_pose_contribution": pose,
+        "score_rate_contribution": rate,
+        "archive_size_bytes": archive_size_bytes,
+        "provenance": {
+            "archive_sha256": archive_sha256,
+            "archive_size_bytes": archive_size_bytes,
+            "inflate_runtime_manifest": {
+                "runtime_tree_sha256": runtime_sha256,
+            },
+            "inflated_output_manifest": {
+                "payload": {
+                    "aggregate_sha256": raw_sha256,
+                },
+            },
+        },
+    }
 
 
 def _action(candidate_id: str, rank: int) -> dict[str, object]:
@@ -373,3 +413,164 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         check=False,
     )
     assert validate.returncode == 0, validate.stderr
+
+
+def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Path) -> None:
+    action_summary = _write_action_summary(tmp_path)
+    artifact_root = tmp_path / "frontier_artifacts"
+    _write_materializer_feedback(artifact_root)
+    baseline = _write_json(
+        tmp_path / "baseline.json",
+        _advisory(
+            archive_sha256="1" * 64,
+            archive_size_bytes=178_592,
+            raw_sha256="2" * 64,
+            runtime_sha256="3" * 64,
+        ),
+    )
+    advisory = _write_json(
+        tmp_path / "candidate" / "local_cpu_advisory.json",
+        _advisory(
+            archive_sha256="4" * 64,
+            archive_size_bytes=178_559,
+            raw_sha256="5" * 64,
+            runtime_sha256="6" * 64,
+            seg=0.054,
+        ),
+    )
+    harvest = _write_json(
+        tmp_path / ".omx" / "research" / "dqs1_local_first_harvest.json",
+        {
+            "schema": "dqs1_local_first_harvest.v1",
+            **_false_authority(),
+            "candidate_id": "pairset_drop_one_rank023_pair0440",
+            "candidate_archive_sha256": "4" * 64,
+            "local_cpu_advisory_path": str(advisory),
+            "local_score": 0.191,
+            "projected_contest_score": 0.190,
+            "conservative_projected_contest_score": 0.192,
+            "recommended_action": "observe_only",
+            "eureka_trigger": False,
+            "eureka_margin": -1e-6,
+            "authority": "false_authority_dqs1_local_first_harvest",
+            "harvested_at_utc": "20260525T010203Z",
+            "dispatch_blockers": ["exact_cpu_cuda_auth_eval_required"],
+        },
+    )
+    acquisition = _write_json(
+        tmp_path / "pairset_acquisition.json",
+        {
+            "schema": "decoder_q_pairset_acquisition.v1",
+            "candidates": [
+                {
+                    "acquisition_id": "pairset_drop_one_rank023_pair0440",
+                    "selector_id": "pairset_drop_one_rank023_pair0440",
+                    "selector_kind": "drop_one_from_best",
+                    "selected_pair_indices": [1, 2, 440],
+                    "acquisition_operation": {
+                        "op": "drop_one",
+                        "dropped_pair_rank": 23,
+                        "dropped_pair_index": 440,
+                    },
+                }
+            ],
+        },
+    )
+    autopilot_result = _write_json(
+        tmp_path / "autopilot_result.json",
+        {
+            "schema": AUTOPILOT_RESULT_SCHEMA,
+            **_false_authority(),
+            "queue_path": str(tmp_path / "initial_queue.json"),
+            "execute": True,
+            "stop_reason": "batch_harvested_waiting_for_portfolio_rebuild",
+            "total_steps_started": 6,
+            "candidates_harvested": 1,
+            "rounds": [
+                {
+                    "harvests": [
+                        {
+                            **_false_authority(),
+                            "candidate_id": "pairset_drop_one_rank023_pair0440",
+                            "harvest_path": str(harvest),
+                        }
+                    ]
+                }
+            ],
+        },
+    )
+    output_dir = tmp_path / "cycle_out"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "tools/run_frontier_rate_attack_feedback_cycle.py",
+            "--action-summary",
+            str(action_summary),
+            "--frontier-artifact-root",
+            str(artifact_root),
+            "--autopilot-result-json",
+            str(autopilot_result),
+            "--pairset-acquisition",
+            str(acquisition),
+            "--baseline-advisory",
+            str(baseline),
+            "--baseline-archive-size-bytes",
+            "178560",
+            "--output-dir",
+            str(output_dir),
+            "--results-root",
+            str(tmp_path / "results"),
+            "--queue-id",
+            "frontier_feedback_cycle_unit",
+            "--post-harvest-queue-id",
+            "frontier_feedback_cycle_unit_post",
+            "--candidate-limit",
+            "2",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["score_claim"] is False
+    assert payload["harvest_path_count"] == 1
+    assert payload["initial_selected_candidate_ids"] == [
+        "pairset_drop_one_rank023_pair0440",
+        "pairset_drop_one_rank024_pair0112",
+    ]
+    assert payload["post_harvest_selected_candidate_ids"] == [
+        "pairset_drop_one_rank024_pair0112",
+        "pairset_drop_one_rank025_pair0233",
+    ]
+    observation_jsonl = Path(payload["observation_jsonl"])
+    if not observation_jsonl.is_absolute():
+        observation_jsonl = REPO_ROOT / observation_jsonl
+    assert observation_jsonl.exists()
+    cycle_report = json.loads(
+        (output_dir / "frontier_rate_attack_feedback_cycle.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert cycle_report["schema"] == "frontier_rate_attack_feedback_cycle.v1"
+    assert cycle_report["post_harvest_refresh"]["queue_validate"]["valid"] is True
+    assert "dynamic_observation_jsonl_to_refreshed_dqs1_queue" in cycle_report[
+        "integration_edges"
+    ]
+
+
+def test_frontier_feedback_cycle_refuses_truthy_autopilot_authority(
+    tmp_path: Path,
+) -> None:
+    payload = {
+        "schema": AUTOPILOT_RESULT_SCHEMA,
+        **_false_authority(),
+        "score_claim": True,
+        "rounds": [],
+    }
+
+    with pytest.raises(FrontierRateAttackFeedbackCycleError, match="forbidden truthy"):
+        harvest_paths_from_autopilot_payload(payload, repo_root=tmp_path)

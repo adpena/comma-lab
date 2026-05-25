@@ -1,0 +1,2533 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 2,
+      "local_io_heavy": 2,
+      "local_mlx": 1,
+      "modal_cpu": 0,
+      "modal_gpu": 0
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "pairset_drop_two_r010_001_p0376_0501",
+      "lane_id": "lane_dqs1_pairset_drop_two_r010_001_p0376_0501_local_first_20260523",
+      "metadata": {
+        "action_summary_path": "/Users/adpena/Projects/pact/experiments/results/cross_family_candidate_portfolio/20260523T134800Z_full_drop_two_local_harvest16/action_summary.json",
+        "portfolio_path": "/Users/adpena/Projects/pact/experiments/results/cross_family_candidate_portfolio/20260523T134800Z_full_drop_two_local_harvest16/portfolio.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "dqs1_local_first_experiment_metadata.v1",
+        "score_claim": false,
+        "selected_pair_indices": [
+          26,
+          59,
+          68,
+          98,
+          109,
+          112,
+          134,
+          151,
+          167,
+          229,
+          242,
+          257,
+          259,
+          296,
+          320,
+          327,
+          371,
+          378,
+          412,
+          430,
+          440,
+          459,
+          467,
+          479,
+          492,
+          496,
+          520,
+          544,
+          555,
+          588
+        ],
+        "skipped_candidates": [
+          {
+            "candidate_id": "pairset_drop_one_rank023_pair0440",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank024_pair0112",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank018_pair0588",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank017_pair0242",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank016_pair0229",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank025_pair0026",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank015_pair0068",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank001_pair0501",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank002_pair0109",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank003_pair0479",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank004_pair0098",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank005_pair0467",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank006_pair0544",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank014_pair0492",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank007_pair0059",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank029_pair0259",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank008_pair0496",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank028_pair0257",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank030_pair0412",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank012_pair0134",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank011_pair0555",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank009_pair0459",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_two_r010_009_p0376_0459",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_two_r010_005_p0376_0467",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_two_r010_003_p0376_0479",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_two_r010_008_p0376_0496",
+            "reason": "local_advisory_exists"
+          }
+        ],
+        "source_custody_preserved": true,
+        "source_metadata": {
+          "acquisition_operation": {
+            "dropped_pair_indices": [
+              376,
+              501
+            ],
+            "dropped_pair_ranks": [
+              1,
+              10
+            ],
+            "op": "drop_two"
+          },
+          "acquisition_score": -0.159338299577178,
+          "observation_response_model": {
+            "active": false,
+            "allowed_use": "planning_prior_only_no_score_or_dispatch_authority",
+            "available_selector_kinds": [
+              "diversity_spaced"
+            ],
+            "axis": "contest_cpu",
+            "axis_observation_counts": {
+              "contest_cpu": 16,
+              "contest_cuda": 1
+            },
+            "dispatch_attempted": false,
+            "gpu_launched": false,
+            "identity_counts": {
+              "candidate_id_match_count": 17,
+              "selected_pair_indices_mismatch_count": 0,
+              "selected_pair_indices_missing_candidate_count": 0,
+              "selected_pair_indices_missing_observation_count": 0,
+              "selected_pair_indices_verified_count": 17
+            },
+            "identity_policy": "candidate_id_and_selected_pair_indices_required_and_matched",
+            "inactive_reason": "no_exact_observations_for_selector_kind",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "pairset_observation_response_model.v1",
+            "score_claim": false,
+            "score_claim_valid": false,
+            "selector_kind": "drop_two_from_best",
+            "training_row_count": 16
+          },
+          "payload_bytes": 41,
+          "predicted_score_source": "source_selector_inherited_non_authoritative",
+          "rate_delta": 2.7300217078009024e-05,
+          "selected_pair_count": 30,
+          "selected_pair_indices": [
+            26,
+            59,
+            68,
+            98,
+            109,
+            112,
+            134,
+            151,
+            167,
+            229,
+            242,
+            257,
+            259,
+            296,
+            320,
+            327,
+            371,
+            378,
+            412,
+            430,
+            440,
+            459,
+            467,
+            479,
+            492,
+            496,
+            520,
+            544,
+            555,
+            588
+          ],
+          "selector_kind": "drop_two_from_best"
+        }
+      },
+      "priority": 27,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_decoder_q_selective_window_bridge_plan.py",
+            "--selection",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/mlx_effective_spend_triage_observed_window_selection_top32.json",
+            "--candidate-manifest",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/mutation_manifest.json",
+            "--lane-id",
+            "lane_dqs1_pairset_drop_two_r010_001_p0376_0501_local_first_20260523",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/decoder_q_selective_window_bridge_plan.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/decoder_q_selective_window_bridge_plan.md"
+          ],
+          "id": "build_bridge_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/decoder_q_selective_window_bridge_plan.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/plan_decoder_q_selective_runtime_packet.py",
+            "--bridge-plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/decoder_q_selective_window_bridge_plan.json",
+            "--base-archive",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r010_001_p0376_0501.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r010_001_p0376_0501.md",
+            "--frame-policy",
+            "pair_all_frames",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,378,412,430,440,459,467,479,492,496,520,544,555,588"
+          ],
+          "id": "plan_packet",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r010_001_p0376_0501.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "build_bridge_plan"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/materialize_decoder_q_selective_runtime_candidate.py",
+            "--plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r010_001_p0376_0501.json",
+            "--base-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--output-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/submission_dir",
+            "--frame-policy",
+            "pair_all_frames",
+            "--manifest-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/materialization_manifest.json"
+          ],
+          "id": "materialize",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/materialization_manifest.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "plan_packet"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_decoder_q_selective_runtime_locality_controls.py",
+            "--parent-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--global-mutated-archive",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
+            "--selective-submission-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/submission_dir",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,378,412,430,440,459,467,479,492,496,520,544,555,588",
+            "--frame-policy",
+            "pair_all_frames",
+            "--timeout-seconds",
+            "540",
+            "--global-timeout-seconds",
+            "840",
+            "--max-inflate-parallelism",
+            "3",
+            "--reuse-existing-inflates",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/locality_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/locality_controls.json"
+          ],
+          "id": "locality_controls",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": true,
+              "key": "locality_controls_passed",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/locality_controls.json",
+              "type": "json_equals"
+            },
+            {
+              "axis_equals": "[locality-control no-score]",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/locality_controls.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "materialize"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 960
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "experiments/contest_auth_eval.py",
+            "--archive",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/submission_dir/archive.zip",
+            "--inflate-sh",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/submission_dir/inflate.sh",
+            "--upstream-dir",
+            "upstream",
+            "--video-names-file",
+            "upstream/public_test_video_names.txt",
+            "--device",
+            "cpu",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/local_cpu_advisory_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/local_cpu_advisory.json",
+            "--inflate-timeout",
+            "1800",
+            "--evaluate-timeout",
+            "1800",
+            "--keep-work-dir"
+          ],
+          "id": "local_cpu_advisory",
+          "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "cpu_advisory",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/local_cpu_advisory.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "locality_controls"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 3600
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/compact_experiment_artifacts.py",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501",
+            "--min-bytes",
+            "1",
+            "--json-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/raw_artifact_retention_plan.json"
+          ],
+          "id": "plan_raw_artifact_retention",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": 0,
+              "key": "plan.blocked_candidate_count",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/raw_artifact_retention_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/raw_artifact_retention_plan.json",
+              "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/calibrate_local_cpu_contest_drift.py",
+            "--calibration-json",
+            ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json",
+            "--candidate-id",
+            "pairset_drop_two_r010_001_p0376_0501",
+            "--candidate-local-json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_001_p0376_0501/local_cpu_advisory.json",
+            "--auth-frontier-score-from-pointer",
+            "--eureka-out",
+            ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r010_001_p0376_0501_20260523T134800Z.json",
+            "--min-margin",
+            "0.0"
+          ],
+          "id": "local_cpu_contest_drift_eureka",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "local_cpu_contest_drift_eureka_signal.v1",
+              "key": "schema",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r010_001_p0376_0501_20260523T134800Z.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r010_001_p0376_0501_20260523T134800Z.json",
+              "required_false": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "score_claim",
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "promotable",
+                "gpu_launched",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "score_affecting_payload_changed",
+                "charged_bits_changed"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "dqs1",
+        "pairset",
+        "local-first",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "pairset_drop_two_r009_005_p0459_0467",
+      "lane_id": "lane_dqs1_pairset_drop_two_r009_005_p0459_0467_local_first_20260523",
+      "metadata": {
+        "action_summary_path": "/Users/adpena/Projects/pact/experiments/results/cross_family_candidate_portfolio/20260523T134800Z_full_drop_two_local_harvest16/action_summary.json",
+        "portfolio_path": "/Users/adpena/Projects/pact/experiments/results/cross_family_candidate_portfolio/20260523T134800Z_full_drop_two_local_harvest16/portfolio.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "dqs1_local_first_experiment_metadata.v1",
+        "score_claim": false,
+        "selected_pair_indices": [
+          26,
+          59,
+          68,
+          98,
+          109,
+          112,
+          134,
+          151,
+          167,
+          229,
+          242,
+          257,
+          259,
+          296,
+          320,
+          327,
+          371,
+          376,
+          378,
+          412,
+          430,
+          440,
+          479,
+          492,
+          496,
+          501,
+          520,
+          544,
+          555,
+          588
+        ],
+        "skipped_candidates": [
+          {
+            "candidate_id": "pairset_drop_one_rank023_pair0440",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank024_pair0112",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank018_pair0588",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank017_pair0242",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank016_pair0229",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank025_pair0026",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank015_pair0068",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank001_pair0501",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank002_pair0109",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank003_pair0479",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank004_pair0098",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank005_pair0467",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank006_pair0544",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank014_pair0492",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank007_pair0059",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank029_pair0259",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank008_pair0496",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank028_pair0257",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank030_pair0412",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank012_pair0134",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank011_pair0555",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank009_pair0459",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_two_r010_009_p0376_0459",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_two_r010_005_p0376_0467",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_two_r010_003_p0376_0479",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_two_r010_008_p0376_0496",
+            "reason": "local_advisory_exists"
+          }
+        ],
+        "source_custody_preserved": true,
+        "source_metadata": {
+          "acquisition_operation": {
+            "dropped_pair_indices": [
+              459,
+              467
+            ],
+            "dropped_pair_ranks": [
+              5,
+              9
+            ],
+            "op": "drop_two"
+          },
+          "acquisition_score": -0.1594075241468631,
+          "observation_response_model": {
+            "active": false,
+            "allowed_use": "planning_prior_only_no_score_or_dispatch_authority",
+            "available_selector_kinds": [
+              "diversity_spaced"
+            ],
+            "axis": "contest_cpu",
+            "axis_observation_counts": {
+              "contest_cpu": 16,
+              "contest_cuda": 1
+            },
+            "dispatch_attempted": false,
+            "gpu_launched": false,
+            "identity_counts": {
+              "candidate_id_match_count": 17,
+              "selected_pair_indices_mismatch_count": 0,
+              "selected_pair_indices_missing_candidate_count": 0,
+              "selected_pair_indices_missing_observation_count": 0,
+              "selected_pair_indices_verified_count": 17
+            },
+            "identity_policy": "candidate_id_and_selected_pair_indices_required_and_matched",
+            "inactive_reason": "no_exact_observations_for_selector_kind",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "pairset_observation_response_model.v1",
+            "score_claim": false,
+            "score_claim_valid": false,
+            "selector_kind": "drop_two_from_best",
+            "training_row_count": 16
+          },
+          "payload_bytes": 41,
+          "predicted_score_source": "source_selector_inherited_non_authoritative",
+          "rate_delta": 2.7300217078009024e-05,
+          "selected_pair_count": 30,
+          "selected_pair_indices": [
+            26,
+            59,
+            68,
+            98,
+            109,
+            112,
+            134,
+            151,
+            167,
+            229,
+            242,
+            257,
+            259,
+            296,
+            320,
+            327,
+            371,
+            376,
+            378,
+            412,
+            430,
+            440,
+            479,
+            492,
+            496,
+            501,
+            520,
+            544,
+            555,
+            588
+          ],
+          "selector_kind": "drop_two_from_best"
+        }
+      },
+      "priority": 28,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_decoder_q_selective_window_bridge_plan.py",
+            "--selection",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/mlx_effective_spend_triage_observed_window_selection_top32.json",
+            "--candidate-manifest",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/mutation_manifest.json",
+            "--lane-id",
+            "lane_dqs1_pairset_drop_two_r009_005_p0459_0467_local_first_20260523",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/decoder_q_selective_window_bridge_plan.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/decoder_q_selective_window_bridge_plan.md"
+          ],
+          "id": "build_bridge_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/decoder_q_selective_window_bridge_plan.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/plan_decoder_q_selective_runtime_packet.py",
+            "--bridge-plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/decoder_q_selective_window_bridge_plan.json",
+            "--base-archive",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r009_005_p0459_0467.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r009_005_p0459_0467.md",
+            "--frame-policy",
+            "pair_all_frames",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,376,378,412,430,440,479,492,496,501,520,544,555,588"
+          ],
+          "id": "plan_packet",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r009_005_p0459_0467.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "build_bridge_plan"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/materialize_decoder_q_selective_runtime_candidate.py",
+            "--plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r009_005_p0459_0467.json",
+            "--base-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--output-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/submission_dir",
+            "--frame-policy",
+            "pair_all_frames",
+            "--manifest-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/materialization_manifest.json"
+          ],
+          "id": "materialize",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/materialization_manifest.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "plan_packet"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_decoder_q_selective_runtime_locality_controls.py",
+            "--parent-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--global-mutated-archive",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
+            "--selective-submission-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/submission_dir",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,376,378,412,430,440,479,492,496,501,520,544,555,588",
+            "--frame-policy",
+            "pair_all_frames",
+            "--timeout-seconds",
+            "540",
+            "--global-timeout-seconds",
+            "840",
+            "--max-inflate-parallelism",
+            "3",
+            "--reuse-existing-inflates",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/locality_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/locality_controls.json"
+          ],
+          "id": "locality_controls",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": true,
+              "key": "locality_controls_passed",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/locality_controls.json",
+              "type": "json_equals"
+            },
+            {
+              "axis_equals": "[locality-control no-score]",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/locality_controls.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "materialize"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 960
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "experiments/contest_auth_eval.py",
+            "--archive",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/submission_dir/archive.zip",
+            "--inflate-sh",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/submission_dir/inflate.sh",
+            "--upstream-dir",
+            "upstream",
+            "--video-names-file",
+            "upstream/public_test_video_names.txt",
+            "--device",
+            "cpu",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/local_cpu_advisory_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/local_cpu_advisory.json",
+            "--inflate-timeout",
+            "1800",
+            "--evaluate-timeout",
+            "1800",
+            "--keep-work-dir"
+          ],
+          "id": "local_cpu_advisory",
+          "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "cpu_advisory",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/local_cpu_advisory.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "locality_controls"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 3600
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/compact_experiment_artifacts.py",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467",
+            "--min-bytes",
+            "1",
+            "--json-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/raw_artifact_retention_plan.json"
+          ],
+          "id": "plan_raw_artifact_retention",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": 0,
+              "key": "plan.blocked_candidate_count",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/raw_artifact_retention_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/raw_artifact_retention_plan.json",
+              "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/calibrate_local_cpu_contest_drift.py",
+            "--calibration-json",
+            ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json",
+            "--candidate-id",
+            "pairset_drop_two_r009_005_p0459_0467",
+            "--candidate-local-json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_005_p0459_0467/local_cpu_advisory.json",
+            "--auth-frontier-score-from-pointer",
+            "--eureka-out",
+            ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r009_005_p0459_0467_20260523T134800Z.json",
+            "--min-margin",
+            "0.0"
+          ],
+          "id": "local_cpu_contest_drift_eureka",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "local_cpu_contest_drift_eureka_signal.v1",
+              "key": "schema",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r009_005_p0459_0467_20260523T134800Z.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r009_005_p0459_0467_20260523T134800Z.json",
+              "required_false": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "score_claim",
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "promotable",
+                "gpu_launched",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "score_affecting_payload_changed",
+                "charged_bits_changed"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "dqs1",
+        "pairset",
+        "local-first",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "pairset_drop_two_r009_003_p0459_0479",
+      "lane_id": "lane_dqs1_pairset_drop_two_r009_003_p0459_0479_local_first_20260523",
+      "metadata": {
+        "action_summary_path": "/Users/adpena/Projects/pact/experiments/results/cross_family_candidate_portfolio/20260523T134800Z_full_drop_two_local_harvest16/action_summary.json",
+        "portfolio_path": "/Users/adpena/Projects/pact/experiments/results/cross_family_candidate_portfolio/20260523T134800Z_full_drop_two_local_harvest16/portfolio.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "dqs1_local_first_experiment_metadata.v1",
+        "score_claim": false,
+        "selected_pair_indices": [
+          26,
+          59,
+          68,
+          98,
+          109,
+          112,
+          134,
+          151,
+          167,
+          229,
+          242,
+          257,
+          259,
+          296,
+          320,
+          327,
+          371,
+          376,
+          378,
+          412,
+          430,
+          440,
+          467,
+          492,
+          496,
+          501,
+          520,
+          544,
+          555,
+          588
+        ],
+        "skipped_candidates": [
+          {
+            "candidate_id": "pairset_drop_one_rank023_pair0440",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank024_pair0112",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank018_pair0588",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank017_pair0242",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank016_pair0229",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank025_pair0026",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank015_pair0068",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank001_pair0501",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank002_pair0109",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank003_pair0479",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank004_pair0098",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank005_pair0467",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank006_pair0544",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank014_pair0492",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank007_pair0059",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank029_pair0259",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank008_pair0496",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank028_pair0257",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank030_pair0412",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank012_pair0134",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank011_pair0555",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank009_pair0459",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_two_r010_009_p0376_0459",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_two_r010_005_p0376_0467",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_two_r010_003_p0376_0479",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_two_r010_008_p0376_0496",
+            "reason": "local_advisory_exists"
+          }
+        ],
+        "source_custody_preserved": true,
+        "source_metadata": {
+          "acquisition_operation": {
+            "dropped_pair_indices": [
+              459,
+              479
+            ],
+            "dropped_pair_ranks": [
+              3,
+              9
+            ],
+            "op": "drop_two"
+          },
+          "acquisition_score": -0.1594748777822324,
+          "observation_response_model": {
+            "active": false,
+            "allowed_use": "planning_prior_only_no_score_or_dispatch_authority",
+            "available_selector_kinds": [
+              "diversity_spaced"
+            ],
+            "axis": "contest_cpu",
+            "axis_observation_counts": {
+              "contest_cpu": 16,
+              "contest_cuda": 1
+            },
+            "dispatch_attempted": false,
+            "gpu_launched": false,
+            "identity_counts": {
+              "candidate_id_match_count": 17,
+              "selected_pair_indices_mismatch_count": 0,
+              "selected_pair_indices_missing_candidate_count": 0,
+              "selected_pair_indices_missing_observation_count": 0,
+              "selected_pair_indices_verified_count": 17
+            },
+            "identity_policy": "candidate_id_and_selected_pair_indices_required_and_matched",
+            "inactive_reason": "no_exact_observations_for_selector_kind",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "pairset_observation_response_model.v1",
+            "score_claim": false,
+            "score_claim_valid": false,
+            "selector_kind": "drop_two_from_best",
+            "training_row_count": 16
+          },
+          "payload_bytes": 41,
+          "predicted_score_source": "source_selector_inherited_non_authoritative",
+          "rate_delta": 2.7300217078009024e-05,
+          "selected_pair_count": 30,
+          "selected_pair_indices": [
+            26,
+            59,
+            68,
+            98,
+            109,
+            112,
+            134,
+            151,
+            167,
+            229,
+            242,
+            257,
+            259,
+            296,
+            320,
+            327,
+            371,
+            376,
+            378,
+            412,
+            430,
+            440,
+            467,
+            492,
+            496,
+            501,
+            520,
+            544,
+            555,
+            588
+          ],
+          "selector_kind": "drop_two_from_best"
+        }
+      },
+      "priority": 29,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_decoder_q_selective_window_bridge_plan.py",
+            "--selection",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/mlx_effective_spend_triage_observed_window_selection_top32.json",
+            "--candidate-manifest",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/mutation_manifest.json",
+            "--lane-id",
+            "lane_dqs1_pairset_drop_two_r009_003_p0459_0479_local_first_20260523",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/decoder_q_selective_window_bridge_plan.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/decoder_q_selective_window_bridge_plan.md"
+          ],
+          "id": "build_bridge_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/decoder_q_selective_window_bridge_plan.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/plan_decoder_q_selective_runtime_packet.py",
+            "--bridge-plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/decoder_q_selective_window_bridge_plan.json",
+            "--base-archive",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r009_003_p0459_0479.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r009_003_p0459_0479.md",
+            "--frame-policy",
+            "pair_all_frames",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,376,378,412,430,440,467,492,496,501,520,544,555,588"
+          ],
+          "id": "plan_packet",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r009_003_p0459_0479.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "build_bridge_plan"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/materialize_decoder_q_selective_runtime_candidate.py",
+            "--plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r009_003_p0459_0479.json",
+            "--base-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--output-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/submission_dir",
+            "--frame-policy",
+            "pair_all_frames",
+            "--manifest-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/materialization_manifest.json"
+          ],
+          "id": "materialize",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/materialization_manifest.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "plan_packet"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_decoder_q_selective_runtime_locality_controls.py",
+            "--parent-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--global-mutated-archive",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
+            "--selective-submission-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/submission_dir",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,376,378,412,430,440,467,492,496,501,520,544,555,588",
+            "--frame-policy",
+            "pair_all_frames",
+            "--timeout-seconds",
+            "540",
+            "--global-timeout-seconds",
+            "840",
+            "--max-inflate-parallelism",
+            "3",
+            "--reuse-existing-inflates",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/locality_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/locality_controls.json"
+          ],
+          "id": "locality_controls",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": true,
+              "key": "locality_controls_passed",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/locality_controls.json",
+              "type": "json_equals"
+            },
+            {
+              "axis_equals": "[locality-control no-score]",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/locality_controls.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "materialize"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 960
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "experiments/contest_auth_eval.py",
+            "--archive",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/submission_dir/archive.zip",
+            "--inflate-sh",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/submission_dir/inflate.sh",
+            "--upstream-dir",
+            "upstream",
+            "--video-names-file",
+            "upstream/public_test_video_names.txt",
+            "--device",
+            "cpu",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/local_cpu_advisory_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/local_cpu_advisory.json",
+            "--inflate-timeout",
+            "1800",
+            "--evaluate-timeout",
+            "1800",
+            "--keep-work-dir"
+          ],
+          "id": "local_cpu_advisory",
+          "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "cpu_advisory",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/local_cpu_advisory.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "locality_controls"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 3600
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/compact_experiment_artifacts.py",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479",
+            "--min-bytes",
+            "1",
+            "--json-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/raw_artifact_retention_plan.json"
+          ],
+          "id": "plan_raw_artifact_retention",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": 0,
+              "key": "plan.blocked_candidate_count",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/raw_artifact_retention_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/raw_artifact_retention_plan.json",
+              "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/calibrate_local_cpu_contest_drift.py",
+            "--calibration-json",
+            ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json",
+            "--candidate-id",
+            "pairset_drop_two_r009_003_p0459_0479",
+            "--candidate-local-json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r009_003_p0459_0479/local_cpu_advisory.json",
+            "--auth-frontier-score-from-pointer",
+            "--eureka-out",
+            ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r009_003_p0459_0479_20260523T134800Z.json",
+            "--min-margin",
+            "0.0"
+          ],
+          "id": "local_cpu_contest_drift_eureka",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "local_cpu_contest_drift_eureka_signal.v1",
+              "key": "schema",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r009_003_p0459_0479_20260523T134800Z.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r009_003_p0459_0479_20260523T134800Z.json",
+              "required_false": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "score_claim",
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "promotable",
+                "gpu_launched",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "score_affecting_payload_changed",
+                "charged_bits_changed"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "dqs1",
+        "pairset",
+        "local-first",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "pairset_drop_two_r005_003_p0467_0479",
+      "lane_id": "lane_dqs1_pairset_drop_two_r005_003_p0467_0479_local_first_20260523",
+      "metadata": {
+        "action_summary_path": "/Users/adpena/Projects/pact/experiments/results/cross_family_candidate_portfolio/20260523T134800Z_full_drop_two_local_harvest16/action_summary.json",
+        "portfolio_path": "/Users/adpena/Projects/pact/experiments/results/cross_family_candidate_portfolio/20260523T134800Z_full_drop_two_local_harvest16/portfolio.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "dqs1_local_first_experiment_metadata.v1",
+        "score_claim": false,
+        "selected_pair_indices": [
+          26,
+          59,
+          68,
+          98,
+          109,
+          112,
+          134,
+          151,
+          167,
+          229,
+          242,
+          257,
+          259,
+          296,
+          320,
+          327,
+          371,
+          376,
+          378,
+          412,
+          430,
+          440,
+          459,
+          492,
+          496,
+          501,
+          520,
+          544,
+          555,
+          588
+        ],
+        "skipped_candidates": [
+          {
+            "candidate_id": "pairset_drop_one_rank023_pair0440",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank024_pair0112",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank018_pair0588",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank017_pair0242",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank016_pair0229",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank025_pair0026",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank015_pair0068",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank001_pair0501",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank002_pair0109",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank003_pair0479",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank004_pair0098",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank005_pair0467",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank006_pair0544",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank014_pair0492",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank007_pair0059",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank029_pair0259",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank008_pair0496",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank028_pair0257",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank030_pair0412",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank012_pair0134",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank011_pair0555",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_one_rank009_pair0459",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_two_r010_009_p0376_0459",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_two_r010_005_p0376_0467",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_two_r010_003_p0376_0479",
+            "reason": "local_advisory_exists"
+          },
+          {
+            "candidate_id": "pairset_drop_two_r010_008_p0376_0496",
+            "reason": "local_advisory_exists"
+          }
+        ],
+        "source_custody_preserved": true,
+        "source_metadata": {
+          "acquisition_operation": {
+            "dropped_pair_indices": [
+              467,
+              479
+            ],
+            "dropped_pair_ranks": [
+              3,
+              5
+            ],
+            "op": "drop_two"
+          },
+          "acquisition_score": -0.15951978020581192,
+          "observation_response_model": {
+            "active": false,
+            "allowed_use": "planning_prior_only_no_score_or_dispatch_authority",
+            "available_selector_kinds": [
+              "diversity_spaced"
+            ],
+            "axis": "contest_cpu",
+            "axis_observation_counts": {
+              "contest_cpu": 16,
+              "contest_cuda": 1
+            },
+            "dispatch_attempted": false,
+            "gpu_launched": false,
+            "identity_counts": {
+              "candidate_id_match_count": 17,
+              "selected_pair_indices_mismatch_count": 0,
+              "selected_pair_indices_missing_candidate_count": 0,
+              "selected_pair_indices_missing_observation_count": 0,
+              "selected_pair_indices_verified_count": 17
+            },
+            "identity_policy": "candidate_id_and_selected_pair_indices_required_and_matched",
+            "inactive_reason": "no_exact_observations_for_selector_kind",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "pairset_observation_response_model.v1",
+            "score_claim": false,
+            "score_claim_valid": false,
+            "selector_kind": "drop_two_from_best",
+            "training_row_count": 16
+          },
+          "payload_bytes": 41,
+          "predicted_score_source": "source_selector_inherited_non_authoritative",
+          "rate_delta": 2.7300217078009024e-05,
+          "selected_pair_count": 30,
+          "selected_pair_indices": [
+            26,
+            59,
+            68,
+            98,
+            109,
+            112,
+            134,
+            151,
+            167,
+            229,
+            242,
+            257,
+            259,
+            296,
+            320,
+            327,
+            371,
+            376,
+            378,
+            412,
+            430,
+            440,
+            459,
+            492,
+            496,
+            501,
+            520,
+            544,
+            555,
+            588
+          ],
+          "selector_kind": "drop_two_from_best"
+        }
+      },
+      "priority": 30,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_decoder_q_selective_window_bridge_plan.py",
+            "--selection",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/mlx_effective_spend_triage_observed_window_selection_top32.json",
+            "--candidate-manifest",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/mutation_manifest.json",
+            "--lane-id",
+            "lane_dqs1_pairset_drop_two_r005_003_p0467_0479_local_first_20260523",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/decoder_q_selective_window_bridge_plan.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/decoder_q_selective_window_bridge_plan.md"
+          ],
+          "id": "build_bridge_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/decoder_q_selective_window_bridge_plan.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/plan_decoder_q_selective_runtime_packet.py",
+            "--bridge-plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/decoder_q_selective_window_bridge_plan.json",
+            "--base-archive",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r005_003_p0467_0479.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r005_003_p0467_0479.md",
+            "--frame-policy",
+            "pair_all_frames",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,376,378,412,430,440,459,492,496,501,520,544,555,588"
+          ],
+          "id": "plan_packet",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r005_003_p0467_0479.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "build_bridge_plan"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/materialize_decoder_q_selective_runtime_candidate.py",
+            "--plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r005_003_p0467_0479.json",
+            "--base-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--output-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/submission_dir",
+            "--frame-policy",
+            "pair_all_frames",
+            "--manifest-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/materialization_manifest.json"
+          ],
+          "id": "materialize",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/materialization_manifest.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "plan_packet"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_decoder_q_selective_runtime_locality_controls.py",
+            "--parent-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--global-mutated-archive",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
+            "--selective-submission-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/submission_dir",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,376,378,412,430,440,459,492,496,501,520,544,555,588",
+            "--frame-policy",
+            "pair_all_frames",
+            "--timeout-seconds",
+            "540",
+            "--global-timeout-seconds",
+            "840",
+            "--max-inflate-parallelism",
+            "3",
+            "--reuse-existing-inflates",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/locality_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/locality_controls.json"
+          ],
+          "id": "locality_controls",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": true,
+              "key": "locality_controls_passed",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/locality_controls.json",
+              "type": "json_equals"
+            },
+            {
+              "axis_equals": "[locality-control no-score]",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/locality_controls.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "materialize"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 960
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "experiments/contest_auth_eval.py",
+            "--archive",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/submission_dir/archive.zip",
+            "--inflate-sh",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/submission_dir/inflate.sh",
+            "--upstream-dir",
+            "upstream",
+            "--video-names-file",
+            "upstream/public_test_video_names.txt",
+            "--device",
+            "cpu",
+            "--work-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/local_cpu_advisory_work",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/local_cpu_advisory.json",
+            "--inflate-timeout",
+            "1800",
+            "--evaluate-timeout",
+            "1800",
+            "--keep-work-dir"
+          ],
+          "id": "local_cpu_advisory",
+          "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "cpu_advisory",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/local_cpu_advisory.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "locality_controls"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 3600
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/compact_experiment_artifacts.py",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479",
+            "--min-bytes",
+            "1",
+            "--json-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/raw_artifact_retention_plan.json"
+          ],
+          "id": "plan_raw_artifact_retention",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": 0,
+              "key": "plan.blocked_candidate_count",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/raw_artifact_retention_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/raw_artifact_retention_plan.json",
+              "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/calibrate_local_cpu_contest_drift.py",
+            "--calibration-json",
+            ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json",
+            "--candidate-id",
+            "pairset_drop_two_r005_003_p0467_0479",
+            "--candidate-local-json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r005_003_p0467_0479/local_cpu_advisory.json",
+            "--auth-frontier-score-from-pointer",
+            "--eureka-out",
+            ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r005_003_p0467_0479_20260523T134800Z.json",
+            "--min-margin",
+            "0.0"
+          ],
+          "id": "local_cpu_contest_drift_eureka",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "local_cpu_contest_drift_eureka_signal.v1",
+              "key": "schema",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r005_003_p0467_0479_20260523T134800Z.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r005_003_p0467_0479_20260523T134800Z.json",
+              "required_false": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "score_claim",
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "promotable",
+                "gpu_launched",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "score_affecting_payload_changed",
+                "charged_bits_changed"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "dqs1",
+        "pairset",
+        "local-first",
+        "no-score-authority"
+      ]
+    }
+  ],
+  "queue_id": "frontier_rate_attack_feedback_cycle_20260525T135320Z",
+  "schema": "experiment_queue.v1"
+}
