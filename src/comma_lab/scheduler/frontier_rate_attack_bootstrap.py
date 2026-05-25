@@ -747,6 +747,8 @@ def build_frontier_rate_attack_payloads(
     local_cpu_concurrency: int = 1,
     lane_id: str | None = None,
     source_work_queue_path: str | Path | None = None,
+    include_exact_readiness_followup: bool = False,
+    exact_readiness_followup_require_ready: bool = False,
 ) -> dict[str, Any]:
     """Compile archives and materializer targets into durable queue payloads."""
 
@@ -757,6 +759,10 @@ def build_frontier_rate_attack_payloads(
         raise FrontierRateAttackBootstrapError("at least one archive record is required")
     if local_cpu_concurrency < 1:
         raise FrontierRateAttackBootstrapError("local_cpu_concurrency must be >= 1")
+    if include_exact_readiness_followup and source_work_queue_path is None:
+        raise FrontierRateAttackBootstrapError(
+            "include_exact_readiness_followup requires source_work_queue_path"
+        )
     checked_records = [dict(record) for record in archive_records]
     for index, record in enumerate(checked_records):
         require_no_truthy_authority_fields(record, context=f"archive_records[{index}]")
@@ -1002,7 +1008,10 @@ def build_frontier_rate_attack_payloads(
         source_work_queue_path=source_work_queue_path,
         local_cpu_concurrency=local_cpu_concurrency,
         resource_concurrency={"local_cpu": local_cpu_concurrency},
-        include_exact_readiness_followup=False,
+        include_exact_readiness_followup=include_exact_readiness_followup,
+        exact_readiness_followup_require_ready=(
+            exact_readiness_followup_require_ready
+        ),
     )
     queue_metadata = apply_proxy_evidence_boundary(
         {
@@ -1011,7 +1020,17 @@ def build_frontier_rate_attack_payloads(
             "archive_labels": [record["label"] for record in checked_records],
             "target_kinds": [row["target_kind"] for row in backlog_rows],
             "target_omissions": target_omissions,
-            "allowed_use": "local_final_rate_attack_materializer_sweep_only",
+            "exact_readiness_followup_requested": bool(
+                include_exact_readiness_followup
+            ),
+            "exact_readiness_followup_require_ready": bool(
+                exact_readiness_followup_require_ready
+            ),
+            "allowed_use": (
+                "local_final_rate_attack_materializer_sweep_with_exact_readiness_handoff"
+                if include_exact_readiness_followup
+                else "local_final_rate_attack_materializer_sweep_only"
+            ),
             **FALSE_AUTHORITY,
         },
         dispatch_blockers=(
@@ -1041,7 +1060,17 @@ def build_frontier_rate_attack_payloads(
             "experiment_count": len(queue.get("experiments", [])),
             "step_count": sum(len(exp.get("steps", [])) for exp in queue.get("experiments", [])),
             "controls": queue.get("controls"),
-            "allowed_use": "local_final_rate_attack_materializer_sweep_only",
+            "exact_readiness_followup_requested": bool(
+                include_exact_readiness_followup
+            ),
+            "exact_readiness_followup_require_ready": bool(
+                exact_readiness_followup_require_ready
+            ),
+            "allowed_use": (
+                "local_final_rate_attack_materializer_sweep_with_exact_readiness_handoff"
+                if include_exact_readiness_followup
+                else "local_final_rate_attack_materializer_sweep_only"
+            ),
             **FALSE_AUTHORITY,
         },
         dispatch_blockers=(

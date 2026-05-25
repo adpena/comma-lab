@@ -55812,6 +55812,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_probe_9c_per_level_wavelet_basis_disambiguator_20260525",
+      "name": "Probe 9c per-level wavelet basis selection disambiguator",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pr95_mlx_stage_4_v332_qat_curriculum_build_20260525",
+      "name": "PR 95 Stage 4 v332_qat MLX Curriculum Build",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Stage 4 v332_qat MLX synthetic timing smoke landed commit 80331c2bb: PR95_STAGE_MODULES[4]=stage4_v332_qat + descriptor pr95_stage4_adamw_qat_mlx + 12 NEW tests in test_pr95_mlx_stage_4_v332_qat_curriculum_build.py + 78/78 tests PASS"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #313 probe-outcomes row registered via tac.probe_outcomes_ledger.register_probe_outcome; Catalog #344 canonical equation pr95_mlx_stage_4_v332_qat_one_to_one_curriculum_port_v1 QUEUED for RATIFY-N"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/pr95_mlx_stage_4_v332_qat_curriculum_build_landed_20260525.md (sister STUB + APPEND-ONLY extension per Catalog #110/#113 Variant 2 COMPLEMENTARY)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -55821,5 +55903,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T16:47:17Z"
+  "updated_at": "2026-05-25T16:54:41Z"
 }

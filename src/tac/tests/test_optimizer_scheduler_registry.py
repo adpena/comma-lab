@@ -185,6 +185,7 @@ def test_pr95_mlx_stage_descriptors_match_recovered_public_curriculum() -> None:
     descriptor_by_stage = {
         1: "pr95_stage1_adamw_baseline_mlx",
         2: "pr95_stage2_adamw_baseline_mlx",
+        3: "pr95_stage3_adamw_baseline_mlx",
         5: "pr95_stage5_adamw_baseline_mlx",
         8: "pr95_stage8_muon_adamw_mlx",
     }

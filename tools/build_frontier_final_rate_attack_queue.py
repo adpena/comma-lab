@@ -122,6 +122,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Pass --allow-overwrite to materializer sweep outputs.",
     )
     parser.add_argument("--local-cpu-concurrency", type=int, default=2)
+    parser.add_argument(
+        "--include-exact-readiness-followup",
+        action="store_true",
+        help=(
+            "Append harvest/exact-readiness/dispatch-plan follow-up steps after "
+            "harvestable materializer rows."
+        ),
+    )
+    parser.add_argument(
+        "--exact-readiness-followup-require-ready",
+        action="store_true",
+        help="Make exact-readiness follow-up harvest fail unless a ready candidate is emitted.",
+    )
     parser.add_argument("--max-steps", type=int, default=64)
     parser.add_argument("--max-parallel", type=int, default=0)
     parser.add_argument("--execute", action="store_true")
@@ -265,6 +278,11 @@ def main(argv: list[str] | None = None) -> int:
             allow_overwrite=args.allow_materializer_overwrite,
             local_cpu_concurrency=args.local_cpu_concurrency,
             lane_id=f"lane_{queue_id}",
+            source_work_queue_path=output_dir / "materializer_work_queue.json",
+            include_exact_readiness_followup=args.include_exact_readiness_followup,
+            exact_readiness_followup_require_ready=(
+                args.exact_readiness_followup_require_ready
+            ),
         )
         if frontier_resolution is not None:
             payloads["bootstrap"]["frontier_resolution"] = frontier_resolution

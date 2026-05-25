@@ -20,6 +20,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY,
     PR95_MLX_LOSS_SURFACE_RGB_MSE,
     PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE,
+    PR95_MLX_PYTORCH_EXPORT_FORWARD_PARITY_SCHEMA,
     PR95_MLX_SOURCE_FAITHFUL_BLOCKERS,
     PR95_MLX_SOURCE_VIDEO_RGB_BLOCKERS,
     PR95_MLX_SOURCE_VIDEO_RGB_YUV6_BLOCKERS,
@@ -42,10 +43,13 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     run_pr95_mlx_synthetic_timing_smoke,
     stage_smoke_config,
     write_pr95_mlx_byte_closed_smoke_archive,
+    write_pr95_public_archive_pytorch_export_forward_parity,
     write_pr95_public_archive_zip,
     zeropower_via_newtonschulz5_mlx,
 )
 from tac.local_acceleration.pr95_hnerv_mlx_contract import (  # noqa: E402
+    PR95_EXPORT_FORWARD_PARITY_BLOCKER,
+    PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER,
     PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER,
     PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER,
     PR95_SOURCE_VIDEO_RGB_NOT_FULL_SCORER_BLOCKER,
@@ -243,6 +247,57 @@ def test_public_pr95_archive_packet_mlx_cpu_forward_parity_probe() -> None:
     assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in result[
         "exact_readiness_refusal"
     ]["blockers"]
+    _assert_false_authority(result)
+
+
+def test_public_pr95_archive_pytorch_export_forward_parity_probe(
+    tmp_path: Path,
+) -> None:
+    torch = pytest.importorskip("torch")
+    module = _load_public_pr95_model_module()
+
+    torch.manual_seed(45)
+    model = module.HNeRVDecoder(
+        latent_dim=28,
+        base_channels=4,
+        eval_size=(384, 512),
+    ).eval()
+    latents = torch.randn(1, 28)
+    write_pr95_public_archive_zip(
+        model.state_dict(),
+        latents,
+        meta={
+            "n_pairs": 1,
+            "latent_dim": 28,
+            "base_channels": 4,
+            "eval_size": [384, 512],
+        },
+        output_zip_path=tmp_path / "archive.zip",
+    )
+    packet = parse_pr95_public_archive_zip(tmp_path / "archive.zip")
+
+    result = write_pr95_public_archive_pytorch_export_forward_parity(
+        packet,
+        module.HNeRVDecoder,
+        output_pt_path=tmp_path / "state.pt",
+        run_id="unit_pr95_export_parity",
+        sample_indices=[0],
+        mlx_device="cpu",
+        overwrite=True,
+    )
+
+    assert result["schema"] == PR95_MLX_PYTORCH_EXPORT_FORWARD_PARITY_SCHEMA
+    assert result["pytorch_export_forward_parity_established"] is True
+    assert result["state_dict_pt_export"]["schema_version"] == "mlx_to_pytorch_export.v1"
+    assert result["pt_path"].endswith("state.pt")
+    assert (tmp_path / "state.pt").is_file()
+    assert result["sample_indices"] == [0]
+    assert result["forward_parity"]["parity"]["passed"] is True
+    blockers = result["exact_readiness_refusal"]["blockers"]
+    assert PR95_EXPORT_FORWARD_PARITY_BLOCKER not in blockers
+    assert "requires_pytorch_export_forward_parity_on_source_checkpoint" not in blockers
+    assert PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER in blockers
+    assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in blockers
     _assert_false_authority(result)
 
 

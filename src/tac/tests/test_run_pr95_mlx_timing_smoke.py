@@ -16,6 +16,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (
     PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_YUV6_TIMING_ONLY,
 )
 from tac.local_acceleration.pr95_hnerv_mlx_contract import (
+    PR95_EXPORT_FORWARD_PARITY_BLOCKER,
     PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER,
     PR95_PREPROCESS_SMOKE_NOT_SOURCE_VIDEO_TRAINING_BLOCKER,
     PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER,
@@ -53,6 +54,7 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
             str(output_dir),
             "--write-byte-closed-smoke",
             "--write-pr95-public-archive-export",
+            "--write-pytorch-export-parity",
             "--prove-pr95-runtime-consumption",
             "--runtime-proof-max-output-bytes",
             "7000000",
@@ -101,6 +103,11 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     runtime_proof = json.loads(
         (output_dir / "runtime_consumption_proof.json").read_text(encoding="utf-8")
     )
+    pytorch_export_parity = json.loads(
+        (output_dir / "pytorch_export_forward_parity.json").read_text(
+            encoding="utf-8"
+        )
+    )
     preprocess_smoke = json.loads(
         (output_dir / "source_faithful_preprocess_smoke.json").read_text(
             encoding="utf-8"
@@ -114,6 +121,19 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     )
     assert export_summary["runtime_consumption_proof_present"] is True
     assert export_summary["runtime_consumption_proven"] is True
+    assert (output_dir / "pr95_pytorch_state_dict.pt").is_file()
+    assert pytorch_export_parity["schema"] == (
+        "pr95_hnerv_mlx_pytorch_export_forward_parity.v1"
+    )
+    assert (
+        pytorch_export_parity["pytorch_export_forward_parity_established"] is True
+    )
+    assert pytorch_export_parity["state_dict_pt_export"]["schema_version"] == (
+        "mlx_to_pytorch_export.v1"
+    )
+    assert pytorch_export_parity["forward_parity"]["parity"]["passed"] is True
+    for key in FALSE_AUTHORITY:
+        assert pytorch_export_parity[key] is False
     assert (
         "pr95_archive_export_is_byte_closed_but_not_runtime_consumed"
         not in export_summary["exact_readiness_refusal"]["blockers"]
@@ -124,7 +144,19 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in (
         export_summary["exact_readiness_refusal"]["blockers"]
     )
+    assert PR95_EXPORT_FORWARD_PARITY_BLOCKER not in (
+        manifest["exact_readiness_refusal"]["blockers"]
+    )
+    assert "requires_pytorch_export_forward_parity_on_source_checkpoint" not in (
+        manifest["exact_readiness_refusal"]["blockers"]
+    )
+    assert "pytorch_export_forward_parity_is_local_probe_not_score_authority" in (
+        manifest["exact_readiness_refusal"]["blockers"]
+    )
     assert summary["runtime_consumption_proof"]["runtime_consumption_proven"] is True
+    assert summary["pytorch_export_forward_parity"][
+        "pytorch_export_forward_parity_established"
+    ] is True
     assert summary["source_faithful_preprocess_smoke"]["source_faithful_preprocess_ready"] is True
     assert preprocess_smoke["gradient_probe"]["gradient_reachable"] is True
     assert manifest["stage_module"] == "stage1_v328_ce"
@@ -175,6 +207,12 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     assert manifest["runtime_consumption_proof"]["raw_output_bytes"] == (
         runtime_proof["expected_raw_bytes"]
     )
+    assert manifest["pytorch_export_forward_parity"][
+        "pytorch_export_forward_parity_established"
+    ] is True
+    assert manifest["pytorch_export_state_dict_pt_path"].endswith(
+        "pr95_pytorch_state_dict.pt"
+    )
     assert manifest["optimizer_recipe"]["optimizer_descriptor_id"] == (
         "pr95_stage1_adamw_baseline_mlx"
     )
@@ -210,6 +248,11 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     assert representation["archive_zip"]["sha256"] == export_summary["sha256"]
     assert representation["pr95_public_archive_export"]["sha256"] == export_summary["sha256"]
     assert representation["runtime_consumption_proof"]["runtime_consumption_proven"] is True
+    assert representation["pytorch_export_forward_parity"][
+        "pytorch_export_forward_parity_established"
+    ] is True
+    assert representation["candidate_params"]["pytorch_export_forward_parity_present"] is True
+    assert representation["candidate_params"]["pytorch_export_forward_parity_requested"] is True
     assert representation["source_faithful_preprocess_smoke"][
         "source_faithful_preprocess_ready"
     ] is True
@@ -238,6 +281,12 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
         PR95_YUV6_SCORER_LOSS_UNWIRED_BLOCKER not in row["dispatch_blockers"]
     )
     assert PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER in row[
+        "dispatch_blockers"
+    ]
+    assert PR95_EXPORT_FORWARD_PARITY_BLOCKER not in row[
+        "dispatch_blockers"
+    ]
+    assert "requires_pytorch_export_forward_parity_on_source_checkpoint" not in row[
         "dispatch_blockers"
     ]
     assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in row[

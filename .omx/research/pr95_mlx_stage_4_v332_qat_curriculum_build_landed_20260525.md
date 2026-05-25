@@ -206,4 +206,3 @@ Both stages resume from their immediate predecessor (Stage 6 from Stage 5 final;
 **Cost band**: free_local_smoke_only ($0 + ~20 min wall-clock)
 **Mission alignment**: `frontier_breaking_enabler` (extends canonical MLX paradigm to FOURTH PR 95 published curriculum stage; unblocks Stage 6+7 parallel sister BUILD cascade; canonical extension pattern empirically proven 4x).
 **Lane**: `lane_pr95_mlx_stage_4_v332_qat_curriculum_build_20260525` L1
-

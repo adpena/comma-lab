@@ -10,6 +10,9 @@ from pathlib import Path
 import brotli
 import pytest
 
+from comma_lab.scheduler.byte_shaving_campaign_queue import (
+    MATERIALIZER_EXECUTION_STEP_ID,
+)
 from comma_lab.scheduler.byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
@@ -114,6 +117,108 @@ def test_frontier_bootstrap_builds_queue_with_experiment_metadata(tmp_path: Path
         ]
         assert metadata["score_claim"] is False
         assert metadata["ready_for_exact_eval_dispatch"] is False
+        assert metadata["exact_readiness_followup_requested"] is False
+
+
+def test_frontier_bootstrap_can_append_exact_readiness_followups(
+    tmp_path: Path,
+) -> None:
+    archive_path = _write_archive(tmp_path / "archive.zip", member_name="payload.bin")
+    record = archive_record(
+        label="frontier",
+        archive_path=archive_path,
+        repo_root=tmp_path,
+        source_kind="unit_test",
+    )
+
+    payloads = build_frontier_rate_attack_payloads(
+        repo_root=tmp_path,
+        queue_id="frontier_final_rate_attack_exact_followup",
+        archive_records=[record],
+        results_root=tmp_path / "results",
+        target_kinds=(PACKET_MEMBER_RECOMPRESS_TARGET_KIND,),
+        include_optional_target_blockers=False,
+        member_name="payload.bin",
+        source_work_queue_path=tmp_path / "materializer_work_queue.json",
+        include_exact_readiness_followup=True,
+        exact_readiness_followup_require_ready=True,
+    )
+
+    bootstrap = payloads["bootstrap"]
+    queue = payloads["queue"]
+    experiment = queue["experiments"][0]
+    metadata = experiment["metadata"]["frontier_rate_attack_bootstrap"]
+
+    assert bootstrap["exact_readiness_followup_requested"] is True
+    assert bootstrap["exact_readiness_followup_require_ready"] is True
+    assert metadata["exact_readiness_followup_requested"] is True
+    assert experiment["metadata"]["exact_readiness_followup_enabled"] is False
+    assert experiment["metadata"]["exact_readiness_followup_skipped_reason"] == (
+        "materializer_manifest_not_harvestable_for_exact_readiness"
+    )
+    assert [step["id"] for step in experiment["steps"]] == [
+        MATERIALIZER_EXECUTION_STEP_ID,
+    ]
+
+
+def test_frontier_bootstrap_exact_followup_request_stays_fail_closed_on_sweeps(
+    tmp_path: Path,
+) -> None:
+    archive_path = _write_archive(tmp_path / "archive.zip", member_name="payload.bin")
+    record = archive_record(
+        label="frontier",
+        archive_path=archive_path,
+        repo_root=tmp_path,
+        source_kind="unit_test",
+    )
+
+    payloads = build_frontier_rate_attack_payloads(
+        repo_root=tmp_path,
+        queue_id="frontier_final_rate_attack_exact_followup_skip",
+        archive_records=[record],
+        results_root=tmp_path / "results",
+        target_kinds=(PACKET_MEMBER_RECOMPRESS_TARGET_KIND,),
+        include_optional_target_blockers=False,
+        member_name="payload.bin",
+        source_work_queue_path=tmp_path / "materializer_work_queue.json",
+        include_exact_readiness_followup=True,
+    )
+
+    experiment = payloads["queue"]["experiments"][0]
+    assert experiment["metadata"]["exact_readiness_followup_requested"] is True
+    assert experiment["metadata"]["exact_readiness_followup_enabled"] is False
+    assert experiment["metadata"]["exact_readiness_followup_skipped_reason"] == (
+        "materializer_manifest_not_harvestable_for_exact_readiness"
+    )
+    assert [step["id"] for step in experiment["steps"]] == [
+        MATERIALIZER_EXECUTION_STEP_ID,
+    ]
+
+
+def test_frontier_bootstrap_refuses_exact_followup_without_work_queue_custody(
+    tmp_path: Path,
+) -> None:
+    archive_path = _write_archive(tmp_path / "archive.zip")
+    record = archive_record(
+        label="frontier",
+        archive_path=archive_path,
+        repo_root=tmp_path,
+        source_kind="unit_test",
+    )
+
+    with pytest.raises(
+        FrontierRateAttackBootstrapError,
+        match="requires source_work_queue_path",
+    ):
+        build_frontier_rate_attack_payloads(
+            repo_root=tmp_path,
+            queue_id="frontier_final_rate_attack_missing_custody",
+            archive_records=[record],
+            results_root=tmp_path / "results",
+            target_kinds=(PACKET_MEMBER_RECOMPRESS_TARGET_KIND,),
+            include_optional_target_blockers=False,
+            include_exact_readiness_followup=True,
+        )
 
 
 def test_frontier_bootstrap_cli_writes_valid_queue(tmp_path: Path) -> None:
@@ -135,6 +240,7 @@ def test_frontier_bootstrap_cli_writes_valid_queue(tmp_path: Path) -> None:
             "--target-kind",
             PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
             "--no-optional-target-blockers",
+            "--include-exact-readiness-followup",
         ],
         cwd=REPO_ROOT,
         text=True,
@@ -153,6 +259,16 @@ def test_frontier_bootstrap_cli_writes_valid_queue(tmp_path: Path) -> None:
     bootstrap = json.loads(bootstrap_path.read_text(encoding="utf-8"))
     assert bootstrap["archive_count"] == 1
     assert bootstrap["archives"][0]["sha256"] == sha256_file(archive_path)
+    queue = json.loads(queue_path.read_text(encoding="utf-8"))
+    assert queue["experiments"][0]["metadata"][
+        "exact_readiness_followup_enabled"
+    ] is False
+    assert queue["experiments"][0]["metadata"][
+        "exact_readiness_followup_skipped_reason"
+    ] == "materializer_manifest_not_harvestable_for_exact_readiness"
+    assert [step["id"] for step in queue["experiments"][0]["steps"]] == [
+        MATERIALIZER_EXECUTION_STEP_ID,
+    ]
 
     validate = subprocess.run(
         [
