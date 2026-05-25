@@ -56186,11 +56186,11 @@
       "id": "lane_pr95_mlx_byte_closed_contest_archive_export_20260525",
       "name": "PR95 MLX byte-closed contest archive export",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tools/package_pr95_mlx_pytorch_state_dict_to_contest_archive.py + .omx/research/pr95_mlx_byte_closed_contest_archive_export_landed_20260525.md commit 3b126aa0d; byte-closed round-trip residual=0.0 BYTE-IDENTICAL"
         },
         "real_archive_empirical": {
           "status": false,
@@ -56213,8 +56213,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pr95_mlx_byte_closed_contest_archive_export_landed_20260525.md (canonical landing memo)"
         },
         "deploy_runbook": {
           "status": false,
@@ -56272,5 +56272,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T17:55:19Z"
+  "updated_at": "2026-05-25T18:00:31Z"
 }
