@@ -33,7 +33,10 @@ FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA = "family_agnostic_materiali
 FAMILY_AGNOSTIC_MATERIALIZER_CANDIDATE_SCHEMAS = frozenset(
     {
         "archive_section_entropy_recode_candidate.v1",
+        "packet_member_merge_candidate.v1",
         "packet_member_recompress_candidate.v1",
+        "packet_member_zip_header_elide_candidate.v1",
+        "renderer_payload_dfl1_candidate.v1",
         "tensor_factorize_candidate.v1",
     }
 )

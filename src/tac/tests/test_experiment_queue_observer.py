@@ -745,12 +745,36 @@ def test_observer_surfaces_succeeded_single_family_materializer_manifests(
             "section_recode",
         ),
         (
+            "packet_member_merge",
+            "packet_member_merge_candidate.v1",
+            "packet_member_merge_v1",
+            "packet_member_merge_adapter",
+            "family_agnostic_packet_member_merge",
+            "selected_merge",
+        ),
+        (
             "packet_member_recompress",
             "packet_member_recompress_candidate.v1",
             "packet_member_recompress_v1",
             "packet_member_recompress_adapter",
             "family_agnostic_packet_member_recompress",
             "selected_compression",
+        ),
+        (
+            "packet_member_zip_header_elide",
+            "packet_member_zip_header_elide_candidate.v1",
+            "packet_member_zip_header_elide_v1",
+            "packet_member_zip_header_elide_adapter",
+            "family_agnostic_packet_member_zip_header_elide",
+            "selected_elision",
+        ),
+        (
+            "renderer_payload_dfl1",
+            "renderer_payload_dfl1_candidate.v1",
+            "renderer_payload_dfl1_v1",
+            "renderer_payload_dfl1_adapter",
+            "source_runtime_native_renderer_payload_dfl1",
+            "selected_payload",
         ),
         (
             "tensor_factorize",
@@ -874,7 +898,7 @@ def test_observer_surfaces_succeeded_single_family_materializer_manifests(
 
     assert observation["healthy"] is True
     assert observation["succeeded_artifact_failure_steps"] == []
-    assert len(observation["succeeded_artifact_steps"]) == 3
+    assert len(observation["succeeded_artifact_steps"]) == len(manifests)
     artifact_by_schema = {
         step["expected_artifacts"][0]["json_schema"]: step["expected_artifacts"][0]
         for step in observation["succeeded_artifact_steps"]

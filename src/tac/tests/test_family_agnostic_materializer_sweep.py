@@ -58,6 +58,30 @@ def _write_recompress_zip(path: Path) -> None:
         )
 
 
+def _write_merge_zip(path: Path) -> None:
+    with zipfile.ZipFile(path, "w") as zf:
+        for name, payload in {
+            "renderer.bin": b"A" * 256,
+            "masks.mkv": b"B" * 128,
+        }.items():
+            zf.writestr(name, payload, compress_type=zipfile.ZIP_STORED)
+
+
+def _write_dfl1_zip(path: Path) -> None:
+    with zipfile.ZipFile(path, "w") as zf:
+        for name, payload in {
+            "renderer.bin": b"A" * 512,
+            "masks.mkv": b"B" * 384,
+            "optimized_poses.pt": b"C" * 256,
+        }.items():
+            zf.writestr(
+                name,
+                payload,
+                compress_type=zipfile.ZIP_DEFLATED,
+                compresslevel=9,
+            )
+
+
 def _write_tensor_zip(path: Path) -> None:
     rows = np.arange(256, dtype=np.float32).reshape(256, 1)
     cols = np.linspace(0.25, 2.0, 256, dtype=np.float32).reshape(1, 256)
@@ -181,6 +205,64 @@ def test_materializer_empirical_sweep_supports_packet_member_recompress(
     assert row["observed_rate_gain"] > 0
     assert row["observed_score_gain"] > 0
     assert row["receiver_contract_satisfied"] is True
+    assert row["score_claim"] is False
+    assert Path(row["candidate_archive_path"]).is_file()
+
+
+def test_materializer_empirical_sweep_supports_packet_member_merge(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "merge.zip"
+    _write_merge_zip(archive)
+
+    payload = build_materializer_empirical_sweep(
+        target_kind="packet_member_merge_v1",
+        archives=[f"merge={archive}"],
+        output_dir=tmp_path / "sweep",
+        member_names=("renderer.bin", "masks.mkv"),
+        merged_member_name="p",
+    )
+
+    row = payload["observations"][0]
+    assert payload["materializer_id"] == "packet_member_merge_adapter"
+    assert payload["planner_feedback"]["target_kind"] == "packet_member_merge_v1"
+    assert row["selected_materialization_key"] == "selected_merge"
+    assert row["selected_member_names"] == ["renderer.bin", "masks.mkv"]
+    assert row["rate_positive"] is True
+    assert row["receiver_contract_satisfied"] is False
+    assert "packet_member_merge_receiver_contract_not_satisfied" in (
+        row["readiness_blockers"]
+    )
+    assert row["score_claim"] is False
+    assert Path(row["candidate_archive_path"]).is_file()
+
+
+def test_materializer_empirical_sweep_supports_renderer_payload_dfl1(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "dfl1.zip"
+    _write_dfl1_zip(archive)
+
+    payload = build_materializer_empirical_sweep(
+        target_kind="renderer_payload_dfl1_v1",
+        archives=[f"dfl1={archive}"],
+        output_dir=tmp_path / "sweep",
+    )
+
+    row = payload["observations"][0]
+    assert payload["materializer_id"] == "renderer_payload_dfl1_adapter"
+    assert payload["planner_feedback"]["target_kind"] == "renderer_payload_dfl1_v1"
+    assert row["selected_materialization_key"] == "selected_payload"
+    assert row["selected_member_names"] == [
+        "renderer.bin",
+        "masks.mkv",
+        "optimized_poses.pt",
+    ]
+    assert row["rate_positive"] is True
+    assert row["receiver_contract_satisfied"] is False
+    assert "renderer_payload_dfl1_full_frame_inflate_parity_missing" in (
+        row["readiness_blockers"]
+    )
     assert row["score_claim"] is False
     assert Path(row["candidate_archive_path"]).is_file()
 

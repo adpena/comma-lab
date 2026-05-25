@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from hashlib import sha256
 from pathlib import Path
 
@@ -181,6 +183,34 @@ def _write_cross_family_summary(repo: Path) -> Path:
         )
     )
     return summary
+
+
+def _write_pair_frame_geometry_lattice(repo: Path) -> Path:
+    path = repo / "pair_frame_scorer_geometry_lattice.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "pair_frame_scorer_geometry_lattice.v1",
+                **_false_authority(),
+                "queue_executable_pairset_drop_requests": [
+                    {
+                        "schema": "pair_frame_geometry_queue_executable_drop_request.v1",
+                        **_false_authority(),
+                        "candidate_id": "pairset_geometry_lowimpact_k003_habcdef1234",
+                        "selector_kind": "pair_frame_geometry_low_impact_drop_many",
+                        "selected_pair_count": 3,
+                        "selected_pair_indices": [1, 2, 112],
+                        "queue_executable": True,
+                        "operator_next_action": (
+                            "materialize_pairset_archive_and_run_local_controls"
+                        ),
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
 
 
 def _write_completed_local_advisory(
@@ -1562,6 +1592,50 @@ def test_dqs1_queue_builder_accepts_pair_frame_geometry_queue_requests(
     steps = {step["id"]: step["command"] for step in experiment["steps"]}
     assert steps["plan_packet"][-1] == "1,2,112,233,440"
     assert experiment["metadata"]["score_claim"] is False
+
+
+def test_dqs1_queue_cli_accepts_geometry_lattice_and_writes_selected_acquisition(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+    summary_payload = json.loads(summary.read_text(encoding="utf-8"))
+    summary_payload["portfolio_json"] = str(tmp_path / "portfolio.json")
+    summary.write_text(json.dumps(summary_payload), encoding="utf-8")
+    lattice = _write_pair_frame_geometry_lattice(tmp_path)
+    selected_acquisition = tmp_path / "selected_pairset_acquisition.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "tools/build_dqs1_local_first_queue.py",
+            "--action-summary",
+            str(summary),
+            "--results-root",
+            str(tmp_path / "results"),
+            "--pair-frame-geometry-lattice",
+            str(lattice),
+            "--selected-pairset-acquisition-out",
+            str(selected_acquisition),
+            "--skip-raw-retention-plan",
+            "--skip-mlx-retention-plan",
+        ],
+        cwd=Path(__file__).resolve().parents[3],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    queue = json.loads(result.stdout)
+    assert queue["experiments"][0]["id"] == (
+        "pairset_geometry_lowimpact_k003_habcdef1234"
+    )
+    sidecar = json.loads(selected_acquisition.read_text(encoding="utf-8"))
+    assert sidecar["schema"] == "dqs1_selected_pairset_acquisition.v1"
+    assert sidecar["candidates"][0]["candidate_id"] == (
+        "pairset_geometry_lowimpact_k003_habcdef1234"
+    )
+    assert sidecar["score_claim"] is False
 
 
 def test_dqs1_queue_builder_threads_runtime_overrides(tmp_path: Path) -> None:

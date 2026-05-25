@@ -22,16 +22,22 @@ ensure_repo_imports(REPO_ROOT)
 from tac.optimization.family_agnostic_materializers import (  # noqa: E402
     ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID,
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    PACKET_MEMBER_MERGE_MATERIALIZER_ID,
+    PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_MATERIALIZER_ID,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+    RENDERER_PAYLOAD_DFL1_MATERIALIZER_ID,
+    RENDERER_PAYLOAD_DFL1_TARGET_KIND,
     TENSOR_FACTORIZE_MATERIALIZER_ID,
     TENSOR_FACTORIZE_TARGET_KIND,
     FamilyAgnosticMaterializerError,
     materialize_archive_section_entropy_recode_candidate,
+    materialize_packet_member_merge_candidate,
     materialize_packet_member_recompress_candidate,
     materialize_packet_member_zip_header_elide_candidate,
+    materialize_renderer_payload_dfl1_candidate,
     materialize_tensor_factorize_candidate,
 )
 from tac.optimization.materializer_feedback import (  # noqa: E402
@@ -73,8 +79,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
         choices=(
             ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+            PACKET_MEMBER_MERGE_TARGET_KIND,
             PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
             PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+            RENDERER_PAYLOAD_DFL1_TARGET_KIND,
             TENSOR_FACTORIZE_TARGET_KIND,
         ),
     )
@@ -94,6 +102,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--section-name", action="append", default=[])
     parser.add_argument("--brotli-quality", action="append", type=int, default=[])
     parser.add_argument("--packet-member-manifest", type=Path)
+    parser.add_argument("--merge-contract", type=Path)
+    parser.add_argument("--merged-member-name")
+    parser.add_argument("--payload-member-name", default="p")
+    parser.add_argument("--full-frame-inflate-parity-proof", type=Path)
     parser.add_argument("--header-elision-contract", type=Path)
     parser.add_argument("--zip-compression-method", action="append", default=[])
     parser.add_argument("--zip-compresslevel", action="append", type=int, default=[])
@@ -127,6 +139,10 @@ def main(argv: list[str] | None = None) -> int:
             zip_compresslevels=tuple(args.zip_compresslevel),
             tensor_manifest=args.tensor_manifest,
             factorization_contract=args.factorization_contract,
+            merge_contract=args.merge_contract,
+            merged_member_name=args.merged_member_name,
+            payload_member_name=args.payload_member_name,
+            full_frame_inflate_parity_proof=args.full_frame_inflate_parity_proof,
             rank=args.rank,
             all_members=args.all_members,
             min_free_bytes=args.min_free_bytes,
@@ -166,6 +182,10 @@ def build_materializer_empirical_sweep(
     section_names: Sequence[str] = (),
     brotli_qualities: Sequence[int] = (),
     packet_member_manifest: str | Path | Mapping[str, Any] | None = None,
+    merge_contract: str | Path | Mapping[str, Any] | None = None,
+    merged_member_name: str | None = None,
+    payload_member_name: str = "p",
+    full_frame_inflate_parity_proof: str | Path | Mapping[str, Any] | None = None,
     header_elision_contract: str | Path | Mapping[str, Any] | None = None,
     zip_compression_methods: Sequence[str] = (),
     zip_compresslevels: Sequence[int] = (),
@@ -177,8 +197,10 @@ def build_materializer_empirical_sweep(
 ) -> dict[str, Any]:
     if target_kind not in {
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        PACKET_MEMBER_MERGE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+        RENDERER_PAYLOAD_DFL1_TARGET_KIND,
         TENSOR_FACTORIZE_TARGET_KIND,
     }:
         raise FamilyAgnosticMaterializerError(f"unsupported target kind: {target_kind}")
@@ -220,6 +242,10 @@ def build_materializer_empirical_sweep(
             section_names=section_names,
             brotli_qualities=brotli_qualities,
             packet_member_manifest=packet_member_manifest,
+            merge_contract=merge_contract,
+            merged_member_name=merged_member_name,
+            payload_member_name=payload_member_name,
+            full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
             member_name=member_name,
             member_names=member_names,
             all_members=all_members,
@@ -279,6 +305,10 @@ def _materialize_target(
     section_names: Sequence[str],
     brotli_qualities: Sequence[int],
     packet_member_manifest: str | Path | Mapping[str, Any] | None,
+    merge_contract: str | Path | Mapping[str, Any] | None,
+    merged_member_name: str | None,
+    payload_member_name: str,
+    full_frame_inflate_parity_proof: str | Path | Mapping[str, Any] | None,
     member_name: str | None,
     member_names: Sequence[str],
     all_members: bool,
@@ -302,6 +332,21 @@ def _materialize_target(
             section_manifest=section_manifest,
             section_names=section_names,
             brotli_qualities=tuple(brotli_qualities or (9, 10, 11)),
+            runtime_consumption_proof_out=proof_path,
+            repo_root=REPO_ROOT,
+            allow_overwrite=allow_overwrite,
+            min_free_bytes=min_free_bytes,
+        )
+    if target_kind == PACKET_MEMBER_MERGE_TARGET_KIND:
+        return materialize_packet_member_merge_candidate(
+            archive_path=archive,
+            output_archive=candidate_path,
+            packet_member_manifest=packet_member_manifest,
+            member_name=member_name,
+            member_names=member_names,
+            all_members=all_members,
+            merge_contract=merge_contract,
+            merged_member_name=merged_member_name,
             runtime_consumption_proof_out=proof_path,
             repo_root=REPO_ROOT,
             allow_overwrite=allow_overwrite,
@@ -334,6 +379,19 @@ def _materialize_target(
             allow_overwrite=allow_overwrite,
             min_free_bytes=min_free_bytes,
         )
+    if target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND:
+        return materialize_renderer_payload_dfl1_candidate(
+            archive_path=archive,
+            output_archive=candidate_path,
+            packet_member_manifest=packet_member_manifest,
+            member_names=member_names or (),
+            payload_member_name=payload_member_name,
+            runtime_consumption_proof_out=proof_path,
+            full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
+            repo_root=REPO_ROOT,
+            allow_overwrite=allow_overwrite,
+            min_free_bytes=min_free_bytes,
+        )
     if target_kind == TENSOR_FACTORIZE_TARGET_KIND:
         contract: str | Path | Mapping[str, Any]
         if factorization_contract is not None:
@@ -360,10 +418,14 @@ def _materialize_target(
 def _target_materializer_id(target_kind: str) -> str:
     if target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND:
         return ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID
+    if target_kind == PACKET_MEMBER_MERGE_TARGET_KIND:
+        return PACKET_MEMBER_MERGE_MATERIALIZER_ID
     if target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
         return PACKET_MEMBER_RECOMPRESS_MATERIALIZER_ID
     if target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
         return PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID
+    if target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND:
+        return RENDERER_PAYLOAD_DFL1_MATERIALIZER_ID
     if target_kind == TENSOR_FACTORIZE_TARGET_KIND:
         return TENSOR_FACTORIZE_MATERIALIZER_ID
     raise FamilyAgnosticMaterializerError(f"unsupported target kind: {target_kind}")
