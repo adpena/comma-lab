@@ -1,0 +1,200 @@
+{
+  "schema_version": "cuda_axis_dqs1_build_1_pv_gate_verdict_v1",
+  "lane_id": "lane_cuda_axis_dqs1_build_1_per_axis_pair_delta_table_empirical_population_20260525",
+  "captured_at_utc": "2026-05-25T16:08:00Z",
+  "agent": "claude (CUDA-AXIS-DQS1-BUILD-1 subagent)",
+  "scope": "PV gate execution per DROP-MANY-BEAM-BUILD-1 (commit b5478c9a7) precedent BEFORE empirical per-axis pair-delta table population",
+  "target_archive_sha256": "7a0da5d0fc32",
+  "target_archive_sha256_canonical_reference": "CUDA-AXIS-DQS1-DESIGN memo .omx/research/cuda_axis_dqs1_design_memo_per_axis_pareto_pair_ordering_20260525.md FRONTIER archive citation",
+  "final_verdict": "PV_GATE_FAILED_DATA_SOURCE_PREMISE_FALSIFIED",
+  "verdict_classification_per_catalog_307": "IMPLEMENTATION-LEVEL falsification of DATA-SOURCE assumption (BUILD-1 can use master gradient ledger as empirical anchor source for target archive 7a0da5d0fc32). NOT PARADIGM-LEVEL refutation of per-axis Pareto pair ordering design.",
+  "pv_check_1": {
+    "name": "paired_cpu_cuda_anchors_exist_for_target_archive",
+    "verdict": "FAIL_CRITICAL",
+    "empirical_evidence": {
+      "target_archive_sha_prefix": "7a0da5d0fc32",
+      "anchors_in_ledger_matching_target": 0,
+      "ledger_path": ".omx/state/master_gradient_anchors.jsonl",
+      "ledger_total_rows": 11,
+      "available_archive_sha_prefixes_in_ledger": [
+        "f174192aeadf",
+        "87ec7ca5f2f3",
+        "b83bf3488625",
+        "6bae0201fb08",
+        "9cb989cef519",
+        "7ecb0df1c462"
+      ],
+      "search_for_7a0da_in_any_field": "NOT FOUND"
+    },
+    "rationale": "Target FRONTIER archive 7a0da5d0fc32 (per CUDA-AXIS-DQS1-DESIGN memo Section line 9) has ZERO master gradient anchors in the canonical ledger. Cannot populate per-axis pair-delta table for an archive with no anchor data."
+  },
+  "pv_check_2": {
+    "name": "cuda_delta_values_non_constant_minimum_3_unique",
+    "verdict": "N_A_BLOCKED_BY_PV1",
+    "empirical_evidence": {
+      "rationale": "Cannot compute per-pair CUDA delta diversity for target archive when zero anchors exist for target.",
+      "sister_archive_6bae0201fb08_diagnostic": {
+        "cuda_anchors_count": 1,
+        "n_pairs_used_authoritative": 600,
+        "diversity_check_possible_only_for_sister_NOT_target": true
+      }
+    }
+  },
+  "pv_check_3": {
+    "name": "per_axis_decomposition_components_rate_seg_pose_exist_separately",
+    "verdict": "FAIL_PARTIAL_DEGENERATE_POSE_COLUMN",
+    "empirical_evidence": {
+      "fec6_cuda_t4_array_shape": [178417, 3],
+      "fec6_cuda_t4_array_dtype": "float32",
+      "cuda_col_0_rate_unique_count": 27,
+      "cuda_col_1_seg_unique_count": 29,
+      "cuda_col_2_pose_unique_count": 1,
+      "cuda_col_2_pose_mean": 0.0,
+      "cuda_col_2_pose_std": 0.0,
+      "cpu_col_2_pose_unique_count": 1,
+      "cpu_col_2_pose_mean": 2.663436e-08,
+      "cpu_col_2_pose_std": 1.776357e-15
+    },
+    "rationale": "Even on sister archive 6bae0201fb08, the per-axis decomposition is structurally DEGENERATE on the pose component: CUDA pose column is uniformly 0.0 (zero variance, single unique value); CPU pose column is also single-unique-value at 2.66e-08. Cannot apply equation #36 per-axis decomposition ΔPoseNet_axis(pair_i) when the pose component is structurally degenerate. The pose-axis amplification per equation #18 cannot be empirically resolved from this data source for per-pair-drop ranking."
+  },
+  "pv_check_4": {
+    "name": "not_source_selector_inherited_authoritative_per_pair_data",
+    "verdict": "FAIL_PARTIAL_NO_FEC6_PER_PAIR_TABLE",
+    "empirical_evidence": {
+      "per_pair_tables_available_in_ledger": [
+        {"file": "master_gradient_a1_headered_diagnostic_8pair_per_pair_20260518.npy", "shape": [178162, 8, 3], "subset_pair_count": 8, "substrate": "A1_NOT_FEC6"},
+        {"file": "master_gradient_pr101_lc_v2_diagnostic_8pair_per_pair_20260518.npy", "shape": [178158, 8, 3], "subset_pair_count": 8, "substrate": "PR101_LC_V2_NOT_FEC6"},
+        {"file": "master_gradient_a1_headered_diagnostic_1pair_per_pair_20260518.npy", "shape": [178162, 1, 3], "subset_pair_count": 1, "substrate": "A1_NOT_FEC6"}
+      ],
+      "fec6_600_pair_per_pair_tables_found": 0,
+      "fec6_any_per_pair_tables_found": 0,
+      "anchors_with_n_pairs_used_600": [
+        {"archive_sha_prefix": "6bae0201fb08", "axis": "[contest-CUDA]", "method": "autograd_per_parameter_projected_fec6_int8_fp16_jacobian", "note": "FULL-set authoritative but only AGGREGATE-per-byte (no per-pair table)"}
+      ],
+      "anchors_with_n_pairs_used_8_subset": [
+        "f174192aeadf [macOS-CPU advisory]",
+        "87ec7ca5f2f3 [macOS-CPU advisory] (2 entries)",
+        "b83bf3488625 [macOS-CPU advisory] (2 entries)",
+        "6bae0201fb08 [macOS-CPU advisory] (2 entries)",
+        "9cb989cef519 [macOS-CPU advisory]",
+        "7ecb0df1c462 [macOS-CPU advisory]"
+      ],
+      "per_pair_projection_from_aggregate_attempted_diagnostic_only": {
+        "method": "uniform 297-byte slice per pair from aggregate-per-byte 178417-byte CUDA array",
+        "per_pair_cuda_unique_count": 31,
+        "per_pair_cuda_mean": 2.039290e-04,
+        "per_pair_cuda_std": 3.357402e-04,
+        "per_pair_cpu_unique_count": 31,
+        "per_pair_cpu_mean": 4.592022e-04,
+        "per_pair_cpu_std": 3.927657e-04,
+        "WARNING": "This projection assumes UNIFORM byte distribution across DQS1 600-pair selector space — NOT empirically validated. The 31-unique-value count suggests structural byte-region granularity (~600/31 ≈ 19 pairs per unique value) consistent with shared rate-saving constants — strongly suggesting the projection is itself an INHERITANCE ARTIFACT analogous to DROP-MANY-BEAM-BUILD-1's source-selector-inherited bug class."
+    },
+    "rationale": "No fec6 600-pair per-pair table exists in canonical ledger. Available per-pair tables are limited to A1 and PR101_LC_V2 substrates at 8-pair diagnostic subset depth. The aggregate-per-byte fec6 CUDA + CPU arrays exist for sister archive 6bae0201fb08 (NOT target 7a0da5d0fc32) but uniform slice projection from aggregate-per-byte to per-pair (31 unique values across 600 pairs) is structurally identical to the DROP-MANY-BEAM-BUILD-1 source-selector-inheritance artifact bug class."
+  },
+  "drop_many_beam_build_1_precedent_parallel": {
+    "precedent_commit": "b5478c9a7",
+    "precedent_memo": ".omx/research/dqs1_drop_many_build_1_pairwise_interaction_matrix_empirical_population_20260525.md",
+    "precedent_verdict": "DATA_SOURCE_PREMISE_FALSIFIED_ARTIFACT_DOMINANT",
+    "precedent_concentration_pct": 100.0,
+    "precedent_root_cause": "Acquisition plan source-selector inheritance: every child candidate inherits source-selector predicted score; rate_score_delta_vs_source_selector uses linear superposition model that produces constant |Δ_ij| = 6.658589e-07",
+    "current_root_cause_parallel": "Master gradient ledger absence of target archive anchors + sister archive's per-axis pose column degeneracy + uniform per-pair projection from aggregate-per-byte fec6 arrays (no authoritative fec6 per-pair table) all combine to the SAME META-CLASS bug: BUILD-1 stated purpose requires per-pair per-axis empirical anchors that the canonical data source does NOT provide for the target FRONTIER archive.",
+    "structural_extinction_value_per_catalog_229": "PV gate caught this bug class BEFORE any artifact .npz/.json population attempt; saved structural confidence in canonical equation candidate cuda_axis_dqs1_per_axis_pareto_pair_ordering_v1 by NOT contaminating its RATIFY-N protocol with artifact-dominant per-axis pair-delta table."
+  },
+  "operator_routable_next_cascade": [
+    {
+      "priority": 1,
+      "name": "BUILD_1B_PAIRED_CPU_CUDA_MODAL_EXACT_EVAL_DISPATCH",
+      "rationale": "Per Catalog #308 alternative methodology + DROP-MANY-BEAM-BUILD-1 precedent: Modal CPU + CUDA paired exact-eval ledger on ~10 drop_one candidates × {CPU, CUDA} = 20 dispatches via canonical operator-authorize chain. Yields true per-pair per-axis predicted_score_mean as child-candidate-empirical (NOT source-selector-inherited or aggregate-projected).",
+      "estimated_cost_usd_range": [10.0, 20.0],
+      "calculation": "~$1.20-2.40 per paired (CPU+CUDA) dispatch × ~10 pairs = ~$12-24 envelope; per-axis Modal T4 CUDA + Modal CPU advisory + Linux x86_64 paired per Catalog #192",
+      "predicted_ds_band_per_axis": {
+        "delta_cpu": "[-0.0000005, +0.0000005]",
+        "delta_cuda": "[-0.0000010, +0.0000005]"
+      },
+      "blockers_per_pre_dispatch_protocol": [
+        "operator_approval_required_per_CLAUDE_md_Executing_actions_with_care",
+        "Catalog_270_dispatch_optimization_protocol_compliance_required",
+        "Catalog_167_smoke_before_full_pattern_required",
+        "Catalog_343_canonical_frontier_pointer_consultation_required_for_target_7a0da5d0fc32_verification"
+      ]
+    },
+    {
+      "priority": 2,
+      "name": "TARGET_ARCHIVE_RESOLUTION_PV_FOLLOWUP",
+      "rationale": "PV Check 1 found ZERO anchors for target 7a0da5d0fc32. Operator-routable for sister subagent: verify target archive sha against canonical frontier pointer (.omx/state/canonical_frontier_pointer.json) per Catalog #343 to confirm CUDA-AXIS-DQS1-DESIGN memo target archive citation is correct, OR identify the sister archive sha that should be the actual BUILD-1 target.",
+      "estimated_cost_usd": 0.0,
+      "calculation": "$0 local lookup + cross-reference against canonical pointer"
+    },
+    {
+      "priority": 3,
+      "name": "DEFER_BUILD_2_BUILD_3_BUILD_4_CASCADE",
+      "rationale": "Per Catalog #307 IMPLEMENTATION-LEVEL falsification per data source: BUILD-2 (Pareto + Dykstra + minimax populator) + BUILD-3 (DISPATCH cascade) + BUILD-4 (Catalog #356 AxisDecomposition wire-in) all DEFER until BUILD-1b lands authoritative paired CPU+CUDA per-pair empirical anchors for the target archive. The CUDA-AXIS-DQS1 PARADIGM (per-axis Pareto + Dykstra alternating-projections) remains research-path-alive per CLAUDE.md 'Forbidden premature KILL without research exhaustion'."
+    },
+    {
+      "priority": 4,
+      "name": "SISTER_ALTERNATIVE_RE_ISSUE_EXTRACTION_FOR_TARGET",
+      "rationale": "Sister codex/claude subagent could fire tools/extract_master_gradient.py (or canonical sister) against target archive 7a0da5d0fc32 to populate the per-pair fec6 600-pair per-axis table directly — $0 paid GPU but requires the target archive to exist at the standard archive registry path. Per Catalog #344 RATIFY-N: this would unblock BUILD-1 to populate per-axis pair-delta table from authoritative per-pair fec6 data."
+    }
+  ],
+  "canonical_provenance": {
+    "kind": "predicted_from_apparatus_discipline_pv_gate",
+    "axis_tag": "[predicted]",
+    "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+    "evidence_grade": "research_only_pv_gate_falsification_verdict",
+    "score_claim": false,
+    "promotable": false,
+    "captured_at": "2026-05-25T16:08:00Z",
+    "source_path": ".omx/state/master_gradient_anchors.jsonl",
+    "source_sha256": "PV-gate-evidence-from-canonical-master-gradient-ledger-11-row-2026-05-25",
+    "rationale": "Per Catalog #341 canonical non-promotable markers + Catalog #323 canonical Provenance umbrella + Catalog #287 evidence-tag discipline. PV gate verdict is observability-only diagnostic; NOT a score signal; NOT promotable."
+  },
+  "catalog_313_probe_outcomes_row": {
+    "schema_version": "probe_outcome_row_v1",
+    "probe_id": "cuda_axis_dqs1_build_1_pv_gate_20260525T160800Z",
+    "lane_id": "lane_cuda_axis_dqs1_build_1_per_axis_pair_delta_table_empirical_population_20260525",
+    "recipe_path_or_target": "cuda_axis_dqs1_per_axis_pareto_pair_ordering_v1_build_1",
+    "substrate_id": "cuda_axis_dqs1_per_axis_pareto_ranker",
+    "verdict": "DEFER",
+    "status": "blocking",
+    "event_type": "adjudicated",
+    "adjudicated_at_utc": "2026-05-25T16:08:00Z",
+    "expires_at_utc": "2026-06-24T16:08:00Z",
+    "rationale": "PV gate falsification per Catalog #229 + DROP-MANY-BEAM-BUILD-1 precedent: data source absence for target archive 7a0da5d0fc32 + per-axis pose component degeneracy + no fec6 600-pair per-pair table = artifact-dominant data source. NOT a paradigm refutation (Catalog #307 IMPLEMENTATION-LEVEL).",
+    "reactivation_criteria": "BUILD-1b paired CPU+CUDA Modal exact-eval dispatch lands ≥3 paired anchors with per-pair per-axis data for target archive 7a0da5d0fc32 OR sister cascade resolves target archive sha against canonical frontier pointer + re-issues per-pair fec6 extraction at target sha.",
+    "canonical_helper_invocation": "tac.probe_outcomes_ledger.register_probe_outcome (queued; operator-routable for downstream registration)"
+  },
+  "canonical_equation_candidate_refinement": {
+    "candidate_name": "cuda_axis_dqs1_per_axis_pareto_pair_ordering_v1",
+    "ratification_trigger_status": "DEFERRED-PENDING-BUILD-1B-OR-SISTER-CASCADE-TARGET-ARCHIVE-RESOLUTION",
+    "refinement_field_proposed": {
+      "empirical_data_source_provenance": "master_gradient_ledger_canonical_no_target_archive_anchors_for_7a0da5d0fc32_NOT_fec6_600pair_per_pair",
+      "per_axis_decomposition_status_on_sister_6bae0201fb08": "DEGENERATE_POSE_COLUMN_ALL_ZEROS_CUDA",
+      "data_source_falsified_for_authoritative_use_for_target_7a0da5d0fc32": true,
+      "predicted_band_refinement": "PENDING (BUILD-1b alternative methodology required OR sister cascade target archive resolution)"
+    },
+    "catalog_344_protocol_status": "QUEUED — NOT auto-registered; operator-routable per RATIFY-N protocol once BUILD-1b lands authoritative anchors for target archive"
+  },
+  "discipline_closure": {
+    "catalog_229_premise_verification": "APPLIED — 4 PV checks executed BEFORE any artifact .npz/.json population",
+    "catalog_287_evidence_tags": "APPLIED — every empirical claim cites .omx/state/master_gradient_anchors.jsonl row counts + .npy array shapes",
+    "catalog_307_paradigm_vs_implementation_classification": "APPLIED — IMPLEMENTATION-LEVEL falsification of data source, NOT PARADIGM refutation of per-axis Pareto pair ordering",
+    "catalog_308_alternative_probe_methodologies": "APPLIED — 4 operator-routable alternatives enumerated (BUILD-1b paired exact-eval + target archive resolution + DEFER BUILD-2-3-4 + sister extraction)",
+    "catalog_313_probe_outcomes_ledger_row": "QUEUED — verdict=DEFER, status=blocking, reactivation_criteria pinned",
+    "catalog_323_canonical_provenance_umbrella": "APPLIED — canonical Provenance with score_claim=False + promotable=False + axis_tag=[predicted] + evidence_grade=research_only_pv_gate_falsification_verdict",
+    "catalog_341_canonical_non_promotable_markers": "APPLIED — Tier A observability-only; routing recommendation NOT a score signal",
+    "catalog_344_canonical_equation_candidate_refinement": "QUEUED — DEFERRED-PENDING-BUILD-1B-OR-SISTER-CASCADE-TARGET-ARCHIVE-RESOLUTION",
+    "catalog_110_113_append_only_historical_provenance": "APPLIED — NEW artifact directory + NEW landing memo + NEW verdict.json; ZERO mutation of CUDA-AXIS-DQS1-DESIGN scaffold, canonical equation registry, master gradient ledger, sister cathedral consumers",
+    "catalog_230_sister_subagent_ownership_map": "VERIFIED — concurrent Slot 2 (PR95-STAGE-2-MLX-BUILD) + Slot 3 (DROP-MANY-BEAM-BUILD-1c-GREEDY) + Slot 4 (COMBINED-TIER-1-WAVE-3) all DISJOINT scope",
+    "catalog_340_sister_checkpoint_guard": "PROCEED — no file-touch overlap with sister subagents at checkpoint time"
+  },
+  "six_hook_wire_in_declaration_per_catalog_125": {
+    "hook_1_sensitivity_map": "N/A — PV gate falsification is observability-only; no sensitivity signal contribution to tac.sensitivity_map.*",
+    "hook_2_pareto_constraint": "N/A — no Pareto-relevant signal from falsified data source",
+    "hook_3_bit_allocator": "N/A — no bit-allocator signal; per-axis pair-delta table NOT populated",
+    "hook_4_cathedral_autopilot_dispatch": "ACTIVE — Catalog #313 probe-outcomes ledger row QUEUED for downstream registration; autopilot predecessor-probe gate per Catalog #313 will refuse BUILD-2 dispatch unless reactivation criterion satisfied",
+    "hook_5_continual_learning_posterior": "ACTIVE — verdict.json + canonical equation refinement field feed tac.canonical_equations.update_equation_with_empirical_anchor per Catalog #344 (refinement DEFERRED pending BUILD-1b OR sister cascade authoritative anchors)",
+    "hook_6_probe_disambiguator": "ACTIVE — BUILD-1 PV gate IS the canonical disambiguator between 'master gradient ledger has authoritative per-pair fec6 anchors for target 7a0da5d0fc32' vs 'master gradient ledger has aggregate-per-byte sister-archive data inadequate for per-axis Pareto ranking' — resolved NEGATIVE empirically"
+  },
+  "mission_contribution_per_catalog_300": "apparatus_maintenance",
+  "mission_contribution_rationale": "BUILD-1 PV gate produced NEGATIVE empirical verdict via PREMISE FALSIFICATION (Catalog #229 + #307 + #308 + DROP-MANY-BEAM-BUILD-1 precedent), preventing downstream BUILD-2 + BUILD-3 + BUILD-4 + DISPATCH cascade from spending paid GPU dollars on a data-source-falsified per-axis pair-delta table. The MISSION-DIRECT score-lowering value of BUILD-1 PV gate is N/A (planning/observability-only). The structural value is unblocking BUILD-1b sister-subagent alternative methodology per Catalog #308 (paired CPU+CUDA Modal exact-eval ~$10-20 envelope) OR sister cascade target archive resolution ($0 local). Once authoritative paired anchors land, BUILD-2 + BUILD-3 + BUILD-4 + DISPATCH cascade can proceed per design memo predicted ΔS_CUDA band [-0.0000010, +0.0000005]."
+}
