@@ -1,0 +1,118 @@
+{
+  "backlog_key_by_experiment": {},
+  "by_backlog_key": {},
+  "by_experiment": {
+    "queue_feedback_widen_inverse_candidate_generation": {
+      "artifact_record_bytes_mean": 43049.0,
+      "artifact_record_bytes_sum": 43049,
+      "artifact_record_count": 2,
+      "artifact_record_raw_bytes_mean": 43049.0,
+      "artifact_record_raw_bytes_sum": 43049,
+      "candidate_ids": [
+        "queue_feedback_widen_inverse_candidate_generation"
+      ],
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.2642246659961529,
+      "elapsed_seconds_mean": 0.2642246659961529,
+      "elapsed_seconds_min": 0.2642246659961529,
+      "elapsed_seconds_sum": 0.2642246659961529,
+      "experiment_ids": [
+        "queue_feedback_widen_inverse_candidate_generation"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 334.0,
+      "log_bytes_sum": 334,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "step_ids": [
+        "widen_inverse_candidate_generation"
+      ],
+      "success_count": 1
+    }
+  },
+  "by_resource_kind": {
+    "local_cpu": {
+      "artifact_record_bytes_mean": 43049.0,
+      "artifact_record_bytes_sum": 43049,
+      "artifact_record_count": 2,
+      "artifact_record_raw_bytes_mean": 43049.0,
+      "artifact_record_raw_bytes_sum": 43049,
+      "candidate_ids": [
+        "queue_feedback_widen_inverse_candidate_generation"
+      ],
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.2642246659961529,
+      "elapsed_seconds_mean": 0.2642246659961529,
+      "elapsed_seconds_min": 0.2642246659961529,
+      "elapsed_seconds_sum": 0.2642246659961529,
+      "experiment_ids": [
+        "queue_feedback_widen_inverse_candidate_generation"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 334.0,
+      "log_bytes_sum": 334,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "step_ids": [
+        "widen_inverse_candidate_generation"
+      ],
+      "success_count": 1
+    }
+  },
+  "by_source_selection_id": {},
+  "by_source_unit_id": {},
+  "by_step": {
+    "queue_feedback_widen_inverse_candidate_generation.widen_inverse_candidate_generation": {
+      "artifact_record_bytes_mean": 43049.0,
+      "artifact_record_bytes_sum": 43049,
+      "artifact_record_count": 2,
+      "artifact_record_raw_bytes_mean": 43049.0,
+      "artifact_record_raw_bytes_sum": 43049,
+      "candidate_ids": [
+        "queue_feedback_widen_inverse_candidate_generation"
+      ],
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.2642246659961529,
+      "elapsed_seconds_mean": 0.2642246659961529,
+      "elapsed_seconds_min": 0.2642246659961529,
+      "elapsed_seconds_sum": 0.2642246659961529,
+      "experiment_ids": [
+        "queue_feedback_widen_inverse_candidate_generation"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 334.0,
+      "log_bytes_sum": 334,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "step_ids": [
+        "widen_inverse_candidate_generation"
+      ],
+      "success_count": 1
+    }
+  },
+  "by_work_id": {},
+  "candidate_id_by_experiment": {
+    "queue_feedback_widen_inverse_candidate_generation": [
+      "queue_feedback_widen_inverse_candidate_generation"
+    ]
+  },
+  "event_count": 1,
+  "promotion_eligible": false,
+  "queue_id": "campaign3_ias1aware_feedback_followup_exec2_candidate_widening",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "experiment_queue_performance_summary.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "source_selection_ids_by_experiment": {},
+  "source_unit_ids_by_experiment": {},
+  "state": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_feedback_candidate_widening_queue.sqlite",
+  "telemetry_only": true,
+  "work_id_by_experiment": {}
+}

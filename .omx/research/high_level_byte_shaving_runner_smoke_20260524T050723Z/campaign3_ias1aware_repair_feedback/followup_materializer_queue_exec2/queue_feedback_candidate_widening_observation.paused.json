@@ -1,0 +1,245 @@
+{
+  "auto_parallelism": {
+    "idle_declared_resources": {},
+    "local_only": {
+      "max_parallel": 1,
+      "resource_limits": {
+        "local_cpu": 1
+      }
+    },
+    "used_resource_kinds": [
+      "local_cpu"
+    ],
+    "with_cloud": {
+      "max_parallel": 1,
+      "resource_limits": {
+        "local_cpu": 1
+      }
+    }
+  },
+  "blocked_steps": [],
+  "blocker_count": 0,
+  "blockers": [],
+  "definition_drift": {
+    "changed_step_count": 0,
+    "changed_steps": [],
+    "missing_hash_step_count": 0,
+    "missing_hash_steps": [],
+    "missing_step_count": 0,
+    "missing_steps": [],
+    "read_only": true,
+    "schema": "experiment_queue_definition_drift.v1"
+  },
+  "failed_steps": [],
+  "generated_at_utc": "2026-05-25T07:07:34Z",
+  "healthy": true,
+  "mode": "paused",
+  "observe_read_only": true,
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "performance": {
+    "backlog_key_by_experiment": {},
+    "by_backlog_key": {},
+    "by_experiment": {
+      "queue_feedback_widen_inverse_candidate_generation": {
+        "artifact_record_bytes_mean": 43049.0,
+        "artifact_record_bytes_sum": 43049,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 43049.0,
+        "artifact_record_raw_bytes_sum": 43049,
+        "candidate_ids": [
+          "queue_feedback_widen_inverse_candidate_generation"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.2642246659961529,
+        "elapsed_seconds_mean": 0.2642246659961529,
+        "elapsed_seconds_min": 0.2642246659961529,
+        "elapsed_seconds_sum": 0.2642246659961529,
+        "experiment_ids": [
+          "queue_feedback_widen_inverse_candidate_generation"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 334.0,
+        "log_bytes_sum": 334,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "widen_inverse_candidate_generation"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_resource_kind": {
+      "local_cpu": {
+        "artifact_record_bytes_mean": 43049.0,
+        "artifact_record_bytes_sum": 43049,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 43049.0,
+        "artifact_record_raw_bytes_sum": 43049,
+        "candidate_ids": [
+          "queue_feedback_widen_inverse_candidate_generation"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.2642246659961529,
+        "elapsed_seconds_mean": 0.2642246659961529,
+        "elapsed_seconds_min": 0.2642246659961529,
+        "elapsed_seconds_sum": 0.2642246659961529,
+        "experiment_ids": [
+          "queue_feedback_widen_inverse_candidate_generation"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 334.0,
+        "log_bytes_sum": 334,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "widen_inverse_candidate_generation"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_source_selection_id": {},
+    "by_source_unit_id": {},
+    "by_step": {
+      "queue_feedback_widen_inverse_candidate_generation.widen_inverse_candidate_generation": {
+        "artifact_record_bytes_mean": 43049.0,
+        "artifact_record_bytes_sum": 43049,
+        "artifact_record_count": 2,
+        "artifact_record_raw_bytes_mean": 43049.0,
+        "artifact_record_raw_bytes_sum": 43049,
+        "candidate_ids": [
+          "queue_feedback_widen_inverse_candidate_generation"
+        ],
+        "dominant_resource_kind": "local_cpu",
+        "elapsed_seconds_max": 0.2642246659961529,
+        "elapsed_seconds_mean": 0.2642246659961529,
+        "elapsed_seconds_min": 0.2642246659961529,
+        "elapsed_seconds_sum": 0.2642246659961529,
+        "experiment_ids": [
+          "queue_feedback_widen_inverse_candidate_generation"
+        ],
+        "failure_count": 0,
+        "log_bytes_mean": 334.0,
+        "log_bytes_sum": 334,
+        "resource_kind_counts": {
+          "local_cpu": 1
+        },
+        "run_count": 1,
+        "step_ids": [
+          "widen_inverse_candidate_generation"
+        ],
+        "success_count": 1
+      }
+    },
+    "by_work_id": {},
+    "candidate_id_by_experiment": {
+      "queue_feedback_widen_inverse_candidate_generation": [
+        "queue_feedback_widen_inverse_candidate_generation"
+      ]
+    },
+    "event_count": 1,
+    "promotion_eligible": false,
+    "queue_id": "campaign3_ias1aware_feedback_followup_exec2_candidate_widening",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "experiment_queue_performance_summary.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_selection_ids_by_experiment": {},
+    "source_unit_ids_by_experiment": {},
+    "telemetry_only": true,
+    "work_id_by_experiment": {}
+  },
+  "queue_id": "campaign3_ias1aware_feedback_followup_exec2_candidate_widening",
+  "queue_sha256": "8dc3074f93f50a6065eda1d7443c8f2797e4f2835fc598f358b672ee3409e404",
+  "queued_steps": [],
+  "ready_steps": [],
+  "running_steps": [],
+  "runtime_policy": {
+    "advisory_only": true,
+    "apply_requires_explicit_call": true,
+    "backpressure": {
+      "local_io_heavy": {
+        "reason": "limit_file_tree_hashing_and_artifact_pullback_pressure",
+        "recommended_concurrency": 4
+      }
+    },
+    "current_max_concurrency": {
+      "local_cpu": 1
+    },
+    "dispatch_attempted": false,
+    "generated_from_schema": "experiment_queue_performance_summary.v1",
+    "gpu_launched": false,
+    "input_event_count": 1,
+    "machine_capacity": {
+      "local_cpu": 18,
+      "local_io_heavy": 4,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_id": "campaign3_ias1aware_feedback_followup_exec2_candidate_widening",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_max_concurrency": {
+      "local_cpu": 18
+    },
+    "recommended_timeout_seconds_by_resource": {
+      "local_cpu": 30
+    },
+    "resource_policies": {
+      "local_cpu": {
+        "advisory_only": true,
+        "concurrency_reason": "use_detected_local_cpu_capacity",
+        "current_concurrency": 1,
+        "current_timeout_seconds_max": null,
+        "elapsed_seconds_p50": 0.2642246659961529,
+        "elapsed_seconds_p95": 0.2642246659961529,
+        "observed_failure_count": 0,
+        "observed_run_count": 1,
+        "observed_timeout_count": 0,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_concurrency": 18,
+        "recommended_timeout_seconds": 30,
+        "resource_kind": "local_cpu",
+        "score_claim": false,
+        "timeout_multiplier": 3.0
+      }
+    },
+    "schema": "scheduler_runtime_policy.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "telemetry_only": true
+  },
+  "schema": "experiment_queue_observation.v1",
+  "state": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_feedback_candidate_widening_queue.sqlite",
+  "state_watermark": {
+    "control_mode": "paused",
+    "control_updated_at_utc": "2026-05-25T07:07:25Z",
+    "event_count": 8,
+    "max_event_id": 8,
+    "max_step_updated_at_utc": "2026-05-25T07:07:11Z",
+    "queue_id": "campaign3_ias1aware_feedback_followup_exec2_candidate_widening",
+    "schema": "experiment_queue_state_watermark.v1",
+    "state_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_feedback_candidate_widening_queue.sqlite",
+    "step_state_count": 1
+  },
+  "status_counts": {
+    "succeeded": 1
+  },
+  "step_count": 1,
+  "succeeded_artifact_failure_steps": [],
+  "suggested_commands": {
+    "pause": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control paused --reason '<reason>'",
+    "refresh": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> observe --tail-lines 20",
+    "resume": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> control running --reason '<reason>'",
+    "run_worker": ".venv/bin/python tools/experiment_queue.py --queue <queue-path> run-worker --execute"
+  }
+}

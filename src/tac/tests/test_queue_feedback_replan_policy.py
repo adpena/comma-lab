@@ -7,7 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from comma_lab.scheduler.experiment_queue import connect_state, initialize_queue_state
+from comma_lab.scheduler.experiment_queue import (
+    DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
+    DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
+    connect_state,
+    initialize_queue_state,
+)
 from comma_lab.scheduler.queue_feedback_replan_policy import (
     ACTION_BLOCKED,
     ACTION_EXECUTE_FEEDBACK_FOLLOWUP,
@@ -789,6 +794,7 @@ def test_feedback_replan_policy_routes_dry_action_functional_to_candidate_wideni
     assert widening["command_template"][
         widening["command_template"].index("--inverse-scorer-max-units") + 1
     ] == "64"
+    assert widening["source_mode"] == "existing_widenable_source"
 
     queue, blockers = build_queue_feedback_replan_continuation_queue(
         policy,
@@ -817,6 +823,301 @@ def test_feedback_replan_policy_routes_dry_action_functional_to_candidate_wideni
     assert step["id"] == QUEUE_FEEDBACK_CANDIDATE_WIDENING_STEP_ID
     assert step["command"] == policy["candidate_generation_command_template"]
     assert step["resources"] == {"kind": "local_cpu"}
+    assert step["postconditions"] == [
+        {
+            "type": "path_exists",
+            "path": widening["widened_output_path"],
+        },
+        {
+            "type": "json_completion_contract",
+            "path": widening["widened_output_path"],
+            "required_equals": {
+                "schema": "inverse_steganalysis_discrete_action_functional.v1"
+            },
+            "required_true": [
+                "planning_only",
+                "candidate_generation_only",
+            ],
+            "required_false": list(DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS),
+            "false_or_missing": list(DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS),
+        },
+        {
+            "type": "path_exists",
+            "path": widening["widened_md_path"],
+        },
+    ]
+
+
+def test_feedback_replan_policy_candidate_widening_discovers_nearby_scorer_response(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    run_dir = tmp_path / "campaign" / "feedback_exec"
+    run_dir.mkdir(parents=True)
+    action_path = run_dir / "inverse_steganalysis_action_functional.feedback.json"
+    action_path.write_text(
+        json.dumps(
+            {
+                "schema": "inverse_steganalysis_discrete_action_functional.v1",
+                "integral_totals": {
+                    "cell_count": 1,
+                    "blocked_cell_count": 1,
+                    "materializer_archive_delta_blocked_cell_count": 1,
+                },
+                "water_bucket": {"selected_count": 0, "selected_cells": []},
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    scorer_response = tmp_path / "campaign" / "scorer_response.json"
+    scorer_response.write_text(
+        json.dumps(
+            {
+                "schema": "scorer_response_dataset.v1",
+                "producer": "test",
+                "rows": [
+                    {
+                        "schema": "scorer_response_row.v1",
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "rank_or_kill_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    plan_path = run_dir / "byte_shaving_campaign_plan.feedback.json"
+    plan_path.write_text(
+        json.dumps(
+            {
+                "schema": "byte_shaving_campaign_plan.v1",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    policy = build_queue_feedback_replan_policy(
+        _run_summary(
+            run_dir=str(run_dir),
+            plan=str(plan_path),
+            queue_feedback_replan_followup_executed=True,
+            queue_feedback_replan_followup_execution_success=True,
+            queue_feedback_replan_followup_action_functional_path=str(action_path),
+            queue_feedback_replan_request={
+                "command_template": [
+                    ".venv/bin/python",
+                    QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL,
+                    "--output",
+                    str(action_path),
+                    "--byte-shaving-campaign-plan",
+                    str(plan_path),
+                ],
+            },
+        ),
+        feedback_followup_queue=_child_queue(
+            [
+                sys.executable,
+                QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL,
+                "--output",
+                str(action_path),
+                "--md-out",
+                str(action_path.with_suffix(".md")),
+            ]
+        ),
+        iteration_index=0,
+        max_iterations=3,
+    )
+
+    assert policy["decision"] == ACTION_WIDEN_CANDIDATE_GENERATION
+    widening = policy["candidate_widening_handoff"]
+    assert widening["blockers"] == []
+    assert widening["source_mode"] == "discovered_nearby_scorer_response"
+    assert widening["discovered_scorer_response_paths"] == [
+        "campaign/scorer_response.json"
+    ]
+    assert widening["discovered_scorer_response_records"] == [
+        {
+            "path": "campaign/scorer_response.json",
+            "sha256": widening["discovered_scorer_response_records"][0]["sha256"],
+            "bytes": scorer_response.stat().st_size,
+            "row_count": 1,
+            "producer": "test",
+            "relation_seed_dir": "campaign",
+            "usable": True,
+            "blockers": [],
+        }
+    ]
+    command = widening["command_template"]
+    assert command[command.index("--scorer-response") + 1] == (
+        "campaign/scorer_response.json"
+    )
+
+
+def test_feedback_replan_policy_candidate_widening_blocks_ambiguous_scorer_response(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    run_dir = tmp_path / "campaign" / "feedback_exec"
+    run_dir.mkdir(parents=True)
+    action_path = run_dir / "inverse_steganalysis_action_functional.feedback.json"
+    action_path.write_text(
+        json.dumps(
+            {
+                "schema": "inverse_steganalysis_discrete_action_functional.v1",
+                "integral_totals": {"cell_count": 1},
+                "water_bucket": {"selected_count": 0, "selected_cells": []},
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    for name in ("a_scorer_response.json", "b_scorer_response.json"):
+        (tmp_path / "campaign" / name).write_text(
+            json.dumps(
+                {
+                    "schema": "scorer_response_dataset.v1",
+                    "producer": "test",
+                    "rows": [
+                        {
+                            "schema": "scorer_response_row.v1",
+                            "score_claim": False,
+                            "promotion_eligible": False,
+                            "rank_or_kill_eligible": False,
+                            "ready_for_exact_eval_dispatch": False,
+                        }
+                    ],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    policy = build_queue_feedback_replan_policy(
+        _run_summary(
+            run_dir=str(run_dir),
+            plan=str(run_dir / "byte_shaving_campaign_plan.feedback.json"),
+            queue_feedback_replan_followup_executed=True,
+            queue_feedback_replan_followup_execution_success=True,
+            queue_feedback_replan_followup_action_functional_path=str(action_path),
+            queue_feedback_replan_request={
+                "command_template": [
+                    ".venv/bin/python",
+                    QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL,
+                    "--output",
+                    str(action_path),
+                    "--byte-shaving-campaign-plan",
+                    str(run_dir / "byte_shaving_campaign_plan.feedback.json"),
+                ],
+            },
+        ),
+        feedback_followup_queue=_child_queue(
+            [
+                sys.executable,
+                QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL,
+                "--output",
+                str(action_path),
+                "--md-out",
+                str(action_path.with_suffix(".md")),
+            ]
+        ),
+    )
+
+    assert policy["decision"] == ACTION_WIDEN_CANDIDATE_GENERATION
+    assert policy["candidate_generation_command_template"] is None
+    blockers = policy["candidate_generation_queue_blockers"]
+    assert "candidate_widening_no_widenable_source_surface" in blockers
+    assert any(
+        item.startswith(
+            "candidate_widening_ambiguous_nearby_scorer_response_sources:"
+        )
+        for item in blockers
+    )
+
+
+def test_feedback_replan_policy_candidate_widening_blocks_no_widenable_source(
+    tmp_path: Path,
+) -> None:
+    action_path = tmp_path / "inverse_steganalysis_action_functional.feedback.json"
+    action_path.write_text(
+        json.dumps(
+            {
+                "schema": "inverse_steganalysis_discrete_action_functional.v1",
+                "integral_totals": {"cell_count": 1},
+                "water_bucket": {"selected_count": 0, "selected_cells": []},
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    policy = build_queue_feedback_replan_policy(
+        _run_summary(
+            run_dir=str(tmp_path),
+            queue_feedback_replan_followup_executed=True,
+            queue_feedback_replan_followup_execution_success=True,
+            queue_feedback_replan_followup_action_functional_path=str(action_path),
+            queue_feedback_replan_request={
+                "command_template": [
+                    ".venv/bin/python",
+                    QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL,
+                    "--output",
+                    str(action_path),
+                    "--byte-shaving-campaign-plan",
+                    str(tmp_path / "plan.json"),
+                ],
+            },
+        ),
+        feedback_followup_queue=_child_queue(
+            [
+                sys.executable,
+                QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL,
+                "--output",
+                str(action_path),
+                "--md-out",
+                str(action_path.with_suffix(".md")),
+            ]
+        ),
+    )
+
+    assert policy["decision"] == ACTION_WIDEN_CANDIDATE_GENERATION
+    assert policy["candidate_generation_command_template"] is None
+    assert "candidate_widening_no_widenable_source_surface" in policy[
+        "candidate_generation_queue_blockers"
+    ]
+    queue, blockers = build_queue_feedback_candidate_widening_queue(
+        policy,
+        lane_id="feedback_lane",
+    )
+    assert queue is None
+    assert (
+        "queue_feedback_candidate_widening_handoff:"
+        "candidate_widening_no_widenable_source_surface"
+    ) in blockers
 
 
 def test_feedback_replan_policy_builds_paused_next_iteration_queue() -> None:

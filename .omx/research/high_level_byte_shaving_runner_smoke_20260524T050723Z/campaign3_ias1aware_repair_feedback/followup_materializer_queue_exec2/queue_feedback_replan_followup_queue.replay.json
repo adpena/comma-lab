@@ -1,0 +1,91 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1
+    },
+    "mode": "paused"
+  },
+  "experiments": [
+    {
+      "id": "queue_feedback_replan_action_functional_replay",
+      "lane_id": "codex_feedback_dry_candidate_widening_20260525",
+      "metadata": {
+        "allowed_use": "local_feedback_replan_policy_replay_only",
+        "dispatch_packet_ready": false,
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_dispatch_authority",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "queue_feedback_replan_followup_replay_metadata.v1",
+        "score_claim": false,
+        "source_queue_id": "campaign3_ias1aware_feedback_followup_exec2",
+        "source_request_schema": "byte_shaving_materializer_campaign_feedback_replan_request.v1",
+        "source_run_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materializer_campaign_run.json"
+      },
+      "priority": 82,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/build_inverse_steganalysis_action_functional.py",
+            "--output",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.json",
+            "--md-out",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.md",
+            "--repo-root",
+            "/Users/adpena/Projects/pact",
+            "--resource-kind",
+            "local_mlx",
+            "--byte-shaving-campaign-plan",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/byte_shaving_campaign_plan.feedback.json",
+            "--queue-performance-summary",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_performance_summary.json",
+            "--queue-performance-axis",
+            "[local-queue-performance advisory]",
+            "--queue-performance-runtime-identity",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_performance_runtime_identity.json",
+            "--queue-performance-cache-identity",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_performance_cache_identity.json",
+            "--queue-observation",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_observation.json"
+          ],
+          "id": "build_feedback_action_functional_replay",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.md"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materializer_campaign_run.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/byte_shaving_campaign_plan.feedback.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_performance_summary.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_observation.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": [
+        "byte-shaving",
+        "inverse-steganalysis",
+        "queue-feedback",
+        "replay",
+        "no-score-authority"
+      ]
+    }
+  ],
+  "queue_id": "campaign3_ias1aware_feedback_followup_exec2_feedback_replan_replay",
+  "schema": "experiment_queue.v1"
+}

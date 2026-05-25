@@ -1,0 +1,165 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1
+    },
+    "mode": "paused"
+  },
+  "experiments": [
+    {
+      "id": "queue_feedback_widen_inverse_candidate_generation",
+      "lane_id": "codex_feedback_dry_candidate_widening_20260525",
+      "metadata": {
+        "action": "widen_inverse_candidate_generation",
+        "allowed_use": "paused_local_inverse_candidate_generation_only",
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "paused_candidate_generation_queue_requires_explicit_operator_or_autopilot_resume",
+          "generated_action_functional_is_planning_only",
+          "exact_auth_eval_required_before_score_claim",
+          "lane_dispatch_claim_required_before_paid_or_remote_eval"
+        ],
+        "exact_cuda_auth_eval": false,
+        "feedback_action_functional_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.json",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "gpu_launched": false,
+        "inverse_scorer_max_units": 64,
+        "policy_decision": "widen_inverse_candidate_generation",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "queue_feedback_candidate_widening_metadata.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_policy_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_feedback_replan_policy.widening_replay.json",
+        "source_policy_sha256": "572a65189eb5402c5e5a5078dea17bacdec0827ecadb9e9e1b126110e7134ba3",
+        "source_queue_id": "campaign3_ias1aware_feedback_followup_exec2",
+        "source_queue_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materializer_execution_queue.json",
+        "source_queue_state_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materializer_execution_queue.sqlite",
+        "source_run_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materializer_campaign_run.json",
+        "widened_output_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.widened.json"
+      },
+      "priority": 85,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/build_inverse_steganalysis_action_functional.py",
+            "--output",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.widened.json",
+            "--md-out",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.widened.md",
+            "--repo-root",
+            "/Users/adpena/Projects/pact",
+            "--resource-kind",
+            "local_mlx",
+            "--byte-shaving-campaign-plan",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/byte_shaving_campaign_plan.feedback.json",
+            "--queue-performance-summary",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_performance_summary.json",
+            "--queue-performance-axis",
+            "[local-queue-performance advisory]",
+            "--queue-performance-runtime-identity",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_performance_runtime_identity.json",
+            "--queue-performance-cache-identity",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_performance_cache_identity.json",
+            "--queue-observation",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_observation.json",
+            "--scorer-response",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/scorer_response.json",
+            "--inverse-scorer-max-units",
+            "64",
+            "--max-cells",
+            "4096"
+          ],
+          "id": "widen_inverse_candidate_generation",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.widened.json",
+              "type": "path_exists"
+            },
+            {
+              "false_or_missing": [
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotable",
+                "ready_for_exact_eval_dispatch",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "dispatch_ready",
+                "exact_eval_ready",
+                "exact_eval_dispatch_ready",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "dispatch_attempted",
+                "gpu_launched",
+                "score_affecting_payload_changed",
+                "charged_bits_changed"
+              ],
+              "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.widened.json",
+              "required_equals": {
+                "schema": "inverse_steganalysis_discrete_action_functional.v1"
+              },
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "required_true": [
+                "planning_only",
+                "candidate_generation_only"
+              ],
+              "type": "json_completion_contract"
+            },
+            {
+              "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.widened.md",
+              "type": "path_exists"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.widened.md"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_feedback_replan_policy.widening_replay.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materializer_campaign_run.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/byte_shaving_campaign_plan.feedback.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_performance_summary.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_feedback_replan_followup_queue.replay.json"
+            ],
+            "max_recursive_entries": 256,
+            "pullback_artifact_paths": [
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.widened.md"
+            ],
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": [
+        "byte-shaving",
+        "inverse-steganalysis",
+        "queue-feedback",
+        "candidate-widening",
+        "paused-followup",
+        "no-score-authority"
+      ]
+    }
+  ],
+  "queue_id": "campaign3_ias1aware_feedback_followup_exec2_candidate_widening",
+  "schema": "experiment_queue.v1"
+}

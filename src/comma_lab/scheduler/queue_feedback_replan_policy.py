@@ -162,6 +162,19 @@ def _stable_json_file_sha256(path: str | None) -> str | None:
     return _stable_json_sha256(payload)
 
 
+def _file_sha256(path: Path) -> str | None:
+    try:
+        if not path.is_file() or path.is_symlink():
+            return None
+        digest = hashlib.sha256()
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+    except OSError:
+        return None
+    return digest.hexdigest()
+
+
 def _source_state_watermark_from_path(
     path: str | None,
     *,
@@ -704,6 +717,28 @@ def _command_arg(command_items: Sequence[str], flag: str) -> str | None:
     return None
 
 
+def _command_arg_values(command_items: Sequence[str], flag: str) -> list[str]:
+    values: list[str] = []
+    for index, item in enumerate(command_items):
+        if item == flag:
+            value_index = index + 1
+            if value_index < len(command_items):
+                value = _nonempty_str(command_items[value_index])
+                if value is not None:
+                    values.append(value)
+            continue
+        prefix = f"{flag}="
+        if item.startswith(prefix):
+            value = _nonempty_str(item[len(prefix) :])
+            if value is not None:
+                values.append(value)
+    return values
+
+
+def _has_command_flag(command_items: Sequence[str], flag: str) -> bool:
+    return bool(_command_arg_values(command_items, flag))
+
+
 def _forbidden_command_flag_uses(command_items: Sequence[str]) -> list[str]:
     uses: list[str] = []
     for item in command_items:
@@ -770,6 +805,165 @@ def _widened_json_path(path_text: str | None, *, suffix: str) -> str | None:
     if name.endswith(".json"):
         return path.with_name(f"{name[:-5]}.{suffix}.json").as_posix()
     return path.with_name(f"{name}.{suffix}.json").as_posix()
+
+
+def _resolve_maybe_repo_path(path_text: str | None) -> Path | None:
+    path_text = _nonempty_str(path_text)
+    if path_text is None:
+        return None
+    path = Path(path_text)
+    return path if path.is_absolute() else Path.cwd() / path
+
+
+def _json_file_payload(path: Path) -> Mapping[str, Any] | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    return payload
+
+
+def _path_text(path: Path) -> str:
+    try:
+        return path.resolve().relative_to(Path.cwd().resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _nearby_scorer_response_seed_dirs(
+    run_summary: Mapping[str, Any],
+) -> list[Path]:
+    run_dir = _resolve_maybe_repo_path(run_summary.get("run_dir"))
+    plan_path = _resolve_maybe_repo_path(run_summary.get("plan"))
+    seed_dirs: list[Path] = []
+    for seed in (run_dir, plan_path.parent if plan_path is not None else None):
+        if seed is None:
+            continue
+        for directory in [seed, *list(seed.parents[:4])]:
+            if directory not in seed_dirs:
+                seed_dirs.append(directory)
+    return seed_dirs
+
+
+def _nearest_seed_dir_text(path: Path, seed_dirs: Sequence[Path]) -> str | None:
+    try:
+        resolved_path = path.resolve()
+    except OSError:
+        return None
+    matches: list[Path] = []
+    for seed in seed_dirs:
+        try:
+            resolved_seed = seed.resolve()
+        except OSError:
+            continue
+        try:
+            resolved_path.relative_to(resolved_seed)
+        except ValueError:
+            continue
+        matches.append(resolved_seed)
+    if not matches:
+        return None
+    matches.sort(key=lambda item: len(item.parts), reverse=True)
+    return _path_text(matches[0])
+
+
+def _scorer_response_discovery_record(
+    path: Path,
+    *,
+    seed_dirs: Sequence[Path],
+) -> dict[str, Any] | None:
+    payload = _json_file_payload(path)
+    if payload is None or payload.get("schema") != "scorer_response_dataset.v1":
+        return None
+
+    blockers: list[str] = []
+    rows = payload.get("rows")
+    if not isinstance(rows, list):
+        row_count = 0
+        blockers.append("scorer_response_rows_not_list")
+    else:
+        row_count = len(rows)
+        if row_count <= 0:
+            blockers.append("scorer_response_rows_empty")
+    producer = _nonempty_str(payload.get("producer"))
+    if producer is None:
+        blockers.append("scorer_response_producer_missing")
+    sha256 = _file_sha256(path)
+    if sha256 is None:
+        blockers.append("scorer_response_file_sha256_unavailable")
+    relation_seed = _nearest_seed_dir_text(path, seed_dirs)
+    if relation_seed is None:
+        blockers.append("scorer_response_not_related_to_run_or_plan")
+    blockers.extend(
+        f"scorer_response_truthy_authority_field:{violation}"
+        for violation in truthy_authority_field_violations(
+            payload,
+            fields=FORBIDDEN_TRUE_AUTHORITY_FIELDS,
+        )
+    )
+
+    size_bytes: int | None
+    try:
+        size_bytes = path.stat().st_size
+    except OSError:
+        size_bytes = None
+    return {
+        "path": _path_text(path),
+        "sha256": sha256,
+        "bytes": size_bytes,
+        "row_count": row_count,
+        "producer": producer,
+        "relation_seed_dir": relation_seed,
+        "usable": not blockers,
+        "blockers": list(dict.fromkeys(blockers)),
+    }
+
+
+def _discover_nearby_scorer_response_sources(
+    run_summary: Mapping[str, Any],
+    *,
+    max_paths: int = 8,
+) -> dict[str, Any]:
+    candidates: list[Path] = []
+    seed_dirs = _nearby_scorer_response_seed_dirs(run_summary)
+    for directory in seed_dirs:
+        if not directory.is_dir():
+            continue
+        for path in sorted(directory.glob("*scorer_response*.json")):
+            if path not in candidates:
+                candidates.append(path)
+    records: list[dict[str, Any]] = []
+    for path in candidates:
+        record = _scorer_response_discovery_record(path, seed_dirs=seed_dirs)
+        if record is None:
+            continue
+        records.append(record)
+        if len(records) >= max_paths:
+            break
+    usable_records = [record for record in records if record.get("usable") is True]
+    blockers: list[str] = []
+    if len(usable_records) > 1:
+        blockers.append(
+            "candidate_widening_ambiguous_nearby_scorer_response_sources:"
+            + ",".join(str(record.get("path")) for record in usable_records)
+        )
+    if records and not usable_records:
+        blockers.append("candidate_widening_no_usable_discovered_scorer_response")
+        for record in records:
+            for blocker in _string_list(record.get("blockers")):
+                blockers.append(
+                    "candidate_widening_discovered_scorer_response_invalid:"
+                    f"{record.get('path')}:{blocker}"
+                )
+    return {
+        "records": records,
+        "usable_records": usable_records,
+        "paths": [str(record.get("path")) for record in records],
+        "usable_paths": [str(record.get("path")) for record in usable_records],
+        "blockers": list(dict.fromkeys(blockers)),
+    }
 
 
 def _id_fragment(value: Any) -> str:
@@ -1192,6 +1386,39 @@ def _candidate_widening_command_template(
         f"candidate_widening_command_forbidden_flag:{flag}"
         for flag in _forbidden_command_flag_uses(command_items)
     )
+    widenable_source_flags = (
+        "--scorer-response",
+        "--inverse-scorer-surface",
+        "--byte-shaving-signal-surface",
+        "--mlx-acquisition-batch",
+        "--mlx-effective-spend-triage-selection",
+    )
+    has_widenable_source = any(
+        _has_command_flag(command_items, flag) for flag in widenable_source_flags
+    )
+    discovered_scorer_responses: list[str] = []
+    discovered_scorer_response_records: list[dict[str, Any]] = []
+    discovered_scorer_response_blockers: list[str] = []
+    if not has_widenable_source:
+        discovery = _discover_nearby_scorer_response_sources(run_summary)
+        discovered_scorer_response_records = [
+            dict(record) for record in _as_list(discovery.get("records"))
+        ]
+        discovered_scorer_response_blockers = _string_list(discovery.get("blockers"))
+        usable_scorer_responses = _string_list(discovery.get("usable_paths"))
+        if discovered_scorer_response_blockers:
+            blockers.extend(discovered_scorer_response_blockers)
+        if len(usable_scorer_responses) == 1 and not discovered_scorer_response_blockers:
+            discovered_scorer_responses = usable_scorer_responses
+            for path in discovered_scorer_responses:
+                command_items.extend(["--scorer-response", path])
+            has_widenable_source = True
+        elif not discovered_scorer_response_records:
+            has_widenable_source = False
+        else:
+            has_widenable_source = False
+    if not has_widenable_source:
+        blockers.append("candidate_widening_no_widenable_source_surface")
 
     source_output = _nonempty_str(
         feedback_action_functional_summary.get("path")
@@ -1250,6 +1477,16 @@ def _candidate_widening_command_template(
             "source_command_template": [str(item) for item in raw_command],
             "widened_output_path": widened_output,
             "widened_md_path": widened_md,
+            "source_mode": (
+                "existing_widenable_source"
+                if not discovered_scorer_responses
+                else "discovered_nearby_scorer_response"
+            )
+            if has_widenable_source
+            else "missing_widenable_source",
+            "discovered_scorer_response_paths": discovered_scorer_responses,
+            "discovered_scorer_response_records": discovered_scorer_response_records,
+            "discovered_scorer_response_blockers": discovered_scorer_response_blockers,
             "previous_inverse_scorer_max_units": current_units,
             "inverse_scorer_max_units": widened_units,
             "max_cells": widened_max_cells,
@@ -1963,6 +2200,42 @@ def build_queue_feedback_candidate_widening_queue(
         handoff.get("widened_output_path"),
         handoff.get("widened_md_path"),
     ]
+    postconditions: list[dict[str, Any]] = []
+    widened_output_path = _nonempty_str(handoff.get("widened_output_path"))
+    widened_md_path = _nonempty_str(handoff.get("widened_md_path"))
+    if widened_output_path is not None:
+        postconditions.extend(
+            [
+                {
+                    "type": "path_exists",
+                    "path": widened_output_path,
+                },
+                {
+                    "type": "json_completion_contract",
+                    "path": widened_output_path,
+                    "required_equals": {
+                        "schema": "inverse_steganalysis_discrete_action_functional.v1"
+                    },
+                    "required_true": [
+                        "planning_only",
+                        "candidate_generation_only",
+                    ],
+                    "required_false": [
+                        *DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
+                    ],
+                    "false_or_missing": [
+                        *DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
+                    ],
+                },
+            ]
+        )
+    if widened_md_path is not None:
+        postconditions.append(
+            {
+                "type": "path_exists",
+                "path": widened_md_path,
+            }
+        )
     metadata = _false_authority_payload(
         {
             "schema": QUEUE_FEEDBACK_CANDIDATE_WIDENING_METADATA_SCHEMA,
@@ -2022,6 +2295,7 @@ def build_queue_feedback_candidate_widening_queue(
                             "command": command_items,
                             "requires": [],
                             "resources": {"kind": "local_cpu"},
+                            "postconditions": postconditions,
                             "timeout_seconds": 0,
                             "telemetry": {
                                 "artifact_paths": [
