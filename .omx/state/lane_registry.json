@@ -55484,6 +55484,47 @@
         }
       },
       "notes": "Filter canonical DQS1 harvest observations during pairset acquisition-plan generation so planner, portfolio, and queue do not drift; false-authority only."
+    },
+    {
+      "id": "codex_dqs1_tranche_acquisition_refresh_frontier_bootstrap_20260525",
+      "name": "DQS1 tranche acquisition refresh and frontier bootstrap",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/comma_lab/scheduler/frontier_rate_attack_bootstrap.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/pr110_current_frontier_final_rate_attack_20260525T130851Z/execution_report.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_frontier_rate_attack_bootstrap.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_frontier_final_rate_attack_bootstrap_20260525T130851Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Wire DQS1 observation-filtered acquisition refresh into the local-first tranche runner and harden the frontier final-rate attack bootstrap module/tool so no scheduler signal remains orphaned."
     }
   ],
   "level_rules": {
@@ -55493,5 +55534,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T13:02:35Z"
+  "updated_at": "2026-05-25T13:11:24Z"
 }

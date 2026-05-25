@@ -40,6 +40,9 @@ def test_tranche_parse_args_accepts_post_training_candidate_inputs() -> None:
     assert args.local_io_concurrency == 2
     assert args.include_mlx_local_advisory_debug is False
     assert args.mlx_device == "gpu"
+    assert args.refresh_pairset_acquisition is True
+    assert args.refresh_pairset_max_drop_two == 512
+    assert args.refresh_pairset_max_swap_in == 32
 
 
 def test_tranche_portfolio_directory_names_include_harvest_count() -> None:
@@ -225,6 +228,69 @@ def test_tranche_queue_build_args_forward_materializer_feedback() -> None:
         ".omx/research/dqs1_local_first_harvest_observations_round.jsonl"
     )
     assert "--include-observed-dqs1-candidate" in built
+
+
+def test_tranche_refresh_pairset_acquisition_uses_prior_and_round_observations(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    selector_root = tmp_path / "selector_pareto"
+    selector_root.mkdir(parents=True)
+    selector = selector_root / "latest_selector_pareto.json"
+    selector.write_text("{}", encoding="utf-8")
+    output_root = tmp_path / "refreshed_pairset"
+    calls: list[list[str]] = []
+
+    def fake_run(command: list[str], *, check: bool = True) -> tranche.CommandResult:
+        calls.append(command)
+        return tranche.CommandResult(
+            command=command,
+            returncode=0,
+            stdout=json.dumps(
+                {
+                    "candidate_count": 5,
+                    "unfiltered_candidate_count": 8,
+                    "suppressed_observed_candidate_count": 3,
+                }
+            ),
+            stderr="",
+            elapsed_seconds=0.01,
+        )
+
+    monkeypatch.setattr(tranche, "_run", fake_run)
+    args = tranche.parse_args(
+        [
+            "--pairset-acquisition-refresh-root",
+            str(output_root),
+            "--dqs1-observation-jsonl",
+            "prior.jsonl",
+            "--include-observed-dqs1-candidate",
+            "--refresh-pairset-max-drop-two",
+            "7",
+            "--refresh-pairset-max-swap-in",
+            "3",
+        ]
+    )
+
+    json_out, payload = tranche._refresh_pairset_acquisition(
+        args=args,
+        pairset_acquisition_root=tmp_path,
+        refresh_stamp="20260525T010203Z",
+        dqs1_observation_jsonl=(Path("round.jsonl"),),
+    )
+
+    assert json_out == output_root / "dqs1_pairset_acquisition_observation_filtered_20260525T010203Z.json"
+    assert payload["candidate_count"] == 5
+    assert payload["unfiltered_candidate_count"] == 8
+    assert payload["suppressed_observed_candidate_count"] == 3
+    command = calls[0]
+    assert command[command.index("--selector-pareto") + 1] == str(selector)
+    assert command[command.index("--max-drop-two") + 1] == "7"
+    assert command[command.index("--max-swap-in") + 1] == "3"
+    assert command.count("--dqs1-observation-jsonl") == 2
+    assert "prior.jsonl" in command
+    assert "round.jsonl" in command
+    assert "--include-observed-dqs1-candidate" in command
 
 
 def test_tranche_proactive_cleanup_move_is_not_gated_by_mlx_cache_flag(

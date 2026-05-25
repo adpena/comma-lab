@@ -195,8 +195,35 @@ def _latest_pairset_acquisition(results_root: Path) -> Path:
     return candidates[-1]
 
 
+def _latest_selector_pareto(results_root: Path) -> Path:
+    root = results_root / "selector_pareto"
+    candidates = sorted(
+        root.glob("*selector_pareto*.json"),
+        key=lambda path: (path.stat().st_mtime, path.name),
+    )
+    if not candidates:
+        raise RuntimeError(f"{root}: no DQS1 selector Pareto JSON found")
+    return candidates[-1]
+
+
 def _portfolio_dir_name(stamp: str, row_count: int) -> str:
     return f"{stamp}_full_drop_two_local_harvest{row_count}"
+
+
+def _dqs1_observation_path_values(
+    args: argparse.Namespace,
+    *,
+    extra: Sequence[str | Path] = (),
+) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for path in [*args.dqs1_observation_jsonl, *extra]:
+        display = _display_path(path)
+        if display in seen:
+            continue
+        seen.add(display)
+        out.append(display)
+    return out
 
 
 def _choose_results_root(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
@@ -323,10 +350,11 @@ def _queue_build_common_args(
     for feedback_path in args.materializer_feedback:
         materializer_feedback_args.extend(["--materializer-feedback", feedback_path])
     dqs1_observation_args: list[str] = []
-    for observation_path in [*args.dqs1_observation_jsonl, *dqs1_observation_jsonl]:
-        dqs1_observation_args.extend(
-            ["--dqs1-observation-jsonl", _display_path(observation_path)]
-        )
+    for observation_path in _dqs1_observation_path_values(
+        args,
+        extra=dqs1_observation_jsonl,
+    ):
+        dqs1_observation_args.extend(["--dqs1-observation-jsonl", observation_path])
     if args.include_observed_dqs1_candidate:
         dqs1_observation_args.append("--include-observed-dqs1-candidate")
     base_args = [
@@ -379,6 +407,81 @@ def _queue_build_common_args(
         preflight_args.extend(["--scheduler-proactive-cleanup-cold-store-root", str(root)])
     preflight_args.append("--scheduler-proactive-cleanup-execute")
     return [*base_args, *preflight_args]
+
+
+def _refresh_pairset_acquisition(
+    *,
+    args: argparse.Namespace,
+    pairset_acquisition_root: Path,
+    refresh_stamp: str,
+    dqs1_observation_jsonl: Sequence[str | Path],
+) -> tuple[Path, dict[str, Any]]:
+    selector_pareto = (
+        _latest_selector_pareto(pairset_acquisition_root)
+        if args.pairset_selector_pareto == "latest"
+        else _resolve(args.pairset_selector_pareto)
+    )
+    output_root = (
+        pairset_acquisition_root / "pairset_acquisition"
+        if args.pairset_acquisition_refresh_root is None
+        else _resolve(args.pairset_acquisition_refresh_root)
+    )
+    output_root.mkdir(parents=True, exist_ok=True)
+    json_out = output_root / f"dqs1_pairset_acquisition_observation_filtered_{refresh_stamp}.json"
+    md_out = json_out.with_suffix(".md")
+    command = [
+        ".venv/bin/python",
+        "tools/plan_decoder_q_pairset_acquisition.py",
+        "--selector-pareto",
+        _display_path(selector_pareto),
+        "--max-drop-two",
+        str(args.refresh_pairset_max_drop_two),
+        "--max-swap-in",
+        str(args.refresh_pairset_max_swap_in),
+        "--json-out",
+        _display_path(json_out),
+        "--md-out",
+        _display_path(md_out),
+    ]
+    if args.refresh_pairset_prefix_ks:
+        command.extend(["--prefix-ks", args.refresh_pairset_prefix_ks])
+    if args.refresh_pairset_diversity_ks:
+        command.extend(["--diversity-ks", args.refresh_pairset_diversity_ks])
+    if args.refresh_pairset_no_drop_one:
+        command.append("--no-drop-one")
+    for observation_path in _dqs1_observation_path_values(
+        args,
+        extra=dqs1_observation_jsonl,
+    ):
+        command.extend(["--dqs1-observation-jsonl", observation_path])
+    if args.include_observed_dqs1_candidate:
+        command.append("--include-observed-dqs1-candidate")
+    result = _run(command)
+    stdout_payload = _json_from_stdout(result, label="pairset acquisition refresh")
+    return json_out, {
+        "schema": "dqs1_tranche_pairset_acquisition_refresh.v1",
+        "selector_pareto": str(selector_pareto),
+        "json_out": str(json_out),
+        "md_out": str(md_out),
+        "command": command,
+        "elapsed_seconds": result.elapsed_seconds,
+        "stdout": stdout_payload,
+        "observation_jsonl": _dqs1_observation_path_values(
+            args,
+            extra=dqs1_observation_jsonl,
+        ),
+        "include_observed_dqs1_candidate": bool(args.include_observed_dqs1_candidate),
+        "unfiltered_candidate_count": stdout_payload.get("unfiltered_candidate_count"),
+        "candidate_count": stdout_payload.get("candidate_count"),
+        "suppressed_observed_candidate_count": stdout_payload.get(
+            "suppressed_observed_candidate_count"
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+    }
 
 
 def _prepare_queue_for_results_root(
@@ -682,6 +785,36 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="root to search when --pairset-acquisition=latest; separate from output storage.",
     )
     parser.add_argument(
+        "--refresh-pairset-acquisition",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "after each harvest-observation build, regenerate the pairset acquisition "
+            "plan with prior/current DQS1 observations before portfolio and queue rebuilds"
+        ),
+    )
+    parser.add_argument(
+        "--pairset-selector-pareto",
+        default="latest",
+        help=(
+            "selector Pareto JSON for acquisition refresh, or 'latest' under "
+            "--pairset-acquisition-root/selector_pareto"
+        ),
+    )
+    parser.add_argument(
+        "--pairset-acquisition-refresh-root",
+        default=None,
+        help=(
+            "directory for refreshed pairset acquisition artifacts; defaults to "
+            "--pairset-acquisition-root/pairset_acquisition"
+        ),
+    )
+    parser.add_argument("--refresh-pairset-prefix-ks", default=None)
+    parser.add_argument("--refresh-pairset-diversity-ks", default=None)
+    parser.add_argument("--refresh-pairset-max-drop-two", type=int, default=512)
+    parser.add_argument("--refresh-pairset-max-swap-in", type=int, default=32)
+    parser.add_argument("--refresh-pairset-no-drop-one", action="store_true")
+    parser.add_argument(
         "--mlx-selection",
         action="append",
         default=[],
@@ -798,6 +931,10 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--mlx-batch-pairs must be >= 1")
     if args.mlx_cache_batch_pairs < 1:
         raise SystemExit("--mlx-cache-batch-pairs must be >= 1")
+    if args.refresh_pairset_max_drop_two < 1:
+        raise SystemExit("--refresh-pairset-max-drop-two must be >= 1")
+    if args.refresh_pairset_max_swap_in < 0:
+        raise SystemExit("--refresh-pairset-max-swap-in must be >= 0")
     queue_path = _resolve(args.queue)
     frontier_scores, frontier_payload = _frontier_scores()
     incumbent_score = args.incumbent_score or str(frontier_scores["contest_cuda"])
@@ -825,6 +962,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.pairset_acquisition == "latest"
         else _resolve(args.pairset_acquisition)
     )
+    initial_pairset_acquisition = pairset_acquisition
     portfolio_root = (
         results_root / "cross_family_candidate_portfolio"
         if args.portfolio_root is None
@@ -947,6 +1085,14 @@ def main(argv: list[str] | None = None) -> int:
         )
         observation_payload = _json_from_stdout(obs_result, label="harvest observations")
         row_count = int(observation_payload.get("row_count") or 0)
+        acquisition_refresh: dict[str, Any] | None = None
+        if args.refresh_pairset_acquisition:
+            pairset_acquisition, acquisition_refresh = _refresh_pairset_acquisition(
+                args=args,
+                pairset_acquisition_root=pairset_acquisition_root,
+                refresh_stamp=refresh_stamp,
+                dqs1_observation_jsonl=(observation_jsonl,),
+            )
         portfolio_dir = portfolio_root / _portfolio_dir_name(refresh_stamp, row_count)
         action_summary = portfolio_dir / "action_summary.json"
         portfolio_cmd = [
@@ -1039,6 +1185,7 @@ def main(argv: list[str] | None = None) -> int:
                 exploratory_portfolio_fallback
             ),
         }
+        round_record["pairset_acquisition_refresh"] = acquisition_refresh
         round_record["queue_rebuild"] = queue_payload
         round_record["queue_validate"] = validate_payload
         rounds.append(round_record)
@@ -1058,7 +1205,10 @@ def main(argv: list[str] | None = None) -> int:
         "results_root": str(results_root),
         "storage": storage_payload,
         "pairset_acquisition_root": str(pairset_acquisition_root),
+        "initial_pairset_acquisition": str(initial_pairset_acquisition),
         "pairset_acquisition": str(pairset_acquisition),
+        "refresh_pairset_acquisition": bool(args.refresh_pairset_acquisition),
+        "pairset_selector_pareto": args.pairset_selector_pareto,
         "portfolio_root": str(portfolio_root),
         "retention_cold_store_root": cold_store_root,
         "frontier_scores": frontier_scores,
