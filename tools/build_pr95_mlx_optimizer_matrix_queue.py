@@ -31,6 +31,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     LANE_ID,
     PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY,
     PR95_MLX_LOSS_SURFACE_RGB_MSE,
+    PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE,
     PR95_MLX_LOSS_SURFACES,
     PR95_STAGE_MODULES,
     Pr95HNeRVMlxError,
@@ -42,6 +43,8 @@ from tac.optimization.optimizer_scheduler_registry import (  # noqa: E402
 from tac.repo_io import ArtifactWriteError, read_json, write_json_artifact  # noqa: E402
 
 MATRIX_SCHEMA = "pr95_hnerv_mlx_optimizer_matrix_queue.v1"
+CONTROL_PROFILE_FULL_SOURCE_VIDEO_RUNTIME = "full_pr95_source_video_runtime"
+CONTROL_PROFILE_CHOICES = (CONTROL_PROFILE_FULL_SOURCE_VIDEO_RUNTIME,)
 
 
 def _utc_now() -> str:
@@ -337,6 +340,7 @@ def build_pr95_mlx_optimizer_matrix_queue(
     local_cuda_concurrency: int,
     local_mps_concurrency: int,
     timeout_seconds: int,
+    control_profile: str | None = None,
     allow_existing_plan_dirs: bool = False,
 ) -> dict[str, Any]:
     """Emit per-candidate plans and return matrix manifest plus queue payload."""
@@ -504,6 +508,7 @@ def build_pr95_mlx_optimizer_matrix_queue(
         "generated_at_utc": _utc_now(),
         "lane_id": LANE_ID,
         "queue_id": queue_id,
+        "control_profile": control_profile,
         "output_root": _rel(output_root, repo_root),
         "stage_indices": selected_stages,
         "seeds": selected_seeds,
@@ -586,6 +591,17 @@ def build_pr95_mlx_optimizer_matrix_queue(
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--control-profile",
+        choices=CONTROL_PROFILE_CHOICES,
+        default=None,
+        help=(
+            "Apply a canonical PR95 MLX control profile. "
+            "full_pr95_source_video_runtime emits stage 1/5/8, full PR95 "
+            "dimensions, source-video RGB+YUV6 timing loss, and PR95 runtime "
+            "consumption proof requests."
+        ),
+    )
     parser.add_argument("--stage", action="append", type=int, dest="stages")
     parser.add_argument("--seed", action="append", type=int)
     parser.add_argument("--optimizer-descriptor-id", action="append")
@@ -693,8 +709,33 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _apply_control_profile(args: argparse.Namespace) -> None:
+    if args.control_profile is None:
+        return
+    if args.control_profile == CONTROL_PROFILE_FULL_SOURCE_VIDEO_RUNTIME:
+        args.stages = [1, 5, 8]
+        args.batch_size = 1
+        args.synthetic_pairs = 1
+        args.base_channels = 36
+        args.latent_dim = 28
+        args.write_pr95_public_archive_export = True
+        args.prove_pr95_runtime_consumption = True
+        args.write_source_video_preprocess_smoke = True
+        args.train_on_source_video_pairs = True
+        args.source_video_loss_surface = PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
+        if args.source_video_pair_index is None:
+            args.source_video_pair_index = [0]
+        args.source_video_output_hw = "384,512"
+        args.local_mlx_concurrency = 1
+        if args.timeout_seconds == 0:
+            args.timeout_seconds = 3600
+        return
+    raise ExperimentQueueError(f"unsupported control profile: {args.control_profile}")
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    _apply_control_profile(args)
     try:
         payload = build_pr95_mlx_optimizer_matrix_queue(
             repo_root=args.repo_root,
@@ -737,6 +778,7 @@ def main(argv: list[str] | None = None) -> int:
             local_cuda_concurrency=args.local_cuda_concurrency,
             local_mps_concurrency=args.local_mps_concurrency,
             timeout_seconds=args.timeout_seconds,
+            control_profile=args.control_profile,
             allow_existing_plan_dirs=args.allow_existing_plan_dirs,
         )
         queue_artifact = write_json_artifact(args.queue_output, payload["queue"])

@@ -231,6 +231,84 @@ def test_pr95_mlx_optimizer_matrix_cli_emits_queueable_plans(
     assert json.loads(validation.stdout)["valid"] is True
 
 
+def test_pr95_mlx_optimizer_matrix_full_source_video_control_profile(
+    tmp_path: Path,
+) -> None:
+    output_root = tmp_path / "matrix"
+    queue_path = output_root / "queue.json"
+    manifest_path = output_root / "matrix_manifest.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "build_pr95_mlx_optimizer_matrix_queue.py"),
+            "--control-profile",
+            "full_pr95_source_video_runtime",
+            "--seed",
+            "29",
+            "--steps",
+            "1",
+            "--output-root",
+            str(output_root),
+            "--queue-output",
+            str(queue_path),
+            "--manifest-output",
+            str(manifest_path),
+            "--queue-id",
+            "pr95_mlx_full_profile_fixture",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=180,
+    )
+
+    assert result.returncode == 0, result.stderr
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    queue = json.loads(queue_path.read_text(encoding="utf-8"))
+
+    assert manifest["control_profile"] == "full_pr95_source_video_runtime"
+    assert manifest["stage_indices"] == [1, 5, 8]
+    assert manifest["plan_count"] == 3
+    assert manifest["batch_size"] == 1
+    assert manifest["synthetic_pairs"] == 1
+    assert manifest["base_channels"] == 36
+    assert manifest["latent_dim"] == 28
+    assert manifest["train_on_source_video_pairs"] is True
+    assert manifest["source_video_loss_surface"] == "rgb_yuv6_mse"
+    assert manifest["source_video_output_hw"] == "384,512"
+    assert manifest["prove_pr95_runtime_consumption"] is True
+    assert queue["controls"]["max_concurrency"]["local_mlx"] == 1
+    assert len(queue["experiments"]) == 3
+    assert all(
+        "--train-on-source-video-pairs" in experiment["steps"][0]["command"]
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        "--prove-pr95-runtime-consumption" in experiment["steps"][0]["command"]
+        for experiment in queue["experiments"]
+    )
+
+    validation = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "experiment_queue.py"),
+            "--queue",
+            str(queue_path),
+            "validate",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=120,
+    )
+
+    assert validation.returncode == 0, validation.stderr
+    assert json.loads(validation.stdout)["valid"] is True
+
+
 def test_pr95_mlx_optimizer_matrix_skips_non_executable_descriptor(
     tmp_path: Path,
 ) -> None:

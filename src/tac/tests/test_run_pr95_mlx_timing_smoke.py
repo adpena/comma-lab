@@ -113,6 +113,17 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
         "pr95_hnerv_archive_export.v1"
     )
     assert export_summary["runtime_consumption_proof_present"] is True
+    assert export_summary["runtime_consumption_proven"] is True
+    assert (
+        "pr95_archive_export_is_byte_closed_but_not_runtime_consumed"
+        not in export_summary["exact_readiness_refusal"]["blockers"]
+    )
+    assert "requires_full_frame_inflate_parity_before_runtime_consumption_claim" in (
+        export_summary["exact_readiness_refusal"]["blockers"]
+    )
+    assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in (
+        export_summary["exact_readiness_refusal"]["blockers"]
+    )
     assert summary["runtime_consumption_proof"]["runtime_consumption_proven"] is True
     assert summary["source_faithful_preprocess_smoke"]["source_faithful_preprocess_ready"] is True
     assert preprocess_smoke["gradient_probe"]["gradient_reachable"] is True

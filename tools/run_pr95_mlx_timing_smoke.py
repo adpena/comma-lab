@@ -69,6 +69,9 @@ SOURCE_PREPROCESS_PORTED_LOSS_UNWIRED_BLOCKER = PR95_YUV6_SCORER_LOSS_UNWIRED_BL
 SOURCE_VIDEO_LOADER_UNWIRED_BLOCKER = (
     "pr95_source_video_loader_ported_but_training_loop_not_source_video_backed"
 )
+PR95_ARCHIVE_EXPORT_NOT_RUNTIME_CONSUMED_BLOCKER = (
+    "pr95_archive_export_is_byte_closed_but_not_runtime_consumed"
+)
 
 
 def _rel(path: Path) -> str:
@@ -84,6 +87,31 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
         json.dumps(payload, indent=2, sort_keys=True, default=str) + "\n",
         encoding="utf-8",
     )
+
+
+def _mark_public_archive_export_runtime_consumed(
+    public_archive_export: dict[str, Any],
+    *,
+    proof_path: Path,
+    runtime_consumption_proof: dict[str, Any],
+) -> None:
+    proven = runtime_consumption_proof.get("runtime_consumption_proven") is True
+    public_archive_export["runtime_consumption_proof_present"] = True
+    public_archive_export["runtime_consumption_proven"] = proven
+    public_archive_export["runtime_consumption_proof_path"] = _rel(proof_path)
+    if not proven:
+        return
+    refusal = public_archive_export.get("exact_readiness_refusal")
+    if not isinstance(refusal, dict):
+        return
+    blockers = refusal.get("blockers")
+    if not isinstance(blockers, list):
+        return
+    refusal["blockers"] = [
+        blocker
+        for blocker in blockers
+        if blocker != PR95_ARCHIVE_EXPORT_NOT_RUNTIME_CONSUMED_BLOCKER
+    ]
 
 
 def _slug(value: str) -> str:
@@ -1582,8 +1610,11 @@ def main(argv: list[str] | None = None) -> int:
         runtime_consumption_proof = json.loads(proof_path.read_text(encoding="utf-8"))
         manifest["runtime_consumption_proof"] = runtime_consumption_proof
         manifest["runtime_consumption_proof_path"] = _rel(proof_path)
-        public_archive_export["runtime_consumption_proof_present"] = True
-        public_archive_export["runtime_consumption_proof_path"] = _rel(proof_path)
+        _mark_public_archive_export_runtime_consumed(
+            public_archive_export,
+            proof_path=proof_path,
+            runtime_consumption_proof=runtime_consumption_proof,
+        )
         _write_json(output_dir / "pr95_public_archive_export.json", public_archive_export)
         manifest["runtime_profile"]["packet_compiler_bridge"][
             "runtime_consumption_proof_present"
