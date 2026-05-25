@@ -55944,7 +55944,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "PR95_STAGE_MODULES[7]=stage7_sigma_sweep + pr95_stage7_adamw_sigma_sweep_mlx descriptor + full profile queue stages=1,2,3,4,5,6,7,8; focused PR95 registry/queue suite 74/74 tests pass; state_bytes=915944 byte-identical to Stage 6 (sigma sweep loss-term-only confirmed)"
+          "evidence": "PR 95 Stage 7 descriptor + dict entries + test file + Catalog #313 probe row + 100-step smoke; state_bytes=915944 byte-identical [macOS-MLX research-signal]; see .omx/research/pr95_mlx_stage_7_sigma_sweep_curriculum_build_landed_20260525.md"
         },
         "real_archive_empirical": {
           "status": false,
@@ -55968,7 +55968,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/pr95_mlx_stage_7_sigma_sweep_curriculum_build_landed_20260525.md"
+          "evidence": ".omx/research/pr95_mlx_stage_7_sigma_sweep_curriculum_build_landed_20260525.md (codex sister body + Claude APPEND-ONLY extension per CLAUDE.md Cross-agent sister convergence patterns Variant 2 COMPLEMENTARY)"
         },
         "deploy_runbook": {
           "status": false,
@@ -56026,5 +56026,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T17:18:38Z"
+  "updated_at": "2026-05-25T17:21:29Z"
 }
