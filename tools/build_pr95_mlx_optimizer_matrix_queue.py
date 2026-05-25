@@ -621,7 +621,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help=(
             "Apply a canonical PR95 MLX control profile. "
-            "full_pr95_source_video_runtime emits stage 1/2/3/5/8, full PR95 "
+            "full_pr95_source_video_runtime emits stage 1/2/3/4/5/8, full PR95 "
             "dimensions, source-video RGB+YUV6 timing loss, and PR95 runtime "
             "consumption proof requests."
         ),
@@ -751,11 +751,12 @@ def _apply_control_profile(args: argparse.Namespace) -> None:
         return
     if args.control_profile == CONTROL_PROFILE_FULL_SOURCE_VIDEO_RUNTIME:
         # PR 95 published 8-stage curriculum: current MLX control covers the
-        # source-faithful Stage 1/2/3/5/8 timing spine per the PR95-STAGE-3-MLX-BUILD
-        # landing (`.omx/research/pr95_mlx_stage_3_v332_smooth_curriculum_build_landed_20260525.md`)
-        # + MLX-PARADIGM-T3 commit `916c43d89` Op #3 cascade (Stage 3 = smooth-disagreement
-        # bridge between Stage 2 softplus refinement and Stage 5 c1a_l7 quantization).
-        args.stages = [1, 2, 3, 5, 8]
+        # source-faithful Stage 1/2/3/4/5/8 timing spine per the PR95-STAGE-4-MLX-BUILD
+        # landing (`.omx/research/pr95_mlx_stage_4_v332_qat_curriculum_build_landed_20260525.md`)
+        # + MLX-PARADIGM-T3 commit `916c43d89` Op #3 cascade (Stage 4 = QAT
+        # bridge continuing Stage 3 smooth-disagreement cosine + applying
+        # smooth_disagreement_seg_loss(tau=0.3) with QAT fake-quant).
+        args.stages = [1, 2, 3, 4, 5, 8]
         args.batch_size = 1
         args.synthetic_pairs = 1
         args.base_channels = 36

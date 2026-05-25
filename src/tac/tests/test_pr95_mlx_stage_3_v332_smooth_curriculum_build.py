@@ -78,11 +78,15 @@ def test_unsupported_stage_raises_value_error_with_canonical_supported_list() ->
     """Unsupported stage raises ValueError mentioning canonical supported set.
 
     Soft-error pattern uses `sorted(PR95_STAGE_MODULES)` dynamically so
-    future stage 4/6/7 additions do not require updating hardcoded strings.
+    future stage 6/7 additions do not require updating hardcoded strings.
+    Stage 4 was the formerly-unsupported value tested here; per the PR 95
+    Stage 4 v332_qat MLX curriculum BUILD landing 2026-05-25 it is now
+    supported, so this test exercises Stage 6 (next unsupported) instead.
+    Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY discipline preserved.
     """
 
     with pytest.raises(ValueError, match=r"supported PR95 MLX timing stages"):
-        stage_smoke_config(4)
+        stage_smoke_config(6)
     with pytest.raises(ValueError, match=r"supported PR95 MLX timing stages"):
         pr95_default_optimizer_descriptor_id(7)
 

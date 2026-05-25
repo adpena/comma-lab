@@ -50,6 +50,7 @@ def test_pr95_mlx_optimizer_matrix_cli_emits_queueable_plans(
             "--local-mlx-concurrency",
             "3",
             "--write-pr95-public-archive-export",
+            "--write-pytorch-export-parity",
             "--prove-pr95-runtime-consumption",
             "--runtime-proof-max-output-bytes",
             "7000000",
@@ -93,6 +94,9 @@ def test_pr95_mlx_optimizer_matrix_cli_emits_queueable_plans(
     assert manifest["promotion_eligible"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["write_pr95_public_archive_export"] is True
+    assert manifest["write_pytorch_export_parity"] is True
+    assert manifest["pytorch_export_sample_indices"] == [0]
+    assert manifest["pytorch_export_mlx_device"] == "cpu"
     assert manifest["prove_pr95_runtime_consumption"] is True
     assert manifest["write_source_faithful_preprocess_smoke"] is True
     assert manifest["source_preprocess_shape"] == "1,2,8,10,3"
@@ -122,9 +126,21 @@ def test_pr95_mlx_optimizer_matrix_cli_emits_queueable_plans(
         assert plan["recommended_execution"]["runtime_consumption_proof"].endswith(
             "runtime_consumption_proof.json"
         )
+        assert plan["recommended_execution"]["pytorch_export_state_dict"].endswith(
+            "pr95_pytorch_state_dict.pt"
+        )
+        assert plan["recommended_execution"]["pytorch_export_forward_parity"].endswith(
+            "pytorch_export_forward_parity.json"
+        )
         assert plan["recommended_execution"][
             "source_faithful_preprocess_smoke"
         ].endswith("source_faithful_preprocess_smoke.json")
+        assert "--write-pytorch-export-parity" in plan["recommended_execution"][
+            "python_command_args"
+        ]
+        assert "--pytorch-export-sample-index" in plan["recommended_execution"][
+            "python_command_args"
+        ]
         assert "--write-source-faithful-preprocess-smoke" in plan[
             "recommended_execution"
         ]["python_command_args"]
@@ -154,6 +170,16 @@ def test_pr95_mlx_optimizer_matrix_cli_emits_queueable_plans(
             condition["type"] == "json_equals"
             and condition["path"].endswith("runtime_consumption_proof.json")
             and condition["key"] == "runtime_consumption_proven"
+            and condition["equals"] is True
+            for condition in experiment["steps"][0]["postconditions"]
+        )
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        any(
+            condition["type"] == "json_equals"
+            and condition["path"].endswith("pytorch_export_forward_parity.json")
+            and condition["key"] == "pytorch_export_forward_parity_established"
             and condition["equals"] is True
             for condition in experiment["steps"][0]["postconditions"]
         )
@@ -269,15 +295,16 @@ def test_pr95_mlx_optimizer_matrix_full_source_video_control_profile(
     queue = json.loads(queue_path.read_text(encoding="utf-8"))
 
     assert manifest["control_profile"] == "full_pr95_source_video_runtime"
-    # Stage 3 added per PR95-STAGE-3-MLX-BUILD landing
-    # `.omx/research/pr95_mlx_stage_3_v332_smooth_curriculum_build_landed_20260525.md`;
-    # canonical Stage 1+2+3+5+8 spine.
-    assert manifest["stage_indices"] == [1, 2, 3, 5, 8]
-    assert manifest["plan_count"] == 5
+    # Stage 4 added per PR95-STAGE-4-MLX-BUILD landing
+    # `.omx/research/pr95_mlx_stage_4_v332_qat_curriculum_build_landed_20260525.md`;
+    # canonical Stage 1+2+3+4+5+8 spine.
+    assert manifest["stage_indices"] == [1, 2, 3, 4, 5, 8]
+    assert manifest["plan_count"] == 6
     assert {row["optimizer_descriptor_id"] for row in manifest["plans"]} == {
         "pr95_stage1_adamw_baseline_mlx",
         "pr95_stage2_adamw_baseline_mlx",
         "pr95_stage3_adamw_baseline_mlx",
+        "pr95_stage4_adamw_qat_mlx",
         "pr95_stage5_adamw_baseline_mlx",
         "pr95_stage8_muon_adamw_mlx",
     }
@@ -289,15 +316,22 @@ def test_pr95_mlx_optimizer_matrix_full_source_video_control_profile(
     assert manifest["source_video_loss_surface"] == "rgb_yuv6_mse"
     assert manifest["source_video_output_hw"] == "384,512"
     assert manifest["prove_pr95_runtime_consumption"] is True
+    assert manifest["write_pytorch_export_parity"] is True
+    assert manifest["pytorch_export_sample_indices"] == [0]
+    assert manifest["pytorch_export_mlx_device"] == "cpu"
     assert queue["controls"]["max_concurrency"]["local_mlx"] == 1
-    # Stage 3 added per PR95-STAGE-3-MLX-BUILD landing; 5 experiments emitted.
-    assert len(queue["experiments"]) == 5
+    # Stage 4 added per PR95-STAGE-4-MLX-BUILD landing; 6 experiments emitted.
+    assert len(queue["experiments"]) == 6
     assert all(
         "--train-on-source-video-pairs" in experiment["steps"][0]["command"]
         for experiment in queue["experiments"]
     )
     assert all(
         "--prove-pr95-runtime-consumption" in experiment["steps"][0]["command"]
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        "--write-pytorch-export-parity" in experiment["steps"][0]["command"]
         for experiment in queue["experiments"]
     )
 

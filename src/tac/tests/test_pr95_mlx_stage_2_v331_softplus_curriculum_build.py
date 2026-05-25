@@ -78,13 +78,14 @@ def test_unsupported_stage_raises_value_error_with_canonical_supported_list() ->
 
     Soft-error pattern uses `sorted(PR95_STAGE_MODULES)` dynamically so
     future stage additions do not require updating hardcoded strings. Per
-    Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY: Stage 4/6/7 are
-    not yet in PR95_STAGE_MODULES; sampling those at random surfaces the
-    canonical supported-set message.
+    Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY: Stage 4 is now
+    supported (`.omx/research/pr95_mlx_stage_4_v332_qat_curriculum_build_landed_20260525.md`);
+    Stage 6/7 remain unsupported and are the canonical sentinel values
+    surfacing the canonical-supported-set message.
     """
 
     with pytest.raises(ValueError, match=r"supported PR95 MLX timing stages"):
-        stage_smoke_config(4)
+        stage_smoke_config(6)
     with pytest.raises(ValueError, match=r"supported PR95 MLX timing stages"):
         pr95_default_optimizer_descriptor_id(7)
 

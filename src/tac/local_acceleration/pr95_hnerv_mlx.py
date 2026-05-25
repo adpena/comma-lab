@@ -76,6 +76,7 @@ PR95_STAGE_MODULES: dict[int, str] = {
     1: "stage1_v328_ce",
     2: "stage2_v331_softplus",
     3: "stage3_v332_smooth",
+    4: "stage4_v332_qat",
     5: "stage5_c1a_l7",
     8: "stage8_muon_finetune",
 }
@@ -83,6 +84,7 @@ PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS: dict[int, str] = {
     1: "pr95_stage1_adamw_baseline_mlx",
     2: "pr95_stage2_adamw_baseline_mlx",
     3: "pr95_stage3_adamw_baseline_mlx",
+    4: "pr95_stage4_adamw_qat_mlx",
     5: "pr95_stage5_adamw_baseline_mlx",
     8: "pr95_stage8_muon_adamw_mlx",
 }

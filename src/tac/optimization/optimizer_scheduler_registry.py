@@ -701,6 +701,56 @@ def default_optimizer_scheduler_descriptors() -> tuple[OptimizerSchedulerDescrip
             intended_use="pr95_hnerv_mlx_synthetic_timing_smoke",
         ),
         OptimizerSchedulerDescriptor(
+            descriptor_id="pr95_stage4_adamw_qat_mlx",
+            optimizer="mlx.optimizers.AdamW",
+            scheduler="pr95_stage_static_lr",
+            optimizer_config={
+                "use_muon": False,
+                # Stage 4 v332_qat continues Stage 3 cosine schedule per the
+                # recovered public PR 95 source
+                # (`.omx/research/pr95_8stage_curriculum_forensic_20260513.md` +
+                # `.omx/research/pr95_curriculum_recovery_20260513_codex.md`).
+                # AdamW base LR = 1e-4 (same as Stage 3); cosine continuation
+                # is a runtime scheduler concern, not a descriptor concern.
+                "adamw_lr": 1e-4,
+                "latent_lr_mult": 10.0,
+                "adamw_betas": [0.9, 0.999],
+                "adamw_eps": 1e-8,
+                "adamw_weight_decay": 0.0,
+                "grad_clip": 1.0,
+            },
+            scheduler_config={"stage_indices": [4], "source_pr": 95},
+            training_config={
+                "backend_status": PR95_MLX_BACKEND_STATUS_LOCAL_TIMING_PROXY,
+                "training_fidelity": PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY,
+                "supported_training_fidelities": list(
+                    PR95_MLX_SUPPORTED_TRAINING_FIDELITIES
+                ),
+                "supported_loss_surfaces": list(PR95_MLX_SUPPORTED_LOSS_SURFACES),
+                "source_faithful_training": False,
+                "source_faithfulness_blockers": list(
+                    PR95_MLX_SOURCE_FAITHFUL_BLOCKERS
+                ),
+                "pr95_stage_indices": [4],
+                "stage_modules": ["stage4_v332_qat"],
+                "stage_epochs": 500,
+                # Stage 4 preserves Stage 3's smooth_disagreement_seg_loss
+                # family (tau=0.3) and adds QAT (Quantization-Aware Training)
+                # per the recovered public PR 95 source.
+                "stage_loss_family": "smooth_disagreement_seg_loss",
+                "stage_cat_sigma": 0.2,
+                "stage_cat_lambda": 0.0,
+                "stage_uses_qat": True,
+                "stage_uses_muon": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            parameter_group_lr_policy=EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY,
+            intended_use="pr95_hnerv_mlx_synthetic_timing_smoke",
+        ),
+        OptimizerSchedulerDescriptor(
             descriptor_id="pr95_stage5_adamw_baseline_mlx",
             optimizer="mlx.optimizers.AdamW",
             scheduler="pr95_stage_static_lr",
