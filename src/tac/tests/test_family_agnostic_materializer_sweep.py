@@ -294,9 +294,16 @@ def test_materializer_empirical_sweep_supports_tensor_factorize(
     assert row["factorization"]["rank"] == 1
     assert row["saved_bytes"] > 0
     assert row["rate_positive"] is True
-    assert row["receiver_contract_satisfied"] is True
+    assert row["receiver_contract_satisfied"] is False
+    assert (
+        "tensor_factorize_exact_readiness_refused_until_byte_closed_runtime_adapter_lands"
+        in row["readiness_blockers"]
+    )
+    assert "tensor_factorize_receiver_contract_not_satisfied" in (
+        row["readiness_blockers"]
+    )
     assert row["recommended_planner_action"] == (
-        "keep_rate_positive_candidate_for_inflate_parity_gate"
+        "repair_receiver_contract_before_exact_readiness"
     )
     assert row["score_claim"] is False
     assert Path(row["manifest_path"]).is_file()

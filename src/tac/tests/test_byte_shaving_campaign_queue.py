@@ -3135,6 +3135,143 @@ def test_materializer_work_queue_wraps_family_agnostic_empirical_sweep(
     assert "--chain-manifest" not in harvest_step["command"]
 
 
+def test_materializer_work_queue_wraps_packet_member_merge_empirical_sweep(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    packet_manifest = tmp_path / "packet_members.json"
+    merge_contract = tmp_path / "merge_contract.json"
+    sweep_dir = tmp_path / "merge_sweep"
+    sweep_json = sweep_dir / "sweep.json"
+    observations_jsonl = sweep_dir / "observations.jsonl"
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "backlog_key": "packet_member_merge_sweep_fixture",
+                "unit_kind": "packet_member",
+                "operation_family": "member_merge",
+                "target_kind": PACKET_MEMBER_MERGE_TARGET_KIND,
+                "materializer_id": PACKET_MEMBER_MERGE_MATERIALIZER,
+            },
+        ],
+    }
+
+    queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts={
+            "packet_member_merge_sweep_fixture": {
+                "sweep_archives": [f"merge={archive}"],
+                "packet_member_manifest": str(packet_manifest),
+                "merge_contract": str(merge_contract),
+                "member_names": ["renderer.bin", "masks.mkv"],
+                "merged_member_name": "p",
+                "sweep_output_dir": str(sweep_dir),
+                "sweep_output_json": str(sweep_json),
+                "sweep_observation_jsonl": str(observations_jsonl),
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    row = queue["rows"][0]
+    assert queue["executable_row_count"] == 1
+    assert row["tool"] == "tools/run_family_agnostic_materializer_sweep.py"
+    assert ["--target-kind", PACKET_MEMBER_MERGE_TARGET_KIND] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--packet-member-manifest", str(packet_manifest)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--merge-contract", str(merge_contract)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--member-names", "renderer.bin"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--member-names", "masks.mkv"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--merged-member-name", "p"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert row["telemetry"]["family_agnostic_materializer_sweep_contract"][
+        "target_kind"
+    ] == PACKET_MEMBER_MERGE_TARGET_KIND
+    assert row["telemetry"]["input_artifact_paths"] == [
+        str(archive),
+        str(packet_manifest),
+        str(merge_contract),
+    ]
+
+
+def test_materializer_work_queue_wraps_renderer_payload_dfl1_empirical_sweep(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    packet_manifest = tmp_path / "packet_members.json"
+    parity_proof = tmp_path / "full_frame_parity.json"
+    sweep_dir = tmp_path / "dfl1_sweep"
+    sweep_json = sweep_dir / "sweep.json"
+    observations_jsonl = sweep_dir / "observations.jsonl"
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "backlog_key": "renderer_payload_dfl1_sweep_fixture",
+                "unit_kind": "packet_member",
+                "operation_family": "native_renderer_payload",
+                "target_kind": RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+                "materializer_id": RENDERER_PAYLOAD_DFL1_MATERIALIZER,
+            },
+        ],
+    }
+
+    queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts={
+            "renderer_payload_dfl1_sweep_fixture": {
+                "sweep_archives": [f"dfl1={archive}"],
+                "packet_member_manifest": str(packet_manifest),
+                "full_frame_inflate_parity_proof": str(parity_proof),
+                "member_names": ["renderer.bin", "masks.mkv", "optimized_poses.pt"],
+                "payload_member_name": "payload.dfl1",
+                "sweep_output_dir": str(sweep_dir),
+                "sweep_output_json": str(sweep_json),
+                "sweep_observation_jsonl": str(observations_jsonl),
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    row = queue["rows"][0]
+    assert queue["executable_row_count"] == 1
+    assert row["tool"] == "tools/run_family_agnostic_materializer_sweep.py"
+    assert ["--target-kind", RENDERER_PAYLOAD_DFL1_TARGET_KIND] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--packet-member-manifest", str(packet_manifest)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--full-frame-inflate-parity-proof", str(parity_proof)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--payload-member-name", "payload.dfl1"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert row["command"].count("--member-names") == 3
+    assert row["telemetry"]["family_agnostic_materializer_sweep_contract"][
+        "target_kind"
+    ] == RENDERER_PAYLOAD_DFL1_TARGET_KIND
+    assert row["telemetry"]["input_artifact_paths"] == [
+        str(archive),
+        str(packet_manifest),
+        str(parity_proof),
+    ]
+
+
 def test_materializer_work_queue_wraps_packet_member_zip_header_elide(
     tmp_path: Path,
 ) -> None:

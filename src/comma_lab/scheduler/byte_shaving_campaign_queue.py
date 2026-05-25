@@ -2614,8 +2614,10 @@ def _family_agnostic_materializer_sweep_command(
 
     supported_targets = {
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        PACKET_MEMBER_MERGE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+        RENDERER_PAYLOAD_DFL1_TARGET_KIND,
         TENSOR_FACTORIZE_TARGET_KIND,
     }
     if target_kind not in supported_targets:
@@ -2686,6 +2688,76 @@ def _family_agnostic_materializer_sweep_command(
         for level in ordered_unique(levels):
             if command:
                 command.extend(["--zip-compresslevel", level])
+    elif target_kind == PACKET_MEMBER_MERGE_TARGET_KIND:
+        packet_member_manifest = _path_context_value(context, "packet_member_manifest")
+        if packet_member_manifest is not None:
+            input_paths.append(packet_member_manifest)
+            if command:
+                command.extend(["--packet-member-manifest", packet_member_manifest])
+        merge_contract = _path_context_value(context, "merge_contract")
+        if merge_contract is None:
+            merge_contract = _path_context_value(context, "member_merge_contract")
+        if merge_contract is not None:
+            input_paths.append(merge_contract)
+            if command:
+                command.extend(["--merge-contract", merge_contract])
+        member_selection = _context_string_any(
+            context,
+            ("member_selection", "zip_member_selection", "packet_member_selection"),
+        )
+        if command and (
+            context.get("all_members") is True
+            or member_selection in {"all", "*", "all_members"}
+        ):
+            command.append("--all-members")
+        member_name = _context_string_any(
+            context,
+            ("member_name", "archive_member_name", "packet_member_name"),
+        )
+        if member_name is not None and command:
+            command.extend(["--member-name", member_name])
+        member_names = _string_list_context_value(context, "member_names")
+        member_names.extend(_string_list_context_value(context, "archive_member_names"))
+        member_names.extend(_string_list_context_value(context, "packet_member_names"))
+        for selected_member_name in ordered_unique(member_names):
+            if command:
+                command.extend(["--member-names", selected_member_name])
+        merged_member_name = _context_string_any(
+            context,
+            ("merged_member_name", "candidate_member_name", "output_member_name"),
+        )
+        if merged_member_name is not None and command:
+            command.extend(["--merged-member-name", merged_member_name])
+    elif target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND:
+        packet_member_manifest = _path_context_value(context, "packet_member_manifest")
+        if packet_member_manifest is not None:
+            input_paths.append(packet_member_manifest)
+            if command:
+                command.extend(["--packet-member-manifest", packet_member_manifest])
+        parity_proof = _path_context_value(context, "full_frame_inflate_parity_proof")
+        if parity_proof is None:
+            parity_proof = _path_context_value(
+                context,
+                "renderer_payload_dfl1_inflate_parity_proof",
+            )
+        if parity_proof is None:
+            parity_proof = _path_context_value(context, "inflate_parity_proof")
+        if parity_proof is not None:
+            input_paths.append(parity_proof)
+            if command:
+                command.extend(["--full-frame-inflate-parity-proof", parity_proof])
+        member_names = _string_list_context_value(context, "member_names")
+        member_names.extend(_string_list_context_value(context, "archive_member_names"))
+        member_names.extend(_string_list_context_value(context, "packet_member_names"))
+        for selected_member_name in ordered_unique(member_names):
+            if command:
+                command.extend(["--member-names", selected_member_name])
+        payload_member_name = _context_string_any(
+            context,
+            ("payload_member_name", "renderer_payload_member_name"),
+        )
+        if payload_member_name is not None and command:
+            command.extend(["--payload-member-name", payload_member_name])
     elif target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
         packet_member_manifest = _path_context_value(context, "packet_member_manifest")
         if packet_member_manifest is not None:
