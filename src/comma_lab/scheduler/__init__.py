@@ -70,6 +70,22 @@ from .experiment_queue_observer import (
     observe_experiment_queue,
     render_observation_markdown,
 )
+from .frontier_rate_attack_bootstrap import (
+    BOOTSTRAP_SCHEMA as FRONTIER_RATE_ATTACK_BOOTSTRAP_SCHEMA,
+)
+from .frontier_rate_attack_bootstrap import (
+    FRONTIER_ARCHIVE_RECORD_SCHEMA,
+    FRONTIER_ARCHIVE_RESOLUTION_SCHEMA,
+    FrontierRateAttackBootstrapError,
+    build_frontier_rate_attack_payloads,
+    resolve_current_frontier_archive,
+)
+from .frontier_rate_attack_bootstrap import (
+    archive_record as build_frontier_rate_attack_archive_record,
+)
+from .frontier_rate_attack_bootstrap import (
+    parse_archive_spec as parse_frontier_rate_attack_archive_spec,
+)
 from .local_training_harvest import (
     LOCAL_TRAINING_HARVEST_SCHEMA,
     LocalTrainingHarvestError,
@@ -168,6 +184,9 @@ __all__ = [
     "DQS1_RECEIVER_CONTRACT_ID",
     "DQS1_RECEIVER_CONTRACT_KIND",
     "EXACT_READINESS_BRIDGE_SCHEMA",
+    "FRONTIER_ARCHIVE_RECORD_SCHEMA",
+    "FRONTIER_ARCHIVE_RESOLUTION_SCHEMA",
+    "FRONTIER_RATE_ATTACK_BOOTSTRAP_SCHEMA",
     "HARVEST_SCHEMA",
     "INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER",
     "INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_ID",
@@ -214,6 +233,7 @@ __all__ = [
     "BudgetUsage",
     "ExperimentQueueError",
     "ExperimentSpec",
+    "FrontierRateAttackBootstrapError",
     "LocalTrainingHarvestError",
     "PlatformBudgetReport",
     "PlatformRegistry",
@@ -225,6 +245,8 @@ __all__ = [
     "apply_scheduler_runtime_policy",
     "assert_canonical_state_for_execution",
     "assert_no_orphaned_steps_for_execution",
+    "build_frontier_rate_attack_archive_record",
+    "build_frontier_rate_attack_payloads",
     "build_local_training_execution_queue",
     "build_materializer_exact_eval_consumer_queue",
     "build_materializer_exact_eval_dispatch_plan",
@@ -255,12 +277,14 @@ __all__ = [
     "normalize_resource_kind",
     "observe_experiment_queue",
     "orphaned_step_rows",
+    "parse_frontier_rate_attack_archive_spec",
     "queue_performance_summary",
     "queue_summary",
     "ready_steps",
     "reconcile_satisfied_queued_steps",
     "registry_manifest",
     "render_observation_markdown",
+    "resolve_current_frontier_archive",
     "resolve_materializer",
     "retire_orphaned_steps",
     "rewind_step",
