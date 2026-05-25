@@ -83,6 +83,8 @@ def test_briefing_runs_all_three_phases():
     assert "Phase 1 blocked readiness artifacts" in proc.stdout
     assert "Phase 6c — High-level byte-shaving acquisition queue" in proc.stdout
     assert "Phase 6e — PR95 MLX control profiles" in proc.stdout
+    assert "Phase 6f — Distortion-axis scorer probe signals" in proc.stdout
+    assert "Phase 6g — DQS1 drop-many greedy reducer" in proc.stdout
     assert "pr91_hpm1_readiness_bundle" in proc.stdout
     assert "wr01_apply_pr106x_half" in proc.stdout
     assert "pr106_q10_151byte_brotli" in proc.stdout
@@ -177,6 +179,25 @@ def test_briefing_json_composite_has_all_three_keys():
     assert pr95_mlx["promotion_eligible"] is False
     assert pr95_mlx["rank_or_kill_eligible"] is False
     assert pr95_mlx["ready_for_exact_eval_dispatch"] is False
+    distortion = out["distortion_axis_probe_signals"]
+    assert distortion["schema"] == "pact.distortion_axis_probe_summary.v1"
+    assert distortion["score_claim"] is False
+    assert distortion["promotion_eligible"] is False
+    assert distortion["rank_or_kill_eligible"] is False
+    assert distortion["ready_for_exact_eval_dispatch"] is False
+    assert out["dispatch_readiness"][
+        "phase_6f_distortion_axis_probe_signals"
+    ]["score_claim"] is False
+    dqs1_greedy = out["dqs1_drop_many_greedy"]
+    assert dqs1_greedy["schema"] == "pact.dqs1_drop_many_greedy_summary.v1"
+    assert dqs1_greedy["tool_exists"] is True
+    assert dqs1_greedy["score_claim"] is False
+    assert dqs1_greedy["promotion_eligible"] is False
+    assert dqs1_greedy["rank_or_kill_eligible"] is False
+    assert dqs1_greedy["ready_for_exact_eval_dispatch"] is False
+    assert out["dispatch_readiness"]["phase_6g_dqs1_drop_many_greedy"][
+        "score_claim"
+    ] is False
     l5 = out["l5_v2_frontier_readiness"]
     assert l5["schema"] == "pact.l5_v2_frontier_readiness.v1"
     assert l5["score_claim"] is False
@@ -3413,6 +3434,190 @@ def test_pr95_mlx_control_profile_summary_surfaces_queue_profile(
     assert latest["score_claim"] is False
     assert latest["ready_for_exact_eval_dispatch"] is False
     assert "runtime_proven=1" in mod._format_pr95_mlx_control_profiles()
+
+
+def test_distortion_axis_probe_summary_surfaces_wave2_signals(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    root = tmp_path / "tier_1_distortion_axis_probes_20260521"
+    _write_json(
+        root / "probe_7_hinton_kl_t2_longer_temporal_context_segnet_verdict.json",
+        {
+            "probe_id": "probe_7_temporal",
+            "probe_name": "Probe 7 temporal",
+            "verdict": "POSITIVE_SIGNAL_PLATEAU",
+            "axis_tag": "[macOS-CPU advisory]",
+            "evidence_grade": "macOS-CPU-advisory",
+            "lane_id": "lane_wave2",
+            "actual_signature": {
+                "per_window_results": {
+                    "4": {
+                        "W": 4,
+                        "kl_mean_temporal": 0.011,
+                        "ratio_over_ccc_static_baseline": 16.5,
+                        "ratio_over_probe_6_w2": 1.46,
+                        "classes_with_measurable_drift": 3,
+                    },
+                    "6": {
+                        "W": 6,
+                        "kl_mean_temporal": 0.014,
+                        "ratio_over_ccc_static_baseline": 21.2,
+                        "ratio_over_probe_6_w2": 1.88,
+                        "classes_with_measurable_drift": 3,
+                    },
+                }
+            },
+            "next_action_on_POSITIVE_PLATEAU": "Probe 6 W=2 dispatch unchanged.",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+        },
+    )
+    _write_json(
+        root / "probe_8_uniward_per_segment_label_segnet_verdict.json",
+        {
+            "probe_id": "probe_8_segment",
+            "probe_name": "Probe 8 segment",
+            "verdict": "POSITIVE_SIGNAL_PER_SEGMENT_PARTIAL",
+            "axis_tag": "[macOS-CPU advisory]",
+            "evidence_grade": "macOS-CPU-advisory",
+            "lane_id": "lane_wave2",
+            "actual_signature": {
+                "min_segment_textured_avg_weight": 0.5233,
+                "spread_segment_textured_avg_weight": 0.4027,
+                "valid_segment_count": 22,
+            },
+            "next_action_on_PARTIAL": "Combine per-instance and multi-scale UNIWARD.",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+        },
+    )
+    _write_json(
+        root / "probe_9_uniward_per_instance_multi_scale_wavelet_combined_verdict.json",
+        {
+            "probe_id": "probe_9_combined",
+            "probe_name": "Probe 9 combined",
+            "verdict": "POSITIVE_SIGNAL_BREAKS_THRESHOLD",
+            "axis_tag": "[macOS-CPU advisory]",
+            "evidence_grade": "macOS-CPU-advisory",
+            "lane_id": "lane_wave3",
+            "actual_signature": {
+                "min_segment_textured_avg_weight_combined": 0.2597,
+                "spread_segment_textured_avg_weight_combined": 0.3556,
+                "valid_segment_count": 22,
+                "any_segment_below_threshold": True,
+                "wavelet_name": "db8",
+                "wavelet_levels": 3,
+            },
+            "next_action_on_POSITIVE_BREAKS_THRESHOLD": (
+                "Tier-2 paid dispatch on per-instance multi-scale UNIWARD."
+            ),
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+        },
+    )
+    monkeypatch.setattr(mod, "DISTORTION_AXIS_PROBE_SCAN_ROOTS", (root,))
+
+    summary = mod._distortion_axis_probe_summary()
+
+    assert summary["status"] == "ADVISORY_SIGNALS"
+    assert summary["probe_count"] == 3
+    assert summary["positive_signal_count"] == 3
+    assert summary["partial_signal_count"] == 1
+    assert summary["plateau_signal_count"] == 1
+    assert summary["threshold_broken_count"] == 1
+    assert summary["best_temporal_context"]["W"] == 6
+    assert summary["best_temporal_context"]["ratio_over_ccc_static_baseline"] == 21.2
+    assert summary["best_uniward_segment"]["segment_min_textured_avg_weight"] == 0.2597
+    assert summary["best_uniward_segment"]["segment_valid_count"] == 22
+    assert summary["best_uniward_segment"]["wavelet_name"] == "db8"
+    assert summary["score_claim"] is False
+    assert summary["ready_for_exact_eval_dispatch"] is False
+    text = mod._format_distortion_axis_probe_summary()
+    assert "best temporal KL: W=6 ratio=21.20x" in text
+    assert "best UNIWARD segment: min=0.2597" in text
+    assert "threshold_broken=1" in text
+    assert "authority: macOS-CPU advisory only" in text
+
+
+def test_dqs1_drop_many_greedy_summary_surfaces_defer_verdict(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    root = tmp_path / "results"
+    verdict_path = root / (
+        "dqs1_drop_many_build_1c_greedy_heuristic_alternative_reducer_20260525"
+    ) / "verdict.json"
+    _write_json(
+        verdict_path,
+        {
+            "schema": "dqs1_drop_many_build_1c_greedy_independent_heuristic_verdict.v1",
+            "lane_id": (
+                "lane_dqs1_drop_many_build_1c_greedy_heuristic_alternative_reducer_20260525"
+            ),
+            "build_1c_final_verdict": (
+                "NEGATIVE_COLLAPSE_TO_K1_EMPIRICAL_DROP_MANY_REGRESSES"
+            ),
+            "build_1c_final_verdict_reason": (
+                "ALL empirical K>1 sisters regress vs K=1."
+            ),
+            "canonical_provenance": {
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotable": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "canonical_equation_candidate_refinement": {
+                "refinement_field_proposed": {
+                    "empirical_k1_best_drop_one_pair_index": 371,
+                    "empirical_k1_best_drop_one_delta_vs_base": -6.658e-7,
+                }
+            },
+            "empirical_drop_one_anchor_distribution": {
+                "n_negative_delta_pairs": 1,
+                "n_positive_delta_pairs": 8,
+            },
+            "catalog_313_probe_outcomes_row": {
+                "verdict": "DEFER",
+                "status": "blocking",
+                "reactivation_criteria": "BUILD-1b lands new empirical K>1 anchors",
+            },
+            "operator_routable_next_cascade": [
+                "BUILD-1b paid Modal CPU paired exact-eval on unmeasured pairs.",
+            ],
+        },
+    )
+    monkeypatch.setattr(mod, "DQS1_DROP_MANY_GREEDY_VERDICT_SCAN_ROOTS", (root,))
+
+    summary = mod._dqs1_drop_many_greedy_summary()
+
+    assert summary["status"] == "ADVISORY_DEFER"
+    assert summary["tool_exists"] is True
+    assert summary["verdict_count"] == 1
+    assert summary["latest_verdict"]["k1_best_pair_index"] == 371
+    assert summary["latest_verdict"]["catalog_313_verdict"] == "DEFER"
+    assert summary["score_claim"] is False
+    assert summary["ready_for_exact_eval_dispatch"] is False
+    text = mod._format_dqs1_drop_many_greedy_summary()
+    assert "k1_pair=371" in text
+    assert "BUILD-1b paid Modal CPU" in text
+    assert "research/planning only" in text
 
 
 def test_operator_briefing_blocks_frontier_feedback_cycle_authority_leak(

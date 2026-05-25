@@ -1,6 +1,10 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import importlib.util
+import sys
+from pathlib import Path
+
 import pytest
 
 from tac.local_acceleration.pr95_hnerv_mlx_contract import (
@@ -21,6 +25,22 @@ from tac.optimization.optimizer_scheduler_registry import (
 )
 from tac.optimization.proxy_candidate_contract import validate_proxy_candidate
 from tac.xray.base import CANONICAL_WIRE_IN_HOOKS
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+PR95_CURRICULUM_HELPER = REPO_ROOT / "tools" / "recover_pr95_training_curriculum.py"
+
+
+def _load_pr95_curriculum_helper():
+    spec = importlib.util.spec_from_file_location(
+        "recover_pr95_training_curriculum_for_optimizer_registry_tests",
+        PR95_CURRICULUM_HELPER,
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_default_registry_enumerates_hashed_planning_only_candidates() -> None:
@@ -113,13 +133,20 @@ def test_registry_filters_by_declared_target_axis_and_substrate() -> None:
 def test_registry_exposes_pr95_mlx_optimizer_descriptors_fail_closed() -> None:
     registry = default_optimizer_scheduler_registry()
     stage1 = registry.get("pr95_stage1_adamw_baseline_mlx").to_planner_candidate()
+    stage2 = registry.get("pr95_stage2_adamw_baseline_mlx").to_planner_candidate()
     stage8 = registry.get("pr95_stage8_muon_adamw_mlx").to_planner_candidate()
     descriptor_only = registry.get(
         "pr95_langevin_stage8_polish_descriptor_only"
     ).to_planner_candidate()
 
     assert stage1["optimizer_config"]["use_muon"] is False
+    assert stage1["optimizer_config"]["adamw_lr"] == 1e-3
     assert stage1["training_config"]["pr95_stage_indices"] == [1]
+    assert stage2["optimizer_config"]["use_muon"] is False
+    assert stage2["optimizer_config"]["adamw_lr"] == 1e-3
+    assert stage2["training_config"]["pr95_stage_indices"] == [2]
+    assert stage2["training_config"]["stage_modules"] == ["stage2_v331_softplus"]
+    assert stage2["training_config"]["stage_loss_family"] == "tau_softplus_seg_loss"
     assert stage8["optimizer_config"]["use_muon"] is True
     assert stage8["training_config"]["pr95_stage_indices"] == [8]
     assert stage8["parameter_group_lr_policy_id"] == (
@@ -144,10 +171,55 @@ def test_registry_exposes_pr95_mlx_optimizer_descriptors_fail_closed() -> None:
     assert "optimizer_backend_missing" in descriptor_only["training_config"][
         "dispatch_blockers"
     ]
-    for row in (stage1, stage8, descriptor_only):
+    for row in (stage1, stage2, stage8, descriptor_only):
         assert validate_proxy_candidate(row) == []
         for key, expected in FALSE_AUTHORITY_FIELDS.items():
             assert row[key] is expected
+
+
+def test_pr95_mlx_stage_descriptors_match_recovered_public_curriculum() -> None:
+    helper = _load_pr95_curriculum_helper()
+    source = helper.recover_curriculum(helper.DEFAULT_SOURCE_DIR)
+    stages_by_order = {int(row["order"]): row for row in source["stages"]}
+    registry = default_optimizer_scheduler_registry()
+    descriptor_by_stage = {
+        1: "pr95_stage1_adamw_baseline_mlx",
+        2: "pr95_stage2_adamw_baseline_mlx",
+        5: "pr95_stage5_adamw_baseline_mlx",
+        8: "pr95_stage8_muon_adamw_mlx",
+    }
+
+    for stage_index, descriptor_id in descriptor_by_stage.items():
+        source_stage = stages_by_order[stage_index]
+        row = registry.get(descriptor_id).to_planner_candidate()
+        training = row["training_config"]
+        optimizer = row["optimizer_config"]
+
+        assert training["stage_modules"] == [source_stage["name"]]
+        assert training["stage_epochs"] == source_stage["epochs"]
+        assert training["stage_loss_family"] == source_stage["loss_family"]
+        assert training["stage_cat_lambda"] == source_stage["cat_lambda"]
+        assert training["stage_cat_sigma"] == source_stage["cat_sigma"]
+        assert training["stage_uses_qat"] is source_stage["uses_qat"]
+        assert training["stage_uses_muon"] is source_stage["uses_muon"]
+        assert optimizer["use_muon"] is source_stage["uses_muon"]
+        assert optimizer["adamw_lr"] == source_stage["adamw_lr"]
+        if source_stage["muon_lr"] is not None:
+            assert optimizer["muon_lr"] == source_stage["muon_lr"]
+        if source_stage["muon_weight_decay"] is not None:
+            assert optimizer["muon_weight_decay"] == source_stage["muon_weight_decay"]
+
+
+def test_pr95_mlx_stage_descriptors_reject_stale_stage2_v328_ce_lore() -> None:
+    registry = default_optimizer_scheduler_registry()
+    payload = registry.to_dict()
+    pr95_rows = [
+        row
+        for row in payload["descriptors"]
+        if str(row["descriptor_id"]).startswith("pr95_stage")
+    ]
+
+    assert "stage2_v328_ce" not in str(pr95_rows)
 
 
 def test_registry_rejects_duplicate_descriptors_and_unknown_lookup() -> None:

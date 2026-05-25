@@ -115,8 +115,9 @@ CANONICAL_POSE_SQRT_INNER = 10.0
 CANONICAL_RATE_MULTIPLIER = 25.0
 CANONICAL_RATE_DENOM_BYTES = 37_545_489
 
-# Canonical per-byte rate delta = -25 / 37_545_489 = -6.658589101204981e-07
+# Canonical per-byte rate delta = -25 / 37_545_489 = -6.658589531221714e-07
 CANONICAL_RATE_DELTA_PER_BYTE = -CANONICAL_RATE_MULTIPLIER / CANONICAL_RATE_DENOM_BYTES
+CANONICAL_GREEDY_DELTA_TIE_EPS = 1.0e-12
 
 # Canonical Catalog #341 non-promotable routing markers
 CANONICAL_AXIS_TAG_PREDICTED = "[predicted]"
@@ -190,7 +191,7 @@ def _canonical_helper_invocation_str(script_path: Path) -> str:
 
 
 def _captured_at_utc() -> str:
-    return _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def load_empirical_per_pair_anchors_from_posterior(
@@ -291,7 +292,7 @@ def load_empirical_per_pair_anchors_from_posterior(
                 )
 
     if base_score_cpu is not None:
-        for p_idx, info in drop_one.items():
+        for info in drop_one.values():
             info["delta_vs_base"] = info["score"] - base_score_cpu
             info["base_sha"] = base_sha
         for d in drop_two:
@@ -334,11 +335,7 @@ def _load_acquisition_pair_universe(
             idx = op.get("dropped_pair_index")
             if isinstance(idx, int):
                 universe.add(idx)
-        elif kind == "drop_two":
-            for idx in op.get("dropped_pair_indices", []) or []:
-                if isinstance(idx, int):
-                    universe.add(idx)
-        elif kind == "drop_many":
+        elif kind in {"drop_two", "drop_many"}:
             for idx in op.get("dropped_pair_indices", []) or []:
                 if isinstance(idx, int):
                     universe.add(idx)
@@ -349,10 +346,23 @@ def _load_acquisition_pair_universe(
 def rank_pairs_by_greedy_independent(
     candidates: Sequence[PerPairIndependentDelta],
 ) -> list[PerPairIndependentDelta]:
-    """Sort by predicted_delta_score ascending (most negative = best ΔS)."""
+    """Sort by predicted_delta_score ascending (most negative = best ΔS).
+
+    Rate-only placeholders can be numerically tied with the empirical one-byte
+    drop score. In that case the measured anchor wins; otherwise a floating
+    epsilon can make a non-empirical pair masquerade as the K=1 optimum.
+    """
+
+    def source_priority(candidate: PerPairIndependentDelta) -> int:
+        return 0 if candidate.empirical_source == "continual_learning_posterior" else 1
+
     return sorted(
         candidates,
-        key=lambda c: (c.predicted_delta_score, c.pair_index),
+        key=lambda c: (
+            round(c.predicted_delta_score / CANONICAL_GREEDY_DELTA_TIE_EPS),
+            source_priority(c),
+            c.pair_index,
+        ),
     )
 
 
@@ -1034,7 +1044,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"  verdict_artifact: {verdict_path.relative_to(REPO_ROOT)}")
     print(f"  metadata_artifact: {metadata_path.relative_to(REPO_ROOT)}")
     print(f"  catalog_313_probe_outcomes_row.verdict: {catalog_313_row['verdict']}")
-    print(f"  operator_routable_next_cascade:")
+    print("  operator_routable_next_cascade:")
     for action in operator_routable_next:
         print(f"    - {action}")
     return 0

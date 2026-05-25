@@ -55607,6 +55607,47 @@
         }
       },
       "notes": "Derive per-archive parser-section manifests for frontier final-rate attacks, parse DQS1 tail packets, and fail closed when no Brotli-decompressible sections exist."
+    },
+    {
+      "id": "lane_cuda_axis_dqs1_design_memo_per_axis_pareto_pair_ordering_20260525",
+      "name": "CUDA-Aware DQS1 Per-Axis Pareto Pair Ordering Design Memo",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "commit 618786d93 design memo + scaffold skeleton"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/cuda_axis_dqs1_design_memo_per_axis_pareto_pair_ordering_20260525.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -55616,5 +55657,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T13:40:44Z"
+  "updated_at": "2026-05-25T15:59:40Z"
 }

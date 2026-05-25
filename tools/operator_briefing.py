@@ -72,10 +72,28 @@ PR95_MLX_CONTROL_PROFILE_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
     REPO_ROOT / ".omx" / "research",
 )
+DISTORTION_AXIS_PROBE_SCAN_ROOTS = (
+    REPO_ROOT / ".omx" / "research" / "tier_1_distortion_axis_probes_20260521",
+    REPO_ROOT / ".omx" / "research",
+)
+DQS1_DROP_MANY_GREEDY_VERDICT_SCAN_ROOTS = (
+    REPO_ROOT / "experiments" / "results",
+    REPO_ROOT / ".omx" / "research",
+)
 BYTE_SHAVING_MATERIALIZER_CAMPAIGN_RUN_NAME = "materializer_campaign_run.json"
 FRONTIER_FEEDBACK_CYCLE_REPORT_NAME = "frontier_rate_attack_feedback_cycle.json"
 FRONTIER_FEEDBACK_REFRESH_REPORT_NAME = "feedback_refresh_report.json"
 PR95_MLX_MATRIX_MANIFEST_NAME = "matrix_manifest.json"
+DISTORTION_AXIS_PROBE_VERDICT_GLOB = "probe_*_verdict.json"
+DQS1_DROP_MANY_GREEDY_VERDICT_GLOB = (
+    "dqs1_drop_many_build_1c_greedy_heuristic_alternative_reducer_*/verdict.json"
+)
+DQS1_DROP_MANY_GREEDY_VERDICT_SCHEMA = (
+    "dqs1_drop_many_build_1c_greedy_independent_heuristic_verdict.v1"
+)
+DQS1_DROP_MANY_GREEDY_TOOL = (
+    TOOLS / "probe_dqs1_drop_many_greedy_independent_disambiguator.py"
+)
 FRONTIER_FEEDBACK_CYCLE_TOOL = "tools/run_frontier_rate_attack_feedback_cycle.py"
 MATERIALIZER_EXACT_EVAL_CONSUMER_TOOL = "tools/build_materializer_exact_eval_consumer.py"
 EXACT_READY_SCORE_AXIS_REPAIR_TOOL = "tools/repair_exact_ready_score_axis.py"
@@ -2120,6 +2138,478 @@ def _format_pr95_mlx_control_profiles() -> str:
         )
     lines.append(
         "authority: local MLX research-signal only; exact CPU/CUDA auth still required before score, rank, promotion, or dispatch."
+    )
+    return "\n".join(lines)
+
+
+def _distortion_axis_probe_paths(
+    scan_roots: tuple[Path, ...] | None = None,
+) -> list[Path]:
+    if scan_roots is None:
+        scan_roots = DISTORTION_AXIS_PROBE_SCAN_ROOTS
+    seen: set[Path] = set()
+    paths: list[Path] = []
+    for root in scan_roots:
+        if not root.exists():
+            continue
+        for path in root.glob(DISTORTION_AXIS_PROBE_VERDICT_GLOB):
+            resolved = path.resolve(strict=False)
+            if resolved in seen or not path.is_file():
+                continue
+            seen.add(resolved)
+            paths.append(path)
+    return sorted(
+        paths,
+        key=lambda item: item.stat().st_mtime_ns if item.exists() else 0,
+        reverse=True,
+    )
+
+
+def _distortion_temporal_window_records(
+    payload: dict[str, object],
+) -> list[dict[str, object]]:
+    actual = payload.get("actual_signature")
+    if not isinstance(actual, dict):
+        return []
+    per_window = actual.get("per_window_results")
+    if not isinstance(per_window, dict):
+        return []
+    out: list[dict[str, object]] = []
+    for key, value in per_window.items():
+        if not isinstance(value, dict):
+            continue
+        out.append(
+            {
+                "W": _safe_int(value.get("W") or key),
+                "kl_mean_temporal": _safe_float(value.get("kl_mean_temporal")),
+                "ratio_over_ccc_static_baseline": _safe_float(
+                    value.get("ratio_over_ccc_static_baseline")
+                ),
+                "ratio_over_probe_6_w2": _safe_float(
+                    value.get("ratio_over_probe_6_w2")
+                ),
+                "classes_with_measurable_drift": _safe_int(
+                    value.get("classes_with_measurable_drift")
+                ),
+            }
+        )
+    return sorted(out, key=lambda row: _safe_int(row.get("W")))
+
+
+def _distortion_probe_next_actions(payload: dict[str, object]) -> list[str]:
+    return _unique_strings(
+        [
+            value
+            for key, value in payload.items()
+            if key.startswith("next_action_on_") and isinstance(value, str)
+        ]
+    )
+
+
+def _distortion_axis_probe_row(path: Path) -> dict[str, object]:
+    payload = _load_json_file(path)
+    base = {
+        "kind": "distortion_axis_probe_verdict",
+        "path": _repo_rel(path),
+        "sha256": _sha256_file(path) if path.is_file() else "",
+        "mtime_ns": path.stat().st_mtime_ns if path.is_file() else 0,
+        "promotable": False,
+        **_false_authority_fields(),
+    }
+    if "_error" in payload:
+        return {
+            **base,
+            "status": "ERROR",
+            "blockers": [str(payload["_error"])],
+        }
+    bad_authority = _authority_truthy(payload)
+    if payload.get("promotable") is True:
+        bad_authority.append("promotable")
+    if bad_authority:
+        return {
+            **base,
+            "status": "BLOCKED_AUTHORITY_LEAK",
+            "blockers": [f"truthy_authority:{key}" for key in bad_authority],
+        }
+    actual = payload.get("actual_signature")
+    actual_dict = actual if isinstance(actual, dict) else {}
+    temporal_windows = _distortion_temporal_window_records(payload)
+    segment_min = actual_dict.get(
+        "min_segment_textured_avg_weight",
+        actual_dict.get("min_segment_textured_avg_weight_combined"),
+    )
+    segment_spread = actual_dict.get(
+        "spread_segment_textured_avg_weight",
+        actual_dict.get("spread_segment_textured_avg_weight_combined"),
+    )
+    segment_threshold_broken = (
+        actual_dict.get("any_segment_below_threshold") is True
+        or actual_dict.get("per_segment_min_passed_threshold_lt_0p5") is True
+    )
+    best_temporal = (
+        max(
+            temporal_windows,
+            key=lambda row: _safe_float(row.get("ratio_over_ccc_static_baseline")),
+        )
+        if temporal_windows
+        else {}
+    )
+    return {
+        **base,
+        "status": "ADVISORY_SIGNAL",
+        "probe_id": str(payload.get("probe_id") or ""),
+        "probe_name": str(payload.get("probe_name") or ""),
+        "verdict": str(payload.get("verdict") or ""),
+        "axis_tag": str(payload.get("axis_tag") or ""),
+        "evidence_grade": str(payload.get("evidence_grade") or ""),
+        "lane_id": str(payload.get("lane_id") or ""),
+        "canonical_equation_candidate": str(
+            payload.get("sister_canonical_equation_candidate_for_RATIFY_N")
+            or payload.get("canonical_equation_reference")
+            or ""
+        ),
+        "recommendation": str(payload.get("recommendation") or ""),
+        "next_actions": _distortion_probe_next_actions(payload),
+        "temporal_windows": temporal_windows,
+        "best_temporal_window": best_temporal,
+        "segment_min_textured_avg_weight": (
+            _safe_float(segment_min) if segment_min is not None else None
+        ),
+        "segment_spread_textured_avg_weight": (
+            _safe_float(segment_spread) if segment_spread is not None else None
+        ),
+        "segment_valid_count": _safe_int(actual_dict.get("valid_segment_count")),
+        "segment_threshold_broken": segment_threshold_broken,
+        "wavelet_name": str(actual_dict.get("wavelet_name") or ""),
+        "wavelet_levels": _safe_int(actual_dict.get("wavelet_levels")),
+        "segment_threshold": 0.5,
+        "blockers": [],
+    }
+
+
+def _distortion_axis_probe_summary() -> dict[str, object]:
+    rows = [_distortion_axis_probe_row(path) for path in _distortion_axis_probe_paths()]
+    signal_rows = [
+        row for row in rows if row.get("status") == "ADVISORY_SIGNAL"
+    ]
+    blocked = [
+        row
+        for row in rows
+        if str(row.get("status") or "").startswith(("BLOCKED", "ERROR"))
+    ]
+    temporal_candidates = [
+        {**window, "path": row.get("path"), "probe_id": row.get("probe_id")}
+        for row in signal_rows
+        for window in (
+            row.get("temporal_windows")
+            if isinstance(row.get("temporal_windows"), list)
+            else []
+        )
+        if isinstance(window, dict)
+    ]
+    best_temporal = (
+        max(
+            temporal_candidates,
+            key=lambda row: _safe_float(row.get("ratio_over_ccc_static_baseline")),
+        )
+        if temporal_candidates
+        else {}
+    )
+    segment_candidates = [
+        row
+        for row in signal_rows
+        if isinstance(row.get("segment_min_textured_avg_weight"), int | float)
+    ]
+    best_segment = (
+        min(
+            segment_candidates,
+            key=lambda row: _safe_float(
+                row.get("segment_min_textured_avg_weight"),
+                default=float("inf"),
+            ),
+        )
+        if segment_candidates
+        else {}
+    )
+    verdicts = [str(row.get("verdict") or "") for row in signal_rows]
+    if blocked:
+        status = "BLOCKED"
+        reason = "one or more distortion probe verdicts leak authority or fail loading"
+    elif signal_rows:
+        status = "ADVISORY_SIGNALS"
+        reason = "distortion-axis probe signals are visible as local advisory inputs"
+    else:
+        status = "PENDING"
+        reason = "no distortion-axis probe verdicts found"
+    return {
+        "schema": "pact.distortion_axis_probe_summary.v1",
+        "scan_roots": [_repo_rel(root) for root in DISTORTION_AXIS_PROBE_SCAN_ROOTS],
+        "status": status,
+        "reason": reason,
+        "probe_count": len(rows),
+        "advisory_signal_count": len(signal_rows),
+        "blocked_count": len(blocked),
+        "positive_signal_count": sum(
+            1 for verdict in verdicts if verdict.startswith("POSITIVE_SIGNAL")
+        ),
+        "partial_signal_count": sum("PARTIAL" in verdict for verdict in verdicts),
+        "plateau_signal_count": sum("PLATEAU" in verdict for verdict in verdicts),
+        "threshold_broken_count": sum(
+            row.get("segment_threshold_broken") is True for row in signal_rows
+        ),
+        "best_temporal_context": best_temporal,
+        "best_uniward_segment": best_segment,
+        "latest_probes": rows[:8],
+        "next_actions": _unique_strings(
+            [
+                action
+                for row in signal_rows
+                for action in (
+                    row.get("next_actions")
+                    if isinstance(row.get("next_actions"), list)
+                    else []
+                )
+                if isinstance(action, str)
+            ]
+        )[:8],
+        "promotable": False,
+        **_false_authority_fields(),
+    }
+
+
+def _format_distortion_axis_probe_summary() -> str:
+    payload = _distortion_axis_probe_summary()
+    lines = [
+        f"status: {payload['status']} — {payload['reason']}",
+        f"probes: {payload['probe_count']} "
+        f"advisory={payload['advisory_signal_count']} "
+        f"positive={payload['positive_signal_count']} "
+        f"partial={payload['partial_signal_count']} "
+        f"plateau={payload['plateau_signal_count']} "
+        f"threshold_broken={payload['threshold_broken_count']} "
+        f"blocked={payload['blocked_count']}",
+    ]
+    best_temporal = payload.get("best_temporal_context")
+    if isinstance(best_temporal, dict) and best_temporal:
+        lines.append(
+            "best temporal KL: "
+            f"W={best_temporal.get('W')} "
+            f"ratio={_safe_float(best_temporal.get('ratio_over_ccc_static_baseline')):.2f}x "
+            f"probe={best_temporal.get('probe_id')}"
+        )
+    best_segment = payload.get("best_uniward_segment")
+    if isinstance(best_segment, dict) and best_segment:
+        lines.append(
+            "best UNIWARD segment: "
+            f"min={_safe_float(best_segment.get('segment_min_textured_avg_weight')):.4f} "
+            f"spread={_safe_float(best_segment.get('segment_spread_textured_avg_weight')):.4f} "
+            f"segments={best_segment.get('segment_valid_count')} "
+            f"wavelet={best_segment.get('wavelet_name') or 'n/a'} "
+            f"levels={best_segment.get('wavelet_levels') or 'n/a'} "
+            f"probe={best_segment.get('probe_id')}"
+        )
+    actions = payload.get("next_actions")
+    if isinstance(actions, list) and actions:
+        lines.append("next signals:")
+        for action in actions[:3]:
+            lines.append(f"  - {action}")
+    lines.append(
+        "authority: macOS-CPU advisory only; exact CPU/CUDA auth still required before score, rank, promotion, or dispatch."
+    )
+    return "\n".join(lines)
+
+
+def _dqs1_drop_many_greedy_verdict_paths(
+    scan_roots: tuple[Path, ...] | None = None,
+) -> list[Path]:
+    if scan_roots is None:
+        scan_roots = DQS1_DROP_MANY_GREEDY_VERDICT_SCAN_ROOTS
+    seen: set[Path] = set()
+    paths: list[Path] = []
+    for root in scan_roots:
+        if not root.exists():
+            continue
+        for path in root.glob(DQS1_DROP_MANY_GREEDY_VERDICT_GLOB):
+            resolved = path.resolve(strict=False)
+            if resolved in seen or not path.is_file():
+                continue
+            seen.add(resolved)
+            paths.append(path)
+    return sorted(
+        paths,
+        key=lambda item: item.stat().st_mtime_ns if item.exists() else 0,
+        reverse=True,
+    )
+
+
+def _dqs1_drop_many_greedy_authority_violations(
+    payload: dict[str, object],
+) -> list[str]:
+    bad = _authority_truthy(payload)
+    if payload.get("promotable") is True:
+        bad.append("promotable")
+    provenance = payload.get("canonical_provenance")
+    if isinstance(provenance, dict):
+        bad.extend(
+            f"canonical_provenance.{key}"
+            for key in (
+                "score_claim",
+                "score_claim_valid",
+                "promotion_eligible",
+                "promotable",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched",
+            )
+            if provenance.get(key) is True
+        )
+    return bad
+
+
+def _dqs1_drop_many_greedy_row(path: Path) -> dict[str, object]:
+    payload = _load_json_file(path)
+    base = {
+        "kind": "dqs1_drop_many_greedy_verdict",
+        "path": _repo_rel(path),
+        "sha256": _sha256_file(path) if path.is_file() else "",
+        "mtime_ns": path.stat().st_mtime_ns if path.is_file() else 0,
+        "promotable": False,
+        **_false_authority_fields(),
+    }
+    if "_error" in payload:
+        return {
+            **base,
+            "status": "ERROR",
+            "blockers": [str(payload["_error"])],
+        }
+    schema = str(payload.get("schema") or "")
+    if schema != DQS1_DROP_MANY_GREEDY_VERDICT_SCHEMA:
+        return {
+            **base,
+            "status": "BLOCKED_SCHEMA",
+            "blockers": [f"unexpected_schema:{schema or 'missing'}"],
+        }
+    bad_authority = _dqs1_drop_many_greedy_authority_violations(payload)
+    if bad_authority:
+        return {
+            **base,
+            "status": "BLOCKED_AUTHORITY_LEAK",
+            "blockers": [f"truthy_authority:{key}" for key in bad_authority],
+        }
+    refinement = payload.get("canonical_equation_candidate_refinement")
+    refinement_dict = refinement if isinstance(refinement, dict) else {}
+    field = refinement_dict.get("refinement_field_proposed")
+    field_dict = field if isinstance(field, dict) else {}
+    catalog_row = payload.get("catalog_313_probe_outcomes_row")
+    catalog_dict = catalog_row if isinstance(catalog_row, dict) else {}
+    distribution = payload.get("empirical_drop_one_anchor_distribution")
+    distribution_dict = distribution if isinstance(distribution, dict) else {}
+    return {
+        **base,
+        "status": "ADVISORY_DEFER"
+        if str(payload.get("build_1c_final_verdict") or "").startswith(
+            ("NEGATIVE", "PARTIAL", "INCONCLUSIVE")
+        )
+        else "ADVISORY_SIGNAL",
+        "schema": schema,
+        "lane_id": str(payload.get("lane_id") or ""),
+        "verdict": str(payload.get("build_1c_final_verdict") or ""),
+        "reason": str(payload.get("build_1c_final_verdict_reason") or ""),
+        "k1_best_pair_index": field_dict.get("empirical_k1_best_drop_one_pair_index"),
+        "k1_best_delta_vs_base": field_dict.get(
+            "empirical_k1_best_drop_one_delta_vs_base"
+        ),
+        "n_negative_delta_pairs": _safe_int(
+            distribution_dict.get("n_negative_delta_pairs")
+        ),
+        "n_positive_delta_pairs": _safe_int(
+            distribution_dict.get("n_positive_delta_pairs")
+        ),
+        "catalog_313_verdict": str(catalog_dict.get("verdict") or ""),
+        "catalog_313_status": str(catalog_dict.get("status") or ""),
+        "reactivation_criteria": str(catalog_dict.get("reactivation_criteria") or ""),
+        "operator_routable_next_cascade": [
+            str(item)
+            for item in payload.get("operator_routable_next_cascade", [])
+            if isinstance(item, str)
+        ],
+        "blockers": [],
+    }
+
+
+def _dqs1_drop_many_greedy_summary() -> dict[str, object]:
+    rows = [
+        _dqs1_drop_many_greedy_row(path)
+        for path in _dqs1_drop_many_greedy_verdict_paths()
+    ]
+    advisory = [
+        row
+        for row in rows
+        if str(row.get("status") or "").startswith("ADVISORY")
+    ]
+    blocked = [
+        row
+        for row in rows
+        if str(row.get("status") or "").startswith(("BLOCKED", "ERROR"))
+    ]
+    latest = advisory[0] if advisory else (rows[0] if rows else {})
+    if blocked:
+        status = "BLOCKED"
+        reason = "one or more DQS1 drop-many greedy verdicts leak authority or fail loading"
+    elif advisory:
+        status = str(latest.get("status") or "ADVISORY_SIGNAL")
+        reason = "DQS1 drop-many greedy reducer verdict is visible to operator flows"
+    else:
+        status = "PENDING"
+        reason = "no DQS1 drop-many greedy reducer verdict found"
+    return {
+        "schema": "pact.dqs1_drop_many_greedy_summary.v1",
+        "tool": _repo_rel(DQS1_DROP_MANY_GREEDY_TOOL),
+        "tool_exists": DQS1_DROP_MANY_GREEDY_TOOL.is_file(),
+        "scan_roots": [
+            _repo_rel(root) for root in DQS1_DROP_MANY_GREEDY_VERDICT_SCAN_ROOTS
+        ],
+        "status": status,
+        "reason": reason,
+        "verdict_count": len(rows),
+        "advisory_count": len(advisory),
+        "blocked_count": len(blocked),
+        "latest_verdict": latest,
+        "promotable": False,
+        **_false_authority_fields(),
+    }
+
+
+def _format_dqs1_drop_many_greedy_summary() -> str:
+    payload = _dqs1_drop_many_greedy_summary()
+    lines = [
+        f"status: {payload['status']} — {payload['reason']}",
+        f"tool: {payload['tool']} present={payload['tool_exists']}",
+        (
+            f"verdicts: {payload['verdict_count']} "
+            f"advisory={payload['advisory_count']} blocked={payload['blocked_count']}"
+        ),
+    ]
+    latest = payload.get("latest_verdict")
+    if isinstance(latest, dict) and latest:
+        lines.append(
+            "latest: "
+            f"{latest.get('verdict')} "
+            f"k1_pair={latest.get('k1_best_pair_index')} "
+            f"neg_pairs={latest.get('n_negative_delta_pairs')} "
+            f"pos_pairs={latest.get('n_positive_delta_pairs')}"
+        )
+        reason = str(latest.get("reason") or "")
+        if reason:
+            lines.append(f"reason: {reason}")
+        actions = latest.get("operator_routable_next_cascade")
+        if isinstance(actions, list) and actions:
+            lines.append("next signals:")
+            for action in actions[:3]:
+                lines.append(f"  - {action}")
+    lines.append(
+        "authority: research/planning only; no score, rank, promotion, or exact-dispatch authority."
     )
     return "\n".join(lines)
 
@@ -5498,6 +5988,8 @@ def _dispatch_readiness() -> dict[str, object]:
     byte_shaving_acquisition = _byte_shaving_acquisition_summary()
     frontier_feedback_cycle = _frontier_feedback_cycle_summary()
     pr95_mlx_profiles = _pr95_mlx_control_profile_summary()
+    distortion_probe_signals = _distortion_axis_probe_summary()
+    dqs1_drop_many_greedy = _dqs1_drop_many_greedy_summary()
     return {
         "schema": "pact.operator_dispatch_readiness.v1",
         "phase_1_exact_eval_packets": phase1,
@@ -5628,6 +6120,31 @@ def _dispatch_readiness() -> dict[str, object]:
             "ready_for_exact_eval_dispatch": False,
             "score_claim": False,
         },
+        "phase_6f_distortion_axis_probe_signals": {
+            "status": distortion_probe_signals["status"],
+            "reason": distortion_probe_signals["reason"],
+            "probe_count": distortion_probe_signals["probe_count"],
+            "advisory_signal_count": distortion_probe_signals[
+                "advisory_signal_count"
+            ],
+            "positive_signal_count": distortion_probe_signals[
+                "positive_signal_count"
+            ],
+            "partial_signal_count": distortion_probe_signals["partial_signal_count"],
+            "blocked_count": distortion_probe_signals["blocked_count"],
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+        },
+        "phase_6g_dqs1_drop_many_greedy": {
+            "status": dqs1_drop_many_greedy["status"],
+            "reason": dqs1_drop_many_greedy["reason"],
+            "tool_exists": dqs1_drop_many_greedy["tool_exists"],
+            "verdict_count": dqs1_drop_many_greedy["verdict_count"],
+            "advisory_count": dqs1_drop_many_greedy["advisory_count"],
+            "blocked_count": dqs1_drop_many_greedy["blocked_count"],
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+        },
         "recommendation": (
             "prefer M5 Max parallel coarse-rank ($0) before paid GHA promotion; "
             "reference Phase 6 xray toolkit for diagnosis"
@@ -5683,6 +6200,16 @@ def _format_dispatch_readiness() -> str:
     lines.append(
         "  Phase 6e (PR95 MLX control profiles):       "
         f"{phase6e['status']} — {phase6e['reason']}"
+    )
+    phase6f = readiness["phase_6f_distortion_axis_probe_signals"]
+    lines.append(
+        "  Phase 6f (distortion-axis probe signals):   "
+        f"{phase6f['status']} — {phase6f['reason']}"
+    )
+    phase6g = readiness["phase_6g_dqs1_drop_many_greedy"]
+    lines.append(
+        "  Phase 6g (DQS1 drop-many greedy reducer):   "
+        f"{phase6g['status']} — {phase6g['reason']}"
     )
     phase7 = readiness["phase_7_constrained_coord_search"]
     lines.append(
@@ -5760,6 +6287,8 @@ def main(argv: list[str] | None = None) -> int:
             "byte_shaving_acquisition": _byte_shaving_acquisition_summary(),
             "frontier_feedback_cycle": _frontier_feedback_cycle_summary(),
             "pr95_mlx_control_profiles": _pr95_mlx_control_profile_summary(),
+            "distortion_axis_probe_signals": _distortion_axis_probe_summary(),
+            "dqs1_drop_many_greedy": _dqs1_drop_many_greedy_summary(),
             "l5_v2_frontier_readiness": _l5_v2_frontier_readiness(
                 dispatch_claim_summary=dispatch_claim_summary
             ),
@@ -5908,6 +6437,14 @@ def main(argv: list[str] | None = None) -> int:
     parts.append(_section(
         "Phase 6e — PR95 MLX control profiles",
         _format_pr95_mlx_control_profiles(),
+    ))
+    parts.append(_section(
+        "Phase 6f — Distortion-axis scorer probe signals",
+        _format_distortion_axis_probe_summary(),
+    ))
+    parts.append(_section(
+        "Phase 6g — DQS1 drop-many greedy reducer",
+        _format_dqs1_drop_many_greedy_summary(),
     ))
     parts.append(_section(
         "Phase 7 — Constrained-coord-search status (sister subagent a8522fca)",
