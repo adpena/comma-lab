@@ -112,6 +112,14 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "tac.optimization.optimizer_signal_atoms",
         "build_optimizer_signal_atom_ledger",
     ),
+    "dynamic_sparse_skip_mixture": (
+        "tac.optimization.dynamic_sparse_gate_oracle",
+        "dynamic_sparse_skip_mixture",
+    ),
+    "operation_set_compiler_hint_from_gate_scores": (
+        "tac.optimization.dynamic_sparse_gate_oracle",
+        "operation_set_compiler_hint_from_gate_scores",
+    ),
     "build_local_training_harvest_intelligence": (
         "tac.optimization.local_training_harvest_intelligence",
         "build_local_training_harvest_intelligence",
