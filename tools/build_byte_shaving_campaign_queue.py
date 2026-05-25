@@ -84,6 +84,50 @@ def _write_json(
         raise SystemExit(str(exc)) from exc
 
 
+def _dfl1_parity_followup_summary(
+    queue_payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    requested_count = 0
+    enabled_count = 0
+    blocker_summaries: list[dict[str, Any]] = []
+    experiments = queue_payload.get("experiments")
+    if not isinstance(experiments, list):
+        experiments = []
+    for experiment in experiments:
+        if not isinstance(experiment, Mapping):
+            continue
+        metadata = experiment.get("metadata")
+        if not isinstance(metadata, Mapping):
+            continue
+        if metadata.get("renderer_payload_dfl1_parity_followup_requested") is not True:
+            continue
+        requested_count += 1
+        if metadata.get("renderer_payload_dfl1_parity_followup_enabled") is True:
+            enabled_count += 1
+            continue
+        raw_blockers = metadata.get("renderer_payload_dfl1_parity_followup_blockers")
+        blockers = (
+            [str(item) for item in raw_blockers if str(item).strip()]
+            if isinstance(raw_blockers, list)
+            else []
+        )
+        blocker_summaries.append(
+            {
+                "experiment_id": experiment.get("id"),
+                "work_id": metadata.get("work_id"),
+                "blockers": blockers,
+            }
+        )
+    return {
+        "renderer_payload_dfl1_parity_followup_requested_count": requested_count,
+        "renderer_payload_dfl1_parity_followup_enabled_count": enabled_count,
+        "renderer_payload_dfl1_parity_followup_blocked_count": (
+            requested_count - enabled_count
+        ),
+        "renderer_payload_dfl1_parity_followup_blocker_summaries": blocker_summaries,
+    }
+
+
 def _parse_pair_indices(value: str | None) -> list[int] | None:
     if value is None:
         return None
@@ -577,6 +621,7 @@ def main(argv: list[str] | None = None) -> int:
             "exact_readiness_followup": bool(
                 args.include_materializer_exact_readiness_followup
             ),
+            **_dfl1_parity_followup_summary(materializer_execution_queue),
         }
 
     queue_payload = None

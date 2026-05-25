@@ -42,6 +42,16 @@ def main(argv: list[str] | None = None) -> int:
             "renderer_payload_dfl1 rows before exact-readiness bridging."
         ),
     )
+    parser.add_argument(
+        "--allowed-artifact-root",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Additional non-repo root allowed for explicit sidecar artifacts, "
+            "for example an external SSD workload root used by the scheduler."
+        ),
+    )
     parser.add_argument("--source-queue-out", type=Path, required=True)
     parser.add_argument("--report-out", type=Path, required=True)
     parser.add_argument("--top-k", type=int, default=None)
@@ -150,6 +160,7 @@ def main(argv: list[str] | None = None) -> int:
         renderer_payload_dfl1_inflate_parity_proofs=(
             args.renderer_payload_dfl1_inflate_parity_proof
         ),
+        allowed_artifact_roots=args.allowed_artifact_root,
         require_succeeded_state=not args.allow_unfinished_state,
         top_k=args.top_k,
     )

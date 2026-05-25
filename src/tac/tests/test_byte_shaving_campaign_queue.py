@@ -238,6 +238,10 @@ def _false_authority() -> dict[str, bool]:
     }
 
 
+def _file_list_sha256(*entries: str) -> str:
+    return hashlib.sha256(("\n".join(entries) + "\n").encode("utf-8")).hexdigest()
+
+
 def _pair_drop_plan() -> dict[str, object]:
     surface = {
         "schema": SIGNAL_SURFACE_SCHEMA,
@@ -339,6 +343,35 @@ def _archive_section_entropy_plan() -> dict[str, object]:
                         "operation_id": "recode_pr106_decoder_packed_brotli",
                         "operation_family": "section_entropy_recode",
                         "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+                    }
+                ],
+            },
+        ],
+        **_false_authority(),
+    }
+    return build_byte_shaving_campaign_plan(surface, max_k=1)
+
+
+def _renderer_payload_dfl1_plan() -> dict[str, object]:
+    surface = {
+        "schema": SIGNAL_SURFACE_SCHEMA,
+        "campaign_id": "renderer_payload_dfl1_fixture",
+        "candidate_id": "fixture_seed",
+        "lane_id": "lane_renderer_payload_dfl1_fixture",
+        "combo_beam_width": 4,
+        "max_combo_count": 4,
+        "units": [
+            {
+                "unit_id": "robust_renderer_payload",
+                "unit_kind": "packet_member",
+                "candidate_saved_bytes": 144,
+                "predicted_quality_score_cost": 0.0,
+                "confidence": 0.8,
+                "operations": [
+                    {
+                        "operation_id": "pack_native_renderer_payload",
+                        "operation_family": "native_renderer_payload",
+                        "target_kind": RENDERER_PAYLOAD_DFL1_TARGET_KIND,
                     }
                 ],
             },
@@ -3515,6 +3548,9 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
                 "archive_path": str(archive),
                 "source_runtime_dir": str(runtime),
                 "full_frame_file_list": str(file_list),
+                "expected_full_frame_file_list_sha256": "c" * 64,
+                "expected_full_frame_entry_count": 2,
+                "full_frame_file_list_source": "fixture_full_file_list",
                 "member_names": ["renderer.bin", "masks.mkv", "optimized_poses.pt"],
                 "payload_member_name": "p",
                 "output_archive": str(output),
@@ -3564,13 +3600,19 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
         parity_step["command"][index : index + 2]
         for index in range(len(parity_step["command"]) - 1)
     ]
+    assert ["--expected-full-frame-file-list-sha256", "c" * 64] in [
+        parity_step["command"][index : index + 2]
+        for index in range(len(parity_step["command"]) - 1)
+    ]
+    assert ["--expected-full-frame-entry-count", "2"] in [
+        parity_step["command"][index : index + 2]
+        for index in range(len(parity_step["command"]) - 1)
+    ]
+    assert ["--full-frame-file-list-source", "fixture_full_file_list"] in [
+        parity_step["command"][index : index + 2]
+        for index in range(len(parity_step["command"]) - 1)
+    ]
     assert "--full-frame-file-list-claim" in parity_step["command"]
-    assert parity_step["postconditions"][2] == {
-        "type": "json_equals",
-        "path": proof_path,
-        "key": "full_frame_inflate_output_parity_claim",
-        "equals": True,
-    }
     assert {
         condition["key"]: condition["equals"]
         for condition in parity_step["postconditions"]
@@ -3578,6 +3620,11 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
     } == {
         "schema": "shell_inflate_parity_proof_v2",
         "full_frame_file_list_claim": True,
+        "full_frame_file_list_sha256_match": True,
+        "full_frame_entry_count_match": True,
+        "expected_full_frame_file_list_sha256": "c" * 64,
+        "expected_full_frame_entry_count": 2,
+        "full_frame_file_list_source": "fixture_full_file_list",
         "full_frame_inflate_output_parity_claim": True,
         "output_bytes_match": True,
         "output_sha256_match": True,
@@ -3592,6 +3639,13 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
     assert [
         "--renderer-payload-dfl1-inflate-parity-proof",
         proof_path,
+    ] in [
+        harvest_step["command"][index : index + 2]
+        for index in range(len(harvest_step["command"]) - 1)
+    ]
+    assert [
+        "--allowed-artifact-root",
+        "exact_eval_handoff/renderer_payload_dfl1_shell_parity",
     ] in [
         harvest_step["command"][index : index + 2]
         for index in range(len(harvest_step["command"]) - 1)
@@ -3652,7 +3706,10 @@ def test_materializer_execution_queue_records_missing_dfl1_parity_context(
     assert metadata["renderer_payload_dfl1_parity_followup_requested"] is True
     assert metadata["renderer_payload_dfl1_parity_followup_enabled"] is False
     assert metadata["renderer_payload_dfl1_parity_followup_blockers"] == [
-        "renderer_payload_dfl1_parity_context_missing:file_list_or_entries"
+        "renderer_payload_dfl1_parity_context_missing:file_list_or_entries",
+        "renderer_payload_dfl1_parity_context_missing:expected_full_frame_file_list_sha256",
+        "renderer_payload_dfl1_parity_context_missing:expected_full_frame_entry_count",
+        "renderer_payload_dfl1_parity_context_missing:full_frame_file_list_source",
     ]
 
 
@@ -3686,6 +3743,9 @@ def test_materializer_execution_queue_rejects_dfl1_parity_output_outside_workloa
                 "archive_path": str(archive),
                 "source_runtime_dir": str(runtime),
                 "full_frame_file_list": str(file_list),
+                "expected_full_frame_file_list_sha256": "b" * 64,
+                "expected_full_frame_entry_count": 2,
+                "full_frame_file_list_source": "fixture_full_file_list",
                 "renderer_payload_dfl1_inflate_parity_output_dir": str(outside_parity),
                 "output_archive": str(output),
                 "output_manifest": str(out_manifest),
@@ -4567,6 +4627,204 @@ def test_byte_shaving_campaign_queue_cli_generates_materializer_contexts_from_ar
     assert row["tool"] == "tools/run_family_agnostic_materializer.py"
     assert "--section-manifest" in row["command"]
     assert str(section_manifest) in row["command"]
+
+
+def test_byte_shaving_campaign_queue_cli_wires_generated_dfl1_parity_followup(
+    tmp_path: Path,
+) -> None:
+    plan_path = tmp_path / "plan.json"
+    artifact_map_path = tmp_path / "artifact_map.json"
+    contexts_path = tmp_path / "generated_contexts.json"
+    materialization = tmp_path / "materialization.json"
+    portfolio = tmp_path / "portfolio.json"
+    summary = tmp_path / "action_summary.json"
+    work_queue = tmp_path / "materializer_work_queue.json"
+    execution_queue = tmp_path / "materializer_execution_queue.json"
+    output_root = tmp_path / "materializer_outputs"
+    parity_dir = output_root / "dfl1_parity"
+    runtime_dir = tmp_path / "source_runtime"
+    candidate_runtime_dir = tmp_path / "candidate_runtime"
+    plan_path.write_text(json.dumps(_renderer_payload_dfl1_plan()), encoding="utf-8")
+    artifact_map_path.write_text(
+        json.dumps(
+            {
+                "schema": "final_byte_artifact_map.fixture.v1",
+                "artifacts": {
+                    RENDERER_PAYLOAD_DFL1_TARGET_KIND: {
+                        "archive_path": str(tmp_path / "source.zip"),
+                        "packet_member_manifest": str(tmp_path / "members.json"),
+                        "renderer_payload_dfl1_source_runtime_dir": str(runtime_dir),
+                        "renderer_payload_dfl1_candidate_runtime_dir": str(
+                            candidate_runtime_dir
+                        ),
+                        "file_list_entries": ["0.raw", "1.raw"],
+                        "expected_full_frame_file_list_sha256": "a" * 64,
+                        "expected_full_frame_entry_count": 2,
+                        "full_frame_file_list_source": "fixture_full_file_list",
+                        "renderer_payload_dfl1_inflate_parity_output_dir": str(
+                            parity_dir
+                        ),
+                        "member_names": [
+                            "renderer.bin",
+                            "masks.mkv",
+                            "optimized_poses.pt",
+                        ],
+                        "payload_member_name": "p",
+                        "allow_size_regression": True,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "rank_or_kill_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--plan",
+            str(plan_path),
+            "--materializer-artifact-map",
+            str(artifact_map_path),
+            "--materializer-contexts-out",
+            str(contexts_path),
+            "--materializer-context-default-output-root",
+            str(output_root),
+            "--materialization-out",
+            str(materialization),
+            "--portfolio-out",
+            str(portfolio),
+            "--action-summary-out",
+            str(summary),
+            "--materializer-work-queue-out",
+            str(work_queue),
+            "--materializer-execution-queue-out",
+            str(execution_queue),
+            "--include-materializer-exact-readiness-followup",
+            "--repo-root",
+            str(tmp_path),
+            "--candidate-limit",
+            "4",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    stdout = json.loads(result.stdout)
+    assert stdout["materializer_contexts_generated"] is True
+    assert stdout["materializer_contexts_blocked_count"] == 0
+    execution_summary = stdout["materializer_execution_queue"]
+    assert execution_summary["experiment_count"] == 1
+    assert (
+        execution_summary["renderer_payload_dfl1_parity_followup_requested_count"]
+        == 1
+    )
+    assert (
+        execution_summary["renderer_payload_dfl1_parity_followup_enabled_count"]
+        == 1
+    )
+    assert (
+        execution_summary["renderer_payload_dfl1_parity_followup_blocked_count"]
+        == 0
+    )
+    assert (
+        execution_summary["renderer_payload_dfl1_parity_followup_blocker_summaries"]
+        == []
+    )
+    contexts = json.loads(contexts_path.read_text(encoding="utf-8"))
+    context = contexts["rows"][0]["context"]
+    assert context["renderer_payload_dfl1_source_runtime_dir"] == str(runtime_dir)
+    assert context["renderer_payload_dfl1_candidate_runtime_dir"] == str(
+        candidate_runtime_dir
+    )
+    assert context["renderer_payload_dfl1_full_frame_file_list_entries"] == [
+        "0.raw",
+        "1.raw",
+    ]
+    assert (
+        context["renderer_payload_dfl1_expected_full_frame_file_list_sha256"]
+        == "a" * 64
+    )
+    assert context["renderer_payload_dfl1_expected_full_frame_entry_count"] == 2
+    assert (
+        context["renderer_payload_dfl1_full_frame_file_list_source"]
+        == "fixture_full_file_list"
+    )
+    work = json.loads(work_queue.read_text(encoding="utf-8"))
+    row = work["rows"][0]
+    assert row["renderer_payload_dfl1_parity_context"] == {
+        "source_archive": str(tmp_path / "source.zip"),
+        "candidate_archive": context["output_archive"],
+        "source_runtime_dir": str(runtime_dir),
+        "candidate_runtime_dir": str(candidate_runtime_dir),
+        "output_dir": str(parity_dir),
+        "expected_full_frame_file_list_sha256": "a" * 64,
+        "full_frame_file_list_source": "fixture_full_file_list",
+        "expected_full_frame_entry_count": 2,
+        "file_list_entries": ["0.raw", "1.raw"],
+    }
+    loaded_execution_queue = load_queue_definition(execution_queue)
+    steps = loaded_execution_queue["experiments"][0]["steps"]
+    assert [step["id"] for step in steps] == [
+        MATERIALIZER_EXECUTION_STEP_ID,
+        MATERIALIZER_DFL1_PARITY_STEP_ID,
+        MATERIALIZER_HARVEST_STEP_ID,
+        MATERIALIZER_DISPATCH_PLAN_STEP_ID,
+    ]
+    parity_step = steps[1]
+    assert ["--file-list-entry", "0.raw"] in [
+        parity_step["command"][index : index + 2]
+        for index in range(len(parity_step["command"]) - 1)
+    ]
+    assert [
+        "--output-dir",
+        parity_dir.relative_to(tmp_path).as_posix(),
+    ] in [
+        parity_step["command"][index : index + 2]
+        for index in range(len(parity_step["command"]) - 1)
+    ]
+    assert ["--expected-full-frame-file-list-sha256", "a" * 64] in [
+        parity_step["command"][index : index + 2]
+        for index in range(len(parity_step["command"]) - 1)
+    ]
+    assert ["--expected-full-frame-entry-count", "2"] in [
+        parity_step["command"][index : index + 2]
+        for index in range(len(parity_step["command"]) - 1)
+    ]
+    assert ["--full-frame-file-list-source", "fixture_full_file_list"] in [
+        parity_step["command"][index : index + 2]
+        for index in range(len(parity_step["command"]) - 1)
+    ]
+    harvest_step = steps[2]
+    assert [
+        "--renderer-payload-dfl1-inflate-parity-proof",
+        f"{parity_dir.relative_to(tmp_path).as_posix()}/shell_inflate_parity.json",
+    ] in [
+        harvest_step["command"][index : index + 2]
+        for index in range(len(harvest_step["command"]) - 1)
+    ]
+    assert [
+        "--allowed-artifact-root",
+        parity_dir.relative_to(tmp_path).as_posix(),
+    ] in [
+        harvest_step["command"][index : index + 2]
+        for index in range(len(harvest_step["command"]) - 1)
+    ]
+    metadata = loaded_execution_queue["experiments"][0]["metadata"]
+    assert metadata["renderer_payload_dfl1_parity_followup_requested"] is True
+    assert metadata["renderer_payload_dfl1_parity_followup_enabled"] is True
+    assert metadata["renderer_payload_dfl1_parity_followup_blockers"] == []
+    assert metadata["score_claim"] is False
+    assert metadata["ready_for_exact_eval_dispatch"] is False
 
 
 def test_inverse_action_compiler_hint_runs_family_agnostic_materializer(

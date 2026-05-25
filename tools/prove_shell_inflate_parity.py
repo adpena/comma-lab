@@ -59,6 +59,11 @@ class ShellInflateParityProof:
     file_list_entries: tuple[str, ...]
     file_list_entry_count: int
     file_list_sha256: str
+    full_frame_file_list_source: str | None
+    expected_full_frame_file_list_sha256: str | None
+    expected_full_frame_entry_count: int | None
+    full_frame_file_list_sha256_match: bool | None
+    full_frame_entry_count_match: bool | None
     output_count: int
     file_list_entry: str | None
     output_basename: str | None
@@ -100,6 +105,13 @@ def _sha256_file(path: Path) -> str:
 
 def _sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
+
+
+def _canonical_sha256(value: str | None) -> str | None:
+    text = str(value or "").strip().lower()
+    if len(text) == 64 and all(char in "0123456789abcdef" for char in text):
+        return text
+    return None
 
 
 def _canonical_json_sha256(value: Any) -> str:
@@ -280,6 +292,9 @@ def build_proof(
     file_list_entries: tuple[str, ...] = (),
     file_list_entry: str | None = None,
     full_frame_file_list_claim: bool = False,
+    expected_full_frame_file_list_sha256: str | None = None,
+    expected_full_frame_entry_count: int | None = None,
+    full_frame_file_list_source: str | None = None,
 ) -> ShellInflateParityProof:
     _prepare_output_dir(output_dir)
     if not file_list_entries:
@@ -288,6 +303,21 @@ def build_proof(
         file_list_entries = _ordered_file_list_entries(list(file_list_entries))
     file_list = output_dir / "file_list.txt"
     file_list.write_text("\n".join(file_list_entries) + "\n", encoding="utf-8")
+    file_list_sha256 = _sha256_file(file_list)
+    expected_file_list_sha256 = _canonical_sha256(
+        expected_full_frame_file_list_sha256
+    )
+    file_list_source = str(full_frame_file_list_source or "").strip() or None
+    file_list_sha256_match = (
+        None
+        if expected_file_list_sha256 is None
+        else file_list_sha256 == expected_file_list_sha256
+    )
+    entry_count_match = (
+        None
+        if expected_full_frame_entry_count is None
+        else len(file_list_entries) == expected_full_frame_entry_count
+    )
     output_basename = (
         _expected_output_basename(file_list_entries[0])
         if len(file_list_entries) == 1
@@ -341,6 +371,19 @@ def build_proof(
         blockers: list[str] = []
         if not full_frame_file_list_claim:
             blockers.append("full_frame_file_list_claim_missing")
+        if full_frame_file_list_claim:
+            if expected_file_list_sha256 is None:
+                blockers.append("expected_full_frame_file_list_sha256_missing")
+            elif not file_list_sha256_match:
+                blockers.append("expected_full_frame_file_list_sha256_mismatch")
+            if expected_full_frame_entry_count is None:
+                blockers.append("expected_full_frame_entry_count_missing")
+            elif expected_full_frame_entry_count < 1:
+                blockers.append("expected_full_frame_entry_count_invalid")
+            elif not entry_count_match:
+                blockers.append("expected_full_frame_entry_count_mismatch")
+            if file_list_source is None:
+                blockers.append("full_frame_file_list_source_missing")
         if not (
             output_bytes_match
             and output_sha256_match
@@ -354,7 +397,12 @@ def build_proof(
             generated_at_utc=_utc_iso(),
             file_list_entries=file_list_entries,
             file_list_entry_count=len(file_list_entries),
-            file_list_sha256=_sha256_file(file_list),
+            file_list_sha256=file_list_sha256,
+            full_frame_file_list_source=file_list_source,
+            expected_full_frame_file_list_sha256=expected_file_list_sha256,
+            expected_full_frame_entry_count=expected_full_frame_entry_count,
+            full_frame_file_list_sha256_match=file_list_sha256_match,
+            full_frame_entry_count_match=entry_count_match,
             output_count=len(file_list_entries),
             file_list_entry=file_list_entries[0] if len(file_list_entries) == 1 else None,
             output_basename=output_basename,
@@ -384,6 +432,11 @@ def render_markdown(proof: ShellInflateParityProof) -> str:
             f"- Generated UTC: {proof.generated_at_utc}",
             f"- File list entries: {proof.file_list_entry_count}",
             f"- File list SHA-256: `{proof.file_list_sha256}`",
+            f"- Full-frame file-list source: `{proof.full_frame_file_list_source}`",
+            f"- Expected full-frame file-list SHA-256: `{proof.expected_full_frame_file_list_sha256}`",
+            f"- Expected full-frame entry count: {proof.expected_full_frame_entry_count}",
+            f"- Full-frame file-list SHA-256 match: {str(proof.full_frame_file_list_sha256_match).lower()}",
+            f"- Full-frame entry count match: {str(proof.full_frame_entry_count_match).lower()}",
             f"- Full-frame file-list claim: {str(proof.full_frame_file_list_claim).lower()}",
             f"- Full-frame inflate parity claim: {str(proof.full_frame_inflate_output_parity_claim).lower()}",
             f"- Output count: {proof.output_count}",
@@ -420,6 +473,9 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     file_list_group.add_argument("--file-list", type=Path)
     file_list_group.add_argument("--file-list-entry", action="append")
     parser.add_argument("--full-frame-file-list-claim", action="store_true")
+    parser.add_argument("--expected-full-frame-file-list-sha256")
+    parser.add_argument("--expected-full-frame-entry-count", type=int)
+    parser.add_argument("--full-frame-file-list-source")
     parser.add_argument("--python-bin", default=sys.executable)
     parser.add_argument("--keep-scratch", action="store_true")
     parser.add_argument(
@@ -446,6 +502,11 @@ def main(argv: list[str] | None = None) -> int:
         python_bin=args.python_bin,
         keep_scratch=args.keep_scratch,
         full_frame_file_list_claim=args.full_frame_file_list_claim,
+        expected_full_frame_file_list_sha256=(
+            args.expected_full_frame_file_list_sha256
+        ),
+        expected_full_frame_entry_count=args.expected_full_frame_entry_count,
+        full_frame_file_list_source=args.full_frame_file_list_source,
     )
     payload = json.dumps(proof.to_dict(), indent=2, sort_keys=True) + "\n"
     (args.output_dir / "shell_inflate_parity.json").write_text(payload, encoding="utf-8")

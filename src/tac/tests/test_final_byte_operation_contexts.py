@@ -617,6 +617,15 @@ def test_final_byte_context_compiler_covers_renderer_payload_dfl1(
             RENDERER_PAYLOAD_DFL1_TARGET_KIND: {
                 "archive_path": str(tmp_path / "packet_source.zip"),
                 "packet_member_manifest": str(tmp_path / "members.json"),
+                "renderer_payload_dfl1_source_runtime_dir": str(tmp_path / "source_runtime"),
+                "candidate_runtime_dir": str(tmp_path / "candidate_runtime"),
+                "file_list_entries": ["0.raw", "1.raw"],
+                "expected_full_frame_file_list_sha256": "d" * 64,
+                "expected_full_frame_entry_count": 2,
+                "full_frame_file_list_source": "fixture_full_file_list",
+                "renderer_payload_dfl1_inflate_parity_output_dir": str(
+                    tmp_path / "parity_proof"
+                ),
                 "member_names": [
                     "renderer.bin",
                     "masks.mkv",
@@ -651,6 +660,31 @@ def test_final_byte_context_compiler_covers_renderer_payload_dfl1(
         "optimized_poses.pt",
     ]
     assert context["payload_member_name"] == "p"
+    assert context["renderer_payload_dfl1_source_runtime_dir"] == str(
+        tmp_path / "source_runtime"
+    )
+    assert context["renderer_payload_dfl1_inflate_runtime_dir"] == str(
+        tmp_path / "source_runtime"
+    )
+    assert context["renderer_payload_dfl1_candidate_runtime_dir"] == str(
+        tmp_path / "candidate_runtime"
+    )
+    assert context["renderer_payload_dfl1_full_frame_file_list_entries"] == [
+        "0.raw",
+        "1.raw",
+    ]
+    assert (
+        context["renderer_payload_dfl1_expected_full_frame_file_list_sha256"]
+        == "d" * 64
+    )
+    assert context["renderer_payload_dfl1_expected_full_frame_entry_count"] == 2
+    assert (
+        context["renderer_payload_dfl1_full_frame_file_list_source"]
+        == "fixture_full_file_list"
+    )
+    assert context["renderer_payload_dfl1_inflate_parity_output_dir"] == str(
+        tmp_path / "parity_proof"
+    )
     resolved = materializer_contexts_from_payload(payload)
     work_queue = build_materializer_work_queue(
         _renderer_payload_dfl1_backlog(),
@@ -668,8 +702,67 @@ def test_final_byte_context_compiler_covers_renderer_payload_dfl1(
         row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
     ]
     assert "--runtime-consumption-proof-out" in row["command"]
+    assert row["renderer_payload_dfl1_parity_context"] == {
+        "source_archive": str(tmp_path / "packet_source.zip"),
+        "candidate_archive": context["output_archive"],
+        "source_runtime_dir": str(tmp_path / "source_runtime"),
+        "candidate_runtime_dir": str(tmp_path / "candidate_runtime"),
+        "output_dir": str(tmp_path / "parity_proof"),
+        "expected_full_frame_file_list_sha256": "d" * 64,
+        "full_frame_file_list_source": "fixture_full_file_list",
+        "expected_full_frame_entry_count": 2,
+        "file_list_entries": ["0.raw", "1.raw"],
+    }
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_final_byte_context_compiler_blocks_dfl1_missing_parity_identity(
+    tmp_path: Path,
+) -> None:
+    artifact_map = {
+        "schema": "final_byte_artifact_map.fixture.v1",
+        "artifacts": {
+            RENDERER_PAYLOAD_DFL1_TARGET_KIND: {
+                "archive_path": str(tmp_path / "packet_source.zip"),
+                "packet_member_manifest": str(tmp_path / "members.json"),
+                "member_names": [
+                    "renderer.bin",
+                    "masks.mkv",
+                    "optimized_poses.pt",
+                ],
+                "payload_member_name": "p",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    payload = build_final_byte_operation_contexts(
+        _renderer_payload_dfl1_backlog(),
+        artifact_map=artifact_map,
+        repo_root=tmp_path,
+        default_output_root=tmp_path / "out",
+    )
+
+    assert payload["row_count"] == 1
+    assert payload["blocked_context_count"] == 1
+    assert payload["rows"][0]["context_blockers"] == [
+        "materializer_context_missing:renderer_payload_dfl1_source_runtime_dir",
+        "materializer_context_missing:renderer_payload_dfl1_full_frame_file_list_or_entries",
+        "materializer_context_missing:renderer_payload_dfl1_expected_full_frame_file_list_sha256",
+        "materializer_context_missing:renderer_payload_dfl1_expected_full_frame_entry_count",
+        "materializer_context_missing:renderer_payload_dfl1_full_frame_file_list_source",
+    ]
+    context = payload["rows"][0]["context"]
+    assert context["score_claim"] is False
+    assert context["ready_for_exact_eval_dispatch"] is False
 
 
 def test_final_byte_context_compiler_uses_inline_operation_params(

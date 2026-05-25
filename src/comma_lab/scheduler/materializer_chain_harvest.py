@@ -98,6 +98,7 @@ def harvest_materializer_chain_manifests(
     chain_manifest_paths: Sequence[str | Path] = (),
     chain_roots: Sequence[str | Path] = (),
     renderer_payload_dfl1_inflate_parity_proofs: Sequence[str | Path] = (),
+    allowed_artifact_roots: Sequence[str | Path] = (),
     require_succeeded_state: bool = True,
     top_k: int | None = None,
 ) -> dict[str, Any]:
@@ -155,6 +156,7 @@ def harvest_materializer_chain_manifests(
         source_queue,
         renderer_payload_dfl1_inflate_parity_proofs,
         repo_root=repo,
+        allowed_artifact_roots=allowed_artifact_roots,
     )
     accepted_rows = [row for row in inspected_rows if row["accepted"] is True]
     rejected_rows = [row for row in inspected_rows if row["accepted"] is not True]
@@ -395,8 +397,12 @@ def _apply_renderer_payload_dfl1_sidecar_parity_proofs(
     proof_refs: Sequence[str | Path],
     *,
     repo_root: Path,
+    allowed_artifact_roots: Sequence[str | Path] = (),
 ) -> dict[str, Any]:
     proofs = [_resolve_path(ref, repo_root=repo_root) for ref in proof_refs]
+    allowed_roots = [
+        _resolve_path(root, repo_root=repo_root) for root in allowed_artifact_roots
+    ]
     rows = [
         row
         for row in source_queue.get("top_k") or []
@@ -427,6 +433,7 @@ def _apply_renderer_payload_dfl1_sidecar_parity_proofs(
                 row,
                 proof_path=proof_path,
                 repo_root=repo_root,
+                allowed_artifact_roots=allowed_roots,
                 required_source_archive_sha256=source_sha,
                 required_candidate_archive_sha256=candidate_sha,
             )
@@ -452,6 +459,7 @@ def _renderer_payload_dfl1_sidecar_parity_overlay(
     *,
     proof_path: Path,
     repo_root: Path,
+    allowed_artifact_roots: Sequence[Path] = (),
     required_source_archive_sha256: str,
     required_candidate_archive_sha256: str,
 ) -> dict[str, Any]:
@@ -461,8 +469,13 @@ def _renderer_payload_dfl1_sidecar_parity_overlay(
         blockers.append(f"renderer_payload_dfl1_parity_proof_missing:{rel_proof}")
     if proof_path.is_symlink():
         blockers.append(f"renderer_payload_dfl1_parity_proof_is_symlink:{rel_proof}")
-    if not _path_is_repo_confined(proof_path, repo_root):
-        blockers.append(f"renderer_payload_dfl1_parity_proof_outside_repo:{rel_proof}")
+    if not _path_is_repo_confined(proof_path, repo_root) and not _path_is_under_any_root(
+        proof_path,
+        allowed_artifact_roots,
+    ):
+        blockers.append(
+            f"renderer_payload_dfl1_parity_proof_outside_allowed_roots:{rel_proof}"
+        )
     if not required_source_archive_sha256 or not required_candidate_archive_sha256:
         blockers.append("renderer_payload_dfl1_parity_archive_sha_missing")
     if blockers:
@@ -563,6 +576,17 @@ def _path_is_repo_confined(path: Path, repo_root: Path) -> bool:
     except ValueError:
         return False
     return True
+
+
+def _path_is_under_any_root(path: Path, roots: Sequence[Path]) -> bool:
+    resolved_path = path.resolve(strict=False)
+    for root in roots:
+        try:
+            resolved_path.relative_to(root.resolve(strict=False))
+        except ValueError:
+            continue
+        return True
+    return False
 
 
 def _text_values(value: Any) -> list[str]:

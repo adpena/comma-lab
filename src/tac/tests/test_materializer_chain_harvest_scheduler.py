@@ -752,6 +752,12 @@ def test_shell_inflate_parity_proof_supports_full_frame_multi_entry_scope(
             "--file-list",
             str(file_list),
             "--full-frame-file-list-claim",
+            "--expected-full-frame-file-list-sha256",
+            hashlib.sha256(file_list.read_bytes()).hexdigest(),
+            "--expected-full-frame-entry-count",
+            "2",
+            "--full-frame-file-list-source",
+            "fixture_full_file_list",
             "--output-dir",
             str(out_dir),
         ],
@@ -764,6 +770,13 @@ def test_shell_inflate_parity_proof_supports_full_frame_multi_entry_scope(
     proof = json.loads((out_dir / "shell_inflate_parity.json").read_text())
     assert proof["schema"] == "shell_inflate_parity_proof_v2"
     assert proof["file_list_entry_count"] == 2
+    assert proof["expected_full_frame_file_list_sha256"] == hashlib.sha256(
+        file_list.read_bytes()
+    ).hexdigest()
+    assert proof["expected_full_frame_entry_count"] == 2
+    assert proof["full_frame_file_list_source"] == "fixture_full_file_list"
+    assert proof["full_frame_file_list_sha256_match"] is True
+    assert proof["full_frame_entry_count_match"] is True
     assert proof["output_count"] == 2
     assert proof["output_basename"] is None
     assert proof["output_bytes_match"] is True
@@ -824,6 +837,64 @@ def test_shell_inflate_parity_proof_fails_without_full_frame_claim(
     assert proof["full_frame_inflate_output_parity_claim"] is False
     assert proof["blockers"] == ["full_frame_file_list_claim_missing"]
     assert not (out_dir / "scratch").exists()
+
+
+def test_shell_inflate_parity_proof_rejects_partial_full_frame_claim(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    source = repo / "source.zip"
+    candidate = repo / "candidate.zip"
+    runtime = _write_simple_shell_runtime(repo / "runtime")
+    full_file_list = repo / "full_file_list.txt"
+    partial_file_list = repo / "partial_file_list.txt"
+    out_dir = repo / "parity"
+    full_file_list.write_text("0.mkv\n1.mkv\n", encoding="utf-8")
+    partial_file_list.write_text("0.mkv\n", encoding="utf-8")
+    with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+    with zipfile.ZipFile(candidate, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SHELL_PARITY_TOOL),
+            "--left-archive",
+            str(source),
+            "--left-submission-dir",
+            str(runtime),
+            "--right-archive",
+            str(candidate),
+            "--right-submission-dir",
+            str(runtime),
+            "--file-list",
+            str(partial_file_list),
+            "--full-frame-file-list-claim",
+            "--expected-full-frame-file-list-sha256",
+            hashlib.sha256(full_file_list.read_bytes()).hexdigest(),
+            "--expected-full-frame-entry-count",
+            "2",
+            "--full-frame-file-list-source",
+            "fixture_full_file_list",
+            "--output-dir",
+            str(out_dir),
+        ],
+        check=False,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    assert proc.returncode == 1
+    proof = json.loads((out_dir / "shell_inflate_parity.json").read_text())
+    assert proof["output_sha256_match"] is True
+    assert proof["full_frame_file_list_sha256_match"] is False
+    assert proof["full_frame_entry_count_match"] is False
+    assert proof["full_frame_inflate_output_parity_claim"] is False
+    assert "expected_full_frame_file_list_sha256_mismatch" in proof["blockers"]
+    assert "expected_full_frame_entry_count_mismatch" in proof["blockers"]
 
 
 def test_shell_inflate_parity_proof_refuses_nonempty_output_dir(
@@ -966,6 +1037,12 @@ def test_harvest_attaches_dfl1_shell_parity_sidecar(
             "--file-list",
             str(file_list),
             "--full-frame-file-list-claim",
+            "--expected-full-frame-file-list-sha256",
+            hashlib.sha256(file_list.read_bytes()).hexdigest(),
+            "--expected-full-frame-entry-count",
+            "1",
+            "--full-frame-file-list-source",
+            "fixture_full_file_list",
             "--output-dir",
             str(parity_dir),
         ],
@@ -997,6 +1074,39 @@ def test_harvest_attaches_dfl1_shell_parity_sidecar(
     ).hexdigest()
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+
+    external_parity_dir = tmp_path / "external_workload" / "parity"
+    external_parity_dir.mkdir(parents=True)
+    external_proof = external_parity_dir / "shell_inflate_parity.json"
+    external_proof.write_bytes((parity_dir / "shell_inflate_parity.json").read_bytes())
+    external_blocked = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[manifest_path],
+        renderer_payload_dfl1_inflate_parity_proofs=[external_proof],
+    )
+    external_blocked_report = external_blocked["report"][
+        "renderer_payload_dfl1_sidecar_parity"
+    ]
+    assert external_blocked_report["applied_candidate_count"] == 0
+    assert any(
+        str(blocker).startswith(
+            "renderer_payload_dfl1_parity_proof_outside_allowed_roots:"
+        )
+        for blocker in external_blocked_report["rows"][0]["blockers"]
+    )
+    external_allowed = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[manifest_path],
+        renderer_payload_dfl1_inflate_parity_proofs=[external_proof],
+        allowed_artifact_roots=[external_parity_dir.parent],
+    )
+    external_allowed_report = external_allowed["report"][
+        "renderer_payload_dfl1_sidecar_parity"
+    ]
+    assert external_allowed_report["applied_candidate_count"] == 1
+    assert external_allowed["source_queue"]["top_k"][0][
+        "renderer_payload_dfl1_full_frame_inflate_parity_satisfied"
+    ] is True
 
     symlink_proof = repo / "parity_link.json"
     symlink_proof.symlink_to(parity_dir / "shell_inflate_parity.json")
@@ -1055,6 +1165,12 @@ def test_dfl1_materializer_consumes_full_frame_shell_parity_proof(
             "--file-list",
             str(file_list),
             "--full-frame-file-list-claim",
+            "--expected-full-frame-file-list-sha256",
+            hashlib.sha256(file_list.read_bytes()).hexdigest(),
+            "--expected-full-frame-entry-count",
+            "2",
+            "--full-frame-file-list-source",
+            "fixture_full_file_list",
             "--output-dir",
             str(parity_dir),
         ],

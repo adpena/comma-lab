@@ -2087,6 +2087,23 @@ def verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
         blockers.append("shell_inflate_parity_full_frame_file_list_claim_missing")
     if proof.get("full_frame_inflate_output_parity_claim") is not True:
         blockers.append("shell_inflate_full_frame_output_parity_claim_missing")
+    full_frame_source = _clean_str(proof.get("full_frame_file_list_source"))
+    expected_file_list_sha = _clean_str(
+        proof.get("expected_full_frame_file_list_sha256")
+    )
+    if not full_frame_source:
+        blockers.append("shell_inflate_parity_full_frame_file_list_source_missing")
+    if expected_file_list_sha is None or len(expected_file_list_sha) != 64 or any(
+        char not in "0123456789abcdef" for char in expected_file_list_sha
+    ):
+        blockers.append("shell_inflate_parity_expected_file_list_sha256_missing")
+    if proof.get("full_frame_file_list_sha256_match") is not True:
+        blockers.append("shell_inflate_parity_file_list_sha256_match_not_true")
+    expected_entry_count = proof.get("expected_full_frame_entry_count")
+    if not isinstance(expected_entry_count, int) or expected_entry_count < 1:
+        blockers.append("shell_inflate_parity_expected_entry_count_invalid")
+    if proof.get("full_frame_entry_count_match") is not True:
+        blockers.append("shell_inflate_parity_entry_count_match_not_true")
     for key in (
         "output_bytes_match",
         "output_sha256_match",
@@ -2136,6 +2153,9 @@ def verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
         "full_frame_inflate_parity_satisfied": not blockers,
         "file_list_entry_count": file_list_entry_count,
         "file_list_sha256": _clean_str(proof.get("file_list_sha256")),
+        "full_frame_file_list_source": full_frame_source,
+        "expected_full_frame_file_list_sha256": expected_file_list_sha,
+        "expected_full_frame_entry_count": expected_entry_count,
         "source_archive_sha256": required_source_archive_sha256,
         "candidate_archive_sha256": required_candidate_archive_sha256,
         "source_side_label": source_side.get("label") if source_side else None,

@@ -1756,6 +1756,37 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--packet-member-min-free-bytes", type=int, default=None)
     parser.add_argument("--packet-member-allow-size-regression", action="store_true")
     parser.add_argument("--packet-member-allow-overwrite", action="store_true")
+    parser.add_argument(
+        "--renderer-payload-dfl1-source-runtime-dir",
+        type=Path,
+        default=None,
+    )
+    parser.add_argument(
+        "--renderer-payload-dfl1-candidate-runtime-dir",
+        type=Path,
+        default=None,
+    )
+    parser.add_argument(
+        "--renderer-payload-dfl1-full-frame-file-list",
+        type=Path,
+        default=None,
+    )
+    parser.add_argument(
+        "--renderer-payload-dfl1-full-frame-file-list-entry",
+        action="append",
+        default=[],
+    )
+    parser.add_argument("--renderer-payload-dfl1-expected-full-frame-file-list-sha256")
+    parser.add_argument(
+        "--renderer-payload-dfl1-expected-full-frame-entry-count",
+        type=int,
+    )
+    parser.add_argument("--renderer-payload-dfl1-full-frame-file-list-source")
+    parser.add_argument(
+        "--renderer-payload-dfl1-inflate-parity-output-dir",
+        type=Path,
+        default=None,
+    )
     parser.add_argument("--tensor-factorize-archive-path", type=Path, default=None)
     parser.add_argument("--tensor-factorize-manifest", type=Path, default=None)
     parser.add_argument("--tensor-factorize-contract", type=Path, default=None)
@@ -2422,6 +2453,7 @@ def _packet_member_auto_artifact_map_requested(args: argparse.Namespace) -> bool
             args.packet_member_min_free_bytes is not None,
             args.packet_member_allow_size_regression,
             args.packet_member_allow_overwrite,
+            _renderer_payload_dfl1_parity_artifact_args_used(args),
         )
     )
 
@@ -2468,6 +2500,15 @@ def _path_value(path: Path | None) -> str | None:
     return _display_path(_resolve(path))
 
 
+def _canonical_sha256_arg(value: str | None, *, flag: str) -> str | None:
+    text = str(value or "").strip().lower()
+    if not text:
+        return None
+    if len(text) != 64 or any(char not in "0123456789abcdef" for char in text):
+        raise SystemExit(f"{flag} must be a 64-character hexadecimal SHA-256")
+    return text
+
+
 def _add_path_context_value(context: dict[str, Any], key: str, path: Path | None) -> None:
     value = _path_value(path)
     if value is not None:
@@ -2494,6 +2535,32 @@ def _add_string_list_context_value(
     parsed = [str(value).strip() for value in values if str(value).strip()]
     if parsed:
         context[key] = parsed
+
+
+def _renderer_payload_dfl1_parity_artifact_args_used(
+    args: argparse.Namespace,
+) -> bool:
+    return any(
+        (
+            args.renderer_payload_dfl1_source_runtime_dir is not None,
+            args.renderer_payload_dfl1_candidate_runtime_dir is not None,
+            args.renderer_payload_dfl1_full_frame_file_list is not None,
+            bool(args.renderer_payload_dfl1_full_frame_file_list_entry),
+            bool(
+                str(
+                    args.renderer_payload_dfl1_expected_full_frame_file_list_sha256
+                    or ""
+                ).strip()
+            ),
+            args.renderer_payload_dfl1_expected_full_frame_entry_count is not None,
+            bool(
+                str(
+                    args.renderer_payload_dfl1_full_frame_file_list_source or ""
+                ).strip()
+            ),
+            args.renderer_payload_dfl1_inflate_parity_output_dir is not None,
+        )
+    )
 
 
 def _build_inverse_scorer_artifact_context(
@@ -2625,6 +2692,15 @@ def _build_archive_section_artifact_context(args: argparse.Namespace) -> dict[st
 
 
 def _build_packet_member_artifact_context(args: argparse.Namespace) -> dict[str, Any]:
+    dfl1_parity_args_used = _renderer_payload_dfl1_parity_artifact_args_used(args)
+    if (
+        dfl1_parity_args_used
+        and args.packet_member_target_kind != RENDERER_PAYLOAD_DFL1_TARGET_KIND
+    ):
+        raise SystemExit(
+            "renderer-payload DFL1 parity flags require "
+            f"--packet-member-target-kind {RENDERER_PAYLOAD_DFL1_TARGET_KIND}"
+        )
     archive_path = _path_value(args.packet_member_archive_path)
     if archive_path is None:
         raise SystemExit(
@@ -2674,6 +2750,53 @@ def _build_packet_member_artifact_context(args: argparse.Namespace) -> dict[str,
         context["allow_size_regression"] = True
     if args.packet_member_allow_overwrite:
         context["allow_overwrite"] = True
+    if args.packet_member_target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND:
+        _add_path_context_value(
+            context,
+            "renderer_payload_dfl1_source_runtime_dir",
+            args.renderer_payload_dfl1_source_runtime_dir,
+        )
+        _add_path_context_value(
+            context,
+            "renderer_payload_dfl1_candidate_runtime_dir",
+            args.renderer_payload_dfl1_candidate_runtime_dir,
+        )
+        _add_path_context_value(
+            context,
+            "renderer_payload_dfl1_full_frame_file_list",
+            args.renderer_payload_dfl1_full_frame_file_list,
+        )
+        _add_string_list_context_value(
+            context,
+            "renderer_payload_dfl1_full_frame_file_list_entries",
+            args.renderer_payload_dfl1_full_frame_file_list_entry,
+        )
+        expected_sha = _canonical_sha256_arg(
+            args.renderer_payload_dfl1_expected_full_frame_file_list_sha256,
+            flag="--renderer-payload-dfl1-expected-full-frame-file-list-sha256",
+        )
+        if expected_sha:
+            context["renderer_payload_dfl1_expected_full_frame_file_list_sha256"] = (
+                expected_sha
+            )
+        _add_positive_int_context_value(
+            context,
+            "renderer_payload_dfl1_expected_full_frame_entry_count",
+            args.renderer_payload_dfl1_expected_full_frame_entry_count,
+            flag="--renderer-payload-dfl1-expected-full-frame-entry-count",
+        )
+        file_list_source = str(
+            args.renderer_payload_dfl1_full_frame_file_list_source or ""
+        ).strip()
+        if file_list_source:
+            context["renderer_payload_dfl1_full_frame_file_list_source"] = (
+                file_list_source
+            )
+        _add_path_context_value(
+            context,
+            "renderer_payload_dfl1_inflate_parity_output_dir",
+            args.renderer_payload_dfl1_inflate_parity_output_dir,
+        )
     return context
 
 

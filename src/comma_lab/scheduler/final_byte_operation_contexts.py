@@ -75,6 +75,26 @@ def _int_mapping(value: Any) -> dict[str, int]:
     return out
 
 
+def _positive_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _canonical_sha256(value: Any) -> str | None:
+    text = _text(value)
+    if text is None:
+        return None
+    lowered = text.lower()
+    if len(lowered) == 64 and all(char in "0123456789abcdef" for char in lowered):
+        return lowered
+    return None
+
+
 def _text(value: Any) -> str | None:
     if isinstance(value, Path):
         return value.as_posix()
@@ -386,17 +406,139 @@ def _packet_member_context_row(
         row.get("operation_family") == "member_merge"
         and row.get("target_kind") == PACKET_MEMBER_MERGE_TARGET_KIND
     )
+    is_renderer_payload_dfl1 = (
+        row.get("operation_family") == "native_renderer_payload"
+        and row.get("target_kind") == RENDERER_PAYLOAD_DFL1_TARGET_KIND
+    )
     source_runtime = _first_text(
         hints,
         (
+            "renderer_payload_dfl1_source_runtime_dir",
+            "renderer_payload_dfl1_inflate_runtime_dir",
             "packet_member_merge_source_runtime_dir",
             "source_runtime_dir",
             "inflate_runtime_dir",
         ),
     )
     if source_runtime is not None:
-        context["packet_member_merge_source_runtime_dir"] = source_runtime
         context["source_runtime_dir"] = source_runtime
+        if is_member_merge:
+            context["packet_member_merge_source_runtime_dir"] = source_runtime
+        if is_renderer_payload_dfl1:
+            context["renderer_payload_dfl1_source_runtime_dir"] = source_runtime
+            context["renderer_payload_dfl1_inflate_runtime_dir"] = source_runtime
+            context["inflate_runtime_dir"] = source_runtime
+    if is_renderer_payload_dfl1:
+        candidate_runtime = _first_text(
+            hints,
+            (
+                "renderer_payload_dfl1_candidate_runtime_dir",
+                "candidate_runtime_dir",
+            ),
+        )
+        if candidate_runtime is not None:
+            context["renderer_payload_dfl1_candidate_runtime_dir"] = candidate_runtime
+            context["candidate_runtime_dir"] = candidate_runtime
+        file_list_key, file_list = _first_text_with_key(
+            hints,
+            (
+                "renderer_payload_dfl1_full_frame_file_list",
+                "full_frame_file_list",
+                "inflate_file_list",
+                "file_list",
+            ),
+        )
+        if file_list is not None:
+            context["renderer_payload_dfl1_full_frame_file_list"] = file_list
+            context["full_frame_file_list"] = file_list
+            if file_list_key not in (
+                None,
+                "renderer_payload_dfl1_full_frame_file_list",
+                "full_frame_file_list",
+            ):
+                context[str(file_list_key)] = file_list
+        file_list_entries = ordered_unique(
+            [
+                *_string_list(
+                    hints.get("renderer_payload_dfl1_full_frame_file_list_entries")
+                ),
+                *_string_list(hints.get("full_frame_file_list_entries")),
+                *_string_list(hints.get("file_list_entries")),
+                *_string_list(hints.get("file_list_entry")),
+            ]
+        )
+        if file_list_entries:
+            context["renderer_payload_dfl1_full_frame_file_list_entries"] = file_list_entries
+            context["full_frame_file_list_entries"] = file_list_entries
+        parity_output_dir = _first_text(
+            hints,
+            (
+                "renderer_payload_dfl1_inflate_parity_output_dir",
+                "full_frame_inflate_parity_output_dir",
+                "inflate_parity_output_dir",
+            ),
+        )
+        if parity_output_dir is not None:
+            context["renderer_payload_dfl1_inflate_parity_output_dir"] = parity_output_dir
+            context["full_frame_inflate_parity_output_dir"] = parity_output_dir
+        expected_file_list_sha = _canonical_sha256(
+            _first_text(
+                hints,
+                (
+                    "renderer_payload_dfl1_expected_full_frame_file_list_sha256",
+                    "expected_full_frame_file_list_sha256",
+                ),
+            )
+        )
+        if expected_file_list_sha is not None:
+            context["renderer_payload_dfl1_expected_full_frame_file_list_sha256"] = (
+                expected_file_list_sha
+            )
+            context["expected_full_frame_file_list_sha256"] = expected_file_list_sha
+        expected_entry_count = _positive_int(
+            hints.get("renderer_payload_dfl1_expected_full_frame_entry_count")
+        )
+        if expected_entry_count is None:
+            expected_entry_count = _positive_int(
+                hints.get("expected_full_frame_entry_count")
+            )
+        if expected_entry_count is not None:
+            context["renderer_payload_dfl1_expected_full_frame_entry_count"] = (
+                expected_entry_count
+            )
+            context["expected_full_frame_entry_count"] = expected_entry_count
+        file_list_source = _first_text(
+            hints,
+            (
+                "renderer_payload_dfl1_full_frame_file_list_source",
+                "full_frame_file_list_source",
+            ),
+        )
+        if file_list_source is not None:
+            context["renderer_payload_dfl1_full_frame_file_list_source"] = (
+                file_list_source
+            )
+            context["full_frame_file_list_source"] = file_list_source
+        if source_runtime is None:
+            blockers.append(
+                "materializer_context_missing:renderer_payload_dfl1_source_runtime_dir"
+            )
+        if file_list is None and not file_list_entries:
+            blockers.append(
+                "materializer_context_missing:renderer_payload_dfl1_full_frame_file_list_or_entries"
+            )
+        if expected_file_list_sha is None:
+            blockers.append(
+                "materializer_context_missing:renderer_payload_dfl1_expected_full_frame_file_list_sha256"
+            )
+        if expected_entry_count is None:
+            blockers.append(
+                "materializer_context_missing:renderer_payload_dfl1_expected_full_frame_entry_count"
+            )
+        if file_list_source is None:
+            blockers.append(
+                "materializer_context_missing:renderer_payload_dfl1_full_frame_file_list_source"
+            )
     if is_member_merge and merge_contract is None:
         blockers.append("materializer_context_missing:merge_contract")
     if is_member_merge and source_runtime is None:

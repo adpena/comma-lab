@@ -1108,6 +1108,27 @@ def _renderer_payload_dfl1_parity_context(
             "inflate_parity_output_dir",
         ),
     )
+    expected_file_list_sha = _context_string_any(
+        context,
+        (
+            "renderer_payload_dfl1_expected_full_frame_file_list_sha256",
+            "expected_full_frame_file_list_sha256",
+        ),
+    )
+    expected_entry_count = _finite_int(
+        context.get("renderer_payload_dfl1_expected_full_frame_entry_count")
+    )
+    if expected_entry_count is None:
+        expected_entry_count = _finite_int(
+            context.get("expected_full_frame_entry_count")
+        )
+    file_list_source = _context_string_any(
+        context,
+        (
+            "renderer_payload_dfl1_full_frame_file_list_source",
+            "full_frame_file_list_source",
+        ),
+    )
     archive_path = _path_context_value(context, "archive_path")
     output_archive = _path_context_value(context, "output_archive")
     out: dict[str, Any] = {}
@@ -1118,9 +1139,13 @@ def _renderer_payload_dfl1_parity_context(
         ("candidate_runtime_dir", candidate_runtime or source_runtime),
         ("file_list", file_list),
         ("output_dir", output_dir),
+        ("expected_full_frame_file_list_sha256", expected_file_list_sha),
+        ("full_frame_file_list_source", file_list_source),
     ):
         if value is not None:
             out[key] = value
+    if expected_entry_count is not None:
+        out["expected_full_frame_entry_count"] = expected_entry_count
     if file_list_entries:
         out["file_list_entries"] = ordered_unique(file_list_entries)
     return out
@@ -1148,6 +1173,27 @@ def _renderer_payload_dfl1_parity_followup_blockers(
     if file_list is None and not file_list_entries:
         blockers.append(
             "renderer_payload_dfl1_parity_context_missing:file_list_or_entries"
+        )
+    expected_file_list_sha = _context_string_any(
+        context,
+        ("expected_full_frame_file_list_sha256",),
+    )
+    if (
+        expected_file_list_sha is None
+        or len(expected_file_list_sha) != 64
+        or any(char not in "0123456789abcdef" for char in expected_file_list_sha)
+    ):
+        blockers.append(
+            "renderer_payload_dfl1_parity_context_missing:expected_full_frame_file_list_sha256"
+        )
+    expected_entry_count = _finite_int(context.get("expected_full_frame_entry_count"))
+    if expected_entry_count is None or expected_entry_count < 1:
+        blockers.append(
+            "renderer_payload_dfl1_parity_context_missing:expected_full_frame_entry_count"
+        )
+    if _context_string_any(context, ("full_frame_file_list_source",)) is None:
+        blockers.append(
+            "renderer_payload_dfl1_parity_context_missing:full_frame_file_list_source"
         )
     return ordered_unique(blockers)
 
@@ -2759,6 +2805,8 @@ def _materializer_exact_readiness_followup_steps(
             [
                 "--renderer-payload-dfl1-inflate-parity-proof",
                 _repo_rel(dfl1_parity_proof_path, repo_root),
+                "--allowed-artifact-root",
+                _repo_rel(dfl1_parity_proof_path.parent, repo_root),
             ]
         )
     if require_ready:
@@ -2886,12 +2934,21 @@ def _renderer_payload_dfl1_parity_followup_step(
     candidate_runtime = _context_string_any(context, ("candidate_runtime_dir",))
     file_list = _context_string_any(context, ("file_list",))
     file_list_entries = _string_list_context_value(context, "file_list_entries")
+    expected_file_list_sha = _context_string_any(
+        context,
+        ("expected_full_frame_file_list_sha256",),
+    )
+    expected_entry_count = _finite_int(context.get("expected_full_frame_entry_count"))
+    file_list_source = _context_string_any(context, ("full_frame_file_list_source",))
     if (
         source_archive is None
         or candidate_archive is None
         or source_runtime is None
         or candidate_runtime is None
         or (file_list is None and not file_list_entries)
+        or expected_file_list_sha is None
+        or expected_entry_count is None
+        or file_list_source is None
     ):
         return None
     output_dir = _context_string_any(context, ("output_dir",))
@@ -2913,6 +2970,12 @@ def _renderer_payload_dfl1_parity_followup_step(
         "--right-submission-dir",
         candidate_runtime,
         "--full-frame-file-list-claim",
+        "--expected-full-frame-file-list-sha256",
+        expected_file_list_sha,
+        "--expected-full-frame-entry-count",
+        str(expected_entry_count),
+        "--full-frame-file-list-source",
+        file_list_source,
         "--output-dir",
         _repo_rel_no_resolve(parity_dir, repo_root),
     ]
@@ -2943,6 +3006,36 @@ def _renderer_payload_dfl1_parity_followup_step(
                 "path": _repo_rel_no_resolve(proof_path, repo_root),
                 "key": "full_frame_file_list_claim",
                 "equals": True,
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "full_frame_file_list_sha256_match",
+                "equals": True,
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "full_frame_entry_count_match",
+                "equals": True,
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "expected_full_frame_file_list_sha256",
+                "equals": expected_file_list_sha,
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "expected_full_frame_entry_count",
+                "equals": expected_entry_count,
+            },
+            {
+                "type": "json_equals",
+                "path": _repo_rel_no_resolve(proof_path, repo_root),
+                "key": "full_frame_file_list_source",
+                "equals": file_list_source,
             },
             {
                 "type": "json_equals",
