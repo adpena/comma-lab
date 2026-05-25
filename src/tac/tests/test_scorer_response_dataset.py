@@ -349,6 +349,16 @@ def _mlx_production_contract_payload(*, passed: bool = True) -> dict:
                 "n_pairs_actual": 1,
                 "archive_zip_sha256": "c" * 64,
                 "axis_tag": EVIDENCE_TAG_MLX,
+                "operator_routable_per_verdict": (
+                    "run mitigation ladder" if not passed else "keep local bridge"
+                ),
+                "stages": [
+                    {
+                        "stage_name": "stage_5_contest_score_aggregation",
+                        "metric": "aggregate_contest_score_drift_due_to_mlx_vs_pytorch_framework",
+                        "max_abs": 7.4e-5 if passed else 0.02,
+                    }
+                ],
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -978,6 +988,80 @@ def test_next_probe_plan_routes_missing_downstream_drift_to_gate() -> None:
     assert plan["probes"][0]["probe_id"] == "ll_mlx_downstream_scorer_drift_required"
     assert plan["probes"][0]["class"] == "downstream_scorer_drift_gate"
     assert plan["effective_mlx_spend_triage_gate"]["status"] == "blocked"
+
+
+def test_next_probe_plan_routes_failed_downstream_drift_to_mitigation_ladder() -> None:
+    false_authority = {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    normalized_gain = 1.0e-6
+    contract = _mlx_production_contract_payload()
+    contract["passed"] = False
+    contract["advisory_passed"] = False
+    contract["verdict"] = "FAIL_MLX_SCORER_PRODUCTION_CONTRACT"
+    contract["blockers"] = [
+        "downstream_scorer_drift_verdict_not_below_precision",
+        "downstream_scorer_drift_units_exceed_threshold:0.02>0.001",
+    ]
+    contract["numerical_mitigation_summary"]["downstream_scorer_drift"][
+        "aggregate_verdict"
+    ] = "ABOVE_SCORER_PRECISION"
+    contract["numerical_mitigation_summary"]["downstream_scorer_drift"][
+        "aggregate_contest_score_drift_units"
+    ] = 0.02
+    plan = build_next_probe_plan(
+        {
+            "schema": "scorer_response_dataset.v1",
+            "summary": {"row_count": 1},
+            "rows": [
+                {
+                    "schema": "scorer_response_row.v1",
+                    "row_id": "mlx-row-1",
+                    "family": "mlx_scorer_response",
+                    "delta_vs_baseline_score": 1.0e-6,
+                    "scorer_delta_vs_baseline": 1.0e-6,
+                    "observed_scorer_gain_vs_baseline": normalized_gain,
+                    "added_archive_bytes": 0,
+                    "full_video_denominator": 600,
+                    "normalized_full_video_scorer_gain_vs_baseline": normalized_gain,
+                    "projected_full_video_delta_vs_baseline_score": -normalized_gain,
+                    "break_even_added_bytes_from_normalized_full_video_gain": (
+                        normalized_gain / RATE_SCORE_PER_BYTE
+                    ),
+                    "normalized_full_video_byte_budget_margin_vs_break_even": (
+                        normalized_gain / RATE_SCORE_PER_BYTE
+                    ),
+                    "byte_budget_margin_vs_break_even": None,
+                    "archive_sha256": "a" * 64,
+                    "source_inflated_outputs_aggregate_sha256": "e" * 64,
+                    "source_batch_pairs": 1,
+                    "source_n_samples": 600,
+                    "source_pair_window": [0, 600],
+                    **false_authority,
+                }
+            ],
+        },
+        mlx_torch_parity_sweep=_mlx_parity_sweep_payload(passed=True),
+        mlx_score_calibration=_mlx_score_calibration_payload(),
+        mlx_production_contract=contract,
+    )
+
+    assert plan["mlx_production_contract_gate"]["status"] == "blocked"
+    assert (
+        plan["probes"][0]["probe_id"]
+        == "ll_mlx_downstream_scorer_drift_mitigation_replan"
+    )
+    assert plan["probes"][0]["class"] == "numerical_mitigation_gate"
+    assert "fixed_fp64_conv2d_accumulation" in plan["probes"][0]["mitigation_ladder"]
+    assert (
+        plan["probes"][0]["downstream_scorer_drift_summary"]["aggregate_verdict"]
+        == "ABOVE_SCORER_PRECISION"
+    )
 
 
 def test_next_probe_plan_excludes_mlx_rows_missing_normalized_objective() -> None:

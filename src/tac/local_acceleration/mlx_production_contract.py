@@ -1297,6 +1297,8 @@ def _downstream_scorer_drift_summary(
         "archive_zip_sha256": manifest.get("archive_zip_sha256"),
         "posenet_sha256": _downstream_component_sha256(manifest, "posenet_sha256"),
         "segnet_sha256": _downstream_component_sha256(manifest, "segnet_sha256"),
+        "stages": _downstream_stage_summaries(manifest),
+        "operator_routable_per_verdict": manifest.get("operator_routable_per_verdict"),
         "axis_tag": manifest.get("axis_tag"),
         "score_claim": manifest.get("score_claim"),
         "promotion_eligible": manifest.get("promotion_eligible"),
@@ -1314,6 +1316,31 @@ def _downstream_component_sha256(manifest: dict[str, Any], key: str) -> Any:
     if isinstance(components, dict):
         return components.get(key)
     return None
+
+
+def _downstream_stage_summaries(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    stages = manifest.get("stages")
+    if not isinstance(stages, list):
+        return []
+    summaries: list[dict[str, Any]] = []
+    for stage in stages:
+        if not isinstance(stage, dict):
+            continue
+        summaries.append(
+            {
+                key: stage.get(key)
+                for key in (
+                    "stage_name",
+                    "metric",
+                    "max_abs",
+                    "mean_abs",
+                    "rms",
+                    "extra",
+                )
+                if key in stage
+            }
+        )
+    return summaries
 
 
 def _check_profile_stability_manifest(

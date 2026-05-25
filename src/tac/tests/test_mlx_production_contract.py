@@ -84,6 +84,9 @@ def test_mlx_production_contract_accepts_cpu_local_acceleration_signal() -> None
         ]
         == "BELOW_SCORER_PRECISION"
     )
+    assert manifest["numerical_mitigation_summary"]["downstream_scorer_drift"][
+        "stages"
+    ][0]["stage_name"] == "stage_5_contest_score_aggregation"
 
 
 def test_mlx_production_contract_rejects_failed_conv2d_accumulation_probe() -> None:
@@ -183,6 +186,42 @@ def test_mlx_production_contract_rejects_failed_downstream_scorer_drift() -> Non
         blocker.startswith("downstream_scorer_drift_units_exceed_threshold")
         for blocker in manifest["blockers"]
     )
+
+
+def test_mlx_production_contract_preserves_downstream_failure_routing() -> None:
+    drift = _downstream_scorer_drift(
+        aggregate_verdict="ABOVE_SCORER_PRECISION",
+        drift_units=0.02,
+    )
+    drift["operator_routable_per_verdict"] = (
+        "run kahan/fp64/MLX determinism/cudnn mitigation ladder"
+    )
+    drift["stages"] = [
+        {
+            "stage_name": "stage_5_contest_score_aggregation",
+            "metric": "aggregate_contest_score_drift_due_to_mlx_vs_pytorch_framework",
+            "max_abs": 0.02,
+            "mean_abs": 0.02,
+            "rms": 0.02,
+            "extra": {"pose_contest_delta_units": 0.02},
+        }
+    ]
+    manifest = build_mlx_scorer_production_contract_manifest(
+        _response_payload(),
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(),
+        reference_torch_parity=_torch_parity(side="reference"),
+        profile_stability=_profile_stability(),
+        batch_invariance=_batch_invariance(),
+        downstream_scorer_drift=drift,
+    )
+
+    summary = manifest["numerical_mitigation_summary"]["downstream_scorer_drift"]
+    assert summary["operator_routable_per_verdict"] == (
+        "run kahan/fp64/MLX determinism/cudnn mitigation ladder"
+    )
+    assert summary["stages"][0]["stage_name"] == "stage_5_contest_score_aggregation"
+    assert summary["stages"][0]["extra"]["pose_contest_delta_units"] == 0.02
 
 
 def test_mlx_production_contract_rejects_unbound_downstream_scorer_drift() -> None:
@@ -1418,6 +1457,17 @@ def _downstream_scorer_drift(
             "posenet_sha256": posenet_sha256,
             "segnet_sha256": segnet_sha256,
         },
+        "stages": [
+            {
+                "stage_name": "stage_5_contest_score_aggregation",
+                "metric": "aggregate_contest_score_drift_due_to_mlx_vs_pytorch_framework",
+                "max_abs": drift_units,
+                "mean_abs": drift_units,
+                "rms": drift_units,
+                "extra": {"verdict_per_stage": aggregate_verdict},
+            }
+        ],
+        "operator_routable_per_verdict": "unit-test-only",
         "evidence_grade": EVIDENCE_GRADE_MLX,
         "evidence_tag": EVIDENCE_TAG_MLX,
         "axis_tag": EVIDENCE_TAG_MLX,

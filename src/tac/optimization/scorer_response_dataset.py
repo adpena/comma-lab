@@ -66,6 +66,10 @@ MLX_CONV2D_ACCUMULATION_GATE_BLOCKER = (
 MLX_DOWNSTREAM_SCORER_DRIFT_GATE_BLOCKER = (
     "mlx_production_contract_required_gate_downstream_scorer_drift_not_true"
 )
+MLX_DOWNSTREAM_SCORER_DRIFT_FAILURE_BLOCKER_PREFIXES = (
+    "downstream_scorer_drift_verdict_not_below_precision",
+    "downstream_scorer_drift_units_exceed_threshold",
+)
 DECODER_Q_SURFACE_SIGN_CALIBRATION_SCHEMA = "decoder_q_surface_sign_calibration_labels.v1"
 SOURCE_IDENTITY_REFRESH_SCHEMA = "scorer_response_source_identity_refresh.v1"
 MLX_PARENT_PRODUCTION_CONTRACT_PLAN_SCHEMA = (
@@ -2682,6 +2686,17 @@ def _canonical_json(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"))
 
 
+def _has_downstream_scorer_drift_failure(blockers: Iterable[Any]) -> bool:
+    for blocker in blockers:
+        text = str(blocker)
+        if any(
+            text.startswith(prefix)
+            for prefix in MLX_DOWNSTREAM_SCORER_DRIFT_FAILURE_BLOCKER_PREFIXES
+        ):
+            return True
+    return False
+
+
 def _mlx_parent_contract_group_key(row: dict[str, Any]) -> tuple[Any, ...] | None:
     batch_pairs = _as_int(row.get("source_batch_pairs"))
     candidate_cache = row.get("source_candidate_cache_array_sha256")
@@ -4412,6 +4427,10 @@ def build_next_probe_plan(
                 }
             )
         elif not mlx_production_contract_gate["mlx_spend_triage_allowed"]:
+            production_blockers = {
+                str(blocker)
+                for blocker in mlx_production_contract_gate.get("blockers", [])
+            }
             prohibitions.append(
                 {
                     "rule": "do_not_use_mlx_rows_for_exact_eval_spend_triage_after_failed_production_contract",
@@ -4424,10 +4443,7 @@ def build_next_probe_plan(
                     "input_rows": mlx_rows,
                 }
             )
-            if MLX_CONV2D_ACCUMULATION_GATE_BLOCKER in {
-                str(blocker)
-                for blocker in mlx_production_contract_gate.get("blockers", [])
-            }:
+            if MLX_CONV2D_ACCUMULATION_GATE_BLOCKER in production_blockers:
                 for probe in probes:
                     probe["priority"] = int(probe["priority"]) + 1
                 probes.insert(
@@ -4452,10 +4468,7 @@ def build_next_probe_plan(
                         ),
                     },
                 )
-            if MLX_DOWNSTREAM_SCORER_DRIFT_GATE_BLOCKER in {
-                str(blocker)
-                for blocker in mlx_production_contract_gate.get("blockers", [])
-            }:
+            if MLX_DOWNSTREAM_SCORER_DRIFT_GATE_BLOCKER in production_blockers:
                 for probe in probes:
                     probe["priority"] = int(probe["priority"]) + 1
                 probes.insert(
@@ -4477,6 +4490,53 @@ def build_next_probe_plan(
                             "contest_uint8 mode, rebuild the production contract "
                             "with --require-downstream-scorer-drift, and keep "
                             "score_claim=false and exact-eval-before-promotion."
+                        ),
+                    },
+                )
+            if _has_downstream_scorer_drift_failure(production_blockers):
+                downstream_summary = (
+                    mlx_production_contract_gate.get("summary", {})
+                    .get("numerical_mitigation_summary", {})
+                    .get("downstream_scorer_drift")
+                    if isinstance(mlx_production_contract_gate.get("summary"), dict)
+                    and isinstance(
+                        mlx_production_contract_gate.get("summary", {}).get(
+                            "numerical_mitigation_summary"
+                        ),
+                        dict,
+                    )
+                    else None
+                )
+                for probe in probes:
+                    probe["priority"] = int(probe["priority"]) + 1
+                probes.insert(
+                    0,
+                    {
+                        "probe_id": "ll_mlx_downstream_scorer_drift_mitigation_replan",
+                        "priority": 1,
+                        "class": "numerical_mitigation_gate",
+                        "rationale": (
+                            "The downstream scorer-drift gate is present but "
+                            "fails precision, so the next probe must test the "
+                            "known numerical mitigation ladder rather than "
+                            "leaving the failed drift signal as a generic "
+                            "blocked contract."
+                        ),
+                        "input_rows": mlx_rows,
+                        "mlx_production_contract_gate": mlx_production_contract_gate,
+                        "downstream_scorer_drift_summary": downstream_summary,
+                        "mitigation_ladder": [
+                            "kahan_fp32_conv2d_accumulation",
+                            "fixed_fp64_conv2d_accumulation",
+                            "mlx_runtime_determinism_contract",
+                            "cudnn_reference_conv2d_comparison",
+                        ],
+                        "acceptance_gate": (
+                            "Run the Conv2d accumulation probe over Kahan and "
+                            "fp64 modes plus the MLX determinism contract; if "
+                            "drift remains above threshold, prepare the cuDNN "
+                            "reference Conv2d dispatch/measurement before MLX "
+                            "rows can drive spend triage."
                         ),
                     },
                 )
@@ -4570,14 +4630,19 @@ def build_next_probe_plan(
             )
         elif not (
             isinstance(mlx_production_contract_gate, dict)
-            and {
-                MLX_CONV2D_ACCUMULATION_GATE_BLOCKER,
-                MLX_DOWNSTREAM_SCORER_DRIFT_GATE_BLOCKER,
-            }
-            & {
-                str(blocker)
-                for blocker in mlx_production_contract_gate.get("blockers", [])
-            }
+            and (
+                {
+                    MLX_CONV2D_ACCUMULATION_GATE_BLOCKER,
+                    MLX_DOWNSTREAM_SCORER_DRIFT_GATE_BLOCKER,
+                }
+                & {
+                    str(blocker)
+                    for blocker in mlx_production_contract_gate.get("blockers", [])
+                }
+                or _has_downstream_scorer_drift_failure(
+                    mlx_production_contract_gate.get("blockers", [])
+                )
+            )
         ):
             for probe in probes:
                 probe["priority"] = int(probe["priority"]) + 1
