@@ -76,8 +76,13 @@ from tac.substrates.hinton_distilled_scorer_surrogate import (  # noqa: E402
     DEFAULT_SEGNET_CLASSES,
     HintonMlxCustomLossFnConfig,
     MockTeacherLogitsProvider,
+    build_real_segnet_teacher_cache,
     make_hinton_custom_loss_fn,
 )
+
+TEACHER_PROVIDER_MOCK = "mock"
+TEACHER_PROVIDER_REAL_SEGNET = "real_segnet"
+VALID_TEACHER_PROVIDERS = (TEACHER_PROVIDER_MOCK, TEACHER_PROVIDER_REAL_SEGNET)
 
 SMOKE_CURRICULUM_DEFAULT = (
     StageHyperparameters(
@@ -433,7 +438,37 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=int,
         help=(
             "Spatial downsample factor for the canonical mock teacher "
-            "(default 4 = matches SegNet stride-2 stem aggregation)."
+            "(default 4 = matches SegNet stride-2 stem aggregation). "
+            "IGNORED when --teacher-provider=real_segnet (real SegNet "
+            "outputs at canonical 384x512 = downsample factor 1)."
+        ),
+    )
+    parser.add_argument(
+        "--teacher-provider",
+        choices=VALID_TEACHER_PROVIDERS,
+        default=TEACHER_PROVIDER_MOCK,
+        help=(
+            "Teacher logits source. 'mock' uses the deterministic cosine "
+            "projection (the canonical $0 smoke surface; the previous "
+            "100ep smoke at commit e3b8c0d8d used this). 'real_segnet' "
+            "pre-computes real upstream-PyTorch SegNet logits via "
+            "tac.scorer.load_default_scorers on every video frame ONCE "
+            "at setup time then indexes the cache per-batch via MLX "
+            "integer indexing (O(1) lookup per step). The real_segnet "
+            "path is the REAL-TEACHER REFIRE per the HINTON-MLX-BUNDLE "
+            "mandate; it falsifies whether the mock-teacher convergence "
+            "translates to the contest SegNet teacher."
+        ),
+    )
+    parser.add_argument(
+        "--teacher-cache-device",
+        default="cpu",
+        choices=("cpu",),
+        help=(
+            "PyTorch device for the real-SegNet teacher cache build. "
+            "Only 'cpu' is permitted per CLAUDE.md 'MPS auth eval is "
+            "NOISE' non-negotiable (MPS forwards through SegNet produce "
+            "2x distortion drift)."
         ),
     )
     parser.add_argument(
@@ -491,14 +526,26 @@ def main(argv: list[str] | None = None) -> int:
         operator_run_label=args.operator_run_label,
     )
 
+    # Per the HINTON-MLX-BUNDLE 2026-05-25 REAL-TEACHER REFIRE mandate:
+    # when --teacher-provider=real_segnet the student-side projection MUST
+    # match the real SegNet output spatial shape (B, 384, 512, 5) so the
+    # KL term is well-defined. The mock provider with downsample_factor=1
+    # is the canonical student-side path; real-SegNet teacher logits are
+    # supplied via the RealSegNetTeacherLogitsCache (built post-setup).
+    student_downsample = (
+        1 if args.teacher_provider == TEACHER_PROVIDER_REAL_SEGNET
+        else args.spatial_downsample_factor
+    )
     hinton_config = HintonMlxCustomLossFnConfig(
         distillation_weight=args.distillation_weight,
         temperature=args.distillation_temperature,
         student_head_out_channels=args.num_classes,
         teacher_provider=MockTeacherLogitsProvider(
             num_classes=args.num_classes,
-            spatial_downsample_factor=args.spatial_downsample_factor,
+            spatial_downsample_factor=student_downsample,
         ),
+        # real_teacher_cache is wired AFTER pipeline.setup() below, where
+        # the frame buffer becomes available.
     )
 
     source_sha = None
@@ -519,6 +566,8 @@ def main(argv: list[str] | None = None) -> int:
         "distillation_weight": args.distillation_weight,
         "num_classes": args.num_classes,
         "spatial_downsample_factor": args.spatial_downsample_factor,
+        "teacher_provider": args.teacher_provider,
+        "teacher_cache_device": args.teacher_cache_device,
         "latent_dim": config.latent_dim,
         "base_channels": config.base_channels,
         "eval_size": list(config.eval_size),
@@ -576,6 +625,33 @@ def main(argv: list[str] | None = None) -> int:
     setup_elapsed = time.time() - setup_t0
     if source_sha is None:
         source_sha = pipeline._source_video_sha256  # type: ignore[attr-defined]
+
+    # REAL-TEACHER REFIRE: build the real-SegNet teacher cache from the
+    # in-memory frame buffer (canonical Slot 1 pair iterator stores
+    # uint8 frames at (T, H, W, 3) per upstream/videos/0.mkv decode).
+    # This is the critical mock-vs-real falsification surface: the
+    # convergence verdict on REAL SegNet teacher logits is the load-
+    # bearing artifact, not the mock-teacher loss-curve.
+    real_teacher_cache_seconds: float | None = None
+    real_teacher_cache_frame_count: int | None = None
+    real_teacher_cache_hwk: list[int] | None = None
+    if args.teacher_provider == TEACHER_PROVIDER_REAL_SEGNET:
+        cache_t0 = time.time()
+        frames_buffer = pipeline._pair_iterator._frames_np  # type: ignore[attr-defined]
+        cache = build_real_segnet_teacher_cache(
+            frames_buffer,
+            upstream_dir=REPO_ROOT / "upstream",
+            device=args.teacher_cache_device,
+        )
+        real_teacher_cache_seconds = time.time() - cache_t0
+        real_teacher_cache_frame_count = cache.frame_count
+        real_teacher_cache_hwk = [cache.height, cache.width, cache.num_classes]
+        # Rebuild the hinton_config with the cache + reinstall the loss fn
+        # on the pipeline.
+        hinton_config = dataclasses.replace(hinton_config, real_teacher_cache=cache)
+        pipeline._hinton_config = hinton_config  # type: ignore[attr-defined]
+        pipeline._hinton_custom_loss_fn = make_hinton_custom_loss_fn(hinton_config)  # type: ignore[attr-defined]
+
     run_t0 = time.time()
     loss_curve: list[float] = []
 
@@ -614,15 +690,29 @@ def main(argv: list[str] | None = None) -> int:
     plan["completed_at_utc"] = completed_utc
     plan["setup_seconds"] = setup_elapsed
     plan["run_seconds"] = run_elapsed
+    plan["real_teacher_cache_seconds"] = real_teacher_cache_seconds
+    plan["real_teacher_cache_frame_count"] = real_teacher_cache_frame_count
+    plan["real_teacher_cache_hwk"] = real_teacher_cache_hwk
     plan["loss_curve"] = loss_curve
     plan["convergence_verdict"] = verdict.as_dict()
     plan["local_training_queue_signal"] = local_training_queue_signal
     plan["paid_dispatch_authorization_signal"] = paid_dispatch_authorization_signal
-    plan["readiness_blockers"] = [
-        "scorer_loss_is_kl_to_mock_teacher_logits_not_contest_segnet",
-        "no_paired_cpu_cuda_auth_eval_yet",
-        "macos_mlx_research_signal_only_per_catalog_192",
-    ]
+    # Readiness blockers depend on teacher provider per Catalog #287/#323:
+    # mock teacher path retains the strong-language blocker; real_segnet
+    # teacher path retains only the canonical paired-CPU+CUDA discipline
+    # blocker (because the scorer loss IS the contest SegNet under the
+    # real_segnet path).
+    if args.teacher_provider == TEACHER_PROVIDER_REAL_SEGNET:
+        plan["readiness_blockers"] = [
+            "scorer_loss_is_kl_to_real_segnet_teacher_BUT_no_paired_cpu_cuda_auth_eval_yet",
+            "macos_mlx_research_signal_only_per_catalog_192",
+        ]
+    else:
+        plan["readiness_blockers"] = [
+            "scorer_loss_is_kl_to_mock_teacher_logits_not_contest_segnet",
+            "no_paired_cpu_cuda_auth_eval_yet",
+            "macos_mlx_research_signal_only_per_catalog_192",
+        ]
     plan["ready_for_exact_eval_dispatch"] = False
 
     output_report.parent.mkdir(parents=True, exist_ok=True)

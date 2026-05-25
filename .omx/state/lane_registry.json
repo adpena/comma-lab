@@ -56673,6 +56673,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_hinton_mlx_real_teacher_refire_20260525",
+      "name": "Hinton MLX real-teacher 100ep smoke refire",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/hinton_distilled_scorer_surrogate/mlx_loss.py + tools/run_hinton_mlx_long_training_smoke.py --teacher-provider real_segnet; 600 frames 100ep smoke executed; verdict SUB_PARADIGM 17.09% reduction; cargo-cult-mock-teacher empirically falsified per Catalog 307 IMPLEMENTATION-LEVEL (paradigm INTACT)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "MVP-first phasing self-review: mock vs real apples-to-apples comparison on identical infrastructure; existing 25/25 unit tests pass; back-compat preserved; SUB_PARADIGM verdict is canonical 4-taxonomy compliant"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/hinton_mlx_bundle_landed_20260525.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_hinton_mlx_numpy_parity_proof_20260525",
+      "name": "Hinton MLX student decoder numpy round-trip parity proof",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/hinton_mlx_bundle_landed_20260525.md \u2014 DEFERRED-PENDING-PHASE-1-CONVERGES; numpy parity proof on distilled-student MLX state_dict is BLOCKED-BY Phase 1 SUB_PARADIGM verdict per Carmack MVP-first"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -56682,5 +56764,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T22:21:50Z"
+  "updated_at": "2026-05-25T23:55:28Z"
 }

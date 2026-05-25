@@ -318,6 +318,192 @@ class MockTeacherLogitsProvider:
 
 
 # ---------------------------------------------------------------------------
+# Canonical real-SegNet teacher cache for the HINTON-MLX-BUNDLE-2026-05-25
+# REAL-TEACHER REFIRE per the MVP-first phasing non-negotiable.
+#
+# This cache is the canonical falsification surface for the mock-vs-real
+# teacher cargo-cult: the existing :class:`MockTeacherLogitsProvider`
+# produces deterministic cosine logits, while the real upstream PyTorch
+# SegNet (loaded via :func:`tac.scorer.load_default_scorers`) produces the
+# actual contest-scoring logits. The cache holds pre-computed real SegNet
+# logits for every video frame so the per-batch ``teacher_logits_for_indices``
+# lookup is O(1) MLX indexing instead of N PyTorch forwards per epoch.
+#
+# Per CLAUDE.md "MLX portable-local-substrate authority" non-negotiable +
+# Catalog #192: the cache holds [macOS-MLX research-signal] axis data and
+# carries NO contest-score authority on its own. The convergence verdict
+# from the smoke is research signal only; promotion still requires paired
+# CPU+CUDA contest-hardware verify per Catalog #205.
+#
+# The canonical scorer-response dataset pattern at
+# :mod:`tac.optimization.scorer_response_dataset` is the long-term
+# canonicalization surface for this kind of pre-computed teacher logits
+# corpus. The cache here is the per-session in-memory equivalent so the
+# first MLX long-training validation lands at $0 without requiring the
+# operator to first stage an HF dataset.
+# ---------------------------------------------------------------------------
+
+
+@dataclasses.dataclass(frozen=True)
+class RealSegNetTeacherLogitsCache:
+    """Pre-computed real upstream-PyTorch SegNet logits indexed by frame index.
+
+    Wraps an MLX float32 array of shape ``(T, H, W, K)`` where:
+      * ``T`` = total frame count (matches the Slot 1 pair iterator's
+        ``frame_count``);
+      * ``H``, ``W`` = canonical SegNet input size ``(384, 512)`` per
+        :mod:`upstream.modules` SegNet.preprocess_input;
+      * ``K`` = canonical SegNet output classes (5 per the canonical
+        ``smp.Unet(classes=5)`` config).
+
+    The cache is built ONCE pre-training by :func:`build_real_segnet_teacher_cache`
+    (one PyTorch SegNet forward per video frame, no gradient, CPU) and then
+    indexed by batch ``indices`` during training. This makes the per-batch
+    teacher logits lookup pure MLX (no PyTorch round-trip per step), which
+    keeps the MLX training loop fast even with the real-SegNet teacher
+    active.
+
+    Per CLAUDE.md "Forbidden empirical-claim-without-evidence-tag": this
+    cache and any artifact derived from it MUST carry the canonical MLX
+    false-authority labels (``score_claim=False``, ``promotion_eligible=False``,
+    ``ready_for_exact_eval_dispatch=False``, ``rank_or_kill_eligible=False``).
+    """
+
+    teacher_logits_thwk: Any  # MLX float32 (T, H, W, K)
+    frame_count: int
+    height: int
+    width: int
+    num_classes: int
+    upstream_segnet_safetensors_sha256: str | None = None
+    cache_build_seconds: float | None = None
+
+    def __post_init__(self) -> None:
+        _require_mlx()
+        if self.frame_count < 1:
+            raise ValueError(f"frame_count must be >= 1; got {self.frame_count}")
+        if self.height < 1 or self.width < 1:
+            raise ValueError(
+                f"height and width must be positive; got ({self.height}, {self.width})"
+            )
+        if self.num_classes < 2:
+            raise ValueError(
+                f"num_classes must be >= 2 for KL distillation; got {self.num_classes}"
+            )
+
+    def teacher_logits_for_indices(self, indices: Any) -> Any:
+        """Look up real SegNet teacher logits via MLX integer indexing.
+
+        Args:
+            indices: MLX int32 array of shape ``(B,)``.
+
+        Returns:
+            MLX float32 array of shape ``(B, H, W, K)``.
+        """
+        _require_mlx()
+        return self.teacher_logits_thwk[indices]
+
+
+def build_real_segnet_teacher_cache(
+    frames_thwc_uint8: Any,  # numpy (T, H, W, 3) uint8
+    *,
+    upstream_dir: Any = "upstream",
+    device: str = "cpu",
+    cache_dtype: Any = None,  # MLX dtype; defaults to float32 inside
+    segnet_safetensors_sha256: str | None = None,
+) -> RealSegNetTeacherLogitsCache:
+    """Compute real upstream-PyTorch SegNet logits for every video frame.
+
+    Loads the canonical contest SegNet via :func:`tac.scorer.load_default_scorers`,
+    constructs a fake 2-frame stack per frame (SegNet's ``preprocess_input``
+    only uses the LAST frame so the first slot is ignored), runs ONE
+    PyTorch SegNet forward per frame (no gradient, eval mode, CPU by
+    default to avoid CUDA staging cost on macOS), then returns the
+    canonical :class:`RealSegNetTeacherLogitsCache`.
+
+    Args:
+        frames_thwc_uint8: numpy array of shape ``(T, H, W, 3)`` uint8 RGB
+            frames (matches the Slot 1 ``MLXPairIterator._frames_np``
+            buffer layout).
+        upstream_dir: Path to the upstream repo containing
+            ``models/segnet.safetensors``. Default ``"upstream"``.
+        device: PyTorch device for the SegNet forward. Default ``"cpu"``
+            (no MPS — MPS forwards through SegNet produce 2× distortion drift
+            per CLAUDE.md "MPS auth eval is NOISE"; CPU is the canonical
+            authoritative substrate for the teacher cache).
+        cache_dtype: MLX dtype for the cache. Default ``mx.float32``.
+        segnet_safetensors_sha256: Optional sha256 of the SegNet safetensors
+            file for canonical Catalog #229 PV traceability.
+
+    Returns:
+        :class:`RealSegNetTeacherLogitsCache` carrying the canonical
+        ``(T, H, W, K)`` MLX teacher logits array.
+    """
+    _require_mlx()
+    import time as _time
+
+    import numpy as np  # type: ignore[import-not-found]
+    import torch  # type: ignore[import-not-found]
+
+    from tac.scorer import load_default_scorers
+
+    if frames_thwc_uint8.ndim != 4 or frames_thwc_uint8.shape[-1] != 3:
+        raise ValueError(
+            f"frames_thwc_uint8 must be (T, H, W, 3); got shape "
+            f"{frames_thwc_uint8.shape!r}"
+        )
+    if frames_thwc_uint8.dtype != np.uint8:
+        raise ValueError(
+            f"frames_thwc_uint8 must be uint8; got {frames_thwc_uint8.dtype!r}"
+        )
+
+    t0 = _time.time()
+    _, segnet = load_default_scorers(upstream_dir, device=device)
+    segnet.eval()
+    # Build (T, 2, 3, H, W) float32 tensor in the same 0..255 RGB scale used
+    # by upstream DistortionNet.preprocess_input. SegNet has no internal
+    # image normalization beyond resize/last-frame selection, so dividing by
+    # 255 here would silently measure a different teacher distribution.
+    frames_f32 = frames_thwc_uint8.astype(np.float32)  # (T, H, W, 3)
+    # Per upstream/modules.py SegNet.preprocess_input: x = x[:, -1, ...] then
+    # interpolate to (segnet_model_input_size[1], segnet_model_input_size[0]).
+    # The pipeline targets are already at canonical (384, 512) per
+    # CANONICAL_EVAL_SIZE so the interpolation is a no-op on the spatial
+    # dims; the only transform left is NHWC -> NCHW + last-frame slicing.
+    teacher_logits_chunks = []
+    chunk_size = 16  # batch SegNet forwards in chunks of 16 to keep CPU
+    # memory bounded
+    with torch.inference_mode():
+        for start in range(0, frames_f32.shape[0], chunk_size):
+            end = min(start + chunk_size, frames_f32.shape[0])
+            chunk = frames_f32[start:end]  # (b, H, W, 3)
+            chunk_nchw = np.transpose(chunk, (0, 3, 1, 2))  # (b, 3, H, W)
+            # Build (b, 2, 3, H, W) for SegNet's 2-frame input contract.
+            stacked = np.stack([chunk_nchw, chunk_nchw], axis=1)
+            x = torch.from_numpy(stacked).to(device)
+            # Per upstream/modules.py SegNet.debug_run: callers MUST invoke
+            # `x = self.preprocess_input(x)` before `self(x)`. SegNet.forward
+            # does NOT call preprocess_input internally.
+            x_pre = segnet.preprocess_input(x)  # (b, 3, 384, 512)
+            logits = segnet(x_pre)  # (b, 5, 384, 512)
+            # NHWC + numpy then convert to MLX float32 below.
+            logits_np = logits.detach().cpu().numpy()
+            teacher_logits_chunks.append(np.transpose(logits_np, (0, 2, 3, 1)))
+    teacher_logits_np = np.concatenate(teacher_logits_chunks, axis=0)  # (T, 384, 512, 5)
+    cache_dt = cache_dtype if cache_dtype is not None else mx.float32
+    teacher_logits_mx = mx.array(teacher_logits_np, dtype=cache_dt)
+    cache_seconds = _time.time() - t0
+    return RealSegNetTeacherLogitsCache(
+        teacher_logits_thwk=teacher_logits_mx,
+        frame_count=int(teacher_logits_np.shape[0]),
+        height=int(teacher_logits_np.shape[1]),
+        width=int(teacher_logits_np.shape[2]),
+        num_classes=int(teacher_logits_np.shape[3]),
+        upstream_segnet_safetensors_sha256=segnet_safetensors_sha256,
+        cache_build_seconds=cache_seconds,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Canonical custom_loss_fn factory matching SubstrateAdapterScaffold contract
 # ---------------------------------------------------------------------------
 
@@ -370,9 +556,15 @@ class HintonMlxCustomLossFnConfig:
     temperature: float = DEFAULT_DISTILLATION_TEMPERATURE
     student_head_out_channels: int = DEFAULT_SEGNET_CLASSES
     teacher_provider: TeacherLogitsProvider | None = None
+    real_teacher_cache: RealSegNetTeacherLogitsCache | None = None
     evidence_grade: str = EVIDENCE_GRADE_MLX
 
     def __post_init__(self) -> None:
+        if self.real_teacher_cache is not None and self.real_teacher_cache.num_classes != self.student_head_out_channels:
+            raise ValueError(
+                f"real_teacher_cache.num_classes ({self.real_teacher_cache.num_classes}) "
+                f"must match student_head_out_channels ({self.student_head_out_channels})"
+            )
         if self.distillation_weight < 0.0:
             raise ValueError(
                 f"distillation_weight must be >= 0 (set to 0.0 to disable "
@@ -493,13 +685,25 @@ def make_hinton_custom_loss_fn(
         diff = decoded_bhwc - targets_batch
         mse = mx.mean(diff * diff)
         # Hinton KL T=2.0 distillation term.
+        # Student-side: always the MLX-native projection on decoded frames
+        # (pure-MLX, gradient-bearing path from KL -> decoder weights).
         student_logits = _student_logits_from_decoded(decoded_bhwc, config)
-        teacher_logits = config.teacher_provider.teacher_logits(targets_batch)
+        # Teacher-side: prefer the real-SegNet cache (canonical contest
+        # teacher) when wired; else fall back to the mock provider on the
+        # target frames (foundation $0 smoke surface). The cache lookup is
+        # O(1) MLX indexing per Catalog #305 observability + queryable
+        # post-hoc.
+        if config.real_teacher_cache is not None:
+            teacher_logits = config.real_teacher_cache.teacher_logits_for_indices(
+                indices
+            )
+        else:
+            teacher_logits = config.teacher_provider.teacher_logits(targets_batch)
         # Stop the gradient on the teacher path so distillation matches the
         # Hinton 2014 canonical pattern (teacher provides soft targets, not
-        # gradient signal): in our foundation surrogate the teacher is a
-        # pure tensor function so this stop_gradient guards against future
-        # extension when a learnable teacher is added.
+        # gradient signal): the teacher is either a pure tensor function
+        # (mock) or a pre-computed cache (real SegNet) — both are gradient-
+        # blocked here as defense-in-depth.
         teacher_logits_stopped = mx.stop_gradient(teacher_logits)
         distill = hinton_distilled_kl_t2_loss(
             student_logits=student_logits,
