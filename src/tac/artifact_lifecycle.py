@@ -41,6 +41,7 @@ Cross-references
 from __future__ import annotations
 
 import fnmatch
+import hashlib
 import json
 import re
 import subprocess
@@ -575,6 +576,8 @@ LONG_LIVED_ARTIFACT_ROOTS: tuple[str, ...] = (
     "submissions/robust_current/",
 )
 ALLOWLIST_RELPATH = ".omx/state/artifact_classification_allowlist.json"
+LARGE_RESEARCH_JSON_THRESHOLD_BYTES = 50 * 1024 * 1024
+LARGE_RESEARCH_JSON_MANIFEST_SCHEMA = "omx.large_research_artifact_manifest.v1"
 
 
 def _load_classification_allowlist(repo_root: Path) -> set[str]:
@@ -596,7 +599,7 @@ def _enumerate_long_lived_tracked_paths(repo_root: Path) -> list[str]:
     """git ls-files restricted to long-lived-artifact roots."""
     try:
         result = subprocess.run(
-            ["git", "ls-files"] + list(LONG_LIVED_ARTIFACT_ROOTS),
+            ["git", "ls-files", *LONG_LIVED_ARTIFACT_ROOTS],
             cwd=repo_root,
             capture_output=True,
             text=True,
@@ -651,6 +654,45 @@ def audit_unregistered_long_lived_artifacts(
                 f"LIVE_RECIPE / DERIVED_OUTPUT), or allowlist it with a "
                 f"justification."
             )
+    return violations
+
+
+def audit_large_rebuildable_research_json_artifacts(
+    repo_root: Path | None = None,
+    *,
+    path_filter: set[str] | None = None,
+    threshold_bytes: int = LARGE_RESEARCH_JSON_THRESHOLD_BYTES,
+) -> list[str]:
+    """Flag bulky tracked research JSON unless compact custody is present.
+
+    ``.omx/research/**/*.json`` is historical provenance by default, but huge
+    generated payloads create source-control and disk-pressure failures unless
+    the durable record is a compact manifest plus reproducible source contract.
+    The audit intentionally targets tracked/indexed files, so new files are
+    caught once staged while untracked scratch output can remain local.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    for relpath in _enumerate_omx_research_json_paths(root):
+        if path_filter is not None and relpath not in path_filter:
+            continue
+        if relpath.endswith((".compact_manifest.json", ".compact_summary.json")):
+            continue
+        path = root / relpath
+        try:
+            size = path.stat().st_size
+        except OSError:
+            continue
+        if size <= threshold_bytes:
+            continue
+        violations.extend(
+            _validate_large_research_json_manifest(
+                root,
+                relpath=relpath,
+                size=size,
+                threshold_bytes=threshold_bytes,
+            )
+        )
     return violations
 
 
@@ -758,7 +800,127 @@ def run_meta_lifecycle_audit(
                 path_filter=path_filter,
             )
         )
+        violations.extend(
+            audit_large_rebuildable_research_json_artifacts(
+                repo_root=root,
+                path_filter=path_filter,
+            )
+        )
     return violations
+
+
+def _enumerate_omx_research_json_paths(repo_root: Path) -> list[str]:
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", ".omx/research"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return []
+    if result.returncode != 0:
+        return []
+    return [
+        rel
+        for rel in result.stdout.splitlines()
+        if (
+            rel.startswith(".omx/research/")
+            and rel.endswith(".json")
+            and not rel.endswith(".jsonl")
+        )
+    ]
+
+
+def _validate_large_research_json_manifest(
+    repo_root: Path,
+    *,
+    relpath: str,
+    size: int,
+    threshold_bytes: int,
+) -> list[str]:
+    manifest_rel = _find_large_research_json_manifest(repo_root, relpath)
+    if manifest_rel is None:
+        return [
+            f"LARGE_REBUILDABLE_RESEARCH_JSON {relpath!r}: {size} bytes exceeds "
+            f"{threshold_bytes} bytes and no sibling compact "
+            "manifest was found. Externalize rebuildable payloads and commit a "
+            f"{LARGE_RESEARCH_JSON_MANIFEST_SCHEMA} manifest with source hash, "
+            "byte count, rebuild/source provenance, summary path, and false "
+            "authority fields set false."
+        ]
+
+    manifest_path = repo_root / manifest_rel
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"{manifest_rel}: compact manifest for {relpath!r} is unreadable: {exc}"]
+    if not isinstance(manifest, dict):
+        return [f"{manifest_rel}: compact manifest for {relpath!r} is not a JSON object"]
+
+    violations: list[str] = []
+    if manifest.get("schema") != LARGE_RESEARCH_JSON_MANIFEST_SCHEMA:
+        violations.append(
+            f"{manifest_rel}: schema must be {LARGE_RESEARCH_JSON_MANIFEST_SCHEMA!r}"
+        )
+    if manifest.get("source_json_path") != relpath:
+        violations.append(f"{manifest_rel}: source_json_path does not match {relpath!r}")
+    if manifest.get("source_json_bytes") != size:
+        violations.append(
+            f"{manifest_rel}: source_json_bytes {manifest.get('source_json_bytes')!r} "
+            f"does not match current size {size}"
+        )
+    actual_sha = _sha256_file(repo_root / relpath)
+    if manifest.get("source_json_sha256") != actual_sha:
+        violations.append(f"{manifest_rel}: source_json_sha256 is stale or missing")
+    if not _has_rebuild_or_source_inputs(manifest):
+        violations.append(
+            f"{manifest_rel}: must include non-empty rebuild_command or source_inputs"
+        )
+    compact_summary_path = manifest.get("compact_summary_path")
+    if not isinstance(compact_summary_path, str) or not compact_summary_path:
+        violations.append(f"{manifest_rel}: compact_summary_path must be non-empty")
+    elif not (repo_root / compact_summary_path).is_file():
+        violations.append(
+            f"{manifest_rel}: compact_summary_path {compact_summary_path!r} does not exist"
+        )
+    for authority_field in (
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+    ):
+        if manifest.get(authority_field) is not False:
+            violations.append(f"{manifest_rel}: {authority_field} must be false")
+    return violations
+
+
+def _find_large_research_json_manifest(repo_root: Path, relpath: str) -> str | None:
+    source = Path(relpath)
+    preferred = source.with_suffix(".compact_manifest.json").as_posix()
+    appended = f"{relpath}.compact_manifest.json"
+    for candidate in (preferred, appended):
+        if (repo_root / candidate).is_file():
+            return candidate
+    return None
+
+
+def _has_rebuild_or_source_inputs(manifest: dict[str, Any]) -> bool:
+    rebuild_command = manifest.get("rebuild_command")
+    if isinstance(rebuild_command, str) and rebuild_command.strip():
+        return True
+    source_inputs = manifest.get("source_inputs")
+    return bool(
+        isinstance(source_inputs, (list, tuple, dict)) and source_inputs
+    ) or bool(isinstance(source_inputs, str) and source_inputs.strip())
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _glob_under_root(root: Path, pattern: str) -> list[Path]:
@@ -793,6 +955,7 @@ __all__ = [
     "ProvenanceGuard",
     "RecipeGuard",
     "RegistryEntry",
+    "audit_large_rebuildable_research_json_artifacts",
     "audit_unregistered_long_lived_artifacts",
     "load_registry",
     "run_meta_lifecycle_audit",

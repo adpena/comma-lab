@@ -1,0 +1,19 @@
+{
+  "schema": "omx.large_research_artifact_manifest.v1",
+  "source_json_path": ".omx/research/codex_pairset_acquisition_signal_surface_20260525T191605Z/byte_shaving_campaign_plan.pairset_acquisition_outcomes.json",
+  "source_json_sha256": "14cf76595940b35a8d7c77bc94d1be3a1c457e9340307e78095e50d2165681e7",
+  "source_json_bytes": 58071024,
+  "source_inputs": [
+    "tools/plan_byte_shaving_campaign.py",
+    "src/tac/optimization/byte_shaving_campaign.py",
+    "src/tac/optimization/pairset_acquisition.py",
+    ".omx/research/codex_pairset_acquisition_signal_surface_20260525T191605Z/"
+  ],
+  "compact_summary_path": ".omx/research/codex_pairset_acquisition_signal_surface_20260525T191605Z/byte_shaving_campaign_plan.pairset_acquisition_outcomes.compact_summary.json",
+  "custody_note": "Large historical research JSON is retained for forensic replay, but future rebuildable .omx/research JSON over 50 MiB must carry this compact manifest contract or fail artifact lifecycle preflight.",
+  "recorded_at_utc": "2026-05-25T20:20:00Z",
+  "recorded_from_commit": "4d0ccfc1af386af594eee278d440e9c6780fdbde",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false
+}

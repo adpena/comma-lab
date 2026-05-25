@@ -13,19 +13,21 @@ entirely, recreating the provenance-vs-state-confusion bug class.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 from pathlib import Path
 
 from tac.artifact_lifecycle import (
-    LONG_LIVED_ARTIFACT_ROOTS,
     ALLOWLIST_RELPATH,
+    LARGE_RESEARCH_JSON_MANIFEST_SCHEMA,
+    LONG_LIVED_ARTIFACT_ROOTS,
     ArtifactClassifier,
     ArtifactKind,
+    audit_large_rebuildable_research_json_artifacts,
     audit_unregistered_long_lived_artifacts,
     run_meta_lifecycle_audit,
 )
-
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -166,6 +168,119 @@ def test_path_filter_restricts_audit(tmp_path: Path) -> None:
     # a.json should be flagged; b.json filtered out.
     assert any("reports/raw/a.json" in v for v in violations)
     assert not any("reports/raw/b.json" in v for v in violations)
+
+
+def test_large_research_json_requires_compact_manifest(tmp_path: Path) -> None:
+    _init_repo(tmp_path)
+    _write_registry(
+        tmp_path,
+        '''
+- pattern: ".omx/research/**/*.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "test research json"
+''',
+    )
+    target = tmp_path / ".omx" / "research" / "run" / "huge_plan.json"
+    target.parent.mkdir(parents=True)
+    target.write_text('{"payload": "large"}\n', encoding="utf-8")
+    _commit_all(tmp_path, "large research json")
+
+    violations = audit_large_rebuildable_research_json_artifacts(
+        tmp_path,
+        threshold_bytes=8,
+    )
+
+    assert any("huge_plan.json" in v for v in violations)
+    assert any("no sibling compact manifest" in v for v in violations)
+
+
+def test_large_research_json_accepts_compact_manifest(tmp_path: Path) -> None:
+    _init_repo(tmp_path)
+    _write_registry(
+        tmp_path,
+        '''
+- pattern: ".omx/research/**/*.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "test research json"
+''',
+    )
+    target = tmp_path / ".omx" / "research" / "run" / "huge_plan.json"
+    summary = tmp_path / ".omx" / "research" / "run" / "huge_plan.compact_summary.json"
+    manifest = tmp_path / ".omx" / "research" / "run" / "huge_plan.compact_manifest.json"
+    target.parent.mkdir(parents=True)
+    target.write_text('{"payload": "large"}\n', encoding="utf-8")
+    summary.write_text('{"summary": "compact"}\n', encoding="utf-8")
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": LARGE_RESEARCH_JSON_MANIFEST_SCHEMA,
+                "source_json_path": ".omx/research/run/huge_plan.json",
+                "source_json_sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
+                "source_json_bytes": target.stat().st_size,
+                "rebuild_command": "python tools/rebuild_huge_plan.py",
+                "compact_summary_path": ".omx/research/run/huge_plan.compact_summary.json",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    _commit_all(tmp_path, "large research json manifest")
+
+    violations = audit_large_rebuildable_research_json_artifacts(
+        tmp_path,
+        threshold_bytes=8,
+    )
+
+    assert violations == []
+
+
+def test_large_research_json_rejects_stale_compact_manifest(tmp_path: Path) -> None:
+    _init_repo(tmp_path)
+    _write_registry(
+        tmp_path,
+        '''
+- pattern: ".omx/research/**/*.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "test research json"
+''',
+    )
+    target = tmp_path / ".omx" / "research" / "run" / "huge_plan.json"
+    summary = tmp_path / ".omx" / "research" / "run" / "huge_plan.compact_summary.json"
+    manifest = tmp_path / ".omx" / "research" / "run" / "huge_plan.compact_manifest.json"
+    target.parent.mkdir(parents=True)
+    target.write_text('{"payload": "large"}\n', encoding="utf-8")
+    summary.write_text('{"summary": "compact"}\n', encoding="utf-8")
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": LARGE_RESEARCH_JSON_MANIFEST_SCHEMA,
+                "source_json_path": ".omx/research/run/huge_plan.json",
+                "source_json_sha256": "0" * 64,
+                "source_json_bytes": 1,
+                "source_inputs": ["source_state.json"],
+                "compact_summary_path": ".omx/research/run/huge_plan.compact_summary.json",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    _commit_all(tmp_path, "large research json stale manifest")
+
+    violations = audit_large_rebuildable_research_json_artifacts(
+        tmp_path,
+        threshold_bytes=8,
+    )
+
+    assert any("source_json_bytes" in v for v in violations)
+    assert any("source_json_sha256 is stale or missing" in v for v in violations)
 
 
 def test_run_meta_audit_with_enumerate_unregistered_true_flags_unknown(tmp_path: Path) -> None:

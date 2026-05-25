@@ -1,0 +1,44 @@
+{
+  "schema": "omx.large_research_artifact_summary.v1",
+  "source_json_path": ".omx/research/codex_pairset_acquisition_signal_surface_20260525T191605Z/byte_shaving_campaign_plan.pairset_acquisition_outcomes.json",
+  "source_json_bytes": 58071024,
+  "source_json_sha256": "14cf76595940b35a8d7c77bc94d1be3a1c457e9340307e78095e50d2165681e7",
+  "source_schema": "byte_shaving_campaign_plan.v1",
+  "campaign_id": "dqs1_pairset_acquisition_outcome_signal_surface_20260525T191605Z",
+  "lane_id": "lane_dqs1_pairset_acquisition_outcome_signal_surface_20260525T191605Z",
+  "generated_at_utc": "2026-05-25T19:50:31Z",
+  "producer_tool": "tools/plan_byte_shaving_campaign.py",
+  "stored_large_payload_reason": "Historical pairset acquisition signal surface was already committed before the large-research-JSON lifecycle guard existed; this compact summary preserves the durable review signal while the source JSON remains available for exact forensic replay.",
+  "top_level_counts": {
+    "ranked_units": 1216,
+    "sweep_ladder": 16,
+    "combination_ladder": 32,
+    "operation_set_ladder": 32,
+    "packet_ir_operation_sets": 32,
+    "permutation_ladder": 8,
+    "inverse_action_materialization_portfolios": 0
+  },
+  "authority": {
+    "score_claim": false,
+    "score_claim_valid": false,
+    "promotion_eligible": false,
+    "promotable": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false
+  },
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "byte_shaving_plan_is_planning_only",
+    "requires_byte_closed_materialization_before_dispatch",
+    "requires_runtime_consumption_proof_before_exact_eval",
+    "requires_same_runtime_locality_or_inflate_parity_check",
+    "requires_exact_auth_eval_before_score_claim",
+    "byte_shaving_signal_surface_is_planning_only",
+    "source_refs_are_not_score_authority",
+    "requires_materializer_before_candidate_archive",
+    "requires_locality_controls_before_exact_eval"
+  ]
+}
