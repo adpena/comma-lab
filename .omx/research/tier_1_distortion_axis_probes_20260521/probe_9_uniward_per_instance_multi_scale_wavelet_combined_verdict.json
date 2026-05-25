@@ -1,0 +1,310 @@
+{
+  "actual_signature": {
+    "any_segment_below_threshold": true,
+    "ccc_baseline_textured_avg_weight": 0.8062214255332947,
+    "ddd_baseline_textured_avg_weight": 0.626,
+    "max_segment_textured_avg_weight_combined": 0.6152524948120117,
+    "median_segment_textured_avg_weight_combined": 0.43152308464050293,
+    "min_segment_pixels_threshold": 200,
+    "min_segment_textured_avg_weight_combined": 0.25968116521835327,
+    "min_textured_pixels_threshold": 50,
+    "n_frames_decoded": 8,
+    "pair_count": 4,
+    "per_class_segment_count": {
+      "0": 7,
+      "1": 7,
+      "2": 4,
+      "3": 0,
+      "4": 4
+    },
+    "per_segment_metrics": [
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.10780970752239227,
+        "instance_id": 1,
+        "instance_pixel_count": 44697,
+        "instance_textured_avg_weight_combined": 0.4530479907989502,
+        "instance_textured_count": 11174,
+        "pair_index": 0
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.15633371472358704,
+        "instance_id": 1,
+        "instance_pixel_count": 2204,
+        "instance_textured_avg_weight_combined": 0.32806113362312317,
+        "instance_textured_count": 551,
+        "pair_index": 0
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.21172559261322021,
+        "instance_id": 2,
+        "instance_pixel_count": 594,
+        "instance_textured_avg_weight_combined": 0.25968116521835327,
+        "instance_textured_count": 149,
+        "pair_index": 0
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.13120223581790924,
+        "instance_id": 1,
+        "instance_pixel_count": 108445,
+        "instance_textured_avg_weight_combined": 0.41401559114456177,
+        "instance_textured_count": 27111,
+        "pair_index": 0
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.13139623403549194,
+        "instance_id": 1,
+        "instance_pixel_count": 40648,
+        "instance_textured_avg_weight_combined": 0.4656113088130951,
+        "instance_textured_count": 10162,
+        "pair_index": 0
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.10922977328300476,
+        "instance_id": 1,
+        "instance_pixel_count": 36948,
+        "instance_textured_avg_weight_combined": 0.45419591665267944,
+        "instance_textured_count": 9237,
+        "pair_index": 1
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.14170344173908234,
+        "instance_id": 2,
+        "instance_pixel_count": 11742,
+        "instance_textured_avg_weight_combined": 0.3452233672142029,
+        "instance_textured_count": 2936,
+        "pair_index": 1
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.17297795414924622,
+        "instance_id": 1,
+        "instance_pixel_count": 2560,
+        "instance_textured_avg_weight_combined": 0.3236819803714752,
+        "instance_textured_count": 640,
+        "pair_index": 1
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.17261415719985962,
+        "instance_id": 2,
+        "instance_pixel_count": 1255,
+        "instance_textured_avg_weight_combined": 0.348332941532135,
+        "instance_textured_count": 314,
+        "pair_index": 1
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.13027606904506683,
+        "instance_id": 1,
+        "instance_pixel_count": 104613,
+        "instance_textured_avg_weight_combined": 0.425123393535614,
+        "instance_textured_count": 26153,
+        "pair_index": 1
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.13275647163391113,
+        "instance_id": 1,
+        "instance_pixel_count": 39490,
+        "instance_textured_avg_weight_combined": 0.4585803747177124,
+        "instance_textured_count": 9873,
+        "pair_index": 1
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.10575437545776367,
+        "instance_id": 1,
+        "instance_pixel_count": 35141,
+        "instance_textured_avg_weight_combined": 0.45756420493125916,
+        "instance_textured_count": 8785,
+        "pair_index": 2
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.12449445575475693,
+        "instance_id": 2,
+        "instance_pixel_count": 11808,
+        "instance_textured_avg_weight_combined": 0.380034476518631,
+        "instance_textured_count": 2952,
+        "pair_index": 2
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.1825629621744156,
+        "instance_id": 1,
+        "instance_pixel_count": 2119,
+        "instance_textured_avg_weight_combined": 0.2924861013889313,
+        "instance_textured_count": 530,
+        "pair_index": 2
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.15152986347675323,
+        "instance_id": 4,
+        "instance_pixel_count": 658,
+        "instance_textured_avg_weight_combined": 0.40612590312957764,
+        "instance_textured_count": 165,
+        "pair_index": 2
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.1226503774523735,
+        "instance_id": 1,
+        "instance_pixel_count": 106623,
+        "instance_textured_avg_weight_combined": 0.43792277574539185,
+        "instance_textured_count": 26656,
+        "pair_index": 2
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.11540158092975616,
+        "instance_id": 1,
+        "instance_pixel_count": 40113,
+        "instance_textured_avg_weight_combined": 0.5089901089668274,
+        "instance_textured_count": 10028,
+        "pair_index": 2
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.09446215629577637,
+        "instance_id": 1,
+        "instance_pixel_count": 41375,
+        "instance_textured_avg_weight_combined": 0.5281972289085388,
+        "instance_textured_count": 10344,
+        "pair_index": 3
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.09682418406009674,
+        "instance_id": 2,
+        "instance_pixel_count": 11283,
+        "instance_textured_avg_weight_combined": 0.4947841763496399,
+        "instance_textured_count": 2821,
+        "pair_index": 3
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.1559053361415863,
+        "instance_id": 1,
+        "instance_pixel_count": 2127,
+        "instance_textured_avg_weight_combined": 0.3546100854873657,
+        "instance_textured_count": 532,
+        "pair_index": 3
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.10651201754808426,
+        "instance_id": 1,
+        "instance_pixel_count": 107343,
+        "instance_textured_avg_weight_combined": 0.4931935667991638,
+        "instance_textured_count": 26836,
+        "pair_index": 3
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.09158281236886978,
+        "instance_id": 1,
+        "instance_pixel_count": 34322,
+        "instance_textured_avg_weight_combined": 0.6152524948120117,
+        "instance_textured_count": 8581,
+        "pair_index": 3
+      }
+    ],
+    "probe_5_per_class_min": 0.5673,
+    "probe_8_per_instance_min": 0.5233,
+    "probe_8_per_instance_spread": 0.4027,
+    "segnet_eval_resolution_HxW": [
+      384,
+      512
+    ],
+    "segnet_missing_keys": 0,
+    "segnet_unexpected_keys": 0,
+    "spread_segment_textured_avg_weight_combined": 0.35557132959365845,
+    "valid_segment_count": 22,
+    "wavelet_levels": 3,
+    "wavelet_name": "db8"
+  },
+  "axis_tag": "[macOS-CPU advisory]",
+  "canonical_equation_reference": "candidate uniward_per_instance_multi_scale_wavelet_combined_v1 (Catalog #344 FORMALIZATION_PENDING; RATIFY-N pending per RATE-ATTACK-MATRIX cell #3 + cell #21 combined-axis operator-routable)",
+  "canonical_provenance": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "connected_components_reference": "scipy.ndimage.label with 4-connectivity structure for per-instance segmentation derivation from SegNet 5-class hard mask; canonical CS computer-vision instance segmentation primitive from semantic segmentation via connected-components.",
+    "evidence_grade": "macOS-CPU-advisory",
+    "fridrich_canonical_reference": "Holub-Fridrich-Denemark 2014 'Universal Distortion Function for Steganography in an Arbitrary Domain' (UNIWARD) multi-level wavelet extension; CLAUDE.md 'Fridrich inverse steganalysis' section; SegNet exact architecture per CLAUDE.md 'Exact scorer architectures'.",
+    "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+    "kind": "macos_cpu_advisory",
+    "multi_scale_wavelet_reference": "pywt.wavedec2 with db8 wavelet at level=3; canonical multi-scale Daubechies wavelet decomposition; coarse-to-fine HL+LH+HH detail-subband sum across levels captures edge-energy at multiple scales per Holub-Fridrich 2014 + Mallat 1989 multi-resolution analysis.",
+    "predecessor_probes": [
+      "tier_1_distortion_uniward_wavelet_subband_sharper_inversion_smoke (DDD; single-level)",
+      "tier_1_distortion_uniward_per_class_explicit_segnet_smoke (Probe 5; per-class)",
+      "tier_1_distortion_uniward_per_segment_label_segnet_smoke (Probe 8; per-instance)"
+    ],
+    "promotable": false,
+    "rate_attack_matrix_reference": "RATE-ATTACK-METHODS-DIMENSIONS-MATRIX commit 7a78c5661 Top-5 cell #3 (per-instance) + cell #21 (multi-scale wavelet) COMBINED dimension D26: per-instance UNIWARD + multi-level db8 wavelet detail-subband sum",
+    "score_claim_valid": false,
+    "source": "tier_1_distortion_axis_probe_9_uniward_per_instance_multi_scale_wavelet_combined"
+  },
+  "catalog_references": [
+    "#344",
+    "#287",
+    "#323",
+    "#192",
+    "#1",
+    "#313",
+    "#307",
+    "#308"
+  ],
+  "delta_vs_baselines": {
+    "ccc_baseline_textured_avg_weight": 0.8062214255332947,
+    "ddd_baseline_textured_avg_weight": 0.626,
+    "improvement_direction": "combined_sharper_than_probe_8_per_instance",
+    "min_combined_vs_ccc_absolute_delta": -0.5465402603149414,
+    "min_combined_vs_ddd_absolute_delta": -0.36631883478164673,
+    "min_combined_vs_probe_5_absolute_delta": -0.30761883478164675,
+    "min_combined_vs_probe_8_absolute_delta": -0.2636188347816467,
+    "per_segment_min_breaks_probe_8_per_instance_ceiling": true,
+    "per_segment_min_passed_threshold_lt_0p5": true,
+    "probe_5_per_class_min": 0.5673,
+    "probe_8_per_instance_min": 0.5233,
+    "spread_combined_vs_probe_8_absolute_delta": -0.047128670406341555
+  },
+  "device": "cpu",
+  "elapsed_seconds": 1.5224559307098389,
+  "evidence_grade": "macOS-CPU-advisory",
+  "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+  "lane_id": "lane_combined_tier_1_wave_3_uniward_multi_scale_plus_hinton_motion_aware_20260525",
+  "next_action_on_NEGATIVE": "DEFER per Catalog #307 IMPLEMENTATION-LEVEL falsification of combined-axis paradigm; queue per-instance + HILL filter per Catalog #308.",
+  "next_action_on_PARTIAL": "DEFER-PENDING-FURTHER-DIMENSION; iterate sister probe with per-instance + HILL filter OR per-instance + boundary-aware UNIWARD per Catalog #308.",
+  "next_action_on_POSITIVE_BREAKS_THRESHOLD": "STRONG empirical case for Tier-2 paid dispatch on per-instance + multi-scale wavelet UNIWARD-weighted SegNet loss substrate via Vast.ai 4090 ($0.25/hr); estimated cost ~$2-7; predicted DS -0.010 to -0.025 [predicted].",
+  "predicted_signature": {
+    "NEGATIVE": "min segment combined textured_avg_weight >= 0.5233 (multi-scale extension non-productive)",
+    "POSITIVE_BREAKS_THRESHOLD": "any segment combined per-instance + multi-scale textured_avg_weight < 0.5 AND valid_segment_count >= 4",
+    "POSITIVE_COMBINED_PARTIAL": "min segment combined textured_avg_weight < Probe 8 per-instance ceiling 0.5233 but threshold 0.5 unbroken"
+  },
+  "probe_id": "tier_1_distortion_uniward_per_instance_multi_scale_wavelet_combined_smoke",
+  "probe_name": "UNIWARD per-instance x multi-scale wavelet COMBINED (M40 x D16 x D26 multi-level db8)",
+  "promotable": false,
+  "recommendation": "POSITIVE_SIGNAL_BREAKS_THRESHOLD: combined per-instance + multi-scale wavelet COMBINED yields min segment textured_avg_weight=0.2597 (< 0.5 hard threshold; Probe 8 per-instance min=0.5233; DDD single-level baseline=0.626). Inter-segment spread 0.3556 vs Probe 8 spread 0.4027. Per Holub-Fridrich 2014 canonical multi-scale + per-instance granularity: BOTH dimensions productive. STRONG empirical case for Tier-2 paid dispatch on per-instance + multi-scale wavelet UNIWARD-weighted SegNet loss substrate JUSTIFIED. Predicted DS -0.010 to -0.025 [predicted]. Estimated cost ~$2-7.",
+  "dispatch_attempted": false,
+  "gpu_launched": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "score_claim": false,
+  "score_claim_valid": false,
+  "signature_checks": {
+    "any_segment_below_threshold_present": true,
+    "breaks_probe_8_min_present": true,
+    "spread_exceeds_probe_8_present": false,
+    "valid_segment_count_present": true
+  },
+  "sister_canonical_equation_candidate_for_RATIFY_N": "uniward_per_instance_multi_scale_wavelet_combined_v1",
+  "verdict": "POSITIVE_SIGNAL_BREAKS_THRESHOLD"
+}

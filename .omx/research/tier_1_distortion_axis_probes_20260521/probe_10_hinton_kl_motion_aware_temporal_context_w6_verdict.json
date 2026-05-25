@@ -1,0 +1,108 @@
+{
+  "actual_signature": {
+    "W_fixed": 6,
+    "ccc_static_baseline": 0.0006739782984368503,
+    "center_pair_indices": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "ego_motion_norms_per_pair": [
+      0.035231625040372215,
+      0.03398549541210135,
+      0.03277537211154898,
+      0.03257431571061412,
+      0.0327159541969498,
+      0.03284202329814434
+    ],
+    "high_motion_kl_mean": 0.013764379856487116,
+    "high_motion_ratio_over_ccc_static_baseline": 20.422586140252104,
+    "high_vs_low_motion_kl_ratio": 0.8845726078678199,
+    "kl_per_pair": [
+      0.015109327621757984,
+      0.015699436888098717,
+      0.030479302629828453,
+      0.006458581890910864,
+      0.00974357407540083,
+      0.010484375059604645
+    ],
+    "low_motion_kl_mean": 0.015560486198713383,
+    "median_motion": 0.032808697704846665,
+    "motion_amplification_ratio": 1.0013685713896916,
+    "motion_kl_pearson": 0.08990300558401604,
+    "motion_weighted_kl_W6": 0.01468249961394509,
+    "motion_weighted_ratio_over_ccc_static_baseline": 21.784825487701955,
+    "n_frames_decoded": 18,
+    "probe_7_w6_anchor": 0.01428,
+    "probe_7_w6_ratio_over_ccc": 21.187625822848347,
+    "segnet_missing_keys": 0,
+    "segnet_unexpected_keys": 0,
+    "uniform_kl_W6": 0.01466243302760025,
+    "uniform_ratio_over_ccc_static_baseline": 21.75505214575403
+  },
+  "axis_tag": "[macOS-CPU advisory]",
+  "canonical_equation_reference": "candidate hinton_kl_motion_aware_temporal_context_v1 (Catalog #344 FORMALIZATION_PENDING; RATIFY-N pending per RATE-ATTACK-MATRIX cell #4 + cell #29 motion-aware aggregation operator-routable)",
+  "canonical_provenance": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "evidence_grade": "macOS-CPU-advisory",
+    "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+    "hinton_canonical_reference": "Hinton/Vinyals/Dean 2015 'Distilling the Knowledge in a Neural Network' (KL T=2.0 dark-knowledge); CLAUDE.md 'Grand Council Geoffrey Hinton' + 'Quantizr intelligence' (Quantizr 0.33 [contest-CUDA] uses kl_on_logits T=2.0).",
+    "kind": "macos_cpu_advisory",
+    "motion_aware_cooperative_receiver_reference": "Atick-Redlich 1990 'Towards a Theory of Early Visual Processing' + Rao-Ballard 1999 'Predictive coding in the visual cortex' canonical cooperative-receiver + predictive-coding paradigm; CLAUDE.md 'Grand Council Atick' + 'predictive coding'. Ego-motion concentration weight derived from luma frame-difference L2 magnitude \u2014 canonical computer-vision dense optical-flow proxy without explicit Lucas-Kanade / RAFT solver.",
+    "predecessor_probes": [
+      "tier_1_distortion_hinton_kl_t2_segnet_smoke (CCC)",
+      "tier_1_distortion_hinton_kl_t2_temporal_context_segnet_smoke (Probe 6 W=2)",
+      "tier_1_distortion_hinton_kl_t2_longer_temporal_context_segnet_smoke (Probe 7 W=6 peak)"
+    ],
+    "promotable": false,
+    "rate_attack_matrix_reference": "RATE-ATTACK-METHODS-DIMENSIONS-MATRIX commit 7a78c5661 Top-5 cell #4 (temporal-context) + cell #29 (motion-aware aggregation) COMBINED dimension D27: per-pair ego-motion-weighted aggregation of Probe 7 W=6 per-pair KL values",
+    "score_claim_valid": false,
+    "source": "tier_1_distortion_axis_probe_10_hinton_kl_motion_aware_temporal_context_w6"
+  },
+  "catalog_references": [
+    "#344",
+    "#287",
+    "#323",
+    "#192",
+    "#1",
+    "#313",
+    "#307",
+    "#308"
+  ],
+  "delta_vs_probe_7_w6_baseline": {
+    "motion_amplification_direction": "motion_amplifies_KL",
+    "motion_weighted_vs_probe_7_absolute_delta": 0.00040249961394509155,
+    "motion_weighted_vs_probe_7_relative_ratio": 1.0281862474751464,
+    "probe_7_w6_kl_mean": 0.01428,
+    "probe_7_w6_ratio_over_ccc": 21.187625822848347
+  },
+  "device": "cpu",
+  "elapsed_seconds": 8.574187994003296,
+  "evidence_grade": "macOS-CPU-advisory",
+  "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+  "lane_id": "lane_combined_tier_1_wave_3_uniward_multi_scale_plus_hinton_motion_aware_20260525",
+  "next_action_on_NEGATIVE": "DEFER motion-aware enhancement per Catalog #307 IMPLEMENTATION-LEVEL falsification; queue per-segment-label D16 temporal grouping OR Atick-Redlich pure-redundancy-reduction aggregation per Catalog #308. Probe 7 W=6 Tier-2 dispatch UNCHANGED.",
+  "next_action_on_POSITIVE_MOTION_AMPLIFIED": "STRONG empirical case for Tier-2 paid dispatch on motion-weighted temporal Hinton-distilled scorer surrogate substrate via Vast.ai 4090 ($0.25/hr); estimated cost ~$2-7; predicted DS -0.010 to -0.025 [predicted].",
+  "next_action_on_POSITIVE_PARTIAL": "DEFER-PENDING-WEIGHTING-AUDIT; iterate sister probe with per-segment-label temporal grouping per Catalog #308 alternative reducer.",
+  "predicted_signature": {
+    "NEGATIVE_MOTION_NEUTRAL": "motion_weighted/uniform <= 1.0x (motion NOT predictive of KL)",
+    "POSITIVE_MOTION_AMPLIFIED": "motion_weighted / uniform >= 1.5x AND pearson(ego_motion, KL) >= 0.6",
+    "POSITIVE_MOTION_PARTIAL": "1.0x < motion_weighted/uniform < 1.5x AND pearson >= 0.6"
+  },
+  "probe_id": "tier_1_distortion_hinton_kl_motion_aware_temporal_context_w6_smoke",
+  "probe_name": "Hinton KL T=2.0 motion-aware temporal-context W=6 (M44 x D17 x D27 ego-motion-weighted)",
+  "promotable": false,
+  "recommendation": "NEGATIVE_MOTION_NEUTRAL: motion concentration is NOT predictive of temporal-context KL density (motion-weighted/uniform ratio=1.00x <= 1.0x; pearson=0.090). Per Catalog #307 IMPLEMENTATION-LEVEL falsification of the motion-aware cooperative-receiver enhancement. Probe 7 W=6 21.20x finding remains INTACT (paradigm-level UNCHANGED); only the motion-concentration enhancement is falsified. Per Catalog #308 alternative reducer: queue per-segment-label D16 temporal grouping OR Atick-Redlich pure-redundancy-reduction aggregation. Probe 7 W=6 Tier-2 dispatch recommendation UNCHANGED.",
+  "score_claim": false,
+  "signature_checks": {
+    "motion_amplified_ge_1p5x_present": false,
+    "motion_neutral_le_1p0x_present": false,
+    "motion_partial_gt_1p0x_present": true,
+    "pearson_positive_ge_0p6_present": false
+  },
+  "sister_canonical_equation_candidate_for_RATIFY_N": "hinton_kl_motion_aware_temporal_context_v1",
+  "verdict": "NEGATIVE_MOTION_NEUTRAL"
+}
