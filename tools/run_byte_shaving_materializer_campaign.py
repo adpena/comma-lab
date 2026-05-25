@@ -1492,12 +1492,192 @@ def _artifact_serialized_saved_bytes(artifact: Mapping[str, Any]) -> int:
     return 0
 
 
+def _queue_feedback_artifact_path(
+    path_text: str,
+    *,
+    queue_observation_path: Path | None,
+) -> Path:
+    path = Path(path_text).expanduser()
+    if path.is_absolute():
+        return path.resolve(strict=False)
+    if queue_observation_path is not None:
+        candidate = queue_observation_path.resolve(strict=False).parent / path
+        if candidate.exists():
+            return candidate.resolve(strict=False)
+    return _resolve(path).resolve(strict=False)
+
+
+def _feedback_row_saved_bytes(row: Mapping[str, Any]) -> int:
+    for key in (
+        "saved_bytes",
+        "realized_saved_bytes",
+        "serialized_archive_delta_realized_saved_bytes",
+    ):
+        parsed = _optional_int(row.get(key))
+        if parsed is not None:
+            return parsed
+    delta = row.get("serialized_archive_delta")
+    if isinstance(delta, Mapping):
+        parsed = _optional_int(delta.get("realized_saved_bytes"))
+        if parsed is not None:
+            return parsed
+    return 0
+
+
+def _feedback_row_delta_status(row: Mapping[str, Any]) -> str:
+    for value in (
+        row.get("archive_delta_status"),
+        row.get("materializer_rate_outcome"),
+        row.get("serialized_archive_delta_status"),
+    ):
+        text = str(value or "").strip()
+        if text:
+            return text
+    delta = row.get("serialized_archive_delta")
+    if isinstance(delta, Mapping):
+        return str(delta.get("status") or "").strip()
+    return ""
+
+
+def _feedback_row_savings_realized(
+    row: Mapping[str, Any],
+    *,
+    saved_bytes: int,
+) -> bool:
+    delta = row.get("serialized_archive_delta")
+    return (
+        row.get("savings_realized") is True
+        or row.get("serialized_archive_delta_savings_realized") is True
+        or (isinstance(delta, Mapping) and delta.get("savings_realized") is True)
+        or saved_bytes > 0
+    )
+
+
+def _feedback_row_has_receiver_signal(row: Mapping[str, Any]) -> bool:
+    if (
+        row.get("receiver_contract_satisfied") is not None
+        or row.get("inflate_parity_satisfied") is not None
+    ):
+        return True
+    receiver = row.get("receiver_verification")
+    return isinstance(receiver, Mapping) and (
+        receiver.get("receiver_contract_satisfied") is not None
+        or receiver.get("inflate_parity_satisfied") is not None
+    )
+
+
+def _feedback_row_receiver_ok(row: Mapping[str, Any]) -> bool:
+    if (
+        row.get("receiver_contract_satisfied") is True
+        or row.get("inflate_parity_satisfied") is True
+    ):
+        return True
+    receiver = row.get("receiver_verification")
+    return isinstance(receiver, Mapping) and (
+        receiver.get("receiver_contract_satisfied") is True
+        or receiver.get("inflate_parity_satisfied") is True
+    )
+
+
+def _materializer_feedback_rows_from_artifact_path(
+    path_text: str,
+    *,
+    queue_observation_path: Path | None,
+) -> list[Mapping[str, Any]]:
+    path = _queue_feedback_artifact_path(
+        path_text,
+        queue_observation_path=queue_observation_path,
+    )
+    if not path.is_file() or path.suffix not in {".json", ".jsonl"}:
+        return []
+    try:
+        if path.stat().st_size > MAX_AUTO_DISCOVERED_FEEDBACK_OBSERVATION_BYTES:
+            return []
+    except OSError:
+        return []
+    rows: list[Mapping[str, Any]] = []
+    if path.suffix == ".jsonl":
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                for index, raw_line in enumerate(handle, start=1):
+                    if index > MAX_AUTO_DISCOVERED_FEEDBACK_OBSERVATIONS:
+                        break
+                    line = raw_line.strip()
+                    if not line:
+                        continue
+                    try:
+                        payload = json.loads(line)
+                    except json.JSONDecodeError:
+                        return []
+                    if (
+                        isinstance(payload, Mapping)
+                        and payload.get("schema")
+                        == FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA
+                    ):
+                        rows.append(payload)
+        except OSError:
+            return []
+        return rows
+    payload = _load_json_object_if_present(path)
+    if payload is None:
+        return []
+    if truthy_authority_field_violations(payload):
+        return []
+    if payload.get("schema") == FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA:
+        return [payload]
+    if payload.get("schema") != FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA:
+        return []
+    observations = payload.get("observations")
+    if not isinstance(observations, Sequence) or isinstance(
+        observations,
+        (bytes, bytearray, str),
+    ):
+        return []
+    for row in observations[:MAX_AUTO_DISCOVERED_FEEDBACK_OBSERVATIONS]:
+        if (
+            isinstance(row, Mapping)
+            and row.get("schema") == FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA
+        ):
+            rows.append(row)
+    return rows
+
+
+def _count_receiver_feedback_record(
+    counts: dict[str, int],
+    row: Mapping[str, Any],
+) -> None:
+    if truthy_authority_field_violations(row):
+        return
+    saved_bytes = _feedback_row_saved_bytes(row)
+    delta_status = _feedback_row_delta_status(row)
+    savings_realized = _feedback_row_savings_realized(row, saved_bytes=saved_bytes)
+    rate_saving = (
+        saved_bytes > 0
+        and delta_status in {"", "realized_saving"}
+        and (row.get("rate_positive") is True if "rate_positive" in row else savings_realized)
+    )
+    receiver_seen = _feedback_row_has_receiver_signal(row)
+    receiver_ok = _feedback_row_receiver_ok(row)
+    if receiver_seen and not receiver_ok:
+        counts["receiver_negative_count"] += 1
+    elif receiver_ok and rate_saving:
+        counts["receiver_positive_rate_saving_count"] += 1
+    elif receiver_ok:
+        counts["receiver_positive_rate_nonpositive_count"] += 1
+    elif rate_saving:
+        counts["rate_saving_without_receiver_proof_count"] += 1
+
+
 def _queue_observation_receiver_feedback_counts(
     queue_observation: Mapping[str, Any],
+    *,
+    queue_observation_path: Path | None = None,
 ) -> dict[str, int]:
     counts = {
         "materializer_artifact_count": 0,
+        "materializer_observation_count": 0,
         "receiver_positive_rate_saving_count": 0,
+        "receiver_positive_rate_nonpositive_count": 0,
         "receiver_negative_count": 0,
         "rate_saving_without_receiver_proof_count": 0,
     }
@@ -1507,7 +1687,16 @@ def _queue_observation_receiver_feedback_counts(
         for artifact in _as_sequence(step.get("expected_artifacts")):
             if not isinstance(artifact, Mapping):
                 continue
-            if not (
+            artifact_path_text = str(artifact.get("path") or "").strip()
+            rows_from_artifact_path = (
+                _materializer_feedback_rows_from_artifact_path(
+                    artifact_path_text,
+                    queue_observation_path=queue_observation_path,
+                )
+                if artifact_path_text
+                else []
+            )
+            if not rows_from_artifact_path and not (
                 artifact.get("target_kind")
                 or artifact.get("materializer_id")
                 or artifact.get("materializer_delta_source")
@@ -1515,27 +1704,45 @@ def _queue_observation_receiver_feedback_counts(
             ):
                 continue
             counts["materializer_artifact_count"] += 1
-            saved_bytes = _artifact_serialized_saved_bytes(artifact)
-            delta_status = str(
-                artifact.get("serialized_archive_delta_status") or ""
-            ).strip()
-            savings_realized = (
-                artifact.get("serialized_archive_delta_savings_realized") is True
-                or saved_bytes > 0
+            if rows_from_artifact_path:
+                for row in rows_from_artifact_path:
+                    counts["materializer_observation_count"] += 1
+                    _count_receiver_feedback_record(counts, row)
+                continue
+            _count_receiver_feedback_record(
+                counts,
+                {
+                    "saved_bytes": _artifact_serialized_saved_bytes(artifact),
+                    "archive_delta_status": artifact.get("serialized_archive_delta_status"),
+                    "savings_realized": (
+                        artifact.get("serialized_archive_delta_savings_realized") is True
+                    ),
+                    "receiver_contract_satisfied": (
+                        True
+                        if _artifact_receiver_contract_satisfied(artifact)
+                        else (
+                            False
+                            if _artifact_has_receiver_signal(artifact)
+                            else None
+                        )
+                    ),
+                    **{
+                        key: value
+                        for key, value in artifact.items()
+                        if key
+                        in {
+                            "score_claim",
+                            "score_claim_valid",
+                            "promotion_eligible",
+                            "rank_or_kill_eligible",
+                            "promotable",
+                            "ready_for_exact_eval_dispatch",
+                            "dispatch_attempted",
+                            "gpu_launched",
+                        }
+                    },
+                },
             )
-            rate_saving = (
-                saved_bytes > 0
-                and delta_status in {"", "realized_saving"}
-                and savings_realized
-            )
-            receiver_seen = _artifact_has_receiver_signal(artifact)
-            receiver_ok = _artifact_receiver_contract_satisfied(artifact)
-            if receiver_seen and not receiver_ok:
-                counts["receiver_negative_count"] += 1
-            elif receiver_ok and rate_saving:
-                counts["receiver_positive_rate_saving_count"] += 1
-            elif rate_saving:
-                counts["rate_saving_without_receiver_proof_count"] += 1
     return counts
 
 
@@ -1599,7 +1806,10 @@ def _write_dynamic_sparse_feedback_compiler_hint(
 ) -> tuple[Path | None, Path, dict[str, Any], CommandResult]:
     hint_path = run_dir / "dynamic_sparse_feedback_compiler_hint.json"
     status_path = run_dir / "dynamic_sparse_feedback_compiler_hint_status.json"
-    counts = _queue_observation_receiver_feedback_counts(queue_observation)
+    counts = _queue_observation_receiver_feedback_counts(
+        queue_observation,
+        queue_observation_path=queue_observation_path,
+    )
     command = _dynamic_sparse_feedback_compiler_hint_command(
         args,
         queue=queue,

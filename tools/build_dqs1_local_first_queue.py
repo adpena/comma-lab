@@ -142,6 +142,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="number of independent safe DQS1 candidates to include in the queue",
     )
     parser.add_argument(
+        "--materializer-feedback",
+        action="append",
+        default=[],
+        help=(
+            "family-agnostic materializer feedback sweep/observation JSON to stamp "
+            "onto the DQS1 queue as false-authority replanning context. May repeat."
+        ),
+    )
+    parser.add_argument(
+        "--materializer-feedback-bridge-out",
+        default=None,
+        help="optional path for the derived DQS1 materializer-feedback bridge JSON",
+    )
+    parser.add_argument(
+        "--overwrite-materializer-feedback-bridge",
+        action="store_true",
+        help="allow replacing --materializer-feedback-bridge-out if it exists",
+    )
+    parser.add_argument(
         "--local-cpu-concurrency",
         type=int,
         default=1,
@@ -203,12 +222,31 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _load_materializer_feedback(path_values: list[str]) -> tuple[dict[str, object], ...]:
+    payloads: list[dict[str, object]] = []
+    for value in path_values:
+        path = Path(value)
+        if not path.is_absolute():
+            path = REPO_ROOT / path
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ExperimentQueueError(f"{path}: invalid JSON: {exc.msg}") from exc
+        if not isinstance(payload, dict):
+            raise ExperimentQueueError(f"{path}: feedback JSON root must be an object")
+        payloads.append(payload)
+    return tuple(payloads)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     action_summary = (
         find_latest_cross_family_action_summary(REPO_ROOT)
         if args.action_summary == "latest"
         else Path(args.action_summary)
+    )
+    materializer_feedback_payloads = _load_materializer_feedback(
+        args.materializer_feedback
     )
     result = build_queue_from_action_summary(
         action_summary,
@@ -240,6 +278,8 @@ def main(argv: list[str] | None = None) -> int:
         exclude_candidate_ids=set(args.exclude_candidate),
         skip_completed_local_advisory=not args.include_completed_local_advisory,
         candidate_limit=args.candidate_limit,
+        materializer_feedback_payloads=materializer_feedback_payloads,
+        materializer_feedback_source_paths=tuple(args.materializer_feedback),
         local_cpu_concurrency=args.local_cpu_concurrency,
         local_io_concurrency=args.local_io_concurrency,
         include_mlx_local_advisory_debug=args.include_mlx_local_advisory_debug,
@@ -264,6 +304,22 @@ def main(argv: list[str] | None = None) -> int:
         scheduler_proactive_cleanup_cold_store_reserve_gb=args.scheduler_proactive_cleanup_cold_store_reserve_gb,
     )
     output = Path(args.output)
+    feedback_bridge_out = (
+        None
+        if args.materializer_feedback_bridge_out is None
+        else Path(args.materializer_feedback_bridge_out)
+    )
+    if feedback_bridge_out is not None and result.materializer_feedback_bridge is not None:
+        try:
+            write_json_artifact(
+                feedback_bridge_out,
+                result.materializer_feedback_bridge,
+                allow_overwrite=bool(args.overwrite_materializer_feedback_bridge),
+                min_free_bytes=int(max(args.min_free_gb, 0.0) * (1024**3)),
+            )
+        except ArtifactWriteError as exc:
+            print(f"FATAL: {exc}", file=sys.stderr)
+            return 2
     if args.write:
         if args.overwrite_output and output.exists() and args.expected_output_sha256 is None:
             print(
@@ -298,6 +354,16 @@ def main(argv: list[str] | None = None) -> int:
                 "action_summary": str(result.selection.action_summary_path),
                 "portfolio": str(result.selection.portfolio_path),
                 "skipped_candidates": list(result.selection.skipped_candidates),
+                "materializer_feedback_bridge_out": (
+                    None if feedback_bridge_out is None else str(feedback_bridge_out)
+                ),
+                "materializer_feedback_bridge_recommended_next_action": (
+                    None
+                    if result.materializer_feedback_bridge is None
+                    else result.materializer_feedback_bridge.get(
+                        "recommended_next_action"
+                    )
+                ),
             }
         )
     else:

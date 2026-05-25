@@ -313,10 +313,14 @@ def _queue_build_common_args(args: argparse.Namespace, *, results_root: Path) ->
     completed_args: list[str] = []
     for completed_root in _completed_results_roots(args):
         completed_args.extend(["--completed-results-root", completed_root])
+    materializer_feedback_args: list[str] = []
+    for feedback_path in args.materializer_feedback:
+        materializer_feedback_args.extend(["--materializer-feedback", feedback_path])
     base_args = [
         "--results-root",
         str(results_root),
         *completed_args,
+        *materializer_feedback_args,
         "--candidate-limit",
         str(args.queue_candidate_limit),
         "--local-cpu-concurrency",
@@ -693,6 +697,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--dynamic-observation-jsonl",
         action="append",
         default=[DEFAULT_DYNAMIC_OBSERVATIONS],
+    )
+    parser.add_argument(
+        "--materializer-feedback",
+        action="append",
+        default=[],
+        help=(
+            "family-agnostic materializer feedback sweep/observation JSON to forward "
+            "into generated DQS1 local-first queues"
+        ),
     )
     parser.add_argument("--portfolio-root", default=None)
     parser.add_argument("--incumbent-score", default=None)

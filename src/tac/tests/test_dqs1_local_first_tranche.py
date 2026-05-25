@@ -188,6 +188,29 @@ def test_tranche_queue_build_args_forward_mlx_local_advisory_controls() -> None:
     assert "--skip-mlx-retention-plan" in built
 
 
+def test_tranche_queue_build_args_forward_materializer_feedback() -> None:
+    args = tranche.parse_args(
+        [
+            "--no-storage-waterfall",
+            "--materializer-feedback",
+            "experiments/results/header_elide/sweep.json",
+            "--materializer-feedback",
+            "experiments/results/recompress/sweep.json",
+        ]
+    )
+
+    built = tranche._queue_build_common_args(
+        args,
+        results_root=tranche.Path("experiments/results/dqs1_local_first"),
+    )
+
+    assert built.count("--materializer-feedback") == 2
+    first = built.index("--materializer-feedback")
+    second = built.index("--materializer-feedback", first + 1)
+    assert built[first + 1] == "experiments/results/header_elide/sweep.json"
+    assert built[second + 1] == "experiments/results/recompress/sweep.json"
+
+
 def test_tranche_proactive_cleanup_move_is_not_gated_by_mlx_cache_flag(
     tmp_path: Path,
     monkeypatch,

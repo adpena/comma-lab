@@ -910,6 +910,250 @@ def test_materializer_campaign_runner_emits_receiver_gated_dynamic_sparse_hint(
     ]
 
 
+def test_materializer_campaign_runner_counts_receiver_positive_sweep_artifact_rows(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    run_dir.mkdir()
+    queue_observation_path = run_dir / "queue_observation.json"
+    runtime_identity_path = run_dir / "queue_performance_runtime_identity.json"
+    cache_identity_path = run_dir / "queue_performance_cache_identity.json"
+    sweep_path = run_dir / "materializer_sweep.json"
+    runtime_identity_path.write_text(
+        json.dumps({"runtime_contract_sha256": "a" * 64}),
+        encoding="utf-8",
+    )
+    cache_identity_path.write_text(
+        json.dumps({"cache_sha256": "b" * 64}),
+        encoding="utf-8",
+    )
+    sweep_path.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_materializer_empirical_sweep.v1",
+                "target_kind": runner.PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                "materializer_id": "packet_member_recompress_adapter",
+                "observation_count": 2,
+                "observations": [
+                    {
+                        "schema": "family_agnostic_materializer_empirical_observation.v1",
+                        "observation_kind": (
+                            "family_agnostic_materializer_empirical_observation"
+                        ),
+                        "observation_id": "sweep_receiver_positive_rate_saving",
+                        "candidate_id": "sweep_positive_candidate",
+                        "axis": "[local-materializer-proof]",
+                        "runtime_identity": {"runtime_contract_sha256": "a" * 64},
+                        "cache_identity": {"cache_sha256": "b" * 64},
+                        "target_kind": runner.PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                        "materializer_id": "packet_member_recompress_adapter",
+                        "receiver_contract_kind": (
+                            "family_agnostic_packet_member_recompress"
+                        ),
+                        "saved_bytes": 64,
+                        "observed_rate_gain": 64 * runner.CONTEST_RATE_SCORE_PER_BYTE,
+                        "observed_score_gain": 64 * runner.CONTEST_RATE_SCORE_PER_BYTE,
+                        "artifact_bytes": 425,
+                        "resource_kind": "local_cpu",
+                        "rate_positive": True,
+                        "receiver_contract_satisfied": True,
+                        "source_unit_ids": ["sweep_positive_unit"],
+                        **_false_authority(),
+                    },
+                    {
+                        "schema": "family_agnostic_materializer_empirical_observation.v1",
+                        "observation_kind": (
+                            "family_agnostic_materializer_empirical_observation"
+                        ),
+                        "observation_id": "sweep_receiver_positive_no_delta",
+                        "candidate_id": "sweep_no_delta_candidate",
+                        "axis": "[local-materializer-proof]",
+                        "runtime_identity": {"runtime_contract_sha256": "a" * 64},
+                        "cache_identity": {"cache_sha256": "b" * 64},
+                        "target_kind": runner.PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                        "materializer_id": "packet_member_recompress_adapter",
+                        "receiver_contract_kind": (
+                            "family_agnostic_packet_member_recompress"
+                        ),
+                        "saved_bytes": 0,
+                        "observed_rate_gain": 0.0,
+                        "observed_score_gain": 0.0,
+                        "artifact_bytes": 500,
+                        "resource_kind": "local_cpu",
+                        "rate_positive": False,
+                        "receiver_contract_satisfied": True,
+                        "source_unit_ids": ["sweep_no_delta_unit"],
+                        **_false_authority(),
+                    },
+                ],
+                **_false_authority(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    queue_observation = {
+        "schema": "experiment_queue_observation.v1",
+        "queue_id": "receiver_sweep_queue",
+        "healthy": True,
+        "succeeded_artifact_steps": [
+            {
+                "experiment_id": "sweep_exp",
+                "step_id": "sweep",
+                "resource_kind": "local_cpu",
+                "candidate_ids": ["sweep_positive_candidate"],
+                "expected_artifacts": [
+                    {
+                        "path": sweep_path.name,
+                        "exists": True,
+                        "postcondition_type": "json_false_authority",
+                    }
+                ],
+            }
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+    queue_observation_path.write_text(json.dumps(queue_observation), encoding="utf-8")
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--run-dir",
+            str(run_dir),
+            "--lane-id",
+            "receiver_sweep_lane",
+        ]
+    )
+
+    hint_path, _status_path, status, result = (
+        runner._write_dynamic_sparse_feedback_compiler_hint(
+            args,
+            queue={"queue_id": "receiver_sweep_queue"},
+            run_dir=run_dir,
+            queue_observation_path=queue_observation_path,
+            queue_observation=queue_observation,
+            runtime_identity_path=runtime_identity_path,
+            cache_identity_path=cache_identity_path,
+        )
+    )
+
+    assert result.returncode == 0
+    assert hint_path == run_dir / "dynamic_sparse_feedback_compiler_hint.json"
+    assert status["hint_emitted"] is True
+    assert status["receiver_feedback_counts"]["materializer_artifact_count"] == 1
+    assert status["receiver_feedback_counts"]["materializer_observation_count"] == 2
+    assert (
+        status["receiver_feedback_counts"]["receiver_positive_rate_saving_count"]
+        == 1
+    )
+    assert (
+        status["receiver_feedback_counts"]["receiver_positive_rate_nonpositive_count"]
+        == 1
+    )
+    payload = json.loads(hint_path.read_text(encoding="utf-8"))
+    selected = payload["selected_operations"]
+    assert [row["unit_id"] for row in selected] == ["sweep_positive_unit"]
+    assert selected[0]["score_claim"] is False
+
+
+def test_materializer_campaign_runner_counts_rate_saving_without_receiver_separately(
+    tmp_path: Path,
+) -> None:
+    queue_observation_path = tmp_path / "queue_observation.json"
+    queue_observation = {
+        "schema": "experiment_queue_observation.v1",
+        "queue_id": "receiver_missing_queue",
+        "healthy": True,
+        "succeeded_artifact_steps": [
+            {
+                "experiment_id": "receiver_missing_exp",
+                "step_id": "materialize",
+                "candidate_ids": ["receiver_missing_candidate"],
+                "expected_artifacts": [
+                    {
+                        "path": "receiver_missing_manifest.json",
+                        "candidate_id": "receiver_missing_candidate",
+                        "target_kind": runner.PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                        "materializer_id": "packet_member_recompress_adapter",
+                        "serialized_archive_delta_status": "realized_saving",
+                        "serialized_archive_delta_realized_saved_bytes": 32,
+                        "serialized_archive_delta_savings_realized": True,
+                        "score_claim": False,
+                    }
+                ],
+            }
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+    queue_observation_path.write_text(json.dumps(queue_observation), encoding="utf-8")
+
+    counts = runner._queue_observation_receiver_feedback_counts(
+        queue_observation,
+        queue_observation_path=queue_observation_path,
+    )
+
+    assert counts["materializer_artifact_count"] == 1
+    assert counts["rate_saving_without_receiver_proof_count"] == 1
+    assert counts["receiver_negative_count"] == 0
+    assert counts["receiver_positive_rate_saving_count"] == 0
+
+
+def test_materializer_campaign_runner_rejects_truthy_authority_sweep_artifact(
+    tmp_path: Path,
+) -> None:
+    queue_observation_path = tmp_path / "queue_observation.json"
+    sweep_path = tmp_path / "truthy_sweep.json"
+    sweep_path.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_materializer_empirical_sweep.v1",
+                "score_claim": True,
+                "observations": [
+                    {
+                        "schema": "family_agnostic_materializer_empirical_observation.v1",
+                        "saved_bytes": 64,
+                        "rate_positive": True,
+                        "receiver_contract_satisfied": True,
+                        **_false_authority(),
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    queue_observation = {
+        "schema": "experiment_queue_observation.v1",
+        "queue_id": "truthy_receiver_sweep_queue",
+        "healthy": True,
+        "succeeded_artifact_steps": [
+            {
+                "experiment_id": "truthy_sweep_exp",
+                "step_id": "sweep",
+                "expected_artifacts": [
+                    {
+                        "path": sweep_path.name,
+                        "exists": True,
+                        "postcondition_type": "json_false_authority",
+                    }
+                ],
+            }
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+    queue_observation_path.write_text(json.dumps(queue_observation), encoding="utf-8")
+
+    counts = runner._queue_observation_receiver_feedback_counts(
+        queue_observation,
+        queue_observation_path=queue_observation_path,
+    )
+
+    assert counts["materializer_artifact_count"] == 0
+    assert counts["materializer_observation_count"] == 0
+    assert counts["receiver_positive_rate_saving_count"] == 0
+
+
 def test_materializer_campaign_runner_blocks_dynamic_sparse_hint_without_receiver(
     tmp_path: Path,
 ) -> None:

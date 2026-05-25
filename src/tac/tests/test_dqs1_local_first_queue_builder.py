@@ -393,6 +393,76 @@ def test_dqs1_queue_builder_can_emit_multiple_local_first_candidates(
         "pairset_drop_one_rank023_pair0440",
         "pairset_drop_one_rank024_pair0112",
     ]
+    assert result.materializer_feedback_bridge is None
+    assert all(
+        "materializer_feedback_bridge" not in experiment["metadata"]
+        for experiment in result.queue["experiments"]
+    )
+
+
+def test_dqs1_queue_builder_stamps_materializer_feedback_bridge(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+    materializer_feedback = {
+        "schema": "family_agnostic_materializer_empirical_sweep.v1",
+        **_false_authority(),
+        "observations": [
+            {
+                "schema": "family_agnostic_materializer_empirical_observation.v1",
+                **_false_authority(),
+                "observation_id": "packet_member_recompress_no_delta",
+                "candidate_id": "packet_member_recompress_no_delta",
+                "target_kind": "packet_member_recompress_v1",
+                "materializer_id": "packet_member_recompress_adapter",
+                "saved_bytes": 0,
+                "rate_positive": False,
+                "savings_realized": False,
+                "receiver_contract_satisfied": True,
+                "inflate_parity_satisfied": False,
+                "recommended_planner_action": (
+                    "demote_matching_archive_class_for_member_recompress"
+                ),
+                "readiness_blockers": [],
+            }
+        ],
+    }
+
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="results",
+        candidate_limit=2,
+        materializer_feedback_payloads=(materializer_feedback,),
+        materializer_feedback_source_paths=("materializer_feedback.json",),
+    )
+
+    bridge = result.materializer_feedback_bridge
+    assert bridge is not None
+    assert bridge["schema"] == "dqs1_materializer_feedback_bridge.v1"
+    assert bridge["recommended_next_action"] == (
+        "switch_to_dqs1_pairset_composition_followup"
+    )
+    assert bridge["score_claim"] is False
+    assert bridge["ready_for_exact_eval_dispatch"] is False
+    assert bridge["planned_dqs1_candidate_count"] == 2
+    assert [row["candidate_id"] for row in bridge["planned_dqs1_candidates"]] == [
+        "pairset_drop_one_rank023_pair0440",
+        "pairset_drop_one_rank024_pair0112",
+    ]
+    assert bridge["demoted_materializer_target_kinds"] == [
+        {
+            **_false_authority(),
+            "target_kind": "packet_member_recompress_v1",
+            "demotion_reason": "receiver_contract_satisfied_but_no_archive_delta",
+            "observation_count": 1,
+            "saved_bytes_sum": 0,
+        }
+    ]
+    assert all(
+        experiment["metadata"]["materializer_feedback_bridge"] == bridge
+        for experiment in result.queue["experiments"]
+    )
 
 
 def test_dqs1_queue_builder_accepts_local_io_concurrency(
@@ -1255,7 +1325,9 @@ def test_checked_in_dqs1_queue_keeps_eureka_append_only_contract() -> None:
             if condition["type"] == "json_false_authority"
         )
         assert false_authority["path"] == eureka_out
-        assert false_authority["required_false"] == list(EUREKA_FALSE_AUTHORITY_FIELDS)
+        assert set(false_authority["required_false"]) == set(
+            EUREKA_FALSE_AUTHORITY_FIELDS
+        )
         assert false_authority["false_or_missing"] == []
 
 

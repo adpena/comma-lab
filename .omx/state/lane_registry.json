@@ -55279,6 +55279,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "codex_dynamic_sparse_sweep_artifact_receiver_counts_20260525",
+      "name": "Dynamic sparse sweep artifact receiver counts",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/run_byte_shaving_materializer_campaign.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/codex_dqs1_materializer_feedback_bridge_20260525T121724Z/dqs1_materializer_feedback_bridge.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_dqs1_local_first_tranche.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_dynamic_sparse_dqs1_materializer_feedback_bridge_20260525T122022Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "codex_dqs1_materializer_feedback_bridge_20260525",
+      "name": "DQS1 materializer feedback bridge",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/dqs1_materializer_feedback_bridge.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/codex_dqs1_materializer_feedback_bridge_20260525T121724Z/dqs1_materializer_feedback_bridge.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_dqs1_local_first_queue_builder.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_dqs1_materializer_feedback_bridge_20260525T121724Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -55288,5 +55370,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T12:05:43Z"
+  "updated_at": "2026-05-25T12:24:11Z"
 }

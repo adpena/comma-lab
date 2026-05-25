@@ -11,6 +11,9 @@ from typing import Any
 
 from comma_lab.storage_tiers import DEFAULT_RESERVE_FREE_GB
 from tac.optimization.decoder_q_constants import FEC6_PAIR_COUNT
+from tac.optimization.dqs1_materializer_feedback_bridge import (
+    build_dqs1_materializer_feedback_bridge,
+)
 from tac.optimization.local_cpu_contest_drift import (
     EUREKA_FALSE_AUTHORITY_FIELDS,
     EUREKA_SIGNAL_SCHEMA,
@@ -99,6 +102,7 @@ class Dqs1QueueBuildResult:
     queue: dict[str, Any]
     selection: Dqs1QueueSelection
     selections: tuple[Dqs1QueueSelection, ...] = field(default_factory=tuple)
+    materializer_feedback_bridge: dict[str, Any] | None = None
 
 
 def _json_load(path: Path) -> dict[str, Any]:
@@ -745,6 +749,7 @@ def build_dqs1_local_first_queue(
     include_raw_retention_plan: bool = True,
     include_mlx_retention_plan: bool = True,
     preflight_dependency: str | None = None,
+    materializer_feedback_bridge: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if (
         isinstance(local_cpu_concurrency, bool)
@@ -1170,6 +1175,11 @@ def build_dqs1_local_first_queue(
                     "promotion_eligible": False,
                     "rank_or_kill_eligible": False,
                     "ready_for_exact_eval_dispatch": False,
+                    **(
+                        {"materializer_feedback_bridge": materializer_feedback_bridge}
+                        if materializer_feedback_bridge is not None
+                        else {}
+                    ),
                 },
                 "steps": steps,
             }
@@ -1219,6 +1229,7 @@ def build_dqs1_local_first_queue_from_selections(
     scheduler_proactive_cleanup_min_bytes: str = "1",
     scheduler_proactive_cleanup_cold_store_roots: tuple[str, ...] = (),
     scheduler_proactive_cleanup_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
+    materializer_feedback_bridge: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not selections:
         raise ExperimentQueueError("at least one DQS1 queue selection is required")
@@ -1275,6 +1286,7 @@ def build_dqs1_local_first_queue_from_selections(
             include_raw_retention_plan=include_raw_retention_plan,
             include_mlx_retention_plan=include_mlx_retention_plan,
             preflight_dependency=preflight_dependency,
+            materializer_feedback_bridge=materializer_feedback_bridge,
         )
         for selection in selections
     ]
@@ -1348,6 +1360,8 @@ def build_queue_from_action_summary(
     scheduler_proactive_cleanup_min_bytes: str = "1",
     scheduler_proactive_cleanup_cold_store_roots: tuple[str, ...] = (),
     scheduler_proactive_cleanup_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
+    materializer_feedback_payloads: tuple[dict[str, Any], ...] = (),
+    materializer_feedback_source_paths: tuple[str, ...] = (),
 ) -> Dqs1QueueBuildResult:
     selections = select_dqs1_local_first_candidates(
         action_summary_path,
@@ -1356,6 +1370,12 @@ def build_queue_from_action_summary(
         completed_results_roots=completed_results_roots,
         exclude_candidate_ids=exclude_candidate_ids,
         skip_completed_local_advisory=skip_completed_local_advisory,
+        candidate_limit=candidate_limit,
+    )
+    materializer_feedback_bridge = build_dqs1_materializer_feedback_bridge(
+        materializer_feedback_payloads=materializer_feedback_payloads,
+        materializer_feedback_source_paths=materializer_feedback_source_paths,
+        planned_dqs1_candidate_ids=tuple(selection.candidate_id for selection in selections),
         candidate_limit=candidate_limit,
     )
     return Dqs1QueueBuildResult(
@@ -1396,7 +1416,9 @@ def build_queue_from_action_summary(
             scheduler_proactive_cleanup_min_bytes=scheduler_proactive_cleanup_min_bytes,
             scheduler_proactive_cleanup_cold_store_roots=scheduler_proactive_cleanup_cold_store_roots,
             scheduler_proactive_cleanup_cold_store_reserve_gb=scheduler_proactive_cleanup_cold_store_reserve_gb,
+            materializer_feedback_bridge=materializer_feedback_bridge,
         ),
         selection=selections[0],
         selections=selections,
+        materializer_feedback_bridge=materializer_feedback_bridge,
     )
