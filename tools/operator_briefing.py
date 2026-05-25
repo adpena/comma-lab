@@ -76,6 +76,10 @@ DISTORTION_AXIS_PROBE_SCAN_ROOTS = (
     REPO_ROOT / ".omx" / "research" / "tier_1_distortion_axis_probes_20260521",
     REPO_ROOT / ".omx" / "research",
 )
+DISTORTION_AXIS_LEARNED_SWEEP_SCAN_ROOTS = (
+    REPO_ROOT / "experiments" / "results",
+    REPO_ROOT / ".omx" / "research",
+)
 DQS1_DROP_MANY_GREEDY_VERDICT_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
     REPO_ROOT / ".omx" / "research",
@@ -85,6 +89,12 @@ FRONTIER_FEEDBACK_CYCLE_REPORT_NAME = "frontier_rate_attack_feedback_cycle.json"
 FRONTIER_FEEDBACK_REFRESH_REPORT_NAME = "feedback_refresh_report.json"
 PR95_MLX_MATRIX_MANIFEST_NAME = "matrix_manifest.json"
 DISTORTION_AXIS_PROBE_VERDICT_GLOB = "probe_*_verdict.json"
+DISTORTION_AXIS_LEARNED_SWEEP_PAYLOAD_GLOB = (
+    "distortion_axis_probe_learned_sweep_candidates*.json"
+)
+DISTORTION_AXIS_LEARNED_SWEEP_PLAN_GLOB = (
+    "distortion_axis_probe_learned_sweep_plan*.json"
+)
 DQS1_DROP_MANY_GREEDY_VERDICT_GLOB = (
     "dqs1_drop_many_build_1c_greedy_heuristic_alternative_reducer_*/verdict.json"
 )
@@ -2415,6 +2425,208 @@ def _format_distortion_axis_probe_summary() -> str:
             lines.append(f"  - {action}")
     lines.append(
         "authority: macOS-CPU advisory only; exact CPU/CUDA auth still required before score, rank, promotion, or dispatch."
+    )
+    return "\n".join(lines)
+
+
+def _distortion_axis_learned_sweep_paths(
+    filename_glob: str,
+    *,
+    scan_roots: tuple[Path, ...] | None = None,
+    max_depth: int = 5,
+) -> list[Path]:
+    if scan_roots is None:
+        scan_roots = DISTORTION_AXIS_LEARNED_SWEEP_SCAN_ROOTS
+    patterns = tuple(f"{'*/' * depth}{filename_glob}" for depth in range(max_depth))
+    seen: set[Path] = set()
+    paths: list[Path] = []
+    for root in scan_roots:
+        if not root.exists():
+            continue
+        for pattern in patterns:
+            for path in root.glob(pattern):
+                resolved = path.resolve(strict=False)
+                if resolved in seen or not path.is_file():
+                    continue
+                seen.add(resolved)
+                paths.append(path)
+    return sorted(
+        paths,
+        key=lambda item: item.stat().st_mtime_ns if item.exists() else 0,
+        reverse=True,
+    )
+
+
+def _distortion_axis_learned_sweep_artifact_row(
+    path: Path,
+    *,
+    expected_schema: str,
+    kind: str,
+) -> dict[str, object]:
+    payload = _load_json_file(path)
+    base = {
+        "kind": kind,
+        "path": _repo_rel(path),
+        "sha256": _sha256_file(path) if path.is_file() else "",
+        "mtime_ns": path.stat().st_mtime_ns if path.is_file() else 0,
+        **_false_authority_fields(),
+    }
+    if "_error" in payload:
+        return {**base, "status": "ERROR", "blockers": [str(payload["_error"])]}
+    bad_authority = _authority_truthy(payload)
+    if bad_authority:
+        return {
+            **base,
+            "schema": str(payload.get("schema") or ""),
+            "status": "BLOCKED_AUTHORITY_LEAK",
+            "blockers": [f"truthy_authority:{key}" for key in bad_authority],
+        }
+    schema = str(payload.get("schema") or "")
+    if schema != expected_schema:
+        return {
+            **base,
+            "schema": schema,
+            "status": "BLOCKED_SCHEMA",
+            "blockers": [f"expected_schema:{expected_schema}"],
+        }
+    summary = payload.get("summary")
+    summary_dict = summary if isinstance(summary, dict) else {}
+    return {
+        **base,
+        "schema": schema,
+        "status": "ADVISORY_PLAN",
+        "adapted_candidate_count": _safe_int(
+            summary_dict.get("adapted_candidate_count")
+            or summary_dict.get("candidate_count")
+        ),
+        "suppressed_candidate_count": _safe_int(
+            summary_dict.get("suppressed_candidate_count")
+            or summary_dict.get("suppressed_observed_row_count")
+        ),
+        "ranked_row_count": _safe_int(summary_dict.get("ranked_row_count")),
+        "local_ready_row_count": _safe_int(
+            summary_dict.get("local_ready_row_count")
+        ),
+        "best_predicted_score_mean": _safe_float(
+            summary_dict.get("best_predicted_score_mean")
+            or payload.get("incumbent_score")
+        ),
+        "best_repair_budget_score": _safe_float(
+            summary_dict.get("best_non_authoritative_repair_budget_score")
+        ),
+        "best_repair_budget_bytes_equivalent": _safe_float(
+            summary_dict.get(
+                "best_non_authoritative_repair_budget_bytes_equivalent"
+            )
+        ),
+        "execution_bridge_status": str(
+            payload.get("execution_bridge_status")
+            or "planning_only_no_execution_authority"
+        ),
+        "blockers": [],
+    }
+
+
+def _distortion_axis_learned_sweep_summary() -> dict[str, object]:
+    payload_rows = [
+        _distortion_axis_learned_sweep_artifact_row(
+            path,
+            expected_schema="distortion_axis_probe_learned_sweep_candidates.v1",
+            kind="distortion_axis_learned_sweep_candidates",
+        )
+        for path in _distortion_axis_learned_sweep_paths(
+            DISTORTION_AXIS_LEARNED_SWEEP_PAYLOAD_GLOB
+        )
+    ]
+    plan_rows = [
+        _distortion_axis_learned_sweep_artifact_row(
+            path,
+            expected_schema="mlx_dynamic_learned_sweep_plan.v1",
+            kind="distortion_axis_learned_sweep_plan",
+        )
+        for path in _distortion_axis_learned_sweep_paths(
+            DISTORTION_AXIS_LEARNED_SWEEP_PLAN_GLOB
+        )
+    ]
+    rows = payload_rows + plan_rows
+    blocked = [
+        row
+        for row in rows
+        if str(row.get("status") or "").startswith(("BLOCKED", "ERROR"))
+    ]
+    advisory = [row for row in rows if row.get("status") == "ADVISORY_PLAN"]
+    latest_payload = payload_rows[0] if payload_rows else {}
+    latest_plan = plan_rows[0] if plan_rows else {}
+    if blocked:
+        status = "BLOCKED"
+        reason = "one or more distortion learned-sweep artifacts leak authority or fail loading"
+    elif advisory:
+        status = "ADVISORY_PLAN"
+        reason = "distortion probe signals are adapted into learned-sweep planning artifacts"
+    else:
+        status = "PENDING"
+        reason = "no distortion learned-sweep adapter artifacts found"
+    return {
+        "schema": "pact.distortion_axis_learned_sweep_bridge_summary.v1",
+        "tool": "tools/adapt_distortion_axis_probes_to_learned_sweep.py",
+        "tool_exists": (TOOLS / "adapt_distortion_axis_probes_to_learned_sweep.py").is_file(),
+        "scan_roots": [
+            _repo_rel(root) for root in DISTORTION_AXIS_LEARNED_SWEEP_SCAN_ROOTS
+        ],
+        "status": status,
+        "reason": reason,
+        "payload_count": len(payload_rows),
+        "plan_count": len(plan_rows),
+        "blocked_count": len(blocked),
+        "adapted_candidate_count": sum(
+            _safe_int(row.get("adapted_candidate_count")) for row in payload_rows
+        ),
+        "suppressed_candidate_count": sum(
+            _safe_int(row.get("suppressed_candidate_count")) for row in payload_rows
+        ),
+        "local_ready_row_count": sum(
+            _safe_int(row.get("local_ready_row_count")) for row in plan_rows
+        ),
+        "best_repair_budget_bytes_equivalent": _safe_float(
+            latest_payload.get("best_repair_budget_bytes_equivalent")
+        ),
+        "latest_payload": latest_payload,
+        "latest_plan": latest_plan,
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotable": False,
+        **_false_authority_fields(),
+    }
+
+
+def _format_distortion_axis_learned_sweep_summary() -> str:
+    payload = _distortion_axis_learned_sweep_summary()
+    lines = [
+        f"status: {payload['status']} — {payload['reason']}",
+        f"artifacts: payloads={payload['payload_count']} "
+        f"plans={payload['plan_count']} blocked={payload['blocked_count']} "
+        f"candidates={payload['adapted_candidate_count']} "
+        f"suppressed={payload['suppressed_candidate_count']} "
+        f"local_ready_rows={payload['local_ready_row_count']}",
+    ]
+    budget = _safe_float(payload.get("best_repair_budget_bytes_equivalent"))
+    if budget > 0.0:
+        lines.append(
+            "best non-authoritative repair budget: "
+            f"{budget:.1f} byte-equivalent score units"
+        )
+    latest_payload = payload.get("latest_payload")
+    if isinstance(latest_payload, dict) and latest_payload:
+        lines.append(
+            "latest payload: "
+            f"{latest_payload.get('path')} "
+            f"bridge={latest_payload.get('execution_bridge_status')}"
+        )
+    latest_plan = payload.get("latest_plan")
+    if isinstance(latest_plan, dict) and latest_plan:
+        lines.append(f"latest plan: {latest_plan.get('path')}")
+    lines.append(
+        "authority: learned-sweep planning only; exact CPU/CUDA auth and byte-closed archive still required."
     )
     return "\n".join(lines)
 
@@ -5989,6 +6201,7 @@ def _dispatch_readiness() -> dict[str, object]:
     frontier_feedback_cycle = _frontier_feedback_cycle_summary()
     pr95_mlx_profiles = _pr95_mlx_control_profile_summary()
     distortion_probe_signals = _distortion_axis_probe_summary()
+    distortion_learned_sweep = _distortion_axis_learned_sweep_summary()
     dqs1_drop_many_greedy = _dqs1_drop_many_greedy_summary()
     return {
         "schema": "pact.operator_dispatch_readiness.v1",
@@ -6145,6 +6358,24 @@ def _dispatch_readiness() -> dict[str, object]:
             "ready_for_exact_eval_dispatch": False,
             "score_claim": False,
         },
+        "phase_6h_distortion_axis_learned_sweep_bridge": {
+            "status": distortion_learned_sweep["status"],
+            "reason": distortion_learned_sweep["reason"],
+            "tool_exists": distortion_learned_sweep["tool_exists"],
+            "payload_count": distortion_learned_sweep["payload_count"],
+            "plan_count": distortion_learned_sweep["plan_count"],
+            "adapted_candidate_count": distortion_learned_sweep[
+                "adapted_candidate_count"
+            ],
+            "suppressed_candidate_count": distortion_learned_sweep[
+                "suppressed_candidate_count"
+            ],
+            "local_ready_row_count": distortion_learned_sweep[
+                "local_ready_row_count"
+            ],
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+        },
         "recommendation": (
             "prefer M5 Max parallel coarse-rank ($0) before paid GHA promotion; "
             "reference Phase 6 xray toolkit for diagnosis"
@@ -6210,6 +6441,11 @@ def _format_dispatch_readiness() -> str:
     lines.append(
         "  Phase 6g (DQS1 drop-many greedy reducer):   "
         f"{phase6g['status']} — {phase6g['reason']}"
+    )
+    phase6h = readiness["phase_6h_distortion_axis_learned_sweep_bridge"]
+    lines.append(
+        "  Phase 6h (distortion learned-sweep bridge):  "
+        f"{phase6h['status']} — {phase6h['reason']}"
     )
     phase7 = readiness["phase_7_constrained_coord_search"]
     lines.append(
@@ -6288,6 +6524,9 @@ def main(argv: list[str] | None = None) -> int:
             "frontier_feedback_cycle": _frontier_feedback_cycle_summary(),
             "pr95_mlx_control_profiles": _pr95_mlx_control_profile_summary(),
             "distortion_axis_probe_signals": _distortion_axis_probe_summary(),
+            "distortion_axis_learned_sweep_bridge": (
+                _distortion_axis_learned_sweep_summary()
+            ),
             "dqs1_drop_many_greedy": _dqs1_drop_many_greedy_summary(),
             "l5_v2_frontier_readiness": _l5_v2_frontier_readiness(
                 dispatch_claim_summary=dispatch_claim_summary
@@ -6445,6 +6684,10 @@ def main(argv: list[str] | None = None) -> int:
     parts.append(_section(
         "Phase 6g — DQS1 drop-many greedy reducer",
         _format_dqs1_drop_many_greedy_summary(),
+    ))
+    parts.append(_section(
+        "Phase 6h — Distortion-axis learned-sweep bridge",
+        _format_distortion_axis_learned_sweep_summary(),
     ))
     parts.append(_section(
         "Phase 7 — Constrained-coord-search status (sister subagent a8522fca)",

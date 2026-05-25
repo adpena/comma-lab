@@ -1,0 +1,364 @@
+{
+  "advisory_only_verdicts": [],
+  "allowed_use": "learned_sweep_candidate_intake_from_distortion_axis_probe_verdicts",
+  "archive_materialization_required": true,
+  "candidate_generation_only": true,
+  "candidates": [
+    {
+      "archive_materialization_required": true,
+      "candidate_generation_only": true,
+      "candidate_id": "distortion_axis:uniward_per_instance_multi_scale_wavelet_combined_v1",
+      "canonical_equation_provenance": {
+        "canonical_equation_candidate": "uniward_per_instance_multi_scale_wavelet_combined_v1",
+        "catalog_status": "FORMALIZATION_PENDING",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "distortion_axis_probe_canonical_equation_provenance.v1",
+        "score_claim": false,
+        "score_claim_valid": false
+      },
+      "component_axis_context": {
+        "non_authoritative_rate_budget_bytes_equivalent": 15018.1956,
+        "non_authoritative_repair_budget_score": 0.01,
+        "posenet_repair_requires_exact_component_probe": true,
+        "primary_axis": "segnet",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "rate_axis": "non_authoritative_free_budget_equivalent",
+        "rate_score_per_byte": 6.658589531221714e-07,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "distortion_axis_probe_component_axis_context.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "secondary_axis": "posenet_repair_budget_unmeasured",
+        "source_evidence_grade": "macOS-CPU-advisory"
+      },
+      "consumer_payload": {
+        "local_actuator_status": "selection_adapter_required",
+        "loss_family": "uniward_per_instance_multi_scale_wavelet_segnet",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_runtime_status": "training_loss_surface_not_inflate_runtime",
+        "schema": "distortion_axis_probe_local_sweep_spec.v1",
+        "score_claim": false,
+        "score_claim_valid": false
+      },
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "distortion_probe_is_macos_cpu_advisory_not_auth_score",
+        "byte_closed_archive_required_before_promotion",
+        "exact_auth_eval_required_before_score_claim",
+        "local_selection_adapter_required_before_run_mlx_dynamic_learned_sweep_local"
+      ],
+      "family": "distortion_axis_segnet_uniward",
+      "frame_pair_context": {
+        "granularity": [
+          "region",
+          "boundary",
+          "frame",
+          "pair",
+          "full_video"
+        ],
+        "n_frames_decoded": 8,
+        "pair_count": 4,
+        "pair_indices": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "distortion_axis_probe_frame_pair_context.v1",
+        "score_claim": false,
+        "score_claim_valid": false
+      },
+      "full_video_denominator": 600,
+      "gpu_launched": false,
+      "master_gradient_priority": 0.48063766956329346,
+      "non_authoritative_mlx_gain_sum": 0.01,
+      "non_authoritative_mlx_window_gain_sum": 6.0,
+      "non_authoritative_normalized_full_video_gain_sum": 0.01,
+      "orthogonality_score": 0.75,
+      "pair_indices": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "payload_bytes": 0,
+      "posenet_context": {
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "required_followup": "paired SegNet/PoseNet component probe before spending saved rate budget",
+        "schema": "distortion_axis_probe_posenet_context.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "status": "repair_budget_candidate_not_measured"
+      },
+      "predicted_delta_band_vs_incumbent_score": [
+        -0.025,
+        -0.01
+      ],
+      "predicted_delta_vs_incumbent_score": -0.01,
+      "predicted_score_mean": 0.18202828295713674,
+      "predicted_score_scope": "macOS_CPU_advisory_full_video_planning_projection_not_auth_score",
+      "predicted_score_source": "distortion_axis_probe9_threshold_break_conservative_predicted_delta",
+      "predicted_score_variance": 5.625000000000001e-05,
+      "promotable": false,
+      "promotion_eligible": false,
+      "quality_evidence": {
+        "adapter_tool": "tools/adapt_distortion_axis_probes_to_learned_sweep.py",
+        "calibrated_delta_mean": -0.01,
+        "calibrated_gain_mean": 0.01,
+        "calibrated_score_mean": 0.18202828295713674,
+        "calibration_scope": "macOS_CPU_advisory_distortion_threshold_planning_only_not_auth_score",
+        "gate_basis": {
+          "calibration": "probe_verdict_breaks_predeclared_segment_threshold",
+          "effective_spend_triage": "non_authoritative_rate_budget_equivalent_is_positive",
+          "parity": "source_verdict_loaded_with_no_truthy_authority_fields",
+          "production_contract": "candidate_payload_has_false_authority_and_explicit_context"
+        },
+        "gate_statuses": {
+          "calibration": "strict_pass",
+          "effective_spend_triage": "strict_pass",
+          "parity": "strict_pass",
+          "production_contract": "strict_pass"
+        },
+        "predicted_delta_band": [
+          -0.025,
+          -0.01
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "mlx_dynamic_learned_sweep_quality_evidence.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "source_probe_id": "tier_1_distortion_uniward_per_instance_multi_scale_wavelet_combined_smoke",
+        "source_schema": "distortion_axis_probe_learned_sweep_candidates.v1"
+      },
+      "rank_or_kill_eligible": false,
+      "rank_score_field": "distortion_axis_predicted_score_mean",
+      "rate_distortion_lattice_context": {
+        "batch_full_video_signal": "conservative_predicted_full_video_gain",
+        "bit_byte_signal": "rate_budget_equivalent_only_no_payload_change",
+        "covered_levels": [
+          "bit",
+          "byte",
+          "pixel",
+          "region",
+          "boundary",
+          "frame",
+          "pair",
+          "batch",
+          "full_video"
+        ],
+        "frame_pair_signal": "probe_source_pairs_and_segments",
+        "pixel_region_boundary_signal": "per_instance_multi_scale_textured_segment_threshold_break",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "distortion_axis_probe_rate_distortion_lattice_context.v1",
+        "score_claim": false,
+        "score_claim_valid": false
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "requires_exact_auth_eval_before_score_claim": true,
+      "schema": "distortion_axis_probe_learned_sweep_candidate.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "segnet_context": {
+        "lowest_segments": [
+          {
+            "class_index": 1,
+            "instance_id": 2,
+            "instance_pixel_count": 594,
+            "instance_textured_avg_weight": 0.25968116521835327,
+            "instance_textured_count": 149,
+            "pair_index": 0
+          },
+          {
+            "class_index": 1,
+            "instance_id": 1,
+            "instance_pixel_count": 2119,
+            "instance_textured_avg_weight": 0.2924861013889313,
+            "instance_textured_count": 530,
+            "pair_index": 2
+          },
+          {
+            "class_index": 1,
+            "instance_id": 1,
+            "instance_pixel_count": 2560,
+            "instance_textured_avg_weight": 0.3236819803714752,
+            "instance_textured_count": 640,
+            "pair_index": 1
+          },
+          {
+            "class_index": 1,
+            "instance_id": 1,
+            "instance_pixel_count": 2204,
+            "instance_textured_avg_weight": 0.32806113362312317,
+            "instance_textured_count": 551,
+            "pair_index": 0
+          },
+          {
+            "class_index": 0,
+            "instance_id": 2,
+            "instance_pixel_count": 11742,
+            "instance_textured_avg_weight": 0.3452233672142029,
+            "instance_textured_count": 2936,
+            "pair_index": 1
+          },
+          {
+            "class_index": 1,
+            "instance_id": 2,
+            "instance_pixel_count": 1255,
+            "instance_textured_avg_weight": 0.348332941532135,
+            "instance_textured_count": 314,
+            "pair_index": 1
+          },
+          {
+            "class_index": 1,
+            "instance_id": 1,
+            "instance_pixel_count": 2127,
+            "instance_textured_avg_weight": 0.3546100854873657,
+            "instance_textured_count": 532,
+            "pair_index": 3
+          },
+          {
+            "class_index": 0,
+            "instance_id": 2,
+            "instance_pixel_count": 11808,
+            "instance_textured_avg_weight": 0.380034476518631,
+            "instance_textured_count": 2952,
+            "pair_index": 2
+          }
+        ],
+        "per_class_segment_count": {
+          "0": 7,
+          "1": 7,
+          "2": 4,
+          "3": 0,
+          "4": 4
+        },
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "distortion_axis_probe_segnet_context.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "segment_min_textured_avg_weight": 0.25968116521835327,
+        "segment_spread_textured_avg_weight": 0.35557132959365845,
+        "segment_threshold": 0.5,
+        "threshold_broken": true,
+        "valid_segment_count": 22,
+        "wavelet_levels": 3,
+        "wavelet_name": "db8"
+      },
+      "selected_pair_count": 4,
+      "selected_pair_indices": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "source_probe_id": "tier_1_distortion_uniward_per_instance_multi_scale_wavelet_combined_smoke",
+      "source_probe_index": 0,
+      "waterbucket_context": {
+        "added_archive_bytes": 0,
+        "allocation_hint": "treat score-equivalent bytes as repair budget for SegNet/PoseNet",
+        "break_even_added_bytes": 15018.1956,
+        "byte_budget_margin": 15018.1956,
+        "normalized_gain": 0.01,
+        "projected_delta": -0.01,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "distortion_axis_probe_waterbucket_context.v1",
+        "score_claim": false,
+        "score_claim_valid": false
+      }
+    }
+  ],
+  "dispatch_attempted": false,
+  "evidence_grade": "macOS-CPU-advisory",
+  "evidence_tag": "[macOS-CPU advisory]",
+  "execution_bridge_status": "planning_payload_only_selection_adapter_required_before_local_actuation",
+  "gpu_launched": false,
+  "producer": "tac.optimization.distortion_axis_probe_learned_sweep_adapter",
+  "promotable": false,
+  "promotion_eligible": false,
+  "quality_evidence_schema": "mlx_dynamic_learned_sweep_quality_evidence.v1",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "requires_exact_auth_eval_before_score_claim": true,
+  "schema": "distortion_axis_probe_learned_sweep_candidates.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "source_artifacts": {
+    "verdict_000": {
+      "bytes": 13430,
+      "path": ".omx/research/tier_1_distortion_axis_probes_20260521/probe_9_uniward_per_instance_multi_scale_wavelet_combined_verdict.json",
+      "sha256": "bb9043e9f012d630367cdf541aac5df28afff0566f0a6d174a4e38aac4af7f27"
+    },
+    "verdict_001": {
+      "bytes": 6214,
+      "path": ".omx/research/tier_1_distortion_axis_probes_20260521/probe_10_hinton_kl_motion_aware_temporal_context_w6_verdict.json",
+      "sha256": "0aee7e4d0c3f57029523d3270153b2a28ca53c98eb4b82d463a9b83b54907f85"
+    }
+  },
+  "summary": {
+    "adapted_candidate_count": 1,
+    "advisory_only_count": 0,
+    "best_non_authoritative_repair_budget_bytes_equivalent": 15018.1956,
+    "best_non_authoritative_repair_budget_score": 0.01,
+    "best_predicted_delta_vs_incumbent": -0.010000000000000009,
+    "best_predicted_score_mean": 0.18202828295713674,
+    "incumbent_score": 0.19202828295713675,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "suppressed_candidate_count": 1,
+    "top_k": null,
+    "variance_floor": 2.5e-10,
+    "verdict_count": 2
+  },
+  "suppressed_candidates": [
+    {
+      "candidate_generation_only": true,
+      "candidate_id": "distortion_axis:hinton_kl_motion_aware_temporal_context_w6_v1",
+      "dispatch_blockers": [
+        "motion_weighted_uniform_ratio_failed_threshold",
+        "motion_kl_pearson_failed_threshold",
+        "do_not_spend_budget_on_motion_weighting_without_new_probe"
+      ],
+      "family": "distortion_axis_motion_weighted_hinton_kl",
+      "motion_kl_pearson": 0.08990300558401604,
+      "motion_weighted_uniform_ratio": 1.0013685713896916,
+      "preserved_signal": "Probe 7 W=6 temporal Hinton KL remains eligible; only the motion-weighted enhancement is suppressed.",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "distortion_axis_probe_suppressed_candidate.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_probe_id": "tier_1_distortion_hinton_kl_motion_aware_temporal_context_w6_smoke",
+      "source_probe_index": 1,
+      "suppression_reason": "NEGATIVE_MOTION_NEUTRAL"
+    }
+  ]
+}

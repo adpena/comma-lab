@@ -188,6 +188,17 @@ def test_briefing_json_composite_has_all_three_keys():
     assert out["dispatch_readiness"][
         "phase_6f_distortion_axis_probe_signals"
     ]["score_claim"] is False
+    distortion_sweep = out["distortion_axis_learned_sweep_bridge"]
+    assert distortion_sweep["schema"] == (
+        "pact.distortion_axis_learned_sweep_bridge_summary.v1"
+    )
+    assert distortion_sweep["score_claim"] is False
+    assert distortion_sweep["promotion_eligible"] is False
+    assert distortion_sweep["rank_or_kill_eligible"] is False
+    assert distortion_sweep["ready_for_exact_eval_dispatch"] is False
+    assert out["dispatch_readiness"][
+        "phase_6h_distortion_axis_learned_sweep_bridge"
+    ]["score_claim"] is False
     dqs1_greedy = out["dqs1_drop_many_greedy"]
     assert dqs1_greedy["schema"] == "pact.dqs1_drop_many_greedy_summary.v1"
     assert dqs1_greedy["tool_exists"] is True
@@ -3552,6 +3563,72 @@ def test_distortion_axis_probe_summary_surfaces_wave2_signals(
     assert "best UNIWARD segment: min=0.2597" in text
     assert "threshold_broken=1" in text
     assert "authority: macOS-CPU advisory only" in text
+
+
+def test_distortion_axis_learned_sweep_bridge_summary_surfaces_budget(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    root = tmp_path / "results"
+    _write_json(
+        root / "distortion_axis_probe_learned_sweep_candidates.json",
+        {
+            "schema": "distortion_axis_probe_learned_sweep_candidates.v1",
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+            "execution_bridge_status": (
+                "planning_payload_only_selection_adapter_required_before_local_actuation"
+            ),
+            "summary": {
+                "adapted_candidate_count": 1,
+                "suppressed_candidate_count": 1,
+                "best_predicted_score_mean": 0.182,
+                "best_non_authoritative_repair_budget_score": 0.010,
+                "best_non_authoritative_repair_budget_bytes_equivalent": 15018.2,
+            },
+        },
+    )
+    _write_json(
+        root / "distortion_axis_probe_learned_sweep_plan.json",
+        {
+            "schema": "mlx_dynamic_learned_sweep_plan.v1",
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+            "summary": {
+                "candidate_count": 1,
+                "ranked_row_count": 2,
+                "local_ready_row_count": 2,
+                "suppressed_observed_row_count": 0,
+            },
+        },
+    )
+    monkeypatch.setattr(mod, "DISTORTION_AXIS_LEARNED_SWEEP_SCAN_ROOTS", (root,))
+
+    summary = mod._distortion_axis_learned_sweep_summary()
+
+    assert summary["status"] == "ADVISORY_PLAN"
+    assert summary["payload_count"] == 1
+    assert summary["plan_count"] == 1
+    assert summary["adapted_candidate_count"] == 1
+    assert summary["suppressed_candidate_count"] == 1
+    assert summary["local_ready_row_count"] == 2
+    assert summary["best_repair_budget_bytes_equivalent"] == 15018.2
+    assert summary["score_claim"] is False
+    assert summary["ready_for_exact_eval_dispatch"] is False
+    text = mod._format_distortion_axis_learned_sweep_summary()
+    assert "best non-authoritative repair budget: 15018.2" in text
+    assert "authority: learned-sweep planning only" in text
 
 
 def test_dqs1_drop_many_greedy_summary_surfaces_defer_verdict(
