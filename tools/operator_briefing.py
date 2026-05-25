@@ -1790,6 +1790,11 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
         if isinstance(payload.get("queue_feedback_replan_policy"), dict)
         else {}
     )
+    feedback_action_summary = (
+        feedback_policy.get("feedback_action_functional_summary")
+        if isinstance(feedback_policy.get("feedback_action_functional_summary"), dict)
+        else {}
+    )
     recovery_plan = (
         payload.get("queue_observation_recovery_plan")
         if isinstance(payload.get("queue_observation_recovery_plan"), dict)
@@ -1996,6 +2001,24 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
         "queue_feedback_replan_policy_should_continue": (
             payload.get("queue_feedback_replan_policy_should_continue") is True
             or feedback_policy.get("should_continue_feedback_loop") is True
+        ),
+        "queue_feedback_replan_candidate_widening_ready": (
+            payload.get("queue_feedback_replan_candidate_widening_ready") is True
+            or feedback_policy.get("ready_for_candidate_generation_widening") is True
+        ),
+        "queue_feedback_replan_dry_no_selected_cells": (
+            feedback_action_summary.get("dry_no_selected_cells") is True
+        ),
+        "queue_feedback_replan_feedback_cell_count": _safe_int(
+            feedback_action_summary.get("cell_count")
+        ),
+        "queue_feedback_replan_feedback_selected_count": _safe_int(
+            feedback_action_summary.get("selected_count")
+        ),
+        "queue_feedback_replan_archive_delta_blocked_cell_count": _safe_int(
+            feedback_action_summary.get(
+                "materializer_archive_delta_blocked_cell_count"
+            )
         ),
         "queue_observation_path": str(
             payload.get("queue_observation_path")
@@ -2457,6 +2480,12 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
             f"{latest.get('experiment_count', 0)} experiment(s) queued from "
             f"{latest.get('high_level_action_source_count', 0)} high-level source(s)"
         )
+    elif latest.get("queue_feedback_replan_candidate_widening_ready") is True:
+        status = "NEEDS_CANDIDATE_WIDENING"
+        reason = (
+            "latest feedback action surface has no selected materializer cells; "
+            "refresh or widen inverse candidate generation"
+        )
     else:
         status = "PENDING"
         reason = "latest campaign run has not produced an executable queue yet"
@@ -2516,6 +2545,20 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
             1
             for row in rows
             if row.get("queue_feedback_replan_policy_should_continue") is True
+        ),
+        "queue_feedback_candidate_widening_ready_count": sum(
+            1
+            for row in rows
+            if row.get("queue_feedback_replan_candidate_widening_ready") is True
+        ),
+        "queue_feedback_dry_no_selected_count": sum(
+            1
+            for row in rows
+            if row.get("queue_feedback_replan_dry_no_selected_cells") is True
+        ),
+        "queue_feedback_archive_delta_blocked_cell_count": sum(
+            _safe_int(row.get("queue_feedback_replan_archive_delta_blocked_cell_count"))
+            for row in rows
         ),
         "queue_observation_recovery_required_count": sum(
             1 for row in rows if row.get("queue_observation_recovery_required") is True
@@ -2737,6 +2780,12 @@ def _format_byte_shaving_acquisition_summary() -> str:
             "feedback_success="
             f"{payload['queue_feedback_followup_execution_success_count']} "
             f"feedback_continue={payload['queue_feedback_policy_continue_count']} "
+            "feedback_widen="
+            f"{payload['queue_feedback_candidate_widening_ready_count']} "
+            "feedback_dry="
+            f"{payload['queue_feedback_dry_no_selected_count']} "
+            "feedback_archive_delta_blocked_cells="
+            f"{payload['queue_feedback_archive_delta_blocked_cell_count']} "
             "queue_recovery_required="
             f"{payload['queue_observation_recovery_required_count']} "
             "queue_recovery_ready="
@@ -2827,6 +2876,12 @@ def _format_byte_shaving_acquisition_summary() -> str:
                 f"{row.get('queue_feedback_replan_policy_decision') or '<none>'} "
                 "feedback_continue="
                 f"{row.get('queue_feedback_replan_policy_should_continue') is True} "
+                "feedback_widening="
+                f"{row.get('queue_feedback_replan_candidate_widening_ready') is True} "
+                "feedback_dry="
+                f"{row.get('queue_feedback_replan_dry_no_selected_cells') is True} "
+                "feedback_archive_delta_blocked_cells="
+                f"{row.get('queue_feedback_replan_archive_delta_blocked_cell_count', 0)} "
                 "queue_recovery_required="
                 f"{row.get('queue_observation_recovery_required') is True} "
                 "queue_recovery_ready="

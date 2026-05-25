@@ -95,6 +95,7 @@ ACTION_RUN_NEXT_ITERATION = "run_next_materializer_campaign_iteration"
 ACTION_INSPECT_EXACT_HANDOFFS = "inspect_exact_readiness_handoffs"
 ACTION_RECOVER_QUEUE_HEALTH = "recover_queue_health"
 ACTION_QUEUE_OBSERVATION_MAINTENANCE = "queue_observation_maintenance"
+ACTION_WIDEN_CANDIDATE_GENERATION = "widen_inverse_candidate_generation"
 ACTION_BLOCKED = "blocked"
 ACTION_STOP_MAX_ITERATIONS = "stop_max_iterations"
 ACTION_REFUSE = "refuse_false_authority_or_schema"
@@ -1004,6 +1005,92 @@ def _campaign_iteration_command(
     ]
 
 
+def _feedback_action_functional_summary(path: str | None) -> dict[str, Any]:
+    path_text = _nonempty_str(path)
+    if path_text is None:
+        return {
+            "path": None,
+            "loaded": False,
+            "dry_no_selected_cells": False,
+            "blockers": [],
+        }
+    resolved = Path(path_text)
+    if not resolved.exists():
+        return {
+            "path": path_text,
+            "loaded": False,
+            "dry_no_selected_cells": False,
+            "blockers": [],
+            "warnings": ["feedback_action_functional_path_not_readable"],
+        }
+    blockers: list[str] = []
+    try:
+        payload = json.loads(resolved.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return {
+            "path": path_text,
+            "loaded": False,
+            "dry_no_selected_cells": False,
+            "blockers": ["feedback_action_functional_json_invalid"],
+        }
+    if not isinstance(payload, Mapping):
+        return {
+            "path": path_text,
+            "loaded": False,
+            "dry_no_selected_cells": False,
+            "blockers": ["feedback_action_functional_not_object"],
+        }
+    schema = _nonempty_str(payload.get("schema"))
+    if schema != "inverse_steganalysis_discrete_action_functional.v1":
+        blockers.append("feedback_action_functional_schema_invalid")
+    blockers.extend(
+        f"feedback_action_functional_truthy_authority_field:{violation}"
+        for violation in truthy_authority_field_violations(
+            payload,
+            fields=FORBIDDEN_TRUE_AUTHORITY_FIELDS,
+        )
+    )
+    water_bucket = payload.get("water_bucket")
+    water_bucket = water_bucket if isinstance(water_bucket, Mapping) else {}
+    integral_totals = payload.get("integral_totals")
+    integral_totals = integral_totals if isinstance(integral_totals, Mapping) else {}
+    selected_count = _safe_int(water_bucket.get("selected_count"))
+    cell_count = _safe_int(integral_totals.get("cell_count"))
+    blocked_cell_count = _safe_int(integral_totals.get("blocked_cell_count"))
+    archive_delta_blocked = _safe_int(
+        integral_totals.get("materializer_archive_delta_blocked_cell_count")
+    )
+    feedback = payload.get("materializer_archive_delta_feedback")
+    feedback = feedback if isinstance(feedback, Mapping) else {}
+    return _false_authority_payload(
+        {
+            "path": path_text,
+            "loaded": True,
+            "schema": schema,
+            "cell_count": cell_count,
+            "selected_count": selected_count,
+            "blocked_cell_count": blocked_cell_count,
+            "materializer_archive_delta_blocked_cell_count": archive_delta_blocked,
+            "selected_expected_score_gain": water_bucket.get(
+                "selected_expected_score_gain"
+            ),
+            "materializer_archive_delta_blocks_water_bucket": (
+                feedback.get("blocks_water_bucket") is True
+                or archive_delta_blocked > 0
+            ),
+            "materializer_archive_delta_realized_saved_bytes_sum": feedback.get(
+                "realized_saved_bytes_sum"
+            ),
+            "dry_no_selected_cells": cell_count > 0 and selected_count == 0,
+            "blockers": list(dict.fromkeys(blockers)),
+            "allowed_use": "local_feedback_policy_routing_only",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_dispatch_authority"
+            ),
+        }
+    )
+
+
 def _validate_next_iteration_command(
     policy: Mapping[str, Any],
     command_items: Sequence[str],
@@ -1678,6 +1765,9 @@ def build_queue_feedback_replan_policy(
     followup_action_functional_path = _nonempty_str(
         run_summary.get("queue_feedback_replan_followup_action_functional_path")
     )
+    feedback_action_functional_summary = _feedback_action_functional_summary(
+        followup_action_functional_path
+    )
     exact_auth_calibration_policy = _exact_auth_calibration_pair_policy(run_summary)
     queue_observation_recovery_plan = _queue_observation_recovery_plan_from_run(
         run_summary
@@ -1726,6 +1816,13 @@ def build_queue_feedback_replan_policy(
         for item in _string_list(exact_auth_calibration_policy.get("blockers"))
     ]
     blockers.extend(calibration_blockers)
+    action_functional_blockers = [
+        f"feedback_action_functional:{item}"
+        for item in _string_list(feedback_action_functional_summary.get("blockers"))
+    ]
+    blockers.extend(action_functional_blockers)
+    for warning in _string_list(feedback_action_functional_summary.get("warnings")):
+        warnings.append(f"feedback_action_functional:{warning}")
 
     if iteration_index >= max_iterations:
         decision = ACTION_STOP_MAX_ITERATIONS
@@ -1745,6 +1842,9 @@ def build_queue_feedback_replan_policy(
     elif calibration_blockers:
         decision = ACTION_BLOCKED
         stop_reason = "exact_auth_calibration_policy_failed"
+    elif action_functional_blockers:
+        decision = ACTION_BLOCKED
+        stop_reason = "feedback_action_functional_invalid"
     elif queue_observation_recovery_required:
         decision = ACTION_RECOVER_QUEUE_HEALTH
         stop_reason = None
@@ -1789,6 +1889,9 @@ def build_queue_feedback_replan_policy(
         decision = ACTION_BLOCKED
         stop_reason = "feedback_action_functional_missing"
         blockers.append("feedback_action_functional_missing")
+    elif feedback_action_functional_summary.get("dry_no_selected_cells") is True:
+        decision = ACTION_WIDEN_CANDIDATE_GENERATION
+        stop_reason = "feedback_action_functional_dry_no_selected_cells"
     else:
         decision = ACTION_RUN_NEXT_ITERATION
         stop_reason = None
@@ -1850,6 +1953,35 @@ def build_queue_feedback_replan_policy(
                 "ready_for_exact_eval_dispatch": False,
             }
         )
+    if decision == ACTION_WIDEN_CANDIDATE_GENERATION:
+        recommended_actions.append(
+            {
+                "action": ACTION_WIDEN_CANDIDATE_GENERATION,
+                "reason": stop_reason,
+                "feedback_action_functional_path": followup_action_functional_path,
+                "cell_count": feedback_action_functional_summary.get("cell_count"),
+                "selected_count": feedback_action_functional_summary.get(
+                    "selected_count"
+                ),
+                "blocked_cell_count": feedback_action_functional_summary.get(
+                    "blocked_cell_count"
+                ),
+                "materializer_archive_delta_blocked_cell_count": (
+                    feedback_action_functional_summary.get(
+                        "materializer_archive_delta_blocked_cell_count"
+                    )
+                ),
+                "next_gate": "widen_inverse_surface_candidate_generation",
+                "candidate_generation_hints": [
+                    "increase_inverse_scorer_max_units",
+                    "refresh_source_inverse_scorer_surface",
+                    "switch_to_compiled_receiver_transform_materializers",
+                ],
+                "local_only": True,
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        )
 
     next_iteration_index = iteration_index + 1
     next_command = None
@@ -1898,6 +2030,7 @@ def build_queue_feedback_replan_policy(
                 run_summary.get("queue_feedback_replan_followup_queue_path")
             ),
             "feedback_action_functional_path": followup_action_functional_path,
+            "feedback_action_functional_summary": feedback_action_functional_summary,
             "feedback_followup_queue_validation": queue_validation,
             "iteration_index": iteration_index,
             "next_iteration_index": next_iteration_index,
@@ -1911,6 +2044,9 @@ def build_queue_feedback_replan_policy(
             ),
             "ready_for_local_materialization": (
                 decision == ACTION_RUN_NEXT_ITERATION
+            ),
+            "ready_for_candidate_generation_widening": (
+                decision == ACTION_WIDEN_CANDIDATE_GENERATION
             ),
             "exact_readiness_handoff_count": exact_handoff_count,
             "exact_auth_calibration_policy": exact_auth_calibration_policy,
@@ -1958,6 +2094,7 @@ __all__ = [
     "ACTION_REFUSE",
     "ACTION_RUN_NEXT_ITERATION",
     "ACTION_STOP_MAX_ITERATIONS",
+    "ACTION_WIDEN_CANDIDATE_GENERATION",
     "MATERIALIZER_CAMPAIGN_RUN_SCHEMA",
     "QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL",
     "QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA",

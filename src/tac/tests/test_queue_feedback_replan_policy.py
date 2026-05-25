@@ -17,6 +17,7 @@ from comma_lab.scheduler.queue_feedback_replan_policy import (
     ACTION_REFUSE,
     ACTION_RUN_NEXT_ITERATION,
     ACTION_STOP_MAX_ITERATIONS,
+    ACTION_WIDEN_CANDIDATE_GENERATION,
     QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL,
     QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA,
     QUEUE_FEEDBACK_REPLAN_CONTINUATION_EXPERIMENT_ID,
@@ -684,6 +685,82 @@ def test_feedback_replan_policy_builds_next_iteration_command_after_success() ->
         "3",
     ]
     assert policy["recommended_actions"][-1]["requires_materializer_context_or_artifact_map"] is True
+
+
+def test_feedback_replan_policy_routes_dry_action_functional_to_candidate_widening(
+    tmp_path: Path,
+) -> None:
+    action_path = tmp_path / "inverse_steganalysis_action_functional.feedback.json"
+    action_path.write_text(
+        json.dumps(
+            {
+                "schema": "inverse_steganalysis_discrete_action_functional.v1",
+                "integral_totals": {
+                    "cell_count": 1,
+                    "blocked_cell_count": 1,
+                    "materializer_archive_delta_blocked_cell_count": 1,
+                },
+                "water_bucket": {
+                    "schema": "inverse_steganalysis_water_bucket_plan.v1",
+                    "selected_count": 0,
+                    "selected_expected_score_gain": 0.0,
+                    "selected_cells": [],
+                },
+                "materializer_archive_delta_feedback": {
+                    "schema": "inverse_steganalysis_materializer_archive_delta_feedback.v1",
+                    "blocks_water_bucket": True,
+                    "realized_saved_bytes_sum": -1805,
+                    "score_claim": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+                "exact_cuda_auth_eval": False,
+                "contest_cuda_auth_eval": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    policy = build_queue_feedback_replan_policy(
+        _run_summary(
+            queue_feedback_replan_followup_executed=True,
+            queue_feedback_replan_followup_execution_success=True,
+            queue_feedback_replan_followup_action_functional_path=str(action_path),
+        ),
+        feedback_followup_queue=_child_queue(),
+        iteration_index=1,
+        max_iterations=3,
+    )
+
+    assert policy["decision"] == ACTION_WIDEN_CANDIDATE_GENERATION
+    assert policy["stop_reason"] == "feedback_action_functional_dry_no_selected_cells"
+    assert policy["should_continue_feedback_loop"] is False
+    assert policy["ready_for_local_materialization"] is False
+    assert policy["ready_for_candidate_generation_widening"] is True
+    assert policy["next_iteration_command_template"] is None
+    summary = policy["feedback_action_functional_summary"]
+    assert summary["loaded"] is True
+    assert summary["dry_no_selected_cells"] is True
+    assert summary["selected_count"] == 0
+    assert summary["materializer_archive_delta_blocked_cell_count"] == 1
+    action = policy["recommended_actions"][-1]
+    assert action["action"] == ACTION_WIDEN_CANDIDATE_GENERATION
+    assert action["next_gate"] == "widen_inverse_surface_candidate_generation"
+    assert "refresh_source_inverse_scorer_surface" in action["candidate_generation_hints"]
+
+    queue, blockers = build_queue_feedback_replan_continuation_queue(
+        policy,
+        lane_id="feedback_lane",
+    )
+    assert queue is None
+    assert "queue_feedback_replan_continuation_policy_not_next_iteration" in blockers
+    assert "queue_feedback_replan_continuation_policy_not_continuable" in blockers
 
 
 def test_feedback_replan_policy_builds_paused_next_iteration_queue() -> None:
