@@ -55066,7 +55066,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_mlx_structural_interaction_priors_20260525T112650Z_codex.md"
+          "evidence": ".omx/research/codex_findings_mlx_structural_interaction_priors_20260525T112537Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -55083,5 +55083,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T11:27:13Z"
+  "updated_at": "2026-05-25T11:28:00Z"
 }
