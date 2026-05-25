@@ -12,6 +12,7 @@ from tac.optimization.dynamic_sparse_gate_oracle import (
     dynamic_sparse_skip_mixture,
     operation_set_compiler_hint_from_channel_gate_scores,
     operation_set_compiler_hint_from_gate_scores,
+    operation_set_compiler_hint_from_observation_feedback,
 )
 from tac.optimization.inverse_steganalysis_operation_set_compiler import (
     packet_ir_operation_set_from_compiler_hint,
@@ -171,6 +172,69 @@ def test_channel_gate_hint_rejects_ambiguous_unkeyed_candidates() -> None:
         )
 
 
+def test_observation_feedback_builds_channel_gate_hint() -> None:
+    observations = [
+        {
+            "schema": "inverse_steganalysis_observation.v1",
+            "observation_id": "obs_value_h9",
+            "observation_kind": "family_agnostic_materializer_empirical_observation",
+            "candidate_id": "candidate_value_h9",
+            "axis": "[local-materializer advisory]",
+            "target_kind": "packet_member_recompress_v1",
+            "materializer_id": "packet_member_recompress_adapter",
+            "source_unit_ids": ["mudd_value_h9"],
+            "saved_bytes": 90,
+            "observed_rate_gain": 0.00006,
+            "rate_positive": True,
+            "receiver_contract_satisfied": True,
+            "inflate_parity_satisfied": True,
+            "elapsed_seconds": 3.0,
+            "score_claim": False,
+            "promotion_eligible": False,
+        },
+        {
+            "schema": "inverse_steganalysis_observation.v1",
+            "observation_id": "obs_cost",
+            "candidate_id": "candidate_cost",
+            "axis": "[local-materializer advisory]",
+            "target_kind": "archive_section_entropy_recode_v1",
+            "source_unit_ids": ["mudd_residual_h7"],
+            "saved_bytes": -8,
+            "observed_rate_gain": 0.0,
+            "rate_positive": False,
+            "score_claim": False,
+        },
+    ]
+
+    hint = operation_set_compiler_hint_from_observation_feedback(
+        observations,
+        operation_set_id="observation_feedback_fixture",
+        max_operations=1,
+        lane_id="codex_dynamic_sparse_observation_feedback_20260525",
+    )
+    packet_ir = packet_ir_operation_set_from_compiler_hint(
+        hint,
+        source_backlog_key="dynamic_sparse_observation_feedback_backlog",
+        source_unit_ids=["mudd_value_h9"],
+    )
+
+    selected = hint["selected_operations"][0]
+    feedback = selected["params"]["dynamic_sparse_observation_feedback"]
+    gate = selected["params"]["dynamic_sparse_channel_gate"]
+    assert hint["selection_source"] == "dynamic_sparse_observation_feedback"
+    assert hint["observation_feedback"]["observation_count"] == 2
+    assert hint["observation_feedback"]["selectable_observation_count"] == 1
+    assert selected["unit_id"] == "mudd_value_h9"
+    assert selected["target_kind"] == "packet_member_recompress_v1"
+    assert selected["candidate_saved_bytes"] == 90
+    assert feedback["observation_id"] == "obs_value_h9"
+    assert feedback["channel_scores"]["rate_saving"] == pytest.approx(0.00006)
+    assert gate["channel_id"] == "rate_saving"
+    assert gate["source_id"] == "mudd_value_h9"
+    assert selected["score_claim"] is False
+    assert packet_ir["selected_operations"][0]["score_claim"] is False
+
+
 def test_dynamic_sparse_gate_compiler_hint_cli_writes_channel_hint(tmp_path: Path) -> None:
     candidates = tmp_path / "candidates.json"
     coefficients = tmp_path / "coefficients.json"
@@ -224,3 +288,50 @@ def test_dynamic_sparse_gate_compiler_hint_cli_writes_channel_hint(tmp_path: Pat
     assert payload["schema"] == "inverse_action_operation_set_compiler_hint.v1"
     assert payload["source_schema"] == "dynamic_sparse_channel_gate_operation_selection.v1"
     assert payload["selected_operations"][0]["dynamic_gate_abs_mean_coefficient"] == pytest.approx(0.8)
+
+
+def test_dynamic_sparse_gate_compiler_hint_cli_writes_observation_feedback_hint(
+    tmp_path: Path,
+) -> None:
+    observations = tmp_path / "observations.json"
+    out = tmp_path / "hint.json"
+    observations.write_text(
+        json.dumps(
+            {
+                "observations": [
+                    {
+                        "schema": "inverse_steganalysis_observation.v1",
+                        "observation_id": "obs_cli",
+                        "candidate_id": "candidate_cli",
+                        "axis": "[local-materializer advisory]",
+                        "target_kind": "packet_member_recompress_v1",
+                        "source_unit_ids": ["packet_member_cli"],
+                        "saved_bytes": 42,
+                        "rate_positive": True,
+                        "receiver_contract_satisfied": True,
+                        "score_claim": False,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert (
+        gate_cli.main(
+            [
+                "--observations",
+                str(observations),
+                "--operation-set-id",
+                "cli_observation_feedback",
+                "--out",
+                str(out),
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["selection_source"] == "dynamic_sparse_observation_feedback"
+    assert payload["observation_feedback"]["selectable_observation_count"] == 1
+    assert payload["selected_operations"][0]["unit_id"] == "packet_member_cli"

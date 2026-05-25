@@ -23,13 +23,23 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.score_composition import CANONICAL_RATE_DENOM_BYTES, CANONICAL_RATE_MULTIPLIER
 
 DYNAMIC_SPARSE_SKIP_MIXTURE_SCHEMA = "dynamic_sparse_skip_mixture_oracle.v1"
 DYNAMIC_SPARSE_GATE_OPERATION_SELECTION_SCHEMA = "dynamic_sparse_gate_operation_selection.v1"
 DYNAMIC_SPARSE_CHANNEL_GATE_OPERATION_SELECTION_SCHEMA = (
     "dynamic_sparse_channel_gate_operation_selection.v1"
 )
+DYNAMIC_SPARSE_OBSERVATION_FEEDBACK_SELECTION_SCHEMA = (
+    "dynamic_sparse_gate_observation_feedback_selection.v1"
+)
 DEFAULT_RMS_EPSILON = 1.0e-6
+DEFAULT_RATE_SCORE_PER_BYTE = CANONICAL_RATE_MULTIPLIER / float(CANONICAL_RATE_DENOM_BYTES)
+DEFAULT_OBSERVATION_CHANNEL_IDS = (
+    "rate_saving",
+    "receiver_proof",
+    "runtime_efficiency",
+)
 
 
 class DynamicSparseGateOracleError(ValueError):
@@ -259,6 +269,179 @@ def _candidate_channel_id(row: Mapping[str, Any]) -> str:
         or row.get("channel")
         or ""
     )
+
+
+def _optional_finite_float(value: Any, *, label: str) -> float | None:
+    if value in (None, ""):
+        return None
+    parsed = _as_float(value, label=label, default=0.0)
+    return parsed
+
+
+def _optional_int(value: Any) -> int | None:
+    if value in (None, "") or isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _first_nonempty_text(*values: Any) -> str:
+    for value in values:
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return ""
+
+
+def _source_id_from_observation(row: Mapping[str, Any], *, index: int) -> str:
+    for key in (
+        "source_unit_ids",
+        "backlog_keys",
+        "work_ids",
+        "source_selection_ids",
+        "candidate_ids",
+    ):
+        values = _string_list(row.get(key))
+        if values:
+            return values[0]
+    return _first_nonempty_text(
+        row.get("source_unit_id"),
+        row.get("backlog_key"),
+        row.get("work_id"),
+        row.get("candidate_id"),
+        row.get("target_kind"),
+        f"observation_{index:04d}",
+    )
+
+
+def _observation_saved_bytes(row: Mapping[str, Any]) -> int:
+    for key in ("saved_bytes", "archive_delta_bytes", "realized_saved_bytes"):
+        parsed = _optional_int(row.get(key))
+        if parsed is not None:
+            return parsed
+    return 0
+
+
+def _observation_rate_score(
+    row: Mapping[str, Any],
+    *,
+    rate_score_per_byte: float,
+) -> float:
+    observed = _optional_finite_float(row.get("observed_rate_gain"), label="observed_rate_gain")
+    if observed is None:
+        observed = _optional_finite_float(row.get("observed_score_gain"), label="observed_score_gain")
+    if observed is not None and observed > 0.0:
+        return observed
+    saved_bytes = _observation_saved_bytes(row)
+    if row.get("rate_positive") is True and saved_bytes > 0:
+        return float(saved_bytes) * rate_score_per_byte
+    if row.get("savings_realized") is True and saved_bytes > 0:
+        return float(saved_bytes) * rate_score_per_byte
+    return 0.0
+
+
+def _observation_channel_scores(
+    row: Mapping[str, Any],
+    *,
+    channel_ids: Sequence[str],
+    rate_score_per_byte: float,
+) -> dict[str, float]:
+    rate_score = _observation_rate_score(row, rate_score_per_byte=rate_score_per_byte)
+    elapsed = _optional_finite_float(row.get("elapsed_seconds"), label="elapsed_seconds")
+    receiver_ok = row.get("receiver_contract_satisfied") is True or row.get("inflate_parity_satisfied") is True
+    queue_health_ok = row.get("queue_observation_health") is not False
+    score_by_channel: dict[str, float] = {}
+    for channel_id in channel_ids:
+        if channel_id == "rate_saving":
+            score = rate_score
+        elif channel_id == "receiver_proof":
+            score = rate_score if receiver_ok else 0.0
+        elif channel_id == "runtime_efficiency":
+            score = rate_score / max(float(elapsed or 1.0), 1.0) if rate_score > 0.0 else 0.0
+        elif channel_id == "queue_health":
+            score = rate_score if queue_health_ok else 0.0
+        else:
+            score = _optional_finite_float(row.get(channel_id), label=channel_id) or 0.0
+        if not queue_health_ok and channel_id != "queue_health":
+            score = 0.0
+        score_by_channel[channel_id] = max(0.0, float(score))
+    return score_by_channel
+
+
+def _best_observation_channel(score_by_channel: Mapping[str, float]) -> tuple[str, float]:
+    ranked = sorted(
+        ((float(score), str(channel_id)) for channel_id, score in score_by_channel.items()),
+        key=lambda item: (-item[0], item[1]),
+    )
+    return (ranked[0][1], ranked[0][0]) if ranked else ("", 0.0)
+
+
+def _observation_candidate(
+    row: Mapping[str, Any],
+    *,
+    index: int,
+    source_id: str,
+    channel_id: str,
+    channel_scores: Mapping[str, float],
+) -> dict[str, Any] | None:
+    target_kind = _first_nonempty_text(row.get("target_kind"))
+    if not target_kind:
+        return None
+    saved_bytes = max(0, _observation_saved_bytes(row))
+    observation_id = _first_nonempty_text(row.get("observation_id"), f"observation_{index:04d}")
+    candidate_id = _first_nonempty_text(row.get("candidate_id"), source_id)
+    params: dict[str, Any] = {}
+    if isinstance(row.get("params"), Mapping):
+        params.update(dict(row["params"]))
+    params["dynamic_sparse_observation_feedback"] = {
+        "schema": DYNAMIC_SPARSE_OBSERVATION_FEEDBACK_SELECTION_SCHEMA,
+        "observation_id": observation_id,
+        "candidate_id": candidate_id,
+        "source_id": source_id,
+        "selected_channel_id": channel_id,
+        "channel_scores": {str(key): float(value) for key, value in channel_scores.items()},
+        "source_observation_schema": _first_nonempty_text(row.get("schema")),
+        "observation_kind": _first_nonempty_text(row.get("observation_kind")),
+        "axis": _first_nonempty_text(row.get("axis")),
+        "queue_id": _first_nonempty_text(row.get("queue_id")),
+        "experiment_id": _first_nonempty_text(row.get("experiment_id")),
+        "step_id": _first_nonempty_text(row.get("step_id")),
+        "source_path": _first_nonempty_text(row.get("source_path")),
+        "saved_bytes": saved_bytes,
+        "observed_rate_gain": float(channel_scores.get("rate_saving", 0.0)),
+        **FALSE_AUTHORITY,
+    }
+    materializer = _first_nonempty_text(row.get("materializer"), row.get("materializer_id"))
+    if materializer:
+        params["materializer_id"] = materializer
+    receiver_contract_kind = _first_nonempty_text(row.get("receiver_contract_kind"))
+    candidate = {
+        "unit_id": source_id,
+        "operation_id": f"dynamic_sparse_observation_{source_id}",
+        "target_kind": target_kind,
+        "candidate_id": candidate_id,
+        "candidate_saved_bytes": saved_bytes,
+        "params": params,
+        "dynamic_gate_channel_id": channel_id,
+        "dynamic_gate_source_id": source_id,
+        "blockers": ordered_unique(
+            [
+                *_string_list(row.get("readiness_blockers")),
+                *_string_list(row.get("dispatch_blockers")),
+                "dynamic_sparse_observation_feedback_candidate_generation_only",
+            ]
+        ),
+        **FALSE_AUTHORITY,
+    }
+    if materializer:
+        candidate["materializer"] = materializer
+    if receiver_contract_kind:
+        candidate["receiver_contract_kind"] = receiver_contract_kind
+    return candidate
 
 
 def _channel_candidate_grid(
@@ -517,14 +700,117 @@ def operation_set_compiler_hint_from_channel_gate_scores(
     }
 
 
+def operation_set_compiler_hint_from_observation_feedback(
+    observations: Sequence[Mapping[str, Any]],
+    *,
+    operation_set_id: str,
+    channel_ids: Sequence[str] = DEFAULT_OBSERVATION_CHANNEL_IDS,
+    max_operations: int | None = None,
+    min_abs_gate: float = 0.0,
+    lane_id: str | None = None,
+    candidate_id: str | None = None,
+    coefficient_mode: str = "observation_feedback",
+    shared_projection_id: str | None = None,
+    topology_id: str | None = None,
+    rate_score_per_byte: float = DEFAULT_RATE_SCORE_PER_BYTE,
+) -> dict[str, Any]:
+    """Build a channel-gate compiler hint from real queue/materializer observations."""
+
+    if not observations:
+        raise DynamicSparseGateOracleError("observations must include at least one row")
+    channels = [str(item) for item in channel_ids if str(item)]
+    if not channels:
+        raise DynamicSparseGateOracleError("channel_ids must include at least one channel")
+    rate_per_byte = _as_float(
+        rate_score_per_byte,
+        label="rate_score_per_byte",
+        default=DEFAULT_RATE_SCORE_PER_BYTE,
+    )
+    if rate_per_byte <= 0.0:
+        raise DynamicSparseGateOracleError("rate_score_per_byte must be positive")
+
+    source_ids: list[str] = []
+    score_rows: list[dict[str, float]] = []
+    candidates: list[dict[str, Any]] = []
+    seen_sources: set[str] = set()
+    for index, raw_observation in enumerate(observations):
+        if not isinstance(raw_observation, Mapping):
+            raise DynamicSparseGateOracleError(f"observations[{index}] must be an object")
+        try:
+            require_no_truthy_authority_fields(raw_observation, context=f"observations[{index}]")
+        except ValueError as exc:
+            raise DynamicSparseGateOracleError(str(exc)) from exc
+        source_id = _source_id_from_observation(raw_observation, index=index)
+        if source_id in seen_sources:
+            source_id = f"{source_id}_{index:04d}"
+        seen_sources.add(source_id)
+        channel_scores = _observation_channel_scores(
+            raw_observation,
+            channel_ids=channels,
+            rate_score_per_byte=rate_per_byte,
+        )
+        best_channel, best_score = _best_observation_channel(channel_scores)
+        if best_score <= 0.0:
+            continue
+        candidate = _observation_candidate(
+            raw_observation,
+            index=index,
+            source_id=source_id,
+            channel_id=best_channel,
+            channel_scores=channel_scores,
+        )
+        if candidate is None:
+            continue
+        source_ids.append(source_id)
+        score_rows.append(channel_scores)
+        candidates.append(candidate)
+
+    if not candidates:
+        raise DynamicSparseGateOracleError("no observation feedback row produced a selectable operation candidate")
+
+    coefficients = np.zeros((len(channels), len(source_ids)), dtype=np.float32)
+    for source_index, channel_scores in enumerate(score_rows):
+        for channel_index, channel_id in enumerate(channels):
+            coefficients[channel_index, source_index] = np.float32(channel_scores.get(channel_id, 0.0))
+    hint = operation_set_compiler_hint_from_channel_gate_scores(
+        candidates,
+        coefficients,
+        operation_set_id=operation_set_id,
+        source_ids=source_ids,
+        channel_ids=channels,
+        max_operations=max_operations,
+        min_abs_gate=min_abs_gate,
+        lane_id=lane_id,
+        candidate_id=candidate_id,
+        coefficient_mode=coefficient_mode,
+        shared_projection_id=shared_projection_id,
+        topology_id=topology_id,
+    )
+    hint["selection_source"] = "dynamic_sparse_observation_feedback"
+    hint["observation_feedback"] = {
+        "schema": DYNAMIC_SPARSE_OBSERVATION_FEEDBACK_SELECTION_SCHEMA,
+        "observation_count": len(observations),
+        "selectable_observation_count": len(candidates),
+        "rate_score_per_byte": rate_per_byte,
+        "channel_ids": channels,
+        "source_ids": source_ids,
+        "allowed_use": "queue_materializer_feedback_candidate_generation_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+        **FALSE_AUTHORITY,
+    }
+    return hint
+
+
 __all__ = [
     "DYNAMIC_SPARSE_CHANNEL_GATE_OPERATION_SELECTION_SCHEMA",
     "DYNAMIC_SPARSE_GATE_OPERATION_SELECTION_SCHEMA",
+    "DYNAMIC_SPARSE_OBSERVATION_FEEDBACK_SELECTION_SCHEMA",
     "DYNAMIC_SPARSE_SKIP_MIXTURE_SCHEMA",
     "DynamicSparseGateOracleError",
     "dynamic_sparse_skip_mixture",
     "gelu",
     "operation_set_compiler_hint_from_channel_gate_scores",
     "operation_set_compiler_hint_from_gate_scores",
+    "operation_set_compiler_hint_from_observation_feedback",
     "rms_norm",
 ]

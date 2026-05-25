@@ -18,9 +18,11 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.optimization.dynamic_sparse_gate_oracle import (  # noqa: E402
+    DEFAULT_RATE_SCORE_PER_BYTE,
     DynamicSparseGateOracleError,
     operation_set_compiler_hint_from_channel_gate_scores,
     operation_set_compiler_hint_from_gate_scores,
+    operation_set_compiler_hint_from_observation_feedback,
 )
 from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
@@ -43,6 +45,17 @@ def _operation_candidates(payload: Any) -> list[Mapping[str, Any]]:
         raw = obj.get("operation_candidates", obj.get("selected_operations"))
     if not isinstance(raw, list) or not all(isinstance(item, Mapping) for item in raw):
         raise SystemExit("--operation-candidates must contain operation_candidates[]")
+    return list(raw)
+
+
+def _observations(payload: Any) -> list[Mapping[str, Any]]:
+    if isinstance(payload, list):
+        raw = payload
+    else:
+        obj = _object_payload(payload, label="--observations")
+        raw = obj.get("observations", obj.get("rows"))
+    if not isinstance(raw, list) or not all(isinstance(item, Mapping) for item in raw):
+        raise SystemExit("--observations must contain observations[] or rows[]")
     return list(raw)
 
 
@@ -80,8 +93,10 @@ def _write_json(path: Path, payload: Mapping[str, Any], *, overwrite: bool) -> N
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--operation-candidates", type=Path, required=True)
-    parser.add_argument("--coefficients", type=Path, required=True)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--operation-candidates", type=Path)
+    source.add_argument("--observations", type=Path)
+    parser.add_argument("--coefficients", type=Path)
     parser.add_argument("--operation-set-id", required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--source-ids", default=None)
@@ -93,17 +108,49 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--coefficient-mode", default="linear")
     parser.add_argument("--shared-projection-id", default=None)
     parser.add_argument("--topology-id", default=None)
+    parser.add_argument("--rate-score-per-byte", type=float, default=None)
     parser.add_argument("--overwrite-output", action="store_true")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    candidate_payload = _load_json(args.operation_candidates)
-    coefficient_payload = _load_json(args.coefficients)
-    candidates = _operation_candidates(candidate_payload)
-    coefficients = _coefficients(coefficient_payload)
     try:
+        if args.observations is not None:
+            observations = _observations(_load_json(args.observations))
+            channel_ids = (
+                [item.strip() for item in args.channel_ids.split(",") if item.strip()]
+                if args.channel_ids
+                else None
+            )
+            hint = operation_set_compiler_hint_from_observation_feedback(
+                observations,
+                operation_set_id=args.operation_set_id,
+                channel_ids=channel_ids
+                if channel_ids is not None
+                else ("rate_saving", "receiver_proof", "runtime_efficiency"),
+                max_operations=args.max_operations,
+                min_abs_gate=args.min_abs_gate,
+                lane_id=args.lane_id,
+                candidate_id=args.candidate_id,
+                coefficient_mode=args.coefficient_mode,
+                shared_projection_id=args.shared_projection_id,
+                topology_id=args.topology_id,
+                rate_score_per_byte=(
+                    args.rate_score_per_byte
+                    if args.rate_score_per_byte is not None
+                    else DEFAULT_RATE_SCORE_PER_BYTE
+                ),
+            )
+            _write_json(args.out, hint, overwrite=args.overwrite_output)
+            print(str(args.out))
+            return 0
+        if args.operation_candidates is None or args.coefficients is None:
+            raise SystemExit("--coefficients is required with --operation-candidates")
+        candidate_payload = _load_json(args.operation_candidates)
+        coefficient_payload = _load_json(args.coefficients)
+        candidates = _operation_candidates(candidate_payload)
+        coefficients = _coefficients(coefficient_payload)
         channel_mode = bool(args.channel_ids) or (
             isinstance(coefficient_payload, Mapping)
             and isinstance(coefficient_payload.get("channel_ids"), list)

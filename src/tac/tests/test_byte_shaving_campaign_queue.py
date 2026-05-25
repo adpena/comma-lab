@@ -107,6 +107,7 @@ from tac.optimization.byte_shaving_campaign import (
 )
 from tac.optimization.dynamic_sparse_gate_oracle import (
     operation_set_compiler_hint_from_channel_gate_scores,
+    operation_set_compiler_hint_from_observation_feedback,
 )
 from tac.optimization.family_agnostic_materializers import (
     ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
@@ -633,6 +634,73 @@ def _dynamic_sparse_channel_gate_compiler_plan() -> dict[str, object]:
                     "water_fill_cost_bytes": 176,
                     "expected_score_gain": 0.0003,
                     "euler_lagrange_residual": 0.0001,
+                }
+            ]
+        },
+        **_false_authority(),
+    }
+    surface = build_signal_surface_from_inverse_action_functional(action)
+    return build_byte_shaving_campaign_plan(surface, max_k=1)
+
+
+def _dynamic_sparse_observation_feedback_compiler_plan() -> dict[str, object]:
+    hint = operation_set_compiler_hint_from_observation_feedback(
+        [
+            {
+                "schema": "inverse_steganalysis_observation.v1",
+                "observation_id": "obs_feedback_packet_member",
+                "observation_kind": "family_agnostic_materializer_empirical_observation",
+                "candidate_id": "feedback_packet_member_candidate",
+                "axis": "[local-materializer advisory]",
+                "target_kind": PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                "materializer_id": PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
+                "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+                "source_unit_ids": ["feedback_packet_member_source"],
+                "saved_bytes": 72,
+                "observed_rate_gain": 0.00008,
+                "rate_positive": True,
+                "receiver_contract_satisfied": True,
+                "inflate_parity_satisfied": True,
+                "elapsed_seconds": 4.0,
+                "score_claim": False,
+                "promotion_eligible": False,
+            },
+            {
+                "schema": "inverse_steganalysis_observation.v1",
+                "observation_id": "obs_feedback_no_saving",
+                "candidate_id": "feedback_cost_candidate",
+                "axis": "[local-materializer advisory]",
+                "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+                "source_unit_ids": ["feedback_archive_section_source"],
+                "saved_bytes": -16,
+                "observed_rate_gain": 0.0,
+                "rate_positive": False,
+                "score_claim": False,
+            },
+        ],
+        operation_set_id="dynamic_sparse_observation_feedback_set",
+        max_operations=1,
+        lane_id="codex_dynamic_sparse_observation_feedback_20260525",
+        topology_id="queue_materializer_feedback_rate_receiver_runtime",
+    )
+    action = {
+        "schema": "inverse_steganalysis_discrete_action_functional.v1",
+        "cells": [
+            {
+                "atom_id": "dynamic_sparse_observation_feedback_cell",
+                "operation_set_compiler": hint,
+            }
+        ],
+        "water_bucket": {
+            "selected_cells": [
+                {
+                    "atom_id": "dynamic_sparse_observation_feedback_cell",
+                    "candidate_id": "dynamic_sparse_observation_feedback_candidate",
+                    "scope_axis": "operation_set",
+                    "component": "rate",
+                    "water_fill_cost_bytes": 72,
+                    "expected_score_gain": 0.00008,
+                    "euler_lagrange_residual": 0.00001,
                 }
             ]
         },
@@ -1695,6 +1763,43 @@ def test_dynamic_sparse_channel_gate_hint_reaches_materializer_work_queue(
     assert value_gate["score_claim"] is False
     assert residual_gate["source_id"] == "h7"
     assert residual_gate["channel_id"] == "residual"
+    assert backlog["score_claim"] is False
+    assert work_queue["score_claim"] is False
+
+
+def test_dynamic_sparse_observation_feedback_hint_reaches_materializer_work_queue(
+    tmp_path: Path,
+) -> None:
+    plan = _dynamic_sparse_observation_feedback_compiler_plan()
+    packet_ir = plan["packet_ir_operation_sets"][0]
+
+    compiled = compile_dqs1_byte_shaving_campaign(
+        plan,
+        repo_root=tmp_path,
+    )
+    backlog = compiled["materializer_backlog"]
+    work_queue = compiled["materializer_work_queue"]
+
+    assert packet_ir["schema"] == PACKET_IR_OPERATION_SET_SCHEMA
+    assert packet_ir["score_claim"] is False
+    operation = packet_ir["operations"][0]
+    feedback = operation["params"]["dynamic_sparse_observation_feedback"]
+    gate = operation["params"]["dynamic_sparse_channel_gate"]
+    assert feedback["observation_id"] == "obs_feedback_packet_member"
+    assert feedback["channel_scores"]["rate_saving"] == pytest.approx(0.00008)
+    assert gate["source_id"] == "feedback_packet_member_source"
+    assert gate["channel_id"] == "rate_saving"
+    assert compiled["packet_ir_materializer_backlog_row_count"] >= 1
+    assert work_queue["row_count"] == 1
+    assert work_queue["ready_for_exact_eval_dispatch"] is False
+    backlog_row = backlog["rows"][0]
+    assert backlog_row["target_kind"] == PACKET_MEMBER_RECOMPRESS_TARGET_KIND
+    assert backlog_row["operation_params"]["dynamic_sparse_observation_feedback"][
+        "score_claim"
+    ] is False
+    assert backlog_row["operation_params"]["dynamic_sparse_channel_gate"][
+        "score_claim"
+    ] is False
     assert backlog["score_claim"] is False
     assert work_queue["score_claim"] is False
 

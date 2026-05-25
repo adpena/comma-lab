@@ -124,6 +124,10 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "tac.optimization.dynamic_sparse_gate_oracle",
         "operation_set_compiler_hint_from_channel_gate_scores",
     ),
+    "operation_set_compiler_hint_from_observation_feedback": (
+        "tac.optimization.dynamic_sparse_gate_oracle",
+        "operation_set_compiler_hint_from_observation_feedback",
+    ),
     "build_local_training_harvest_intelligence": (
         "tac.optimization.local_training_harvest_intelligence",
         "build_local_training_harvest_intelligence",
