@@ -342,6 +342,50 @@ def _inverse_scorer_artifact_map(tmp_path: Path) -> dict[str, object]:
     }
 
 
+def _high_level_inverse_action_artifact_map(tmp_path: Path) -> dict[str, object]:
+    payload = _artifact_map(tmp_path)
+    artifacts = payload["artifacts"]
+    assert isinstance(artifacts, dict)
+    artifacts[INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND] = {
+        "candidate_family": "hnerv_variant",
+        "archive_grammar": {
+            "schema": "archive_grammar.fixture.v1",
+            "packet": "single_member_zip",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+        "runtime_consumption_proof": str(tmp_path / "runtime_proof.json"),
+        "operation_set_compiler": {
+            "schema": "inverse_action_operation_set_compiler_hint.v1",
+            "operation_set_id": "compiled_high_level_section",
+            "candidate_saved_bytes": 64,
+            "operation_portability": "family_agnostic",
+            "selected_operations": [
+                {
+                    "unit_id": "compiled_decoder_section",
+                    "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+                    "archive_section": "decoder_packed_brotli",
+                    "section_name": "decoder_packed_brotli",
+                    "candidate_saved_bytes": 64,
+                    "representation_family_class": "hnerv_variant",
+                }
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    return payload
+
+
 def test_final_byte_context_compiler_emits_consumable_materializer_contexts(
     tmp_path: Path,
 ) -> None:
@@ -1008,7 +1052,7 @@ def test_final_byte_context_compiler_carries_missing_artifact_blockers(
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
-def test_final_byte_context_compiler_turns_unsupported_rows_into_blocked_contexts(
+def test_final_byte_context_compiler_blocks_high_level_inverse_action_without_compiler_hint(
     tmp_path: Path,
 ) -> None:
     payload = build_final_byte_operation_contexts(
@@ -1019,10 +1063,10 @@ def test_final_byte_context_compiler_turns_unsupported_rows_into_blocked_context
     )
 
     assert payload["blocked_context_count"] == 1
-    assert payload["unsupported_backlog_keys"] == ["inverse_action_inverse_surface_pair0007"]
+    assert payload["unsupported_backlog_keys"] == []
     row = payload["rows"][0]
-    assert row["unsupported"] is True
-    assert "final_byte_context_compiler_unsupported_backlog_row" in row["context_blockers"]
+    assert "unsupported" not in row
+    assert "materializer_context_missing:operation_set_compiler" in row["context_blockers"]
     bridge = row["context"]["packetir_compiler_bridge"]
     assert bridge["schema"] == "final_byte_packetir_compiler_bridge_hint.v1"
     assert bridge["canonical_packet_compiler_module"] == ("tac.packet_compiler.deterministic_compiler")
@@ -1046,12 +1090,68 @@ def test_final_byte_context_compiler_turns_unsupported_rows_into_blocked_context
     )
     work_row = work_queue["rows"][0]
     assert work_queue["executable_row_count"] == 0
-    assert "final_byte_context_compiler_unsupported_backlog_row" in work_row["materialization_blockers"]
-    assert any(
+    assert (
+        "materializer_context_missing:operation_set_compiler"
+        in work_row["materialization_blockers"]
+    )
+    assert not any(
         blocker.startswith("materializer_work_queue_adapter_missing:")
         for blocker in work_row["materialization_blockers"]
     )
     assert work_row["score_claim"] is False
+
+
+def test_final_byte_context_compiler_lowers_high_level_inverse_action_to_packetir_context(
+    tmp_path: Path,
+) -> None:
+    payload = build_final_byte_operation_contexts(
+        _unsupported_high_level_backlog(),
+        artifact_map=_high_level_inverse_action_artifact_map(tmp_path),
+        repo_root=tmp_path,
+        default_output_root=tmp_path / "out",
+    )
+
+    assert payload["blocked_context_count"] == 0
+    assert payload["unsupported_backlog_keys"] == []
+    assert payload["row_count"] == 2
+    high_level_context = payload["rows"][0]["context"]
+    assert high_level_context["packet_ir_operation_set"]["schema"] == "packet_ir_operation_set_v1"
+    assert high_level_context["score_claim"] is False
+    concrete = payload["rows"][1]
+    assert concrete["target_kind"] == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
+    assert concrete["context"]["archive_path"] == str(tmp_path / "source.zip")
+    assert concrete["context"]["section_manifest"] == str(tmp_path / "sections.json")
+    resolved = materializer_contexts_from_payload(payload)
+    work_queue = build_materializer_work_queue(
+        _unsupported_high_level_backlog(),
+        repo_root=tmp_path,
+        contexts=resolved,
+        source_plan_path="plan.json",
+    )
+    assert work_queue["executable_row_count"] == 1
+    assert work_queue["blocked_row_count"] == 1
+    assert not any(
+        "materializer_work_queue_adapter_missing" in "\n".join(row["materialization_blockers"])
+        for row in work_queue["rows"]
+    )
+    concrete_work = next(
+        row
+        for row in work_queue["rows"]
+        if row["target_kind"] == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
+    )
+    assert concrete_work["executable"] is True
+    assert concrete_work["tool"] == "tools/run_family_agnostic_materializer.py"
+    assert concrete_work["score_claim"] is False
+    high_level_work = next(
+        row
+        for row in work_queue["rows"]
+        if row["target_kind"] == INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND
+    )
+    assert high_level_work["executable"] is False
+    assert (
+        "inverse_action_high_level_context_lowered_to_packet_ir_materializer_rows"
+        in high_level_work["materialization_blockers"]
+    )
 
 
 def test_build_final_byte_operation_contexts_cli_writes_json(

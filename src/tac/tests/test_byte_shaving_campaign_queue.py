@@ -117,6 +117,9 @@ from tac.optimization.inverse_steganalysis_acquisition import (
     build_discrete_scorer_action_functional,
     inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection,
 )
+from tac.optimization.inverse_steganalysis_operation_set_compiler import (
+    packet_ir_operation_set_from_compiler_hint,
+)
 from tac.packet_compiler.deterministic_compiler import PACKET_IR_OPERATION_SET_SCHEMA
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -516,6 +519,59 @@ def _direct_mlx_compiler_plan() -> dict[str, object]:
     action = build_discrete_scorer_action_functional(atoms, total_byte_budget=512)
     surface = build_signal_surface_from_inverse_action_functional(action)
     return build_byte_shaving_campaign_plan(surface, max_k=2)
+
+
+def _inverse_action_high_level_backlog() -> dict[str, object]:
+    return {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "schema": "byte_shaving_materializer_backlog_row.v1",
+                "backlog_key": "inverse_action_inverse_surface_pair0007",
+                "unit_kind": "scorer_inverse_surface_cell",
+                "operation_family": INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
+                "target_kind": INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
+                "materializer_id": INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
+                "source_unit_ids": ["inverse_surface_pair0007"],
+                "source_selection_ids": ["candidate_inverse_surface_pair0007"],
+                "candidate_saved_bytes_sum": 64,
+                "expected_score_gain_sum": 0.0002,
+                **_false_authority(),
+            }
+        ],
+        **_false_authority(),
+    }
+
+
+def _inverse_action_operation_set_compiler_context(tmp_path: Path) -> dict[str, object]:
+    return {
+        "candidate_family": "hnerv_variant",
+        "archive_grammar": {
+            "schema": "archive_grammar.fixture.v1",
+            "packet": "single_member_zip",
+            **_false_authority(),
+        },
+        "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+        "runtime_consumption_proof": str(tmp_path / "runtime_proof.json"),
+        "operation_set_compiler": {
+            "schema": "inverse_action_operation_set_compiler_hint.v1",
+            "operation_set_id": "compiled_high_level_section",
+            "candidate_saved_bytes": 64,
+            "operation_portability": "family_agnostic",
+            "selected_operations": [
+                {
+                    "unit_id": "compiled_decoder_section",
+                    "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+                    "archive_section": "decoder_packed_brotli",
+                    "section_name": "decoder_packed_brotli",
+                    "candidate_saved_bytes": 64,
+                    "representation_family_class": "hnerv_variant",
+                }
+            ],
+            **_false_authority(),
+        },
+        **_false_authority(),
+    }
 
 
 def _inverse_surface_plan() -> dict[str, object]:
@@ -1482,6 +1538,104 @@ def test_direct_mlx_compiler_hint_reaches_materializer_work_queue(
     assert backlog["score_claim"] is False
     assert work_queue["score_claim"] is False
     assert work_queue["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_work_queue_lowers_high_level_inverse_action_context(
+    tmp_path: Path,
+) -> None:
+    high_level_context = _inverse_action_operation_set_compiler_context(tmp_path)
+    queue = build_materializer_work_queue(
+        _inverse_action_high_level_backlog(),
+        repo_root=tmp_path,
+        contexts={
+            "inverse_action_inverse_surface_pair0007": high_level_context,
+            ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND: {
+                "archive_path": str(tmp_path / "source.zip"),
+                "section_manifest": str(tmp_path / "sections.json"),
+                "target_sections": ["decoder_packed_brotli"],
+                "brotli_quality": [0],
+                "output_archive": str(tmp_path / "candidate.zip"),
+                "output_manifest": str(tmp_path / "candidate.json"),
+                "runtime_consumption_proof": str(tmp_path / "runtime_proof.json"),
+                **_false_authority(),
+            },
+        },
+        source_plan_path="plan.json",
+    )
+
+    assert queue["row_count"] == 2
+    assert queue["executable_row_count"] == 1
+    assert queue["blocked_row_count"] == 1
+    assert not any(
+        blocker.startswith("materializer_work_queue_adapter_missing:")
+        for row in queue["rows"]
+        for blocker in row["materialization_blockers"]
+    )
+    concrete = next(
+        row
+        for row in queue["rows"]
+        if row["target_kind"] == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
+    )
+    assert concrete["executable"] is True
+    assert concrete["tool"] == "tools/run_family_agnostic_materializer.py"
+    assert concrete["source_packet_ir_operation_set_ids"] == [
+        "packetir_compiled_high_level_section"
+    ]
+    assert concrete["source_backlog_key"] == "inverse_action_inverse_surface_pair0007"
+    high_level = next(
+        row
+        for row in queue["rows"]
+        if row["target_kind"] == INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND
+    )
+    assert high_level["executable"] is False
+    assert (
+        "inverse_action_high_level_context_lowered_to_packet_ir_materializer_rows"
+        in high_level["materialization_blockers"]
+    )
+    assert high_level["score_claim"] is False
+    assert concrete["score_claim"] is False
+
+
+def test_materializer_work_queue_rejects_high_level_packetir_truthy_authority(
+    tmp_path: Path,
+) -> None:
+    context = _inverse_action_operation_set_compiler_context(tmp_path)
+    compiler = context.pop("operation_set_compiler")
+    assert isinstance(compiler, dict)
+    packet_ir = packet_ir_operation_set_from_compiler_hint(
+        compiler,
+        source_backlog_key="inverse_action_inverse_surface_pair0007",
+        source_unit_ids=["inverse_surface_pair0007"],
+    )
+    packet_ir["selected_operations"][0]["score_claim"] = True
+    context["packet_ir_operation_set"] = packet_ir
+
+    with pytest.raises(ExperimentQueueError, match="score_claim"):
+        build_materializer_work_queue(
+            _inverse_action_high_level_backlog(),
+            repo_root=tmp_path,
+            contexts={"inverse_action_inverse_surface_pair0007": context},
+            source_plan_path="plan.json",
+        )
+
+
+def test_materializer_work_queue_rejects_high_level_compiler_truthy_authority(
+    tmp_path: Path,
+) -> None:
+    context = _inverse_action_operation_set_compiler_context(tmp_path)
+    compiler = context["operation_set_compiler"]
+    assert isinstance(compiler, dict)
+    selected_operations = compiler["selected_operations"]
+    assert isinstance(selected_operations, list)
+    selected_operations[0]["score_claim"] = True
+
+    with pytest.raises(ExperimentQueueError, match="operation_set_compiler"):
+        build_materializer_work_queue(
+            _inverse_action_high_level_backlog(),
+            repo_root=tmp_path,
+            contexts={"inverse_action_inverse_surface_pair0007": context},
+            source_plan_path="plan.json",
+        )
 
 
 def test_operation_set_execution_requires_matching_packet_ir_handoff(

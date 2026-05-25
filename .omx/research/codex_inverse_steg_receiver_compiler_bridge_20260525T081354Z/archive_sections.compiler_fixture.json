@@ -1,0 +1,6 @@
+{
+  "schema": "archive_section_manifest.fixture.v1",
+  "sections": [
+    "decoder_packed_brotli"
+  ]
+}

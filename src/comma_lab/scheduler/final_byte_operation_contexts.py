@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import Any
 
 from tac.optimization.byte_shaving_campaign import FALSE_AUTHORITY
+from tac.optimization.inverse_steganalysis_operation_set_compiler import (
+    packet_ir_operation_set_from_compiler_hint,
+)
 from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
     ordered_unique,
@@ -22,9 +25,12 @@ from tac.packet_compiler.deterministic_compiler import (
 from .byte_shaving_campaign_queue import (
     MATERIALIZER_BACKLOG_SCHEMA,
     MATERIALIZER_CONTEXTS_SCHEMA,
+    lower_packetir_operation_set_to_backlog_rows,
 )
 from .byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
+    INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
     INVERSE_SCORER_CELL_TARGET_KIND,
     PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
@@ -866,6 +872,183 @@ def _packetir_compiler_bridge_hint(
     }
 
 
+def _known_materializer_context_row(
+    row: Mapping[str, Any],
+    *,
+    hints: Mapping[str, Any],
+    repo_root: Path,
+    default_output_root: Path | None,
+) -> dict[str, Any] | None:
+    if (
+        row.get("unit_kind") == "archive_section"
+        and row.get("operation_family") == "section_entropy_recode"
+        and row.get("target_kind") == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
+    ):
+        return _archive_section_context_row(
+            row,
+            hints=hints,
+            repo_root=repo_root,
+            default_output_root=default_output_root,
+        )
+    if (
+        row.get("unit_kind") == "packet_member"
+        and (
+            (
+                row.get("operation_family") == "member_recompress"
+                and row.get("target_kind") == PACKET_MEMBER_RECOMPRESS_TARGET_KIND
+            )
+            or (
+                row.get("operation_family") == "member_merge"
+                and row.get("target_kind") == PACKET_MEMBER_MERGE_TARGET_KIND
+            )
+            or (
+                row.get("operation_family") == "zip_header_elide"
+                and row.get("target_kind") == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND
+            )
+            or (
+                row.get("operation_family") == "native_renderer_payload"
+                and row.get("target_kind") == RENDERER_PAYLOAD_DFL1_TARGET_KIND
+            )
+        )
+    ):
+        return _packet_member_context_row(
+            row,
+            hints=hints,
+            repo_root=repo_root,
+            default_output_root=default_output_root,
+        )
+    if (
+        row.get("unit_kind") == "tensor"
+        and row.get("operation_family") == "factorize_tensor"
+        and row.get("target_kind") == TENSOR_FACTORIZE_TARGET_KIND
+    ):
+        return _tensor_factorize_context_row(
+            row,
+            hints=hints,
+            repo_root=repo_root,
+            default_output_root=default_output_root,
+        )
+    if (
+        row.get("unit_kind") == "scorer_inverse_surface_cell"
+        and row.get("operation_family") == "materialize_inverse_scorer_cell_candidate"
+        and row.get("target_kind") == INVERSE_SCORER_CELL_TARGET_KIND
+    ):
+        return _inverse_scorer_cell_context_row(
+            row,
+            hints=hints,
+            repo_root=repo_root,
+            default_output_root=default_output_root,
+        )
+    return None
+
+
+def _inverse_action_high_level_context_rows(
+    row: Mapping[str, Any],
+    *,
+    hints: Mapping[str, Any],
+    global_hints: Mapping[str, Any],
+    repo_root: Path,
+    default_output_root: Path | None,
+) -> list[dict[str, Any]]:
+    context: dict[str, Any] = {}
+    blockers: list[str] = []
+    candidate_family = _first_text(
+        hints,
+        ("candidate_family", "representation_family_class", "coherence_group"),
+    )
+    archive_grammar = hints.get("archive_grammar")
+    if archive_grammar is None:
+        archive_grammar = _first_text(hints, ("archive_grammar_path",))
+    receiver_contract_kind = (
+        _first_text(hints, ("receiver_contract_kind",))
+        or _text(row.get("receiver_contract_kind"))
+    )
+    runtime_consumption_proof = _first_text(hints, ("runtime_consumption_proof",))
+    operation_set_compiler = hints.get("operation_set_compiler")
+    packet_ir_operation_set = hints.get("packet_ir_operation_set")
+
+    if candidate_family is None:
+        blockers.append("materializer_context_missing:candidate_family")
+    if archive_grammar is None:
+        blockers.append("materializer_context_missing:archive_grammar")
+    if receiver_contract_kind is None:
+        blockers.append("materializer_context_missing:receiver_contract_kind")
+    if runtime_consumption_proof is None:
+        blockers.append("materializer_context_missing:runtime_consumption_proof")
+    if not isinstance(operation_set_compiler, Mapping) and not isinstance(
+        packet_ir_operation_set,
+        Mapping,
+    ):
+        blockers.append("materializer_context_missing:operation_set_compiler")
+
+    if packet_ir_operation_set is None and isinstance(operation_set_compiler, Mapping):
+        try:
+            packet_ir_operation_set = packet_ir_operation_set_from_compiler_hint(
+                operation_set_compiler,
+                source_backlog_key=str(row.get("backlog_key") or ""),
+                source_unit_ids=[str(item) for item in _as_list(row.get("source_unit_ids"))],
+            )
+        except ValueError as exc:
+            blockers.append(f"operation_set_compiler_invalid:{exc}")
+
+    context.update(
+        {
+            "context_blockers": blockers,
+            "candidate_family": candidate_family,
+            "archive_grammar": archive_grammar,
+            "receiver_contract_kind": receiver_contract_kind,
+            "runtime_consumption_proof": runtime_consumption_proof,
+            "packetir_compiler_bridge": _packetir_compiler_bridge_hint(
+                row,
+                blockers=blockers,
+            ),
+            **FALSE_AUTHORITY,
+        }
+    )
+    if isinstance(operation_set_compiler, Mapping):
+        context["operation_set_compiler"] = dict(operation_set_compiler)
+    if isinstance(packet_ir_operation_set, Mapping):
+        context["packet_ir_operation_set"] = dict(packet_ir_operation_set)
+    for key in ("compiler_output", "output", "manifest_out", "allow_overwrite"):
+        value = hints.get(key)
+        if value is not None:
+            context[key] = value
+
+    rows = [_context_row_payload(row, context=context, blockers=blockers)]
+    if blockers or not isinstance(packet_ir_operation_set, Mapping):
+        return rows
+
+    for lowered_row in lower_packetir_operation_set_to_backlog_rows(
+        packet_ir_operation_set,
+        source_backlog_row=row,
+    ):
+        lowered_hints = _merged_hints(global_hints, lowered_row)
+        for key in (
+            "candidate_family",
+            "archive_grammar",
+            "receiver_contract_kind",
+            "runtime_consumption_proof",
+        ):
+            if key not in lowered_hints and key in hints:
+                lowered_hints[key] = hints[key]
+        known = _known_materializer_context_row(
+            lowered_row,
+            hints=lowered_hints,
+            repo_root=repo_root,
+            default_output_root=default_output_root,
+        )
+        if known is None:
+            rows.append(
+                _unsupported_context_row(
+                    lowered_row,
+                    fallback_key=str(lowered_row.get("backlog_key") or "packet_ir"),
+                )
+            )
+        else:
+            rows.append(known)
+    return rows
+
+
 def build_final_byte_operation_contexts(
     backlog: Mapping[str, Any],
     *,
@@ -886,71 +1069,26 @@ def build_final_byte_operation_contexts(
     for index, row in enumerate(_as_list(backlog.get("rows")), start=1):
         if not isinstance(row, Mapping):
             raise ExperimentQueueError(f"backlog row {index} must be an object")
+        row_hints = _merged_hints(hints, row)
+        known_row = _known_materializer_context_row(
+            row,
+            hints=row_hints,
+            repo_root=repo,
+            default_output_root=output_root,
+        )
+        if known_row is not None:
+            rows.append(known_row)
+            continue
         if (
-            row.get("unit_kind") == "archive_section"
-            and row.get("operation_family") == "section_entropy_recode"
-            and row.get("target_kind") == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
-        ):
-            rows.append(
-                _archive_section_context_row(
-                    row,
-                    hints=_merged_hints(hints, row),
-                    repo_root=repo,
-                    default_output_root=output_root,
-                )
-            )
-        elif (
-            row.get("unit_kind") == "packet_member"
-            and (
-                (
-                    row.get("operation_family") == "member_recompress"
-                    and row.get("target_kind") == PACKET_MEMBER_RECOMPRESS_TARGET_KIND
-                )
-                or (
-                    row.get("operation_family") == "member_merge"
-                    and row.get("target_kind") == PACKET_MEMBER_MERGE_TARGET_KIND
-                )
-                or (
-                    row.get("operation_family") == "zip_header_elide"
-                    and row.get("target_kind")
-                    == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND
-                )
-                or (
-                    row.get("operation_family") == "native_renderer_payload"
-                    and row.get("target_kind") == RENDERER_PAYLOAD_DFL1_TARGET_KIND
-                )
-            )
-        ):
-            rows.append(
-                _packet_member_context_row(
-                    row,
-                    hints=_merged_hints(hints, row),
-                    repo_root=repo,
-                    default_output_root=output_root,
-                )
-            )
-        elif (
-            row.get("unit_kind") == "tensor"
-            and row.get("operation_family") == "factorize_tensor"
-            and row.get("target_kind") == TENSOR_FACTORIZE_TARGET_KIND
-        ):
-            rows.append(
-                _tensor_factorize_context_row(
-                    row,
-                    hints=_merged_hints(hints, row),
-                    repo_root=repo,
-                    default_output_root=output_root,
-                )
-            )
-        elif (
             row.get("unit_kind") == "scorer_inverse_surface_cell"
-            and row.get("operation_family") == "materialize_inverse_scorer_cell_candidate"
-            and row.get("target_kind") == INVERSE_SCORER_CELL_TARGET_KIND
+            and row.get("operation_family") == INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY
+            and row.get("target_kind") == INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND
         ):
-            rows.append(
-                _inverse_scorer_cell_context_row(
+            rows.extend(
+                _inverse_action_high_level_context_rows(
                     row,
-                    hints=_merged_hints(hints, row),
+                    hints=row_hints,
+                    global_hints=hints,
                     repo_root=repo,
                     default_output_root=output_root,
                 )

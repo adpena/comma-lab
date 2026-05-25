@@ -46,6 +46,9 @@ from tac.optimization.inverse_scorer_cell_chain import (
 from tac.optimization.inverse_scorer_cell_chain import (
     CHAIN_SCHEMA as INVERSE_SCORER_CELL_CHAIN_SCHEMA,
 )
+from tac.optimization.inverse_steganalysis_operation_set_compiler import (
+    packet_ir_operation_set_from_compiler_hint,
+)
 from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
     ordered_unique,
@@ -59,6 +62,9 @@ from tac.packet_compiler.deterministic_compiler import (
 from .byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
     DQS1_PAIRSET_TARGET_KIND,
+    INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
+    INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
+    INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
     INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER,
     INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
     INVERSE_SCORER_CELL_TARGET_KIND,
@@ -764,6 +770,62 @@ def _merge_packet_ir_materializer_backlog_rows(
     )
 
 
+def _high_level_context_packet_ir_rows(
+    materializer_backlog: Mapping[str, Any],
+    contexts: Mapping[str, Mapping[str, Any]] | None,
+    *,
+    source_plan_path: str | None,
+) -> list[dict[str, Any]]:
+    if not contexts:
+        return []
+    out: list[dict[str, Any]] = []
+    for row in _as_list(materializer_backlog.get("rows")):
+        if not isinstance(row, Mapping):
+            continue
+        if (
+            row.get("unit_kind") != "scorer_inverse_surface_cell"
+            or row.get("operation_family") != INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY
+            or row.get("target_kind") != INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND
+        ):
+            continue
+        matches = _context_matches_for_backlog_row(
+            contexts,
+            row,
+            extra_keys=(
+                INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
+                INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
+            ),
+        )
+        if len(matches) != 1:
+            continue
+        context = matches[0][1]
+        packet_ir = _context_mapping_value(context, "packet_ir_operation_set")
+        if packet_ir is None:
+            compiler = _context_mapping_value(context, "operation_set_compiler")
+            if compiler is None:
+                continue
+            source_selection_ids = _as_list(row.get("source_selection_ids"))
+            candidate_id = (
+                str(source_selection_ids[0])
+                if source_selection_ids
+                else str(row.get("backlog_key") or "")
+            )
+            try:
+                packet_ir = packet_ir_operation_set_from_compiler_hint(
+                    compiler,
+                    source_backlog_key=str(row.get("backlog_key") or ""),
+                    source_unit_ids=[str(item) for item in _as_list(row.get("source_unit_ids"))],
+                    candidate_id=candidate_id,
+                    source_paths=[source_plan_path] if source_plan_path else [],
+                )
+            except ValueError as exc:
+                raise ExperimentQueueError(
+                    f"inverse_action_operation_set_compiler_invalid:{exc}"
+                ) from exc
+        out.extend(lower_packetir_operation_set_to_backlog_rows(packet_ir, source_backlog_row=row))
+    return out
+
+
 def _backlog_row_sort_key(row: Mapping[str, Any]) -> tuple[float, int, int, str]:
     return (
         -float(row.get("expected_score_gain_sum") or 0.0),
@@ -1083,6 +1145,11 @@ def _context_string_any(
         if isinstance(value, str) and value.strip():
             return value.strip()
     return None
+
+
+def _context_mapping_value(context: Mapping[str, Any], key: str) -> Mapping[str, Any] | None:
+    value = context.get(key)
+    return value if isinstance(value, Mapping) else None
 
 
 def _renderer_payload_dfl1_parity_context(
@@ -2104,6 +2171,14 @@ def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
                 "inverse_scorer_cell_candidate_requires_inflate_parity",
             ]
         )
+    if target_kind == INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND:
+        blockers.extend(
+            [
+                "inverse_action_operation_set_compiler_handoff_is_planning_only",
+                "packet_ir_lowering_required_before_materializer_contexts",
+                "runtime_consumption_proof_required_before_exact_eval",
+            ]
+        )
     blockers.append("exact_auth_eval_required_before_score_claim")
     return tuple(blockers)
 
@@ -2317,6 +2392,16 @@ def build_materializer_work_queue(
     rows = [item for item in _as_list(backlog.get("rows")) if isinstance(item, Mapping)]
     if limit is not None:
         rows = rows[:limit]
+    existing_backlog_keys = {str(row.get("backlog_key") or "") for row in rows}
+    rows.extend(
+        row
+        for row in _high_level_context_packet_ir_rows(
+            {"schema": MATERIALIZER_BACKLOG_SCHEMA, "rows": rows},
+            context_map,
+            source_plan_path=source_plan_path,
+        )
+        if str(row.get("backlog_key") or "") not in existing_backlog_keys
+    )
 
     work_rows: list[dict[str, Any]] = []
     for rank, row in enumerate(rows, start=1):
@@ -2558,6 +2643,22 @@ def build_materializer_work_queue(
                     manifest_path=manifest_out,
                     schema=INVERSE_SCORER_CELL_CANDIDATE_SCHEMA,
                 )
+        elif (
+            unit_kind == "scorer_inverse_surface_cell"
+            and operation_family == INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY
+            and target_kind == INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND
+        ):
+            if _context_mapping_value(
+                context,
+                "packet_ir_operation_set",
+            ) or _context_mapping_value(context, "operation_set_compiler"):
+                blockers.append(
+                    "inverse_action_high_level_context_lowered_to_packet_ir_materializer_rows"
+                )
+            else:
+                blockers.append(
+                    "inverse_action_high_level_context_requires_operation_set_compiler"
+                )
         else:
             blockers.append(
                 f"materializer_work_queue_adapter_missing:{unit_kind}:{operation_family}:{target_kind or '<target_tbd>'}"
@@ -2579,6 +2680,7 @@ def build_materializer_work_queue(
                     "work_rank": rank,
                     "backlog_key": backlog_key,
                     "backlog_rank": row.get("backlog_rank"),
+                    "source_backlog_key": row.get("source_backlog_key"),
                     "source_plan_path": source_plan_path,
                     "repo_root": _repo_rel(repo, repo),
                     "unit_kind": unit_kind,
@@ -2601,12 +2703,26 @@ def build_materializer_work_queue(
                     or "local_cpu",
                     "source_unit_ids": _as_list(row.get("source_unit_ids")),
                     "source_selection_ids": _as_list(row.get("source_selection_ids")),
-                    "packet_ir_lowered_row_count": row.get("packet_ir_lowered_row_count"),
-                    "source_packet_ir_operation_set_ids": _as_list(row.get("source_packet_ir_operation_set_ids")),
+                    "packet_ir_lowered_row_count": row.get("packet_ir_lowered_row_count")
+                    or (1 if row.get("source_packet_ir_operation_set_id") else None),
+                    "source_packet_ir_operation_set_ids": ordered_unique(
+                        [
+                            *_as_list(row.get("source_packet_ir_operation_set_ids")),
+                            str(row.get("source_packet_ir_operation_set_id") or ""),
+                        ]
+                    ),
                     "source_packet_ir_source_operation_set_ids": _as_list(
                         row.get("source_packet_ir_source_operation_set_ids")
+                    )
+                    or (
+                        [str(row.get("source_packet_ir_source_operation_set_id"))]
+                        if row.get("source_packet_ir_source_operation_set_id")
+                        else []
                     ),
-                    "packet_ir_blocker_counts": _counter_dict(row.get("packet_ir_blocker_counts")),
+                    "packet_ir_blocker_counts": _counter_dict(
+                        row.get("packet_ir_blocker_counts")
+                    )
+                    or _counter_dict(row.get("blocker_counts")),
                     "candidate_saved_bytes_sum": row.get("candidate_saved_bytes_sum"),
                     "expected_score_gain_sum": row.get("expected_score_gain_sum"),
                     "executable": executable,
@@ -3805,6 +3921,13 @@ def compile_dqs1_byte_shaving_campaign(
         if isinstance(packet_ir, Mapping)
         for backlog_row in lower_packetir_operation_set_to_backlog_rows(packet_ir)
     ]
+    packet_ir_materializer_backlog_rows.extend(
+        _high_level_context_packet_ir_rows(
+            base_materializer_backlog,
+            materializer_contexts,
+            source_plan_path=plan_ref,
+        )
+    )
     materializer_backlog = _merge_packet_ir_materializer_backlog_rows(
         base_materializer_backlog,
         packet_ir_materializer_backlog_rows,

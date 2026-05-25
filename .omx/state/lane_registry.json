@@ -54418,6 +54418,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "codex_inverse_steg_receiver_compiler_20260525",
+      "name": "Codex inverse steganalysis receiver compiler bridge",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/inverse_steganalysis_operation_set_compiler.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_inverse_steg_receiver_compiler_bridge_20260525T081354Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -54427,5 +54468,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T07:27:46Z"
+  "updated_at": "2026-05-25T08:15:43Z"
 }
