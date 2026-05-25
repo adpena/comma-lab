@@ -56304,6 +56304,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_t3_grand_council_active_exploration_conv2d_drift_unexplored_paths_20260525",
+      "name": "T3 Grand Council Active Exploration Conv2d Drift Unexplored Paths",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/local_acceleration/deterministic_primitives.py APPEND-ONLY extension with 5 new symbols + 3 typed result dataclasses + 1 canonical anchor dict; tools/measure_unexplored_mitigation_paths_drift.py NEW canonical CLI routing through sister codex; 72 tests pass"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/t3_grand_council_active_exploration_conv2d_drift_unexplored_paths_landed_20260525.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -56313,5 +56354,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T18:19:54Z"
+  "updated_at": "2026-05-25T20:23:26Z"
 }

@@ -188,3 +188,52 @@ Registered via `tac.probe_outcomes_ledger.register_probe_outcome`:
 - Canonical CLI: `tools/measure_pr95_mlx_pytorch_per_op_drift.py`
 - Canonical regression tests: `src/tac/tests/test_pr95_mlx_pytorch_drift_mitigation.py` (34 tests, all pass)
 - Catalog #313 probe outcome ledger: `.omx/state/probe_outcomes.jsonl` (row `pr95_mlx_pytorch_drift_mitigation_engineering_20260525`)
+
+---
+
+## T3 Grand Council corrective verdict + empirical exploration (APPENDED 2026-05-25)
+
+**APPEND-ONLY per CLAUDE.md "Bugs must be permanently fixed AND self-protected against" + Catalog #110/#113 HISTORICAL_PROVENANCE non-negotiables.** Slot 2 body above is preserved verbatim; this footer documents the T3 grand council's empirical revision of the "NOT FIXABLE" verdict via active engineering exploration of the 4 unexplored paths.
+
+**Sister landing**: `.omx/research/t3_grand_council_active_exploration_conv2d_drift_unexplored_paths_landed_20260525.md` (task #1256; lane `lane_t3_grand_council_active_exploration_conv2d_drift_unexplored_paths_20260525`)
+
+### Corrective verdict per Catalog #307 (paradigm-vs-implementation)
+
+Slot 2's `Aggregate drift reduction: 0.0%` finding was structurally over-stated. The reason: Slot 2 measured drift at a SINGLE Conv2d 3x3 scale (36→144 / 6×8) where the framework boundary drift floor is dominated by SIMD-vectorization-order at the small-spatial scale, NOT summation precision. Empirical exploration at THREE PR95-class spatial scales reveals:
+
+| Path | Verdict | Max Observed Reduction | Carmack MVP-first 5/5 Step 2 |
+|---|---|---:|---|
+| Thread 1 (Kahan compensated summation) | PARTIALLY_FIXABLE_MARGINAL | 22.4% (at PR95 final-head class 256×48×64) | FALSIFIED at predicted >50% |
+| Thread 2 (FP64 intermediate accumulation) | PARTIALLY_FIXABLE_MARGINAL | 22.4% (same scale) | FALSIFIED at predicted >50% |
+| Thread 3 (MLX-side deterministic-reduction) | NOT_FIXABLE_FRAMEWORK_FUNDAMENTAL | N/A (no public API) | NOT FALSIFIED |
+| Thread 4 (cuDNN reference Conv2d 3x3) | DEFERRED_PENDING_PAID_DISPATCH | UNMEASURED | NOT FALSIFIED (deferred) |
+
+### Revised canonical engineering primitive (supersedes Slot 2's all-or-nothing "NOT FIXABLE")
+
+The canonical engineering primitive is **SCALE-CONDITIONAL substitution**:
+- Use `tac.local_acceleration.mlx_scorer_adapters.MLXConv2dReference(accumulation_mode="kahan_fp32")` OR `accumulation_mode="fixed_fp64"` at PR95 stages with ≥144 channels AND ≥24 spatial dimensions (predicted 10-22% drift reduction)
+- Use the canonical optimized MLX Conv2d at smaller stages (zero benefit from substitution)
+- The ATTESTED-TOLERANCE PORTABILITY primitive remains the canonical operator-facing surface for state-dict bridge use; per-stage substitution is an OPTIONAL refinement
+
+### Slot 1 export bridge VERDICT upgrade — DO NOT UPGRADE YET
+
+Per the T3 council Karpathy + Contrarian dissents: the existing Slot 1 NUMERIC_TOLERANCE 3.05e-5 [contest-CUDA T4] verdict remains canonical. The CPU-only baseline used in Slot 2 + this exploration may not represent the contest's CUDA execution path. Thread 4 paid dispatch ($2-5 Modal A100 or Vast.ai 4090) is the reactivation criterion for Slot 1 VERDICT upgrade.
+
+### Operator-routable next steps (per T3 council 5-priority queue)
+
+1. **PRIMARY**: keep Slot 1 export bridge VERDICT unchanged at NUMERIC_TOLERANCE 3.05e-5 [contest-CUDA T4] until Thread 4 lands
+2. **SECONDARY**: Boyd ADMM stacked Kahan+FP64 test (operator-decision)
+3. **TERTIARY**: Yousfi full-decoder downstream scorer test
+4. **QUATERNARY**: Daubechies extended-scale sweep (96×128 + 192×256 + 384×512)
+5. **QUINARY (DEFERRED)**: operator-decision paid cuDNN dispatch ($2-5)
+
+### Cross-references for the T3 corrective work
+
+- T3 council memo: `.omx/research/t3_grand_council_active_exploration_conv2d_drift_unexplored_paths_landed_20260525.md`
+- T3 empirical evidence: `experiments/results/conv2d_drift_unexplored_paths_20260525T200834Z/results.json`
+- T3 canonical CLI: `tools/measure_unexplored_mitigation_paths_drift.py`
+- T3 canonical primitive extensions: `src/tac/local_acceleration/deterministic_primitives.py` (APPEND-ONLY: `kahan_compensated_sum`, `kahan_conv2d_3x3`, `fp64_intermediate_conv2d_3x3`, `classify_reduction_percent`, `ActiveExplorationPathVerdict`, 3 typed result dataclasses, `ACTIVE_EXPLORATION_CONV2D_DRIFT_UNEXPLORED_PATHS_ANCHOR`)
+- T3 canonical regression tests: `src/tac/tests/test_t3_active_exploration_conv2d_drift_unexplored_paths.py` (36 tests)
+- T3 sister codex routing: `src/tac/local_acceleration/mlx_scorer_torch_parity.py::build_mlx_conv2d_accumulation_probe_manifest` + `mlx_runtime_determinism_contract` + `tools/probe_mlx_conv2d_accumulation.py`
+- T3 4 canonical equation candidates queued FORMALIZATION_PENDING per Catalog #344
+- T3 Catalog #313 ledger row: `t3_grand_council_active_exploration_conv2d_drift_unexplored_paths_20260525` (verdict PROCEED; 30-day expiry)
