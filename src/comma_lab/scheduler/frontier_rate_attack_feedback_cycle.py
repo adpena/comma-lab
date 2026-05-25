@@ -470,6 +470,11 @@ def write_frontier_refresh_artifacts(
         path = out / "local_cpu_eureka_planning.json"
         write_json_artifact(path, dict(eureka_planning))
         artifacts["local_cpu_eureka_planning"] = repo_rel(path, repo_root)
+    operation_portfolio = report.get("operation_portfolio")
+    if isinstance(operation_portfolio, Mapping):
+        path = out / "operation_portfolio.json"
+        write_json_artifact(path, dict(operation_portfolio))
+        artifacts["operation_portfolio"] = repo_rel(path, repo_root)
     selected_acquisition = report.get("selected_pairset_acquisition")
     if isinstance(selected_acquisition, Mapping):
         path = out / "dqs1_selected_pairset_acquisition.json"

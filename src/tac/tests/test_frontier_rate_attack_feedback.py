@@ -11,6 +11,7 @@ import pytest
 from comma_lab.scheduler.frontier_rate_attack_feedback import (
     FEEDBACK_REFRESH_SCHEMA,
     LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA,
+    OPERATION_PORTFOLIO_SCHEMA,
     FrontierRateAttackFeedbackError,
     build_frontier_rate_attack_feedback_refresh,
     discover_local_cpu_eureka_planning_signals,
@@ -243,6 +244,20 @@ def _write_materializer_feedback(root: Path) -> Path:
                     rate_positive=True,
                 ),
                 _materializer_observation(
+                    observation_id="packet_member_merge_receiver_positive",
+                    target_kind="packet_member_merge_v1",
+                    saved_bytes=258,
+                    receiver_contract_satisfied=True,
+                    rate_positive=True,
+                ),
+                _materializer_observation(
+                    observation_id="renderer_payload_dfl1_receiver_positive",
+                    target_kind="renderer_payload_dfl1_v1",
+                    saved_bytes=380,
+                    receiver_contract_satisfied=True,
+                    rate_positive=True,
+                ),
+                _materializer_observation(
                     observation_id="packet_member_recompress_no_delta",
                     target_kind="packet_member_recompress_v1",
                     saved_bytes=0,
@@ -429,11 +444,13 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     }
     assert discovered_targets == {
         "packet_member_zip_header_elide_v1",
+        "packet_member_merge_v1",
         "packet_member_recompress_v1",
+        "renderer_payload_dfl1_v1",
         "tensor_factorize_v1",
     }
     bridge = report["materializer_feedback_bridge"]
-    assert bridge["materializer_observation_count"] == 3
+    assert bridge["materializer_observation_count"] == 5
     assert bridge["planned_dqs1_candidate_count"] == 2
     assert bridge["observed_dqs1_candidate_count"] == 1
     assert bridge["score_claim"] is False
@@ -441,6 +458,54 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     assert bridge["recommended_next_action"] == (
         "materializer_receiver_positive_followup_before_dqs1_switch"
     )
+    operation_portfolio = report["operation_portfolio"]
+    assert operation_portfolio["schema"] == OPERATION_PORTFOLIO_SCHEMA
+    _assert_false_authority(operation_portfolio)
+    assert operation_portfolio["queue_executable_operation_count"] >= 2
+    assert operation_portfolio["followup_signal_operation_count"] >= 6
+    assert {"bit", "byte", "packet_member", "pair", "frame", "scorer_axis"}.issubset(
+        set(operation_portfolio["operation_level_counts"])
+    )
+    assert operation_portfolio["component_behavior_summary"]["active"] is True
+    assert operation_portfolio["component_behavior_summary"]["best_candidate_id"] == (
+        "pairset_drop_one_rank023_pair0440"
+    )
+    correction_budget = operation_portfolio["targeted_correction_budget_summary"]
+    assert correction_budget["active"] is True
+    assert correction_budget["local_drop_saved_bytes_max"] == 4
+    assert correction_budget["local_drop_rate_credit_score_units_max"] == 0.00002
+    assert correction_budget["materializer_rate_positive_saved_bytes_total"] > 0
+    assert correction_budget["score_claim"] is False
+    assert correction_budget["ready_for_exact_eval_dispatch"] is False
+    assert operation_portfolio["top_operation_ids"][0] == (
+        "dqs1_component_coupled_pair_batch_expansion"
+    )
+    assert operation_portfolio["top_queue_executable_operation_ids"][0] == (
+        "dqs1_component_coupled_pair_batch_expansion"
+    )
+    chain_row = next(
+        row
+        for row in operation_portfolio["rows"]
+        if row["operation_id"] == "chain_dfl1_merge_header_elide_minimal_envelope"
+    )
+    assert chain_row["queue_executable"] is False
+    assert chain_row["followup_signal"] is True
+    assert chain_row["evidence_summary"]["chain_targets"] == [
+        "renderer_payload_dfl1_v1",
+        "packet_member_merge_v1",
+        "packet_member_zip_header_elide_v1",
+    ]
+    recompress_row = next(
+        row
+        for row in operation_portfolio["rows"]
+        if row["operation_id"] == "materializer_packet_member_recompress_v1"
+    )
+    assert recompress_row["queue_executable"] is False
+    assert recompress_row["followup_signal"] is True
+    assert recompress_row["suppression_keys"]
+    assert "same_archive_target_member_negative_rate_feedback" in recompress_row[
+        "blockers"
+    ]
     queue = report["queue"]
     assert queue["queue_id"] == "frontier_feedback_unit"
     assert len(queue["experiments"]) == 2
@@ -450,6 +515,23 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     assert "--cold-store-root" in raw_retention_command
     assert all(
         experiment["metadata"]["materializer_feedback_bridge"] == bridge
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        experiment["metadata"]["frontier_operation_portfolio"]["operation_count"]
+        == operation_portfolio["operation_count"]
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        experiment["metadata"]["frontier_operation_portfolio"]["top_operation_ids"]
+        == operation_portfolio["top_operation_ids"]
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        experiment["metadata"]["frontier_operation_portfolio"][
+            "targeted_correction_budget_active"
+        ]
+        is True
         for experiment in queue["experiments"]
     )
     assert report["queue_summary"]["experiment_count"] == 2
@@ -536,6 +618,17 @@ def test_frontier_feedback_compiler_turns_eureka_near_misses_into_beyond_drop_tw
     assert experiment["metadata"]["frontier_feedback_eureka_planning"][
         "planner_hint_count"
     ] == 1
+    operation_portfolio = report["operation_portfolio"]
+    assert operation_portfolio["schema"] == OPERATION_PORTFOLIO_SCHEMA
+    operation_ids = set(operation_portfolio["top_operation_ids"])
+    assert "eureka_learned_multi_drop" in {
+        row["operation_id"] for row in operation_portfolio["rows"]
+    }
+    assert "eureka_drop_many_beam_pairwise_interaction_waterfill" in operation_ids
+    assert operation_portfolio["component_behavior_summary"]["active"] is False
+    assert report["queue"]["experiments"][0]["metadata"][
+        "frontier_operation_portfolio"
+    ]["operation_count"] == operation_portfolio["operation_count"]
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
 
@@ -547,6 +640,7 @@ def test_frontier_feedback_compiler_turns_eureka_near_misses_into_beyond_drop_tw
     assert artifacts["local_cpu_eureka_planning"].endswith(
         "local_cpu_eureka_planning.json"
     )
+    assert artifacts["operation_portfolio"].endswith("operation_portfolio.json")
     artifact_payload = json.loads(
         (tmp_path / artifacts["local_cpu_eureka_planning"]).read_text(
             encoding="utf-8"
@@ -853,6 +947,31 @@ def test_frontier_feedback_eureka_discovery_rejects_authority_leak(
             repo_root=tmp_path,
             frontier_artifact_roots=(artifact_root,),
         )
+
+
+def test_feedback_refresh_ignores_stale_eureka_authority_in_root_scan(
+    tmp_path: Path,
+) -> None:
+    artifact_root = tmp_path / "frontier_artifacts"
+    payload = _eureka_signal()
+    payload["score_claim"] = True
+    _write_json(
+        artifact_root
+        / "local_cpu_contest_drift_eureka_pairset_drop_two_r013_009_p0327_0459_20260525T131428Z.json",
+        payload,
+    )
+
+    report = build_frontier_rate_attack_feedback_refresh(
+        repo_root=tmp_path,
+        local_cpu_eureka_roots=(artifact_root,),
+        action_summary_path=None,
+    )
+
+    eureka = report["local_cpu_eureka_planning"]
+    assert eureka["signal_count"] == 0
+    assert len(eureka["ignored_signal_candidates"]) == 1
+    assert "score_claim" in eureka["ignored_signal_candidates"][0]["reason"]
+    assert report["operation_portfolio"]["score_claim"] is False
 
 
 def test_frontier_feedback_compiler_fails_closed_on_truthy_authority(

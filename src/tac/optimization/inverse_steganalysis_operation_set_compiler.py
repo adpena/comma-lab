@@ -115,6 +115,11 @@ def packet_ir_operation_set_from_compiler_hint(
     raw_operations = [
         item for item in _as_list(compiler.get("selected_operations")) if isinstance(item, Mapping)
     ]
+    for index, raw_operation in enumerate(raw_operations):
+        require_no_truthy_authority_fields(
+            raw_operation,
+            context=f"operation_set_compiler.selected_operations[{index}]",
+        )
     if not raw_operations:
         raise ValueError("operation_set_compiler selected_operations[] missing")
 

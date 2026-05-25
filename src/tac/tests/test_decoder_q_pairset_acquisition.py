@@ -277,6 +277,18 @@ def test_pairset_acquisition_eureka_expands_into_bounded_drop_many() -> None:
             {
                 "schema": "frontier_rate_attack_local_cpu_eureka_planner_hint.v1",
                 "hint_id": "dqs1_expand_beyond_drop_two_near_boundary",
+                "source_candidate_ids": [
+                    "pairset_drop_two_r013_009_p0327_0459",
+                    "pairset_drop_two_r029_017_p0259_0242",
+                ],
+                "source_signal_paths": [
+                    ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r013_009_p0327_0459_20260525T131428Z.json"
+                ],
+                "recommended_candidate_families": [
+                    "learned_multi_drop",
+                    "drop_many_beam_pairwise_interaction_waterfill",
+                    "within_selected_set_mask_feather_probe",
+                ],
                 "pairset_acquisition_profile": {
                     "schema": (
                         "frontier_rate_attack_local_cpu_eureka_pairset_acquisition_profile.v1"
@@ -284,6 +296,13 @@ def test_pairset_acquisition_eureka_expands_into_bounded_drop_many() -> None:
                     "active": True,
                     "max_drop_many": 5,
                     "drop_many_counts": [3, 4],
+                    "blocked_family_requests": [
+                        {
+                            "family": "within_selected_set_mask_feather_probe",
+                            "blocker": "requires_receiver_materializer_support",
+                            **FALSE_ACQUISITION_AUTHORITY,
+                        }
+                    ],
                     **FALSE_ACQUISITION_AUTHORITY,
                 },
                 **FALSE_ACQUISITION_AUTHORITY,
@@ -342,6 +361,18 @@ def test_pairset_acquisition_eureka_expands_into_bounded_drop_many() -> None:
         in row["acquisition_operation"]["eureka_planner_hint_ids"]
         for row in drop_many
     )
+    context = drop_many[0]["acquisition_operation"]["eureka_planner_hint_context"]
+    assert context["source_candidate_ids"] == [
+        "pairset_drop_two_r013_009_p0327_0459",
+        "pairset_drop_two_r029_017_p0259_0242",
+    ]
+    assert context["source_signal_paths"] == [
+        ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r013_009_p0327_0459_20260525T131428Z.json"
+    ]
+    assert context["blocked_family_requests"][0]["family"] == (
+        "within_selected_set_mask_feather_probe"
+    )
+    assert context["score_claim"] is False
     assert all(row["score_claim"] is False for row in drop_many)
 
 

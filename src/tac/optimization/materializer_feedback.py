@@ -75,6 +75,10 @@ def _observation_dedupe_key(row: Mapping[str, Any]) -> tuple[str, ...]:
         str(row.get("selected_member_name") or ""),
         str(row.get("saved_bytes") or ""),
         str(row.get("selected_materialization_key") or ""),
+        str(row.get("receiver_contract_satisfied")),
+        str(row.get("inflate_parity_satisfied")),
+        ",".join(str(item) for item in row.get("readiness_blockers") or []),
+        ",".join(str(item) for item in row.get("receiver_verification_blockers") or []),
     )
 
 

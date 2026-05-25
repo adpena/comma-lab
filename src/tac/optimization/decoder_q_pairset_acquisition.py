@@ -575,6 +575,99 @@ def _eureka_planner_hint_ids(eureka_planning: Mapping[str, Any] | None) -> list[
     return hint_ids
 
 
+def _eureka_planner_hint_context(
+    eureka_planning: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if not isinstance(eureka_planning, Mapping):
+        return {}
+    try:
+        require_no_truthy_authority_fields(
+            eureka_planning,
+            context="decoder_q_pairset_acquisition.eureka_planning",
+        )
+    except ValueError as exc:
+        raise DecoderQPairsetAcquisitionError(str(exc)) from exc
+    hints = eureka_planning.get("planner_hints")
+    if not isinstance(hints, list):
+        return {}
+    hint_rows: list[dict[str, Any]] = []
+    blocked: list[dict[str, Any]] = []
+    for index, hint in enumerate(hints):
+        if not isinstance(hint, Mapping):
+            continue
+        try:
+            require_no_truthy_authority_fields(
+                hint,
+                context=f"decoder_q_pairset_acquisition.eureka_hint[{index}]",
+            )
+        except ValueError as exc:
+            raise DecoderQPairsetAcquisitionError(str(exc)) from exc
+        hint_rows.append(
+            {
+                "hint_id": hint.get("hint_id"),
+                "source_candidate_ids": [
+                    str(item) for item in hint.get("source_candidate_ids") or [] if str(item)
+                ],
+                "source_signal_paths": [
+                    str(item) for item in hint.get("source_signal_paths") or [] if str(item)
+                ],
+                "recommended_candidate_families": [
+                    str(item)
+                    for item in hint.get("recommended_candidate_families") or []
+                    if str(item)
+                ],
+                **FALSE_ACQUISITION_AUTHORITY,
+            }
+        )
+        profile = hint.get("pairset_acquisition_profile")
+        if isinstance(profile, Mapping):
+            for blocked_row in profile.get("blocked_family_requests") or []:
+                if not isinstance(blocked_row, Mapping):
+                    continue
+                blocked.append(
+                    {
+                        "hint_id": hint.get("hint_id"),
+                        "family": blocked_row.get("family"),
+                        "blocker": blocked_row.get("blocker"),
+                        **FALSE_ACQUISITION_AUTHORITY,
+                    }
+                )
+    if not hint_rows and not blocked:
+        return {}
+    return {
+        "schema": "decoder_q_pairset_acquisition_eureka_hint_context.v1",
+        "planner_hint_ids": [
+            str(row.get("hint_id")) for row in hint_rows if row.get("hint_id")
+        ],
+        "source_candidate_ids": sorted(
+            {
+                source_id
+                for row in hint_rows
+                for source_id in row["source_candidate_ids"]
+            }
+        ),
+        "source_signal_paths": sorted(
+            {
+                source_path
+                for row in hint_rows
+                for source_path in row["source_signal_paths"]
+            }
+        ),
+        "recommended_candidate_families": sorted(
+            {
+                family
+                for row in hint_rows
+                for family in row["recommended_candidate_families"]
+            }
+        ),
+        "blocked_family_requests": blocked,
+        "hint_rows": hint_rows,
+        "allowed_use": "dqs1_pairset_acquisition_planning_context_only",
+        "forbidden_use": "score_claim_or_dispatch_or_promotion_authority",
+        **FALSE_ACQUISITION_AUTHORITY,
+    }
+
+
 def _eureka_pairset_profile(
     eureka_planning: Mapping[str, Any] | None,
 ) -> Mapping[str, Any]:
@@ -751,6 +844,7 @@ def build_decoder_q_pairset_acquisition_plan(
     if isinstance(max_swap_in, bool) or max_swap_in < 0:
         raise DecoderQPairsetAcquisitionError("max_swap_in must be non-negative")
     hint_ids = _eureka_planner_hint_ids(eureka_planning)
+    eureka_hint_context = _eureka_planner_hint_context(eureka_planning)
     eureka_expand_beyond_drop_two = (
         "dqs1_expand_beyond_drop_two_near_boundary" in set(hint_ids)
     )
@@ -871,6 +965,7 @@ def build_decoder_q_pairset_acquisition_plan(
                         "bounded_tail_beam_plus_spaced_tail_waterfill"
                     ),
                     "eureka_planner_hint_ids": hint_ids,
+                    "eureka_planner_hint_context": eureka_hint_context,
                     "rate_distortion_policy": (
                         "rate_gain_probe_with_distortion_authority_false"
                     ),

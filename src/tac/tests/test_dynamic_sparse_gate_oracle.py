@@ -90,6 +90,35 @@ def test_dynamic_sparse_gate_hint_lowers_to_packetir_false_authority() -> None:
     assert "packetir_operation_set_requires_runtime_consumption_proof" in packet_ir["blockers"]
 
 
+def test_operation_set_compiler_rejects_nested_truthy_authority() -> None:
+    hint = {
+        "schema": "inverse_action_operation_set_compiler_hint.v1",
+        "operation_set_id": "nested_truthy_authority_fixture",
+        "selected_operations": [
+            {
+                "unit_id": "payload_member",
+                "target_kind": "packet_member_recompress_v1",
+                "candidate_saved_bytes": 20,
+                "ready_for_exact_eval_dispatch": True,
+            }
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    with pytest.raises(
+        ValueError,
+        match=r"selected_operations\[0\].*ready_for_exact_eval_dispatch=truthy",
+    ):
+        packet_ir_operation_set_from_compiler_hint(
+            hint,
+            source_backlog_key="nested_truthy_backlog",
+            source_unit_ids=["payload_member"],
+        )
+
+
 def test_channel_gate_hint_preserves_mudd_style_source_channel_signal() -> None:
     coefficients = np.array(
         [
@@ -313,6 +342,54 @@ def test_materializer_feedback_accepts_serialized_archive_delta_contract() -> No
     assert row["rate_positive"] is True
     assert row["source_unit_ids"] == ["future/payload.bin"]
     assert row["score_claim"] is False
+
+
+def test_materializer_feedback_preserves_contradictory_receiver_evidence() -> None:
+    base = {
+        "schema": "family_agnostic_materializer_empirical_observation.v1",
+        "observation_id": "same_candidate",
+        "candidate_id": "same_candidate",
+        "target_kind": "packet_member_merge_v1",
+        "materializer_id": "packet_member_merge_adapter",
+        "source_archive_sha256": "a" * 64,
+        "candidate_archive_sha256": "b" * 64,
+        "selected_member_name": "renderer.bin",
+        "saved_bytes": 258,
+        "rate_positive": True,
+        "savings_realized": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    rows = materializer_observation_feedback_rows(
+        {
+            "schema": "family_agnostic_materializer_empirical_sweep.v1",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "observations": [
+                {
+                    **base,
+                    "receiver_contract_satisfied": False,
+                    "inflate_parity_satisfied": False,
+                    "readiness_blockers": ["runtime_adapter_missing"],
+                },
+                {
+                    **base,
+                    "receiver_contract_satisfied": True,
+                    "inflate_parity_satisfied": True,
+                    "readiness_blockers": [],
+                },
+            ],
+        },
+        source_path="merge_feedback.json",
+    )
+
+    assert len(rows) == 2
+    assert {row["receiver_contract_satisfied"] for row in rows} == {False, True}
 
 
 def test_materializer_feedback_rejects_truthy_serialized_archive_delta_authority() -> None:

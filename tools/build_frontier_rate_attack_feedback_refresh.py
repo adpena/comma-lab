@@ -69,6 +69,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Root to scan for frontier materializer sweep.json/observations.jsonl artifacts.",
     )
     parser.add_argument(
+        "--local-cpu-eureka-root",
+        action="append",
+        default=[],
+        help="Root or file for local_cpu_contest_drift_eureka_*.json planning signals.",
+    )
+    parser.add_argument(
         "--materializer-feedback",
         action="append",
         default=[],
@@ -199,6 +205,11 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
         path = output_dir / "local_cpu_eureka_planning.json"
         write_json_artifact(path, eureka_planning)
         artifacts["local_cpu_eureka_planning"] = _display_path(path)
+    operation_portfolio = report.get("operation_portfolio")
+    if isinstance(operation_portfolio, dict):
+        path = output_dir / "operation_portfolio.json"
+        write_json_artifact(path, operation_portfolio)
+        artifacts["operation_portfolio"] = _display_path(path)
     bridge = report.get("materializer_feedback_bridge")
     if isinstance(bridge, dict):
         path = output_dir / "materializer_feedback_bridge.json"
@@ -257,6 +268,7 @@ def main(argv: list[str] | None = None) -> int:
         report = build_frontier_rate_attack_feedback_refresh(
             repo_root=REPO_ROOT,
             frontier_artifact_roots=tuple(args.frontier_artifact_root),
+            local_cpu_eureka_roots=tuple(args.local_cpu_eureka_root),
             materializer_feedback_paths=tuple(args.materializer_feedback),
             pair_frame_geometry_paths=tuple(args.pair_frame_geometry_lattice),
             dqs1_observation_paths=tuple(args.dqs1_observation_jsonl),
@@ -306,6 +318,39 @@ def main(argv: list[str] | None = None) -> int:
                 "dqs1_observation_count": report.get("dqs1_observation_count"),
                 "selected_candidate_ids": report.get("selected_candidate_ids"),
                 "queue_summary": report.get("queue_summary"),
+                "operation_portfolio_summary": {
+                    "operation_count": (
+                        report.get("operation_portfolio", {}).get("operation_count")
+                        if isinstance(report.get("operation_portfolio"), dict)
+                        else None
+                    ),
+                    "queue_executable_operation_count": (
+                        report.get("operation_portfolio", {}).get(
+                            "queue_executable_operation_count"
+                        )
+                        if isinstance(report.get("operation_portfolio"), dict)
+                        else None
+                    ),
+                    "followup_signal_operation_count": (
+                        report.get("operation_portfolio", {}).get(
+                            "followup_signal_operation_count"
+                        )
+                        if isinstance(report.get("operation_portfolio"), dict)
+                        else None
+                    ),
+                    "top_operation_ids": (
+                        report.get("operation_portfolio", {}).get("top_operation_ids")
+                        if isinstance(report.get("operation_portfolio"), dict)
+                        else None
+                    ),
+                    "top_queue_executable_operation_ids": (
+                        report.get("operation_portfolio", {}).get(
+                            "top_queue_executable_operation_ids"
+                        )
+                        if isinstance(report.get("operation_portfolio"), dict)
+                        else None
+                    ),
+                },
                 "score_claim": False,
                 "promotion_eligible": False,
                 "rank_or_kill_eligible": False,

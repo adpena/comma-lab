@@ -227,6 +227,7 @@ def _build_refresh(
     return build_frontier_rate_attack_feedback_refresh(
         repo_root=REPO_ROOT,
         frontier_artifact_roots=tuple(args.frontier_artifact_root),
+        local_cpu_eureka_roots=tuple(args.local_cpu_eureka_root),
         materializer_feedback_paths=tuple(args.materializer_feedback),
         pair_frame_geometry_paths=tuple(args.pair_frame_geometry_lattice),
         dqs1_observation_paths=dqs1_observation_paths,
@@ -265,7 +266,9 @@ def _cycle_dqs1_observation_paths(
 ) -> tuple[str | Path, ...]:
     discovery = discover_dqs1_observation_jsonl_paths(
         repo_root=REPO_ROOT,
-        frontier_artifact_roots=tuple(args.frontier_artifact_root),
+        frontier_artifact_roots=tuple(
+            args.frontier_artifact_root or (".omx/research",)
+        ),
     )
     discovered = tuple(
         str(path)
@@ -396,6 +399,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="DQS1 action_summary path, latest, or none.",
     )
     parser.add_argument("--frontier-artifact-root", action="append", default=[])
+    parser.add_argument(
+        "--local-cpu-eureka-root",
+        action="append",
+        default=[],
+        help=(
+            "Root or file for local_cpu_contest_drift_eureka_*.json signals. "
+            "Defaults to --frontier-artifact-root, or .omx/research when not supplied."
+        ),
+    )
     parser.add_argument("--materializer-feedback", action="append", default=[])
     parser.add_argument("--pair-frame-geometry-lattice", action="append", default=[])
     parser.add_argument(
@@ -858,6 +870,7 @@ def main(argv: list[str] | None = None) -> int:
         post_followup_eureka_planning = discover_local_cpu_eureka_planning_signals(
             repo_root=REPO_ROOT,
             frontier_artifact_roots=post_followup_eureka_roots,
+            strict_authority=False,
         )
         post_followup_eureka_path = output_dir / "post_followup_local_cpu_eureka_planning.json"
         write_json_artifact(post_followup_eureka_path, post_followup_eureka_planning)
@@ -874,6 +887,7 @@ def main(argv: list[str] | None = None) -> int:
                 "local_cpu_eureka_planning": initial_report.get(
                     "local_cpu_eureka_planning"
                 ),
+                "operation_portfolio": initial_report.get("operation_portfolio"),
                 "pairset_component_marginal": initial_component_marginal,
                 "queue_validate": initial_validate,
                 **FALSE_AUTHORITY,
@@ -900,6 +914,7 @@ def main(argv: list[str] | None = None) -> int:
                 "local_cpu_eureka_planning": post_report.get(
                     "local_cpu_eureka_planning"
                 ),
+                "operation_portfolio": post_report.get("operation_portfolio"),
                 "pairset_component_marginal": post_component_marginal,
                 "queue_validate": post_validate,
                 **FALSE_AUTHORITY,
@@ -921,6 +936,8 @@ def main(argv: list[str] | None = None) -> int:
                 "dynamic_observation_jsonl_to_refreshed_dqs1_queue",
                 "local_cpu_eureka_signal_to_default_feedback_refresh",
                 "post_followup_eureka_signal_to_next_acquisition_hint",
+                "materializer_eureka_component_signals_to_many_operation_portfolio",
+                "operation_portfolio_to_chained_materializer_and_receiver_backlog",
             ],
             "allowed_use": "local_queue_owned_frontier_feedback_iteration_only",
             "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
