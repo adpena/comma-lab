@@ -39,11 +39,16 @@ from tac.optimization.pairset_component_marginal import (
     component_marginal_status,
     component_score_delta,
 )
+from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
 from tac.repo_io import json_text, repo_relative, sha256_file
 
 SCHEMA = "cross_family_candidate_portfolio.v1"
 ROW_SCHEMA = "cross_family_candidate_portfolio_row.v1"
 TOOL = "tac.optimization.cross_family_candidate_portfolio"
+DROP_MANY_GREEDY_VERDICT_SCHEMA = (
+    "dqs1_drop_many_build_1c_greedy_independent_heuristic_verdict.v1"
+)
+DROP_MANY_GREEDY_FEEDBACK_SCHEMA = "dqs1_drop_many_greedy_verdict_feedback_model.v1"
 
 DEFAULT_EXPECTED_IMPROVEMENT_WEIGHT = 1.0
 DEFAULT_INFORMATION_GAIN_WEIGHT = 0.01
@@ -468,6 +473,198 @@ def _pairset_candidate_rows(
             )
         )
     return out
+
+
+def _drop_many_greedy_verdict_feedback_model(
+    verdicts: Sequence[Mapping[str, Any]] | None,
+) -> dict[str, Any]:
+    """Compile independent-greedy DQS1 drop-many verdicts into portfolio policy."""
+
+    rows: list[dict[str, Any]] = []
+    for index, payload in enumerate(verdicts or ()):
+        if payload.get("schema") != DROP_MANY_GREEDY_VERDICT_SCHEMA:
+            raise CrossFamilyCandidatePortfolioError(
+                f"drop-many greedy verdict {index} schema mismatch"
+            )
+        try:
+            require_no_truthy_authority_fields(
+                payload,
+                context=f"cross_family_candidate_portfolio.drop_many_greedy_verdict[{index}]",
+            )
+        except ValueError as exc:
+            raise CrossFamilyCandidatePortfolioError(str(exc)) from exc
+        final_verdict = str(payload.get("build_1c_final_verdict") or "")
+        if not final_verdict:
+            raise CrossFamilyCandidatePortfolioError(
+                f"drop-many greedy verdict {index} missing build_1c_final_verdict"
+            )
+        catalog_row = (
+            payload.get("catalog_313_probe_outcomes_row")
+            if isinstance(payload.get("catalog_313_probe_outcomes_row"), Mapping)
+            else {}
+        )
+        refinement = (
+            payload.get("canonical_equation_candidate_refinement")
+            if isinstance(payload.get("canonical_equation_candidate_refinement"), Mapping)
+            else {}
+        )
+        refinement_fields = (
+            refinement.get("refinement_field_proposed")
+            if isinstance(refinement.get("refinement_field_proposed"), Mapping)
+            else {}
+        )
+        rows.append(
+            {
+                "verdict": final_verdict,
+                "verdict_reason": str(payload.get("build_1c_final_verdict_reason") or ""),
+                "lane_id": payload.get("lane_id"),
+                "captured_at_utc": payload.get("captured_at_utc"),
+                "catalog_313_verdict": catalog_row.get("verdict"),
+                "catalog_313_status": catalog_row.get("status"),
+                "empirical_k1_best_drop_one_pair_index": refinement_fields.get(
+                    "empirical_k1_best_drop_one_pair_index"
+                ),
+                "empirical_k1_best_drop_one_delta_vs_base": refinement_fields.get(
+                    "empirical_k1_best_drop_one_delta_vs_base"
+                ),
+                "greedy_top_k_count": len(payload.get("greedy_top_k_sweep") or []),
+                **FALSE_AUTHORITY,
+            }
+        )
+    if not rows:
+        return {
+            "schema": DROP_MANY_GREEDY_FEEDBACK_SCHEMA,
+            "active": False,
+            "inactive_reason": "no_drop_many_greedy_verdicts_supplied",
+            **FALSE_AUTHORITY,
+        }
+
+    negative_rows = [
+        row
+        for row in rows
+        if str(row["verdict"]).startswith("NEGATIVE")
+        or str(row.get("catalog_313_verdict") or "") == "DEFER"
+    ]
+    partial_rows = [row for row in rows if str(row["verdict"]).startswith("PARTIAL")]
+    positive_rows = [row for row in rows if str(row["verdict"]).startswith("POSITIVE")]
+    latest = sorted(
+        rows,
+        key=lambda row: str(row.get("captured_at_utc") or ""),
+    )[-1]
+    independent_greedy_deferred = bool(negative_rows or partial_rows)
+    return {
+        "schema": DROP_MANY_GREEDY_FEEDBACK_SCHEMA,
+        "active": True,
+        "verdict_count": len(rows),
+        "latest_verdict": latest["verdict"],
+        "latest_verdict_reason": latest["verdict_reason"],
+        "negative_or_defer_count": len(negative_rows),
+        "partial_count": len(partial_rows),
+        "positive_count": len(positive_rows),
+        "independent_greedy_status": (
+            "deferred_requires_interaction_or_component_model"
+            if independent_greedy_deferred
+            else "not_deferred_by_supplied_verdicts"
+        ),
+        "blocked_selector_kinds": (
+            ["drop_many_beam_pairwise_interaction_waterfill"]
+            if independent_greedy_deferred
+            else []
+        ),
+        "preferred_successor_selector_kinds": [
+            "learned_component_marginal_combo",
+            "pair_frame_geometry_low_impact_drop_many",
+            "inverse_scorer_null_direction_masked_variant",
+        ],
+        "verdict_rows": rows,
+        "allowed_use": (
+            "portfolio_operator_action_sorting_only_no_score_or_dispatch_authority"
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _is_independent_drop_many_candidate(row: Mapping[str, Any]) -> bool:
+    if str(row.get("source_kind") or "") != "decoder_q_pairset_acquisition":
+        return False
+    selector_kind = _candidate_selector_kind(row)
+    operation = _candidate_acquisition_operation(row)
+    op = str((operation or {}).get("op") or "")
+    return (
+        selector_kind == "drop_many_beam_pairwise_interaction_waterfill"
+        or op == "drop_many"
+    )
+
+
+def _is_interaction_aware_drop_many_successor(row: Mapping[str, Any]) -> bool:
+    if str(row.get("source_kind") or "") != "decoder_q_pairset_acquisition":
+        return False
+    selector_kind = _candidate_selector_kind(row)
+    operation = _candidate_acquisition_operation(row)
+    op = str((operation or {}).get("op") or "")
+    return selector_kind in {
+        "learned_component_marginal_combo",
+        "pair_frame_geometry_low_impact_drop_many",
+    } or op in {
+        "learned_multi_drop",
+        "pair_frame_geometry_low_impact_drop_many",
+    }
+
+
+def _apply_drop_many_greedy_verdict_feedback(
+    candidates: Sequence[Mapping[str, Any]],
+    model: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    """Use greedy verdicts to avoid re-promoting independent drop-many priors."""
+
+    if model.get("active") is not True:
+        return [dict(row) for row in candidates]
+    independent_deferred = (
+        model.get("independent_greedy_status")
+        == "deferred_requires_interaction_or_component_model"
+    )
+    updated: list[dict[str, Any]] = []
+    for candidate in candidates:
+        row = dict(candidate)
+        if not (
+            _is_independent_drop_many_candidate(row)
+            or _is_interaction_aware_drop_many_successor(row)
+        ):
+            updated.append(row)
+            continue
+        metadata = dict(row.get("source_metadata") or {})
+        metadata["drop_many_greedy_verdict"] = {
+            "schema": "dqs1_drop_many_greedy_candidate_feedback.v1",
+            "active": True,
+            "model_schema": model.get("schema"),
+            "latest_verdict": model.get("latest_verdict"),
+            "independent_greedy_status": model.get("independent_greedy_status"),
+            "candidate_selector_kind": _candidate_selector_kind(row),
+            "candidate_operation": (
+                (_candidate_acquisition_operation(row) or {}).get("op")
+            ),
+            "allowed_use": "candidate_sorting_and_blocker_signal_only",
+            **FALSE_AUTHORITY,
+        }
+        if independent_deferred and _is_independent_drop_many_candidate(row):
+            blockers = set(row.get("source_dispatch_blockers") or [])
+            blockers.add(
+                "drop_many_independent_greedy_deferred_requires_interaction_or_component_model"
+            )
+            blockers.add(
+                "drop_many_source_selector_inherited_score_not_child_candidate_authority"
+            )
+            row["source_dispatch_blockers"] = sorted(blockers)
+            metadata["drop_many_greedy_verdict"][
+                "portfolio_policy"
+            ] = "blocked_until_interaction_aware_or_component_marginal_successor"
+        elif _is_interaction_aware_drop_many_successor(row):
+            metadata["drop_many_greedy_verdict"][
+                "portfolio_policy"
+            ] = "interaction_or_component_model_successor_allowed_for_local_controls"
+        row["source_metadata"] = metadata
+        updated.append(row)
+    return updated
 
 
 def _hfv2_candidate_rows(
@@ -2376,6 +2573,11 @@ def _operator_action_for_row(row: Mapping[str, Any]) -> str:
     source_kind = str(row.get("source_kind") or "")
     blockers = set(row.get("source_dispatch_blockers") or [])
     if source_kind == "decoder_q_pairset_acquisition":
+        if (
+            "drop_many_independent_greedy_deferred_requires_interaction_or_component_model"
+            in blockers
+        ):
+            return "hold_independent_drop_many_until_interaction_or_component_model"
         return "materialize_pairset_archive_and_run_local_controls"
     if source_kind == "mlx_effective_spend_triage_selection":
         return "materialize_mlx_selected_window_archive_and_run_controls"
@@ -2481,6 +2683,7 @@ def build_cross_family_candidate_portfolio(
     incumbent_score: float,
     mlx_selections: Sequence[Mapping[str, Any]] | None = None,
     pairset_acquisitions: Sequence[Mapping[str, Any]] | None = None,
+    drop_many_greedy_verdicts: Sequence[Mapping[str, Any]] | None = None,
     hfv2_manifests: Sequence[Mapping[str, Any]] | None = None,
     manual_candidates: Sequence[Mapping[str, Any]] | None = None,
     observations: Sequence[Mapping[str, Any]] | None = None,
@@ -2560,6 +2763,13 @@ def build_cross_family_candidate_portfolio(
     candidates = _apply_pairset_component_marginal_feedback(
         candidates,
         pairset_component_marginal_model,
+    )
+    drop_many_greedy_verdict_model = _drop_many_greedy_verdict_feedback_model(
+        drop_many_greedy_verdicts,
+    )
+    candidates = _apply_drop_many_greedy_verdict_feedback(
+        candidates,
+        drop_many_greedy_verdict_model,
     )
     candidates = _apply_observation_feedback(
         candidates,
@@ -2665,6 +2875,7 @@ def build_cross_family_candidate_portfolio(
             ),
             "pairset_observation_response_model": pairset_observation_response_model,
             "pairset_component_marginal_model": pairset_component_marginal_model,
+            "drop_many_greedy_verdict_model": drop_many_greedy_verdict_model,
         },
         "portfolio_summary": {
             "candidate_count_before_top_k": len(candidates),

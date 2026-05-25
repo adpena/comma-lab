@@ -332,6 +332,52 @@ def _pairset_acquisition_with_response_candidates() -> dict[str, object]:
     }
 
 
+def _drop_many_greedy_negative_verdict() -> dict[str, object]:
+    return {
+        "schema": "dqs1_drop_many_build_1c_greedy_independent_heuristic_verdict.v1",
+        "captured_at_utc": "2026-05-25T15:30:00Z",
+        "lane_id": "lane_dqs1_drop_many_build_1c_greedy_heuristic_alternative_reducer_20260525",
+        "build_1c_final_verdict": (
+            "NEGATIVE_COLLAPSE_TO_K1_EMPIRICAL_DROP_MANY_REGRESSES"
+        ),
+        "build_1c_final_verdict_reason": (
+            "empirical K>1 sisters regress vs the K=1 drop-one anchor"
+        ),
+        "greedy_top_k_sweep": [
+            {
+                "k": 1,
+                "selected_pair_indices": [371],
+                "cumulative_predicted_delta_vs_base": -6.6e-7,
+            },
+            {
+                "k": 2,
+                "selected_pair_indices": [327, 371],
+                "cumulative_predicted_delta_vs_base": -1.3e-6,
+            },
+        ],
+        "canonical_provenance": {
+            **_false_authority(),
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+        },
+        "canonical_equation_candidate_refinement": {
+            "candidate_id": "dqs1_drop_many_greedy_independent_pair_ordering_v1",
+            "refinement_field_proposed": {
+                "empirical_k1_best_drop_one_pair_index": 371,
+                "empirical_k1_best_drop_one_delta_vs_base": -6.6e-7,
+                "greedy_verdict_class": (
+                    "NEGATIVE_COLLAPSE_TO_K1_EMPIRICAL_DROP_MANY_REGRESSES"
+                ),
+            },
+        },
+        "catalog_313_probe_outcomes_row": {
+            "probe_id": "dqs1_drop_many_build_1c_greedy_independent_heuristic_alternative_reducer_20260525",
+            "verdict": "DEFER",
+            "status": "blocking",
+        },
+    }
+
+
 def test_portfolio_fuses_mlx_pairset_and_outside_class_without_authority(
     tmp_path: Path,
 ) -> None:
@@ -896,6 +942,119 @@ def test_portfolio_combo_search_uses_pairwise_interaction_terms(
     )
 
 
+def test_portfolio_uses_greedy_verdict_to_block_independent_drop_many_not_learned_combo(
+    tmp_path: Path,
+) -> None:
+    acquisition = _pairset_acquisition_with_component_candidates()
+    acquisition["candidates"].append(  # type: ignore[index,union-attr]
+        {
+            "schema": "decoder_q_pairset_acquisition_candidate.v1",
+            **_false_authority(),
+            "dispatch_attempted": False,
+            "acquisition_id": "pairset_drop_many_k003_r002_003_004",
+            "acquisition_rank": 0,
+            "selector_kind": "drop_many_beam_pairwise_interaction_waterfill",
+            "selected_pair_count": 1,
+            "selected_pair_indices": [101],
+            "payload_bytes": 38,
+            "rate_delta": 0.000008,
+            "acquisition_score": 9.0,
+            "acquisition_operation": {
+                "op": "drop_many",
+                "drop_count": 3,
+                "dropped_pair_indices": [327, 371, 376],
+                "dropped_pair_ranks": [2, 3, 4],
+            },
+            "predicted_score_mean": 0.18,
+            "predicted_score_source": "source_selector_inherited_non_authoritative",
+        }
+    )
+
+    portfolio = build_cross_family_candidate_portfolio(
+        incumbent_score=0.226190435402,
+        pairset_acquisitions=[acquisition],
+        drop_many_greedy_verdicts=[_drop_many_greedy_negative_verdict()],
+        observations=[
+            _contest_observation(
+                tmp_path,
+                candidate_id="pairset_drop_one_rank002_pair0327",
+                score=0.19202828,
+                archive_char="a",
+                raw_char="b",
+                selected_pair_indices=[101, 371, 376],
+                segnet_delta=0.0,
+                rate_delta=-0.00000066585895312,
+                axis="macos_cpu_advisory",
+                evidence_grade="macOS-CPU-advisory",
+                evidence_tag="[macOS-CPU advisory only]",
+                baseline_score=0.19203,
+            ),
+            _contest_observation(
+                tmp_path,
+                candidate_id="pairset_drop_one_rank003_pair0371",
+                score=0.19202828,
+                archive_char="d",
+                raw_char="e",
+                selected_pair_indices=[101, 327, 376],
+                segnet_delta=0.0,
+                rate_delta=-0.00000066585895312,
+                axis="macos_cpu_advisory",
+                evidence_grade="macOS-CPU-advisory",
+                evidence_tag="[macOS-CPU advisory only]",
+                baseline_score=0.19203,
+            ),
+        ],
+        top_k=16,
+    )
+
+    model = portfolio["observation_feedback"]["drop_many_greedy_verdict_model"]
+    assert model["active"] is True
+    assert model["independent_greedy_status"] == (
+        "deferred_requires_interaction_or_component_model"
+    )
+    assert model["score_claim"] is False
+
+    independent = next(
+        row
+        for row in portfolio["operator_action_rows"]
+        if row["candidate_id"] == "pairset_drop_many_k003_r002_003_004"
+    )
+    assert "drop_many_independent_greedy_deferred_requires_interaction_or_component_model" in (
+        independent["dispatch_blockers"]
+    )
+    assert independent["source_metadata"]["drop_many_greedy_verdict"][
+        "portfolio_policy"
+    ] == "blocked_until_interaction_aware_or_component_marginal_successor"
+    assert independent["operator_next_action"] == (
+        "hold_independent_drop_many_until_interaction_or_component_model"
+    )
+
+    learned = next(
+        row
+        for row in portfolio["operator_action_rows"]
+        if row["candidate_id"] == "pairset_learned_drop_combo_k002_p0327_p0371"
+    )
+    assert "drop_many_independent_greedy_deferred_requires_interaction_or_component_model" not in (
+        learned["dispatch_blockers"]
+    )
+    assert learned["source_metadata"]["drop_many_greedy_verdict"][
+        "portfolio_policy"
+    ] == "interaction_or_component_model_successor_allowed_for_local_controls"
+    assert learned["operator_action_rank"] < independent["operator_action_rank"]
+
+
+def test_portfolio_rejects_truthy_authority_in_greedy_verdict() -> None:
+    verdict = _drop_many_greedy_negative_verdict()
+    verdict["canonical_provenance"]["score_claim"] = True  # type: ignore[index]
+
+    with pytest.raises(CrossFamilyCandidatePortfolioError, match="score_claim"):
+        build_cross_family_candidate_portfolio(
+            incumbent_score=0.2,
+            pairset_acquisitions=[_pairset_acquisition()],
+            drop_many_greedy_verdicts=[verdict],
+        )
+
+
 def test_portfolio_preserves_custody_readiness_as_advisory_only(
     tmp_path: Path,
 ) -> None:
@@ -1047,12 +1206,17 @@ def test_cross_family_portfolio_cli_writes_deterministic_outputs(
 ) -> None:
     mlx_path = tmp_path / "mlx_selection.json"
     pairset_path = tmp_path / "pairset.json"
+    greedy_verdict_path = tmp_path / "drop_many_greedy_verdict.json"
     hfv2_path = tmp_path / "hfv2_manifest.json"
     json_out = tmp_path / "portfolio.json"
     md_out = tmp_path / "portfolio.md"
     mlx_path.write_text(json.dumps(_mlx_selection(), sort_keys=True), encoding="utf-8")
     pairset_path.write_text(
         json.dumps(_pairset_acquisition(), sort_keys=True),
+        encoding="utf-8",
+    )
+    greedy_verdict_path.write_text(
+        json.dumps(_drop_many_greedy_negative_verdict(), sort_keys=True),
         encoding="utf-8",
     )
     hfv2_path.write_text(
@@ -1070,6 +1234,8 @@ def test_cross_family_portfolio_cli_writes_deterministic_outputs(
             str(mlx_path),
             "--pairset-acquisition",
             str(pairset_path),
+            "--dqs1-drop-many-greedy-verdict",
+            str(greedy_verdict_path),
             "--hfv2-manifest",
             str(hfv2_path),
             "--json-out",
@@ -1093,6 +1259,8 @@ def test_cross_family_portfolio_cli_writes_deterministic_outputs(
             str(mlx_path),
             "--pairset-acquisition",
             str(pairset_path),
+            "--dqs1-drop-many-greedy-verdict",
+            str(greedy_verdict_path),
             "--hfv2-manifest",
             str(hfv2_path),
             "--json-out",
@@ -1108,5 +1276,8 @@ def test_cross_family_portfolio_cli_writes_deterministic_outputs(
 
     assert json.loads(first.stdout)["score_claim"] is False
     assert json.loads(second.stdout)["ready_for_exact_eval_dispatch"] is False
+    assert json.loads(first.stdout)["drop_many_greedy_verdict_model"]["active"] is True
     assert json_out.read_text(encoding="utf-8") == first_text
-    assert "Cross-Family Candidate Portfolio" in md_out.read_text(encoding="utf-8")
+    markdown = md_out.read_text(encoding="utf-8")
+    assert "Cross-Family Candidate Portfolio" in markdown
+    assert "Drop-Many Greedy Verdict" in markdown

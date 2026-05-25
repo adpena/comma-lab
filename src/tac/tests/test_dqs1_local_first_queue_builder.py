@@ -1594,6 +1594,63 @@ def test_dqs1_queue_builder_accepts_pair_frame_geometry_queue_requests(
     assert experiment["metadata"]["score_claim"] is False
 
 
+def test_dqs1_queue_skips_greedy_deferred_independent_drop_many_action(
+    tmp_path: Path,
+) -> None:
+    summary_dir = tmp_path / "portfolio"
+    summary_dir.mkdir()
+    portfolio = summary_dir / "portfolio.json"
+    independent_id = "pairset_drop_many_k003_r002_003_004"
+    learned_id = "pairset_learned_drop_combo_k002_p0327_p0371"
+    portfolio.write_text(
+        json.dumps(
+            {
+                "operator_action_rows": [
+                    _row(independent_id, [101]),
+                    _row(learned_id, [101, 376]),
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    summary = summary_dir / "action_summary.json"
+    summary.write_text(
+        json.dumps(
+            {
+                **_false_authority(),
+                "schema": "cross_family_candidate_portfolio_action_summary.v1",
+                "json_out": str(portfolio),
+                "top_operator_actions": [
+                    {
+                        **_false_authority(),
+                        "candidate_id": independent_id,
+                        "operator_action_rank": 1,
+                        "operator_next_action": (
+                            "hold_independent_drop_many_until_interaction_or_component_model"
+                        ),
+                    },
+                    _action(learned_id, 2),
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="results",
+        include_raw_retention_plan=False,
+        include_mlx_retention_plan=False,
+    )
+
+    assert result.selection.candidate_id == learned_id
+    assert result.selection.skipped_candidates == (
+        {"candidate_id": independent_id, "reason": "unsupported_operator_action"},
+    )
+    assert result.queue["experiments"][0]["id"] == learned_id
+
+
 def test_dqs1_queue_cli_accepts_geometry_lattice_and_writes_selected_acquisition(
     tmp_path: Path,
 ) -> None:

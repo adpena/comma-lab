@@ -78,6 +78,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="decoder_q_pairset_acquisition.v1 JSON. May repeat.",
     )
     parser.add_argument(
+        "--dqs1-drop-many-greedy-verdict",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "dqs1_drop_many_build_1c_greedy_independent_heuristic_verdict.v1 "
+            "JSON. May repeat; used as planning-only blocker signal for "
+            "source-inherited independent drop-many rows."
+        ),
+    )
+    parser.add_argument(
         "--hfv2-manifest",
         type=Path,
         action="append",
@@ -239,6 +250,21 @@ def _pairset_component_marginal_model(
     }
 
 
+def _drop_many_greedy_verdict_model(
+    portfolio: Mapping[str, Any],
+) -> dict[str, Any]:
+    feedback = _mapping(portfolio.get("observation_feedback"))
+    model = feedback.get("drop_many_greedy_verdict_model")
+    if isinstance(model, Mapping):
+        return dict(model)
+    return {
+        "schema": "dqs1_drop_many_greedy_verdict_feedback_model.v1",
+        "active": False,
+        "inactive_reason": "missing_from_portfolio",
+        **_false_authority_payload(),
+    }
+
+
 def _top_operator_actions(
     portfolio: Mapping[str, Any],
     *,
@@ -291,6 +317,7 @@ def _build_action_summary(
 ) -> dict[str, Any]:
     model = _pairset_observation_response_model(portfolio)
     component_model = _pairset_component_marginal_model(portfolio)
+    drop_many_greedy_model = _drop_many_greedy_verdict_model(portfolio)
     return {
         "schema": ACTION_SUMMARY_SCHEMA,
         "producer": Path(__file__).name,
@@ -303,6 +330,7 @@ def _build_action_summary(
         "portfolio_summary": dict(_mapping(portfolio.get("portfolio_summary"))),
         "pairset_observation_response_model": model,
         "pairset_component_marginal_model": component_model,
+        "drop_many_greedy_verdict_model": drop_many_greedy_model,
         "top_action_limit": top_actions,
         "top_operator_actions": _top_operator_actions(
             portfolio,
@@ -331,6 +359,7 @@ def _require_active_pairset_observation_model(summary: Mapping[str, Any]) -> Non
 def _render_action_summary_markdown(summary: Mapping[str, Any]) -> str:
     model = _mapping(summary.get("pairset_observation_response_model"))
     component_model = _mapping(summary.get("pairset_component_marginal_model"))
+    drop_many_model = _mapping(summary.get("drop_many_greedy_verdict_model"))
     lines = [
         "## CLI Action Summary",
         "",
@@ -363,6 +392,17 @@ def _render_action_summary_markdown(summary: Mapping[str, Any]) -> str:
         f"- Score claim: `{component_model.get('score_claim')}`",
         "- Ready for exact eval dispatch: "
         f"`{component_model.get('ready_for_exact_eval_dispatch')}`",
+        "",
+        "### Drop-Many Greedy Verdict",
+        "",
+        f"- Active: `{drop_many_model.get('active')}`",
+        f"- Latest verdict: `{drop_many_model.get('latest_verdict')}`",
+        "- Independent greedy status: "
+        f"`{drop_many_model.get('independent_greedy_status')}`",
+        f"- Verdict count: `{drop_many_model.get('verdict_count')}`",
+        f"- Score claim: `{drop_many_model.get('score_claim')}`",
+        "- Ready for exact eval dispatch: "
+        f"`{drop_many_model.get('ready_for_exact_eval_dispatch')}`",
         "",
         "### Top Next Actions",
         "",
@@ -397,6 +437,7 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "mlx_selections": args.mlx_selection,
                 "pairset_acquisitions": args.pairset_acquisition,
+                "dqs1_drop_many_greedy_verdicts": args.dqs1_drop_many_greedy_verdict,
                 "hfv2_manifests": args.hfv2_manifest,
                 "manual_candidate_json": args.candidate_json,
                 "family_beliefs": args.family_beliefs,
@@ -414,6 +455,9 @@ def main(argv: list[str] | None = None) -> int:
             incumbent_score=args.incumbent_score,
             mlx_selections=_json_objects(args.mlx_selection),
             pairset_acquisitions=_json_objects(args.pairset_acquisition),
+            drop_many_greedy_verdicts=_json_objects(
+                args.dqs1_drop_many_greedy_verdict
+            ),
             hfv2_manifests=_json_objects(args.hfv2_manifest),
             manual_candidates=_manual_candidates(args.candidate_json),
             observations=observations,
@@ -424,6 +468,9 @@ def main(argv: list[str] | None = None) -> int:
                 "mlx_selections": [path.as_posix() for path in args.mlx_selection],
                 "pairset_acquisitions": [
                     path.as_posix() for path in args.pairset_acquisition
+                ],
+                "dqs1_drop_many_greedy_verdicts": [
+                    path.as_posix() for path in args.dqs1_drop_many_greedy_verdict
                 ],
                 "hfv2_manifests": [path.as_posix() for path in args.hfv2_manifest],
             },
@@ -482,6 +529,9 @@ def main(argv: list[str] | None = None) -> int:
                 ],
                 "pairset_component_marginal_model": action_summary[
                     "pairset_component_marginal_model"
+                ],
+                "drop_many_greedy_verdict_model": action_summary[
+                    "drop_many_greedy_verdict_model"
                 ],
                 "top_operator_actions": action_summary["top_operator_actions"],
             },
