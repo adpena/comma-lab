@@ -137,6 +137,21 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
             ):
                 if key in payload:
                     record[key] = payload[key]
+            delta = payload.get("serialized_archive_delta")
+            if isinstance(delta, Mapping):
+                record["serialized_archive_delta_status"] = delta.get("status")
+                record["serialized_archive_delta_realized_saved_bytes"] = delta.get(
+                    "realized_saved_bytes"
+                )
+                record["serialized_archive_delta_savings_realized"] = delta.get(
+                    "savings_realized"
+                )
+                record["serialized_archive_delta_source_archive_bytes"] = delta.get(
+                    "source_archive_bytes"
+                )
+                record["serialized_archive_delta_candidate_archive_bytes"] = (
+                    delta.get("candidate_archive_bytes")
+                )
             score = payload.get("score")
             if isinstance(score, Mapping):
                 record["score"] = {

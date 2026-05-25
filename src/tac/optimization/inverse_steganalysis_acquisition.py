@@ -54,6 +54,9 @@ PRIORITY_SCHEMA = "inverse_steganalysis_acquisition_priority.v1"
 ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
 ACTION_CELL_SCHEMA = "inverse_steganalysis_action_cell.v1"
 QUEUE_HEALTH_FEEDBACK_SCHEMA = "inverse_steganalysis_queue_health_feedback.v1"
+MATERIALIZER_ARCHIVE_DELTA_FEEDBACK_SCHEMA = (
+    "inverse_steganalysis_materializer_archive_delta_feedback.v1"
+)
 INVERSE_SCORER_SURFACE_SCHEMA = "scorer_inverse_decision_surface.v1"
 BYTE_SHAVING_OPERATION_SET_PROVENANCE_SCHEMA = (
     "inverse_steganalysis_byte_shaving_operation_set_provenance.v1"
@@ -86,6 +89,7 @@ QUEUE_HEALTH_BLOCKER_OBSERVATION_KINDS = frozenset(
         "queue_observation_global_health_blocker",
     }
 )
+MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND = "materializer_chain_archive_delta"
 
 ALLOWED_SCALES = frozenset(
     {
@@ -315,6 +319,38 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
         "queue_observation_blockers": _list_strings(
             row.get("queue_observation_blockers")
         ),
+        "archive_delta_status": _optional_text(row.get("archive_delta_status")),
+        "archive_delta_bytes": _optional_int(
+            row.get("archive_delta_bytes"),
+            "archive_delta_bytes",
+        ),
+        "source_archive_bytes": _optional_int(
+            row.get("source_archive_bytes"),
+            "source_archive_bytes",
+            minimum=0,
+        ),
+        "candidate_archive_bytes": _optional_int(
+            row.get("candidate_archive_bytes"),
+            "candidate_archive_bytes",
+            minimum=0,
+        ),
+        "source_archive_sha256": _sha256_or_none(
+            row.get("source_archive_sha256"),
+            "source_archive_sha256",
+        ),
+        "candidate_archive_sha256": _sha256_or_none(
+            row.get("candidate_archive_sha256"),
+            "candidate_archive_sha256",
+        ),
+        "savings_realized": row.get("savings_realized") is True,
+        "inflate_parity_satisfied": row.get("inflate_parity_satisfied") is True,
+        "quality_spend_allowed": row.get("quality_spend_allowed") is True,
+        "materializer_rate_outcome": _optional_text(
+            row.get("materializer_rate_outcome")
+        ),
+        "signal_semantics": _optional_text(row.get("signal_semantics")),
+        "readiness_blockers": _list_strings(row.get("readiness_blockers")),
+        "dispatch_blockers": _list_strings(row.get("dispatch_blockers")),
         "expected_artifact_paths": _list_strings(row.get("expected_artifact_paths")),
         "candidate_ids": _list_strings(row.get("candidate_ids")),
         "work_ids": _list_strings(row.get("work_ids")),
@@ -616,6 +652,252 @@ def observations_from_queue_observation(
     return observations
 
 
+def observations_from_materializer_chain_manifest(
+    manifest: Mapping[str, Any],
+    *,
+    runtime_identity: Mapping[str, Any],
+    cache_identity: Mapping[str, Any],
+    axis: str = "[local-materializer-archive-delta advisory]",
+    source_path: str | None = None,
+    candidate_manifest: Mapping[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Convert byte-closed materializer chain economics into planner feedback.
+
+    A materializer chain can be receiver/parity-correct while still adding bytes.
+    That is valuable negative evidence: the next water-bucket pass must not
+    refill the same matched bucket just because the local proof chain succeeded.
+    """
+
+    _reject_truthy_authority(manifest, label="materializer chain manifest")
+    if candidate_manifest is not None:
+        _reject_truthy_authority(
+            candidate_manifest,
+            label="materializer chain candidate manifest",
+        )
+    delta = manifest.get("serialized_archive_delta")
+    if not isinstance(delta, Mapping):
+        raise InverseSteganalysisAcquisitionError(
+            "materializer chain manifest serialized_archive_delta must be an object"
+        )
+    _reject_truthy_authority(delta, label="materializer chain serialized_archive_delta")
+    status = _text(delta.get("status"), "serialized_archive_delta.status")
+    realized_saved_bytes = _int(
+        delta.get("realized_saved_bytes"),
+        "serialized_archive_delta.realized_saved_bytes",
+    )
+    archive_delta_bytes = _optional_int(
+        delta.get("archive_delta_bytes"),
+        "serialized_archive_delta.archive_delta_bytes",
+    )
+    source_archive = manifest.get("source_archive")
+    candidate_archive = manifest.get("candidate_archive")
+    if not isinstance(source_archive, Mapping):
+        source_archive = {}
+    if not isinstance(candidate_archive, Mapping):
+        candidate_archive = {}
+    source_archive_bytes = _optional_int(
+        _first(
+            delta.get("source_archive_bytes"),
+            manifest.get("source_archive_bytes"),
+            source_archive.get("bytes"),
+            source_archive.get("archive_bytes"),
+        ),
+        "source_archive_bytes",
+        minimum=0,
+    )
+    candidate_archive_bytes = _optional_int(
+        _first(
+            delta.get("candidate_archive_bytes"),
+            manifest.get("candidate_archive_bytes"),
+            candidate_archive.get("bytes"),
+            candidate_archive.get("archive_bytes"),
+        ),
+        "candidate_archive_bytes",
+        minimum=0,
+    )
+    source_archive_sha256 = _sha256_or_none(
+        _first(
+            manifest.get("source_archive_sha256"),
+            source_archive.get("sha256"),
+            source_archive.get("archive_sha256"),
+        ),
+        "source_archive_sha256",
+    )
+    candidate_archive_sha256 = _sha256_or_none(
+        _first(
+            manifest.get("candidate_archive_sha256"),
+            candidate_archive.get("sha256"),
+            candidate_archive.get("archive_sha256"),
+        ),
+        "candidate_archive_sha256",
+    )
+    rate_positive = realized_saved_bytes > 0 and status == "realized_saving"
+    observed_rate_gain = (
+        CONTEST_RATE_SCORE_PER_BYTE * float(realized_saved_bytes)
+        if rate_positive
+        else 0.0
+    )
+    selected_cells = (
+        _sequence_of_mappings(candidate_manifest.get("selected_cells"))
+        if isinstance(candidate_manifest, Mapping)
+        else []
+    )
+    if not selected_cells:
+        selected_cells = _sequence_of_mappings(manifest.get("selected_cells"))
+    if not selected_cells:
+        selected_cells = [
+            {
+                "candidate_id": _first(
+                    manifest.get("candidate_id"),
+                    (
+                        f"materializer_chain_{candidate_archive_sha256[:12]}"
+                        if candidate_archive_sha256
+                        else None
+                    ),
+                    "materializer_chain_unknown_candidate",
+                ),
+                "atom_id": _first(
+                    manifest.get("atom_id"),
+                    (
+                        f"materializer_chain_{candidate_archive_sha256[:12]}"
+                        if candidate_archive_sha256
+                        else None
+                    ),
+                ),
+            }
+        ]
+    expected_artifact_paths = _materializer_chain_artifact_paths(manifest)
+    readiness_blockers = ordered_unique(
+        str(item)
+        for item in (
+            *(_list_strings(manifest.get("readiness_blockers"))),
+            *(
+                _list_strings(candidate_manifest.get("readiness_blockers"))
+                if isinstance(candidate_manifest, Mapping)
+                else []
+            ),
+            *(_list_strings(delta.get("blockers"))),
+        )
+        if str(item)
+    )
+    dispatch_blockers = ordered_unique(
+        str(item)
+        for item in (
+            *(_list_strings(manifest.get("dispatch_blockers"))),
+            *(
+                _list_strings(candidate_manifest.get("dispatch_blockers"))
+                if isinstance(candidate_manifest, Mapping)
+                else []
+            ),
+        )
+        if str(item)
+    )
+    observations: list[dict[str, Any]] = []
+    for index, cell in enumerate(selected_cells):
+        atom_id = _optional_text(cell.get("atom_id"))
+        candidate_id = _optional_text(cell.get("candidate_id")) or _optional_text(
+            manifest.get("candidate_id")
+        )
+        if candidate_id is None:
+            candidate_id = (
+                f"materializer_chain_{candidate_archive_sha256[:12]}"
+                if candidate_archive_sha256
+                else f"materializer_chain_cell_{index:04d}"
+            )
+        source_unit_ids = ordered_unique(
+            str(item)
+            for item in (
+                atom_id,
+                f"inverse_action_{atom_id}" if atom_id else None,
+                *_list_strings(cell.get("source_unit_ids")),
+            )
+            if str(item or "")
+        )
+        observations.append(
+            normalize_inverse_steganalysis_observation(
+                {
+                    "observation_id": (
+                        "materializer_chain_delta_"
+                        f"{_slug(candidate_id)}_"
+                        f"{_slug(atom_id or str(index))}"
+                    ),
+                    "observation_kind": MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND,
+                    "candidate_id": candidate_id,
+                    "axis": axis,
+                    "source_path": source_path,
+                    "runtime_identity": runtime_identity,
+                    "cache_identity": cache_identity,
+                    "target_kind": (
+                        _optional_text(
+                            _first(
+                                candidate_manifest.get("target_kind")
+                                if isinstance(candidate_manifest, Mapping)
+                                else None,
+                                manifest.get("target_kind"),
+                            )
+                        )
+                    ),
+                    "materializer_id": (
+                        _optional_text(
+                            _first(
+                                candidate_manifest.get("materializer_id")
+                                if isinstance(candidate_manifest, Mapping)
+                                else None,
+                                manifest.get("materializer_id"),
+                            )
+                        )
+                    ),
+                    "receiver_contract_kind": (
+                        _optional_text(
+                            _first(
+                                candidate_manifest.get("receiver_contract_kind")
+                                if isinstance(candidate_manifest, Mapping)
+                                else None,
+                                manifest.get("receiver_contract_kind"),
+                            )
+                        )
+                    ),
+                    "saved_bytes": realized_saved_bytes,
+                    "observed_rate_gain": observed_rate_gain,
+                    "observed_score_gain": observed_rate_gain,
+                    "rate_positive": rate_positive,
+                    "savings_realized": delta.get("savings_realized") is True,
+                    "quality_spend_allowed": manifest.get("quality_spend_allowed")
+                    is True,
+                    "materializer_rate_outcome": status,
+                    "signal_semantics": (
+                        "realized_archive_saving"
+                        if rate_positive
+                        else "successful_quality_spend_not_byte_saving_progress"
+                    ),
+                    "receiver_contract_satisfied": (
+                        manifest.get("receiver_contract_satisfied") is True
+                    ),
+                    "inflate_parity_satisfied": (
+                        manifest.get("inflate_parity_satisfied") is True
+                    ),
+                    "archive_delta_status": status,
+                    "archive_delta_bytes": archive_delta_bytes,
+                    "source_archive_bytes": source_archive_bytes,
+                    "candidate_archive_bytes": candidate_archive_bytes,
+                    "source_archive_sha256": source_archive_sha256,
+                    "candidate_archive_sha256": candidate_archive_sha256,
+                    "artifact_bytes": candidate_archive_bytes or 0,
+                    "resource_kind": "local_cpu",
+                    "candidate_ids": [candidate_id],
+                    "source_unit_ids": source_unit_ids,
+                    "source_selection_ids": _list_strings(
+                        cell.get("source_selection_ids")
+                    ),
+                    "expected_artifact_paths": expected_artifact_paths,
+                    "readiness_blockers": readiness_blockers,
+                    "dispatch_blockers": dispatch_blockers,
+                }
+            )
+        )
+    return observations
+
+
 def paired_exact_auth_calibration_observations_from_review_packets(
     packets: Sequence[Mapping[str, Any]],
     *,
@@ -809,9 +1091,12 @@ def compute_acquisition_priority(
     queue_health_blocked = (
         obs_row is not None and _is_queue_health_blocker_observation(obs_row)
     )
+    archive_delta_blocked = (
+        obs_row is not None and _materializer_archive_delta_blocks_water_bucket(obs_row)
+    )
     expected_gain = (
         0.0
-        if queue_health_blocked
+        if queue_health_blocked or archive_delta_blocked
         else max(0.0, base_gain - calibration_penalty - fragility_penalty)
         + uncertainty_bonus
     )
@@ -942,6 +1227,7 @@ def build_discrete_scorer_action_functional(
     total_expected_gain = 0.0
     blocked_cells = 0
     queue_health_blocked_cells = 0
+    materializer_archive_delta_blocked_cells = 0
     for index, raw_atom in enumerate(atoms):
         if max_cells is not None and index >= max_cells:
             raise InverseSteganalysisAcquisitionError(
@@ -953,6 +1239,12 @@ def build_discrete_scorer_action_functional(
         queue_health_feedback = _queue_health_feedback_for_observations(
             matched_observations,
             atom=atom,
+        )
+        materializer_archive_delta_feedback = (
+            _materializer_archive_delta_feedback_for_observations(
+                matched_observations,
+                atom=atom,
+            )
         )
         priority = _apply_queue_health_feedback_to_priority(
             compute_acquisition_priority(atom, best_obs),
@@ -970,11 +1262,20 @@ def build_discrete_scorer_action_functional(
         residual = marginal_utility - lambda_rate
         guard = dict(atom["discontinuity_guard"])
         queue_health_blocked = bool(queue_health_feedback["blocks_water_bucket"])
-        blocked = bool(guard.get("blocked")) or queue_health_blocked
+        materializer_archive_delta_blocked = bool(
+            materializer_archive_delta_feedback["blocks_water_bucket"]
+        )
+        blocked = (
+            bool(guard.get("blocked"))
+            or queue_health_blocked
+            or materializer_archive_delta_blocked
+        )
         if blocked:
             blocked_cells += 1
         if queue_health_blocked:
             queue_health_blocked_cells += 1
+        if materializer_archive_delta_blocked:
+            materializer_archive_delta_blocked_cells += 1
         total_first_order += first_order
         total_second_order += second_order
         total_synergy += synergy
@@ -1007,6 +1308,12 @@ def build_discrete_scorer_action_functional(
                     "discontinuity_guard": guard,
                     "queue_health_feedback": queue_health_feedback,
                     "queue_health_blocked": queue_health_blocked,
+                    "materializer_archive_delta_feedback": (
+                        materializer_archive_delta_feedback
+                    ),
+                    "materializer_archive_delta_blocked": (
+                        materializer_archive_delta_blocked
+                    ),
                     "queue_health_group_ids": queue_health_feedback["group_ids"],
                     "queue_health_repeat_count": queue_health_feedback[
                         "repeated_observation_count"
@@ -1080,10 +1387,16 @@ def build_discrete_scorer_action_functional(
             },
             "observation_feedback": _observation_feedback_summary(obs_rows),
             "queue_health_feedback": _queue_health_feedback_for_observations(obs_rows),
+            "materializer_archive_delta_feedback": (
+                _materializer_archive_delta_feedback_for_observations(obs_rows)
+            ),
             "integral_totals": {
                 "cell_count": len(cells),
                 "blocked_cell_count": blocked_cells,
                 "queue_health_blocked_cell_count": queue_health_blocked_cells,
+                "materializer_archive_delta_blocked_cell_count": (
+                    materializer_archive_delta_blocked_cells
+                ),
                 "first_order_marginal_effect_sum": total_first_order,
                 "second_order_interaction_effect_sum": total_second_order,
                 "synergy_effect_sum": total_synergy,
@@ -2284,6 +2597,7 @@ def _byte_shaving_unit_provenance(
             "source_lane_id": plan.get("lane_id"),
             "unit_id": unit.get("unit_id"),
             "unit_kind": unit.get("unit_kind"),
+            "atom_ids": _list_strings(unit.get("atom_ids")),
             "source_candidate_id": unit.get("source_candidate_id"),
             "source_span": unit.get("source_span"),
             "candidate_saved_bytes": unit.get("candidate_saved_bytes"),
@@ -2502,7 +2816,27 @@ def _source_span_byte_range(value: Any) -> list[int] | None:
     )
     if start is None or end is None or end < start:
         return None
-    return [start, end]
+        return [start, end]
+
+
+def _materializer_chain_artifact_paths(manifest: Mapping[str, Any]) -> list[str]:
+    paths: list[str] = []
+    candidate_archive = manifest.get("candidate_archive")
+    if isinstance(candidate_archive, Mapping):
+        _extend_unique(paths, [_optional_text(candidate_archive.get("path"))])
+    artifacts = manifest.get("artifacts")
+    if isinstance(artifacts, Mapping):
+        for artifact in artifacts.values():
+            if isinstance(artifact, Mapping):
+                _extend_unique(paths, [_optional_text(artifact.get("path"))])
+    for step in _sequence_of_mappings(manifest.get("chain_steps")):
+        artifact = step.get("artifact")
+        if isinstance(artifact, Mapping):
+            _extend_unique(paths, [_optional_text(artifact.get("path"))])
+        archive = step.get("archive")
+        if isinstance(archive, Mapping):
+            _extend_unique(paths, [_optional_text(archive.get("path"))])
+    return paths
 
 
 def _byte_shaving_sparsity_prior(unit_kinds: Sequence[str]) -> float:
@@ -2599,19 +2933,34 @@ def _atom_feedback_target_ids(atom: Mapping[str, Any]) -> set[str]:
             for value in (
                 provenance.get("operation_set_id"),
                 provenance.get("combo_id"),
+                provenance.get("unit_id"),
                 provenance.get("source_row_id"),
                 provenance.get("source_candidate_id"),
                 provenance.get("candidate_id"),
             )
             if str(value or "")
         )
+        ids.update(_list_strings(provenance.get("atom_ids")))
         ids.update(_list_strings(provenance.get("selected_unit_ids")))
         ids.update(_list_strings(provenance.get("source_unit_ids")))
         ids.update(_list_strings(provenance.get("source_selection_ids")))
+        recommended_params = provenance.get("recommended_operation_params")
+        if isinstance(recommended_params, Mapping):
+            op_atom_id = _optional_text(recommended_params.get("atom_id"))
+            if op_atom_id:
+                ids.add(op_atom_id)
+                ids.add(f"inverse_action_{op_atom_id}")
         for operation in _sequence_of_mappings(provenance.get("selected_operations")):
             unit_id = _optional_text(operation.get("unit_id"))
             if unit_id:
                 ids.add(unit_id)
+        for operation in _sequence_of_mappings(provenance.get("operation_candidates")):
+            params = operation.get("operation_params")
+            if isinstance(params, Mapping):
+                op_atom_id = _optional_text(params.get("atom_id"))
+                if op_atom_id:
+                    ids.add(op_atom_id)
+                    ids.add(f"inverse_action_{op_atom_id}")
     _add_compiler_feedback_target_ids(ids, atom)
     return ids
 
@@ -2680,7 +3029,10 @@ def _observation_feedback_target_ids(observation: Mapping[str, Any]) -> set[str]
 
 
 def _observation_requires_target_intersection(observation: Mapping[str, Any]) -> bool:
-    if observation.get("observation_kind") != "queue_observation_health_blocker":
+    if observation.get("observation_kind") not in {
+        "queue_observation_health_blocker",
+        MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND,
+    }:
         return False
     for key in (
         "work_ids",
@@ -2766,6 +3118,9 @@ def _observation_feedback_summary(
             "queue_health_group_priors": _queue_health_feedback_for_observations(
                 observations
             ),
+            "materializer_archive_delta_feedback": (
+                _materializer_archive_delta_feedback_for_observations(observations)
+            ),
             "allowed_use": "action_functional_calibration_interpretability_only",
         },
         "observation_feedback_is_not_score_authority",
@@ -2774,6 +3129,90 @@ def _observation_feedback_summary(
 
 def _is_queue_health_blocker_observation(row: Mapping[str, Any]) -> bool:
     return str(row.get("observation_kind") or "") in QUEUE_HEALTH_BLOCKER_OBSERVATION_KINDS
+
+
+def _is_materializer_archive_delta_observation(row: Mapping[str, Any]) -> bool:
+    return (
+        str(row.get("observation_kind") or "")
+        == MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND
+    )
+
+
+def _materializer_archive_delta_blocks_water_bucket(row: Mapping[str, Any]) -> bool:
+    return (
+        _is_materializer_archive_delta_observation(row)
+        and row.get("rate_positive") is not True
+        and row.get("quality_spend_allowed") is not True
+    )
+
+
+def _materializer_archive_delta_feedback_for_observations(
+    observations: Sequence[Mapping[str, Any]],
+    *,
+    atom: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    rows = [
+        dict(row)
+        for row in observations
+        if _is_materializer_archive_delta_observation(row)
+    ]
+    blocking_rows = [
+        row
+        for row in rows
+        if _materializer_archive_delta_blocks_water_bucket(row)
+    ]
+    realized_values = [
+        int(row["saved_bytes"])
+        for row in rows
+        if row.get("saved_bytes") is not None
+    ]
+    blockers = ["rate_negative_materializer_success"] if blocking_rows else []
+    observed_ids = [_optional_text(row.get("observation_id")) for row in rows]
+    blocking_ids = [
+        _optional_text(row.get("observation_id")) for row in blocking_rows
+    ]
+    source_unit_ids: list[str] = []
+    source_selection_ids: list[str] = []
+    candidate_ids: list[str] = []
+    archive_delta_statuses: list[str] = []
+    signal_semantics: list[str] = []
+    for row in rows:
+        _extend_unique(candidate_ids, [row.get("candidate_id")])
+        _extend_unique(source_unit_ids, _list_strings(row.get("source_unit_ids")))
+        _extend_unique(
+            source_selection_ids,
+            _list_strings(row.get("source_selection_ids")),
+        )
+        _extend_unique(archive_delta_statuses, [row.get("archive_delta_status")])
+        _extend_unique(signal_semantics, [row.get("signal_semantics")])
+    return _false_authority(
+        {
+            "schema": MATERIALIZER_ARCHIVE_DELTA_FEEDBACK_SCHEMA,
+            "observation_count": len(rows),
+            "blocking_observation_count": len(blocking_rows),
+            "observation_ids": [item for item in observed_ids if item],
+            "blocking_observation_ids": [item for item in blocking_ids if item],
+            "rate_positive_count": sum(1 for row in rows if row.get("rate_positive") is True),
+            "rate_nonpositive_count": sum(1 for row in rows if row.get("rate_positive") is not True),
+            "realized_saved_bytes_sum": sum(realized_values),
+            "min_realized_saved_bytes": min(realized_values) if realized_values else None,
+            "max_realized_saved_bytes": max(realized_values) if realized_values else None,
+            "blocks_water_bucket": bool(blocking_rows),
+            "quality_spend_allowed": any(
+                row.get("quality_spend_allowed") is True for row in rows
+            ),
+            "blockers": blockers,
+            "candidate_ids": candidate_ids,
+            "source_unit_ids": source_unit_ids,
+            "source_selection_ids": source_selection_ids,
+            "archive_delta_statuses": archive_delta_statuses,
+            "signal_semantics": signal_semantics,
+            "atom_id": None if atom is None else atom.get("atom_id"),
+            "allowed_use": "archive_delta_feedback_for_local_planning_only",
+        },
+        "materializer_archive_delta_feedback_is_not_score_authority",
+        "rate_negative_materializer_success_requires_replan_before_water_bucket_selection",
+    )
 
 
 def _queue_health_feedback_for_observations(
@@ -4049,6 +4488,16 @@ def _sha256_value(value: Any, label: str) -> None:
         raise InverseSteganalysisAcquisitionError(f"{label} must be sha256 hex")
 
 
+def _sha256_or_none(value: Any, label: str) -> str | None:
+    if value is None:
+        return None
+    text = _optional_text(value)
+    if text is None:
+        return None
+    _sha256_value(text, label)
+    return text
+
+
 def _has_value(value: Any) -> bool:
     if isinstance(value, Mapping):
         return any(_has_value(item) for item in value.values())
@@ -4205,6 +4654,8 @@ __all__ = [
     "CONTEST_RATE_DENOM_BYTES",
     "CONTEST_RATE_SCORE_PER_BYTE",
     "INVERSE_SCORER_SURFACE_SCHEMA",
+    "MATERIALIZER_ARCHIVE_DELTA_FEEDBACK_SCHEMA",
+    "MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND",
     "MLX_ACQUISITION_BATCH_PROVENANCE_SCHEMA",
     "MLX_EFFECTIVE_SPEND_TRIAGE_PROVENANCE_SCHEMA",
     "MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_ROW_SCHEMA",
@@ -4231,6 +4682,7 @@ __all__ = [
     "inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection",
     "normalize_inverse_steganalysis_atom",
     "normalize_inverse_steganalysis_observation",
+    "observations_from_materializer_chain_manifest",
     "observations_from_queue_observation",
     "observations_from_queue_performance_summary",
     "paired_exact_auth_calibration_observations_from_review_packets",

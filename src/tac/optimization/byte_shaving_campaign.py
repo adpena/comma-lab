@@ -701,7 +701,11 @@ def validate_signal_surface(payload: Mapping[str, Any]) -> None:
         if key in payload and payload.get(key) is not expected:
             raise ByteShavingCampaignError(f"{key} must be explicit false")
     units = payload.get("units")
-    if not isinstance(units, list) or not units:
+    if not isinstance(units, list):
+        raise ByteShavingCampaignError("units must be a list")
+    if not units:
+        if payload.get("signal_status") == "dry_no_selected_cells":
+            return
         raise ByteShavingCampaignError("units must be a non-empty list")
     for index, item in enumerate(units):
         if not isinstance(item, Mapping):
@@ -1631,7 +1635,16 @@ def build_byte_shaving_campaign_plan(
 
     validate_signal_surface(payload)
     repo_root = repo_root or Path.cwd()
-    ranked = _rank_units([item for item in _as_list(payload.get("units")) if isinstance(item, Mapping)])
+    unit_items = [
+        item for item in _as_list(payload.get("units")) if isinstance(item, Mapping)
+    ]
+    if not unit_items:
+        return _empty_byte_shaving_campaign_plan(
+            payload,
+            source_path=source_path,
+            repo_root=repo_root,
+        )
+    ranked = _rank_units(unit_items)
     conflicts = _conflict_sets(payload)
     operation_order_priors = _operation_order_priors(payload)
     prefix_rows = _prefix_rows(
@@ -1747,6 +1760,115 @@ def build_byte_shaving_campaign_plan(
     if plan["inverse_action_materialization_portfolios"]:
         plan["materialization_bridge"] = build_inverse_action_materialization_bridge(plan)
     return apply_proxy_evidence_boundary(plan, dispatch_blockers=plan["dispatch_blockers"])
+
+
+def _empty_byte_shaving_campaign_plan(
+    payload: Mapping[str, Any],
+    *,
+    source_path: Path | None,
+    repo_root: Path,
+) -> dict[str, Any]:
+    source_paths = [_repo_rel(source_path, repo_root)] if source_path is not None else []
+    operation_order_priors = _operation_order_priors(payload)
+    dispatch_blockers = ordered_unique(
+        [
+            *BASE_BLOCKERS,
+            *[str(item) for item in _as_list(payload.get("blockers"))],
+            "byte_shaving_signal_surface_has_no_units",
+            str(payload.get("signal_status") or "dry_no_units"),
+        ]
+    )
+    plan = {
+        "schema": PLAN_SCHEMA,
+        "tool": TOOL_NAME,
+        "generated_at_utc": _utc_now(),
+        "campaign_id": str(payload.get("campaign_id") or "byte_shaving_campaign"),
+        "candidate_id": payload.get("candidate_id"),
+        "lane_id": payload.get("lane_id") or "byte_shaving_campaign",
+        "source_paths": source_paths,
+        "source_signal_refs": _as_list(payload.get("source_signal_refs")),
+        "auth_eval_refs": _as_list(payload.get("auth_eval_refs")),
+        "mlx_calibration_refs": _as_list(payload.get("mlx_calibration_refs")),
+        "scorer_response_refs": _as_list(payload.get("scorer_response_refs")),
+        "inverse_scorer_surface_refs": _as_list(payload.get("inverse_scorer_surface_refs")),
+        "inverse_action_materialization_portfolios": (
+            _inverse_action_materialization_portfolios(payload)
+        ),
+        "frontier_axis": payload.get("frontier_axis") or "[planning-only]",
+        "ranked_units": [],
+        "sweep_ladder": [],
+        "recommended_prefix": None,
+        "combination_ladder": [],
+        "permutation_ladder": [],
+        "operation_set_ladder": [],
+        "packet_ir_operation_sets": [],
+        "recommended_combination": None,
+        "recommended_operation_set": None,
+        "operation_menu": DEFAULT_OPERATION_FAMILIES,
+        "operation_order_priors": operation_order_priors,
+        "combination_policy": {
+            "max_units_considered": int(payload.get("max_combo_units_considered") or 32),
+            "max_ops_per_unit": int(payload.get("max_combo_ops_per_unit") or 3),
+            "beam_width": int(payload.get("combo_beam_width") or 64),
+            "max_combo_count": int(payload.get("max_combo_count") or 32),
+            "interactions_mode": (
+                "direct delta_score plus extra_saved_bytes/shared_overhead_bytes "
+                "for scorer-axis and runtime externalities"
+            ),
+            "conflicts_mode": "unit conflict sets cannot co-occur in one combo",
+        },
+        "search_space_policy": {
+            "unit_layers": sorted(UNIT_KINDS),
+            "operation_layers": {
+                unit_kind: list(families)
+                for unit_kind, families in sorted(DEFAULT_OPERATION_FAMILIES.items())
+            },
+            "scorer_interaction_terms": [
+                "rate_delta_score",
+                "quality_cost_score",
+                "predicted_seg_score_cost",
+                "predicted_pose_score_cost",
+                "master_gradient_score_cost",
+                "interaction_delta_score",
+            ],
+            "combination_search": "not_run_no_units",
+            "permutation_search": "not_run_no_units",
+            "operation_set_search": "not_run_no_units",
+            "non_bruteforce_principle": (
+                "dry no-op plans preserve saturated feedback as queue intelligence "
+                "instead of throwing away no-selected-cell evidence"
+            ),
+        },
+        "dry_plan": {
+            "status": str(payload.get("signal_status") or "dry_no_units"),
+            "reason": payload.get("dry_reason")
+            or "input signal surface produced no materializable units",
+            "source_selected_cell_count": payload.get("source_selected_cell_count"),
+            "source_blocked_cell_count": payload.get("source_blocked_cell_count"),
+            "source_materializer_archive_delta_blocked_cell_count": payload.get(
+                "source_materializer_archive_delta_blocked_cell_count"
+            ),
+        },
+        "dispatch_blockers": dispatch_blockers,
+        "evidence_boundary": {
+            "planning_only": True,
+            "rate_delta_formula": f"-25 * saved_bytes / {CONTEST_ORIGINAL_BYTES}",
+            "quality_cost_source": (
+                "predicted_quality_score_cost or seg/pose/master-gradient score costs"
+            ),
+            "next_gate": (
+                "no materializer queue units remain; refresh the inverse-action "
+                "surface or widen the candidate generator"
+            ),
+        },
+        **FALSE_AUTHORITY,
+    }
+    if plan["inverse_action_materialization_portfolios"]:
+        plan["materialization_bridge"] = build_inverse_action_materialization_bridge(plan)
+    return apply_proxy_evidence_boundary(
+        plan,
+        dispatch_blockers=plan["dispatch_blockers"],
+    )
 
 
 def _inverse_action_materialization_portfolios(
@@ -2743,7 +2865,66 @@ def build_signal_surface_from_inverse_action_functional(
             )
         )
     if not units:
-        raise ByteShavingCampaignError("inverse action functional produced no selected cells")
+        integral_totals = _mapping(action_payload.get("integral_totals"))
+        blocked_count = integral_totals.get("blocked_cell_count")
+        materializer_blocked_count = integral_totals.get(
+            "materializer_archive_delta_blocked_cell_count"
+        )
+        blockers = ordered_unique(
+            [
+                *[str(item) for item in _as_list(action_payload.get("dispatch_blockers"))],
+                "inverse_action_functional_produced_no_selected_cells",
+                *(
+                    ["materializer_archive_delta_feedback_blocked_selected_cells"]
+                    if materializer_blocked_count
+                    else []
+                ),
+            ]
+        )
+        return {
+            "schema": SIGNAL_SURFACE_SCHEMA,
+            "campaign_id": campaign_id,
+            "candidate_id": water_bucket.get("schema") or "inverse_steganalysis_action",
+            "lane_id": "inverse_steganalysis_action_byte_shaving",
+            "frontier_axis": "[planning-only inverse-steganalysis action]",
+            "signal_status": "dry_no_selected_cells",
+            "dry_reason": "inverse action functional produced no selected cells",
+            "source_selected_cell_count": water_bucket.get("selected_count"),
+            "source_blocked_cell_count": blocked_count,
+            "source_materializer_archive_delta_blocked_cell_count": (
+                materializer_blocked_count
+            ),
+            "source_signal_refs": [
+                {
+                    "kind": "inverse_steganalysis_action_functional",
+                    "schema": action_payload.get("schema"),
+                    "water_bucket_materialization_portfolio_schema": (
+                        INVERSE_ACTION_WATER_BUCKET_PORTFOLIO_SCHEMA
+                    ),
+                    "cell_count": integral_totals.get("cell_count"),
+                    "selected_count": water_bucket.get("selected_count"),
+                    "selected_expected_score_gain": water_bucket.get(
+                        "selected_expected_score_gain"
+                    ),
+                    "source_provenance_operation_set_count": 0,
+                    "high_level_operation_compiler_required_count": 0,
+                    "leaf_cell_candidate_count": 0,
+                    "compiled_operation_set_count": 0,
+                    **FALSE_AUTHORITY,
+                }
+            ],
+            "water_bucket_materialization_portfolio": {
+                "schema": INVERSE_ACTION_WATER_BUCKET_PORTFOLIO_SCHEMA,
+                "selected_cell_count": len(selected_cells),
+                "portfolio_row_count": 0,
+                "actuation_modes": [],
+                "rows": [],
+                **FALSE_AUTHORITY,
+            },
+            "units": [],
+            "blockers": blockers,
+            **FALSE_AUTHORITY,
+        }
     return {
         "schema": SIGNAL_SURFACE_SCHEMA,
         "campaign_id": campaign_id,

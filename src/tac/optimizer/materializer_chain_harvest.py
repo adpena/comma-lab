@@ -110,6 +110,17 @@ def adapt_materializer_chain_manifest_to_candidate(
     byte_changed = (
         source_bytes is not None and candidate_archive["bytes"] != source_bytes
     )
+    delta_status = str(delta_facts.get("expected_status") or "").strip()
+    realized_saved_bytes = delta_facts.get("computed_realized_saved_bytes")
+    rate_positive = (
+        delta_status == "realized_saving"
+        and delta_facts.get("expected_savings_realized") is True
+    )
+    rate_semantics = (
+        "realized_archive_saving"
+        if rate_positive
+        else "successful_quality_spend_not_byte_saving_progress"
+    )
     candidate_id = _candidate_id(
         chain, schema=schema, archive_sha=candidate_archive["sha256"]
     )
@@ -136,6 +147,12 @@ def adapt_materializer_chain_manifest_to_candidate(
         "source_archive_path": source_archive.get("path"),
         "serialized_archive_delta": dict(chain.get("serialized_archive_delta") or {}),
         "serialized_archive_delta_validated": delta_facts,
+        "materializer_rate_outcome": chain.get("materializer_rate_outcome")
+        or delta_status,
+        "rate_positive": rate_positive,
+        "realized_saved_bytes": realized_saved_bytes,
+        "signal_semantics": chain.get("signal_semantics") or rate_semantics,
+        "quality_spend_allowed": chain.get("quality_spend_allowed") is True,
         "score_affecting_payload_changed": archive_changed,
         "charged_bits_changed": byte_changed,
         "score_affecting_change_proof": _score_affecting_change_proof(
@@ -159,7 +176,8 @@ def adapt_materializer_chain_manifest_to_candidate(
             "non_authoritative_planning_signal_only_not_score_claim"
         ),
         "evidence_semantics": (
-            "materializer_chain_harvest_candidate_pending_exact_readiness"
+            "materializer_chain_harvest_candidate_pending_exact_readiness:"
+            f"{rate_semantics}"
         ),
         "evidence_grade": "[materializer-chain-harvest-no-score]",
         "harvested_at_utc": _utc_now(),

@@ -539,6 +539,11 @@ def test_harvest_work_queue_chain_manifest_into_source_queue(
     assert queue["dispatch_ready_count"] == 0
     assert row["candidate_id"] == "external_materializer_candidate"
     assert row["archive_candidate_verified"] is True
+    assert row["materializer_rate_outcome"] == "realized_saving"
+    assert row["rate_positive"] is True
+    assert row["realized_saved_bytes"] > 0
+    assert row["signal_semantics"] == "realized_archive_saving"
+    assert row["quality_spend_allowed"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
     assert row["score_claim"] is False
     assert str(external) in row["candidate_archive_path"]

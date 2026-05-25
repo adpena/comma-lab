@@ -15,6 +15,7 @@ from tac.optimization.inverse_steganalysis_acquisition import (
     ATOM_SCHEMA,
     CONTEST_RATE_DENOM_BYTES,
     CONTEST_RATE_SCORE_PER_BYTE,
+    MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND,
     MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA,
     OBSERVATION_SCHEMA,
     SCHEMA,
@@ -29,6 +30,7 @@ from tac.optimization.inverse_steganalysis_acquisition import (
     inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection,
     normalize_inverse_steganalysis_atom,
     normalize_inverse_steganalysis_observation,
+    observations_from_materializer_chain_manifest,
     observations_from_queue_observation,
     observations_from_queue_performance_summary,
     paired_exact_auth_calibration_observations_from_review_packets,
@@ -641,6 +643,204 @@ def test_materializer_observation_matches_compiler_target_and_materializer() -> 
     assert cell["priority"]["expected_score_gain"] == pytest.approx(observed_rate_gain)
     assert cell["score_claim"] is False
     assert action["score_claim"] is False
+
+
+def test_materializer_chain_realized_cost_blocks_matching_water_bucket() -> None:
+    runtime_identity = {
+        "runtime_tree_sha256": "d" * 64,
+        "scorer_version": "local_materializer_chain.v1",
+    }
+    cache_identity = {"cache_sha256": "e" * 64}
+    atom = _atom(
+        "surface_candidate",
+        atom_id="atom_materializer_delta",
+        predicted_score_gain=0.001,
+        first_order_marginal_effect=0.001,
+        second_order_interaction_effect=0.0,
+        uncertainty=0.0,
+        fragility_penalty=0.0,
+    )
+    unrelated_atom = _atom(
+        "surface_candidate",
+        atom_id="atom_unrelated_same_candidate",
+        predicted_score_gain=0.001,
+        first_order_marginal_effect=0.001,
+        second_order_interaction_effect=0.0,
+        uncertainty=0.0,
+        fragility_penalty=0.0,
+    )
+    manifest = {
+        "schema": "inverse_scorer_cell_candidate_chain_v1",
+        "serialized_archive_delta": {
+            "schema": "serialized_archive_delta_contract.v1",
+            "status": "realized_cost",
+            "archive_delta_bytes": 1764,
+            "source_archive_bytes": 178_592,
+            "candidate_archive_bytes": 180_356,
+            "realized_saved_bytes": -1764,
+            "savings_realized": False,
+            **_planning_false_authority(),
+        },
+        "source_archive_sha256": "a" * 64,
+        "candidate_archive_sha256": "b" * 64,
+        "source_archive_bytes": 178_592,
+        "candidate_archive_bytes": 180_356,
+        "receiver_contract_satisfied": True,
+        "inflate_parity_satisfied": True,
+        "readiness_blockers": ["exact_auth_eval_required_before_score_claim"],
+        "dispatch_blockers": ["requires_exact_eval_readiness_gate"],
+        **_planning_false_authority(),
+    }
+    candidate_manifest = {
+        "schema": "inverse_scorer_cell_candidate_v1",
+        "materializer_id": "inverse_scorer_cell_candidate_adapter",
+        "target_kind": "inverse_scorer_cell_candidate_v1",
+        "receiver_contract_kind": "inverse_scorer_coordinate_candidate",
+        "selected_cells": [
+            {
+                "atom_id": "atom_materializer_delta",
+                "candidate_id": "surface_candidate",
+                "source_selection_ids": ["top_0001"],
+            }
+        ],
+        **_planning_false_authority(),
+    }
+
+    observations = observations_from_materializer_chain_manifest(
+        manifest,
+        runtime_identity=runtime_identity,
+        cache_identity=cache_identity,
+        candidate_manifest=candidate_manifest,
+        source_path="scratch/inverse_cell_chain_manifest.json",
+    )
+    direct_manifest = {
+        **manifest,
+        "materializer_id": "inverse_scorer_cell_candidate_adapter",
+        "target_kind": "inverse_scorer_cell_candidate_v1",
+        "receiver_contract_kind": "inverse_scorer_coordinate_candidate",
+        "selected_cells": candidate_manifest["selected_cells"],
+    }
+    direct_observations = observations_from_materializer_chain_manifest(
+        direct_manifest,
+        runtime_identity=runtime_identity,
+        cache_identity=cache_identity,
+        source_path="scratch/inverse_cell_candidate_manifest.json",
+    )
+    action = build_discrete_scorer_action_functional(
+        [atom, unrelated_atom],
+        observations=observations,
+    )
+    cells_by_atom = {cell["atom_id"]: cell for cell in action["cells"]}
+    cell = cells_by_atom["atom_materializer_delta"]
+    unrelated_cell = cells_by_atom["atom_unrelated_same_candidate"]
+    feedback = cell["materializer_archive_delta_feedback"]
+
+    assert observations[0]["observation_kind"] == MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND
+    assert observations[0]["saved_bytes"] == -1764
+    assert observations[0]["observed_rate_gain"] == 0.0
+    assert observations[0]["rate_positive"] is False
+    assert observations[0]["materializer_rate_outcome"] == "realized_cost"
+    assert observations[0]["signal_semantics"] == (
+        "successful_quality_spend_not_byte_saving_progress"
+    )
+    assert direct_observations[0]["source_unit_ids"] == [
+        "atom_materializer_delta",
+        "inverse_action_atom_materializer_delta",
+    ]
+    assert direct_observations[0]["materializer_id"] == (
+        "inverse_scorer_cell_candidate_adapter"
+    )
+    assert cell["best_observation_id"] == observations[0]["observation_id"]
+    assert cell["priority"]["expected_score_gain"] == 0.0
+    assert cell["water_bucket_selectable"] is False
+    assert cell["materializer_archive_delta_blocked"] is True
+    assert unrelated_cell["materializer_archive_delta_blocked"] is False
+    assert unrelated_cell["water_bucket_selectable"] is True
+    assert feedback["blocks_water_bucket"] is True
+    assert feedback["realized_saved_bytes_sum"] == -1764
+    assert "rate_negative_materializer_success" in feedback["blockers"]
+    assert action["integral_totals"]["materializer_archive_delta_blocked_cell_count"] == 1
+    assert action["materializer_archive_delta_feedback"]["blocking_observation_count"] == 1
+    assert action["score_claim"] is False
+
+
+def test_materializer_delta_blocks_replanned_byte_shaving_ranked_unit_identity() -> None:
+    runtime_identity = {
+        "runtime_tree_sha256": "d" * 64,
+        "scorer_version": "local_materializer_chain.v1",
+    }
+    cache_identity = {"cache_sha256": "e" * 64}
+    plan = {
+        "schema": "byte_shaving_campaign_plan.v1",
+        "candidate_id": "surface_candidate",
+        "ranked_units": [
+            {
+                "unit_id": "inverse_action_atom_materializer_delta",
+                "unit_kind": "scorer_inverse_surface_cell",
+                "atom_ids": ["atom_materializer_delta"],
+                "source_candidate_id": "surface_candidate",
+                "candidate_saved_bytes": 0,
+                "expected_score_gain": 0.001,
+                "quality_cost_score": 0.0,
+                "recommended_operation_params": {
+                    "atom_id": "atom_materializer_delta",
+                    "candidate_id": "surface_candidate",
+                },
+                "operation_candidates": [
+                    {
+                        "operation_params": {
+                            "atom_id": "atom_materializer_delta",
+                            "candidate_id": "surface_candidate",
+                        }
+                    }
+                ],
+            }
+        ],
+        **_planning_false_authority(),
+    }
+    atoms = action_atoms_from_byte_shaving_campaign_plan(plan)
+    manifest = {
+        "schema": "inverse_scorer_cell_candidate_v1",
+        "materializer_id": "inverse_scorer_cell_candidate_adapter",
+        "target_kind": "inverse_scorer_cell_candidate_v1",
+        "receiver_contract_kind": "inverse_scorer_coordinate_candidate",
+        "serialized_archive_delta": {
+            "schema": "serialized_archive_delta_contract.v1",
+            "status": "realized_cost",
+            "archive_delta_bytes": 1805,
+            "source_archive_bytes": 178_592,
+            "candidate_archive_bytes": 180_397,
+            "realized_saved_bytes": -1805,
+            "savings_realized": False,
+            **_planning_false_authority(),
+        },
+        "selected_cells": [
+            {
+                "atom_id": "atom_materializer_delta",
+                "candidate_id": "surface_candidate",
+            }
+        ],
+        **_planning_false_authority(),
+    }
+
+    observations = observations_from_materializer_chain_manifest(
+        manifest,
+        runtime_identity=runtime_identity,
+        cache_identity=cache_identity,
+        source_path="scratch/replanned_direct_materializer_manifest.json",
+    )
+    action = build_discrete_scorer_action_functional(atoms, observations=observations)
+    cell = action["cells"][0]
+
+    assert cell["atom_id"].startswith("byte_shaving_unit_inverse_action_atom_materializer_delta")
+    assert atoms[0]["source_provenance"]["atom_ids"] == ["atom_materializer_delta"]
+    assert observations[0]["source_unit_ids"] == [
+        "atom_materializer_delta",
+        "inverse_action_atom_materializer_delta",
+    ]
+    assert cell["materializer_archive_delta_blocked"] is True
+    assert cell["water_bucket_selectable"] is False
+    assert cell["priority"]["expected_score_gain"] == 0.0
 
 
 def test_mlx_direct_spend_triage_rejects_truthy_nested_compiler_authority() -> None:

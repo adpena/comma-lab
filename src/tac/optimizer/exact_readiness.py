@@ -502,6 +502,14 @@ def validate_serialized_archive_delta_contract(
         "schema": schema,
         "status": status or None,
         "expected_status": expected_status,
+        "materializer_rate_outcome": expected_status,
+        "rate_positive": expected_status == "realized_saving",
+        "signal_semantics": (
+            "realized_archive_saving"
+            if expected_status == "realized_saving"
+            else "successful_quality_spend_not_byte_saving_progress"
+        ),
+        "quality_spend_allowed": as_bool(row.get("quality_spend_allowed")) is True,
         "source_archive_bytes": source_bytes,
         "candidate_archive_bytes": candidate_bytes,
         "archive_delta_bytes": declared_delta,

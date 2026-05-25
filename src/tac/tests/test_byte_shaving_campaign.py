@@ -495,6 +495,34 @@ def test_inverse_action_functional_converts_to_plannable_surface() -> None:
     assert bridge["ready_for_exact_eval_dispatch"] is False
 
 
+def test_inverse_action_functional_empty_water_bucket_becomes_dry_plan() -> None:
+    payload = _inverse_action_payload()
+    payload["integral_totals"] = {
+        "cell_count": 1,
+        "blocked_cell_count": 1,
+        "materializer_archive_delta_blocked_cell_count": 1,
+    }
+    water_bucket = payload["water_bucket"]
+    assert isinstance(water_bucket, dict)
+    water_bucket["selected_count"] = 0
+    water_bucket["selected_expected_score_gain"] = 0.0
+    water_bucket["selected_cells"] = []
+
+    surface = build_signal_surface_from_inverse_action_functional(payload)
+    plan = build_byte_shaving_campaign_plan(surface)
+
+    assert surface["signal_status"] == "dry_no_selected_cells"
+    assert surface["units"] == []
+    assert "materializer_archive_delta_feedback_blocked_selected_cells" in surface["blockers"]
+    assert plan["ranked_units"] == []
+    assert plan["recommended_prefix"] is None
+    assert plan["recommended_operation_set"] is None
+    assert plan["dry_plan"]["status"] == "dry_no_selected_cells"
+    assert plan["dry_plan"]["source_materializer_archive_delta_blocked_cell_count"] == 1
+    assert "byte_shaving_signal_surface_has_no_units" in plan["dispatch_blockers"]
+    assert plan["score_claim"] is False
+
+
 def test_inverse_action_functional_leaf_cells_are_explicit_opt_in() -> None:
     surface = build_signal_surface_from_inverse_action_functional(
         _inverse_action_payload(),

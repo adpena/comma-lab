@@ -27,6 +27,9 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.serialized_archive_economics import (
+    build_serialized_archive_delta_contract,
+)
 from tac.repo_io import read_json, repo_relative, sha256_bytes, sha256_file
 
 PLAN_SCHEMA = "inverse_scorer_cell_candidate_plan_v1"
@@ -236,6 +239,26 @@ def materialize_inverse_scorer_cell_candidate(
         source_label="inverse_scorer_cell_template_archive",
         candidate_label="inverse_scorer_cell_candidate_archive",
     )
+    serialized_archive_delta = build_serialized_archive_delta_contract(
+        source_archive=descriptor["template_archive"],
+        candidate_archive=candidate_archive,
+        modeled_cost_bytes=sum(
+            _int(cell.get("water_fill_cost_bytes"), "selected_cell.water_fill_cost_bytes")
+            for cell in selected_cells
+        ),
+    )
+    realized_saved_bytes = serialized_archive_delta.get("realized_saved_bytes")
+    rate_positive = (
+        serialized_archive_delta.get("status") == "realized_saving"
+        and serialized_archive_delta.get("savings_realized") is True
+        and isinstance(realized_saved_bytes, int)
+        and realized_saved_bytes > 0
+    )
+    rate_semantics = (
+        "realized_archive_saving"
+        if rate_positive
+        else "successful_quality_spend_not_byte_saving_progress"
+    )
     return apply_proxy_evidence_boundary(
         {
             "schema": CANDIDATE_SCHEMA,
@@ -250,6 +273,12 @@ def materialize_inverse_scorer_cell_candidate(
             "template_archive": descriptor["template_archive"],
             "candidate_archive": candidate_archive,
             "archive_diff_manifest": diff_manifest,
+            "serialized_archive_delta": serialized_archive_delta,
+            "materializer_rate_outcome": serialized_archive_delta.get("status"),
+            "rate_positive": rate_positive,
+            "realized_saved_bytes": realized_saved_bytes,
+            "signal_semantics": rate_semantics,
+            "quality_spend_allowed": False,
             "inverse_action_functional": action_record,
             "inverse_scorer_cell_descriptor": descriptor_record,
             "selected_cells": selected_cells,

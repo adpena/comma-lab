@@ -875,6 +875,122 @@ def test_cli_reads_materializer_observation_jsonl(tmp_path: Path) -> None:
     assert action["ready_for_exact_eval_dispatch"] is False
 
 
+def test_cli_ingests_materializer_chain_realized_cost_feedback(tmp_path: Path) -> None:
+    atoms = tmp_path / "atoms.json"
+    chain_manifest = tmp_path / "chain_manifest.json"
+    candidate_manifest = tmp_path / "candidate_manifest.json"
+    runtime_identity = tmp_path / "runtime_identity.json"
+    cache_identity = tmp_path / "cache_identity.json"
+    output = tmp_path / "action.json"
+    atoms.write_text(
+        json.dumps(
+            {
+                "atoms": [
+                    {
+                        "atom_id": "atom_materializer_delta",
+                        "candidate_id": "surface_candidate",
+                        "scale": "pair",
+                        "scope_axis": "pairs",
+                        "component": "rate",
+                        "predicted_score_gain": 0.001,
+                        "first_order_marginal_effect": 0.001,
+                        "second_order_interaction_effect": 0.0,
+                        "fragility_penalty": 0.0,
+                        "uncertainty": 0.0,
+                        **_false_authority(),
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    candidate_manifest.write_text(
+        json.dumps(
+            {
+                "schema": "inverse_scorer_cell_candidate_v1",
+                "materializer_id": "inverse_scorer_cell_candidate_adapter",
+                "target_kind": "inverse_scorer_cell_candidate_v1",
+                "receiver_contract_kind": "inverse_scorer_coordinate_candidate",
+                "selected_cells": [
+                    {
+                        "atom_id": "atom_materializer_delta",
+                        "candidate_id": "surface_candidate",
+                    }
+                ],
+                **_false_authority(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    chain_manifest.write_text(
+        json.dumps(
+            {
+                "schema": "inverse_scorer_cell_candidate_chain_v1",
+                "artifacts": {
+                    "candidate_manifest": {"path": candidate_manifest.name}
+                },
+                "serialized_archive_delta": {
+                    "schema": "serialized_archive_delta_contract.v1",
+                    "status": "realized_cost",
+                    "archive_delta_bytes": 1764,
+                    "source_archive_bytes": 178_592,
+                    "candidate_archive_bytes": 180_356,
+                    "realized_saved_bytes": -1764,
+                    "savings_realized": False,
+                    **_false_authority(),
+                },
+                "source_archive_sha256": "a" * 64,
+                "candidate_archive_sha256": "b" * 64,
+                "receiver_contract_satisfied": True,
+                "inflate_parity_satisfied": True,
+                **_false_authority(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    runtime_identity.write_text(
+        json.dumps({"runtime_tree_sha256": "d" * 64}),
+        encoding="utf-8",
+    )
+    cache_identity.write_text(
+        json.dumps({"cache_sha256": "e" * 64}),
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--atom",
+            str(atoms),
+            "--materializer-chain-manifest",
+            str(chain_manifest),
+            "--queue-performance-runtime-identity",
+            str(runtime_identity),
+            "--queue-performance-cache-identity",
+            str(cache_identity),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(tmp_path),
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    action = json.loads(output.read_text(encoding="utf-8"))
+    cell = action["cells"][0]
+    assert cell["materializer_archive_delta_blocked"] is True
+    assert cell["water_bucket_selectable"] is False
+    assert cell["priority"]["expected_score_gain"] == 0.0
+    assert cell["materializer_archive_delta_feedback"]["realized_saved_bytes_sum"] == -1764
+    assert "rate_negative_materializer_success" in (
+        cell["materializer_archive_delta_feedback"]["blockers"]
+    )
+    assert action["score_claim"] is False
+
+
 def test_cli_accepts_mlx_effective_spend_triage_selection(tmp_path: Path) -> None:
     selection = tmp_path / "selection.json"
     output = tmp_path / "action.json"

@@ -272,6 +272,18 @@ def _chain_manifest(
             "readiness_blockers": verified_blockers,
         }
     )
+    realized_saved_bytes = serialized_archive_delta.get("realized_saved_bytes")
+    rate_positive = (
+        serialized_archive_delta.get("status") == "realized_saving"
+        and serialized_archive_delta.get("savings_realized") is True
+        and isinstance(realized_saved_bytes, int)
+        and realized_saved_bytes > 0
+    )
+    rate_semantics = (
+        "realized_archive_saving"
+        if rate_positive
+        else "successful_quality_spend_not_byte_saving_progress"
+    )
     return {
         "schema": CHAIN_SCHEMA,
         "output_dir": repo_relative(output_dir, repo),
@@ -283,6 +295,12 @@ def _chain_manifest(
         "candidate_archive_bytes": candidate_archive.get("bytes"),
         "candidate_member_sha256": candidate_archive.get("member_sha256") or "",
         "serialized_archive_delta": serialized_archive_delta,
+        "materializer_rate_outcome": serialized_archive_delta.get("status"),
+        "rate_positive": rate_positive,
+        "realized_saved_bytes": realized_saved_bytes,
+        "signal_semantics": rate_semantics,
+        "evidence_semantics": rate_semantics,
+        "quality_spend_allowed": False,
         "byte_closed_candidate_emitted": candidate.get("byte_closed_candidate_emitted") is True,
         "runtime_adapter_ready": not adapter_blockers,
         "receiver_proof_ready": receiver_proof.get("ready_for_receiver_verification") is True,

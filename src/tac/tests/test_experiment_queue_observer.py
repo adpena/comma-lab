@@ -54,7 +54,19 @@ def _queue(artifact_path: Path) -> dict[str, object]:
 def test_observer_surfaces_running_step_log_tail_and_artifacts(tmp_path: Path) -> None:
     artifact = tmp_path / "artifact.json"
     artifact.write_text(
-        json.dumps({"schema": "artifact.v1", "canonical_score": 0.5}),
+        json.dumps(
+            {
+                "schema": "artifact.v1",
+                "canonical_score": 0.5,
+                "serialized_archive_delta": {
+                    "status": "realized_cost",
+                    "realized_saved_bytes": -1764,
+                    "savings_realized": False,
+                    "source_archive_bytes": 178_592,
+                    "candidate_archive_bytes": 180_356,
+                },
+            }
+        ),
         encoding="utf-8",
     )
     log_path = tmp_path / "logs" / "smoke.log"
@@ -115,6 +127,20 @@ def test_observer_surfaces_running_step_log_tail_and_artifacts(tmp_path: Path) -
     assert running["log_tail"] == ["second"]
     assert running["expected_artifacts"][0]["exists"] is True
     assert running["expected_artifacts"][0]["json_schema"] == "artifact.v1"
+    assert (
+        running["expected_artifacts"][0]["serialized_archive_delta_status"]
+        == "realized_cost"
+    )
+    assert (
+        running["expected_artifacts"][0][
+            "serialized_archive_delta_realized_saved_bytes"
+        ]
+        == -1764
+    )
+    assert (
+        running["expected_artifacts"][0]["serialized_archive_delta_savings_realized"]
+        is False
+    )
     assert running["expected_artifacts"][0]["postcondition_passed"] is True
     markdown = render_observation_markdown(observation)
     assert "observer_test" in markdown

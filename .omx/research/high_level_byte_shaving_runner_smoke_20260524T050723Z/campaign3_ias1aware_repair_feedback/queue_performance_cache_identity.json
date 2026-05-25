@@ -1,0 +1,11 @@
+{
+  "cache_sha256": "802614148b59147856f14c2d8f882f9b2ed181fcd13945df28091557323344da",
+  "identity_kind": "campaign3_feedback_local_cache",
+  "promotion_eligible": false,
+  "queue_observation_sha256": "676ffe384acea4079266b55ed741c3b07ab3be234d23c4e178a19bf4a9ee03ad",
+  "queue_performance_summary_sha256": "802614148b59147856f14c2d8f882f9b2ed181fcd13945df28091557323344da",
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "materializer_archive_delta_feedback_cache_identity.v1",
+  "score_claim": false,
+  "source_chain_manifest_sha256": "a477dbec02fb8671d2c36439a1f815979812f7ec8ef8903ae08005c22b61750c"
+}

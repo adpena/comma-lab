@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +28,7 @@ from tac.optimization.inverse_steganalysis_acquisition import (  # noqa: E402
     action_atoms_from_mlx_acquisition_batch,
     build_discrete_scorer_action_functional,
     inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection,
+    observations_from_materializer_chain_manifest,
     observations_from_queue_observation,
     observations_from_queue_performance_summary,
     paired_exact_auth_calibration_observations_from_review_packets,
@@ -93,6 +95,31 @@ def _load_observation_rows(path: Path) -> list[dict[str, Any]]:
     return _as_rows(payload, path=path, key="observations")
 
 
+def _resolve_repo_path(path_text: str, repo_root: Path) -> Path:
+    path = Path(path_text)
+    return path if path.is_absolute() else repo_root / path
+
+
+def _auto_materializer_candidate_manifest(
+    manifest: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    artifacts = manifest.get("artifacts")
+    candidate_ref = None
+    if isinstance(artifacts, dict):
+        candidate_ref = artifacts.get("candidate_manifest")
+    if not isinstance(candidate_ref, dict):
+        return None
+    path_text = candidate_ref.get("path")
+    if not isinstance(path_text, str) or not path_text:
+        return None
+    path = _resolve_repo_path(path_text, repo_root)
+    if not path.is_file():
+        return None
+    return _load_mapping(path, label="materializer chain candidate manifest")
+
+
 def _render_markdown(payload: dict[str, Any]) -> str:
     bucket = payload.get("water_bucket") or {}
     totals = payload.get("integral_totals") or {}
@@ -157,6 +184,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--mlx-effective-spend-triage-selection", action="append", default=[])
     parser.add_argument("--atom", action="append", default=[])
     parser.add_argument("--observation", action="append", default=[])
+    parser.add_argument("--materializer-chain-manifest", action="append", default=[])
+    parser.add_argument(
+        "--materializer-chain-candidate-manifest",
+        action="append",
+        default=[],
+        help="optional per-chain candidate manifest; defaults to the chain artifact reference when available",
+    )
     parser.add_argument("--exact-auth-calibration-packet", action="append", default=[])
     parser.add_argument("--exact-auth-calibration-candidate-id", default=None)
     parser.add_argument("--queue-performance-summary", action="append", default=[])
@@ -281,6 +315,62 @@ def main(argv: list[str] | None = None) -> int:
         for raw_path in args.observation:
             path = Path(raw_path)
             observations.extend(_load_observation_rows(path))
+        if (
+            args.materializer_chain_candidate_manifest
+            and len(args.materializer_chain_candidate_manifest)
+            != len(args.materializer_chain_manifest)
+        ):
+            raise SystemExit(
+                "--materializer-chain-candidate-manifest count must match "
+                "--materializer-chain-manifest count"
+            )
+        for index, raw_path in enumerate(args.materializer_chain_manifest):
+            path = Path(raw_path)
+            chain_manifest = _load_mapping(path, label="materializer chain manifest")
+            candidate_manifest = None
+            if args.materializer_chain_candidate_manifest:
+                candidate_manifest = _load_mapping(
+                    Path(args.materializer_chain_candidate_manifest[index]),
+                    label="materializer chain candidate manifest",
+                )
+            else:
+                candidate_manifest = _auto_materializer_candidate_manifest(
+                    chain_manifest,
+                    repo_root=args.repo_root,
+                )
+            runtime_identity = (
+                candidate_manifest.get("runtime_identity", {})
+                if isinstance(candidate_manifest, dict)
+                else {}
+            )
+            if not runtime_identity and args.queue_performance_runtime_identity is not None:
+                runtime_identity = _load_mapping(
+                    args.queue_performance_runtime_identity,
+                    label="queue performance runtime identity",
+                )
+            if not runtime_identity and isinstance(chain_manifest.get("runtime_identity"), dict):
+                runtime_identity = chain_manifest["runtime_identity"]
+            cache_identity = (
+                candidate_manifest.get("cache_identity", {})
+                if isinstance(candidate_manifest, dict)
+                else {}
+            )
+            if not cache_identity and args.queue_performance_cache_identity is not None:
+                cache_identity = _load_mapping(
+                    args.queue_performance_cache_identity,
+                    label="queue performance cache identity",
+                )
+            if not cache_identity and isinstance(chain_manifest.get("cache_identity"), dict):
+                cache_identity = chain_manifest["cache_identity"]
+            observations.extend(
+                observations_from_materializer_chain_manifest(
+                    chain_manifest,
+                    runtime_identity=runtime_identity,
+                    cache_identity=cache_identity,
+                    source_path=_repo_rel(path, args.repo_root),
+                    candidate_manifest=candidate_manifest,
+                )
+            )
         if args.exact_auth_calibration_packet:
             calibration_candidate_id = (
                 args.exact_auth_calibration_candidate_id or args.candidate_id

@@ -747,6 +747,15 @@ def test_refuses_required_serialized_archive_saving_when_candidate_is_larger(
         result["report"]["facts"]["serialized_archive_delta"]["expected_status"]
         == "realized_cost"
     )
+    assert (
+        result["report"]["facts"]["serialized_archive_delta"]["materializer_rate_outcome"]
+        == "realized_cost"
+    )
+    assert result["report"]["facts"]["serialized_archive_delta"]["rate_positive"] is False
+    assert (
+        result["report"]["facts"]["serialized_archive_delta"]["signal_semantics"]
+        == "successful_quality_spend_not_byte_saving_progress"
+    )
 
 
 def test_refuses_serialized_archive_delta_candidate_byte_mismatch(

@@ -1,0 +1,10 @@
+{
+  "identity_kind": "campaign3_feedback_local_runtime",
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "runtime_tree_sha256": "788ba5ccd1043f009d90fb672f1a9c357c0d75bfd8f3a2a24fe95ed764e0353a",
+  "schema": "materializer_archive_delta_feedback_runtime_identity.v1",
+  "score_claim": false,
+  "source_action_functional_sha256": "788ba5ccd1043f009d90fb672f1a9c357c0d75bfd8f3a2a24fe95ed764e0353a",
+  "source_chain_manifest_sha256": "a477dbec02fb8671d2c36439a1f815979812f7ec8ef8903ae08005c22b61750c"
+}

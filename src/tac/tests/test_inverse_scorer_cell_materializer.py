@@ -184,6 +184,17 @@ def test_materializer_appends_ias1_descriptor_and_keeps_false_authority(
     assert "runtime_consumption_proof_missing" in manifest["readiness_blockers"]
     assert "inverse_scorer_cell_receiver_contract_not_satisfied" in manifest["readiness_blockers"]
     assert manifest["archive_diff_manifest"]["candidate_non_noop"] is True
+    assert manifest["serialized_archive_delta"]["status"] == "realized_cost"
+    assert manifest["serialized_archive_delta"]["realized_saved_bytes"] < 0
+    assert manifest["materializer_rate_outcome"] == "realized_cost"
+    assert manifest["rate_positive"] is False
+    assert manifest["realized_saved_bytes"] == manifest["serialized_archive_delta"][
+        "realized_saved_bytes"
+    ]
+    assert manifest["signal_semantics"] == (
+        "successful_quality_spend_not_byte_saving_progress"
+    )
+    assert manifest["quality_spend_allowed"] is False
     descriptor_record = manifest["inverse_scorer_cell_descriptor"]
     assert descriptor_record["schema"] == DESCRIPTOR_SCHEMA
     assert descriptor_record["magic"] == "IAS1"
@@ -1420,6 +1431,16 @@ def test_inverse_scorer_cell_chain_clears_receiver_blockers_only(
     assert chain["serialized_archive_delta"]["require_realized_saving"] is False
     assert chain["serialized_archive_delta"]["blockers"] == []
     assert chain["serialized_archive_delta"]["score_claim"] is False
+    assert chain["materializer_rate_outcome"] == "realized_cost"
+    assert chain["rate_positive"] is False
+    assert chain["realized_saved_bytes"] == chain["serialized_archive_delta"][
+        "realized_saved_bytes"
+    ]
+    assert chain["signal_semantics"] == (
+        "successful_quality_spend_not_byte_saving_progress"
+    )
+    assert chain["evidence_semantics"] == chain["signal_semantics"]
+    assert chain["quality_spend_allowed"] is False
     assert "runtime_consumption_proof_missing" not in chain["readiness_blockers"]
     assert "inverse_scorer_cell_receiver_contract_not_satisfied" not in chain["readiness_blockers"]
     assert "candidate_inflate_output_parity_missing" in chain["readiness_blockers"]

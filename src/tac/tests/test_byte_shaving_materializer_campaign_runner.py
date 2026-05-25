@@ -1677,6 +1677,99 @@ def test_materializer_campaign_runner_auto_discovers_materializer_observations(
     ] == [str(observations)]
 
 
+def test_materializer_campaign_runner_auto_discovers_materializer_archive_delta_manifests(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "run"
+    output_dir = run_dir / "materializer_outputs"
+    output_dir.mkdir(parents=True)
+    plan = tmp_path / "plan.json"
+    queue = tmp_path / "materializer_execution_queue.json"
+    state = tmp_path / "materializer_execution_queue.sqlite"
+    performance = run_dir / "queue_performance_summary.json"
+    runtime_identity = run_dir / "queue_performance_runtime_identity.json"
+    cache_identity = run_dir / "queue_performance_cache_identity.json"
+    manifest = output_dir / "inverse_cell_candidate_manifest.json"
+    for path in (plan, queue, state, performance, runtime_identity, cache_identity):
+        path.write_text("{}", encoding="utf-8")
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "inverse_scorer_cell_candidate_v1",
+                "selected_cells": [
+                    {
+                        "atom_id": "inverse_surface_pair0020",
+                        "candidate_id": "candidate_pair0020",
+                    }
+                ],
+                "serialized_archive_delta": {
+                    "schema": "serialized_archive_delta_contract.v1",
+                    "status": "realized_cost",
+                    "realized_saved_bytes": -1805,
+                    **_false_authority(),
+                },
+                **_false_authority(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(plan),
+            "--materializer-contexts",
+            str(tmp_path / "contexts.json"),
+        ]
+    )
+    performance_payload = {
+        "schema": runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA,
+        "event_count": 1,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    request = runner._queue_feedback_replan_request_payload(
+        args,
+        summary_path=run_dir / "materializer_campaign_run.json",
+        plan_path=plan,
+        queue_performance_summary_path=performance,
+        queue_performance_summary=performance_payload,
+        runtime_identity_path=runtime_identity,
+        cache_identity_path=cache_identity,
+        generated_runtime_identity=False,
+        generated_cache_identity=False,
+        run_dir=run_dir,
+        execution_queue=queue,
+        state_path=state,
+    )
+
+    command = request["command_template"]
+    assert request["ready_for_action_functional_feedback"] is True
+    assert request["materializer_chain_manifest_paths"] == [str(manifest)]
+    assert request["materializer_chain_manifest_auto_discovery_enabled"] is True
+    assert [
+        command[index + 1]
+        for index, item in enumerate(command[:-1])
+        if item == "--materializer-chain-manifest"
+    ] == [str(manifest)]
+
+    child_queue, blockers = runner._queue_feedback_replan_followup_queue_payload(
+        args,
+        queue_feedback_replan_request=request,
+        queue_feedback_replan_request_path=run_dir / "queue_feedback_replan_request.json",
+        run_dir=run_dir,
+        execution_queue=queue,
+        state_path=state,
+        source_queue={"queue_id": "materializer_unit_queue"},
+    )
+    assert blockers == []
+    assert child_queue is not None
+    input_paths = child_queue["experiments"][0]["steps"][0]["telemetry"][
+        "input_artifact_paths"
+    ]
+    assert str(manifest) in input_paths
+
+
 def test_materializer_campaign_feedback_replan_discovers_calibration_packet_pair(
     tmp_path: Path,
 ) -> None:

@@ -99,6 +99,8 @@ FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA = (
 )
 MAX_AUTO_DISCOVERED_FEEDBACK_OBSERVATIONS = 128
 MAX_AUTO_DISCOVERED_FEEDBACK_OBSERVATION_BYTES = 8 * 1024 * 1024
+MAX_AUTO_DISCOVERED_MATERIALIZER_CHAIN_MANIFESTS = 128
+MAX_AUTO_DISCOVERED_MATERIALIZER_CHAIN_MANIFEST_BYTES = 8 * 1024 * 1024
 QUEUE_FEEDBACK_REPLAN_REQUIRED_FALSE_FIELDS = tuple(
     dict.fromkeys(
         (
@@ -311,6 +313,20 @@ def _feedback_observation_paths(args: argparse.Namespace, *, run_dir: Path) -> l
     return list(dict.fromkeys([*explicit, *discovered]))
 
 
+def _materializer_chain_manifest_paths(
+    args: argparse.Namespace,
+    *,
+    run_dir: Path,
+) -> list[str]:
+    explicit = _display_path_list(args.materializer_chain_manifest)
+    discovered = [
+        _display_path(path)
+        for path in _discover_materializer_chain_manifest_paths(run_dir)
+        if _display_path(path) not in explicit
+    ]
+    return list(dict.fromkeys([*explicit, *discovered]))
+
+
 def _discover_feedback_observation_paths(run_dir: Path) -> list[Path]:
     root = run_dir.resolve(strict=False)
     paths: list[Path] = []
@@ -331,6 +347,39 @@ def _discover_feedback_observation_paths(run_dir: Path) -> list[Path]:
         if _path_has_family_agnostic_materializer_observation(path):
             paths.append(path)
     return paths
+
+
+def _discover_materializer_chain_manifest_paths(run_dir: Path) -> list[Path]:
+    root = run_dir.resolve(strict=False)
+    paths: list[Path] = []
+    if not root.exists():
+        return paths
+    for path in sorted(root.rglob("*.json")):
+        if len(paths) >= MAX_AUTO_DISCOVERED_MATERIALIZER_CHAIN_MANIFESTS:
+            break
+        if not path.is_file() or not _path_under_root(path, root):
+            continue
+        try:
+            if path.stat().st_size > MAX_AUTO_DISCOVERED_MATERIALIZER_CHAIN_MANIFEST_BYTES:
+                continue
+        except OSError:
+            continue
+        if _path_has_materializer_chain_archive_delta(path):
+            paths.append(path)
+    return paths
+
+
+def _path_has_materializer_chain_archive_delta(path: Path) -> bool:
+    payload = _load_json_object_if_present(path)
+    if payload is None:
+        return False
+    delta = payload.get("serialized_archive_delta")
+    if not isinstance(delta, Mapping):
+        return False
+    return bool(
+        str(delta.get("status") or "").strip()
+        and delta.get("realized_saved_bytes") is not None
+    )
 
 
 def _path_has_family_agnostic_materializer_observation(path: Path) -> bool:
@@ -779,6 +828,7 @@ def _feedback_action_functional_command_hint(
     runtime_identity_path: Path | None,
     cache_identity_path: Path | None,
     feedback_observation_paths: Sequence[str | Path] = (),
+    materializer_chain_manifest_paths: Sequence[str | Path] = (),
     queue_observation_paths: Sequence[str | Path] = (),
     exact_auth_calibration_inputs: Mapping[str, Any] | None = None,
     output_stem: str = "inverse_steganalysis_action_functional.feedback",
@@ -823,6 +873,11 @@ def _feedback_action_functional_command_hint(
             ]
         )
     _append_path_args(command, "--observation", list(feedback_observation_paths))
+    _append_path_args(
+        command,
+        "--materializer-chain-manifest",
+        list(materializer_chain_manifest_paths),
+    )
     _append_path_args(command, "--queue-observation", list(queue_observation_paths))
     calibration_inputs = (
         exact_auth_calibration_inputs
@@ -875,6 +930,10 @@ def _queue_feedback_replan_request_payload(
         run_dir=run_dir,
     )
     feedback_observation_paths = _feedback_observation_paths(args, run_dir=run_dir)
+    materializer_chain_manifest_paths = _materializer_chain_manifest_paths(
+        args,
+        run_dir=run_dir,
+    )
     queue_observation_paths = (
         [queue_observation_path] if queue_observation_path is not None else []
     )
@@ -893,6 +952,7 @@ def _queue_feedback_replan_request_payload(
         runtime_identity_path=runtime_identity_path,
         cache_identity_path=cache_identity_path,
         feedback_observation_paths=feedback_observation_paths,
+        materializer_chain_manifest_paths=materializer_chain_manifest_paths,
         queue_observation_paths=queue_observation_paths,
         exact_auth_calibration_inputs=exact_auth_calibration_inputs,
         output_stem=action_functional_output_stem,
@@ -917,6 +977,9 @@ def _queue_feedback_replan_request_payload(
             "feedback_observation_paths": feedback_observation_paths,
             "feedback_observation_auto_discovery_root": _display_path(run_dir),
             "feedback_observation_auto_discovery_enabled": True,
+            "materializer_chain_manifest_paths": materializer_chain_manifest_paths,
+            "materializer_chain_manifest_auto_discovery_root": _display_path(run_dir),
+            "materializer_chain_manifest_auto_discovery_enabled": True,
             "queue_observation_path": (
                 None if queue_observation_path is None else _display_path(queue_observation_path)
             ),
@@ -1060,6 +1123,12 @@ def _queue_feedback_replan_followup_queue_payload(
     input_artifacts.extend(
         str(path)
         for path in _as_sequence(queue_feedback_replan_request.get("feedback_observation_paths"))
+    )
+    input_artifacts.extend(
+        str(path)
+        for path in _as_sequence(
+            queue_feedback_replan_request.get("materializer_chain_manifest_paths")
+        )
     )
     input_artifacts.extend(
         str(path)
@@ -2409,6 +2478,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--mlx-acquisition-limit", type=int, default=None)
     parser.add_argument("--atom", action="append", default=[])
     parser.add_argument("--observation", action="append", default=[])
+    parser.add_argument("--materializer-chain-manifest", action="append", default=[])
     parser.add_argument("--exact-auth-calibration-packet", action="append", default=[])
     parser.add_argument(
         "--exact-auth-calibration-packet-root",
@@ -2910,6 +2980,11 @@ def _build_action_functional_command(
         )
     _append_path_args(command, "--atom", args.atom)
     _append_path_args(command, "--observation", args.observation)
+    _append_path_args(
+        command,
+        "--materializer-chain-manifest",
+        args.materializer_chain_manifest,
+    )
     _append_path_args(
         command,
         "--exact-auth-calibration-packet",

@@ -54295,6 +54295,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "codex_materializer_archive_delta_feedback_20260525",
+      "name": "Codex materializer archive-delta feedback ingestion",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "materializer_archive_delta_feedback_cli_runner_and_dry_plan_wiring_landed"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "exec2_materializer_archive_delta_realized_cost_minus1805_selected_zero_feedback"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "ruff_pycompile_and_301_focused_pytest_passed"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "codex_findings_materializer_archive_delta_feedback_20260525T061623Z_codex_md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -54304,5 +54345,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T05:40:03Z"
+  "updated_at": "2026-05-25T06:18:21Z"
 }
