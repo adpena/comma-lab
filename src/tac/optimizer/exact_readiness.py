@@ -30,6 +30,9 @@ from tac.hnerv_frontier_defaults import (
     ACTIVE_SCORE_FRONTIER_LABEL,
     ACTIVE_SCORE_FRONTIER_SCORE,
 )
+from tac.optimization.family_agnostic_materializers import (
+    verify_renderer_payload_dfl1_full_frame_inflate_parity_proof,
+)
 from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
 from tac.optimization.serialized_archive_economics import (
     CANDIDATE_ARCHIVE_LARGER_BLOCKER,
@@ -167,6 +170,11 @@ BYTE_DIFF_FIELD_PAIRS = (
 )
 INVERSE_SCORER_CHAIN_SCHEMA = "inverse_scorer_cell_candidate_chain_v1"
 INVERSE_SCORER_CHAIN_KIND = "inverse_scorer_cell_candidate_chain"
+RENDERER_PAYLOAD_DFL1_SCHEMA = "renderer_payload_dfl1_candidate.v1"
+RENDERER_PAYLOAD_DFL1_TARGET_KIND = "renderer_payload_dfl1_v1"
+RENDERER_PAYLOAD_DFL1_FULL_FRAME_BLOCKER = (
+    "renderer_payload_dfl1_full_frame_inflate_parity_missing"
+)
 INVERSE_SCORER_EXACT_AUTH_BOUNDARY_TOKENS = frozenset(
     {
         "contest_auth_eval",
@@ -186,6 +194,16 @@ INVERSE_SCORER_REQUIRED_FALSE_AUTHORITY_FIELDS = tuple(
     field
     for field in PROXY_FALSE_AUTHORITY_FIELDS
     if field not in {"score_affecting_payload_changed", "charged_bits_changed"}
+)
+RENDERER_PAYLOAD_DFL1_CLEARABLE_SOURCE_BLOCKERS = frozenset(
+    {
+        RENDERER_PAYLOAD_DFL1_FULL_FRAME_BLOCKER,
+        "renderer_payload_dfl1_receiver_contract_not_satisfied",
+        "runtime_consumption_proof_not_passed",
+        "family_agnostic_receiver_contract_not_satisfied",
+        "renderer_payload_dfl1_requires_same_runtime_full_frame_parity",
+        "renderer_payload_dfl1_requires_source_runtime_unpack_proof",
+    }
 )
 
 
@@ -648,6 +666,14 @@ def _is_inverse_scorer_cell_candidate_chain(row: Mapping[str, Any]) -> bool:
     )
 
 
+def _is_renderer_payload_dfl1_candidate(row: Mapping[str, Any]) -> bool:
+    return (
+        row.get("schema") == RENDERER_PAYLOAD_DFL1_SCHEMA
+        or row.get("target_kind") == RENDERER_PAYLOAD_DFL1_TARGET_KIND
+        or row.get("candidate_family") == "renderer_payload_dfl1"
+    )
+
+
 def _has_strict_inverse_scorer_full_frame_parity(
     row: Mapping[str, Any],
     *,
@@ -674,6 +700,80 @@ def _has_strict_inverse_scorer_full_frame_parity(
         ):
             return True
     return False
+
+
+def _has_strict_renderer_payload_dfl1_full_frame_parity(
+    row: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    queue_dir: Path | None,
+) -> bool:
+    if not _is_renderer_payload_dfl1_candidate(row):
+        return False
+    if (
+        row.get("renderer_payload_dfl1_full_frame_inflate_parity_satisfied") is not True
+        and row.get("renderer_payload_dfl1_inflate_parity_satisfied") is not True
+        and row.get("full_frame_inflate_parity_proven") is not True
+    ):
+        return False
+    proof_ref = row.get("renderer_payload_dfl1_full_frame_inflate_parity_proof_path")
+    if proof_ref is None:
+        proof_ref = row.get("renderer_payload_dfl1_inflate_parity_proof_path")
+    verification = row.get("full_frame_inflate_parity_verification")
+    if proof_ref is None and isinstance(verification, Mapping):
+        proof_ref = verification.get("proof_path")
+    proof_path = resolve_path(proof_ref, repo_root=repo_root, queue_dir=queue_dir)
+    if proof_path is None or not proof_path.is_file() or proof_path.is_symlink():
+        return False
+    if not _path_is_repo_confined(proof_path, repo_root):
+        return False
+    expected_proof_sha = row.get(
+        "renderer_payload_dfl1_full_frame_inflate_parity_proof_sha256"
+    )
+    if expected_proof_sha is None:
+        expected_proof_sha = row.get("renderer_payload_dfl1_inflate_parity_proof_sha256")
+    if expected_proof_sha is None and isinstance(verification, Mapping):
+        expected_proof_sha = verification.get("proof_sha256")
+    if is_sha256(expected_proof_sha) and sha256_file(proof_path) != str(
+        expected_proof_sha
+    ).lower():
+        return False
+    candidate_sha = (
+        str(row.get("archive_sha256") or "")
+        if is_sha256(row.get("archive_sha256"))
+        else str(row.get("candidate_archive_sha256") or "")
+    )
+    source_sha = (
+        str(row.get("source_archive_sha256") or "")
+        if is_sha256(row.get("source_archive_sha256"))
+        else ""
+    )
+    if not is_sha256(candidate_sha) or not is_sha256(source_sha):
+        return False
+    verified = verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
+        full_frame_inflate_parity_proof=proof_path,
+        required_source_archive_sha256=source_sha,
+        required_candidate_archive_sha256=candidate_sha,
+        repo_root=repo_root,
+    )
+    return verified.get("full_frame_inflate_parity_satisfied") is True
+
+
+def _has_strict_full_frame_parity(
+    row: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    queue_dir: Path | None,
+) -> bool:
+    return _has_strict_inverse_scorer_full_frame_parity(
+        row,
+        repo_root=repo_root,
+        queue_dir=queue_dir,
+    ) or _has_strict_renderer_payload_dfl1_full_frame_parity(
+        row,
+        repo_root=repo_root,
+        queue_dir=queue_dir,
+    )
 
 
 def _path_is_repo_confined(path: Path, repo_root: Path) -> bool:
@@ -807,6 +907,25 @@ def inverse_scorer_chain_authority_blockers(
             f"{blocker}"
         )
     return blockers
+
+
+def renderer_payload_dfl1_authority_blockers(
+    row: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    queue_dir: Path | None,
+) -> list[str]:
+    """Return DFL1 exact-readiness blockers cleared only by verified parity."""
+
+    if not _is_renderer_payload_dfl1_candidate(row):
+        return []
+    if _has_strict_renderer_payload_dfl1_full_frame_parity(
+        row,
+        repo_root=repo_root,
+        queue_dir=queue_dir,
+    ):
+        return []
+    return ["renderer_payload_dfl1_strict_full_frame_inflate_parity_missing"]
 
 
 def source_blocker_violations(
@@ -1277,7 +1396,7 @@ def validate_runtime_consumption_proof(
     submission_dir: Path | None,
     archive_sha256: str | None,
 ) -> tuple[list[str], dict[str, Any]]:
-    proof_backed_by_full_frame_parity = _has_strict_inverse_scorer_full_frame_parity(
+    proof_backed_by_full_frame_parity = _has_strict_full_frame_parity(
         row,
         repo_root=repo_root,
         queue_dir=queue_dir,
@@ -1351,7 +1470,10 @@ def validate_runtime_consumption_proof(
         blockers.extend(binding_blockers)
         facts.update(binding_facts)
     elif proof_schema in FAMILY_AGNOSTIC_RUNTIME_CONSUMPTION_PROOF_SCHEMAS:
-        if not _family_agnostic_runtime_proof_passed(proof_raw):
+        if not _family_agnostic_runtime_proof_passed(proof_raw) and not (
+            _is_renderer_payload_dfl1_candidate(row)
+            and proof_backed_by_full_frame_parity
+        ):
             blockers.append("runtime_consumption_proof_not_proven")
         for field in ("target_kind", "materializer_id", "receiver_contract_kind"):
             expected = row.get(field)
@@ -1431,10 +1553,20 @@ def readiness_blockers(
         queue_dir=queue_dir,
     )
     blockers.extend(inverse_scorer_blockers)
+    renderer_dfl1_blockers = renderer_payload_dfl1_authority_blockers(
+        row,
+        repo_root=repo_root,
+        queue_dir=queue_dir,
+    )
+    blockers.extend(renderer_dfl1_blockers)
     effective_clearable_source_blockers = list(extra_clearable_source_blockers)
     if _is_inverse_scorer_cell_candidate_chain(row) and not inverse_scorer_blockers:
         effective_clearable_source_blockers.extend(
             sorted(INVERSE_SCORER_CLEARABLE_SOURCE_BLOCKERS)
+        )
+    if _is_renderer_payload_dfl1_candidate(row) and not renderer_dfl1_blockers:
+        effective_clearable_source_blockers.extend(
+            sorted(RENDERER_PAYLOAD_DFL1_CLEARABLE_SOURCE_BLOCKERS)
         )
     blockers.extend(
         source_blocker_violations(
@@ -1788,6 +1920,23 @@ def promoted_row(
         ),
         "runtime_consumption_proof_candidate_member_sha256": facts.get(
             "runtime_consumption_proof_candidate_member_sha256"
+        ),
+        "renderer_payload_dfl1_inflate_parity_satisfied": source_row.get(
+            "renderer_payload_dfl1_inflate_parity_satisfied"
+        ),
+        "renderer_payload_dfl1_inflate_parity_proof_path": source_row.get(
+            "renderer_payload_dfl1_inflate_parity_proof_path"
+        )
+        or source_row.get("renderer_payload_dfl1_full_frame_inflate_parity_proof_path"),
+        "renderer_payload_dfl1_inflate_parity_proof_sha256": source_row.get(
+            "renderer_payload_dfl1_inflate_parity_proof_sha256"
+        )
+        or source_row.get("renderer_payload_dfl1_full_frame_inflate_parity_proof_sha256"),
+        "full_frame_inflate_parity_proven": source_row.get(
+            "full_frame_inflate_parity_proven"
+        ),
+        "full_frame_inflate_parity_verification": source_row.get(
+            "full_frame_inflate_parity_verification"
         ),
         "cuda_component_risk_gate_required": bool(
             facts.get("hdm8_selector_cuda_component_gate_required")

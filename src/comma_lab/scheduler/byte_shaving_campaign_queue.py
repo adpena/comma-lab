@@ -1556,6 +1556,16 @@ def _family_agnostic_materializer_command(
         packet_member_manifest = _path_context_value(context, "packet_member_manifest")
         if packet_member_manifest is not None:
             input_paths.append(packet_member_manifest)
+        parity_proof = _path_context_value(context, "full_frame_inflate_parity_proof")
+        if parity_proof is None:
+            parity_proof = _path_context_value(
+                context,
+                "renderer_payload_dfl1_inflate_parity_proof",
+            )
+        if parity_proof is None:
+            parity_proof = _path_context_value(context, "inflate_parity_proof")
+        if parity_proof is not None:
+            input_paths.append(parity_proof)
     elif target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
         packet_member_manifest = _path_context_value(context, "packet_member_manifest")
         if packet_member_manifest is not None:
@@ -1764,6 +1774,16 @@ def _family_agnostic_materializer_command(
         packet_member_manifest = _path_context_value(context, "packet_member_manifest")
         if packet_member_manifest is not None:
             command.extend(["--packet-member-manifest", packet_member_manifest])
+        parity_proof = _path_context_value(context, "full_frame_inflate_parity_proof")
+        if parity_proof is None:
+            parity_proof = _path_context_value(
+                context,
+                "renderer_payload_dfl1_inflate_parity_proof",
+            )
+        if parity_proof is None:
+            parity_proof = _path_context_value(context, "inflate_parity_proof")
+        if parity_proof is not None:
+            command.extend(["--full-frame-inflate-parity-proof", parity_proof])
         member_names = _string_list_context_value(context, "member_names")
         member_names.extend(_string_list_context_value(context, "archive_member_names"))
         member_names.extend(_string_list_context_value(context, "packet_member_names"))

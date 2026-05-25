@@ -2162,6 +2162,7 @@ def test_materializer_work_queue_wraps_renderer_payload_dfl1(
 ) -> None:
     archive = tmp_path / "source.zip"
     packet_manifest = tmp_path / "packet_members.json"
+    parity_proof = tmp_path / "dfl1_full_frame_parity.json"
     output = tmp_path / "renderer_payload_candidate.zip"
     out_manifest = tmp_path / "renderer_payload_candidate.json"
     backlog = {
@@ -2184,6 +2185,7 @@ def test_materializer_work_queue_wraps_renderer_payload_dfl1(
             "renderer_payload_dfl1_fixture": {
                 "archive_path": str(archive),
                 "packet_member_manifest": str(packet_manifest),
+                "full_frame_inflate_parity_proof": str(parity_proof),
                 "member_names": ["renderer.bin", "masks.mkv", "optimized_poses.pt"],
                 "payload_member_name": "p",
                 "output_archive": str(output),
@@ -2222,6 +2224,9 @@ def test_materializer_work_queue_wraps_renderer_payload_dfl1(
     assert ["--runtime-consumption-proof-out", str(runtime_proof)] in [
         row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
     ]
+    assert ["--full-frame-inflate-parity-proof", str(parity_proof)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
     _assert_typed_postconditions(
         row["postconditions"],
         path=out_manifest,
@@ -2230,6 +2235,7 @@ def test_materializer_work_queue_wraps_renderer_payload_dfl1(
     assert row["telemetry"]["input_artifact_paths"] == [
         str(archive),
         str(packet_manifest),
+        str(parity_proof),
     ]
     assert str(runtime_proof) in row["telemetry"]["artifact_paths"]
     assert "renderer_payload_dfl1_requires_source_runtime_unpack_proof" in (

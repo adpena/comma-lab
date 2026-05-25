@@ -312,6 +312,7 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
         **_renderer_payload_dfl1_harvest_fields(
             manifest,
             runtime_proof=_load_optional_runtime_proof(proof_path, repo_root=repo_root),
+            repo_root=repo_root,
         ),
         "local_advisory_axes": _local_advisory_axes(manifest),
         "local_advisory_axes_semantics": (
@@ -351,6 +352,7 @@ def _renderer_payload_dfl1_harvest_fields(
     manifest: Mapping[str, Any],
     *,
     runtime_proof: Mapping[str, Any],
+    repo_root: Path,
 ) -> dict[str, Any]:
     if manifest.get("schema") != RENDERER_PAYLOAD_DFL1_SCHEMA:
         return {}
@@ -366,9 +368,46 @@ def _renderer_payload_dfl1_harvest_fields(
     selected_payload = manifest.get("selected_payload")
     if isinstance(selected_payload, Mapping):
         fields["selected_payload"] = dict(selected_payload)
+    parity_verification = manifest.get("full_frame_inflate_parity_verification")
+    if isinstance(parity_verification, Mapping):
+        fields["full_frame_inflate_parity_verification"] = dict(parity_verification)
+        fields["full_frame_inflate_parity_proven"] = (
+            parity_verification.get("full_frame_inflate_parity_satisfied") is True
+        )
+        proof_path = _string_or_none(parity_verification.get("proof_path"))
+        if proof_path is not None:
+            fields["renderer_payload_dfl1_inflate_parity_proof_path"] = proof_path
+        proof_sha = _string_or_none(parity_verification.get("proof_sha256"))
+        if proof_sha is not None:
+            fields["renderer_payload_dfl1_inflate_parity_proof_sha256"] = proof_sha
+        fields["renderer_payload_dfl1_inflate_parity_satisfied"] = (
+            parity_verification.get("full_frame_inflate_parity_satisfied") is True
+        )
+        proof_path = _string_or_none(parity_verification.get("proof_path"))
+        if proof_path is not None:
+            fields["renderer_payload_dfl1_full_frame_inflate_parity_proof_path"] = (
+                proof_path
+            )
+            resolved_proof = Path(proof_path)
+            if not resolved_proof.is_absolute():
+                resolved_proof = repo_root / resolved_proof
+            if resolved_proof.is_file() and not resolved_proof.is_symlink():
+                fields[
+                    "renderer_payload_dfl1_full_frame_inflate_parity_proof_sha256"
+                ] = _sha256_file(resolved_proof)
+        fields["renderer_payload_dfl1_full_frame_inflate_parity_satisfied"] = (
+            parity_verification.get("full_frame_inflate_parity_satisfied") is True
+        )
     payload_table = runtime_proof.get("payload_table")
     if isinstance(payload_table, Mapping):
         fields["payload_table"] = dict(payload_table)
+    runtime_parity_verification = runtime_proof.get(
+        "full_frame_inflate_parity_verification"
+    )
+    if isinstance(runtime_parity_verification, Mapping):
+        fields["runtime_full_frame_inflate_parity_verification"] = dict(
+            runtime_parity_verification
+        )
     if runtime_proof.get("source_runtime_unpacker_parse_satisfied") is True:
         fields["source_runtime_unpacker_parse_satisfied"] = True
     reconstructed = runtime_proof.get("reconstructed_member_sha256s")

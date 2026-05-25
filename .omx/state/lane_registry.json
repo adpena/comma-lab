@@ -53705,7 +53705,7 @@
         },
         "strict_preflight": {
           "status": true,
-          "evidence": "py_compile_ruff_364_focused_tests_sidecar_guards_20260525T0125Z"
+          "evidence": "py_compile_ruff_290_focused_tests_shell_parity_bridge_20260525T0129Z"
         },
         "three_clean_review": {
           "status": false,
@@ -53713,7 +53713,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_renderer_payload_dfl1_native_20260525T005452Z_codex.md"
+          "evidence": ".omx/research/codex_findings_renderer_payload_dfl1_shell_parity_20260525T012907Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -53730,5 +53730,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T01:08:39Z"
+  "updated_at": "2026-05-25T01:29:35Z"
 }

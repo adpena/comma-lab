@@ -38,6 +38,7 @@ ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND = "archive_section_entropy_recode_v1"
 PACKET_MEMBER_RECOMPRESS_TARGET_KIND = "packet_member_recompress_v1"
 PACKET_MEMBER_MERGE_TARGET_KIND = "packet_member_merge_v1"
 RENDERER_PAYLOAD_DFL1_TARGET_KIND = "renderer_payload_dfl1_v1"
+SHELL_INFLATE_PARITY_PROOF_SCHEMA = "shell_inflate_parity_proof_v2"
 PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND = "packet_member_zip_header_elide_v1"
 TENSOR_FACTORIZE_TARGET_KIND = "tensor_factorize_v1"
 ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID = "archive_section_entropy_recode_adapter"
@@ -602,6 +603,7 @@ def materialize_renderer_payload_dfl1_candidate(
     payload_member_name: str = "p",
     runtime_consumption_proof: str | Path | Mapping[str, Any] | None = None,
     runtime_consumption_proof_out: str | Path | None = None,
+    full_frame_inflate_parity_proof: str | Path | Mapping[str, Any] | None = None,
     repo_root: str | Path | None = None,
     allow_size_regression: bool = False,
     allow_overwrite: bool = False,
@@ -685,7 +687,6 @@ def materialize_renderer_payload_dfl1_candidate(
     blockers: list[str] = []
     if saved_bytes <= 0 and not allow_size_regression:
         blockers.append("candidate_not_rate_positive")
-    blockers.append("renderer_payload_dfl1_full_frame_inflate_parity_missing")
     write_result = write_bytes_artifact(
         output,
         archive_payload,
@@ -695,6 +696,23 @@ def materialize_renderer_payload_dfl1_candidate(
     )
     candidate_record = _archive_record(output)
     candidate_member_record = _member_record(output, output_member)
+    full_frame_parity_verification = (
+        verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
+            full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
+            required_source_archive_sha256=source_record["sha256"],
+            required_candidate_archive_sha256=candidate_record["sha256"],
+            repo_root=repo,
+        )
+    )
+    if (
+        full_frame_parity_verification.get("full_frame_inflate_parity_satisfied")
+        is not True
+    ):
+        blockers.append("renderer_payload_dfl1_full_frame_inflate_parity_missing")
+        blockers.extend(
+            str(blocker)
+            for blocker in full_frame_parity_verification.get("blockers") or []
+        )
     proof_write_result = None
     runtime_proof_ref: str | Path | Mapping[str, Any] | None = runtime_consumption_proof
     if proof_out is not None:
@@ -707,6 +725,7 @@ def materialize_renderer_payload_dfl1_candidate(
             payload_member_name=output_member,
             payload=payload,
             selected_member_names=target_members,
+            full_frame_parity_verification=full_frame_parity_verification,
         )
         proof_write_result = write_json_artifact(
             proof_out,
@@ -770,6 +789,21 @@ def materialize_renderer_payload_dfl1_candidate(
             for trial in candidate_trials
         ],
         "receiver_verification": receiver_verification,
+        "full_frame_inflate_parity_verification": full_frame_parity_verification,
+        "full_frame_inflate_parity_proven": (
+            full_frame_parity_verification.get("full_frame_inflate_parity_satisfied")
+            is True
+        ),
+        "renderer_payload_dfl1_inflate_parity_proof_path": (
+            full_frame_parity_verification.get("proof_path")
+        ),
+        "renderer_payload_dfl1_inflate_parity_proof_sha256": (
+            full_frame_parity_verification.get("proof_sha256")
+        ),
+        "renderer_payload_dfl1_inflate_parity_satisfied": (
+            full_frame_parity_verification.get("full_frame_inflate_parity_satisfied")
+            is True
+        ),
         "runtime_consumption_proof_path": (
             proof_out.as_posix() if proof_out is not None else receiver_verification.get("proof_path")
         ),
@@ -2014,6 +2048,130 @@ def verify_runtime_consumption_proof(
     }
 
 
+def verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
+    *,
+    full_frame_inflate_parity_proof: str | Path | Mapping[str, Any] | None,
+    required_source_archive_sha256: str,
+    required_candidate_archive_sha256: str,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Validate a shell-level full-frame parity proof for DFL1 candidates."""
+
+    repo = _repo(repo_root)
+    if full_frame_inflate_parity_proof is None:
+        return {
+            "schema": "renderer_payload_dfl1_full_frame_parity_verification.v1",
+            "proof_present": False,
+            "proof_path": None,
+            "full_frame_inflate_parity_satisfied": False,
+            "blockers": ["renderer_payload_dfl1_full_frame_inflate_parity_proof_missing"],
+            **FALSE_AUTHORITY,
+        }
+    proof_path = (
+        _resolve_path(full_frame_inflate_parity_proof, repo=repo).as_posix()
+        if isinstance(full_frame_inflate_parity_proof, (str, Path))
+        else None
+    )
+    proof = _require_mapping(full_frame_inflate_parity_proof, repo=repo)
+    blockers: list[str] = []
+    try:
+        require_no_truthy_authority_fields(
+            proof,
+            context="renderer_payload_dfl1_full_frame_inflate_parity_proof",
+        )
+    except ValueError as exc:
+        blockers.append(str(exc))
+    if proof.get("schema") != SHELL_INFLATE_PARITY_PROOF_SCHEMA:
+        blockers.append("shell_inflate_parity_proof_schema_mismatch")
+    if proof.get("full_frame_file_list_claim") is not True:
+        blockers.append("shell_inflate_parity_full_frame_file_list_claim_missing")
+    if proof.get("full_frame_inflate_output_parity_claim") is not True:
+        blockers.append("shell_inflate_full_frame_output_parity_claim_missing")
+    for key in (
+        "output_bytes_match",
+        "output_sha256_match",
+        "output_manifest_sha256_match",
+        "cmp_equal",
+    ):
+        if proof.get(key) is not True:
+            blockers.append(f"shell_inflate_parity_{key}_not_true")
+    proof_blockers = proof.get("blockers")
+    if isinstance(proof_blockers, Sequence) and not isinstance(
+        proof_blockers, (bytes, bytearray, str)
+    ):
+        blockers.extend(str(blocker) for blocker in proof_blockers if str(blocker))
+    elif proof_blockers:
+        blockers.append("shell_inflate_parity_blockers_not_list")
+
+    left = proof.get("left") if isinstance(proof.get("left"), Mapping) else {}
+    right = proof.get("right") if isinstance(proof.get("right"), Mapping) else {}
+    source_side, candidate_side = _match_parity_archive_sides(
+        left=left,
+        right=right,
+        required_source_archive_sha256=required_source_archive_sha256,
+        required_candidate_archive_sha256=required_candidate_archive_sha256,
+    )
+    if source_side is None or candidate_side is None:
+        blockers.append("shell_inflate_parity_archive_sha_pair_mismatch")
+    left_tree = _clean_str(left.get("submission_tree_sha256"))
+    right_tree = _clean_str(right.get("submission_tree_sha256"))
+    if not left_tree or not right_tree:
+        blockers.append("shell_inflate_parity_submission_tree_sha_missing")
+    elif left_tree != right_tree:
+        blockers.append("shell_inflate_parity_submission_tree_sha_mismatch")
+    file_list_entry_count = proof.get("file_list_entry_count")
+    if not isinstance(file_list_entry_count, int) or file_list_entry_count < 1:
+        blockers.append("shell_inflate_parity_file_list_entry_count_invalid")
+    output_count = proof.get("output_count")
+    if not isinstance(output_count, int) or output_count != file_list_entry_count:
+        blockers.append("shell_inflate_parity_output_count_invalid")
+    return {
+        "schema": "renderer_payload_dfl1_full_frame_parity_verification.v1",
+        "proof_present": True,
+        "proof_path": proof_path,
+        "proof_sha256": sha256_file(_resolve_path(full_frame_inflate_parity_proof, repo=repo))
+        if isinstance(full_frame_inflate_parity_proof, (str, Path))
+        else None,
+        "proof_schema": proof.get("schema"),
+        "full_frame_inflate_parity_satisfied": not blockers,
+        "file_list_entry_count": file_list_entry_count,
+        "file_list_sha256": _clean_str(proof.get("file_list_sha256")),
+        "source_archive_sha256": required_source_archive_sha256,
+        "candidate_archive_sha256": required_candidate_archive_sha256,
+        "source_side_label": source_side.get("label") if source_side else None,
+        "candidate_side_label": candidate_side.get("label") if candidate_side else None,
+        "submission_tree_sha256": left_tree if left_tree == right_tree else None,
+        "output_manifest_sha256": _clean_str(left.get("output_manifest_sha256"))
+        if _clean_str(left.get("output_manifest_sha256"))
+        == _clean_str(right.get("output_manifest_sha256"))
+        else None,
+        "blockers": ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _match_parity_archive_sides(
+    *,
+    left: Mapping[str, Any],
+    right: Mapping[str, Any],
+    required_source_archive_sha256: str,
+    required_candidate_archive_sha256: str,
+) -> tuple[Mapping[str, Any] | None, Mapping[str, Any] | None]:
+    left_sha = _clean_str(left.get("archive_sha256"))
+    right_sha = _clean_str(right.get("archive_sha256"))
+    if (
+        left_sha == required_source_archive_sha256
+        and right_sha == required_candidate_archive_sha256
+    ):
+        return left, right
+    if (
+        right_sha == required_source_archive_sha256
+        and left_sha == required_candidate_archive_sha256
+    ):
+        return right, left
+    return None, None
+
+
 def _proof_candidate_member_sha256s(proof: Mapping[str, Any]) -> dict[str, str]:
     out: dict[str, str] = {}
     raw_map = proof.get("candidate_member_sha256s")
@@ -2543,6 +2701,7 @@ def _renderer_payload_dfl1_runtime_consumption_proof(
     payload_member_name: str,
     payload: bytes,
     selected_member_names: Sequence[str],
+    full_frame_parity_verification: Mapping[str, Any],
 ) -> dict[str, Any]:
     reconstruction = parse_renderer_payload_dfl1_payload(
         payload,
@@ -2584,16 +2743,26 @@ def _renderer_payload_dfl1_runtime_consumption_proof(
         and all(row["passed"] is True for row in native_member_proofs)
         and native_probe["passed"] is True
     )
+    full_frame_parity_satisfied = (
+        full_frame_parity_verification.get("full_frame_inflate_parity_satisfied")
+        is True
+    )
+    proof_passed = reconstruction_passed and full_frame_parity_satisfied
+    runtime_adapter_manifest = dict(native_probe["runtime_adapter_manifest"])
+    runtime_adapter_manifest["runtime_adapter_ready"] = proof_passed
+    runtime_adapter_manifest["native_unpacker_parse_ready"] = native_probe["passed"] is True
+    runtime_adapter_manifest["requires_full_frame_shell_parity"] = True
     return {
         "schema": "family_agnostic_runtime_consumption_proof_v1",
         "proof_kind": "renderer_payload_dfl1_native_unpacker_reconstruction_smoke.v1",
         "target_kind": RENDERER_PAYLOAD_DFL1_TARGET_KIND,
         "materializer_id": RENDERER_PAYLOAD_DFL1_MATERIALIZER_ID,
         "receiver_contract_kind": "source_runtime_native_renderer_payload_dfl1",
-        "runtime_adapter_ready": False,
+        "runtime_adapter_ready": proof_passed,
         "source_runtime_native_unpacker": True,
         "source_runtime_unpacker_parse_satisfied": reconstruction_passed,
-        "runtime_adapter_manifest": native_probe["runtime_adapter_manifest"],
+        "full_frame_inflate_parity_verification": dict(full_frame_parity_verification),
+        "runtime_adapter_manifest": runtime_adapter_manifest,
         "source_archive": dict(source_archive),
         "candidate_archive": dict(candidate_archive),
         "candidate_archive_sha256": candidate_archive.get("sha256"),
@@ -2606,15 +2775,16 @@ def _renderer_payload_dfl1_runtime_consumption_proof(
         "reconstructed_member_sha256s": actual,
         "runtime_consumption_probe": {
             "schema": "renderer_payload_dfl1_reconstruction_probe.v1",
-            "passed": False,
+            "passed": proof_passed,
             "parser_reconstruction_passed": reconstruction_passed,
+            "full_frame_inflate_parity_satisfied": full_frame_parity_satisfied,
             "member_proofs": member_proofs,
             "native_member_proofs": native_member_proofs,
             "native_unpacker_probe": native_probe,
         },
-        "receiver_contract_satisfied": False,
-        "runtime_consumption_proof_passed": False,
-        "passed": False,
+        "receiver_contract_satisfied": proof_passed,
+        "runtime_consumption_proof_passed": proof_passed,
+        "passed": proof_passed,
         **FALSE_AUTHORITY,
     }
 

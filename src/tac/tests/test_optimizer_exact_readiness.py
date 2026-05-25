@@ -475,6 +475,146 @@ def _add_required_runtime_proof_fields(
     queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _write_dfl1_shell_parity_proof(
+    path: Path,
+    *,
+    source_archive_sha: str,
+    candidate_archive_sha: str,
+) -> Path:
+    same_tree = "a" * 64
+    same_output = "b" * 64
+    payload = {
+        "schema": "shell_inflate_parity_proof_v2",
+        "generated_at_utc": "2026-05-25T00:00:00Z",
+        "file_list_entries": ["0.mkv"],
+        "file_list_entry_count": 1,
+        "file_list_sha256": "c" * 64,
+        "output_count": 1,
+        "file_list_entry": "0.mkv",
+        "output_basename": "0.raw",
+        "python_bin": sys.executable,
+        "left": {
+            "label": "source",
+            "archive": "source.zip",
+            "archive_bytes": 100,
+            "archive_sha256": source_archive_sha,
+            "submission_dir": "runtime",
+            "submission_tree_file_count": 1,
+            "submission_tree_sha256": same_tree,
+            "inflate_sh": "runtime/inflate.sh",
+            "inflate_sh_sha256": "d" * 64,
+            "output_count": 1,
+            "output_manifest_sha256": same_output,
+            "output_raw_bytes": 10,
+            "output_raw_sha256": same_output,
+            "outputs": [
+                {
+                    "file_list_entry": "0.mkv",
+                    "output_basename": "0.raw",
+                    "output_raw_bytes": 10,
+                    "output_raw_sha256": same_output,
+                }
+            ],
+            "inflate_seconds": 0.1,
+        },
+        "right": {
+            "label": "candidate",
+            "archive": "candidate.zip",
+            "archive_bytes": 90,
+            "archive_sha256": candidate_archive_sha,
+            "submission_dir": "runtime",
+            "submission_tree_file_count": 1,
+            "submission_tree_sha256": same_tree,
+            "inflate_sh": "runtime/inflate.sh",
+            "inflate_sh_sha256": "d" * 64,
+            "output_count": 1,
+            "output_manifest_sha256": same_output,
+            "output_raw_bytes": 10,
+            "output_raw_sha256": same_output,
+            "outputs": [
+                {
+                    "file_list_entry": "0.mkv",
+                    "output_basename": "0.raw",
+                    "output_raw_bytes": 10,
+                    "output_raw_sha256": same_output,
+                }
+            ],
+            "inflate_seconds": 0.1,
+        },
+        "output_bytes_match": True,
+        "output_sha256_match": True,
+        "output_manifest_sha256_match": True,
+        "cmp_equal": True,
+        "full_frame_file_list_claim": True,
+        "full_frame_inflate_output_parity_claim": True,
+        "blockers": [],
+        "scratch_retained": False,
+        "scratch_dir": "scratch",
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+        "exact_cuda_auth_eval": False,
+        "contest_cuda_auth_eval": False,
+    }
+    return _write_json(path, payload)
+
+
+def _mark_queue_row_as_renderer_payload_dfl1(
+    queue: Path,
+    *,
+    submission: Path,
+    repo: Path,
+    archive_sha: str,
+    source_archive_sha: str = "e" * 64,
+    proof_path: Path | None,
+    self_assert_parity: bool = True,
+) -> None:
+    _write_family_agnostic_runtime_proof(
+        submission,
+        archive_sha,
+        proven=False,
+        extra_fields={
+            "target_kind": "renderer_payload_dfl1_v1",
+            "materializer_id": "renderer_payload_dfl1_adapter",
+            "receiver_contract_kind": "source_runtime_native_renderer_payload_dfl1",
+        },
+    )
+    _add_required_runtime_proof_fields(queue, submission, repo, status="present")
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["top_k"][0]
+    row["schema"] = "renderer_payload_dfl1_candidate.v1"
+    row["candidate_family"] = "renderer_payload_dfl1"
+    row["target_kind"] = "renderer_payload_dfl1_v1"
+    row["materializer_id"] = "renderer_payload_dfl1_adapter"
+    row["receiver_contract_kind"] = "source_runtime_native_renderer_payload_dfl1"
+    row["source_archive_sha256"] = source_archive_sha
+    row["full_frame_inflate_parity_proven"] = self_assert_parity
+    row["renderer_payload_dfl1_full_frame_inflate_parity_satisfied"] = (
+        self_assert_parity
+    )
+    if proof_path is not None:
+        row["renderer_payload_dfl1_full_frame_inflate_parity_proof_path"] = (
+            proof_path.relative_to(repo).as_posix()
+        )
+        row["renderer_payload_dfl1_full_frame_inflate_parity_proof_sha256"] = (
+            hashlib.sha256(proof_path.read_bytes()).hexdigest()
+        )
+    row["dispatch_blockers"].extend(
+        [
+            "family_agnostic_receiver_contract_not_satisfied",
+            "renderer_payload_dfl1_full_frame_inflate_parity_missing",
+            "runtime_consumption_proof_not_passed",
+            "renderer_payload_dfl1_receiver_contract_not_satisfied",
+        ]
+    )
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def test_promotes_byte_closed_candidate_without_score_claim(tmp_path: Path) -> None:
     submission, archive_bytes, archive_sha = _make_submission(tmp_path)
     queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
@@ -1147,6 +1287,70 @@ def test_promotes_family_agnostic_packet_member_proof_with_member_binding(
     assert row["promotion_eligible"] is False
 
 
+def test_promotes_dfl1_candidate_only_with_verified_shell_parity_artifact(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    source_archive_sha = "e" * 64
+    parity = _write_dfl1_shell_parity_proof(
+        tmp_path / "dfl1_shell_parity.json",
+        source_archive_sha=source_archive_sha,
+        candidate_archive_sha=archive_sha,
+    )
+    _mark_queue_row_as_renderer_payload_dfl1(
+        queue,
+        submission=submission,
+        repo=tmp_path,
+        archive_sha=archive_sha,
+        source_archive_sha=source_archive_sha,
+        proof_path=parity,
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is True
+    row = result["promoted_queue"]["dispatch_ready"][0]
+    assert row["source_candidate_fields"]["candidate_family"] == "renderer_payload_dfl1"
+    assert row["runtime_consumption_proof_backed_by_full_frame_parity"] is True
+    assert "renderer_payload_dfl1_strict_full_frame_inflate_parity_missing" not in (
+        result["report"]["blockers"]
+    )
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+
+
+def test_refuses_self_asserted_dfl1_parity_without_verified_artifact(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _mark_queue_row_as_renderer_payload_dfl1(
+        queue,
+        submission=submission,
+        repo=tmp_path,
+        archive_sha=archive_sha,
+        proof_path=None,
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert "renderer_payload_dfl1_strict_full_frame_inflate_parity_missing" in (
+        result["report"]["blockers"]
+    )
+
+
 def test_family_agnostic_packet_member_proof_rejects_member_sha_mismatch(
     tmp_path: Path,
 ) -> None:
@@ -1213,6 +1417,108 @@ def test_family_agnostic_runtime_proof_rejects_wrong_target_metadata(
     assert "runtime_consumption_proof_target_kind_mismatch" in blockers
     assert "runtime_consumption_proof_materializer_id_mismatch" in blockers
     assert "runtime_consumption_proof_receiver_contract_kind_mismatch" in blockers
+
+
+def test_renderer_payload_dfl1_exact_readiness_revalidates_full_frame_parity(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    source_archive_sha = "0" * 64
+    candidate_member_sha = "3" * 64
+    _write_family_agnostic_runtime_proof(
+        submission,
+        archive_sha,
+        proven=False,
+        extra_fields={
+            "proof_kind": "renderer_payload_dfl1_native_unpacker_reconstruction_smoke.v1",
+            "target_kind": "renderer_payload_dfl1_v1",
+            "materializer_id": "renderer_payload_dfl1_adapter",
+            "receiver_contract_kind": "source_runtime_native_renderer_payload_dfl1",
+            "candidate_member_sha256": candidate_member_sha,
+        },
+    )
+    parity_payload = {
+        "schema": "shell_inflate_parity_proof_v2",
+        "file_list_entries": ["0.mkv"],
+        "file_list_entry_count": 1,
+        "file_list_sha256": "4" * 64,
+        "output_count": 1,
+        "file_list_entry": "0.mkv",
+        "output_basename": "0.raw",
+        "python_bin": sys.executable,
+        "left": {
+            "label": "source",
+            "archive_sha256": source_archive_sha,
+            "submission_tree_sha256": "5" * 64,
+            "output_manifest_sha256": "6" * 64,
+        },
+        "right": {
+            "label": "candidate",
+            "archive_sha256": archive_sha,
+            "submission_tree_sha256": "5" * 64,
+            "output_manifest_sha256": "6" * 64,
+        },
+        "output_bytes_match": True,
+        "output_sha256_match": True,
+        "output_manifest_sha256_match": True,
+        "cmp_equal": True,
+        "full_frame_file_list_claim": True,
+        "full_frame_inflate_output_parity_claim": True,
+        "blockers": [],
+        "scratch_retained": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    parity_path = _write_json(tmp_path / "dfl1_parity.json", parity_payload)
+    parity_sha = hashlib.sha256(parity_path.read_bytes()).hexdigest()
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["top_k"][0]
+    row.update(
+        {
+            "schema": "renderer_payload_dfl1_candidate.v1",
+            "target_kind": "renderer_payload_dfl1_v1",
+            "materializer_id": "renderer_payload_dfl1_adapter",
+            "receiver_contract_kind": "source_runtime_native_renderer_payload_dfl1",
+            "source_archive_sha256": source_archive_sha,
+            "source_archive_bytes": archive_bytes + 128,
+            "candidate_member_sha256": candidate_member_sha,
+            "renderer_payload_dfl1_inflate_parity_satisfied": True,
+            "renderer_payload_dfl1_inflate_parity_proof_path": parity_path.relative_to(
+                tmp_path
+            ).as_posix(),
+            "renderer_payload_dfl1_inflate_parity_proof_sha256": parity_sha,
+            "full_frame_inflate_parity_proven": True,
+            "dispatch_blockers": [
+                "optimizer_candidate_queue_is_planning_only",
+                "requires_exact_eval_readiness_gate",
+                "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+                "renderer_payload_dfl1_full_frame_inflate_parity_missing",
+                "renderer_payload_dfl1_receiver_contract_not_satisfied",
+                "runtime_consumption_proof_not_passed",
+                "family_agnostic_receiver_contract_not_satisfied",
+            ],
+        }
+    )
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is True
+    promoted_row = result["promoted_queue"]["dispatch_ready"][0]
+    assert promoted_row["ready_for_exact_eval_dispatch"] is True
+    assert promoted_row["score_claim"] is False
+    assert promoted_row["renderer_payload_dfl1_inflate_parity_satisfied"] is True
+    assert promoted_row["renderer_payload_dfl1_inflate_parity_proof_sha256"] == parity_sha
+    assert promoted_row["renderer_payload_dfl1_inflate_parity_proof_path"] == (
+        parity_path.relative_to(tmp_path).as_posix()
+    )
 
 
 def test_family_agnostic_runtime_proof_requires_candidate_row_metadata(

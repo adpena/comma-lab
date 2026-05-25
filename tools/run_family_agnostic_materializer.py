@@ -68,6 +68,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-manifest", required=True, type=Path)
     parser.add_argument("--runtime-consumption-proof", type=Path)
     parser.add_argument("--runtime-consumption-proof-out", type=Path)
+    parser.add_argument("--full-frame-inflate-parity-proof", type=Path)
     parser.add_argument("--section-manifest", type=Path)
     parser.add_argument("--section-name", action="append", default=[])
     parser.add_argument("--brotli-quality", action="append", type=int, default=[])
@@ -106,6 +107,8 @@ def main(argv: list[str] | None = None) -> int:
     input_paths = [args.archive_path]
     if args.runtime_consumption_proof is not None:
         input_paths.append(args.runtime_consumption_proof)
+    if args.full_frame_inflate_parity_proof is not None:
+        input_paths.append(args.full_frame_inflate_parity_proof)
     if (
         args.runtime_consumption_proof is not None
         and args.runtime_consumption_proof_out is not None
@@ -361,6 +364,7 @@ def _run_materializer(
             packet_member_manifest=args.packet_member_manifest,
             member_names=tuple(args.member_names),
             payload_member_name=args.payload_member_name,
+            full_frame_inflate_parity_proof=args.full_frame_inflate_parity_proof,
             runtime_consumption_proof_out=runtime_proof_out,
             expected_existing_runtime_consumption_proof_sha256=(
                 args.expected_existing_runtime_consumption_proof_sha256
