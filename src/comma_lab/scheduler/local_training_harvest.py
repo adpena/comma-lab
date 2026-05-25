@@ -8,6 +8,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
 from tac.optimization.representation_training_probe_integration import (
     SCHEMA as REPRESENTATION_TRAINING_MANIFEST_SCHEMA,
 )
@@ -24,6 +25,15 @@ from .experiment_queue import (
 from .local_training_queue import LOCAL_TRAINING_QUEUE_SCHEMA
 
 LOCAL_TRAINING_HARVEST_SCHEMA = "local_training_optimizer_candidate_harvest.v1"
+LOCAL_TRAINING_SIGNAL_OBSERVATION_SCHEMA = "local_training_signal_observation.v1"
+HINTON_MLX_LONG_TRAINING_SMOKE_SCHEMA = "hinton_mlx_long_training_smoke_verdict.v1"
+LOCAL_TRAINING_SIGNAL_SCHEMAS = frozenset({HINTON_MLX_LONG_TRAINING_SMOKE_SCHEMA})
+FALSE_AUTHORITY: dict[str, bool] = {
+    "score_claim": False,
+    "promotion_eligible": False,
+    "rank_or_kill_eligible": False,
+    "ready_for_exact_eval_dispatch": False,
+}
 
 
 class LocalTrainingHarvestError(ExperimentQueueError):
@@ -106,6 +116,19 @@ def _manifest_path_from_step(step: Mapping[str, Any]) -> str | None:
     return path
 
 
+def _signal_paths_from_step(step: Mapping[str, Any]) -> list[str]:
+    paths: list[str] = []
+    for condition in step.get("postconditions") or []:
+        if not isinstance(condition, Mapping):
+            continue
+        path = str(condition.get("path") or "").strip()
+        if not path:
+            continue
+        if condition.get("type") == "json_false_authority" and path not in paths:
+            paths.append(path)
+    return paths
+
+
 def _load_completed_manifest(path: Path) -> dict[str, Any]:
     if not path.is_file():
         raise LocalTrainingHarvestError(f"representation manifest missing: {path}")
@@ -121,6 +144,85 @@ def _load_completed_manifest(path: Path) -> dict[str, Any]:
     except ValueError as exc:
         raise LocalTrainingHarvestError(f"{path}: {exc}") from exc
     return payload
+
+
+def _local_training_signal_observation(
+    path: Path,
+    payload: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    experiment_id: str,
+    step_id: str,
+    metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    try:
+        require_no_truthy_authority_fields(
+            payload,
+            context=f"{path}: local training signal",
+        )
+    except ValueError as exc:
+        raise LocalTrainingHarvestError(str(exc)) from exc
+    blockers = [str(item) for item in payload.get("readiness_blockers") or [] if str(item)]
+    return {
+        "schema": LOCAL_TRAINING_SIGNAL_OBSERVATION_SCHEMA,
+        "source_schema": payload.get("schema"),
+        "source_path": _repo_rel(path, repo_root=repo_root),
+        "experiment_id": experiment_id,
+        "step_id": step_id,
+        "candidate_id": metadata.get("candidate_id"),
+        "lane_id": payload.get("lane_id") or metadata.get("lane_id"),
+        "representation_family": metadata.get("representation_family"),
+        "substrate_family": metadata.get("substrate_family"),
+        "training_backend": metadata.get("training_backend"),
+        "device": metadata.get("device"),
+        "mode": payload.get("mode"),
+        "operator_run_label": payload.get("operator_run_label"),
+        "local_training_queue_signal": payload.get("local_training_queue_signal"),
+        "paid_dispatch_authorization_signal": payload.get(
+            "paid_dispatch_authorization_signal"
+        ),
+        "convergence_verdict": payload.get("convergence_verdict"),
+        "readiness_blockers": blockers,
+        "recommended_next_action": (
+            "build_contest_teacher_or_strict_surrogate_queue_before_paid_dispatch"
+            if payload.get("local_training_queue_signal") == "LOCAL_MLX_QUEUE_READY"
+            else "inspect_local_training_signal"
+        ),
+        "allowed_use": "queue_owned_local_training_signal_replanning_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _load_completed_signal_observations(
+    step: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    experiment_id: str,
+    step_id: str,
+    metadata: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    observations: list[dict[str, Any]] = []
+    for raw_path in _signal_paths_from_step(step):
+        path = _repo_path(raw_path, repo_root=repo_root)
+        if not path.is_file():
+            continue
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            continue
+        if payload.get("schema") not in LOCAL_TRAINING_SIGNAL_SCHEMAS:
+            continue
+        observations.append(
+            _local_training_signal_observation(
+                path,
+                payload,
+                repo_root=repo_root,
+                experiment_id=experiment_id,
+                step_id=step_id,
+                metadata=metadata,
+            )
+        )
+    return observations
 
 
 def _manifest_value(payload: Mapping[str, Any], dotted_key: str) -> Any:
@@ -181,6 +283,7 @@ def harvest_local_training_optimizer_candidates(
     normalized_queue = normalize_queue_definition(queue)
     rows_by_step = _state_rows(state_path, queue_id=str(normalized_queue["queue_id"]))
     manifest_paths: list[Path] = []
+    signal_observations: list[dict[str, Any]] = []
     skipped_steps: list[dict[str, Any]] = []
     for experiment in normalized_queue["experiments"]:
         metadata = dict(experiment.get("metadata") or {})
@@ -210,6 +313,16 @@ def harvest_local_training_optimizer_candidates(
                 continue
             manifest_path = _manifest_path_from_step(step)
             if manifest_path is None:
+                step_signals = _load_completed_signal_observations(
+                    step,
+                    repo_root=repo,
+                    experiment_id=key[0],
+                    step_id=key[1],
+                    metadata=metadata,
+                )
+                if step_signals:
+                    signal_observations.extend(step_signals)
+                    continue
                 raise LocalTrainingHarvestError(
                     f"{key[0]}.{key[1]} succeeded without representation manifest "
                     "postcondition"
@@ -222,7 +335,7 @@ def harvest_local_training_optimizer_candidates(
                 path=resolved,
             )
             manifest_paths.append(resolved)
-    if not manifest_paths:
+    if not manifest_paths and not signal_observations:
         raise LocalTrainingHarvestError(
             "no succeeded local-training representation manifests available for harvest"
         )
@@ -247,6 +360,8 @@ def harvest_local_training_optimizer_candidates(
         "harvested_representation_manifest_paths": [
             _repo_rel(path, repo_root=repo) for path in manifest_paths
         ],
+        "harvested_signal_observation_count": len(signal_observations),
+        "signal_observations": signal_observations,
         "skipped_steps": skipped_steps,
         "score_claim": False,
         "promotion_eligible": False,
@@ -258,6 +373,7 @@ def harvest_local_training_optimizer_candidates(
 
 __all__ = [
     "LOCAL_TRAINING_HARVEST_SCHEMA",
+    "LOCAL_TRAINING_SIGNAL_OBSERVATION_SCHEMA",
     "LocalTrainingHarvestError",
     "harvest_local_training_optimizer_candidates",
 ]

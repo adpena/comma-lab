@@ -114,6 +114,10 @@ def main(argv: list[str] | None = None) -> int:
                 "harvested_representation_manifest_count": harvested["harvest"][
                     "harvested_representation_manifest_count"
                 ],
+                "harvested_signal_observation_count": harvested["harvest"].get(
+                    "harvested_signal_observation_count",
+                    0,
+                ),
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,

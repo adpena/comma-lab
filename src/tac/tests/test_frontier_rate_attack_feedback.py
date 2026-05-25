@@ -18,9 +18,11 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
 from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (
     AUTOPILOT_RESULT_SCHEMA,
     FrontierRateAttackFeedbackCycleError,
+    discover_dqs1_drop_many_greedy_verdict_paths,
     harvest_paths_from_autopilot_payload,
     select_pairset_acquisition_for_harvests,
     write_frontier_refresh_artifacts,
+    write_pairset_component_marginal_feedback_bundle,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -339,6 +341,48 @@ def _dqs1_observation_row(
     }
 
 
+def _drop_many_greedy_negative_verdict() -> dict[str, object]:
+    return {
+        "schema": "dqs1_drop_many_build_1c_greedy_independent_heuristic_verdict.v1",
+        **_false_authority(),
+        "captured_at_utc": "2026-05-25T15:30:00Z",
+        "lane_id": "lane_dqs1_drop_many_build_1c_fixture",
+        "build_1c_final_verdict": (
+            "NEGATIVE_COLLAPSE_TO_K1_EMPIRICAL_DROP_MANY_REGRESSES"
+        ),
+        "build_1c_final_verdict_reason": (
+            "empirical K>1 sisters regress vs the K=1 drop-one anchor"
+        ),
+        "greedy_top_k_sweep": [
+            {
+                "k": 1,
+                "selected_pair_indices": [371],
+                "cumulative_predicted_delta_vs_base": -6.6e-7,
+            },
+            {
+                "k": 2,
+                "selected_pair_indices": [327, 371],
+                "cumulative_predicted_delta_vs_base": -1.3e-6,
+            },
+        ],
+        "canonical_equation_candidate_refinement": {
+            "candidate_id": "dqs1_drop_many_greedy_independent_pair_ordering_v1",
+            "refinement_field_proposed": {
+                "empirical_k1_best_drop_one_pair_index": 371,
+                "empirical_k1_best_drop_one_delta_vs_base": -6.6e-7,
+                "greedy_verdict_class": (
+                    "NEGATIVE_COLLAPSE_TO_K1_EMPIRICAL_DROP_MANY_REGRESSES"
+                ),
+            },
+        },
+        "catalog_313_probe_outcomes_row": {
+            "probe_id": "dqs1_drop_many_build_1c_fixture",
+            "verdict": "DEFER",
+            "status": "blocking",
+        },
+    }
+
+
 def _assert_false_authority(payload: dict[str, object]) -> None:
     for key in AUTHORITY_KEYS:
         assert payload[key] is False
@@ -494,6 +538,126 @@ def test_frontier_feedback_compiler_turns_eureka_near_misses_into_beyond_drop_tw
     ] == 1
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_component_marginal_bundle_auto_discovers_drop_many_greedy_verdict(
+    tmp_path: Path,
+) -> None:
+    acquisition = _write_json(
+        tmp_path / "pairset_acquisition.json",
+        {
+            "schema": "decoder_q_pairset_acquisition.v1",
+            **_false_authority(),
+            "candidates": [
+                {
+                    **_false_authority(),
+                    "acquisition_id": "pairset_drop_one_rank023_pair0440",
+                    "selector_id": "pairset_drop_one_rank023_pair0440",
+                    "selector_kind": "drop_one_from_best",
+                    "acquisition_rank": 23,
+                    "predicted_score_mean": 0.1919,
+                    "selected_pair_indices": [1, 2, 440],
+                    "selected_pair_count": 3,
+                    "acquisition_operation": {
+                        "op": "drop_one",
+                        "dropped_pair_rank": 23,
+                        "dropped_pair_index": 440,
+                    },
+                },
+                {
+                    **_false_authority(),
+                    "acquisition_id": "pairset_drop_many_fixture_k004",
+                    "selector_id": "pairset_drop_many_fixture_k004",
+                    "selector_kind": "drop_many_beam_pairwise_interaction_waterfill",
+                    "acquisition_rank": 24,
+                    "predicted_score_mean": 0.1918,
+                    "selected_pair_indices": [1, 2],
+                    "selected_pair_count": 2,
+                    "acquisition_operation": {
+                        "op": "drop_many",
+                        "dropped_pair_indices": [112, 233, 371, 440],
+                    },
+                },
+            ],
+        },
+    )
+    observations = _write_jsonl(
+        tmp_path / "dqs1_observations.jsonl",
+        [_dqs1_observation_row()],
+    )
+    _write_json(
+        tmp_path
+        / "experiments"
+        / "results"
+        / "dqs1_drop_many_build_1c_greedy_heuristic_fixture"
+        / "verdict.json",
+        _drop_many_greedy_negative_verdict(),
+    )
+    out = tmp_path / "component_bundle"
+
+    bundle = write_pairset_component_marginal_feedback_bundle(
+        repo_root=tmp_path,
+        pairset_acquisition_paths=(acquisition,),
+        observation_paths=(observations,),
+        incumbent_score=0.19202,
+        incumbent_scores_by_axis={"macos_cpu_advisory": 0.19202},
+        output_dir=out,
+        top_k=8,
+        top_actions=8,
+    )
+
+    assert bundle["drop_many_greedy_verdict_count"] == 1
+    assert bundle["drop_many_greedy_verdict_discovery"]["active"] is True
+    summary = json.loads((out / "action_summary.json").read_text(encoding="utf-8"))
+    assert summary["drop_many_greedy_verdict_model"]["active"] is True
+    portfolio = json.loads((out / "portfolio.json").read_text(encoding="utf-8"))
+    independent = next(
+        row
+        for row in portfolio["operator_action_rows"]
+        if row["candidate_id"] == "pairset_drop_many_fixture_k004"
+    )
+    assert independent["operator_next_action"] == (
+        "hold_independent_drop_many_until_interaction_or_component_model"
+    )
+    assert (
+        "drop_many_independent_greedy_deferred_requires_interaction_or_component_model"
+        in independent["source_dispatch_blockers"]
+    )
+    assert independent["score_claim"] is False
+    assert independent["ready_for_exact_eval_dispatch"] is False
+
+
+def test_drop_many_greedy_discovery_uses_bounded_known_verdict_pattern(
+    tmp_path: Path,
+) -> None:
+    verdict = _write_json(
+        tmp_path
+        / "experiments"
+        / "results"
+        / "dqs1_drop_many_build_1c_greedy_heuristic_fixture"
+        / "verdict.json",
+        _drop_many_greedy_negative_verdict(),
+    )
+    _write_json(
+        tmp_path
+        / "experiments"
+        / "results"
+        / "unrelated"
+        / "very"
+        / "deep"
+        / "dqs1_drop_many_accidental_verdict.json",
+        _drop_many_greedy_negative_verdict(),
+    )
+
+    discovery = discover_dqs1_drop_many_greedy_verdict_paths(repo_root=tmp_path)
+
+    assert discovery["active"] is True
+    assert discovery["discovered_verdict_paths"] == [
+        verdict.relative_to(tmp_path).as_posix()
+    ]
+    assert discovery["refusal_count"] == 0
+    assert discovery["score_claim"] is False
+    assert discovery["ready_for_exact_eval_dispatch"] is False
 
 
 def test_frontier_feedback_compiler_promotes_pair_frame_geometry_requests_to_queue(

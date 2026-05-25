@@ -11,6 +11,7 @@ import pytest
 from comma_lab.scheduler.experiment_queue import connect_state, initialize_queue_state
 from comma_lab.scheduler.local_training_harvest import (
     LOCAL_TRAINING_HARVEST_SCHEMA,
+    LOCAL_TRAINING_SIGNAL_OBSERVATION_SCHEMA,
     LocalTrainingHarvestError,
     harvest_local_training_optimizer_candidates,
 )
@@ -93,6 +94,29 @@ def _plan(
     }
 
 
+def _hinton_plan(repo: Path) -> dict:
+    report = repo / "hinton" / "executed_smoke_100ep_verdict.json"
+    plan = _plan(repo, candidate_id="hinton_distilled_scorer_surrogate")
+    plan["schema"] = "hinton_mlx_long_training_smoke_verdict.v1"
+    plan["representation_family"] = "hinton_distilled_scorer_surrogate"
+    plan["substrate_family"] = "pr95_mlx_hnerv_family"
+    plan["recommended_execution"].update(
+        {
+            "tool": "tools/run_hinton_mlx_long_training_smoke.py",
+            "output_manifest": str(report),
+            "representation_manifest": None,
+            "python_command_args": [
+                ".venv/bin/python",
+                "tools/run_hinton_mlx_long_training_smoke.py",
+                "--output-report",
+                str(report),
+                "--execute-smoke",
+            ],
+        }
+    )
+    return plan
+
+
 def _write_completed_manifest(path: Path, *, candidate_id: str, seconds: float = 1.25) -> None:
     optimizer_config_sha256 = default_optimizer_scheduler_registry().get(
         "pr95_stage8_muon_adamw_mlx"
@@ -154,6 +178,45 @@ def _write_completed_manifest(path: Path, *, candidate_id: str, seconds: float =
                 "ready_for_exact_eval_dispatch": False,
             }
         },
+    )
+
+
+def _write_hinton_smoke_verdict(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "hinton_mlx_long_training_smoke_verdict.v1",
+                "mode": "executed_smoke",
+                "lane_id": "lane_hinton_mlx_smoke_test",
+                "operator_run_label": "hinton_kl_t2_smoke",
+                "local_training_queue_signal": "LOCAL_MLX_QUEUE_READY",
+                "paid_dispatch_authorization_signal": (
+                    "PAID_DISPATCH_BLOCKED_REQUIRES_CONTEST_TEACHER_AND_CPU_CUDA_AUTH_EVAL"
+                ),
+                "convergence_verdict": {
+                    "verdict": "CONVERGES_CONSISTENTLY",
+                    "initial_loss": 0.2,
+                    "final_loss": 0.01,
+                    "loss_reduction_percent": 95.0,
+                    "oscillation_score": 0.0,
+                    "smoke_epochs": 100,
+                },
+                "readiness_blockers": [
+                    "scorer_loss_is_kl_to_mock_teacher_logits_not_contest_segnet",
+                    "no_paired_cpu_cuda_auth_eval_yet",
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "promotable": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
     )
 
 
@@ -225,6 +288,42 @@ def test_harvest_uses_only_succeeded_representation_manifests(tmp_path: Path) ->
     assert harvested["harvest"]["schema"] == LOCAL_TRAINING_HARVEST_SCHEMA
     assert harvested["harvest"]["harvested_representation_manifest_count"] == 1
     assert harvested["harvest"]["skipped_steps"][0]["status"] == "failed"
+
+
+def test_harvest_preserves_hinton_queue_ready_signal_without_candidate(
+    tmp_path: Path,
+) -> None:
+    plan = _hinton_plan(tmp_path)
+    queue = _queue(tmp_path, plan)
+    report = tmp_path / "hinton" / "executed_smoke_100ep_verdict.json"
+    _write_hinton_smoke_verdict(report)
+    state_path = _state(tmp_path, queue, {queue["experiments"][0]["id"]: "succeeded"})
+
+    harvested = harvest_local_training_optimizer_candidates(
+        queue,
+        state_path=state_path,
+        repo_root=tmp_path,
+    )
+
+    assert harvested["schema"] == "optimizer_candidate_queue_v1"
+    assert harvested["n_candidates"] == 0
+    assert harvested["dispatch_ready_count"] == 0
+    assert harvested["score_claim"] is False
+    assert harvested["promotion_eligible"] is False
+    assert harvested["ready_for_exact_eval_dispatch"] is False
+    harvest = harvested["harvest"]
+    assert harvest["harvested_representation_manifest_count"] == 0
+    assert harvest["harvested_signal_observation_count"] == 1
+    signal = harvest["signal_observations"][0]
+    assert signal["schema"] == LOCAL_TRAINING_SIGNAL_OBSERVATION_SCHEMA
+    assert signal["source_schema"] == "hinton_mlx_long_training_smoke_verdict.v1"
+    assert signal["local_training_queue_signal"] == "LOCAL_MLX_QUEUE_READY"
+    assert signal["recommended_next_action"] == (
+        "build_contest_teacher_or_strict_surrogate_queue_before_paid_dispatch"
+    )
+    assert signal["score_claim"] is False
+    assert signal["promotion_eligible"] is False
+    assert signal["ready_for_exact_eval_dispatch"] is False
 
 
 def test_harvest_refuses_when_no_steps_succeeded(tmp_path: Path) -> None:

@@ -59,6 +59,15 @@ PAIRSET_COMPONENT_MARGINAL_ACTION_SUMMARY_SCHEMA = (
     "pairset_component_marginal_canonicalization_summary.v1"
 )
 AUTOPILOT_RESULT_SCHEMA = "dqs1_local_first_autopilot_result.v1"
+DQS1_DROP_MANY_GREEDY_VERDICT_DISCOVERY_SCHEMA = (
+    "frontier_rate_attack_dqs1_drop_many_greedy_verdict_discovery.v1"
+)
+DQS1_DROP_MANY_GREEDY_VERDICT_SCHEMA = (
+    "dqs1_drop_many_build_1c_greedy_independent_heuristic_verdict.v1"
+)
+DQS1_DROP_MANY_GREEDY_VERDICT_GLOB = (
+    "dqs1_drop_many_build_1c_greedy_heuristic*/verdict.json"
+)
 
 
 class FrontierRateAttackFeedbackCycleError(ExperimentQueueError):
@@ -101,6 +110,107 @@ def load_json_object(path: str | Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise FrontierRateAttackFeedbackCycleError(f"{target}: expected JSON object")
     return payload
+
+
+def _drop_many_greedy_verdict_candidate_paths(
+    root: Path,
+    *,
+    max_files: int,
+) -> list[Path]:
+    if root.is_file():
+        return [root]
+    if not root.exists():
+        return []
+    if not root.is_dir():
+        raise FrontierRateAttackFeedbackCycleError(
+            f"drop-many verdict root is not a file or directory: {root}"
+        )
+    paths: list[Path] = []
+    seen: set[str] = set()
+    for path in sorted(root.glob(DQS1_DROP_MANY_GREEDY_VERDICT_GLOB)):
+        key = path.resolve(strict=False).as_posix()
+        if key in seen:
+            continue
+        seen.add(key)
+        paths.append(path)
+        if len(paths) > max_files:
+            raise FrontierRateAttackFeedbackCycleError(
+                f"{root}: drop-many verdict discovery exceeded max_files={max_files}"
+            )
+    return paths
+
+
+def discover_dqs1_drop_many_greedy_verdict_paths(
+    *,
+    repo_root: str | Path,
+    roots: Sequence[str | Path] = (),
+    max_files_per_root: int = 64,
+) -> dict[str, Any]:
+    """Discover safe DQS1 drop-many greedy verdicts for queue-owned replanning."""
+
+    if max_files_per_root < 1:
+        raise FrontierRateAttackFeedbackCycleError("max_files_per_root must be >= 1")
+    repo = Path(repo_root)
+    default_roots = (repo / ".omx" / "research", repo / "experiments" / "results")
+    resolved_roots = [
+        resolve_repo_path(root, repo_root=repo) for root in (roots or default_roots)
+    ]
+    discovered: list[dict[str, Any]] = []
+    refusals: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for root in resolved_roots:
+        for path in _drop_many_greedy_verdict_candidate_paths(
+            root,
+            max_files=max_files_per_root,
+        ):
+            key = path.resolve(strict=False).as_posix()
+            if key in seen:
+                continue
+            seen.add(key)
+            try:
+                payload = load_json_object(path)
+            except FrontierRateAttackFeedbackCycleError as exc:
+                refusals.append({"path": repo_rel(path, repo), "reason": str(exc)})
+                continue
+            if payload.get("schema") != DQS1_DROP_MANY_GREEDY_VERDICT_SCHEMA:
+                refusals.append(
+                    {
+                        "path": repo_rel(path, repo),
+                        "reason": "schema_mismatch",
+                        "schema": payload.get("schema"),
+                    }
+                )
+                continue
+            try:
+                require_no_truthy_authority_fields(
+                    payload,
+                    context=f"drop_many_greedy_verdict_discovery[{path}]",
+                )
+            except ValueError as exc:
+                raise FrontierRateAttackFeedbackCycleError(str(exc)) from exc
+            discovered.append(
+                {
+                    "path": repo_rel(path, repo),
+                    "schema": payload.get("schema"),
+                    "verdict": payload.get("build_1c_final_verdict"),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            )
+    return {
+        "schema": DQS1_DROP_MANY_GREEDY_VERDICT_DISCOVERY_SCHEMA,
+        "created_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "active": bool(discovered),
+        "roots": [repo_rel(root, repo) for root in resolved_roots],
+        "discovered_verdict_count": len(discovered),
+        "discovered_verdicts": discovered,
+        "discovered_verdict_paths": [row["path"] for row in discovered],
+        "refusal_count": len(refusals),
+        "refusals": refusals,
+        **FALSE_AUTHORITY,
+    }
 
 
 def _candidate_ids_from_harvests(harvest_paths: Sequence[Path]) -> set[str]:
@@ -479,6 +589,8 @@ def write_pairset_component_marginal_feedback_bundle(
     incumbent_score: float,
     incumbent_scores_by_axis: Mapping[str, Any] | None,
     output_dir: str | Path,
+    drop_many_greedy_verdict_paths: Sequence[str | Path] = (),
+    auto_discover_drop_many_greedy_verdicts: bool = True,
     stamp: str | None = None,
     top_k: int = 64,
     top_actions: int = 16,
@@ -505,9 +617,37 @@ def write_pairset_component_marginal_feedback_bundle(
     resolved_observation_paths = _unique_paths(
         resolve_repo_path(path, repo_root=repo) for path in observation_paths
     )
+    if auto_discover_drop_many_greedy_verdicts:
+        discovery = discover_dqs1_drop_many_greedy_verdict_paths(repo_root=repo)
+    else:
+        discovery = {
+            "schema": DQS1_DROP_MANY_GREEDY_VERDICT_DISCOVERY_SCHEMA,
+            "active": False,
+            "discovered_verdict_paths": [],
+            "discovered_verdict_count": 0,
+            "refusals": [],
+            **FALSE_AUTHORITY,
+        }
+    discovered_verdict_paths = [
+        resolve_repo_path(path, repo_root=repo)
+        for path in discovery.get("discovered_verdict_paths") or []
+    ]
+    resolved_drop_many_verdict_paths = _unique_paths(
+        [
+            *(
+                resolve_repo_path(path, repo_root=repo)
+                for path in drop_many_greedy_verdict_paths
+            ),
+            *discovered_verdict_paths,
+        ]
+    )
     missing = [
         path.as_posix()
-        for path in (*acquisition_paths, *resolved_observation_paths)
+        for path in (
+            *acquisition_paths,
+            *resolved_observation_paths,
+            *resolved_drop_many_verdict_paths,
+        )
         if not path.is_file()
     ]
     if missing:
@@ -526,10 +666,14 @@ def write_pairset_component_marginal_feedback_bundle(
                 seen_observations.add(key)
                 observations.append(row)
         pairset_acquisitions = [load_json_object(path) for path in acquisition_paths]
+        drop_many_greedy_verdicts = [
+            load_json_object(path) for path in resolved_drop_many_verdict_paths
+        ]
         source_artifacts = source_artifacts_from_paths(
             {
                 "pairset_acquisitions": acquisition_paths,
                 "observation_jsonl": resolved_observation_paths,
+                "dqs1_drop_many_greedy_verdicts": resolved_drop_many_verdict_paths,
             },
             repo_root=repo,
         )
@@ -537,11 +681,15 @@ def write_pairset_component_marginal_feedback_bundle(
             incumbent_score=incumbent_score,
             pairset_acquisitions=pairset_acquisitions,
             observations=observations,
+            drop_many_greedy_verdicts=drop_many_greedy_verdicts,
             incumbent_scores_by_axis=incumbent_scores_by_axis or {},
             source_artifacts=source_artifacts,
             source_artifact_paths={
                 "pairset_acquisitions": [
                     repo_rel(path, repo) for path in acquisition_paths
+                ],
+                "dqs1_drop_many_greedy_verdicts": [
+                    repo_rel(path, repo) for path in resolved_drop_many_verdict_paths
                 ],
             },
             top_k=top_k,
@@ -583,8 +731,19 @@ def write_pairset_component_marginal_feedback_bundle(
         "observation_jsonl_paths": [
             repo_rel(path, repo) for path in resolved_observation_paths
         ],
+        "drop_many_greedy_verdict_paths": [
+            repo_rel(path, repo) for path in resolved_drop_many_verdict_paths
+        ],
+        "drop_many_greedy_verdict_discovery": discovery,
         "observation_row_count": len(observations),
         "pairset_component_marginal_model": component_model,
+        "drop_many_greedy_verdict_model": dict(
+            _mapping(
+                _mapping(portfolio.get("observation_feedback")).get(
+                    "drop_many_greedy_verdict_model"
+                )
+            )
+        ),
         "portfolio_summary": dict(_mapping(portfolio.get("portfolio_summary"))),
         "top_action_limit": top_actions,
         "top_operator_actions": _top_component_marginal_actions(
@@ -620,6 +779,11 @@ def write_pairset_component_marginal_feedback_bundle(
         "observation_jsonl_paths": [
             repo_rel(path, repo) for path in resolved_observation_paths
         ],
+        "drop_many_greedy_verdict_paths": [
+            repo_rel(path, repo) for path in resolved_drop_many_verdict_paths
+        ],
+        "drop_many_greedy_verdict_discovery": discovery,
+        "drop_many_greedy_verdict_count": len(resolved_drop_many_verdict_paths),
         "observed_candidate_ids": sorted(
             {
                 str(row.get("candidate_id"))
@@ -665,11 +829,13 @@ def write_cycle_report(
 
 __all__ = [
     "AUTOPILOT_RESULT_SCHEMA",
+    "DQS1_DROP_MANY_GREEDY_VERDICT_DISCOVERY_SCHEMA",
     "FRONTIER_RATE_ATTACK_DQS1_OBSERVATION_BUNDLE_SCHEMA",
     "FRONTIER_RATE_ATTACK_FEEDBACK_CYCLE_SCHEMA",
     "FRONTIER_RATE_ATTACK_PAIRSET_COMPONENT_MARGINAL_BUNDLE_SCHEMA",
     "FrontierRateAttackFeedbackCycleError",
     "artifact_token",
+    "discover_dqs1_drop_many_greedy_verdict_paths",
     "harvest_paths_from_autopilot_payload",
     "harvest_paths_from_autopilot_result_files",
     "json_text",

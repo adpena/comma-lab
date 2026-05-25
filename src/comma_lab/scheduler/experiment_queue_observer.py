@@ -28,6 +28,7 @@ from tac.optimization.materializer_feedback import (
 from tac.optimization.serialized_archive_economics import SERIALIZED_ARCHIVE_DELTA_SCHEMA
 
 OBSERVATION_SCHEMA = "experiment_queue_observation.v1"
+LOCAL_TRAINING_SIGNAL_OBSERVATION_SCHEMA = "local_training_signal_observation.v1"
 FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA = "family_agnostic_materializer_empirical_observation.v1"
 FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA = "family_agnostic_materializer_empirical_sweep.v1"
 PR95_MLX_PACKAGE_SCHEMA = "pr95_mlx_pytorch_state_dict_to_contest_archive.v1"
@@ -671,6 +672,77 @@ def _step_has_materializer_feedback_artifact(
     return False
 
 
+def _step_has_local_training_signal_artifact(
+    step_observation: Mapping[str, Any],
+) -> bool:
+    for artifact in step_observation.get("expected_artifacts") or []:
+        if not isinstance(artifact, Mapping):
+            continue
+        if artifact.get("exists") is not True:
+            continue
+        if artifact.get("postcondition_passed") is not True:
+            continue
+        if not _artifact_false_authority_satisfied(artifact):
+            continue
+        if artifact.get("json_schema") == HINTON_MLX_LONG_TRAINING_SMOKE_SCHEMA:
+            return True
+    return False
+
+
+def _local_training_signal_observations_from_step(
+    step_observation: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    observations: list[dict[str, Any]] = []
+    for artifact in step_observation.get("expected_artifacts") or []:
+        if not isinstance(artifact, Mapping):
+            continue
+        if artifact.get("exists") is not True:
+            continue
+        if artifact.get("postcondition_passed") is not True:
+            continue
+        if not _artifact_false_authority_satisfied(artifact):
+            continue
+        if artifact.get("json_schema") != HINTON_MLX_LONG_TRAINING_SMOKE_SCHEMA:
+            continue
+        blockers = [
+            str(item) for item in artifact.get("readiness_blockers") or [] if str(item)
+        ]
+        observations.append(
+            {
+                "schema": LOCAL_TRAINING_SIGNAL_OBSERVATION_SCHEMA,
+                "source_schema": artifact.get("json_schema"),
+                "source_path": artifact.get("path"),
+                "experiment_id": step_observation.get("experiment_id"),
+                "step_id": step_observation.get("step_id"),
+                "status": step_observation.get("status"),
+                "lane_id": artifact.get("lane_id"),
+                "mode": artifact.get("mode"),
+                "operator_run_label": artifact.get("operator_run_label"),
+                "local_training_queue_signal": artifact.get(
+                    "local_training_queue_signal"
+                ),
+                "paid_dispatch_authorization_signal": artifact.get(
+                    "paid_dispatch_authorization_signal"
+                ),
+                "convergence_verdict": artifact.get("convergence_verdict"),
+                "readiness_blockers": blockers,
+                "recommended_next_action": (
+                    "build_contest_teacher_or_strict_surrogate_queue_before_paid_dispatch"
+                    if artifact.get("local_training_queue_signal")
+                    == "LOCAL_MLX_QUEUE_READY"
+                    else "inspect_local_training_signal"
+                ),
+                "allowed_use": "queue_owned_local_training_signal_replanning_only",
+                "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        )
+    return observations
+
+
 def _artifact_false_authority_satisfied(artifact: Mapping[str, Any]) -> bool:
     if (
         artifact.get("postcondition_type") in {"json_false_authority", "jsonl_false_authority"}
@@ -806,6 +878,8 @@ def observe_experiment_queue(
     health_steps: list[dict[str, Any]] = []
     succeeded_artifact_failure_steps: list[dict[str, Any]] = []
     succeeded_artifact_steps: list[dict[str, Any]] = []
+    succeeded_signal_steps: list[dict[str, Any]] = []
+    local_training_signal_observations: list[dict[str, Any]] = []
     for step_state in summary.get("steps", []):
         if not isinstance(step_state, Mapping):
             continue
@@ -827,6 +901,11 @@ def observe_experiment_queue(
         if status == "succeeded":
             if _step_has_materializer_feedback_artifact(step_observation):
                 succeeded_artifact_steps.append(step_observation)
+            if _step_has_local_training_signal_artifact(step_observation):
+                succeeded_signal_steps.append(step_observation)
+                local_training_signal_observations.extend(
+                    _local_training_signal_observations_from_step(step_observation)
+                )
             artifacts = step_observation.get("expected_artifacts") or []
             if any(isinstance(item, Mapping) and item.get("postcondition_passed") is False for item in artifacts):
                 succeeded_artifact_failure_steps.append(step_observation)
@@ -885,6 +964,11 @@ def observe_experiment_queue(
         "queued_steps": queued,
         "blocked_steps": blocked,
         "succeeded_artifact_steps": succeeded_artifact_steps,
+        "succeeded_signal_steps": succeeded_signal_steps,
+        "local_training_signal_observations": local_training_signal_observations,
+        "local_training_signal_observation_count": len(
+            local_training_signal_observations
+        ),
         "succeeded_artifact_failure_steps": succeeded_artifact_failure_steps,
         "orphaned_steps": orphaned,
         "suggested_commands": {
@@ -985,6 +1069,7 @@ def render_observation_markdown(observation: Mapping[str, Any]) -> str:
         *list(observation.get("failed_steps") or []),
         *list(observation.get("queued_steps") or []),
         *list(observation.get("blocked_steps") or []),
+        *list(observation.get("succeeded_signal_steps") or []),
         *list(observation.get("succeeded_artifact_failure_steps") or []),
     ]
     for step in steps:
@@ -1039,6 +1124,7 @@ def _runtime_policy_markdown_summary(value: object) -> dict[str, Any]:
 
 
 __all__ = [
+    "LOCAL_TRAINING_SIGNAL_OBSERVATION_SCHEMA",
     "OBSERVATION_SCHEMA",
     "observe_experiment_queue",
     "render_observation_markdown",

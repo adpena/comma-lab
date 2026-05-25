@@ -794,6 +794,9 @@ def test_observer_surfaces_hinton_mlx_long_training_smoke(
     )
     state = tmp_path / "queue.sqlite"
     queue = _queue(artifact)
+    queue["experiments"][0]["steps"][0]["postconditions"][0]["equals"] = (
+        "hinton_mlx_long_training_smoke_verdict.v1"
+    )
     queue["experiments"][0]["steps"][0]["telemetry"] = {
         "artifact_paths": [artifact.as_posix()],
     }
@@ -837,6 +840,42 @@ def test_observer_surfaces_hinton_mlx_long_training_smoke(
         "scorer_loss_is_kl_to_mock_teacher_logits_not_contest_segnet",
         "no_paired_cpu_cuda_auth_eval_yet",
     ]
+
+    with connect_state(state) as conn:
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-25T22:10:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    succeeded_observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+    )
+
+    assert len(succeeded_observation["succeeded_signal_steps"]) == 1
+    assert succeeded_observation["local_training_signal_observation_count"] == 1
+    signal = succeeded_observation["local_training_signal_observations"][0]
+    assert signal["schema"] == "local_training_signal_observation.v1"
+    assert signal["source_schema"] == "hinton_mlx_long_training_smoke_verdict.v1"
+    assert signal["local_training_queue_signal"] == "LOCAL_MLX_QUEUE_READY"
+    assert signal["recommended_next_action"] == (
+        "build_contest_teacher_or_strict_surrogate_queue_before_paid_dispatch"
+    )
+    assert signal["score_claim"] is False
+    assert signal["promotion_eligible"] is False
+    assert signal["ready_for_exact_eval_dispatch"] is False
 
 
 def test_observer_real_pr95_queue_owns_drift_trace_and_package_artifacts(
