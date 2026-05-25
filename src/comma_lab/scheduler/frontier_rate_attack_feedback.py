@@ -273,6 +273,10 @@ def discover_pair_frame_geometry_queue_requests(
     """
 
     repo = Path(repo_root)
+    default_roots = not frontier_artifact_roots
+    roots: Sequence[str | Path] = (
+        frontier_artifact_roots if not default_roots else (repo / ".omx" / "research",)
+    )
     paths: list[Path] = []
     seen_paths: set[str] = set()
     for value in pair_frame_geometry_paths:
@@ -280,8 +284,10 @@ def discover_pair_frame_geometry_queue_requests(
         if path.as_posix() not in seen_paths:
             seen_paths.add(path.as_posix())
             paths.append(path)
-    for value in frontier_artifact_roots:
+    for value in roots:
         root = _resolve_path(value, repo_root=repo)
+        if default_roots and not root.exists():
+            continue
         for path in _pair_frame_geometry_paths(root, max_files=max_files_per_root):
             if path.as_posix() in seen_paths:
                 continue
@@ -349,7 +355,7 @@ def discover_pair_frame_geometry_queue_requests(
         "schema": PAIR_FRAME_GEOMETRY_DISCOVERY_SCHEMA,
         "frontier_artifact_roots": [
             _repo_rel(_resolve_path(root, repo_root=repo), repo)
-            for root in frontier_artifact_roots
+            for root in roots
         ],
         "explicit_pair_frame_geometry_paths": [
             _repo_rel(_resolve_path(path, repo_root=repo), repo)

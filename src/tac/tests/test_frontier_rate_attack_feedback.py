@@ -724,6 +724,47 @@ def test_frontier_feedback_compiler_promotes_pair_frame_geometry_requests_to_que
     assert report["ready_for_exact_eval_dispatch"] is False
 
 
+def test_frontier_feedback_default_discovers_pair_frame_geometry_lattice(
+    tmp_path: Path,
+) -> None:
+    action_summary = _write_action_summary(tmp_path)
+    lattice_path = _write_json(
+        tmp_path
+        / ".omx"
+        / "research"
+        / "pair_frame_geometry_run"
+        / "pair_frame_scorer_geometry_lattice.json",
+        _pair_frame_geometry_lattice(
+            candidate_id="pairset_geometry_lowimpact_k004_h1234567890",
+            selected_pair_indices=[1, 2, 112, 233],
+        ),
+    )
+
+    report = build_frontier_rate_attack_feedback_refresh(
+        repo_root=tmp_path,
+        action_summary_path=action_summary,
+        results_root=str(tmp_path / "results"),
+        queue_id="frontier_feedback_pair_frame_default",
+        candidate_limit=1,
+    )
+
+    discovery = report["pair_frame_geometry_discovery"]
+    assert discovery["frontier_artifact_roots"] == [".omx/research"]
+    assert discovery["explicit_pair_frame_geometry_paths"] == []
+    assert discovery["queue_executable_request_count"] == 1
+    assert discovery["discovered_lattices"][0]["path"] == (
+        lattice_path.relative_to(tmp_path).as_posix()
+    )
+    assert report["selected_candidate_ids"] == [
+        "pairset_geometry_lowimpact_k004_h1234567890"
+    ]
+    assert report["queue"]["experiments"][0]["metadata"]["source_metadata"][
+        "queue_source_kind"
+    ] == "pair_frame_scorer_geometry_lattice"
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+
+
 def test_frontier_feedback_pair_frame_geometry_discovery_rejects_authority_leak(
     tmp_path: Path,
 ) -> None:

@@ -56632,6 +56632,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_codex_pair_frame_geometry_autodiscovery_20260525",
+      "name": "Pair-frame geometry autodiscovery",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_pair_frame_geometry_autodiscovery_20260525T221949Z_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "ruff_plus_pytest_frontier_feedback_14_plus_queue_validate_4x28_plus_review_policy_clean"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_pair_frame_geometry_autodiscovery_20260525T221949Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -56641,5 +56682,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T22:09:01Z"
+  "updated_at": "2026-05-25T22:21:50Z"
 }
