@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import sqlite3
 import subprocess
 import time
 from collections.abc import Mapping, Sequence
@@ -32,6 +34,17 @@ def _repo_rel(path: Path, repo_root: Path) -> str:
         return path.resolve().relative_to(repo_root.resolve()).as_posix()
     except ValueError:
         return path.as_posix()
+
+
+def _stable_json_sha256(payload: Mapping[str, Any]) -> str:
+    encoded = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        default=str,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def _json_load_lenient(path: Path) -> Mapping[str, Any] | None:
@@ -152,6 +165,107 @@ def _experiment_lookup(queue: Mapping[str, Any]) -> dict[tuple[str, str], Mappin
     return out
 
 
+def _experiment_metadata_lookup(
+    queue: Mapping[str, Any],
+) -> dict[str, Mapping[str, Any]]:
+    out: dict[str, Mapping[str, Any]] = {}
+    for experiment in queue.get("experiments", []):
+        if not isinstance(experiment, Mapping):
+            continue
+        metadata = experiment.get("metadata")
+        out[str(experiment.get("id") or "")] = (
+            metadata if isinstance(metadata, Mapping) else {}
+        )
+    return out
+
+
+def _string_list(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [value] if value else []
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return [str(item) for item in value if str(item)]
+    return []
+
+
+def _nonempty_str(value: Any) -> str | None:
+    text = str(value or "").strip()
+    return text or None
+
+
+def _extend_unique(out: list[str], values: Sequence[Any]) -> None:
+    seen = set(out)
+    for value in values:
+        text = _nonempty_str(value)
+        if text and text not in seen:
+            seen.add(text)
+            out.append(text)
+
+
+def _artifact_paths_from_telemetry(
+    step: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> list[str]:
+    telemetry = step.get("telemetry")
+    if not isinstance(telemetry, Mapping):
+        return []
+    paths: list[str] = []
+    for key in ("artifact_paths", "input_artifact_paths", "pullback_artifact_paths"):
+        for raw_path in _string_list(telemetry.get(key)):
+            path = Path(raw_path)
+            if not path.is_absolute():
+                path = repo_root / path
+            _extend_unique(paths, [_repo_rel(path, repo_root)])
+    return paths
+
+
+def _queue_state_watermark(
+    conn: sqlite3.Connection,
+    *,
+    queue_id: str,
+    state_path: Path,
+    repo_root: Path,
+) -> dict[str, Any]:
+    events = conn.execute(
+        """
+        SELECT COUNT(*) AS event_count, COALESCE(MAX(id), 0) AS max_event_id
+        FROM queue_events
+        WHERE queue_id = ?
+        """,
+        (queue_id,),
+    ).fetchone()
+    steps = conn.execute(
+        """
+        SELECT COUNT(*) AS step_state_count,
+               COALESCE(MAX(updated_at_utc), '') AS max_step_updated_at_utc
+        FROM step_state
+        WHERE queue_id = ?
+        """,
+        (queue_id,),
+    ).fetchone()
+    control = conn.execute(
+        """
+        SELECT mode, updated_at_utc
+        FROM queue_controls
+        WHERE queue_id = ?
+        """,
+        (queue_id,),
+    ).fetchone()
+    return {
+        "schema": "experiment_queue_state_watermark.v1",
+        "queue_id": queue_id,
+        "state_path": _repo_rel(state_path, repo_root),
+        "event_count": int(events["event_count"] or 0) if events else 0,
+        "max_event_id": int(events["max_event_id"] or 0) if events else 0,
+        "step_state_count": int(steps["step_state_count"] or 0) if steps else 0,
+        "max_step_updated_at_utc": (
+            str(steps["max_step_updated_at_utc"] or "") if steps else ""
+        ),
+        "control_mode": str(control["mode"] or "") if control else "",
+        "control_updated_at_utc": str(control["updated_at_utc"] or "") if control else "",
+    }
+
+
 def _expected_artifacts(
     step: Mapping[str, Any],
     *,
@@ -228,6 +342,7 @@ def _step_observation(
     step_state: Mapping[str, Any],
     step_definition: Mapping[str, Any] | None,
     *,
+    experiment_metadata: Mapping[str, Any] | None,
     repo_root: Path,
     processes: Sequence[Mapping[str, str]],
     tail_lines: int,
@@ -259,6 +374,7 @@ def _step_observation(
         "log_exists": bool(log_path and log_path.exists()),
         "processes": _matching_processes(processes, needles),
         "expected_artifacts": [],
+        "expected_artifact_paths": [],
     }
     if step_definition is not None:
         resources = step_definition.get("resources")
@@ -268,6 +384,44 @@ def _step_observation(
             step_definition,
             repo_root=repo_root,
         )
+        _extend_unique(
+            observation["expected_artifact_paths"],
+            [
+                artifact.get("path")
+                for artifact in observation["expected_artifacts"]
+                if isinstance(artifact, Mapping)
+            ],
+        )
+        _extend_unique(
+            observation["expected_artifact_paths"],
+            _artifact_paths_from_telemetry(step_definition, repo_root=repo_root),
+        )
+    metadata = experiment_metadata if isinstance(experiment_metadata, Mapping) else {}
+    for key in (
+        "target_kind",
+        "materializer_id",
+        "receiver_contract_id",
+        "receiver_contract_kind",
+        "unit_kind",
+        "operation_family",
+    ):
+        text = _nonempty_str(metadata.get(key))
+        if text:
+            observation[key] = text
+    for metadata_key, observation_key in (
+        ("work_id", "work_ids"),
+        ("backlog_key", "backlog_keys"),
+    ):
+        text = _nonempty_str(metadata.get(metadata_key))
+        if text:
+            observation[observation_key] = [text]
+    for key in ("candidate_ids", "source_unit_ids", "source_selection_ids"):
+        values = _string_list(metadata.get(key))
+        if values:
+            observation[key] = values
+    for key in ("candidate_saved_bytes_sum", "expected_score_gain_sum"):
+        if key in metadata:
+            observation[key] = metadata.get(key)
     if log_path is not None and log_path.exists():
         observation["log_tail"] = _tail_text(log_path, max_lines=tail_lines)
     return observation
@@ -289,7 +443,13 @@ def observe_experiment_queue(
             definition_drift = queue_definition_drift(conn, queue)
             performance = queue_performance_summary(conn, queue)
             runtime_policy = derive_scheduler_runtime_policy(conn, queue)
-    except ExperimentQueueError:
+            state_watermark = _queue_state_watermark(
+                conn,
+                queue_id=str(queue["queue_id"]),
+                state_path=state_path,
+                repo_root=repo_root,
+            )
+    except (ExperimentQueueError, sqlite3.Error):
         summary = {
             "queue_id": str(queue["queue_id"]),
             "mode": str(queue.get("controls", {}).get("mode") or "unknown"),
@@ -344,7 +504,20 @@ def observe_experiment_queue(
             "recommended_max_concurrency": {},
             "recommended_timeout_seconds_by_resource": {},
         }
+        state_watermark = {
+            "schema": "experiment_queue_state_watermark.v1",
+            "queue_id": str(queue["queue_id"]),
+            "state_path": _repo_rel(state_path, repo_root),
+            "state_missing": True,
+            "event_count": 0,
+            "max_event_id": 0,
+            "step_state_count": 0,
+            "max_step_updated_at_utc": "",
+            "control_mode": "",
+            "control_updated_at_utc": "",
+        }
     lookup = _experiment_lookup(queue)
+    metadata_lookup = _experiment_metadata_lookup(queue)
     processes = _process_table()
     active_steps: list[dict[str, Any]] = []
     health_steps: list[dict[str, Any]] = []
@@ -362,6 +535,7 @@ def observe_experiment_queue(
         step_observation = _step_observation(
             step_state,
             lookup.get(key),
+            experiment_metadata=metadata_lookup.get(key[0]),
             repo_root=repo_root,
             processes=processes,
             tail_lines=0 if status == "succeeded" else tail_lines,
@@ -385,6 +559,7 @@ def observe_experiment_queue(
                     _step_observation(
                         step_state,
                         None,
+                        experiment_metadata=None,
                         repo_root=repo_root,
                         processes=processes,
                         tail_lines=0,
@@ -406,8 +581,10 @@ def observe_experiment_queue(
         "schema": OBSERVATION_SCHEMA,
         "generated_at_utc": _utc_now(),
         "queue_id": summary["queue_id"],
+        "queue_sha256": _stable_json_sha256(queue),
         "mode": summary["mode"],
         "state": _repo_rel(state_path, repo_root),
+        "state_watermark": state_watermark,
         "status_counts": summary.get("status_counts", {}),
         "observe_read_only": True,
         "healthy": not blockers,

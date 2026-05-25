@@ -870,6 +870,26 @@ def _unique_strings(values: list[object]) -> list[str]:
     return out
 
 
+def _queue_recovery_group_summaries(groups: object, *, limit: int = 3) -> list[str]:
+    if not isinstance(groups, list):
+        return []
+    out: list[str] = []
+    for group in groups:
+        if not isinstance(group, dict):
+            continue
+        family = str(group.get("blocker_family") or "unknown")
+        scope_kind = str(group.get("scope_kind") or "scope")
+        scope_value = str(group.get("scope_value") or "unknown")
+        count = _safe_int(group.get("count"))
+        repeated = group.get("repeated") is True
+        out.append(
+            f"{family}:{scope_kind}={scope_value}:count={count}:repeated={repeated}"
+        )
+        if len(out) >= limit:
+            break
+    return out
+
+
 def _row_exact_ready_queue_paths(rows: object) -> list[str]:
     if not isinstance(rows, list):
         return []
@@ -1667,6 +1687,31 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
     )
     if not isinstance(recovery_plan, dict):
         recovery_plan = {}
+    recovery_execution = (
+        payload.get("queue_observation_recovery_execution")
+        if isinstance(payload.get("queue_observation_recovery_execution"), dict)
+        else {}
+    )
+    recovery_source_after = (
+        recovery_execution.get("source_observation_after")
+        if isinstance(recovery_execution.get("source_observation_after"), dict)
+        else {}
+    )
+    recovery_policy_blockers = _unique_strings(
+        payload.get("queue_observation_recovery_policy_blockers")
+        if isinstance(payload.get("queue_observation_recovery_policy_blockers"), list)
+        else []
+    )
+    recovery_execution_blockers = _unique_strings(
+        recovery_execution.get("blockers")
+        if isinstance(recovery_execution.get("blockers"), list)
+        else []
+    )
+    recovery_source_after_blockers = _unique_strings(
+        recovery_source_after.get("blockers")
+        if isinstance(recovery_source_after.get("blockers"), list)
+        else []
+    )
     row = {
         **base,
         "kind": "byte_shaving_materializer_campaign_run",
@@ -1776,6 +1821,25 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
         ),
         "queue_observation_recovery_execution_success": (
             payload.get("queue_observation_recovery_execution_success") is True
+        ),
+        "queue_observation_recovery_grouped_blocker_count": _safe_int(
+            recovery_plan.get("grouped_blocker_count")
+        ),
+        "queue_observation_recovery_repeated_group_count": _safe_int(
+            recovery_plan.get("repeated_group_count")
+        ),
+        "queue_observation_recovery_top_groups": _queue_recovery_group_summaries(
+            recovery_plan.get("grouped_blockers")
+        ),
+        "queue_observation_recovery_policy_blockers": recovery_policy_blockers,
+        "queue_observation_recovery_execution_blockers": recovery_execution_blockers,
+        "queue_observation_recovery_source_observation_healthy": (
+            recovery_source_after.get("healthy") is True
+            if recovery_source_after
+            else None
+        ),
+        "queue_observation_recovery_source_observation_blockers": (
+            recovery_source_after_blockers
         ),
         "queue_observation_recovery_required": (
             payload.get("queue_observation_recovery_required") is True
@@ -1976,6 +2040,14 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
             for row in rows
             if row.get("queue_observation_recovery_execution_success") is True
         ),
+        "queue_observation_recovery_grouped_blocker_count": sum(
+            _safe_int(row.get("queue_observation_recovery_grouped_blocker_count"))
+            for row in rows
+        ),
+        "queue_observation_recovery_repeated_group_count": sum(
+            _safe_int(row.get("queue_observation_recovery_repeated_group_count"))
+            for row in rows
+        ),
         "queue_observation_maintenance_recommended_count": sum(
             1
             for row in rows
@@ -2064,6 +2136,10 @@ def _format_byte_shaving_acquisition_summary() -> str:
             f"{payload['queue_observation_recovery_executed_count']} "
             "queue_recovery_success="
             f"{payload['queue_observation_recovery_execution_success_count']} "
+            "queue_recovery_groups="
+            f"{payload['queue_observation_recovery_grouped_blocker_count']} "
+            "queue_recovery_repeated_groups="
+            f"{payload['queue_observation_recovery_repeated_group_count']} "
             "queue_maintenance="
             f"{payload['queue_observation_maintenance_recommended_count']} "
             "feedback_continuation_queued="
@@ -2122,6 +2198,10 @@ def _format_byte_shaving_acquisition_summary() -> str:
                 f"{row.get('queue_observation_recovery_executed') is True} "
                 "queue_recovery_success="
                 f"{row.get('queue_observation_recovery_execution_success') is True} "
+                "queue_recovery_groups="
+                f"{row.get('queue_observation_recovery_grouped_blocker_count', 0)} "
+                "queue_recovery_repeated_groups="
+                f"{row.get('queue_observation_recovery_repeated_group_count', 0)} "
                 "queue_maintenance="
                 f"{row.get('queue_observation_maintenance_recommended') is True} "
                 "queue_recovery_actions="
@@ -2131,6 +2211,32 @@ def _format_byte_shaving_acquisition_summary() -> str:
                 f"ready_steps={row.get('ready_step_count', 0)} "
                 f"local_mlx_ready={row.get('local_mlx_ready_step_count', 0)}"
             )
+            top_groups = row.get("queue_observation_recovery_top_groups")
+            if isinstance(top_groups, list) and top_groups:
+                lines.append(
+                    "    queue_recovery_top_groups="
+                    + "; ".join(str(item) for item in top_groups[:3])
+                )
+            recovery_blockers = row.get("queue_observation_recovery_execution_blockers")
+            if isinstance(recovery_blockers, list) and recovery_blockers:
+                lines.append(
+                    "    queue_recovery_execution_blockers="
+                    + ", ".join(str(item) for item in recovery_blockers[:5])
+                )
+            policy_blockers = row.get("queue_observation_recovery_policy_blockers")
+            if isinstance(policy_blockers, list) and policy_blockers:
+                lines.append(
+                    "    queue_recovery_policy_blockers="
+                    + ", ".join(str(item) for item in policy_blockers[:5])
+                )
+            source_blockers = row.get(
+                "queue_observation_recovery_source_observation_blockers"
+            )
+            if isinstance(source_blockers, list) and source_blockers:
+                lines.append(
+                    "    queue_recovery_source_blockers="
+                    + ", ".join(str(item) for item in source_blockers[:5])
+                )
             if top_combo.get("combo_id"):
                 lines.append(
                     "    top_combo: "

@@ -1234,6 +1234,8 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
     assert summary["queue_observation_recovery_queue_count"] == 0
     assert summary["queue_observation_recovery_executed_count"] == 0
     assert summary["queue_observation_recovery_execution_success_count"] == 0
+    assert summary["queue_observation_recovery_grouped_blocker_count"] == 0
+    assert summary["queue_observation_recovery_repeated_group_count"] == 0
     assert summary["queue_feedback_continuation_queue_count"] == 1
     assert summary["overall_executable_conversion_rate"] == 0.5
     assert summary["score_claim"] is False
@@ -1301,6 +1303,8 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
     assert "queue_recovery_queued=0" in text
     assert "queue_recovery_executed=0" in text
     assert "queue_recovery_success=0" in text
+    assert "queue_recovery_groups=0" in text
+    assert "queue_recovery_repeated_groups=0" in text
     assert "queue_maintenance=0" in text
     assert "feedback_continuation_queued=1" in text
     assert "feedback_decision=run_next_materializer_campaign_iteration" in text
@@ -1366,6 +1370,26 @@ def test_byte_shaving_acquisition_summary_surfaces_queue_recovery_signal(
             "queue_observation_recovery_execution_requested": True,
             "queue_observation_recovery_executed": False,
             "queue_observation_recovery_execution_success": False,
+            "queue_observation_recovery_policy_blockers": [
+                "queue_observation_recovery_validation:source_state_watermark_drift"
+            ],
+            "queue_observation_recovery_execution": {
+                "schema": (
+                    "byte_shaving_materializer_campaign_queue_observation_recovery_"
+                    "execution.v1"
+                ),
+                "success": False,
+                "blockers": [
+                    "queue_observation_recovery_validation:"
+                    "source_state_watermark_drift"
+                ],
+                "source_observation_after": {
+                    "healthy": False,
+                    "blockers": ["experiment_queue_observation_failed_steps:1"],
+                },
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
             "queue_observation_recovery_required": True,
             "queue_observation_maintenance_recommended": False,
             "queue_observation_recovery_plan": {
@@ -1375,6 +1399,22 @@ def test_byte_shaving_acquisition_summary_surfaces_queue_recovery_signal(
                 "action_count": 1,
                 "required_action_count": 1,
                 "maintenance_action_count": 0,
+                "grouped_blocker_count": 1,
+                "repeated_group_count": 1,
+                "grouped_blockers": [
+                    {
+                        "schema": "queue_observation_recovery_blocker_group.v1",
+                        "blocker_family": "experiment_queue_observation_failed_steps",
+                        "scope_kind": "materializer_target",
+                        "scope_value": (
+                            "entropy_adapter:archive_section_entropy_recode_v1"
+                        ),
+                        "count": 2,
+                        "repeated": True,
+                        "score_claim": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ],
                 "actions": [
                     {
                         "action": "rewind_failed_step",
@@ -1445,6 +1485,8 @@ def test_byte_shaving_acquisition_summary_surfaces_queue_recovery_signal(
     assert summary["queue_observation_recovery_queue_count"] == 1
     assert summary["queue_observation_recovery_executed_count"] == 0
     assert summary["queue_observation_recovery_execution_success_count"] == 0
+    assert summary["queue_observation_recovery_grouped_blocker_count"] == 1
+    assert summary["queue_observation_recovery_repeated_group_count"] == 1
     assert summary["ready_for_queue_health_recovery_count"] == 1
     assert summary["queue_observation_required_action_count"] == 1
     assert latest["queue_observation_recovery_required"] is True
@@ -1456,6 +1498,25 @@ def test_byte_shaving_acquisition_summary_surfaces_queue_recovery_signal(
     assert latest["queue_observation_recovery_execution_requested"] is True
     assert latest["queue_observation_recovery_executed"] is False
     assert latest["queue_observation_recovery_execution_success"] is False
+    assert latest["queue_observation_recovery_grouped_blocker_count"] == 1
+    assert latest["queue_observation_recovery_repeated_group_count"] == 1
+    assert latest["queue_observation_recovery_top_groups"] == [
+        (
+            "experiment_queue_observation_failed_steps:materializer_target="
+            "entropy_adapter:archive_section_entropy_recode_v1:count=2:"
+            "repeated=True"
+        )
+    ]
+    assert latest["queue_observation_recovery_execution_blockers"] == [
+        "queue_observation_recovery_validation:source_state_watermark_drift"
+    ]
+    assert latest["queue_observation_recovery_policy_blockers"] == [
+        "queue_observation_recovery_validation:source_state_watermark_drift"
+    ]
+    assert latest["queue_observation_recovery_source_observation_healthy"] is False
+    assert latest["queue_observation_recovery_source_observation_blockers"] == [
+        "experiment_queue_observation_failed_steps:1"
+    ]
     assert latest["queue_feedback_replan_policy_should_continue"] is False
     assert latest["queue_observation_recovery_action_count"] == 1
     assert latest["queue_observation_required_action_count"] == 1
@@ -1477,6 +1538,12 @@ def test_byte_shaving_acquisition_summary_surfaces_queue_recovery_signal(
     assert "queue_recovery_queued=1" in text
     assert "queue_recovery_executed=0" in text
     assert "queue_recovery_success=0" in text
+    assert "queue_recovery_groups=1" in text
+    assert "queue_recovery_repeated_groups=1" in text
+    assert "queue_recovery_top_groups=experiment_queue_observation_failed_steps" in text
+    assert "queue_recovery_execution_blockers=queue_observation_recovery_validation" in text
+    assert "queue_recovery_policy_blockers=queue_observation_recovery_validation" in text
+    assert "queue_recovery_source_blockers=experiment_queue_observation_failed_steps:1" in text
     assert "queue_recovery_actions=1" in text
     assert "feedback_continue=False" in text
 

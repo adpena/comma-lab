@@ -31,6 +31,15 @@ queue-health feedback, and the next water-bucket planning pass.
 - Operator briefing now surfaces recovery execution request/execution/success
   counts and stops recommending a recovery queue once the latest recovery
   execution succeeded.
+- Real queue observations now propagate materializer/receiver/source metadata
+  from experiment metadata and step telemetry into failed/blocked step records,
+  so recovery grouping is fed by the same observation path used by campaigns.
+- Recovery queues now stamp expected source queue SHA-256 and source queue-state
+  watermark from the observation. Validation recomputes both immediately before
+  execution and fails closed on source queue or state drift.
+- Operator briefing now includes grouped recovery blocker counts, repeated
+  group counts, top blocker family/scope summaries, execution refusal blockers,
+  policy blockers, and source-observation-after blockers.
 
 ## Safeguards
 
@@ -42,12 +51,14 @@ queue-health feedback, and the next water-bucket planning pass.
 - A noncanonical child recovery state path requires an explicit rationale.
 - Source queue observation after worker completion is part of the success
   condition; unhealthy source state remains a blocker.
+- Stale recovery artifacts cannot silently mutate a newer source queue state:
+  source queue hash and state watermark drift are execution blockers.
 
 ## Verification
 
-- `.venv/bin/python -m pytest src/tac/tests/test_queue_feedback_replan_policy.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_operator_briefing.py -q`
-  - Result: 109 passed.
-- `.venv/bin/python -m ruff check src/comma_lab/scheduler/__init__.py src/comma_lab/scheduler/queue_feedback_replan_policy.py tools/run_byte_shaving_materializer_campaign.py tools/operator_briefing.py src/tac/tests/test_queue_feedback_replan_policy.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_operator_briefing.py`
+- `.venv/bin/python -m pytest src/tac/tests/test_experiment_queue_observer.py src/tac/tests/test_queue_feedback_replan_policy.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_operator_briefing.py -q`
+  - Result: 119 passed.
+- `.venv/bin/python -m ruff check src/comma_lab/scheduler/experiment_queue_observer.py src/comma_lab/scheduler/queue_feedback_replan_policy.py tools/operator_briefing.py src/tac/tests/test_experiment_queue_observer.py src/tac/tests/test_queue_feedback_replan_policy.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_operator_briefing.py`
   - Result: all checks passed.
 - `git diff --check`
   - Result: clean.

@@ -12,6 +12,9 @@ from comma_lab.scheduler.experiment_queue_observer import (
     observe_experiment_queue,
     render_observation_markdown,
 )
+from comma_lab.scheduler.queue_feedback_replan_policy import (
+    build_queue_observation_recovery_plan,
+)
 
 
 def _queue(artifact_path: Path) -> dict[str, object]:
@@ -349,6 +352,85 @@ def test_observer_health_marks_failed_steps(tmp_path: Path) -> None:
     assert observation["healthy"] is False
     assert "experiment_queue_observation_failed_steps:1" in observation["blockers"]
     assert observation["failed_steps"][0]["step_id"] == "smoke"
+
+
+def test_observer_preserves_materializer_metadata_for_recovery_grouping(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "candidate.json"
+    state = tmp_path / "queue.sqlite"
+    queue_path = tmp_path / "queue.json"
+    queue = _queue(artifact)
+    queue["experiments"][0]["metadata"] = {
+        "schema": "byte_shaving_materializer_execution_experiment_metadata.v1",
+        "target_kind": "archive_section_entropy_recode_v1",
+        "materializer_id": "entropy_adapter",
+        "receiver_contract_kind": "archive_section_receiver_v1",
+        "work_id": "work-17",
+        "backlog_key": "backlog-3",
+        "source_unit_ids": ["unit-a"],
+        "source_selection_ids": ["selection-a"],
+        "candidate_saved_bytes_sum": 19,
+        "expected_score_gain_sum": 0.25,
+    }
+    queue["experiments"][0]["steps"][0]["telemetry"] = {
+        "artifact_paths": [artifact.as_posix()],
+    }
+    queue_path.write_text(json.dumps(queue), encoding="utf-8")
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'failed',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-25T03:00:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+    )
+    failed = observation["failed_steps"][0]
+
+    assert len(observation["queue_sha256"]) == 64
+    assert observation["state_watermark"]["schema"] == (
+        "experiment_queue_state_watermark.v1"
+    )
+    assert failed["target_kind"] == "archive_section_entropy_recode_v1"
+    assert failed["materializer_id"] == "entropy_adapter"
+    assert failed["receiver_contract_kind"] == "archive_section_receiver_v1"
+    assert failed["work_ids"] == ["work-17"]
+    assert failed["backlog_keys"] == ["backlog-3"]
+    assert failed["source_unit_ids"] == ["unit-a"]
+    assert failed["source_selection_ids"] == ["selection-a"]
+    assert failed["expected_artifact_paths"] == ["candidate.json"]
+
+    recovery_plan = build_queue_observation_recovery_plan(
+        observation,
+        queue_path=str(queue_path),
+        state_path=str(state),
+    )
+    groups = recovery_plan["grouped_blockers"]
+
+    assert recovery_plan["source_queue_sha256"] == observation["queue_sha256"]
+    assert recovery_plan["source_state_watermark"] == observation["state_watermark"]
+    assert groups[0]["scope_kind"] == "materializer_receiver"
+    assert groups[0]["scope_value"] == (
+        "entropy_adapter:archive_section_receiver_v1"
+    )
+    assert groups[0]["target_kinds"] == ["archive_section_entropy_recode_v1"]
+    assert groups[0]["source_selection_ids"] == ["selection-a"]
 
 
 def test_observer_health_marks_blocked_steps(tmp_path: Path) -> None:

@@ -1,10 +1,13 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import json
 import sys
+from pathlib import Path
 
 import pytest
 
+from comma_lab.scheduler.experiment_queue import connect_state, initialize_queue_state
 from comma_lab.scheduler.queue_feedback_replan_policy import (
     ACTION_BLOCKED,
     ACTION_EXECUTE_FEEDBACK_FOLLOWUP,
@@ -346,7 +349,50 @@ def test_feedback_replan_policy_counts_only_paired_exact_auth_calibration() -> N
     assert calibration["ready_for_exact_eval_dispatch"] is False
 
 
-def test_feedback_replan_policy_prioritizes_queue_health_recovery() -> None:
+def test_feedback_replan_policy_prioritizes_queue_health_recovery(
+    tmp_path: Path,
+) -> None:
+    source_queue_path = tmp_path / "materializer_execution_queue.json"
+    source_state_path = tmp_path / "materializer_execution_queue.sqlite"
+    source_queue = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "campaign_queue",
+        "controls": {
+            "mode": "running",
+            "local_first": True,
+            "max_concurrency": {"local_cpu": 1},
+        },
+        "experiments": [
+            {
+                "id": "exp0",
+                "steps": [
+                    {
+                        "id": "materialize",
+                        "kind": "command",
+                        "command": [sys.executable, "-c", "print('materialize')"],
+                        "resources": {"kind": "local_cpu"},
+                    }
+                ],
+            }
+        ],
+    }
+    source_queue_path.write_text(json.dumps(source_queue), encoding="utf-8")
+    with connect_state(source_state_path) as conn:
+        initialize_queue_state(conn, source_queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'failed',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-25T03:00:00Z'
+            WHERE queue_id = 'campaign_queue'
+              AND experiment_id = 'exp0'
+              AND step_id = 'materialize'
+            """,
+            (json.dumps({"reason": "fixture failed materializer"}),),
+        )
+        conn.commit()
     recovery_plan = build_queue_observation_recovery_plan(
         {
             "schema": "experiment_queue_observation.v1",
@@ -361,11 +407,15 @@ def test_feedback_replan_policy_prioritizes_queue_health_recovery() -> None:
                 }
             ],
         },
-        queue_path=".omx/research/campaign/materializer_execution_queue.json",
-        state_path=".omx/research/campaign/materializer_execution_queue.sqlite",
+        queue_path=str(source_queue_path),
+        state_path=str(source_state_path),
     )
     policy = build_queue_feedback_replan_policy(
-        _run_summary(queue_observation_recovery_plan=recovery_plan),
+        _run_summary(
+            queue_path=str(source_queue_path),
+            state_path=str(source_state_path),
+            queue_observation_recovery_plan=recovery_plan,
+        ),
         feedback_followup_queue=_child_queue(),
     )
 
@@ -434,12 +484,14 @@ def test_feedback_replan_policy_prioritizes_queue_health_recovery() -> None:
     assert validation["schema"] == QUEUE_OBSERVATION_RECOVERY_QUEUE_VALIDATION_SCHEMA
     assert validation["valid"] is True
     assert validation["command_count"] == 1
-    assert validation["source_queue_paths"] == [
-        ".omx/research/campaign/materializer_execution_queue.json"
-    ]
-    assert validation["source_state_paths"] == [
-        ".omx/research/campaign/materializer_execution_queue.sqlite"
-    ]
+    assert validation["source_queue_paths"] == [str(source_queue_path)]
+    assert validation["source_state_paths"] == [str(source_state_path)]
+    assert validation["expected_source_queue_sha256s"] == (
+        validation["current_source_queue_sha256s"]
+    )
+    assert validation["expected_source_state_watermarks"] == (
+        validation["current_source_state_watermarks"]
+    )
     assert validation["score_claim"] is False
     assert validation["ready_for_exact_eval_dispatch"] is False
     assert validation["blockers"] == []
@@ -466,7 +518,7 @@ def test_feedback_replan_policy_prioritizes_queue_health_recovery() -> None:
                         "--queue",
                         "other.json",
                         "--state",
-                        ".omx/research/campaign/materializer_execution_queue.sqlite",
+                        str(source_state_path),
                         "rewind",
                         "exp0",
                         "materialize",
@@ -491,6 +543,23 @@ def test_feedback_replan_policy_prioritizes_queue_health_recovery() -> None:
         "queue_observation_recovery_step_command_validation:0:"
         "queue_observation_recovery_command_queue_mismatch:0"
     ) in unsafe_validation["blockers"]
+    with connect_state(source_state_path) as conn:
+        conn.execute(
+            """
+            UPDATE step_state
+            SET updated_at_utc = '2026-05-25T03:01:00Z'
+            WHERE queue_id = 'campaign_queue'
+              AND experiment_id = 'exp0'
+              AND step_id = 'materialize'
+            """
+        )
+        conn.commit()
+    drifted_validation = validate_queue_observation_recovery_queue(recovery_queue)
+    assert drifted_validation["valid"] is False
+    assert (
+        "queue_observation_recovery_source_state_watermark_drift:0"
+        in drifted_validation["blockers"]
+    )
 
 
 def test_feedback_replan_policy_keeps_nonblocking_observation_maintenance_advisory() -> None:

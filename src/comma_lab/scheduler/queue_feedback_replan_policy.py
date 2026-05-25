@@ -6,8 +6,10 @@ from __future__ import annotations
 import hashlib
 import json
 import posixpath
+import sqlite3
 import sys
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 from tac.optimization.proxy_candidate_contract import truthy_authority_field_violations
@@ -16,6 +18,7 @@ from .experiment_queue import (
     DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
     DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
     QUEUE_SCHEMA,
+    ExperimentQueueError,
     normalize_queue_definition,
 )
 
@@ -132,6 +135,82 @@ def _stable_json_sha256(payload: Mapping[str, Any]) -> str:
         default=str,
     ).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _stable_json_file_sha256(path: str | None) -> str | None:
+    path_text = _nonempty_str(path)
+    if path_text is None:
+        return None
+    try:
+        payload = json.loads(Path(path_text).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    try:
+        payload = normalize_queue_definition(payload)
+    except ExperimentQueueError:
+        return None
+    return _stable_json_sha256(payload)
+
+
+def _source_state_watermark_from_path(
+    path: str | None,
+    *,
+    queue_id: str | None,
+) -> dict[str, Any] | None:
+    path_text = _nonempty_str(path)
+    queue_id_text = _nonempty_str(queue_id)
+    if path_text is None or queue_id_text is None:
+        return None
+    try:
+        conn = sqlite3.connect(f"file:{Path(path_text).resolve()}?mode=ro", uri=True)
+        conn.row_factory = sqlite3.Row
+    except sqlite3.Error:
+        return None
+    try:
+        events = conn.execute(
+            """
+            SELECT COUNT(*) AS event_count, COALESCE(MAX(id), 0) AS max_event_id
+            FROM queue_events
+            WHERE queue_id = ?
+            """,
+            (queue_id_text,),
+        ).fetchone()
+        steps = conn.execute(
+            """
+            SELECT COUNT(*) AS step_state_count,
+                   COALESCE(MAX(updated_at_utc), '') AS max_step_updated_at_utc
+            FROM step_state
+            WHERE queue_id = ?
+            """,
+            (queue_id_text,),
+        ).fetchone()
+        control = conn.execute(
+            """
+            SELECT mode, updated_at_utc
+            FROM queue_controls
+            WHERE queue_id = ?
+            """,
+            (queue_id_text,),
+        ).fetchone()
+    except sqlite3.Error:
+        return None
+    finally:
+        conn.close()
+    return {
+        "schema": "experiment_queue_state_watermark.v1",
+        "queue_id": queue_id_text,
+        "state_path": path_text,
+        "event_count": int(events["event_count"] or 0) if events else 0,
+        "max_event_id": int(events["max_event_id"] or 0) if events else 0,
+        "step_state_count": int(steps["step_state_count"] or 0) if steps else 0,
+        "max_step_updated_at_utc": (
+            str(steps["max_step_updated_at_utc"] or "") if steps else ""
+        ),
+        "control_mode": str(control["mode"] or "") if control else "",
+        "control_updated_at_utc": str(control["updated_at_utc"] or "") if control else "",
+    }
 
 
 def _experiment_queue_command(
@@ -545,13 +624,41 @@ def build_queue_observation_recovery_plan(
     maintenance_actions = [item for item in actions if item.get("required") is not True]
     grouped_blockers = _queue_recovery_grouped_blockers(actions)
     repeated_group_count = sum(1 for group in grouped_blockers if group["repeated"])
+    queue_id = _nonempty_str(observation.get("queue_id"))
+    state_watermark = (
+        dict(observation.get("state_watermark"))
+        if isinstance(observation.get("state_watermark"), Mapping)
+        else _source_state_watermark_from_path(state_path, queue_id=queue_id)
+    )
+    if state_watermark is None and _blocker_matches(
+        blockers,
+        "experiment_queue_observation_state_missing",
+    ):
+        state_watermark = {
+            "schema": "experiment_queue_state_watermark.v1",
+            "queue_id": queue_id,
+            "state_path": state_path,
+            "state_missing": True,
+            "event_count": 0,
+            "max_event_id": 0,
+            "step_state_count": 0,
+            "max_step_updated_at_utc": "",
+            "control_mode": "",
+            "control_updated_at_utc": "",
+        }
+    source_queue_sha256 = _nonempty_str(observation.get("queue_sha256")) or (
+        _stable_json_file_sha256(queue_path)
+    )
     return _false_authority_payload(
         {
             "schema": QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA,
             "source_schema": observation.get("schema"),
-            "queue_id": _nonempty_str(observation.get("queue_id")),
+            "queue_id": queue_id,
             "queue_path": queue_path,
             "queue_state_path": state_path,
+            "source_queue_sha256": source_queue_sha256,
+            "source_state_watermark": state_watermark,
+            "source_observation_generated_at_utc": observation.get("generated_at_utc"),
             "observation_healthy": observation.get("healthy") is True,
             "observation_blockers": blockers,
             "observation_blocker_count": len(blockers),
@@ -990,6 +1097,10 @@ def validate_queue_observation_recovery_queue(
     command_count = 0
     source_queue_paths: list[str] = []
     source_state_paths: list[str] = []
+    expected_source_queue_sha256s: list[str] = []
+    current_source_queue_sha256s: list[str] = []
+    expected_source_state_watermarks: list[dict[str, Any]] = []
+    current_source_state_watermarks: list[dict[str, Any]] = []
 
     if recovery_queue.get("schema") != QUEUE_SCHEMA:
         blockers.append("queue_observation_recovery_schema_not_experiment_queue")
@@ -1046,18 +1157,76 @@ def validate_queue_observation_recovery_queue(
             )
             source_queue_path = _nonempty_str(metadata.get("source_queue_path"))
             source_state_path = _nonempty_str(metadata.get("source_queue_state_path"))
+            source_queue_id = _nonempty_str(metadata.get("source_queue_id"))
+            expected_source_queue_sha256 = _nonempty_str(
+                metadata.get("expected_source_queue_sha256")
+            )
+            expected_source_state_watermark = metadata.get(
+                "expected_source_state_watermark"
+            )
             if source_queue_path is None:
                 blockers.append(
                     f"queue_observation_recovery_source_queue_path_missing:{experiment_index}"
                 )
             else:
                 source_queue_paths.append(source_queue_path)
+                current_source_queue_sha256 = _stable_json_file_sha256(
+                    source_queue_path
+                )
+                if current_source_queue_sha256:
+                    current_source_queue_sha256s.append(current_source_queue_sha256)
+                if expected_source_queue_sha256 is None:
+                    blockers.append(
+                        "queue_observation_recovery_expected_source_queue_sha256_missing:"
+                        f"{experiment_index}"
+                    )
+                else:
+                    expected_source_queue_sha256s.append(expected_source_queue_sha256)
+                    if current_source_queue_sha256 is None:
+                        blockers.append(
+                            "queue_observation_recovery_current_source_queue_sha256_missing:"
+                            f"{experiment_index}"
+                        )
+                    elif current_source_queue_sha256 != expected_source_queue_sha256:
+                        blockers.append(
+                            "queue_observation_recovery_source_queue_sha256_drift:"
+                            f"{experiment_index}"
+                        )
             if source_state_path is None:
                 blockers.append(
                     f"queue_observation_recovery_source_state_path_missing:{experiment_index}"
                 )
             else:
                 source_state_paths.append(source_state_path)
+                current_source_state_watermark = _source_state_watermark_from_path(
+                    source_state_path,
+                    queue_id=source_queue_id,
+                )
+                if current_source_state_watermark is not None:
+                    current_source_state_watermarks.append(current_source_state_watermark)
+                if not isinstance(expected_source_state_watermark, Mapping):
+                    blockers.append(
+                        "queue_observation_recovery_expected_source_state_watermark_missing:"
+                        f"{experiment_index}"
+                    )
+                else:
+                    expected_watermark = dict(expected_source_state_watermark)
+                    expected_source_state_watermarks.append(expected_watermark)
+                    if (
+                        current_source_state_watermark is None
+                        and expected_watermark.get("state_missing") is True
+                    ):
+                        pass
+                    elif current_source_state_watermark is None:
+                        blockers.append(
+                            "queue_observation_recovery_current_source_state_watermark_missing:"
+                            f"{experiment_index}"
+                        )
+                    elif current_source_state_watermark != expected_watermark:
+                        blockers.append(
+                            "queue_observation_recovery_source_state_watermark_drift:"
+                            f"{experiment_index}"
+                        )
 
             steps = experiment.get("steps")
             if not isinstance(steps, list) or not steps:
@@ -1118,6 +1287,14 @@ def validate_queue_observation_recovery_queue(
             "command_count": command_count,
             "source_queue_paths": list(dict.fromkeys(source_queue_paths)),
             "source_state_paths": list(dict.fromkeys(source_state_paths)),
+            "expected_source_queue_sha256s": list(
+                dict.fromkeys(expected_source_queue_sha256s)
+            ),
+            "current_source_queue_sha256s": list(
+                dict.fromkeys(current_source_queue_sha256s)
+            ),
+            "expected_source_state_watermarks": expected_source_state_watermarks,
+            "current_source_state_watermarks": current_source_state_watermarks,
             "valid": not blockers,
             "blockers": list(dict.fromkeys(blockers)),
             "allowed_use": "local_queue_observation_recovery_validation_only",
@@ -1223,6 +1400,15 @@ def build_queue_observation_recovery_queue(
             "source_queue_id": policy.get("queue_id"),
             "source_queue_path": policy.get("queue_path"),
             "source_queue_state_path": policy.get("queue_state_path"),
+            "expected_source_queue_sha256": recovery_plan.get(
+                "source_queue_sha256"
+            ),
+            "expected_source_state_watermark": recovery_plan.get(
+                "source_state_watermark"
+            ),
+            "source_observation_generated_at_utc": recovery_plan.get(
+                "source_observation_generated_at_utc"
+            ),
             "policy_decision": policy.get("decision"),
             "action": ACTION_RECOVER_QUEUE_HEALTH,
             "required_action_count": len(command_items_by_index),
