@@ -55083,7 +55083,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "tools/build_dynamic_sparse_gate_compiler_hint.py"
+          "evidence": "src/comma_lab/scheduler/experiment_queue_observer.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -55099,7 +55099,7 @@
         },
         "strict_preflight": {
           "status": true,
-          "evidence": "src/tac/tests/test_dynamic_sparse_gate_oracle.py"
+          "evidence": "src/tac/tests/test_experiment_queue_observer.py"
         },
         "three_clean_review": {
           "status": false,
@@ -55124,5 +55124,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T11:33:25Z"
+  "updated_at": "2026-05-25T11:41:07Z"
 }

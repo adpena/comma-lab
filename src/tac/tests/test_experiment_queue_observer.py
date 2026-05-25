@@ -732,6 +732,165 @@ def test_observer_surfaces_succeeded_materializer_feedback_artifact(
     assert artifact["postcondition_passed"] is True
 
 
+def test_observer_surfaces_succeeded_single_family_materializer_manifests(
+    tmp_path: Path,
+) -> None:
+    manifests = [
+        (
+            "archive_section_entropy_recode",
+            "archive_section_entropy_recode_candidate.v1",
+            "archive_section_entropy_recode_v1",
+            "archive_section_entropy_recode_adapter",
+            "family_agnostic_archive_section_entropy_recode",
+            "section_recode",
+        ),
+        (
+            "packet_member_recompress",
+            "packet_member_recompress_candidate.v1",
+            "packet_member_recompress_v1",
+            "packet_member_recompress_adapter",
+            "family_agnostic_packet_member_recompress",
+            "selected_compression",
+        ),
+        (
+            "tensor_factorize",
+            "tensor_factorize_candidate.v1",
+            "tensor_factorize_v1",
+            "tensor_factorize_adapter",
+            "family_agnostic_tensor_factorize",
+            "factorization",
+        ),
+    ]
+    experiments: list[dict[str, object]] = []
+    for index, (
+        slug,
+        schema,
+        target_kind,
+        materializer_id,
+        receiver_contract_kind,
+        delta_key,
+    ) in enumerate(manifests, start=1):
+        manifest = tmp_path / f"{slug}.json"
+        manifest.write_text(
+            json.dumps(
+                {
+                    "schema": schema,
+                    "target_kind": target_kind,
+                    "materializer_id": materializer_id,
+                    "receiver_contract_kind": receiver_contract_kind,
+                    "receiver_contract_satisfied": True,
+                    "source_archive": {"bytes": 1000 + index, "sha256": f"{index}" * 64},
+                    "candidate_archive": {"bytes": 900 + index, "sha256": f"{index + 3}" * 64},
+                    delta_key: {
+                        "source_archive_bytes": 1000 + index,
+                        "candidate_archive_bytes": 900 + index,
+                        "saved_bytes": 100,
+                    },
+                    "score_claim": False,
+                    "score_claim_valid": False,
+                    "score_claim_eligible": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "promotable": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "field_selection_ready_for_exact_eval_dispatch": False,
+                    "dispatch_attempted": False,
+                    "gpu_launched": False,
+                    "exact_cuda_auth_eval": False,
+                    "contest_cuda_auth_eval": False,
+                    "score_affecting_payload_changed": False,
+                    "charged_bits_changed": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+        experiments.append(
+            {
+                "id": f"{slug}_experiment",
+                "status": "queued",
+                "priority": index,
+                "metadata": {
+                    "candidate_ids": [f"{slug}_candidate"],
+                    "source_unit_ids": [f"{slug}_source"],
+                    "source_selection_ids": [f"{slug}_selection"],
+                },
+                "steps": [
+                    {
+                        "id": "materialize",
+                        "kind": "command",
+                        "command": ["python", "tools/run_family_agnostic_materializer.py"],
+                        "resources": {"kind": "local_cpu"},
+                        "postconditions": [
+                            {
+                                "type": "json_false_authority",
+                                "path": manifest.as_posix(),
+                                "required_false": [
+                                    "score_claim",
+                                    "promotion_eligible",
+                                    "rank_or_kill_eligible",
+                                    "ready_for_exact_eval_dispatch",
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
+    state = tmp_path / "queue.sqlite"
+    queue = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "observer_test",
+        "controls": {"mode": "running", "max_concurrency": {"local_cpu": 3}},
+        "experiments": experiments,
+    }
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        for slug, *_ in manifests:
+            conn.execute(
+                """
+                UPDATE step_state
+                SET status = 'succeeded',
+                    attempts = 1,
+                    last_event_json = ?,
+                    updated_at_utc = '2026-05-25T06:00:00Z'
+                WHERE queue_id = 'observer_test'
+                  AND experiment_id = ?
+                  AND step_id = 'materialize'
+                """,
+                (
+                    json.dumps({"command": ["python", "tools/run_family_agnostic_materializer.py"]}),
+                    f"{slug}_experiment",
+                ),
+            )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+    )
+
+    assert observation["healthy"] is True
+    assert observation["succeeded_artifact_failure_steps"] == []
+    assert len(observation["succeeded_artifact_steps"]) == 3
+    artifact_by_schema = {
+        step["expected_artifacts"][0]["json_schema"]: step["expected_artifacts"][0]
+        for step in observation["succeeded_artifact_steps"]
+    }
+    assert set(artifact_by_schema) == {schema for _, schema, *_ in manifests}
+    for _, schema, target_kind, materializer_id, receiver_contract_kind, delta_key in manifests:
+        artifact = artifact_by_schema[schema]
+        assert artifact["target_kind"] == target_kind
+        assert artifact["materializer_id"] == materializer_id
+        assert artifact["receiver_contract_kind"] == receiver_contract_kind
+        assert artifact["materializer_delta_source"] == delta_key
+        assert artifact["serialized_archive_delta_realized_saved_bytes"] == 100
+        assert artifact["score_claim"] is False
+        assert artifact["postcondition_passed"] is True
+
+
 def test_observer_health_marks_missing_state_fail_closed(tmp_path: Path) -> None:
     artifact = tmp_path / "artifact.json"
     state = tmp_path / "missing.sqlite"

@@ -21,11 +21,27 @@ from comma_lab.scheduler.experiment_queue import (
     queue_summary,
     resolve_worker_max_parallel,
 )
-from tac.optimization.materializer_feedback import materializer_archive_delta
+from tac.optimization.materializer_feedback import (
+    MATERIALIZER_FALSE_AUTHORITY,
+    materializer_archive_delta,
+)
 
 OBSERVATION_SCHEMA = "experiment_queue_observation.v1"
 FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA = "family_agnostic_materializer_empirical_observation.v1"
 FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA = "family_agnostic_materializer_empirical_sweep.v1"
+FAMILY_AGNOSTIC_MATERIALIZER_CANDIDATE_SCHEMAS = frozenset(
+    {
+        "archive_section_entropy_recode_candidate.v1",
+        "packet_member_recompress_candidate.v1",
+        "tensor_factorize_candidate.v1",
+    }
+)
+REQUIRED_MATERIALIZER_FEEDBACK_FALSE_AUTHORITY_FIELDS = (
+    "score_claim",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "ready_for_exact_eval_dispatch",
+)
 
 
 def _utc_now() -> str:
@@ -132,6 +148,7 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
         if payload is not None:
             record["json_schema"] = payload.get("schema") or payload.get("schema_version")
             for key in (
+                *MATERIALIZER_FALSE_AUTHORITY,
                 "candidate_id",
                 "target_kind",
                 "materializer_id",
@@ -500,6 +517,10 @@ def _step_has_materializer_feedback_artifact(
             continue
         if artifact.get("exists") is not True:
             continue
+        if artifact.get("postcondition_passed") is not True:
+            continue
+        if not _artifact_false_authority_satisfied(artifact):
+            continue
         if (
             artifact.get("postcondition_type") == "jsonl_false_authority"
             and artifact.get("postcondition_schema_equals")
@@ -511,7 +532,52 @@ def _step_has_materializer_feedback_artifact(
             FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA,
         }:
             return True
+        if (
+            artifact.get("json_schema") in FAMILY_AGNOSTIC_MATERIALIZER_CANDIDATE_SCHEMAS
+            and _artifact_has_materializer_identity(artifact)
+            and _artifact_has_materializer_delta(artifact)
+        ):
+            return True
     return False
+
+
+def _artifact_false_authority_satisfied(artifact: Mapping[str, Any]) -> bool:
+    if (
+        artifact.get("postcondition_type") in {"json_false_authority", "jsonl_false_authority"}
+        and artifact.get("postcondition_passed") is True
+    ):
+        return True
+    for key in REQUIRED_MATERIALIZER_FEEDBACK_FALSE_AUTHORITY_FIELDS:
+        if artifact.get(key) is not False:
+            return False
+    return all(
+        not (key in artifact and artifact.get(key) is not False)
+        for key in MATERIALIZER_FALSE_AUTHORITY
+    )
+
+
+def _artifact_has_materializer_identity(artifact: Mapping[str, Any]) -> bool:
+    return (
+        bool(artifact.get("target_kind"))
+        and bool(artifact.get("materializer_id"))
+        and bool(artifact.get("receiver_contract_kind"))
+    )
+
+
+def _artifact_has_materializer_delta(artifact: Mapping[str, Any]) -> bool:
+    return bool(artifact.get("materializer_delta_source")) or any(
+        artifact.get(key) is not None
+        for key in (
+            "serialized_archive_delta_status",
+            "serialized_archive_delta_realized_saved_bytes",
+            "section_recode_saved_bytes",
+            "selected_compression_saved_bytes",
+            "selected_merge_saved_bytes",
+            "selected_payload_saved_bytes",
+            "selected_elision_saved_bytes",
+            "factorization_saved_bytes",
+        )
+    )
 
 
 def observe_experiment_queue(
