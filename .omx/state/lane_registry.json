@@ -56345,6 +56345,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_mlx_conv2d_spend_triage_gate_20260525",
+      "name": "MLX Conv2d spend triage gate",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_mlx_conv2d_spend_triage_gate_20260525T205405Z_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "ruff touched MLX gate files; 178 affected MLX spend-triage/parity tests passed"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_mlx_conv2d_spend_triage_gate_20260525T205405Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_tensor_factorize_receiver_dfl1_queue_ordering_20260525",
+      "name": "Tensor factorize receiver and DFL1 queue ordering",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_tensor_factorize_receiver_runtime_20260525T205902Z_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "ruff touched receiver/queue files; 145 affected materializer/final-byte/queue tests passed"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_tensor_factorize_receiver_runtime_20260525T205902Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pr95_mlx_full_decoder_downstream_scorer_drift_measurement_20260525",
+      "name": "PR95 MLX\u2192PyTorch Full Decoder Downstream Scorer Drift Measurement (Task #1258)",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "[macOS-MLX research-signal] tools/measure_pr95_mlx_pytorch_full_decoder_downstream_scorer_drift.py contest_uint8 smoke; result 4874409f6c6ff2d4d5944fad85315ac93790e7ef885891c70114f6d3782bd093; aggregate drift 7.411371190353894e-05 below local 0.001 threshold; top-level false authority fields present; not score/promotion/rank/dispatch authority"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "ruff tool passed; --help passed; one-pair contest_uint8 smoke already recorded with false-authority probe row"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/pr95_mlx_full_decoder_downstream_scorer_drift_measurement_landed_20260525.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -56354,5 +56477,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T20:23:26Z"
+  "updated_at": "2026-05-25T21:08:54Z"
 }
