@@ -18,6 +18,9 @@ import brotli
 import pytest
 
 from comma_lab.scheduler.byte_shaving_campaign_queue import (
+    GROUPED_ARCHIVE_STATE_MATERIALIZER_CHAIN_SCHEMA,
+    GROUPED_ARCHIVE_STATE_MATERIALIZER_REQUEST_SCHEMA,
+    GROUPED_ARCHIVE_STATE_MATERIALIZER_TOOL,
     MATERIALIZATION_SCHEMA,
     MATERIALIZER_BACKLOG_SCHEMA,
     MATERIALIZER_CONTEXTS_SCHEMA,
@@ -133,6 +136,7 @@ from tools import build_byte_shaving_campaign_queue as queue_cli
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = REPO_ROOT / "tools" / "build_byte_shaving_campaign_queue.py"
+GROUPED_TOOL = REPO_ROOT / "tools" / "run_grouped_family_agnostic_materializer.py"
 
 
 @dataclass(frozen=True)
@@ -196,6 +200,24 @@ def _load_queue_builder_tool_module():
     spec = importlib.util.spec_from_file_location(
         "build_byte_shaving_campaign_queue_tool",
         TOOL,
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    original_path = list(sys.path)
+    try:
+        sys.path.insert(0, str(REPO_ROOT))
+        sys.path.insert(0, str(REPO_ROOT / "tools"))
+        spec.loader.exec_module(module)
+    finally:
+        sys.path[:] = original_path
+    return module
+
+
+def _load_grouped_materializer_tool_module():
+    spec = importlib.util.spec_from_file_location(
+        "run_grouped_family_agnostic_materializer_tool",
+        GROUPED_TOOL,
     )
     assert spec is not None
     assert spec.loader is not None
@@ -2573,6 +2595,233 @@ def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
     assert "tensor_factorize_requires_cooperative_receiver" in tensor_row["dispatch_blockers"]
     assert tensor_row["score_claim"] is False
     assert tensor_row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_work_queue_emits_grouped_archive_state_requests(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    section_manifest = tmp_path / "sections.json"
+    packet_manifest = tmp_path / "packet_members.json"
+    entropy_out = tmp_path / "entropy_candidate.zip"
+    entropy_manifest = tmp_path / "entropy_candidate.json"
+    packet_out = tmp_path / "packet_candidate.zip"
+    packet_manifest_out = tmp_path / "packet_candidate.json"
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "backlog_key": "entropy_step",
+                "unit_kind": "archive_section",
+                "operation_family": "section_entropy_recode",
+                "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+                "materializer_id": ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER,
+                "source_packet_ir_operation_set_ids": ["packetir_group_fixture"],
+                "source_packet_ir_source_operation_set_ids": ["source_opset"],
+                "source_packet_ir_operation_indices": [2],
+                "source_packet_ir_operation_indices_by_unit": {"section_a": 2},
+                **_false_authority(),
+            },
+            {
+                "backlog_key": "packet_step",
+                "unit_kind": "packet_member",
+                "operation_family": "member_recompress",
+                "target_kind": PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                "materializer_id": PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
+                "source_packet_ir_operation_set_ids": ["packetir_group_fixture"],
+                "source_packet_ir_source_operation_set_ids": ["source_opset"],
+                "source_packet_ir_operation_indices": [1],
+                "source_packet_ir_operation_indices_by_unit": {"member_a": 1},
+                **_false_authority(),
+            },
+        ],
+        **_false_authority(),
+    }
+
+    contexts_payload = build_final_byte_operation_contexts(
+        backlog,
+        artifact_map=None,
+        repo_root=tmp_path,
+        default_output_root=tmp_path / "contexts",
+    )
+    assert (
+        contexts_payload["rows"][0]["context"][
+            "source_packet_ir_operation_indices_by_unit"
+        ]
+        == {"section_a": 2}
+    )
+    queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts={
+            "entropy_step": {
+                "archive_path": str(archive),
+                "section_manifest": str(section_manifest),
+                "section_names": ["decoder"],
+                "output_archive": str(entropy_out),
+                "output_manifest": str(entropy_manifest),
+            },
+            "packet_step": {
+                "archive_path": str(archive),
+                "packet_member_manifest": str(packet_manifest),
+                "member_name": "payload.bin",
+                "output_archive": str(packet_out),
+                "output_manifest": str(packet_manifest_out),
+            },
+        },
+        source_plan_path="plan.json",
+    )
+
+    assert queue["schema"] == MATERIALIZER_WORK_QUEUE_SCHEMA
+    assert queue["executable_row_count"] == 2
+    assert queue["grouped_archive_state_request_count"] == 1
+    assert queue["grouped_archive_state_executable_request_count"] == 1
+    request = queue["grouped_archive_state_materializer_requests"][0]
+    assert request["schema"] == GROUPED_ARCHIVE_STATE_MATERIALIZER_REQUEST_SCHEMA
+    assert request["tool"] == GROUPED_ARCHIVE_STATE_MATERIALIZER_TOOL
+    assert request["executable"] is True
+    assert request["grouped_execution_ready"] is True
+    assert request["source_packet_ir_operation_set_id"] == "packetir_group_fixture"
+    assert request["source_packet_ir_source_operation_set_ids"] == ["source_opset"]
+    assert request["source_packet_ir_operation_indices"] == [1, 2]
+    assert request["ordered_work_ids"] == [
+        "materializer_work_packet_step",
+        "materializer_work_entropy_step",
+    ]
+    assert request["operation_rows"][0]["source_packet_ir_operation_indices"] == [1]
+    assert request["operation_rows"][1]["source_packet_ir_operation_indices"] == [2]
+    assert request["score_claim"] is False
+    assert request["ready_for_exact_eval_dispatch"] is False
+
+
+def test_grouped_family_agnostic_materializer_chains_archive_state(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_grouped_materializer_tool_module()
+    source_archive = tmp_path / "source.zip"
+    source_archive.write_bytes(b"source-archive")
+    work_queue_path = tmp_path / "materializer_work_queue.json"
+    output_manifest = tmp_path / "grouped_manifest.json"
+    output_dir = tmp_path / "grouped_steps"
+    work_queue = {
+        "schema": MATERIALIZER_WORK_QUEUE_SCHEMA,
+        "rows": [
+            {
+                "work_id": "materializer_work_first",
+                "target_kind": PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                "executable": True,
+                "command": [
+                    sys.executable,
+                    "tools/run_family_agnostic_materializer.py",
+                    "--archive-path",
+                    str(source_archive),
+                    "--output-archive",
+                    str(tmp_path / "unused_first.zip"),
+                    "--output-manifest",
+                    str(tmp_path / "unused_first.json"),
+                ],
+                **_false_authority(),
+            },
+            {
+                "work_id": "materializer_work_second",
+                "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+                "executable": True,
+                "command": [
+                    sys.executable,
+                    "tools/run_family_agnostic_materializer.py",
+                    "--archive-path",
+                    str(source_archive),
+                    "--output-archive",
+                    str(tmp_path / "unused_second.zip"),
+                    "--output-manifest",
+                    str(tmp_path / "unused_second.json"),
+                ],
+                **_false_authority(),
+            },
+        ],
+        "grouped_archive_state_materializer_requests": [
+            {
+                "schema": GROUPED_ARCHIVE_STATE_MATERIALIZER_REQUEST_SCHEMA,
+                "request_id": "grouped_fixture",
+                "source_packet_ir_operation_set_id": "packetir_group_fixture",
+                "ordered_work_ids": [
+                    "materializer_work_first",
+                    "materializer_work_second",
+                ],
+                "executable": True,
+                "grouped_execution_ready": True,
+                "grouped_execution_blockers": [],
+                **_false_authority(),
+            }
+        ],
+        **_false_authority(),
+    }
+    work_queue_path.write_text(json.dumps(work_queue), encoding="utf-8")
+
+    commands: list[list[str]] = []
+
+    def fake_run(command, **_kwargs):
+        command = [str(item) for item in command]
+        commands.append(command)
+        out_archive = Path(command[command.index("--output-archive") + 1])
+        out_manifest = Path(command[command.index("--output-manifest") + 1])
+        out_archive.parent.mkdir(parents=True, exist_ok=True)
+        out_archive.write_bytes(
+            f"candidate-from-{Path(command[command.index('--archive-path') + 1]).name}".encode()
+        )
+        out_manifest.write_text(
+            json.dumps(
+                {
+                    "schema": PACKET_MEMBER_RECOMPRESS_SCHEMA,
+                    "byte_closed_candidate_emitted": True,
+                    "receiver_contract_satisfied": True,
+                    "receiver_verification": {
+                        "receiver_contract_satisfied": True,
+                    },
+                    "readiness_blockers": [],
+                    "runtime_consumption_proof_path": str(
+                        out_manifest.with_suffix(".proof.json")
+                    ),
+                    **_false_authority(),
+                }
+            ),
+            encoding="utf-8",
+        )
+        return subprocess.CompletedProcess(
+            args=command,
+            returncode=0,
+            stdout="{}",
+            stderr="",
+        )
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    manifest = module.run_grouped_request(
+        work_queue_path=work_queue_path,
+        request_id="grouped_fixture",
+        output_dir=output_dir,
+        output_manifest=output_manifest,
+        repo_root=tmp_path,
+        allow_overwrite=True,
+    )
+
+    assert manifest["schema"] == GROUPED_ARCHIVE_STATE_MATERIALIZER_CHAIN_SCHEMA
+    assert manifest["operation_count"] == 2
+    assert manifest["byte_closed_candidate_emitted"] is True
+    assert manifest["receiver_contract_satisfied"] is True
+    assert manifest["readiness_blockers"] == []
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert commands[0][commands[0].index("--archive-path") + 1] == str(source_archive)
+    assert commands[1][commands[1].index("--archive-path") + 1] == str(
+        output_dir / "step_01_materializer_work_first.archive.zip"
+    )
+    second_command = manifest["operations"][1]["command"]
+    assert Path(second_command[second_command.index("--archive-path") + 1]) == (
+        output_dir / "step_01_materializer_work_first.archive.zip"
+    )
+    assert output_manifest.is_file()
 
 
 def test_materializer_work_queue_wraps_family_agnostic_empirical_sweep(

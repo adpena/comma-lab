@@ -809,10 +809,18 @@ def _context_row_payload(
         "source_packet_ir_schemas",
         "source_packet_ir_operation_set_ids",
         "source_packet_ir_source_operation_set_ids",
+        "source_packet_ir_operation_indices",
     ):
         values = _as_list(row.get(key))
         if values:
             context_payload[key] = values
+    operation_indices_by_unit = _int_mapping(
+        row.get("source_packet_ir_operation_indices_by_unit")
+    )
+    if operation_indices_by_unit:
+        context_payload["source_packet_ir_operation_indices_by_unit"] = (
+            operation_indices_by_unit
+        )
     packet_ir_blocker_counts = _int_mapping(row.get("packet_ir_blocker_counts"))
     if packet_ir_blocker_counts:
         context_payload["packet_ir_blocker_counts"] = packet_ir_blocker_counts
@@ -828,6 +836,10 @@ def _context_row_payload(
         "source_packet_ir_schemas": _as_list(row.get("source_packet_ir_schemas")),
         "source_packet_ir_operation_set_ids": _as_list(row.get("source_packet_ir_operation_set_ids")),
         "source_packet_ir_source_operation_set_ids": _as_list(row.get("source_packet_ir_source_operation_set_ids")),
+        "source_packet_ir_operation_indices": _as_list(
+            row.get("source_packet_ir_operation_indices")
+        ),
+        "source_packet_ir_operation_indices_by_unit": operation_indices_by_unit,
         "packet_ir_blocker_counts": packet_ir_blocker_counts,
         "context_keys": _context_keys(row),
         "context": context_payload,

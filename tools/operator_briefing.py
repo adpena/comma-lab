@@ -68,9 +68,14 @@ FRONTIER_FEEDBACK_SCAN_ROOTS = (
     REPO_ROOT / ".omx" / "research",
     REPO_ROOT / "experiments" / "results",
 )
+PR95_MLX_CONTROL_PROFILE_SCAN_ROOTS = (
+    REPO_ROOT / "experiments" / "results",
+    REPO_ROOT / ".omx" / "research",
+)
 BYTE_SHAVING_MATERIALIZER_CAMPAIGN_RUN_NAME = "materializer_campaign_run.json"
 FRONTIER_FEEDBACK_CYCLE_REPORT_NAME = "frontier_rate_attack_feedback_cycle.json"
 FRONTIER_FEEDBACK_REFRESH_REPORT_NAME = "feedback_refresh_report.json"
+PR95_MLX_MATRIX_MANIFEST_NAME = "matrix_manifest.json"
 FRONTIER_FEEDBACK_CYCLE_TOOL = "tools/run_frontier_rate_attack_feedback_cycle.py"
 MATERIALIZER_EXACT_EVAL_CONSUMER_TOOL = "tools/build_materializer_exact_eval_consumer.py"
 EXACT_READY_SCORE_AXIS_REPAIR_TOOL = "tools/repair_exact_ready_score_axis.py"
@@ -1846,6 +1851,277 @@ def _repo_path_from_ref(value: object) -> Path | None:
         return None
     path = Path(value)
     return path if path.is_absolute() else REPO_ROOT / path
+
+
+def _pr95_mlx_control_profile_paths(
+    scan_roots: tuple[Path, ...] | None = None,
+) -> list[Path]:
+    if scan_roots is None:
+        scan_roots = PR95_MLX_CONTROL_PROFILE_SCAN_ROOTS
+    seen: set[Path] = set()
+    paths: list[Path] = []
+    for root in scan_roots:
+        if not root.exists():
+            continue
+        for path in root.glob(f"**/{PR95_MLX_MATRIX_MANIFEST_NAME}"):
+            resolved = path.resolve(strict=False)
+            if resolved in seen or not path.is_file():
+                continue
+            seen.add(resolved)
+            paths.append(path)
+    return sorted(
+        paths,
+        key=lambda item: item.stat().st_mtime_ns if item.exists() else 0,
+        reverse=True,
+    )
+
+
+def _pr95_mlx_run_manifest_digest(path_ref: object) -> dict[str, object]:
+    path = _repo_path_from_ref(path_ref)
+    if path is None or not path.is_file():
+        return {
+            "run_manifest_path": _repo_rel(path) if path is not None else "",
+            "run_manifest_exists": False,
+            "runtime_consumption_proven": False,
+            "training_loss_surface": "",
+            "manifest_train_seconds": 0.0,
+            "process_seconds": 0.0,
+        }
+    payload = _load_json_file(path)
+    proof = (
+        payload.get("runtime_consumption_proof")
+        if isinstance(payload.get("runtime_consumption_proof"), dict)
+        else {}
+    )
+    return {
+        "run_manifest_path": _repo_rel(path),
+        "run_manifest_exists": "_error" not in payload,
+        "runtime_consumption_proven": (
+            proof.get("runtime_consumption_proven") is True
+        ),
+        "training_loss_surface": str(payload.get("training_loss_surface") or ""),
+        "manifest_train_seconds": _safe_float(
+            payload.get("train_seconds")
+            or payload.get("elapsed_train_seconds")
+            or payload.get("manifest_train_seconds")
+        ),
+        "process_seconds": _safe_float(
+            payload.get("process_seconds")
+            or payload.get("elapsed_seconds")
+            or payload.get("wall_seconds")
+        ),
+    }
+
+
+def _pr95_mlx_control_profile_row(path: Path) -> dict[str, object]:
+    payload = _load_json_file(path)
+    base = {
+        "kind": "pr95_mlx_control_profile",
+        "path": _repo_rel(path),
+        "sha256": _sha256_file(path) if path.is_file() else "",
+        "mtime_ns": path.stat().st_mtime_ns if path.is_file() else 0,
+        **_false_authority_fields(),
+    }
+    if "_error" in payload:
+        return {
+            **base,
+            "status": "ERROR",
+            "blockers": [str(payload["_error"])],
+        }
+    if payload.get("schema") != "pr95_hnerv_mlx_optimizer_matrix_queue.v1":
+        return {
+            **base,
+            "status": "IGNORED",
+            "schema": str(payload.get("schema") or ""),
+            "blockers": ["not a PR95 MLX matrix manifest"],
+        }
+    bad_authority = _authority_truthy(payload)
+    if bad_authority:
+        return {
+            **base,
+            "status": "BLOCKED_AUTHORITY_LEAK",
+            "schema": str(payload.get("schema") or ""),
+            "blockers": [f"truthy_authority:{key}" for key in bad_authority],
+        }
+    plans = payload.get("plans") if isinstance(payload.get("plans"), list) else []
+    run_digests = [
+        _pr95_mlx_run_manifest_digest(row.get("run_manifest"))
+        for row in plans
+        if isinstance(row, dict)
+    ]
+    queue_path = _repo_path_from_ref(payload.get("queue_output"))
+    state_path = default_state_path(REPO_ROOT, str(payload.get("queue_id") or ""))
+    queue_observation: dict[str, object] = {}
+    queue_exists = queue_path is not None and queue_path.is_file()
+    if queue_exists and state_path.is_file():
+        try:
+            queue = load_queue_definition(queue_path)
+            queue_observation = {
+                **observe_experiment_queue(
+                    queue,
+                    state_path=state_path,
+                    repo_root=REPO_ROOT,
+                    tail_lines=0,
+                    include_orphans=True,
+                ),
+                "operator_briefing_live_observation": True,
+                **_false_authority_fields(),
+            }
+        except Exception as exc:  # pragma: no cover - depends on state corruption
+            queue_observation = {
+                "operator_briefing_live_observation": True,
+                "healthy": False,
+                "blockers": [
+                    "operator_briefing_pr95_mlx_queue_observation_failed"
+                ],
+                "error": f"{type(exc).__name__}: {exc}",
+                **_false_authority_fields(),
+            }
+    status_counts = (
+        queue_observation.get("status_counts")
+        if isinstance(queue_observation.get("status_counts"), dict)
+        else {}
+    )
+    blocker_count = len(
+        queue_observation.get("blockers")
+        if isinstance(queue_observation.get("blockers"), list)
+        else []
+    )
+    row_blockers = (
+        queue_observation.get("blockers")
+        if isinstance(queue_observation.get("blockers"), list)
+        else []
+    )
+    if blocker_count:
+        status = "BLOCKED_QUEUE_OBSERVATION"
+    elif queue_observation.get("healthy") is True and _safe_int(
+        status_counts.get("succeeded")
+    ) >= len(plans) > 0:
+        status = "EXECUTED_HEALTHY"
+    elif queue_exists:
+        status = "QUEUE_READY"
+    else:
+        status = "MANIFEST_ONLY"
+    proven_count = sum(
+        1 for row in run_digests if row.get("runtime_consumption_proven") is True
+    )
+    return {
+        **base,
+        "schema": str(payload.get("schema") or ""),
+        "status": status,
+        "queue_id": str(payload.get("queue_id") or ""),
+        "queue_path": _repo_rel(queue_path) if queue_path is not None else "",
+        "queue_exists": queue_exists,
+        "queue_state_path": _repo_rel(state_path),
+        "queue_state_exists": state_path.is_file(),
+        "queue_observation": queue_observation,
+        "queue_status_counts": status_counts,
+        "queue_observation_blocker_count": blocker_count,
+        "control_profile": str(payload.get("control_profile") or ""),
+        "stage_indices": payload.get("stage_indices")
+        if isinstance(payload.get("stage_indices"), list)
+        else [],
+        "plan_count": len(plans),
+        "source_video_loss_surface": str(payload.get("source_video_loss_surface") or ""),
+        "train_on_source_video_pairs": (
+            payload.get("train_on_source_video_pairs") is True
+        ),
+        "prove_pr95_runtime_consumption": (
+            payload.get("prove_pr95_runtime_consumption") is True
+        ),
+        "runtime_consumption_proven_count": proven_count,
+        "runtime_consumption_missing_count": max(0, len(plans) - proven_count),
+        "run_manifest_count": sum(
+            1 for row in run_digests if row.get("run_manifest_exists") is True
+        ),
+        "loss_surfaces": _unique_strings(
+            [
+                str(row.get("training_loss_surface") or "")
+                for row in run_digests
+                if row.get("training_loss_surface")
+            ]
+        ),
+        "manifest_train_seconds_sum": sum(
+            _safe_float(row.get("manifest_train_seconds")) for row in run_digests
+        ),
+        "process_seconds_sum": sum(
+            _safe_float(row.get("process_seconds")) for row in run_digests
+        ),
+        "blockers": row_blockers,
+    }
+
+
+def _pr95_mlx_control_profile_summary() -> dict[str, object]:
+    rows = [
+        row
+        for row in (
+            _pr95_mlx_control_profile_row(path)
+            for path in _pr95_mlx_control_profile_paths()
+        )
+        if row.get("status") != "IGNORED"
+    ]
+    latest = rows[0] if rows else {}
+    executed = [row for row in rows if row.get("status") == "EXECUTED_HEALTHY"]
+    blocked = [
+        row
+        for row in rows
+        if str(row.get("status") or "").startswith(("BLOCKED", "ERROR"))
+    ]
+    latest_status = str(latest.get("status") or "") if latest else ""
+    if latest_status.startswith(("BLOCKED", "ERROR")):
+        status = "BLOCKED"
+        reason = "latest PR95 MLX profile failed safe loading or observation"
+    elif executed and latest_status == "EXECUTED_HEALTHY":
+        status = "EXECUTED_HEALTHY"
+        reason = "latest PR95 MLX profile has healthy local queue observations"
+    elif latest:
+        status = str(latest.get("status") or "PENDING")
+        reason = "latest PR95 MLX profile is visible but not fully observed healthy"
+    else:
+        status = "PENDING"
+        reason = "no PR95 MLX matrix profile manifest found"
+    return {
+        "schema": "pact.pr95_mlx_control_profile_summary.v1",
+        "scan_roots": [_repo_rel(root) for root in PR95_MLX_CONTROL_PROFILE_SCAN_ROOTS],
+        "status": status,
+        "reason": reason,
+        "profile_count": len(rows),
+        "executed_healthy_count": len(executed),
+        "blocked_count": len(blocked),
+        "latest_profile": latest,
+        "latest_profiles": rows[:5],
+        **_false_authority_fields(),
+    }
+
+
+def _format_pr95_mlx_control_profiles() -> str:
+    payload = _pr95_mlx_control_profile_summary()
+    lines = [
+        f"status: {payload['status']} — {payload['reason']}",
+        f"profiles: {payload['profile_count']} "
+        f"executed_healthy={payload['executed_healthy_count']} "
+        f"blocked={payload['blocked_count']}",
+    ]
+    latest = payload.get("latest_profile")
+    if isinstance(latest, dict) and latest:
+        lines.extend(
+            [
+                "latest profile:",
+                f"  path: {latest.get('path')}",
+                f"  queue: {latest.get('queue_path') or '-'}",
+                f"  queue_status: {latest.get('status')}",
+                f"  control_profile: {latest.get('control_profile') or '-'}",
+                f"  stages: {latest.get('stage_indices')}",
+                f"  source_loss: {latest.get('source_video_loss_surface') or '-'}",
+                f"  plans: {latest.get('plan_count')} "
+                f"runtime_proven={latest.get('runtime_consumption_proven_count')}",
+                f"  queue_counts: {latest.get('queue_status_counts') or {}}",
+            ]
+        )
+    lines.append(
+        "authority: local MLX research-signal only; exact CPU/CUDA auth still required before score, rank, promotion, or dispatch."
+    )
+    return "\n".join(lines)
 
 
 def _live_queue_observation_error(
@@ -5221,6 +5497,7 @@ def _dispatch_readiness() -> dict[str, object]:
     phase7 = _constrained_coord_search_readiness()
     byte_shaving_acquisition = _byte_shaving_acquisition_summary()
     frontier_feedback_cycle = _frontier_feedback_cycle_summary()
+    pr95_mlx_profiles = _pr95_mlx_control_profile_summary()
     return {
         "schema": "pact.operator_dispatch_readiness.v1",
         "phase_1_exact_eval_packets": phase1,
@@ -5342,6 +5619,15 @@ def _dispatch_readiness() -> dict[str, object]:
             "ready_for_exact_eval_dispatch": False,
             "score_claim": False,
         },
+        "phase_6e_pr95_mlx_control_profiles": {
+            "status": pr95_mlx_profiles["status"],
+            "reason": pr95_mlx_profiles["reason"],
+            "profile_count": pr95_mlx_profiles["profile_count"],
+            "executed_healthy_count": pr95_mlx_profiles["executed_healthy_count"],
+            "blocked_count": pr95_mlx_profiles["blocked_count"],
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+        },
         "recommendation": (
             "prefer M5 Max parallel coarse-rank ($0) before paid GHA promotion; "
             "reference Phase 6 xray toolkit for diagnosis"
@@ -5392,6 +5678,11 @@ def _format_dispatch_readiness() -> str:
     lines.append(
         "  Phase 6d (frontier feedback cycle):         "
         f"{phase6d['status']} — {phase6d['reason']}"
+    )
+    phase6e = readiness["phase_6e_pr95_mlx_control_profiles"]
+    lines.append(
+        "  Phase 6e (PR95 MLX control profiles):       "
+        f"{phase6e['status']} — {phase6e['reason']}"
     )
     phase7 = readiness["phase_7_constrained_coord_search"]
     lines.append(
@@ -5468,6 +5759,7 @@ def main(argv: list[str] | None = None) -> int:
             ),
             "byte_shaving_acquisition": _byte_shaving_acquisition_summary(),
             "frontier_feedback_cycle": _frontier_feedback_cycle_summary(),
+            "pr95_mlx_control_profiles": _pr95_mlx_control_profile_summary(),
             "l5_v2_frontier_readiness": _l5_v2_frontier_readiness(
                 dispatch_claim_summary=dispatch_claim_summary
             ),
@@ -5612,6 +5904,10 @@ def main(argv: list[str] | None = None) -> int:
     parts.append(_section(
         "Phase 6d — Frontier feedback cycle autopolicy",
         _format_frontier_feedback_cycle_summary(),
+    ))
+    parts.append(_section(
+        "Phase 6e — PR95 MLX control profiles",
+        _format_pr95_mlx_control_profiles(),
     ))
     parts.append(_section(
         "Phase 7 — Constrained-coord-search status (sister subagent a8522fca)",

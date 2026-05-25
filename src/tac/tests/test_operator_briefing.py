@@ -82,6 +82,7 @@ def test_briefing_runs_all_three_phases():
     assert "Phase 1 materializer exact-ready handoffs" in proc.stdout
     assert "Phase 1 blocked readiness artifacts" in proc.stdout
     assert "Phase 6c — High-level byte-shaving acquisition queue" in proc.stdout
+    assert "Phase 6e — PR95 MLX control profiles" in proc.stdout
     assert "pr91_hpm1_readiness_bundle" in proc.stdout
     assert "wr01_apply_pr106x_half" in proc.stdout
     assert "pr106_q10_151byte_brotli" in proc.stdout
@@ -170,6 +171,12 @@ def test_briefing_json_composite_has_all_three_keys():
     assert integration["canonical_packet_compiler"] == (
         "tac.packet_compiler.deterministic_compiler"
     )
+    pr95_mlx = out["pr95_mlx_control_profiles"]
+    assert pr95_mlx["schema"] == "pact.pr95_mlx_control_profile_summary.v1"
+    assert pr95_mlx["score_claim"] is False
+    assert pr95_mlx["promotion_eligible"] is False
+    assert pr95_mlx["rank_or_kill_eligible"] is False
+    assert pr95_mlx["ready_for_exact_eval_dispatch"] is False
     l5 = out["l5_v2_frontier_readiness"]
     assert l5["schema"] == "pact.l5_v2_frontier_readiness.v1"
     assert l5["score_claim"] is False
@@ -3326,6 +3333,86 @@ def test_operator_briefing_surfaces_frontier_feedback_cycle_autopolicy(
     assert "latest eureka refresh:" in text
     assert "selected_drop_many: 1" in text
     assert "selected_geometry: 1" in text
+
+
+def test_pr95_mlx_control_profile_summary_surfaces_queue_profile(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    root = tmp_path / "profiles" / "pr95_mlx_full_source_video_runtime_profile_fixture"
+    run_manifest = _write_json(
+        root / "plans" / "stage1" / "manifest.json",
+        {
+            "schema": "pr95_hnerv_mlx_timing_smoke_manifest_v1",
+            "training_loss_surface": "rgb_yuv6_mse",
+            "train_seconds": 0.125,
+            "runtime_consumption_proof": {
+                "runtime_consumption_proven": True,
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+        },
+    )
+    queue = _write_json(
+        root / "experiment_queue.json",
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "pr95_mlx_profile_fixture",
+            "controls": {"mode": "running", "local_first": True},
+            "experiments": [],
+        },
+    )
+    _write_json(
+        root / "matrix_manifest.json",
+        {
+            "schema": "pr95_hnerv_mlx_optimizer_matrix_queue.v1",
+            "queue_id": "pr95_mlx_profile_fixture",
+            "queue_output": str(queue),
+            "control_profile": "full_pr95_source_video_runtime",
+            "stage_indices": [1],
+            "source_video_loss_surface": "rgb_yuv6_mse",
+            "train_on_source_video_pairs": True,
+            "prove_pr95_runtime_consumption": True,
+            "plans": [
+                {
+                    "candidate_id": "stage1_fixture",
+                    "stage_index": 1,
+                    "run_manifest": str(run_manifest),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "dispatch_attempted": False,
+                    "gpu_launched": False,
+                }
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+        },
+    )
+    monkeypatch.setattr(mod, "PR95_MLX_CONTROL_PROFILE_SCAN_ROOTS", (tmp_path,))
+
+    summary = mod._pr95_mlx_control_profile_summary()
+    latest = summary["latest_profile"]
+
+    assert summary["profile_count"] == 1
+    assert summary["blocked_count"] == 0
+    assert latest["status"] == "QUEUE_READY"
+    assert latest["control_profile"] == "full_pr95_source_video_runtime"
+    assert latest["runtime_consumption_proven_count"] == 1
+    assert latest["source_video_loss_surface"] == "rgb_yuv6_mse"
+    assert latest["score_claim"] is False
+    assert latest["ready_for_exact_eval_dispatch"] is False
+    assert "runtime_proven=1" in mod._format_pr95_mlx_control_profiles()
 
 
 def test_operator_briefing_blocks_frontier_feedback_cycle_authority_leak(

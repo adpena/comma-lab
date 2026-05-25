@@ -96,6 +96,8 @@ MATERIALIZER_BACKLOG_SCHEMA = "byte_shaving_materializer_backlog.v1"
 MATERIALIZER_CONTEXTS_SCHEMA = "byte_shaving_materializer_contexts.v1"
 MATERIALIZER_WORK_QUEUE_SCHEMA = "byte_shaving_materializer_work_queue.v1"
 MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA = "byte_shaving_materializer_execution_experiment_metadata.v1"
+GROUPED_ARCHIVE_STATE_MATERIALIZER_REQUEST_SCHEMA = "grouped_archive_state_materializer_request.v1"
+GROUPED_ARCHIVE_STATE_MATERIALIZER_CHAIN_SCHEMA = "grouped_archive_state_materializer_chain.v1"
 MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID = "materializer_scheduler_preflight"
 ACTION_SUMMARY_SCHEMA = "cross_family_candidate_portfolio_action_summary.v1"
 PORTFOLIO_SCHEMA = "byte_shaving_campaign_dqs1_operator_portfolio.v1"
@@ -103,6 +105,7 @@ TOOL_NAME = "comma_lab.scheduler.byte_shaving_campaign_queue"
 BYTE_RANGE_CHAIN_TOOL = "tools/run_byte_range_entropy_recode_chain.py"
 FAMILY_AGNOSTIC_MATERIALIZER_TOOL = "tools/run_family_agnostic_materializer.py"
 FAMILY_AGNOSTIC_MATERIALIZER_SWEEP_TOOL = "tools/run_family_agnostic_materializer_sweep.py"
+GROUPED_ARCHIVE_STATE_MATERIALIZER_TOOL = "tools/run_grouped_family_agnostic_materializer.py"
 SHELL_INFLATE_PARITY_TOOL = "tools/prove_shell_inflate_parity.py"
 INVERSE_ACTION_FUNCTIONAL_TOOL = "tools/build_inverse_steganalysis_action_functional.py"
 INVERSE_SCORER_CELL_TOOL = "tools/materialize_inverse_scorer_cell_candidate.py"
@@ -132,6 +135,13 @@ HARVESTABLE_MATERIALIZER_MANIFEST_SCHEMAS = frozenset(
         PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
         RENDERER_PAYLOAD_DFL1_SCHEMA,
         TENSOR_FACTORIZE_SCHEMA,
+    }
+)
+GROUPED_ARCHIVE_STATE_SUPPORTED_TARGET_KINDS = frozenset(
+    {
+        ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     }
 )
 OPERATION_SET_CLEARABLE_SOURCE_BLOCKERS = frozenset(
@@ -553,13 +563,14 @@ def _packet_ir_compiled_row(packet_ir: Mapping[str, Any]) -> dict[str, Any]:
     materializer_resolutions: list[dict[str, Any]] = []
     source_units: list[dict[str, Any]] = []
     known_target_kinds = known_materializer_target_kinds()
-    for operation in operations:
+    for operation_index, operation in enumerate(operations, start=1):
         unit_id = str(operation.get("unit_id") or "")
         operation_params = _operation_params(operation)
         unit = {
             "unit_id": unit_id,
             "unit_kind": operation.get("unit_kind"),
             "candidate_saved_bytes": operation.get("candidate_saved_bytes"),
+            "packet_ir_operation_index": operation_index,
             "operation_params": operation_params,
             "blockers": [],
         }
@@ -605,6 +616,7 @@ def _packet_ir_compiled_row(packet_ir: Mapping[str, Any]) -> dict[str, Any]:
                 "cooperative_receiver_required": resolution.cooperative_receiver_required,
                 "materialization_resource_kind": resolution.materialization_resource_kind,
                 "executable": resolution.executable,
+                "packet_ir_operation_index": operation_index,
                 "blockers": resolution_blockers,
                 "selected_operation_blockers": _as_list(operation.get("blockers")),
             }
@@ -734,6 +746,22 @@ def _merge_packet_ir_materializer_backlog_rows(
                 *_as_list(packet_row.get("source_unit_ids")),
             ]
         )
+        current["source_packet_ir_operation_indices"] = sorted(
+            {
+                int(index)
+                for index in [
+                    *_as_list(current.get("source_packet_ir_operation_indices")),
+                    *_as_list(packet_row.get("source_packet_ir_operation_indices")),
+                ]
+                if _finite_int(index) is not None
+            }
+        )
+        by_unit = dict(_as_mapping(current.get("source_packet_ir_operation_indices_by_unit")))
+        by_unit.update(
+            dict(_as_mapping(packet_row.get("source_packet_ir_operation_indices_by_unit")))
+        )
+        if by_unit:
+            current["source_packet_ir_operation_indices_by_unit"] = by_unit
         current["source_selection_ids"] = ordered_unique(
             [
                 *_as_list(current.get("source_selection_ids")),
@@ -933,6 +961,8 @@ def build_materializer_backlog(compiled_rows: Sequence[Mapping[str, Any]]) -> di
                     "source_unit_ids": [],
                     "source_selection_ids": [],
                     "source_selection_samples": [],
+                    "source_packet_ir_operation_indices": [],
+                    "source_packet_ir_operation_indices_by_unit": {},
                     "operation_params": {},
                     "source_operation_params_by_unit": {},
                     **FALSE_AUTHORITY,
@@ -956,6 +986,21 @@ def build_materializer_backlog(compiled_rows: Sequence[Mapping[str, Any]]) -> di
                 seen_unit_by_key[key].add(unit_id)
                 current["source_unit_ids"].append(unit_id)
                 current["affected_unit_count"] = len(seen_unit_by_key[key])
+            operation_index = _finite_int(resolution.get("packet_ir_operation_index"))
+            if operation_index is not None:
+                indices = list(_as_list(current.get("source_packet_ir_operation_indices")))
+                indices.append(operation_index)
+                current["source_packet_ir_operation_indices"] = sorted(
+                    {
+                        int(index)
+                        for index in indices
+                        if _finite_int(index) is not None
+                    }
+                )
+                if unit_id:
+                    by_unit = dict(_as_mapping(current.get("source_packet_ir_operation_indices_by_unit")))
+                    by_unit[unit_id] = operation_index
+                    current["source_packet_ir_operation_indices_by_unit"] = by_unit
             source_unit = source_units_by_id.get(unit_id, {})
             operation_params = _as_mapping(source_unit.get("operation_params"))
             if operation_params:
@@ -1054,6 +1099,128 @@ def _materializer_work_id(backlog_key: str) -> str:
     return f"materializer_work_{safe or 'row'}"
 
 
+def _grouped_archive_state_request_id(packet_ir_operation_set_id: str) -> str:
+    safe = re.sub(r"[^a-z0-9_]+", "_", packet_ir_operation_set_id.lower()).strip("_")
+    return f"grouped_archive_state_{safe or 'packetir'}"
+
+
+def _work_row_packet_ir_sort_key(row: Mapping[str, Any]) -> tuple[int, int, str]:
+    indices = [
+        parsed
+        for parsed in (_finite_int(item) for item in _as_list(row.get("source_packet_ir_operation_indices")))
+        if parsed is not None
+    ]
+    first_index = min(indices) if indices else 1_000_000
+    work_rank = _finite_int(row.get("work_rank")) or 1_000_000
+    return first_index, work_rank, str(row.get("work_id") or row.get("backlog_key") or "")
+
+
+def _grouped_archive_state_materializer_requests(
+    work_rows: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    by_packet_ir: dict[str, list[Mapping[str, Any]]] = {}
+    for row in work_rows:
+        for packet_ir_id in _as_list(row.get("source_packet_ir_operation_set_ids")):
+            packet_ir_text = str(packet_ir_id or "").strip()
+            if packet_ir_text:
+                by_packet_ir.setdefault(packet_ir_text, []).append(row)
+
+    requests: list[dict[str, Any]] = []
+    for packet_ir_id in sorted(by_packet_ir):
+        rows = sorted(by_packet_ir[packet_ir_id], key=_work_row_packet_ir_sort_key)
+        if len(rows) < 2:
+            continue
+        blockers: list[str] = []
+        ordered_work_ids: list[str] = []
+        operation_indices: list[int] = []
+        operation_rows: list[dict[str, Any]] = []
+        source_packet_ir_source_ids: list[str] = []
+        for row in rows:
+            work_id = str(row.get("work_id") or "").strip()
+            if not work_id:
+                blockers.append("grouped_archive_state_member_work_id_missing")
+                work_id = str(row.get("backlog_key") or "<missing>")
+            ordered_work_ids.append(work_id)
+            target_kind = str(row.get("target_kind") or "")
+            if target_kind not in GROUPED_ARCHIVE_STATE_SUPPORTED_TARGET_KINDS:
+                blockers.append(f"grouped_archive_state_target_not_supported:{target_kind or '<missing>'}")
+            if row.get("executable") is not True:
+                blockers.append(f"grouped_archive_state_member_not_executable:{work_id}")
+            command = row.get("command")
+            if not isinstance(command, list) or not command:
+                blockers.append(f"grouped_archive_state_member_command_missing:{work_id}")
+            indices = [
+                parsed
+                for parsed in (
+                    _finite_int(item)
+                    for item in _as_list(row.get("source_packet_ir_operation_indices"))
+                )
+                if parsed is not None
+            ]
+            if not indices:
+                blockers.append(f"grouped_archive_state_member_order_missing:{work_id}")
+            operation_indices.extend(indices)
+            source_packet_ir_source_ids.extend(
+                str(item)
+                for item in _as_list(row.get("source_packet_ir_source_operation_set_ids"))
+                if str(item).strip()
+            )
+            operation_rows.append(
+                {
+                    "work_id": work_id,
+                    "work_rank": row.get("work_rank"),
+                    "target_kind": target_kind or None,
+                    "materializer_id": row.get("materializer_id"),
+                    "unit_kind": row.get("unit_kind"),
+                    "operation_family": row.get("operation_family"),
+                    "source_unit_ids": _as_list(row.get("source_unit_ids")),
+                    "source_packet_ir_operation_indices": indices,
+                    "tool": row.get("tool"),
+                    "resource_kind": row.get("resource_kind") or "local_cpu",
+                    **FALSE_AUTHORITY,
+                }
+            )
+
+        ordered_indices = sorted(set(operation_indices))
+        if ordered_indices and ordered_indices != list(range(min(ordered_indices), max(ordered_indices) + 1)):
+            blockers.append("grouped_archive_state_operation_order_has_gap")
+        executable = not blockers
+        requests.append(
+            apply_proxy_evidence_boundary(
+                {
+                    "schema": GROUPED_ARCHIVE_STATE_MATERIALIZER_REQUEST_SCHEMA,
+                    "request_id": _grouped_archive_state_request_id(packet_ir_id),
+                    "source_packet_ir_operation_set_id": packet_ir_id,
+                    "source_packet_ir_source_operation_set_ids": ordered_unique(
+                        source_packet_ir_source_ids
+                    ),
+                    "operation_count": len(rows),
+                    "ordered_work_ids": ordered_work_ids,
+                    "source_packet_ir_operation_indices": ordered_indices,
+                    "target_kinds": ordered_unique(
+                        str(row.get("target_kind") or "") for row in rows
+                    ),
+                    "operation_rows": operation_rows,
+                    "tool": GROUPED_ARCHIVE_STATE_MATERIALIZER_TOOL,
+                    "resource_kind": "local_cpu",
+                    "executable": executable,
+                    "grouped_execution_ready": executable,
+                    "grouped_execution_blockers": ordered_unique(blockers),
+                    **FALSE_AUTHORITY,
+                },
+                dispatch_blockers=(
+                    (
+                        "grouped_archive_state_materializer_local_proof_chain_only",
+                        "exact_auth_eval_required_before_score_claim",
+                    )
+                    if executable
+                    else ordered_unique(blockers)
+                ),
+            )
+        )
+    return requests
+
+
 def _first_suggested_materializer(row: Mapping[str, Any]) -> Mapping[str, Any]:
     suggestions = [item for item in _as_list(row.get("suggested_materializers")) if isinstance(item, Mapping)]
     return suggestions[0] if suggestions else {}
@@ -1102,6 +1269,94 @@ def _context_matches_for_backlog_row(
             continue
         matches.append((key, context))
     return matches
+
+
+def _context_value_present(context: Mapping[str, Any], key: str) -> bool:
+    value = context.get(key)
+    if isinstance(value, Path):
+        return bool(value.as_posix())
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, Mapping):
+        return bool(value)
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray, str)):
+        return bool(value)
+    return value is not None
+
+
+def _merged_context_missing_blocker_resolved(
+    context: Mapping[str, Any],
+    blocker: str,
+) -> bool:
+    prefix = "materializer_context_missing:"
+    if not blocker.startswith(prefix):
+        return False
+    key = blocker[len(prefix) :]
+    if key == "factorization_contract_or_rank":
+        return _path_context_value(context, "factorization_contract") is not None or _finite_int(
+            context.get("rank")
+        ) is not None
+    aliases = {
+        "archive_path": ("archive_path", "source_archive"),
+        "output_manifest": ("output_manifest", "manifest_out", "json_out"),
+    }
+    return any(_context_value_present(context, alias) for alias in aliases.get(key, (key,)))
+
+
+def _merge_context_matches(
+    matches: Sequence[tuple[str, Mapping[str, Any]]],
+) -> Mapping[str, Any]:
+    """Compose generic context hints with row-specific materializer paths.
+
+    Context lookup intentionally accepts broad keys such as materializer id and
+    target kind, while operators often add the executable archive paths under a
+    row-specific backlog key.  The row-specific match appears first in
+    ``matches``; apply broader hints first, then let specific rows override
+    them.
+    """
+
+    merged: dict[str, Any] = {}
+    blockers: list[str] = []
+    for _key, context in reversed(matches):
+        blockers.extend(_string_list_context_value(context, "context_blockers"))
+        for field, value in context.items():
+            if field == "context_blockers":
+                continue
+            merged[field] = value
+    blockers = ordered_unique(
+        blocker
+        for blocker in blockers
+        if not _merged_context_missing_blocker_resolved(merged, blocker)
+    )
+    if blockers:
+        merged["context_blockers"] = blockers
+    else:
+        merged.pop("context_blockers", None)
+    return merged
+
+
+def _context_matches_are_composable(
+    matches: Sequence[tuple[str, Mapping[str, Any]]],
+    *,
+    row: Mapping[str, Any],
+    materializer_id: str,
+    target_kind: str,
+) -> bool:
+    if len(matches) < 2:
+        return False
+    keys = [key for key, _context in matches]
+    backlog_key = str(row.get("backlog_key") or "")
+    if backlog_key not in keys:
+        return False
+    composable_keys = {
+        backlog_key,
+        str(row.get("materializer_id") or ""),
+        str(row.get("target_kind") or ""),
+        materializer_id,
+        target_kind,
+    }
+    composable_keys.discard("")
+    return all(key in composable_keys for key in keys)
 
 
 def _path_context_value(context: Mapping[str, Any], key: str) -> str | None:
@@ -2576,6 +2831,52 @@ def _materializer_chain_postconditions(
     ]
 
 
+def _grouped_archive_state_materializer_postconditions(
+    *,
+    manifest_path: str,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "type": "json_equals",
+            "path": manifest_path,
+            "key": "schema",
+            "equals": GROUPED_ARCHIVE_STATE_MATERIALIZER_CHAIN_SCHEMA,
+        },
+        {
+            "type": "json_completion_contract",
+            "path": manifest_path,
+            "required_equals": {
+                "schema": GROUPED_ARCHIVE_STATE_MATERIALIZER_CHAIN_SCHEMA,
+            },
+            "required_true": [
+                "byte_closed_candidate_emitted",
+                "runtime_adapter_ready",
+                "receiver_proof_ready",
+                "receiver_contract_satisfied",
+                "candidate_runtime_adapter_blocker_cleared",
+            ],
+            "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+            ],
+            "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched",
+            ],
+            "required_sha256": ["candidate_archive_sha256"],
+            "required_positive_int": [
+                "operation_count",
+                "candidate_archive_bytes",
+                "source_archive_bytes",
+            ],
+            "required_artifact_records": ["candidate_archive", "final_candidate_archive"],
+            "forbidden_statuses": ["failed"],
+        },
+    ]
+
+
 def _materializer_candidate_postconditions(
     *,
     manifest_path: str,
@@ -2761,8 +3062,19 @@ def build_materializer_work_queue(
         )
         blockers: list[str] = []
         if len(context_matches) > 1:
-            blockers.append("materializer_context_ambiguous:" + ",".join(key for key, _context in context_matches))
-            context: Mapping[str, Any] = {}
+            if _context_matches_are_composable(
+                context_matches,
+                row=row,
+                materializer_id=materializer_id,
+                target_kind=target_kind,
+            ):
+                context = _merge_context_matches(context_matches)
+            else:
+                blockers.append(
+                    "materializer_context_ambiguous:"
+                    + ",".join(key for key, _context in context_matches)
+                )
+                context = {}
         else:
             context = context_matches[0][1] if context_matches else {}
         blockers.extend(_string_list_context_value(context, "context_blockers"))
@@ -2987,6 +3299,12 @@ def build_materializer_work_queue(
                     "source_selection_ids": _as_list(row.get("source_selection_ids")),
                     "packet_ir_lowered_row_count": row.get("packet_ir_lowered_row_count")
                     or (1 if row.get("source_packet_ir_operation_set_id") else None),
+                    "source_packet_ir_operation_indices": _as_list(
+                        row.get("source_packet_ir_operation_indices")
+                    ),
+                    "source_packet_ir_operation_indices_by_unit": _as_mapping(
+                        row.get("source_packet_ir_operation_indices_by_unit")
+                    ),
                     "source_packet_ir_operation_set_ids": ordered_unique(
                         [
                             *_as_list(row.get("source_packet_ir_operation_set_ids")),
@@ -3016,6 +3334,10 @@ def build_materializer_work_queue(
         )
     executable_rows = [row for row in work_rows if row["executable"] is True]
     blocked_rows = [row for row in work_rows if row["executable"] is not True]
+    grouped_requests = _grouped_archive_state_materializer_requests(work_rows)
+    grouped_executable_requests = [
+        request for request in grouped_requests if request["executable"] is True
+    ]
     return apply_proxy_evidence_boundary(
         {
             "schema": MATERIALIZER_WORK_QUEUE_SCHEMA,
@@ -3026,6 +3348,11 @@ def build_materializer_work_queue(
             "row_count": len(work_rows),
             "executable_row_count": len(executable_rows),
             "blocked_row_count": len(blocked_rows),
+            "grouped_archive_state_request_count": len(grouped_requests),
+            "grouped_archive_state_executable_request_count": len(
+                grouped_executable_requests
+            ),
+            "grouped_archive_state_materializer_requests": grouped_requests,
             "rows": work_rows,
             **FALSE_AUTHORITY,
         },
@@ -3338,6 +3665,127 @@ def _materializer_exact_readiness_followup_steps(
         ]
     )
     return steps
+
+
+def _grouped_archive_state_execution_experiments(
+    *,
+    work_queue: Mapping[str, Any],
+    queue_id: str,
+    repo_root: Path,
+    source_work_queue_path: Path | None,
+    preflight_dependency: str | None,
+    step_timeout_seconds: int,
+    lane_id: str | None,
+    seen_experiments: set[str],
+) -> tuple[list[dict[str, Any]], set[str]]:
+    requests = [
+        request
+        for request in _as_list(work_queue.get("grouped_archive_state_materializer_requests"))
+        if isinstance(request, Mapping) and request.get("executable") is True
+    ]
+    if not requests:
+        return [], set()
+    if source_work_queue_path is None:
+        raise ExperimentQueueError(
+            "source_work_queue_path is required for grouped archive-state materializer execution"
+        )
+
+    experiments: list[dict[str, Any]] = []
+    used_resource_kinds = {"local_cpu"}
+    source_queue_path = _resolve_repo_path(source_work_queue_path, repo_root=repo_root)
+    grouped_root = source_queue_path.with_suffix("").parent / "grouped_archive_state"
+    for rank, request in enumerate(requests, start=1):
+        request_id = str(request.get("request_id") or "")
+        if not request_id:
+            raise ExperimentQueueError("grouped archive-state request_id missing")
+        output_dir = grouped_root / request_id
+        manifest_path = output_dir / "grouped_archive_state_materializer_chain.json"
+        command = [
+            ".venv/bin/python",
+            GROUPED_ARCHIVE_STATE_MATERIALIZER_TOOL,
+            "--repo-root",
+            repo_root.as_posix(),
+            "--work-queue",
+            _repo_rel(source_queue_path, repo_root),
+            "--request-id",
+            request_id,
+            "--output-dir",
+            _repo_rel_no_resolve(output_dir, repo_root),
+            "--output-manifest",
+            _repo_rel_no_resolve(manifest_path, repo_root),
+        ]
+        experiment_id = _materializer_execution_experiment_id(
+            {
+                "work_id": request_id,
+                "work_rank": rank,
+            },
+            rank,
+            seen_experiments,
+        )
+        steps = [
+            {
+                "id": "materialize_grouped_archive_state_chain",
+                "kind": "command",
+                "command": command,
+                "requires": [] if preflight_dependency is None else [preflight_dependency],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": step_timeout_seconds,
+                "postconditions": _grouped_archive_state_materializer_postconditions(
+                    manifest_path=_repo_rel_no_resolve(manifest_path, repo_root)
+                ),
+                "telemetry": {
+                    "artifact_paths": [_repo_rel_no_resolve(output_dir, repo_root)],
+                    "input_artifact_paths": [_repo_rel(source_queue_path, repo_root)],
+                    "pullback_artifact_paths": [_repo_rel_no_resolve(output_dir, repo_root)],
+                    "include_postcondition_paths": True,
+                    "recursive": True,
+                    "pullback_recursive": True,
+                    "pullback_max_recursive_entries": 512,
+                },
+            }
+        ]
+        metadata = apply_proxy_evidence_boundary(
+            {
+                "schema": MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA,
+                "source_work_queue_schema": work_queue.get("schema"),
+                "source_work_queue_path": _repo_rel(source_queue_path, repo_root),
+                "work_id": request_id,
+                "work_rank": rank,
+                "grouped_archive_state_request": request,
+                "source_packet_ir_operation_set_id": request.get(
+                    "source_packet_ir_operation_set_id"
+                ),
+                "ordered_work_ids": _as_list(request.get("ordered_work_ids")),
+                "target_kinds": _as_list(request.get("target_kinds")),
+                "allowed_use": "local_grouped_archive_state_materializer_proof_chain_only",
+                **FALSE_AUTHORITY,
+            },
+            dispatch_blockers=(
+                "grouped_archive_state_materializer_local_proof_chain_only",
+                "grouped_archive_state_requires_runtime_consumption_proof",
+                "grouped_archive_state_requires_same_runtime_full_frame_parity_or_rate_only_control",
+                "grouped_archive_state_requires_exact_auth_eval_axis_payload",
+                "exact_auth_eval_required_before_score_claim",
+            ),
+        )
+        experiments.append(
+            {
+                "id": experiment_id,
+                "lane_id": lane_id,
+                "priority": rank,
+                "status": "queued",
+                "tags": [
+                    "byte-shaving",
+                    "materializer",
+                    "grouped-archive-state",
+                    "local-proof-chain",
+                    "no-score-authority",
+                ],
+                "metadata": metadata,
+                "steps": steps,
+            }
+        )
+    return experiments, used_resource_kinds
 
 
 def _renderer_payload_dfl1_parity_followup_step(
@@ -3853,6 +4301,24 @@ def build_materializer_execution_queue(
                 "steps": steps,
             }
         )
+    grouped_experiments, grouped_resource_kinds = (
+        _grouped_archive_state_execution_experiments(
+            work_queue=work_queue,
+            queue_id=queue_id,
+            repo_root=repo,
+            source_work_queue_path=(
+                Path(source_work_queue_path)
+                if source_work_queue_path is not None
+                else None
+            ),
+            preflight_dependency=preflight_dependency,
+            step_timeout_seconds=step_timeout_seconds,
+            lane_id=lane_id,
+            seen_experiments=seen_experiments,
+        )
+    )
+    experiments.extend(grouped_experiments)
+    used_resource_kinds.update(grouped_resource_kinds)
     for kind in sorted(used_resource_kinds):
         resource_limits.setdefault(
             kind,
