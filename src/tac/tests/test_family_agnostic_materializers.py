@@ -504,6 +504,38 @@ def test_packet_member_merge_receiver_runtime_proves_consumed_transform(
     assert proof["ready_for_exact_eval_dispatch"] is False
 
 
+def test_runtime_consumption_proof_rejects_runtime_adapter_ready_without_sha(
+    tmp_path: Path,
+) -> None:
+    proof = {
+        "schema": "family_agnostic_runtime_consumption_proof_v1",
+        "proof_kind": "fixture_runtime_adapter_ready_without_sha.v1",
+        "receiver_contract_kind": "fixture_receiver",
+        "target_kind": "fixture_target",
+        "materializer_id": "fixture_materializer",
+        "receiver_contract_satisfied": True,
+        "runtime_adapter_ready": True,
+        "runtime_adapter_manifest": {"runtime_adapter_ready": True},
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+
+    verification = verify_runtime_consumption_proof(
+        runtime_consumption_proof=proof,
+        repo_root=tmp_path,
+    )
+
+    assert verification["runtime_adapter_ready"] is False
+    assert verification["receiver_contract_satisfied"] is False
+    assert "runtime_adapter_ready_requires_sha256" in verification["blockers"]
+
+
 def test_packet_member_merge_rejects_mismatched_runtime_proof_metadata(
     tmp_path: Path,
 ) -> None:
@@ -1405,16 +1437,100 @@ def test_tensor_factorize_materializer_emits_cooperative_receiver_proof(
     )
     assert proof_payload["candidate_archive"]["sha256"] == result["candidate_archive"]["sha256"]
     assert proof_payload["candidate_member"]["sha256"] == result["candidate_member"]["sha256"]
-    assert proof_payload["runtime_consumption_probe"]["passed"] is True
+    assert proof_payload["runtime_consumption_probe"]["reconstruction_passed"] is True
+    assert proof_payload["runtime_consumption_probe"]["passed"] is False
+    assert proof_payload["runtime_adapter_ready"] is False
     assert proof_payload["runtime_consumption_probe"]["max_abs_error"] <= 1.0e-3
     assert proof_payload["cooperative_receiver"]["declared"] is True
-    assert result["receiver_contract_satisfied"] is True
+    assert result["runtime_adapter_ready"] is False
+    assert result["receiver_contract_satisfied"] is False
     assert result["runtime_consumption_proof_path"] == str(proof)
-    assert "tensor_factorized_payload_requires_cooperative_receiver" not in (
+    assert "tensor_factorize_exact_readiness_refused_until_byte_closed_runtime_adapter_lands" in (
         result["readiness_blockers"]
     )
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
+
+
+def test_tensor_factorize_materializer_accepts_runtime_adapter_ready_contract(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    proof = tmp_path / "runtime_consumption_proof.json"
+    tensor_path = tmp_path / "tensor.npy"
+    vector_a = np.arange(128, dtype=np.float32)[:, None]
+    vector_b = np.linspace(0.25, 2.0, 128, dtype=np.float32)[None, :]
+    np.save(tensor_path, vector_a @ vector_b)
+    _write_zip(archive, {"weights.npy": tensor_path.read_bytes()})
+
+    result = materialize_tensor_factorize_candidate(
+        archive_path=archive,
+        tensor_manifest={"member_name": "weights.npy"},
+        factorization_contract={
+            "rank": 1,
+            "cooperative_receiver_id": "fixture_tensor_factorize_receiver",
+            "receiver_adapter_kind": "npz_svd_low_rank_v1",
+            "runtime_adapter_manifest": {
+                "runtime_adapter_ready": True,
+                "runtime_tree_sha256": "c" * 64,
+            },
+            "max_abs_error_tolerance": 1.0e-3,
+        },
+        output_archive=output,
+        runtime_consumption_proof_out=proof,
+        repo_root=tmp_path,
+    )
+
+    proof_payload = json.loads(proof.read_text(encoding="utf-8"))
+    assert proof_payload["runtime_consumption_probe"]["reconstruction_passed"] is True
+    assert proof_payload["runtime_consumption_probe"]["passed"] is True
+    assert proof_payload["runtime_adapter_ready"] is True
+    assert proof_payload["runtime_adapter_manifest"]["runtime_tree_sha256"] == "c" * 64
+    assert result["receiver_contract_satisfied"] is True
+    assert result["runtime_adapter_ready"] is True
+    assert "tensor_factorize_exact_readiness_refused_until_byte_closed_runtime_adapter_lands" not in (
+        result["readiness_blockers"]
+    )
+    assert result["score_claim"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
+
+
+def test_tensor_factorize_materializer_runtime_adapter_ready_requires_sha(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    proof = tmp_path / "runtime_consumption_proof.json"
+    tensor_path = tmp_path / "tensor.npy"
+    vector_a = np.arange(128, dtype=np.float32)[:, None]
+    vector_b = np.linspace(0.25, 2.0, 128, dtype=np.float32)[None, :]
+    np.save(tensor_path, vector_a @ vector_b)
+    _write_zip(archive, {"weights.npy": tensor_path.read_bytes()})
+
+    result = materialize_tensor_factorize_candidate(
+        archive_path=archive,
+        tensor_manifest={"member_name": "weights.npy"},
+        factorization_contract={
+            "rank": 1,
+            "cooperative_receiver_id": "fixture_tensor_factorize_receiver",
+            "receiver_adapter_kind": "npz_svd_low_rank_v1",
+            "runtime_adapter_manifest": {"runtime_adapter_ready": True},
+            "max_abs_error_tolerance": 1.0e-3,
+        },
+        output_archive=output,
+        runtime_consumption_proof_out=proof,
+        repo_root=tmp_path,
+    )
+
+    proof_payload = json.loads(proof.read_text(encoding="utf-8"))
+    assert proof_payload["runtime_consumption_probe"]["passed"] is False
+    assert proof_payload["runtime_consumption_probe"]["runtime_adapter_sha256_present"] is False
+    assert proof_payload["runtime_adapter_ready"] is False
+    assert result["receiver_verification"]["runtime_adapter_ready"] is False
+    assert "runtime_consumption_proof_not_passed" in result["readiness_blockers"]
+    assert result["receiver_contract_satisfied"] is False
+    assert result["runtime_adapter_ready"] is False
 
 
 def test_tensor_factorize_materializer_rejects_wrong_proof_metadata(
@@ -1919,12 +2035,17 @@ def test_tensor_factorize_materializer_cli_auto_writes_runtime_proof(
     assert payload["schema"] == TENSOR_FACTORIZE_SCHEMA
     assert stdout_payload["schema"] == TENSOR_FACTORIZE_SCHEMA
     assert proof.is_file()
-    assert payload["receiver_contract_satisfied"] is True
     assert payload["receiver_verification"]["proof_present"] is True
     assert payload["runtime_consumption_proof_path"] == str(proof)
     assert proof_payload["proof_kind"] == (
         "tensor_factorize_cooperative_receiver_reconstruction_proof.v1"
     )
-    assert proof_payload["runtime_consumption_probe"]["passed"] is True
+    assert proof_payload["runtime_consumption_probe"]["reconstruction_passed"] is True
+    assert proof_payload["runtime_consumption_probe"]["passed"] is False
+    assert payload["receiver_contract_satisfied"] is False
+    assert payload["runtime_adapter_ready"] is False
+    assert "tensor_factorize_exact_readiness_refused_until_byte_closed_runtime_adapter_lands" in (
+        payload["readiness_blockers"]
+    )
     assert payload["score_claim"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False

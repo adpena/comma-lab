@@ -3017,6 +3017,7 @@ def _materializer_candidate_postconditions(
         required_nonempty.append("runtime_consumption_proof_path")
     if target_kind == TENSOR_FACTORIZE_TARGET_KIND:
         required_equals["receiver_contract_kind"] = "family_agnostic_tensor_factorize"
+        required_sha256.append("receiver_verification.runtime_adapter_sha256")
         required_positive_int.append("factorization.factor_payload_bytes")
     if target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND:
         required_equals["receiver_contract_kind"] = (
@@ -3057,6 +3058,14 @@ def _materializer_candidate_postconditions(
                         RENDERER_PAYLOAD_DFL1_TARGET_KIND,
                         TENSOR_FACTORIZE_TARGET_KIND,
                     }
+                    else []
+                ),
+                *(
+                    [
+                        "runtime_adapter_ready",
+                        "receiver_verification.runtime_adapter_ready",
+                    ]
+                    if target_kind == TENSOR_FACTORIZE_TARGET_KIND
                     else []
                 ),
                 *(

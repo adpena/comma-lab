@@ -6104,6 +6104,76 @@ def test_renderer_payload_dfl1_postconditions_require_runtime_and_full_frame_par
     )
 
 
+def test_tensor_factorize_postconditions_require_runtime_adapter_ready(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"candidate tensor-factorize bytes")
+    archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    manifest_path = tmp_path / "candidate.json"
+    payload = {
+        "schema": TENSOR_FACTORIZE_SCHEMA,
+        "byte_closed_candidate_emitted": True,
+        "receiver_contract_kind": "family_agnostic_tensor_factorize",
+        "candidate_archive": {
+            "path": archive.name,
+            "bytes": archive.stat().st_size,
+            "sha256": archive_sha,
+        },
+        "candidate_member": {
+            "name": "weights.npy",
+            "bytes": 10,
+            "sha256": "c" * 64,
+        },
+        "factorization": {"factor_payload_bytes": 10},
+        "serialized_archive_delta": {
+            "schema": "serialized_archive_delta_contract.v1",
+            "source_archive_bytes": 100,
+            "candidate_archive_bytes": archive.stat().st_size,
+        },
+        "runtime_consumption_proof_path": "runtime_consumption_proof.json",
+        "receiver_contract_satisfied": True,
+        "runtime_adapter_ready": False,
+        "receiver_verification": {
+            "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+            "receiver_contract_satisfied": True,
+            "runtime_adapter_ready": False,
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    manifest_path.write_text(json.dumps(payload), encoding="utf-8")
+    postconditions = _materializer_candidate_postconditions(
+        manifest_path=manifest_path.name,
+        schema=TENSOR_FACTORIZE_SCHEMA,
+        target_kind=TENSOR_FACTORIZE_TARGET_KIND,
+    )
+
+    assert not all(
+        _condition_passes(condition, repo_root=tmp_path)
+        for condition in postconditions
+    )
+
+    payload["runtime_adapter_ready"] = True
+    payload["receiver_verification"]["runtime_adapter_ready"] = True
+    manifest_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert not all(
+        _condition_passes(condition, repo_root=tmp_path)
+        for condition in postconditions
+    )
+
+    payload["receiver_verification"]["runtime_adapter_sha256"] = "d" * 64
+    manifest_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert all(
+        _condition_passes(condition, repo_root=tmp_path)
+        for condition in postconditions
+    )
+
+
 def test_inverse_action_compiler_hint_runs_family_agnostic_materializer(
     tmp_path: Path,
 ) -> None:

@@ -1857,6 +1857,10 @@ def materialize_tensor_factorize_candidate(
         required_materializer_id=TENSOR_FACTORIZE_MATERIALIZER_ID,
         repo_root=repo,
     )
+    if receiver_verification.get("runtime_adapter_ready") is not True:
+        blockers.append(
+            "tensor_factorize_exact_readiness_refused_until_byte_closed_runtime_adapter_lands"
+        )
     if receiver_verification.get("receiver_contract_satisfied") is not True:
         blockers.append("tensor_factorized_payload_requires_cooperative_receiver")
     readiness_blockers = _readiness_blockers(
@@ -1903,7 +1907,9 @@ def materialize_tensor_factorize_candidate(
         "receiver_verification": receiver_verification,
         "receiver_contract_satisfied": (
             receiver_verification["receiver_contract_satisfied"] is True
+            and receiver_verification.get("runtime_adapter_ready") is True
         ),
+        "runtime_adapter_ready": receiver_verification.get("runtime_adapter_ready") is True,
         "runtime_consumption_proof_path": (
             proof_out.as_posix() if proof_out is not None else receiver_verification.get("proof_path")
         ),
@@ -1962,6 +1968,35 @@ def _tensor_factorize_runtime_consumption_proof(
         contract,
         ("receiver_adapter_kind", "cooperative_receiver_adapter_kind", "runtime_adapter_kind"),
     )
+    runtime_adapter_manifest_raw = contract.get("runtime_adapter_manifest")
+    runtime_adapter_manifest = (
+        dict(runtime_adapter_manifest_raw)
+        if isinstance(runtime_adapter_manifest_raw, Mapping)
+        else {}
+    )
+    runtime_adapter_ready = (
+        contract.get("runtime_adapter_ready") is True
+        or runtime_adapter_manifest.get("runtime_adapter_ready") is True
+    )
+    if cooperative_receiver_id is not None:
+        runtime_adapter_manifest.setdefault(
+            "cooperative_receiver_id",
+            cooperative_receiver_id,
+        )
+    if receiver_adapter_kind is not None:
+        runtime_adapter_manifest.setdefault(
+            "receiver_adapter_kind",
+            receiver_adapter_kind,
+        )
+    runtime_adapter_sha256 = _runtime_adapter_manifest_sha256(runtime_adapter_manifest)
+    if runtime_adapter_sha256 is not None:
+        runtime_adapter_manifest.setdefault("runtime_adapter_sha256", runtime_adapter_sha256)
+    runtime_adapter_manifest["runtime_adapter_ready"] = (
+        runtime_adapter_ready
+        and cooperative_receiver_id is not None
+        and receiver_adapter_kind is not None
+        and runtime_adapter_sha256 is not None
+    )
     if max_abs_tolerance is None:
         abs_passed = True if tolerance_declared else max_abs_error == 0.0
     else:
@@ -1976,7 +2011,8 @@ def _tensor_factorize_runtime_consumption_proof(
         and math.isfinite(max_relative_error)
     )
     receiver_declared = cooperative_receiver_id is not None and receiver_adapter_kind is not None
-    passed = finite and abs_passed and relative_passed and receiver_declared
+    reconstruction_passed = finite and abs_passed and relative_passed and receiver_declared
+    passed = reconstruction_passed and runtime_adapter_manifest["runtime_adapter_ready"] is True
     return {
         "schema": RUNTIME_CONSUMPTION_PROOF_SCHEMA,
         "proof_kind": TENSOR_FACTORIZE_PROOF_KIND,
@@ -2004,11 +2040,17 @@ def _tensor_factorize_runtime_consumption_proof(
             "cooperative_receiver_id": cooperative_receiver_id,
             "receiver_adapter_kind": receiver_adapter_kind,
             "declared": receiver_declared,
+            "runtime_adapter_ready": runtime_adapter_manifest["runtime_adapter_ready"],
+            "runtime_adapter_sha256": runtime_adapter_sha256,
             "reconstruction_formula": "float32((u * s) @ vt)",
         },
+        "runtime_adapter_manifest": runtime_adapter_manifest,
+        "runtime_adapter_ready": runtime_adapter_manifest["runtime_adapter_ready"],
+        "runtime_adapter_sha256": runtime_adapter_sha256,
         "runtime_consumption_probe": {
             "schema": "tensor_factorize_reconstruction_probe.v1",
             "passed": passed,
+            "reconstruction_passed": reconstruction_passed,
             "finite": finite,
             "max_abs_error": max_abs_error,
             "max_abs_error_tolerance": max_abs_tolerance,
@@ -2018,6 +2060,8 @@ def _tensor_factorize_runtime_consumption_proof(
             "max_relative_error_tolerance": max_relative_tolerance,
             "max_relative_error_passed": relative_passed,
             "cooperative_receiver_declared": receiver_declared,
+            "runtime_adapter_ready": runtime_adapter_manifest["runtime_adapter_ready"],
+            "runtime_adapter_sha256_present": runtime_adapter_sha256 is not None,
         },
         "receiver_contract_satisfied": passed,
         "runtime_consumption_proof_passed": passed,
@@ -2095,6 +2139,10 @@ def verify_runtime_consumption_proof(
         isinstance(runtime_adapter_manifest, Mapping)
         and runtime_adapter_manifest.get("runtime_adapter_ready") is True
     )
+    runtime_adapter_sha256 = _runtime_adapter_manifest_sha256(runtime_adapter_manifest)
+    if runtime_adapter_ready and runtime_adapter_sha256 is None:
+        blockers.append("runtime_adapter_ready_requires_sha256")
+        runtime_adapter_ready = False
     archive_sha = _nested_clean_str(proof, ("candidate_archive", "sha256"))
     archive_sha = archive_sha or _clean_str(proof.get("candidate_archive_sha256"))
     if required_candidate_archive_sha256:
@@ -2136,8 +2184,29 @@ def verify_runtime_consumption_proof(
         "candidate_member_sha256": member_sha,
         "candidate_member_sha256s": member_sha_map,
         "runtime_adapter_ready": runtime_adapter_ready,
+        "runtime_adapter_sha256": runtime_adapter_sha256,
         "blockers": ordered_unique(blockers),
     }
+
+
+def _runtime_adapter_manifest_sha256(value: Any) -> str | None:
+    if not isinstance(value, Mapping):
+        return None
+    for key in (
+        "sha256",
+        "runtime_tree_sha256",
+        "runtime_adapter_sha256",
+        "runtime_adapter_tree_sha256",
+        "source_sha256",
+    ):
+        candidate = _clean_str(value.get(key))
+        if candidate and _is_sha256_text(candidate):
+            return candidate
+    return None
+
+
+def _is_sha256_text(value: str) -> bool:
+    return len(value) == 64 and all(ch in "0123456789abcdef" for ch in value.lower())
 
 
 def verify_renderer_payload_dfl1_full_frame_inflate_parity_proof(
