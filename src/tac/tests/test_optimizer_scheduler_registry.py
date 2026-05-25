@@ -186,7 +186,10 @@ def test_pr95_mlx_stage_descriptors_match_recovered_public_curriculum() -> None:
         1: "pr95_stage1_adamw_baseline_mlx",
         2: "pr95_stage2_adamw_baseline_mlx",
         3: "pr95_stage3_adamw_baseline_mlx",
+        4: "pr95_stage4_adamw_qat_mlx",
         5: "pr95_stage5_adamw_baseline_mlx",
+        6: "pr95_stage6_adamw_lambda_sweep_mlx",
+        7: "pr95_stage7_adamw_sigma_sweep_mlx",
         8: "pr95_stage8_muon_adamw_mlx",
     }
 

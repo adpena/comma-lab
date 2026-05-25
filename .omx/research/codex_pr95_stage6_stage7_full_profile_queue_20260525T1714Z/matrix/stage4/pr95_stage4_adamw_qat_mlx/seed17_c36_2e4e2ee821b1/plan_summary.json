@@ -1,0 +1,19 @@
+{
+  "candidate_id": "pr95_hnerv_mlx_stage4_pr95_stage4_adamw_qat_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "gpu_launched": false,
+  "ok": true,
+  "plan": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/plan.json",
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_schema": "experiment_queue.v1",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "representation_training_plan": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/representation_training_plan.json",
+  "schema": "pr95_hnerv_mlx_timing_smoke_plan_summary_v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "stage_index": 4,
+  "stage_module": "stage4_v332_qat"
+}

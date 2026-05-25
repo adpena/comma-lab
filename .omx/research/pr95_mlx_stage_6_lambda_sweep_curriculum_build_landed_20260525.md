@@ -287,25 +287,27 @@ Persisted via canonical `tac.probe_outcomes_ledger.register_probe_outcome`
 helper (NEVER bare write per Catalog #131). Row schema: see
 `src/tac/probe_outcomes_ledger.py`.
 
-## Stage 7 sigma_sweep readiness signal
+## Stage 7 sigma_sweep closure signal
 
-**Stage 7 BUILD READY** per the canonical MLX substrate-trainer
-extension paradigm now proven 6x (Stages 1, 2, 3, 4, 5, 6).
+**Stage 7 BUILD CLOSED in follow-on tranche** per the canonical MLX
+substrate-trainer extension paradigm now proven 7x (Stages 1, 2, 3, 4, 5,
+6, 7). See
+`.omx/research/pr95_mlx_stage_7_sigma_sweep_curriculum_build_landed_20260525.md`.
 
 - Stage 7 (`stage7_sigma_sweep`, 3000 epochs, AdamW LR=3e-5,
   `l7_softplus_seg_loss`, QAT=True, C1a λ=0.02, **σ=0.1** vs Stage 5+6's
   0.2 — the σ sweep parameter).
 - Resumes from Stage 6 final.
 - Extends the canonical dispatch dict by ONE entry using the proven
-  +2-LOC dict + ~57-LOC descriptor + NEW test file pattern.
+  +2-LOC dict + descriptor + NEW test file pattern.
 
 Stage 8 (`stage8_muon_finetune`) already landed via codex
 `full_pr95_source_video_runtime` profile per `codex_findings_pr95_mlx_full_control_profile_20260525T1508Z_codex.md`.
 
 ## Operator-routable next step
 
-- **Path A (Stage 7 sister BUILD)**: spawn ONE sister subagent;
-  canonical extension pattern proven 6x. Cost: $0 + ~20 min wall-clock.
+- **Path A (Stage 7 sister BUILD)**: CLOSED by follow-on Stage 7 sigma-sweep
+  memo and tests; the full profile queue now emits stages 1-8.
 - **Path B (Stage 6 source-faithful training scaling)**: scale to
   actual PR 95 source-video training with paired CPU+CUDA auth eval
   per Catalog #192.

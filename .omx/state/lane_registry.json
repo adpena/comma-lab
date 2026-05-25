@@ -55894,6 +55894,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_pr95_mlx_stage_6_lambda_sweep_curriculum_build_20260525",
+      "name": "PR95 MLX Stage 6 Lambda Sweep Curriculum Build",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "PR95_STAGE_MODULES[6]=stage6_lambda_sweep + pr95_stage6_adamw_lambda_sweep_mlx descriptor + full profile queue stages=1,2,3,4,5,6,7,8 after Stage7 closure; focused PR95 registry/queue suite 74/74 tests pass; state_bytes=915944 byte-identical to Stage 4 (lambda sweep loss-term-only confirmed)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/pr95_mlx_stage_6_lambda_sweep_curriculum_build_landed_20260525.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pr95_mlx_stage_7_sigma_sweep_curriculum_build_20260525",
+      "name": "PR95 MLX Stage 7 Sigma Sweep Curriculum Build",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "PR95_STAGE_MODULES[7]=stage7_sigma_sweep + pr95_stage7_adamw_sigma_sweep_mlx descriptor + full profile queue stages=1,2,3,4,5,6,7,8; focused PR95 registry/queue suite 74/74 tests pass; state_bytes=915944 byte-identical to Stage 6 (sigma sweep loss-term-only confirmed)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/pr95_mlx_stage_7_sigma_sweep_curriculum_build_landed_20260525.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_probe_9_recipe_canonical_update_db8_to_db4_20260525",
+      "name": "Probe 9 substrate recipe + trainer + driver canonical update db8 to db4",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "3 source files updated (recipe + trainer + driver) db8 -> db4 + NEW test src/tac/tests/test_train_substrate_uniward_pims_canonical_db4_basis.py with 7 tests pinning canonical db4 default + cite chain + Catalog #110/#113 HISTORICAL_PROVENANCE preservation; per Probe 9c commit efeaff5c9 SISTER_BASIS_DOMINATES_db4 verdict"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/probe_9_recipe_canonical_update_db8_to_db4_landed_20260525.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -55903,5 +56026,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T17:02:36Z"
+  "updated_at": "2026-05-25T17:18:38Z"
 }

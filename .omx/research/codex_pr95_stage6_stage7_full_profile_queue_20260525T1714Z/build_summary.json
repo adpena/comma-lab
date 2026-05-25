@@ -1,0 +1,19 @@
+{
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "gpu_launched": false,
+  "manifest": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/pr95_mlx_full_profile_manifest.json",
+  "manifest_sha256": "b7abd34ca9b50c20b0dc058518959349be221fb48d109cf4360ef62007270912",
+  "plan_count": 8,
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/pr95_mlx_full_profile_queue.json",
+  "queue_id": "codex_pr95_stage6_stage7_full_profile_20260525T1714Z",
+  "queue_sha256": "e52dc7548d04bfb4c93d4f602f9c340f562c605206282b80b686b27b702cc2ae",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "refusal_count": 0,
+  "schema": "pr95_hnerv_mlx_optimizer_matrix_queue_summary_v1",
+  "score_claim": false,
+  "score_claim_valid": false
+}

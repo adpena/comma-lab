@@ -1,0 +1,2672 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1,
+      "local_cuda": 1,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "local_training_0000_pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+        "device": "mlx",
+        "generated_at_utc": "2026-05-25T17:14:00Z",
+        "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+        "optimizer_config_sha256": "8256163880e1ecb59690f128fb51e83fa33c8964b31b3990ecf165923c88334b",
+        "optimizer_descriptor_id": "pr95_stage1_adamw_baseline_mlx",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hnerv",
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "seed": 17,
+        "source_plan_schema": "representation_training_probe_plan_v1",
+        "stage_index": 1,
+        "substrate_family": "nerv_family",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 10,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_timing_smoke.py",
+            "--stage",
+            "1",
+            "--steps",
+            "1",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "17",
+            "--base-channels",
+            "36",
+            "--latent-dim",
+            "28",
+            "--optimizer-descriptor-id",
+            "pr95_stage1_adamw_baseline_mlx",
+            "--output-dir",
+            ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c",
+            "--allow-existing-output-dir",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-timeout-seconds",
+            "900.0",
+            "--runtime-proof-max-output-bytes",
+            "67108864",
+            "--write-pytorch-export-parity",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--pytorch-export-mlx-device",
+            "cpu",
+            "--pytorch-export-atol-max",
+            "0.002",
+            "--pytorch-export-atol-mean",
+            "0.0001",
+            "--pytorch-export-sample-index",
+            "0",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-output-hw",
+            "384,512",
+            "--source-video-gradient-shape",
+            "1,2,16,20,3",
+            "--source-video-pair-index",
+            "0",
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/representation_training_manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "representation_training_probe_manifest_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/representation_training_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_stage1_pr95_stage1_adamw_baseline_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+              "key": "candidate_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 1,
+              "key": "candidate_params.stage_index",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 17,
+              "key": "seed",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_stage1_adamw_baseline_mlx",
+              "key": "candidate_params.optimizer_descriptor_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "8256163880e1ecb59690f128fb51e83fa33c8964b31b3990ecf165923c88334b",
+              "key": "candidate_params.optimizer_config_sha256",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "embedding_theta1_hidden_muon_adamw",
+              "key": "candidate_params.parameter_group_lr_policy_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+              "key": "candidate_params.parameter_group_lr_policy_sha256",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/source_video_training_target.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_training_target.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_training_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_source_video_rgb_pairs",
+              "key": "target_source.kind",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "rgb_yuv6_mse",
+              "key": "training_loss_surface",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/source_video_training_target.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/source_video_preprocess_smoke.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_loader_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_preprocess_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "gradient_probe.gradient_reachable",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "contains": "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+              "key": "exact_readiness_refusal.blockers",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/source_video_preprocess_smoke.json",
+              "type": "json_array_contains"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/source_video_preprocess_smoke.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/pr95_public_archive.zip",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/pr95_public_archive_export.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_archive_export.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proof_present",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/pr95_public_archive_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/pr95_pytorch_state_dict.pt",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/pytorch_export_forward_parity.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "pytorch_export_forward_parity_established",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/pytorch_export_forward_parity.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/runtime_consumption_proof.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_runtime_consumption_proof.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proven",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/runtime_consumption_proof.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/manifest.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/representation_training_manifest.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/source_video_training_target.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/source_video_preprocess_smoke.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/pr95_public_archive.zip",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/pr95_public_archive_export.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/pr95_pytorch_state_dict.pt",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/pytorch_export_forward_parity.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage1/pr95_stage1_adamw_baseline_mlx/seed17_c36_ef6e264bc25c/runtime_consumption_proof.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 3600
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "local_training_0001_pr95_hnerv_mlx_stage2_pr95_stage2_adamw_baseline_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_stage2_pr95_stage2_adamw_baseline_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+        "device": "mlx",
+        "generated_at_utc": "2026-05-25T17:14:00Z",
+        "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+        "optimizer_config_sha256": "a8f86add4863d4131b21eac09a698cd65ff587fd3ce1437b11874c806f72348e",
+        "optimizer_descriptor_id": "pr95_stage2_adamw_baseline_mlx",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hnerv",
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "seed": 17,
+        "source_plan_schema": "representation_training_probe_plan_v1",
+        "stage_index": 2,
+        "substrate_family": "nerv_family",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 11,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_timing_smoke.py",
+            "--stage",
+            "2",
+            "--steps",
+            "1",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "17",
+            "--base-channels",
+            "36",
+            "--latent-dim",
+            "28",
+            "--optimizer-descriptor-id",
+            "pr95_stage2_adamw_baseline_mlx",
+            "--output-dir",
+            ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b",
+            "--allow-existing-output-dir",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-timeout-seconds",
+            "900.0",
+            "--runtime-proof-max-output-bytes",
+            "67108864",
+            "--write-pytorch-export-parity",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--pytorch-export-mlx-device",
+            "cpu",
+            "--pytorch-export-atol-max",
+            "0.002",
+            "--pytorch-export-atol-mean",
+            "0.0001",
+            "--pytorch-export-sample-index",
+            "0",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-output-hw",
+            "384,512",
+            "--source-video-gradient-shape",
+            "1,2,16,20,3",
+            "--source-video-pair-index",
+            "0",
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/representation_training_manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "representation_training_probe_manifest_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/representation_training_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_stage2_pr95_stage2_adamw_baseline_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+              "key": "candidate_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 2,
+              "key": "candidate_params.stage_index",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 17,
+              "key": "seed",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_stage2_adamw_baseline_mlx",
+              "key": "candidate_params.optimizer_descriptor_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "a8f86add4863d4131b21eac09a698cd65ff587fd3ce1437b11874c806f72348e",
+              "key": "candidate_params.optimizer_config_sha256",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "embedding_theta1_hidden_muon_adamw",
+              "key": "candidate_params.parameter_group_lr_policy_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+              "key": "candidate_params.parameter_group_lr_policy_sha256",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/source_video_training_target.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_training_target.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_training_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_source_video_rgb_pairs",
+              "key": "target_source.kind",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "rgb_yuv6_mse",
+              "key": "training_loss_surface",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/source_video_training_target.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/source_video_preprocess_smoke.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_loader_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_preprocess_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "gradient_probe.gradient_reachable",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "contains": "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+              "key": "exact_readiness_refusal.blockers",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/source_video_preprocess_smoke.json",
+              "type": "json_array_contains"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/source_video_preprocess_smoke.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/pr95_public_archive.zip",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/pr95_public_archive_export.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_archive_export.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proof_present",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/pr95_public_archive_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/pr95_pytorch_state_dict.pt",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/pytorch_export_forward_parity.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "pytorch_export_forward_parity_established",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/pytorch_export_forward_parity.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/runtime_consumption_proof.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_runtime_consumption_proof.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proven",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/runtime_consumption_proof.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/manifest.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/representation_training_manifest.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/source_video_training_target.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/source_video_preprocess_smoke.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/pr95_public_archive.zip",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/pr95_public_archive_export.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/pr95_pytorch_state_dict.pt",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/pytorch_export_forward_parity.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage2/pr95_stage2_adamw_baseline_mlx/seed17_c36_b0e32c12d55b/runtime_consumption_proof.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 3600
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "local_training_0002_pr95_hnerv_mlx_stage3_pr95_stage3_adamw_baseline_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_stage3_pr95_stage3_adamw_baseline_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+        "device": "mlx",
+        "generated_at_utc": "2026-05-25T17:14:00Z",
+        "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+        "optimizer_config_sha256": "09a23acc373d489bc09a397d207e5dc69706625e5f9878e9bb66f6fedb17ef63",
+        "optimizer_descriptor_id": "pr95_stage3_adamw_baseline_mlx",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hnerv",
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "seed": 17,
+        "source_plan_schema": "representation_training_probe_plan_v1",
+        "stage_index": 3,
+        "substrate_family": "nerv_family",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 12,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_timing_smoke.py",
+            "--stage",
+            "3",
+            "--steps",
+            "1",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "17",
+            "--base-channels",
+            "36",
+            "--latent-dim",
+            "28",
+            "--optimizer-descriptor-id",
+            "pr95_stage3_adamw_baseline_mlx",
+            "--output-dir",
+            ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe",
+            "--allow-existing-output-dir",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-timeout-seconds",
+            "900.0",
+            "--runtime-proof-max-output-bytes",
+            "67108864",
+            "--write-pytorch-export-parity",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--pytorch-export-mlx-device",
+            "cpu",
+            "--pytorch-export-atol-max",
+            "0.002",
+            "--pytorch-export-atol-mean",
+            "0.0001",
+            "--pytorch-export-sample-index",
+            "0",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-output-hw",
+            "384,512",
+            "--source-video-gradient-shape",
+            "1,2,16,20,3",
+            "--source-video-pair-index",
+            "0",
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/representation_training_manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "representation_training_probe_manifest_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/representation_training_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_stage3_pr95_stage3_adamw_baseline_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+              "key": "candidate_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 3,
+              "key": "candidate_params.stage_index",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 17,
+              "key": "seed",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_stage3_adamw_baseline_mlx",
+              "key": "candidate_params.optimizer_descriptor_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "09a23acc373d489bc09a397d207e5dc69706625e5f9878e9bb66f6fedb17ef63",
+              "key": "candidate_params.optimizer_config_sha256",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "embedding_theta1_hidden_muon_adamw",
+              "key": "candidate_params.parameter_group_lr_policy_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+              "key": "candidate_params.parameter_group_lr_policy_sha256",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/source_video_training_target.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_training_target.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_training_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_source_video_rgb_pairs",
+              "key": "target_source.kind",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "rgb_yuv6_mse",
+              "key": "training_loss_surface",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/source_video_training_target.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/source_video_preprocess_smoke.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_loader_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_preprocess_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "gradient_probe.gradient_reachable",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "contains": "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+              "key": "exact_readiness_refusal.blockers",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/source_video_preprocess_smoke.json",
+              "type": "json_array_contains"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/source_video_preprocess_smoke.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/pr95_public_archive.zip",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/pr95_public_archive_export.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_archive_export.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proof_present",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/pr95_public_archive_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/pr95_pytorch_state_dict.pt",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/pytorch_export_forward_parity.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "pytorch_export_forward_parity_established",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/pytorch_export_forward_parity.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/runtime_consumption_proof.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_runtime_consumption_proof.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proven",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/runtime_consumption_proof.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/manifest.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/representation_training_manifest.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/source_video_training_target.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/source_video_preprocess_smoke.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/pr95_public_archive.zip",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/pr95_public_archive_export.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/pr95_pytorch_state_dict.pt",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/pytorch_export_forward_parity.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage3/pr95_stage3_adamw_baseline_mlx/seed17_c36_a8bc8cc1b4fe/runtime_consumption_proof.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 3600
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "local_training_0003_pr95_hnerv_mlx_stage4_pr95_stage4_adamw_qat_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_stage4_pr95_stage4_adamw_qat_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+        "device": "mlx",
+        "generated_at_utc": "2026-05-25T17:14:00Z",
+        "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+        "optimizer_config_sha256": "25bd8c43fb1f263f8e07b2c6938da8a14cb126eeef8defa0f3f9a1b51d57e07e",
+        "optimizer_descriptor_id": "pr95_stage4_adamw_qat_mlx",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hnerv",
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "seed": 17,
+        "source_plan_schema": "representation_training_probe_plan_v1",
+        "stage_index": 4,
+        "substrate_family": "nerv_family",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 13,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_timing_smoke.py",
+            "--stage",
+            "4",
+            "--steps",
+            "1",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "17",
+            "--base-channels",
+            "36",
+            "--latent-dim",
+            "28",
+            "--optimizer-descriptor-id",
+            "pr95_stage4_adamw_qat_mlx",
+            "--output-dir",
+            ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1",
+            "--allow-existing-output-dir",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-timeout-seconds",
+            "900.0",
+            "--runtime-proof-max-output-bytes",
+            "67108864",
+            "--write-pytorch-export-parity",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--pytorch-export-mlx-device",
+            "cpu",
+            "--pytorch-export-atol-max",
+            "0.002",
+            "--pytorch-export-atol-mean",
+            "0.0001",
+            "--pytorch-export-sample-index",
+            "0",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-output-hw",
+            "384,512",
+            "--source-video-gradient-shape",
+            "1,2,16,20,3",
+            "--source-video-pair-index",
+            "0",
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/representation_training_manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "representation_training_probe_manifest_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/representation_training_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_stage4_pr95_stage4_adamw_qat_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+              "key": "candidate_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 4,
+              "key": "candidate_params.stage_index",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 17,
+              "key": "seed",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_stage4_adamw_qat_mlx",
+              "key": "candidate_params.optimizer_descriptor_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "25bd8c43fb1f263f8e07b2c6938da8a14cb126eeef8defa0f3f9a1b51d57e07e",
+              "key": "candidate_params.optimizer_config_sha256",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "embedding_theta1_hidden_muon_adamw",
+              "key": "candidate_params.parameter_group_lr_policy_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+              "key": "candidate_params.parameter_group_lr_policy_sha256",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/source_video_training_target.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_training_target.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_training_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_source_video_rgb_pairs",
+              "key": "target_source.kind",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "rgb_yuv6_mse",
+              "key": "training_loss_surface",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/source_video_training_target.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/source_video_preprocess_smoke.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_loader_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_preprocess_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "gradient_probe.gradient_reachable",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "contains": "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+              "key": "exact_readiness_refusal.blockers",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/source_video_preprocess_smoke.json",
+              "type": "json_array_contains"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/source_video_preprocess_smoke.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/pr95_public_archive.zip",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/pr95_public_archive_export.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_archive_export.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proof_present",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/pr95_public_archive_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/pr95_pytorch_state_dict.pt",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/pytorch_export_forward_parity.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "pytorch_export_forward_parity_established",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/pytorch_export_forward_parity.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/runtime_consumption_proof.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_runtime_consumption_proof.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proven",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/runtime_consumption_proof.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/manifest.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/representation_training_manifest.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/source_video_training_target.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/source_video_preprocess_smoke.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/pr95_public_archive.zip",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/pr95_public_archive_export.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/pr95_pytorch_state_dict.pt",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/pytorch_export_forward_parity.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage4/pr95_stage4_adamw_qat_mlx/seed17_c36_2e4e2ee821b1/runtime_consumption_proof.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 3600
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "local_training_0004_pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+        "device": "mlx",
+        "generated_at_utc": "2026-05-25T17:14:00Z",
+        "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+        "optimizer_config_sha256": "3a48c9864f5b4750dc5a7b3252416610d938cd3d155dd4da626fe558910b5831",
+        "optimizer_descriptor_id": "pr95_stage5_adamw_baseline_mlx",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hnerv",
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "seed": 17,
+        "source_plan_schema": "representation_training_probe_plan_v1",
+        "stage_index": 5,
+        "substrate_family": "nerv_family",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 14,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_timing_smoke.py",
+            "--stage",
+            "5",
+            "--steps",
+            "1",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "17",
+            "--base-channels",
+            "36",
+            "--latent-dim",
+            "28",
+            "--optimizer-descriptor-id",
+            "pr95_stage5_adamw_baseline_mlx",
+            "--output-dir",
+            ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494",
+            "--allow-existing-output-dir",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-timeout-seconds",
+            "900.0",
+            "--runtime-proof-max-output-bytes",
+            "67108864",
+            "--write-pytorch-export-parity",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--pytorch-export-mlx-device",
+            "cpu",
+            "--pytorch-export-atol-max",
+            "0.002",
+            "--pytorch-export-atol-mean",
+            "0.0001",
+            "--pytorch-export-sample-index",
+            "0",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-output-hw",
+            "384,512",
+            "--source-video-gradient-shape",
+            "1,2,16,20,3",
+            "--source-video-pair-index",
+            "0",
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/representation_training_manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "representation_training_probe_manifest_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/representation_training_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_stage5_pr95_stage5_adamw_baseline_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+              "key": "candidate_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 5,
+              "key": "candidate_params.stage_index",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 17,
+              "key": "seed",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_stage5_adamw_baseline_mlx",
+              "key": "candidate_params.optimizer_descriptor_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "3a48c9864f5b4750dc5a7b3252416610d938cd3d155dd4da626fe558910b5831",
+              "key": "candidate_params.optimizer_config_sha256",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "embedding_theta1_hidden_muon_adamw",
+              "key": "candidate_params.parameter_group_lr_policy_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+              "key": "candidate_params.parameter_group_lr_policy_sha256",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/source_video_training_target.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_training_target.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_training_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_source_video_rgb_pairs",
+              "key": "target_source.kind",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "rgb_yuv6_mse",
+              "key": "training_loss_surface",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/source_video_training_target.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/source_video_preprocess_smoke.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_loader_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_preprocess_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "gradient_probe.gradient_reachable",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "contains": "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+              "key": "exact_readiness_refusal.blockers",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/source_video_preprocess_smoke.json",
+              "type": "json_array_contains"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/source_video_preprocess_smoke.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/pr95_public_archive.zip",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/pr95_public_archive_export.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_archive_export.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proof_present",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/pr95_public_archive_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/pr95_pytorch_state_dict.pt",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/pytorch_export_forward_parity.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "pytorch_export_forward_parity_established",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/pytorch_export_forward_parity.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/runtime_consumption_proof.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_runtime_consumption_proof.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proven",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/runtime_consumption_proof.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/manifest.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/representation_training_manifest.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/source_video_training_target.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/source_video_preprocess_smoke.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/pr95_public_archive.zip",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/pr95_public_archive_export.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/pr95_pytorch_state_dict.pt",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/pytorch_export_forward_parity.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage5/pr95_stage5_adamw_baseline_mlx/seed17_c36_8c44aea40494/runtime_consumption_proof.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 3600
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "local_training_0005_pr95_hnerv_mlx_stage6_pr95_stage6_adamw_lambda_sweep_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_stage6_pr95_stage6_adamw_lambda_sweep_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+        "device": "mlx",
+        "generated_at_utc": "2026-05-25T17:14:00Z",
+        "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+        "optimizer_config_sha256": "4c7aa04935bbaf5237aaab70140b33028d9c7a1c0b49458e770451812852ebee",
+        "optimizer_descriptor_id": "pr95_stage6_adamw_lambda_sweep_mlx",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hnerv",
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "seed": 17,
+        "source_plan_schema": "representation_training_probe_plan_v1",
+        "stage_index": 6,
+        "substrate_family": "nerv_family",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 15,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_timing_smoke.py",
+            "--stage",
+            "6",
+            "--steps",
+            "1",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "17",
+            "--base-channels",
+            "36",
+            "--latent-dim",
+            "28",
+            "--optimizer-descriptor-id",
+            "pr95_stage6_adamw_lambda_sweep_mlx",
+            "--output-dir",
+            ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837",
+            "--allow-existing-output-dir",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-timeout-seconds",
+            "900.0",
+            "--runtime-proof-max-output-bytes",
+            "67108864",
+            "--write-pytorch-export-parity",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--pytorch-export-mlx-device",
+            "cpu",
+            "--pytorch-export-atol-max",
+            "0.002",
+            "--pytorch-export-atol-mean",
+            "0.0001",
+            "--pytorch-export-sample-index",
+            "0",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-output-hw",
+            "384,512",
+            "--source-video-gradient-shape",
+            "1,2,16,20,3",
+            "--source-video-pair-index",
+            "0",
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/representation_training_manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "representation_training_probe_manifest_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/representation_training_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_stage6_pr95_stage6_adamw_lambda_sweep_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+              "key": "candidate_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 6,
+              "key": "candidate_params.stage_index",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 17,
+              "key": "seed",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_stage6_adamw_lambda_sweep_mlx",
+              "key": "candidate_params.optimizer_descriptor_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "4c7aa04935bbaf5237aaab70140b33028d9c7a1c0b49458e770451812852ebee",
+              "key": "candidate_params.optimizer_config_sha256",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "embedding_theta1_hidden_muon_adamw",
+              "key": "candidate_params.parameter_group_lr_policy_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+              "key": "candidate_params.parameter_group_lr_policy_sha256",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/source_video_training_target.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_training_target.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_training_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_source_video_rgb_pairs",
+              "key": "target_source.kind",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "rgb_yuv6_mse",
+              "key": "training_loss_surface",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/source_video_training_target.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/source_video_preprocess_smoke.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_loader_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_preprocess_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "gradient_probe.gradient_reachable",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "contains": "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+              "key": "exact_readiness_refusal.blockers",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/source_video_preprocess_smoke.json",
+              "type": "json_array_contains"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/source_video_preprocess_smoke.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/pr95_public_archive.zip",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/pr95_public_archive_export.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_archive_export.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proof_present",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/pr95_public_archive_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/pr95_pytorch_state_dict.pt",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/pytorch_export_forward_parity.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "pytorch_export_forward_parity_established",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/pytorch_export_forward_parity.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/runtime_consumption_proof.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_runtime_consumption_proof.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proven",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/runtime_consumption_proof.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/manifest.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/representation_training_manifest.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/source_video_training_target.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/source_video_preprocess_smoke.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/pr95_public_archive.zip",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/pr95_public_archive_export.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/pr95_pytorch_state_dict.pt",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/pytorch_export_forward_parity.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage6/pr95_stage6_adamw_lambda_sweep_mlx/seed17_c36_624d6f2c4837/runtime_consumption_proof.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 3600
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "local_training_0006_pr95_hnerv_mlx_stage7_pr95_stage7_adamw_sigma_sweep_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_stage7_pr95_stage7_adamw_sigma_sweep_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+        "device": "mlx",
+        "generated_at_utc": "2026-05-25T17:14:00Z",
+        "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+        "optimizer_config_sha256": "71aec94a880e3615dfa688c0b7b56323d3dbdf6c18301c4b6fd4f9d0dbc92746",
+        "optimizer_descriptor_id": "pr95_stage7_adamw_sigma_sweep_mlx",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hnerv",
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "seed": 17,
+        "source_plan_schema": "representation_training_probe_plan_v1",
+        "stage_index": 7,
+        "substrate_family": "nerv_family",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 16,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_timing_smoke.py",
+            "--stage",
+            "7",
+            "--steps",
+            "1",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "17",
+            "--base-channels",
+            "36",
+            "--latent-dim",
+            "28",
+            "--optimizer-descriptor-id",
+            "pr95_stage7_adamw_sigma_sweep_mlx",
+            "--output-dir",
+            ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d",
+            "--allow-existing-output-dir",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-timeout-seconds",
+            "900.0",
+            "--runtime-proof-max-output-bytes",
+            "67108864",
+            "--write-pytorch-export-parity",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--pytorch-export-mlx-device",
+            "cpu",
+            "--pytorch-export-atol-max",
+            "0.002",
+            "--pytorch-export-atol-mean",
+            "0.0001",
+            "--pytorch-export-sample-index",
+            "0",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-output-hw",
+            "384,512",
+            "--source-video-gradient-shape",
+            "1,2,16,20,3",
+            "--source-video-pair-index",
+            "0",
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/representation_training_manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "representation_training_probe_manifest_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/representation_training_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_stage7_pr95_stage7_adamw_sigma_sweep_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+              "key": "candidate_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 7,
+              "key": "candidate_params.stage_index",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 17,
+              "key": "seed",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_stage7_adamw_sigma_sweep_mlx",
+              "key": "candidate_params.optimizer_descriptor_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "71aec94a880e3615dfa688c0b7b56323d3dbdf6c18301c4b6fd4f9d0dbc92746",
+              "key": "candidate_params.optimizer_config_sha256",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "embedding_theta1_hidden_muon_adamw",
+              "key": "candidate_params.parameter_group_lr_policy_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+              "key": "candidate_params.parameter_group_lr_policy_sha256",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/source_video_training_target.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_training_target.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_training_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_source_video_rgb_pairs",
+              "key": "target_source.kind",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "rgb_yuv6_mse",
+              "key": "training_loss_surface",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/source_video_training_target.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/source_video_preprocess_smoke.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_loader_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_preprocess_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "gradient_probe.gradient_reachable",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "contains": "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+              "key": "exact_readiness_refusal.blockers",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/source_video_preprocess_smoke.json",
+              "type": "json_array_contains"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/source_video_preprocess_smoke.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/pr95_public_archive.zip",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/pr95_public_archive_export.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_archive_export.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proof_present",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/pr95_public_archive_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/pr95_pytorch_state_dict.pt",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/pytorch_export_forward_parity.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "pytorch_export_forward_parity_established",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/pytorch_export_forward_parity.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/runtime_consumption_proof.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_runtime_consumption_proof.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proven",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/runtime_consumption_proof.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/manifest.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/representation_training_manifest.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/source_video_training_target.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/source_video_preprocess_smoke.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/pr95_public_archive.zip",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/pr95_public_archive_export.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/pr95_pytorch_state_dict.pt",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/pytorch_export_forward_parity.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage7/pr95_stage7_adamw_sigma_sweep_mlx/seed17_c36_3d5c1809448d/runtime_consumption_proof.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 3600
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "local_training_0007_pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": "pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+        "device": "mlx",
+        "generated_at_utc": "2026-05-25T17:14:00Z",
+        "optimizer_backend_status": "implemented_mlx_local_timing_proxy",
+        "optimizer_config_sha256": "c5d401d14216813875097611f6cb5a5582239d1b2bb1804d3bc9edd005acc3af",
+        "optimizer_descriptor_id": "pr95_stage8_muon_adamw_mlx",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": "hnerv",
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "seed": 17,
+        "source_plan_schema": "representation_training_probe_plan_v1",
+        "stage_index": 8,
+        "substrate_family": "nerv_family",
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": "mlx"
+      },
+      "priority": 17,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_timing_smoke.py",
+            "--stage",
+            "8",
+            "--steps",
+            "1",
+            "--batch-size",
+            "1",
+            "--synthetic-pairs",
+            "1",
+            "--seed",
+            "17",
+            "--base-channels",
+            "36",
+            "--latent-dim",
+            "28",
+            "--optimizer-descriptor-id",
+            "pr95_stage8_muon_adamw_mlx",
+            "--output-dir",
+            ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f",
+            "--allow-existing-output-dir",
+            "--write-pr95-public-archive-export",
+            "--prove-pr95-runtime-consumption",
+            "--runtime-proof-timeout-seconds",
+            "900.0",
+            "--runtime-proof-max-output-bytes",
+            "67108864",
+            "--write-pytorch-export-parity",
+            "--public-pr95-source-model",
+            "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+            "--pytorch-export-mlx-device",
+            "cpu",
+            "--pytorch-export-atol-max",
+            "0.002",
+            "--pytorch-export-atol-mean",
+            "0.0001",
+            "--pytorch-export-sample-index",
+            "0",
+            "--write-source-video-preprocess-smoke",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--source-video-upstream-dir",
+            "upstream",
+            "--source-video-output-hw",
+            "384,512",
+            "--source-video-gradient-shape",
+            "1,2,16,20,3",
+            "--source-video-pair-index",
+            "0",
+            "--train-on-source-video-pairs",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/representation_training_manifest.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "representation_training_probe_manifest_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/representation_training_manifest.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_stage8_pr95_stage8_muon_adamw_mlx_seed17_steps1_c36_source_video_rgb_yuv6",
+              "key": "candidate_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 8,
+              "key": "candidate_params.stage_index",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": 17,
+              "key": "seed",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_stage8_muon_adamw_mlx",
+              "key": "candidate_params.optimizer_descriptor_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c5d401d14216813875097611f6cb5a5582239d1b2bb1804d3bc9edd005acc3af",
+              "key": "candidate_params.optimizer_config_sha256",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "embedding_theta1_hidden_muon_adamw",
+              "key": "candidate_params.parameter_group_lr_policy_id",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "c56d3b8378c7ff10b81d67567ee878cede62ee8a9627e83d1702e4ae3352dbf8",
+              "key": "candidate_params.parameter_group_lr_policy_sha256",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/representation_training_manifest.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/source_video_training_target.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_training_target.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_training_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "pr95_source_video_rgb_pairs",
+              "key": "target_source.kind",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "rgb_yuv6_mse",
+              "key": "training_loss_surface",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/source_video_training_target.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/source_video_training_target.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/source_video_preprocess_smoke.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_source_video_preprocess_smoke_v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_loader_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "source_video_preprocess_ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "gradient_probe.gradient_reachable",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/source_video_preprocess_smoke.json",
+              "type": "json_equals"
+            },
+            {
+              "contains": "pr95_source_video_targets_ready_but_scorer_loss_not_wired_to_mlx",
+              "key": "exact_readiness_refusal.blockers",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/source_video_preprocess_smoke.json",
+              "type": "json_array_contains"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/source_video_preprocess_smoke.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_public_archive.zip",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_public_archive_export.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_archive_export.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proof_present",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_public_archive_export.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_public_archive_export.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_pytorch_state_dict.pt",
+              "type": "path_exists"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_export_forward_parity.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "pytorch_export_forward_parity_established",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "exact_readiness_refusal.ready",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_export_forward_parity.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_export_forward_parity.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/runtime_consumption_proof.json",
+              "type": "path_exists"
+            },
+            {
+              "equals": "pr95_hnerv_public_runtime_consumption_proof.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "runtime_consumption_proven",
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/runtime_consumption_proof.json",
+              "type": "json_equals"
+            },
+            {
+              "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/runtime_consumption_proof.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/manifest.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/representation_training_manifest.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/source_video_training_target.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/source_video_preprocess_smoke.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_public_archive.zip",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_public_archive_export.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_pytorch_state_dict.pt",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_export_forward_parity.json",
+              ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/runtime_consumption_proof.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 3600
+        }
+      ],
+      "tags": []
+    }
+  ],
+  "queue_id": "codex_pr95_stage6_stage7_full_profile_20260525T1714Z",
+  "schema": "experiment_queue.v1"
+}
