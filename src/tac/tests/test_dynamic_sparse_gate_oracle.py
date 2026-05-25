@@ -571,3 +571,112 @@ def test_dynamic_sparse_gate_compiler_hint_cli_accepts_materializer_feedback(
     assert selected["unit_id"] == "payload.bin"
     assert selected["candidate_saved_bytes"] == 44
     assert selected["score_claim"] is False
+
+
+def test_dynamic_sparse_gate_compiler_hint_cli_discovers_materializer_feedback_root(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "frontier_feedback"
+    first = root / "packet_member_zip_header_elide_v1"
+    second = root / "per_archive" / "archive_a" / "packet_member_merge_v1"
+    first.mkdir(parents=True)
+    second.mkdir(parents=True)
+    (first / "sweep.json").write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_materializer_empirical_sweep.v1",
+                "observations": [
+                    {
+                        "schema": "family_agnostic_materializer_empirical_observation.v1",
+                        "observation_id": "header_elide_positive",
+                        "target_kind": "packet_member_zip_header_elide_v1",
+                        "materializer_id": "packet_member_zip_header_elide_adapter",
+                        "selected_member_name": "renderer.bin",
+                        "source_archive_sha256": "a" * 64,
+                        "candidate_archive_sha256": "b" * 64,
+                        "source_archive_bytes": 345_802,
+                        "candidate_archive_bytes": 345_646,
+                        "saved_bytes": 156,
+                        "observed_score_gain": 0.0001,
+                        "observed_rate_gain": 0.0001,
+                        "rate_positive": True,
+                        "receiver_contract_satisfied": True,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (first / "observations.jsonl").write_text(
+        "\n".join(
+            json.dumps(row)
+            for row in json.loads((first / "sweep.json").read_text(encoding="utf-8"))[
+                "observations"
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (second / "observations.jsonl").write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_materializer_empirical_observation.v1",
+                "observation_id": "merge_positive_receiver_blocked",
+                "target_kind": "packet_member_merge_v1",
+                "materializer_id": "packet_member_merge_adapter",
+                "selected_member_name": "merged.bin",
+                "source_archive_sha256": "c" * 64,
+                "candidate_archive_sha256": "d" * 64,
+                "source_archive_bytes": 345_802,
+                "candidate_archive_bytes": 345_544,
+                "saved_bytes": 258,
+                "observed_score_gain": 0.0,
+                "observed_rate_gain": 0.00017,
+                "rate_positive": True,
+                "receiver_contract_satisfied": False,
+                "readiness_blockers": [
+                    "packet_member_merge_receiver_contract_not_satisfied"
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    out = tmp_path / "hint.json"
+
+    assert (
+        gate_cli.main(
+            [
+                "--materializer-feedback-root",
+                str(root),
+                "--operation-set-id",
+                "materializer_feedback_root_fixture",
+                "--out",
+                str(out),
+                "--max-operations",
+                "4",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    feedback = payload["materializer_feedback"]
+    assert payload["selection_source"] == "dynamic_sparse_materializer_feedback"
+    assert feedback["normalized_observation_count"] == 2
+    assert feedback["discovered_source_count"] == 2
+    assert len(feedback["source_paths"]) == 2
+    assert {row["target_kind"] for row in payload["selected_operations"]} == {
+        "packet_member_zip_header_elide_v1",
+        "packet_member_merge_v1",
+    }
+    assert payload["score_claim"] is False

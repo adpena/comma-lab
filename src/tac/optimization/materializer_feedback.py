@@ -66,6 +66,18 @@ def _string_sequence(value: Any) -> list[str]:
     return [str(item) for item in _as_sequence(value) if str(item)]
 
 
+def _observation_dedupe_key(row: Mapping[str, Any]) -> tuple[str, ...]:
+    return (
+        str(row.get("observation_id") or ""),
+        str(row.get("target_kind") or ""),
+        str(row.get("source_archive_sha256") or ""),
+        str(row.get("candidate_archive_sha256") or ""),
+        str(row.get("selected_member_name") or ""),
+        str(row.get("saved_bytes") or ""),
+        str(row.get("selected_materialization_key") or ""),
+    )
+
+
 def _recommended_planner_action(
     *,
     target_kind: str,
@@ -392,7 +404,15 @@ def materializer_observation_feedback_rows(
         )
         if row is not None:
             rows.append(row)
-    return rows
+    deduped: list[dict[str, Any]] = []
+    seen: set[tuple[str, ...]] = set()
+    for row in rows:
+        key = _observation_dedupe_key(row)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(row)
+    return deduped
 
 
 __all__ = [

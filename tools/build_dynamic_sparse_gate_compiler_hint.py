@@ -29,6 +29,10 @@ from tac.optimization.inverse_steganalysis_acquisition import (  # noqa: E402
     InverseSteganalysisAcquisitionError,
     observations_from_queue_observation,
 )
+from tac.optimization.materializer_feedback import (  # noqa: E402
+    FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA,
+    MATERIALIZER_FALSE_AUTHORITY,
+)
 from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 
@@ -41,6 +45,22 @@ def _load_mapping(path: Path, *, label: str) -> dict[str, Any]:
     if not isinstance(payload, Mapping):
         raise SystemExit(f"{label}: expected JSON object")
     return dict(payload)
+
+
+def _load_jsonl(path: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for index, raw_line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise SystemExit(f"{path}:{index}: invalid JSONL row: {exc}") from exc
+        if not isinstance(row, Mapping):
+            raise SystemExit(f"{path}:{index}: expected JSON object row")
+        rows.append(dict(row))
+    return rows
 
 
 def _repo_rel(path: Path, repo_root: Path) -> str:
@@ -117,6 +137,81 @@ def _channel_ids(arg_value: str | None) -> tuple[str, ...]:
     return ("rate_saving", "receiver_proof", "runtime_efficiency")
 
 
+def _materializer_feedback_payload(path: Path) -> dict[str, Any]:
+    if path.suffix == ".jsonl":
+        return {
+            "schema": FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA,
+            "source_format": "jsonl_observation_rows",
+            "observations": _load_jsonl(path),
+            **MATERIALIZER_FALSE_AUTHORITY,
+        }
+    return _load_mapping(path, label="--materializer-feedback")
+
+
+def _discover_materializer_feedback_paths(
+    roots: list[Path] | None,
+    *,
+    max_files: int,
+) -> list[Path]:
+    paths: list[Path] = []
+    seen: set[str] = set()
+    for root in roots or []:
+        if root.is_file():
+            candidates = [root]
+        else:
+            if not root.exists():
+                raise SystemExit(f"materializer feedback root does not exist: {root}")
+            candidates = [
+                path
+                for path in sorted(root.rglob("*"))
+                if path.is_file()
+                and (
+                    path.name in {"sweep.json", "observations.jsonl"}
+                    or (
+                        path.suffix in {".json", ".jsonl"}
+                        and "materializer" in path.as_posix()
+                    )
+                )
+                and not (
+                    path.name == "observations.jsonl"
+                    and (path.parent / "sweep.json").is_file()
+                )
+            ]
+        for path in candidates:
+            key = path.resolve(strict=False).as_posix()
+            if key in seen:
+                continue
+            seen.add(key)
+            paths.append(path)
+            if len(paths) > max_files:
+                raise SystemExit(
+                    "materializer feedback discovery exceeded "
+                    f"--materializer-feedback-max-files={max_files}"
+                )
+    return paths
+
+
+def _materializer_feedback_payloads(args: argparse.Namespace) -> tuple[list[dict[str, Any]], list[Path]]:
+    paths: list[Path] = []
+    seen: set[str] = set()
+    for path in args.materializer_feedback or []:
+        key = path.resolve(strict=False).as_posix()
+        if key not in seen:
+            seen.add(key)
+            paths.append(path)
+    for path in _discover_materializer_feedback_paths(
+        args.materializer_feedback_root,
+        max_files=args.materializer_feedback_max_files,
+    ):
+        key = path.resolve(strict=False).as_posix()
+        if key not in seen:
+            seen.add(key)
+            paths.append(path)
+    if not paths:
+        raise SystemExit("no materializer feedback files discovered")
+    return [_materializer_feedback_payload(path) for path in paths], paths
+
+
 def _queue_feedback_observations(args: argparse.Namespace) -> list[Mapping[str, Any]]:
     if args.queue_performance_runtime_identity is None:
         raise SystemExit(
@@ -159,8 +254,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--operation-candidates", type=Path)
     source.add_argument("--observations", type=Path)
-    source.add_argument("--materializer-feedback", type=Path)
+    source.add_argument("--materializer-feedback", type=Path, action="append")
+    source.add_argument("--materializer-feedback-root", type=Path, action="append")
     source.add_argument("--queue-observation", type=Path, action="append")
+    parser.add_argument("--materializer-feedback-max-files", type=int, default=256)
     parser.add_argument("--coefficients", type=Path)
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
     parser.add_argument("--operation-set-id", required=True)
@@ -219,11 +316,18 @@ def main(argv: list[str] | None = None) -> int:
             _write_json(args.out, hint, overwrite=args.overwrite_output)
             print(str(args.out))
             return 0
-        if args.materializer_feedback is not None:
+        if args.materializer_feedback is not None or args.materializer_feedback_root is not None:
+            materializer_feedback, materializer_feedback_paths = (
+                _materializer_feedback_payloads(args)
+            )
             hint = operation_set_compiler_hint_from_materializer_feedback(
-                _load_json(args.materializer_feedback),
+                materializer_feedback,
                 operation_set_id=args.operation_set_id,
-                source_path=_repo_rel(args.materializer_feedback, args.repo_root),
+                source_path=(
+                    _repo_rel(materializer_feedback_paths[0], args.repo_root)
+                    if len(materializer_feedback_paths) == 1
+                    else "multiple_materializer_feedback_sources"
+                ),
                 channel_ids=_channel_ids(args.channel_ids),
                 max_operations=args.max_operations,
                 min_abs_gate=args.min_abs_gate,
@@ -241,6 +345,12 @@ def main(argv: list[str] | None = None) -> int:
                     if args.rate_score_per_byte is not None
                     else DEFAULT_RATE_SCORE_PER_BYTE
                 ),
+            )
+            hint["materializer_feedback"]["source_paths"] = [
+                _repo_rel(path, args.repo_root) for path in materializer_feedback_paths
+            ]
+            hint["materializer_feedback"]["discovered_source_count"] = len(
+                materializer_feedback_paths
             )
             _write_json(args.out, hint, overwrite=args.overwrite_output)
             print(str(args.out))
