@@ -37,6 +37,7 @@ PACKET_MEMBER_MERGE_SCHEMA = "packet_member_merge_candidate.v1"
 RENDERER_PAYLOAD_DFL1_SCHEMA = "renderer_payload_dfl1_candidate.v1"
 PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA = "packet_member_zip_header_elide_candidate.v1"
 TENSOR_FACTORIZE_SCHEMA = "tensor_factorize_candidate.v1"
+RUNTIME_CONSUMPTION_PROOF_SCHEMA = "family_agnostic_runtime_consumption_proof_v1"
 ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND = "archive_section_entropy_recode_v1"
 PACKET_MEMBER_RECOMPRESS_TARGET_KIND = "packet_member_recompress_v1"
 PACKET_MEMBER_MERGE_TARGET_KIND = "packet_member_merge_v1"
@@ -61,6 +62,12 @@ PACKET_MEMBER_RECOMPRESS_PROOF_KIND = (
 )
 PACKET_MEMBER_RECOMPRESS_RECEIVER_CONTRACT_KIND = (
     "family_agnostic_packet_member_recompress"
+)
+PACKET_MEMBER_ZIP_HEADER_ELIDE_PROOF_KIND = (
+    "packet_member_zip_header_elide_payload_identity_receiver_proof.v1"
+)
+PACKET_MEMBER_ZIP_HEADER_ELIDE_RECEIVER_CONTRACT_KIND = (
+    "family_agnostic_packet_member_zip_header_elide"
 )
 TENSOR_FACTORIZE_PROOF_KIND = (
     "tensor_factorize_cooperative_receiver_reconstruction_proof.v1"
@@ -331,7 +338,7 @@ def _packet_member_recompress_runtime_consumption_proof(
         source_member_sha is not None and candidate_member_sha == source_member_sha
     )
     return {
-        "schema": "family_agnostic_runtime_consumption_proof_v1",
+        "schema": RUNTIME_CONSUMPTION_PROOF_SCHEMA,
         "proof_kind": PACKET_MEMBER_RECOMPRESS_PROOF_KIND,
         "proof_scope": "zip_member_payload_identity_after_archive_recompression",
         "target_kind": PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
@@ -974,7 +981,7 @@ def _packet_member_merge_runtime_consumption_proof(
         and reconstruction["table"].get("schema") == "packet_member_merge_table.v1"
     )
     return {
-        "schema": "family_agnostic_runtime_consumption_proof_v1",
+        "schema": RUNTIME_CONSUMPTION_PROOF_SCHEMA,
         "proof_kind": "packet_member_merge_original_member_reconstruction_receiver_proof.v1",
         "proof_scope": "merged_zip_member_reconstructs_original_selected_member_payloads",
         "target_kind": PACKET_MEMBER_MERGE_TARGET_KIND,
@@ -1184,6 +1191,10 @@ def materialize_packet_member_zip_header_elide_candidate(
             str(row["name"]): str(row["sha256"])
             for row in source_member_records
         },
+        required_proof_kind=PACKET_MEMBER_ZIP_HEADER_ELIDE_PROOF_KIND,
+        required_receiver_contract_kind=PACKET_MEMBER_ZIP_HEADER_ELIDE_RECEIVER_CONTRACT_KIND,
+        required_target_kind=PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+        required_materializer_id=PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID,
         repo_root=repo,
     )
     readiness_blockers = _readiness_blockers(
@@ -1203,7 +1214,7 @@ def materialize_packet_member_zip_header_elide_candidate(
             unsupported_features=("zip64", "data_descriptors", "duplicate_member_names"),
         ),
         "receiver_contract_id": f"{PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND}.receiver.v1",
-        "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+        "receiver_contract_kind": PACKET_MEMBER_ZIP_HEADER_ELIDE_RECEIVER_CONTRACT_KIND,
         "byte_closed_candidate_emitted": True,
         "source_archive": source_record,
         "source_member": source_member_record,
@@ -1337,8 +1348,8 @@ def _packet_member_zip_header_elide_runtime_consumption_proof(
         if _clean_str(row.get("name")) and _clean_str(row.get("sha256"))
     }
     return {
-        "schema": "family_agnostic_runtime_consumption_proof_v1",
-        "proof_kind": "packet_member_zip_header_elide_payload_identity_receiver_proof.v1",
+        "schema": RUNTIME_CONSUMPTION_PROOF_SCHEMA,
+        "proof_kind": PACKET_MEMBER_ZIP_HEADER_ELIDE_PROOF_KIND,
         "proof_scope": "zip_header_metadata_elision_with_member_payload_identity",
         "target_kind": PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
         "materializer_id": PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID,
@@ -1349,7 +1360,7 @@ def _packet_member_zip_header_elide_runtime_consumption_proof(
             deterministic_surface="python_stdlib_raw_zip32_wire_rewrite",
             unsupported_features=("zip64", "data_descriptors", "duplicate_member_names"),
         ),
-        "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+        "receiver_contract_kind": PACKET_MEMBER_ZIP_HEADER_ELIDE_RECEIVER_CONTRACT_KIND,
         "receiver_contract_id": f"{PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND}.receiver.v1",
         "selected_member_name": selected_member_name,
         "selected_member_names": list(selected_member_names),
@@ -1688,7 +1699,7 @@ def _archive_section_entropy_recode_runtime_consumption_proof(
     if not section_proofs:
         passed = False
     return {
-        "schema": "family_agnostic_runtime_consumption_proof_v1",
+        "schema": RUNTIME_CONSUMPTION_PROOF_SCHEMA,
         "proof_kind": ARCHIVE_SECTION_ENTROPY_RECODE_PROOF_KIND,
         "proof_scope": "brotli_section_raw_payload_identity_after_entropy_recode",
         "target_kind": ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
@@ -1965,7 +1976,7 @@ def _tensor_factorize_runtime_consumption_proof(
     receiver_declared = cooperative_receiver_id is not None and receiver_adapter_kind is not None
     passed = finite and abs_passed and relative_passed and receiver_declared
     return {
-        "schema": "family_agnostic_runtime_consumption_proof_v1",
+        "schema": RUNTIME_CONSUMPTION_PROOF_SCHEMA,
         "proof_kind": TENSOR_FACTORIZE_PROOF_KIND,
         "proof_scope": "low_rank_npz_packet_reconstructs_source_tensor_for_cooperative_receiver",
         "target_kind": TENSOR_FACTORIZE_TARGET_KIND,
@@ -2059,6 +2070,8 @@ def verify_runtime_consumption_proof(
         )
     except ValueError as exc:
         blockers.append(str(exc))
+    if proof.get("schema") != RUNTIME_CONSUMPTION_PROOF_SCHEMA:
+        blockers.append("runtime_consumption_proof_schema_mismatch")
     if not _proof_passed(proof):
         blockers.append("runtime_consumption_proof_not_passed")
     if required_proof_kind is not None and proof.get("proof_kind") != required_proof_kind:
@@ -2862,7 +2875,7 @@ def _renderer_payload_dfl1_runtime_consumption_proof(
     runtime_adapter_manifest["native_unpacker_parse_ready"] = native_probe["passed"] is True
     runtime_adapter_manifest["requires_full_frame_shell_parity"] = True
     return {
-        "schema": "family_agnostic_runtime_consumption_proof_v1",
+        "schema": RUNTIME_CONSUMPTION_PROOF_SCHEMA,
         "proof_kind": "renderer_payload_dfl1_native_unpacker_reconstruction_smoke.v1",
         "target_kind": RENDERER_PAYLOAD_DFL1_TARGET_KIND,
         "materializer_id": RENDERER_PAYLOAD_DFL1_MATERIALIZER_ID,

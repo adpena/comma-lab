@@ -225,6 +225,41 @@ def test_packet_member_recompress_materializer_rejects_wrong_proof_metadata(
     )
 
 
+def test_packet_member_recompress_materializer_rejects_wrong_proof_schema(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    first_output = tmp_path / "candidate_a.zip"
+    second_output = tmp_path / "candidate_b.zip"
+    valid_proof = tmp_path / "valid_runtime_consumption_proof.json"
+    mismatched_proof = tmp_path / "mismatched_runtime_consumption_proof.json"
+    payload = b"A" * 8192
+    _write_zip(archive, {"payload.bin": payload})
+    materialize_packet_member_recompress_candidate(
+        archive_path=archive,
+        output_archive=first_output,
+        member_name="payload.bin",
+        runtime_consumption_proof_out=valid_proof,
+        repo_root=tmp_path,
+    )
+    proof_payload = json.loads(valid_proof.read_text(encoding="utf-8"))
+    proof_payload["schema"] = "not_a_family_agnostic_runtime_consumption_proof"
+    mismatched_proof.write_text(json.dumps(proof_payload), encoding="utf-8")
+
+    result = materialize_packet_member_recompress_candidate(
+        archive_path=archive,
+        output_archive=second_output,
+        member_name="payload.bin",
+        runtime_consumption_proof=mismatched_proof,
+        repo_root=tmp_path,
+    )
+
+    assert result["receiver_contract_satisfied"] is False
+    assert "runtime_consumption_proof_schema_mismatch" in (
+        result["readiness_blockers"]
+    )
+
+
 def test_packet_member_recompress_materializer_rejects_truthy_proof_authority(
     tmp_path: Path,
 ) -> None:
@@ -989,6 +1024,53 @@ def test_packet_member_zip_header_elide_materializer_emits_runtime_proof(
     )
     assert result["score_claim"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
+
+
+def test_packet_member_zip_header_elide_materializer_rejects_wrong_proof_metadata(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    first_output = tmp_path / "candidate_a.zip"
+    second_output = tmp_path / "candidate_b.zip"
+    valid_proof = tmp_path / "valid_runtime_consumption_proof.json"
+    mismatched_proof = tmp_path / "mismatched_runtime_consumption_proof.json"
+    payload = b"header-elide-payload" * 64
+    _write_zip_with_member_header_overhead(archive, payload=payload)
+    materialize_packet_member_zip_header_elide_candidate(
+        archive_path=archive,
+        output_archive=first_output,
+        member_name="payload.bin",
+        runtime_consumption_proof_out=valid_proof,
+        repo_root=tmp_path,
+    )
+    proof_payload = json.loads(valid_proof.read_text(encoding="utf-8"))
+    proof_payload["proof_kind"] = (
+        "packet_member_recompress_payload_identity_receiver_proof.v1"
+    )
+    proof_payload["target_kind"] = "packet_member_recompress_v1"
+    proof_payload["materializer_id"] = "packet_member_recompress_adapter"
+    proof_payload["receiver_contract_kind"] = "family_agnostic_packet_member_recompress"
+    mismatched_proof.write_text(json.dumps(proof_payload), encoding="utf-8")
+
+    result = materialize_packet_member_zip_header_elide_candidate(
+        archive_path=archive,
+        output_archive=second_output,
+        member_name="payload.bin",
+        runtime_consumption_proof=mismatched_proof,
+        repo_root=tmp_path,
+    )
+
+    assert result["receiver_contract_satisfied"] is False
+    assert "runtime_consumption_proof_kind_mismatch" in result["readiness_blockers"]
+    assert "runtime_consumption_proof_target_kind_mismatch" in (
+        result["readiness_blockers"]
+    )
+    assert "runtime_consumption_proof_materializer_id_mismatch" in (
+        result["readiness_blockers"]
+    )
+    assert "runtime_consumption_proof_receiver_contract_kind_mismatch" in (
+        result["readiness_blockers"]
+    )
 
 
 def test_archive_section_entropy_recode_materializer_uses_section_manifest(
