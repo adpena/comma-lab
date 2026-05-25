@@ -20,6 +20,10 @@ from tac.local_acceleration.mlx_scorer_response import (
     GPU_RESEARCH_SIGNAL_BLOCKER,
 )
 from tac.local_acceleration.mlx_scorer_torch_parity import (
+    CONV_ACCUMULATION_PROBE_SCHEMA_VERSION,
+    PASS_CONV_ACCUMULATION_PROBE_VERDICT,
+)
+from tac.local_acceleration.mlx_scorer_torch_parity import (
     PASS_SWEEP_VERDICT as TORCH_PARITY_PASS_SWEEP_VERDICT,
 )
 from tac.local_acceleration.mlx_scorer_torch_parity import (
@@ -74,6 +78,7 @@ def build_mlx_scorer_production_contract_manifest(
     profile_stability: dict[str, Any] | None = None,
     batch_invariance: dict[str, Any] | None = None,
     score_calibration: dict[str, Any] | None = None,
+    conv2d_accumulation_probe: dict[str, Any] | None = None,
     run_id: str | None = None,
     require_cache_identity: bool = True,
     require_cache_auth_audit: bool = True,
@@ -81,6 +86,7 @@ def build_mlx_scorer_production_contract_manifest(
     require_profile_stability: bool = True,
     require_batch_invariance: bool = True,
     require_score_calibration: bool = False,
+    require_conv2d_accumulation_probe: bool = False,
 ) -> dict[str, Any]:
     """Validate an MLX scorer-response artifact as a production local signal.
 
@@ -184,6 +190,15 @@ def build_mlx_scorer_production_contract_manifest(
             response_payload=response_payload,
             blockers=blockers,
         )
+    if conv2d_accumulation_probe is None:
+        missing = "conv2d_accumulation_probe_manifest_not_supplied"
+        if require_conv2d_accumulation_probe:
+            blockers.append(missing)
+    else:
+        _check_conv2d_accumulation_probe_manifest(
+            conv2d_accumulation_probe,
+            blockers=blockers,
+        )
 
     strict_gate_policy = bool(
         require_cache_identity
@@ -272,7 +287,13 @@ def build_mlx_scorer_production_contract_manifest(
             "batch_invariance": batch_invariance_required,
             "batch_invariance_policy_requested": bool(require_batch_invariance),
             "score_calibration": bool(require_score_calibration),
+            "conv2d_accumulation_probe": bool(require_conv2d_accumulation_probe),
             "strict_gate_policy": strict_gate_policy,
+        },
+        "numerical_mitigation_summary": {
+            "conv2d_accumulation_probe": _conv2d_accumulation_probe_summary(
+                conv2d_accumulation_probe
+            ),
         },
         "authority_status": (
             "Contract pass means production-safe local MLX scorer acceleration "
@@ -1058,6 +1079,88 @@ def _score_calibration_row_matches_response(
         if _shape_mapping(row_side) != _shape_mapping(response_side):
             return False
     return True
+
+
+def _check_conv2d_accumulation_probe_manifest(
+    manifest: dict[str, Any],
+    *,
+    blockers: list[str],
+) -> None:
+    _check_optional_gate_manifest(
+        manifest,
+        blockers=blockers,
+        warnings=[],
+        schema_prefix=CONV_ACCUMULATION_PROBE_SCHEMA_VERSION,
+        label="conv2d_accumulation_probe",
+    )
+    if not isinstance(manifest, dict):
+        return
+    if manifest.get("schema_version") != CONV_ACCUMULATION_PROBE_SCHEMA_VERSION:
+        blockers.append("conv2d_accumulation_probe_schema_version_invalid")
+    if manifest.get("verdict") != PASS_CONV_ACCUMULATION_PROBE_VERDICT:
+        blockers.append("conv2d_accumulation_probe_verdict_not_pass")
+    if manifest.get("score_axis") != EVIDENCE_TAG_MLX:
+        blockers.append("conv2d_accumulation_probe_score_axis_not_mlx_research_signal")
+    rows = manifest.get("rows")
+    if not isinstance(rows, list) or not rows:
+        blockers.append("conv2d_accumulation_probe_rows_missing")
+        return
+    modes = {str(row.get("mode")) for row in rows if isinstance(row, dict)}
+    required_modes = {
+        "optimized_mlx_conv2d",
+        "fixed_fp32",
+        "kahan_fp32",
+        "fixed_fp64",
+    }
+    if not required_modes.issubset(modes):
+        blockers.append("conv2d_accumulation_probe_required_modes_missing")
+    for row in rows:
+        if not isinstance(row, dict):
+            blockers.append("conv2d_accumulation_probe_row_not_object")
+            continue
+        mode = str(row.get("mode"))
+        if row.get("passed") is not True:
+            blockers.append(f"conv2d_accumulation_probe_mode_not_passing:{mode}")
+        if row.get("shape_match") is not True:
+            blockers.append(f"conv2d_accumulation_probe_mode_shape_mismatch:{mode}")
+    mlx_backend = manifest.get("mlx_backend")
+    if not isinstance(mlx_backend, dict):
+        blockers.append("conv2d_accumulation_probe_mlx_backend_missing")
+    else:
+        for field in ("score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch"):
+            if mlx_backend.get(field) is not False:
+                blockers.append(f"conv2d_accumulation_probe_mlx_backend_{field}_not_false")
+
+
+def _conv2d_accumulation_probe_summary(
+    manifest: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if not isinstance(manifest, dict):
+        return None
+    rows = manifest.get("rows")
+    return {
+        "schema_version": manifest.get("schema_version"),
+        "passed": manifest.get("passed") is True,
+        "verdict": manifest.get("verdict"),
+        "device_type": manifest.get("device_type"),
+        "torch_device_type": manifest.get("torch_device_type"),
+        "modes": [
+            {
+                "mode": row.get("mode"),
+                "passed": row.get("passed") is True,
+                "max_abs_delta": row.get("max_abs_delta"),
+            }
+            for row in rows
+            if isinstance(row, dict)
+        ]
+        if isinstance(rows, list)
+        else [],
+        "mlx_backend_classification": (
+            manifest.get("mlx_backend", {}).get("classification")
+            if isinstance(manifest.get("mlx_backend"), dict)
+            else None
+        ),
+    }
 
 
 def _check_profile_stability_manifest(

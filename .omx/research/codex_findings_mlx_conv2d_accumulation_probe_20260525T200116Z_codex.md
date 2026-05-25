@@ -13,6 +13,7 @@ This tranche turns that gap into executable local diagnostics, not authority. `m
 - Reusable primitive: `MLXReferenceConv2dAdapter` in `src/tac/local_acceleration/mlx_scorer_adapters.py`.
 - Canonical manifest: `build_mlx_conv2d_accumulation_probe_manifest(...)` in `src/tac/local_acceleration/mlx_scorer_torch_parity.py`.
 - Operator CLI: `tools/probe_mlx_conv2d_accumulation.py`.
+- Production gate consumer: `tools/check_mlx_scorer_production_contract.py` accepts `--conv2d-accumulation-probe` and fails closed on supplied probe failures.
 - Regression coverage: `src/tac/tests/test_mlx_scorer_torch_parity.py`.
 - Local probe artifact: `.omx/research/codex_mlx_conv2d_accumulation_probe_20260525T200132Z/mlx_conv2d_accumulation_probe.synthetic_grouped_3x3.json`.
 
@@ -47,4 +48,4 @@ Synthetic grouped 3x3 Conv2d smoke:
 
 ## Remaining Work
 
-This is a diagnostic probe, not a scorer-production replacement. The next high-EV follow-up is to consume these probe manifests in the MLX scorer-response production contract or spend-triage gate so failed Conv2d accumulation probes can automatically block planner use of affected MLX rows.
+This is a diagnostic probe, not a scorer-production replacement. The production contract now consumes supplied probe manifests, so the next high-EV follow-up is to thread the same gate into the MLX scorer-response spend-triage planner and queue definitions, where missing/failed numerical-mitigation probes can steer local optimizer selection automatically.

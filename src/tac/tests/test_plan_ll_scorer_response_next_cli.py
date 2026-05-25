@@ -5,6 +5,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tac.exact_eval_custody import CONTEST_EXACT_SAMPLE_COUNT
+from tac.optimization.normalized_objective import RATE_SCORE_PER_BYTE
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -32,6 +35,11 @@ def _mlx_dataset() -> dict:
                 "source_batch_pairs": 1,
                 "source_n_samples": 600,
                 "source_pair_window": [0, 600],
+                **_normalized_objective_fields(
+                    observed_scorer_gain=0.002,
+                    source_n_samples=600,
+                    added_archive_bytes=0,
+                ),
                 **false_authority,
             }
         ],
@@ -87,6 +95,11 @@ def _validated_mlx_dataset() -> dict:
                             "source_batch_pairs": 1,
                             "source_n_samples": 600,
                             "source_pair_window": [0, 600],
+                            **_normalized_objective_fields(
+                                observed_scorer_gain=0.002 + 0.00001 * pair_rank,
+                                source_n_samples=600,
+                                added_archive_bytes=0,
+                            ),
                         }
                     )
                 rows.append(row)
@@ -101,6 +114,33 @@ def _validated_mlx_dataset() -> dict:
         },
         **false_authority,
         "rows": rows,
+    }
+
+
+def _normalized_objective_fields(
+    *,
+    observed_scorer_gain: float,
+    source_n_samples: int,
+    added_archive_bytes: int,
+) -> dict:
+    normalized_gain = (
+        float(observed_scorer_gain)
+        * float(source_n_samples)
+        / float(CONTEST_EXACT_SAMPLE_COUNT)
+    )
+    rate_delta = float(added_archive_bytes) * RATE_SCORE_PER_BYTE
+    return {
+        "full_video_denominator": CONTEST_EXACT_SAMPLE_COUNT,
+        "observed_scorer_gain_vs_baseline": float(observed_scorer_gain),
+        "added_archive_bytes": int(added_archive_bytes),
+        "normalized_full_video_scorer_gain_vs_baseline": normalized_gain,
+        "projected_full_video_delta_vs_baseline_score": rate_delta - normalized_gain,
+        "break_even_added_bytes_from_normalized_full_video_gain": (
+            normalized_gain / RATE_SCORE_PER_BYTE
+        ),
+        "normalized_full_video_byte_budget_margin_vs_break_even": (
+            normalized_gain / RATE_SCORE_PER_BYTE - float(added_archive_bytes)
+        ),
     }
 
 

@@ -31,6 +31,7 @@ def test_mlx_production_contract_accepts_cpu_local_acceleration_signal() -> None
         reference_torch_parity=_torch_parity(side="reference"),
         profile_stability=_profile_stability(),
         batch_invariance=_batch_invariance(),
+        conv2d_accumulation_probe=_conv2d_accumulation_probe(),
     )
 
     assert manifest["passed"] is True
@@ -71,6 +72,58 @@ def test_mlx_production_contract_accepts_cpu_local_acceleration_signal() -> None
     assert manifest["response_summary"]["segnet_sha256"] == "b" * 64
     assert manifest["required_gates"]["batch_invariance"] is False
     assert manifest["required_gates"]["batch_invariance_policy_requested"] is True
+    assert manifest["required_gates"]["conv2d_accumulation_probe"] is False
+    assert (
+        manifest["numerical_mitigation_summary"]["conv2d_accumulation_probe"]["passed"]
+        is True
+    )
+
+
+def test_mlx_production_contract_rejects_failed_conv2d_accumulation_probe() -> None:
+    manifest = build_mlx_scorer_production_contract_manifest(
+        _response_payload(),
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(),
+        reference_torch_parity=_torch_parity(side="reference"),
+        profile_stability=_profile_stability(),
+        batch_invariance=_batch_invariance(),
+        conv2d_accumulation_probe=_conv2d_accumulation_probe(passed=False),
+    )
+
+    assert manifest["passed"] is False
+    assert "conv2d_accumulation_probe_not_passing" in manifest["blockers"]
+    assert "conv2d_accumulation_probe_verdict_not_pass" in manifest["blockers"]
+    assert "conv2d_accumulation_probe_mode_not_passing:fixed_fp64" in manifest["blockers"]
+
+
+def test_mlx_production_contract_can_require_conv2d_accumulation_probe() -> None:
+    missing = build_mlx_scorer_production_contract_manifest(
+        _response_payload(),
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(),
+        reference_torch_parity=_torch_parity(side="reference"),
+        profile_stability=_profile_stability(),
+        batch_invariance=_batch_invariance(),
+        require_conv2d_accumulation_probe=True,
+    )
+
+    assert missing["passed"] is False
+    assert "conv2d_accumulation_probe_manifest_not_supplied" in missing["blockers"]
+    assert missing["required_gates"]["conv2d_accumulation_probe"] is True
+
+    present = build_mlx_scorer_production_contract_manifest(
+        _response_payload(),
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(),
+        reference_torch_parity=_torch_parity(side="reference"),
+        profile_stability=_profile_stability(),
+        batch_invariance=_batch_invariance(),
+        conv2d_accumulation_probe=_conv2d_accumulation_probe(),
+        require_conv2d_accumulation_probe=True,
+    )
+
+    assert present["passed"] is True
+    assert present["required_gates"]["conv2d_accumulation_probe"] is True
 
 
 def test_mlx_production_contract_bundle_accepts_strict_contracts() -> None:
@@ -596,6 +649,69 @@ def test_mlx_production_contract_cli_writes_manifest(tmp_path: Path) -> None:
     reference_torch_parity_path = tmp_path / "reference_torch_parity.json"
     stability_path = tmp_path / "stability.json"
     invariance_path = tmp_path / "invariance.json"
+    conv2d_probe_path = tmp_path / "conv2d_probe.json"
+    out_path = tmp_path / "contract.json"
+    response_path.write_text(json.dumps(_response_payload()), encoding="utf-8")
+    cache_audit_path.write_text(json.dumps(_cache_auth_audit()), encoding="utf-8")
+    torch_parity_path.write_text(json.dumps(_torch_parity()), encoding="utf-8")
+    reference_torch_parity_path.write_text(
+        json.dumps(_torch_parity(side="reference")),
+        encoding="utf-8",
+    )
+    stability_path.write_text(json.dumps(_profile_stability()), encoding="utf-8")
+    invariance_path.write_text(json.dumps(_batch_invariance()), encoding="utf-8")
+    conv2d_probe_path.write_text(
+        json.dumps(_conv2d_accumulation_probe()),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "check_mlx_scorer_production_contract.py"),
+            "--response",
+            str(response_path),
+            "--output",
+            str(out_path),
+            "--cache-auth-audit",
+            str(cache_audit_path),
+            "--torch-parity",
+            str(torch_parity_path),
+            "--reference-torch-parity",
+            str(reference_torch_parity_path),
+            "--profile-stability",
+            str(stability_path),
+            "--batch-invariance",
+            str(invariance_path),
+            "--conv2d-accumulation-probe",
+            str(conv2d_probe_path),
+            "--run-id",
+            "unit",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert '"passed": true' in completed.stdout
+    manifest = json.loads(out_path.read_text(encoding="utf-8"))
+    assert manifest["run_id"] == "unit"
+    assert manifest["passed"] is True
+    assert (
+        manifest["numerical_mitigation_summary"]["conv2d_accumulation_probe"]["passed"]
+        is True
+    )
+
+
+def test_mlx_production_contract_cli_requires_conv2d_accumulation_probe_when_requested(
+    tmp_path: Path,
+) -> None:
+    response_path = tmp_path / "response.json"
+    cache_audit_path = tmp_path / "cache_audit.json"
+    torch_parity_path = tmp_path / "torch_parity.json"
+    reference_torch_parity_path = tmp_path / "reference_torch_parity.json"
+    stability_path = tmp_path / "stability.json"
+    invariance_path = tmp_path / "invariance.json"
     out_path = tmp_path / "contract.json"
     response_path.write_text(json.dumps(_response_payload()), encoding="utf-8")
     cache_audit_path.write_text(json.dumps(_cache_auth_audit()), encoding="utf-8")
@@ -625,18 +741,17 @@ def test_mlx_production_contract_cli_writes_manifest(tmp_path: Path) -> None:
             str(stability_path),
             "--batch-invariance",
             str(invariance_path),
-            "--run-id",
-            "unit",
+            "--require-conv2d-accumulation-probe",
         ],
-        check=True,
+        check=False,
         text=True,
         capture_output=True,
     )
 
-    assert '"passed": true' in completed.stdout
+    assert completed.returncode == 2
     manifest = json.loads(out_path.read_text(encoding="utf-8"))
-    assert manifest["run_id"] == "unit"
-    assert manifest["passed"] is True
+    assert "conv2d_accumulation_probe_manifest_not_supplied" in manifest["blockers"]
+    assert manifest["required_gates"]["conv2d_accumulation_probe"] is True
 
 
 def test_mlx_production_contract_bundle_cli_writes_manifest(tmp_path: Path) -> None:
@@ -1011,6 +1126,53 @@ def _cache_auth_audit(*, passed: bool = True, archive_sha256: str = "f" * 64) ->
         "allowed_use": (
             ["local_mlx_training_transfer_calibration"] if passed else ["debug_only"]
         ),
+    }
+
+
+def _conv2d_accumulation_probe(*, passed: bool = True) -> dict:
+    return {
+        "schema_version": "mlx_conv2d_accumulation_probe.v1",
+        "passed": passed,
+        "verdict": (
+            "PASS_MLX_CONV2D_ACCUMULATION_PROBE"
+            if passed
+            else "FAIL_MLX_CONV2D_ACCUMULATION_PROBE"
+        ),
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_axis": EVIDENCE_TAG_MLX,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "device_type": "cpu",
+        "torch_device_type": "cpu",
+        "mlx_backend": {
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "classification": "framework_different_no_public_deterministic_reduction_flag",
+        },
+        "rows": [
+            _conv2d_accumulation_row("optimized_mlx_conv2d", passed=True),
+            _conv2d_accumulation_row("fixed_fp32", passed=True),
+            _conv2d_accumulation_row("kahan_fp32", passed=True),
+            _conv2d_accumulation_row("fixed_fp64", passed=passed),
+        ],
+    }
+
+
+def _conv2d_accumulation_row(mode: str, *, passed: bool) -> dict:
+    return {
+        "mode": mode,
+        "passed": passed,
+        "shape_match": True,
+        "max_abs_delta": 0.0 if passed else 1.0,
+        "blockers": [] if passed else ["max_abs_delta_exceeds_threshold:1.0>0.0"],
     }
 
 
