@@ -63,6 +63,9 @@ LL_MLX_PRODUCTION_CONTRACT_GATE_SCHEMA = "ll_mlx_production_contract_gate.v1"
 MLX_CONV2D_ACCUMULATION_GATE_BLOCKER = (
     "mlx_production_contract_required_gate_conv2d_accumulation_probe_not_true"
 )
+MLX_DOWNSTREAM_SCORER_DRIFT_GATE_BLOCKER = (
+    "mlx_production_contract_required_gate_downstream_scorer_drift_not_true"
+)
 DECODER_Q_SURFACE_SIGN_CALIBRATION_SCHEMA = "decoder_q_surface_sign_calibration_labels.v1"
 SOURCE_IDENTITY_REFRESH_SCHEMA = "scorer_response_source_identity_refresh.v1"
 MLX_PARENT_PRODUCTION_CONTRACT_PLAN_SCHEMA = (
@@ -2606,6 +2609,7 @@ def build_mlx_production_contract_gate(
         "profile_stability",
         "score_calibration",
         "conv2d_accumulation_probe",
+        "downstream_scorer_drift",
     ):
         if required_gates.get(gate_name) is not True:
             blockers.append(
@@ -3591,6 +3595,22 @@ def build_effective_mlx_spend_triage_gate(
                 )
                 else None
             ),
+            "downstream_scorer_drift_required": (
+                production_summary.get("required_gates", {}).get(
+                    "downstream_scorer_drift"
+                )
+                if isinstance(production_summary.get("required_gates"), dict)
+                else None
+            ),
+            "downstream_scorer_drift_summary": (
+                production_summary.get("numerical_mitigation_summary", {}).get(
+                    "downstream_scorer_drift"
+                )
+                if isinstance(
+                    production_summary.get("numerical_mitigation_summary"), dict
+                )
+                else None
+            ),
         },
         "allowed_use": (
             "local_exact_eval_spend_triage_filter_after_all_mlx_and_dataset_gates"
@@ -4432,6 +4452,34 @@ def build_next_probe_plan(
                         ),
                     },
                 )
+            if MLX_DOWNSTREAM_SCORER_DRIFT_GATE_BLOCKER in {
+                str(blocker)
+                for blocker in mlx_production_contract_gate.get("blockers", [])
+            }:
+                for probe in probes:
+                    probe["priority"] = int(probe["priority"]) + 1
+                probes.insert(
+                    0,
+                    {
+                        "probe_id": "ll_mlx_downstream_scorer_drift_required",
+                        "priority": 1,
+                        "class": "downstream_scorer_drift_gate",
+                        "rationale": (
+                            "MLX scorer-response spend triage now requires a "
+                            "contest-uint8 downstream scorer-drift proof so "
+                            "decoder/scorer drift cannot remain a memo-only "
+                            "side signal."
+                        ),
+                        "input_rows": mlx_rows,
+                        "mlx_production_contract_gate": mlx_production_contract_gate,
+                        "acceptance_gate": (
+                            "Run the PR95 MLX downstream scorer-drift tool in "
+                            "contest_uint8 mode, rebuild the production contract "
+                            "with --require-downstream-scorer-drift, and keep "
+                            "score_claim=false and exact-eval-before-promotion."
+                        ),
+                    },
+                )
         if mlx_score_calibration_gate is None:
             prohibitions.append(
                 {
@@ -4522,8 +4570,14 @@ def build_next_probe_plan(
             )
         elif not (
             isinstance(mlx_production_contract_gate, dict)
-            and MLX_CONV2D_ACCUMULATION_GATE_BLOCKER
-            in {str(blocker) for blocker in mlx_production_contract_gate.get("blockers", [])}
+            and {
+                MLX_CONV2D_ACCUMULATION_GATE_BLOCKER,
+                MLX_DOWNSTREAM_SCORER_DRIFT_GATE_BLOCKER,
+            }
+            & {
+                str(blocker)
+                for blocker in mlx_production_contract_gate.get("blockers", [])
+            }
         ):
             for probe in probes:
                 probe["priority"] = int(probe["priority"]) + 1
@@ -5566,6 +5620,11 @@ def render_next_probe_plan_markdown(plan: dict[str, Any]) -> str:
                 if isinstance(numerical_summary, dict)
                 else None
             )
+            downstream_summary = (
+                numerical_summary.get("downstream_scorer_drift")
+                if isinstance(numerical_summary, dict)
+                else None
+            )
             lines.append(
                 "- Conv2d accumulation probe required: "
                 f"`{required_gates.get('conv2d_accumulation_probe') if isinstance(required_gates, dict) else None}`"
@@ -5574,6 +5633,15 @@ def render_next_probe_plan_markdown(plan: dict[str, Any]) -> str:
                 lines.append(
                     "- Conv2d accumulation probe verdict: "
                     f"`{conv2d_summary.get('verdict')}`"
+                )
+            lines.append(
+                "- Downstream scorer drift required: "
+                f"`{required_gates.get('downstream_scorer_drift') if isinstance(required_gates, dict) else None}`"
+            )
+            if isinstance(downstream_summary, dict):
+                lines.append(
+                    "- Downstream scorer drift verdict: "
+                    f"`{downstream_summary.get('aggregate_verdict')}`"
                 )
             lines.append(
                 "- Archive SHA-256: "
@@ -5642,6 +5710,10 @@ def render_next_probe_plan_markdown(plan: dict[str, Any]) -> str:
         lines.append(
             "- Conv2d accumulation probe required: "
             f"`{gate_summary.get('conv2d_accumulation_probe_required')}`"
+        )
+        lines.append(
+            "- Downstream scorer drift required: "
+            f"`{gate_summary.get('downstream_scorer_drift_required')}`"
         )
         lines.append(f"- Blockers: `{effective_mlx_gate.get('blockers')}`")
         lines.append("")

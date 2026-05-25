@@ -119,7 +119,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Optional strict MLX production-contract manifest. May repeat to "
             "build a per-row contract bundle. Exact-eval spend triage from MLX "
             "rows is blocked unless every row is covered by a strict pass, "
-            "including a required Conv2d accumulation probe gate."
+            "including required Conv2d accumulation and downstream scorer-drift "
+            "gates."
         ),
     )
     parser.add_argument(

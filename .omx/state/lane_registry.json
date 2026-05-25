@@ -56468,6 +56468,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_mlx_downstream_scorer_drift_spend_triage_gate_20260525",
+      "name": "MLX downstream scorer drift spend triage gate",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_mlx_downstream_scorer_drift_spend_triage_gate_20260525T212219Z_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "ruff+mlx_contract_43+scorer_response_106+focused_mlx_slice_185+drift_tool_help+one_pair_refusal_smoke"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_mlx_downstream_scorer_drift_spend_triage_gate_20260525T212219Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_hinton_distilled_scorer_surrogate_mlx_long_training_validation_20260525",
+      "name": "Hinton-distilled scorer surrogate MLX long-training validation ($0 macOS-MLX foundation smoke)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/hinton_distilled_scorer_surrogate/mlx_loss.py + tools/run_hinton_mlx_long_training_smoke.py + 36/36 unit tests pass + 100ep MLX smoke CONVERGES_CONSISTENTLY 98.5% reduction 4.8s; research_only=true [macOS-MLX research-signal] axis per Catalog #192"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "no new strict preflight gate per Catalog #299 quota brake; existing #176 (catalog row) + #185 (live count zero) META-meta sister gates protect; routes through canonical helpers per Catalog #117/#157/#174 serializer + #131/#138 fcntl-locked state + #229 PV + #340 sister-checkpoint guard"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -56477,5 +56559,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T21:08:54Z"
+  "updated_at": "2026-05-25T21:33:13Z"
 }

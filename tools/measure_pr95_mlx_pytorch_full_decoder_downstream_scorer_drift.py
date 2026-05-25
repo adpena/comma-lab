@@ -46,6 +46,7 @@ to characterize the drift bound at every stage of the pipeline.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 import time
@@ -62,6 +63,8 @@ if str(REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "src"))
 if str(REPO_ROOT / "upstream") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "upstream"))
+
+from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX  # noqa: E402,I001
 
 
 # ----------------------------------------------------------------------------
@@ -104,18 +107,31 @@ class StageDriftMeasurement:
 def _canonical_provenance(*, checkpoint_mode: str, n_pairs: int) -> dict[str, Any]:
     """Catalog #287/#323 canonical Provenance for every emitted row."""
     return {
-        "evidence_grade": "macOS-MLX research-signal",
+        "evidence_grade": EVIDENCE_GRADE_MLX,
         "score_claim": False,
         "promotable": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
-        "axis_tag": "[macOS-MLX research-signal]",
+        "axis_tag": EVIDENCE_TAG_MLX,
         "hardware_substrate": "darwin_arm64_apple_silicon",
         "frame_count_basis": int(n_pairs * 2),
         "pair_count_basis": int(n_pairs),
         "checkpoint_mode": checkpoint_mode,
         "captured_at_utc": datetime.now(UTC).isoformat(),
     }
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _sha256_int64_array(values: np.ndarray) -> str:
+    data = np.ascontiguousarray(values, dtype=np.int64).tobytes()
+    return hashlib.sha256(data).hexdigest()
 
 
 def _aggregate_drift_max_abs(a: np.ndarray, b: np.ndarray) -> tuple[float, float, float]:
@@ -137,9 +153,10 @@ def _render_pair_batch(
     state_dict_mlx: Mapping[str, np.ndarray],
     latents: np.ndarray,
     meta: Mapping[str, Any],
+    start_pair: int,
     n_pairs: int,
     seed: int,
-) -> tuple[np.ndarray, np.ndarray, float, float]:
+) -> tuple[np.ndarray, np.ndarray, float, float, np.ndarray]:
     """Render N pairs through MLX vs PyTorch HNeRVDecoder forward.
 
     Returns (rgb_mlx_uint8_range, rgb_pytorch_uint8_range, mlx_seconds, torch_seconds).
@@ -168,13 +185,11 @@ def _render_pair_batch(
         load_pytorch_state_dict_into_mlx,
     )
 
-    rng = np.random.default_rng(seed)
     pair_count = int(latents.shape[0])
-    indices = (
-        rng.integers(0, pair_count, size=n_pairs)
-        if n_pairs > pair_count
-        else np.arange(n_pairs, dtype=np.int64)
-    )
+    if start_pair < 0 or start_pair >= pair_count:
+        raise ValueError(f"start_pair out of range: {start_pair} for {pair_count} pairs")
+    end_pair = min(start_pair + n_pairs, pair_count)
+    indices = np.arange(start_pair, end_pair, dtype=np.int64)
     z_np = latents[indices].astype(np.float32, copy=True)
 
     latent_dim = int(meta["latent_dim"])
@@ -220,7 +235,7 @@ def _render_pair_batch(
     finally:
         mx.set_default_device(previous_device)
 
-    return mlx_out_np, torch_out, mlx_elapsed, torch_elapsed
+    return mlx_out_np, torch_out, mlx_elapsed, torch_elapsed, indices
 
 
 def _measure_stage1_decoder_drift(
@@ -530,6 +545,7 @@ def _aggregate_contest_score_drift(
 def measure_full_decoder_downstream_drift(
     *,
     archive_zip: Path,
+    start_pair: int,
     n_pairs: int,
     seed: int,
     posenet_sd_path: Path,
@@ -544,13 +560,25 @@ def measure_full_decoder_downstream_drift(
     )
 
     packet = parse_pr95_public_archive_zip(archive_zip)
-    n_pairs = min(n_pairs, int(packet.latents.shape[0]))
+    total_pairs = int(packet.latents.shape[0])
+    if n_pairs < 1:
+        raise ValueError("n_pairs must be >= 1")
+    if start_pair < 0 or start_pair >= total_pairs:
+        raise ValueError(f"start_pair out of range: {start_pair} for {total_pairs} pairs")
+    n_pairs = min(n_pairs, total_pairs - start_pair)
 
     # Stage 1 + 2: render N pairs through both frameworks.
-    rgb_mlx, rgb_torch, mlx_decode_sec, torch_decode_sec = _render_pair_batch(
+    (
+        rgb_mlx,
+        rgb_torch,
+        mlx_decode_sec,
+        torch_decode_sec,
+        pair_indices,
+    ) = _render_pair_batch(
         state_dict_mlx=packet.state_dict,
         latents=packet.latents,
         meta=packet.meta,
+        start_pair=start_pair,
         n_pairs=n_pairs,
         seed=seed,
     )
@@ -656,13 +684,24 @@ def measure_full_decoder_downstream_drift(
     aggregate_verdict = stage_5.extra["verdict_per_stage"]
 
     provenance = _canonical_provenance(checkpoint_mode=checkpoint_mode, n_pairs=n_pairs)
+    posenet_sha256 = _sha256_file(posenet_sd_path)
+    segnet_sha256 = _sha256_file(segnet_sd_path)
     return {
         "schema": "pr95_mlx_pytorch_full_decoder_downstream_scorer_drift_v1",
+        "schema_version": "pr95_mlx_pytorch_full_decoder_downstream_scorer_drift_v1",
         "lane_id": "lane_pr95_mlx_full_decoder_downstream_scorer_drift_measurement_20260525",
         "task_id": "#1258",
         "archive_zip": str(archive_zip),
         "archive_zip_sha256": packet.archive_zip_sha256,
+        "posenet_sha256": posenet_sha256,
+        "segnet_sha256": segnet_sha256,
+        "scorer_components": {
+            "posenet_sha256": posenet_sha256,
+            "segnet_sha256": segnet_sha256,
+        },
         "n_pairs_actual": int(n_pairs),
+        "covered_pair_window": [int(pair_indices.min()), int(pair_indices.max()) + 1],
+        "covered_pair_indices_sha256": _sha256_int64_array(pair_indices),
         "seed": int(seed),
         "checkpoint_mode": checkpoint_mode,
         "scorer_input_mode": scorer_input_mode,
@@ -684,8 +723,9 @@ def measure_full_decoder_downstream_drift(
         "carmack_mvp_first_step_2_falsified": (
             aggregate_verdict != "BELOW_SCORER_PRECISION"
         ),
-        "evidence_grade": "macOS-MLX research-signal",
-        "axis_tag": "[macOS-MLX research-signal]",
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "axis_tag": EVIDENCE_TAG_MLX,
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
@@ -750,6 +790,15 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "Number of frame pairs to measure (default=100; 600 = canonical "
             "contest video full set; 100 reasonable wall-clock balance)."
+        ),
+    )
+    parser.add_argument(
+        "--start-pair",
+        type=int,
+        default=0,
+        help=(
+            "First pair index covered by the measurement window. Use with "
+            "--n-pairs to bind drift proof to a scorer-response pair window."
         ),
     )
     parser.add_argument(
@@ -831,6 +880,7 @@ def main(argv: list[str] | None = None) -> int:
     started = time.perf_counter()
     manifest = measure_full_decoder_downstream_drift(
         archive_zip=archive_zip,
+        start_pair=args.start_pair,
         n_pairs=args.n_pairs,
         seed=args.seed,
         posenet_sd_path=posenet_sd,

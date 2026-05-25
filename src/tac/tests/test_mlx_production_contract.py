@@ -32,6 +32,7 @@ def test_mlx_production_contract_accepts_cpu_local_acceleration_signal() -> None
         profile_stability=_profile_stability(),
         batch_invariance=_batch_invariance(),
         conv2d_accumulation_probe=_conv2d_accumulation_probe(),
+        downstream_scorer_drift=_downstream_scorer_drift(),
     )
 
     assert manifest["passed"] is True
@@ -76,6 +77,12 @@ def test_mlx_production_contract_accepts_cpu_local_acceleration_signal() -> None
     assert (
         manifest["numerical_mitigation_summary"]["conv2d_accumulation_probe"]["passed"]
         is True
+    )
+    assert (
+        manifest["numerical_mitigation_summary"]["downstream_scorer_drift"][
+            "aggregate_verdict"
+        ]
+        == "BELOW_SCORER_PRECISION"
     )
 
 
@@ -126,7 +133,106 @@ def test_mlx_production_contract_can_require_conv2d_accumulation_probe() -> None
     assert present["required_gates"]["conv2d_accumulation_probe"] is True
 
 
-def test_mlx_production_contract_bundle_accepts_strict_contracts() -> None:
+def test_mlx_production_contract_can_require_downstream_scorer_drift() -> None:
+    missing = build_mlx_scorer_production_contract_manifest(
+        _response_payload(),
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(),
+        reference_torch_parity=_torch_parity(side="reference"),
+        profile_stability=_profile_stability(),
+        batch_invariance=_batch_invariance(),
+        require_downstream_scorer_drift=True,
+    )
+
+    assert missing["passed"] is False
+    assert "downstream_scorer_drift_manifest_not_supplied" in missing["blockers"]
+    assert missing["required_gates"]["downstream_scorer_drift"] is True
+
+    present = build_mlx_scorer_production_contract_manifest(
+        _response_payload(),
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(),
+        reference_torch_parity=_torch_parity(side="reference"),
+        profile_stability=_profile_stability(),
+        batch_invariance=_batch_invariance(),
+        downstream_scorer_drift=_downstream_scorer_drift(),
+        require_downstream_scorer_drift=True,
+    )
+
+    assert present["passed"] is True
+    assert present["required_gates"]["downstream_scorer_drift"] is True
+
+
+def test_mlx_production_contract_rejects_failed_downstream_scorer_drift() -> None:
+    manifest = build_mlx_scorer_production_contract_manifest(
+        _response_payload(),
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(),
+        reference_torch_parity=_torch_parity(side="reference"),
+        profile_stability=_profile_stability(),
+        batch_invariance=_batch_invariance(),
+        downstream_scorer_drift=_downstream_scorer_drift(
+            aggregate_verdict="ABOVE_SCORER_PRECISION",
+            drift_units=0.02,
+        ),
+    )
+
+    assert manifest["passed"] is False
+    assert "downstream_scorer_drift_verdict_not_below_precision" in manifest["blockers"]
+    assert any(
+        blocker.startswith("downstream_scorer_drift_units_exceed_threshold")
+        for blocker in manifest["blockers"]
+    )
+
+
+def test_mlx_production_contract_rejects_unbound_downstream_scorer_drift() -> None:
+    cases = [
+        (
+            "downstream_scorer_drift_checkpoint_mode_not_trained_archive",
+            _downstream_scorer_drift(checkpoint_mode="random_init"),
+        ),
+        (
+            "downstream_scorer_drift_archive_sha256_mismatch",
+            _downstream_scorer_drift(archive_sha256="0" * 64),
+        ),
+        (
+            "downstream_scorer_drift_posenet_sha256_mismatch",
+            _downstream_scorer_drift(posenet_sha256="0" * 64),
+        ),
+        (
+            "downstream_scorer_drift_segnet_sha256_mismatch",
+            _downstream_scorer_drift(segnet_sha256="0" * 64),
+        ),
+        (
+            "downstream_scorer_drift_units_negative",
+            _downstream_scorer_drift(drift_units=-1.0),
+        ),
+        (
+            "downstream_scorer_drift_pair_coverage_below_minimum:1<100",
+            _downstream_scorer_drift(n_pairs_actual=1, covered_pair_window=[0, 1]),
+        ),
+        (
+            "downstream_scorer_drift_response_pair_window_not_covered",
+            _downstream_scorer_drift(covered_pair_window=[10, 110]),
+        ),
+    ]
+
+    for expected_blocker, drift in cases:
+        manifest = build_mlx_scorer_production_contract_manifest(
+            _response_payload(),
+            cache_auth_audit=_cache_auth_audit(),
+            torch_parity=_torch_parity(),
+            reference_torch_parity=_torch_parity(side="reference"),
+            profile_stability=_profile_stability(),
+            batch_invariance=_batch_invariance(),
+            downstream_scorer_drift=drift,
+        )
+
+        assert manifest["passed"] is False
+        assert expected_blocker in manifest["blockers"]
+
+
+def test_mlx_production_contract_bundle_rejects_stale_no_downstream_gate() -> None:
     contract = build_mlx_scorer_production_contract_manifest(
         _response_payload(),
         cache_auth_audit=_cache_auth_audit(),
@@ -138,6 +244,32 @@ def test_mlx_production_contract_bundle_accepts_strict_contracts() -> None:
         conv2d_accumulation_probe=_conv2d_accumulation_probe(),
         require_score_calibration=True,
         require_conv2d_accumulation_probe=True,
+    )
+
+    bundle = build_mlx_scorer_production_contract_bundle_manifest([contract])
+
+    assert bundle["passed"] is False
+    assert "mlx_production_contract_bundle_child_blocked:0" in bundle["blockers"]
+    assert (
+        "required_gate_downstream_scorer_drift_not_true"
+        in bundle["summary"]["child_contracts"][0]["blockers"]
+    )
+
+
+def test_mlx_production_contract_bundle_accepts_strict_contracts() -> None:
+    contract = build_mlx_scorer_production_contract_manifest(
+        _response_payload(),
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(),
+        reference_torch_parity=_torch_parity(side="reference"),
+        profile_stability=_profile_stability(),
+        batch_invariance=_batch_invariance(),
+        score_calibration=_score_calibration(),
+        conv2d_accumulation_probe=_conv2d_accumulation_probe(),
+        downstream_scorer_drift=_downstream_scorer_drift(),
+        require_score_calibration=True,
+        require_conv2d_accumulation_probe=True,
+        require_downstream_scorer_drift=True,
     )
 
     bundle = build_mlx_scorer_production_contract_bundle_manifest(
@@ -460,8 +592,10 @@ def test_mlx_production_contract_can_require_score_calibration() -> None:
         batch_invariance=_batch_invariance(),
         score_calibration=_score_calibration(),
         conv2d_accumulation_probe=_conv2d_accumulation_probe(),
+        downstream_scorer_drift=_downstream_scorer_drift(),
         require_score_calibration=True,
         require_conv2d_accumulation_probe=True,
+        require_downstream_scorer_drift=True,
     )
 
     assert manifest["passed"] is True
@@ -654,6 +788,7 @@ def test_mlx_production_contract_cli_writes_manifest(tmp_path: Path) -> None:
     stability_path = tmp_path / "stability.json"
     invariance_path = tmp_path / "invariance.json"
     conv2d_probe_path = tmp_path / "conv2d_probe.json"
+    downstream_drift_path = tmp_path / "downstream_drift.json"
     out_path = tmp_path / "contract.json"
     response_path.write_text(json.dumps(_response_payload()), encoding="utf-8")
     cache_audit_path.write_text(json.dumps(_cache_auth_audit()), encoding="utf-8")
@@ -666,6 +801,10 @@ def test_mlx_production_contract_cli_writes_manifest(tmp_path: Path) -> None:
     invariance_path.write_text(json.dumps(_batch_invariance()), encoding="utf-8")
     conv2d_probe_path.write_text(
         json.dumps(_conv2d_accumulation_probe()),
+        encoding="utf-8",
+    )
+    downstream_drift_path.write_text(
+        json.dumps(_downstream_scorer_drift()),
         encoding="utf-8",
     )
 
@@ -689,6 +828,8 @@ def test_mlx_production_contract_cli_writes_manifest(tmp_path: Path) -> None:
             str(invariance_path),
             "--conv2d-accumulation-probe",
             str(conv2d_probe_path),
+            "--downstream-scorer-drift",
+            str(downstream_drift_path),
             "--run-id",
             "unit",
         ],
@@ -704,6 +845,12 @@ def test_mlx_production_contract_cli_writes_manifest(tmp_path: Path) -> None:
     assert (
         manifest["numerical_mitigation_summary"]["conv2d_accumulation_probe"]["passed"]
         is True
+    )
+    assert (
+        manifest["numerical_mitigation_summary"]["downstream_scorer_drift"][
+            "aggregate_verdict"
+        ]
+        == "BELOW_SCORER_PRECISION"
     )
 
 
@@ -758,6 +905,57 @@ def test_mlx_production_contract_cli_requires_conv2d_accumulation_probe_when_req
     assert manifest["required_gates"]["conv2d_accumulation_probe"] is True
 
 
+def test_mlx_production_contract_cli_requires_downstream_scorer_drift_when_requested(
+    tmp_path: Path,
+) -> None:
+    response_path = tmp_path / "response.json"
+    cache_audit_path = tmp_path / "cache_audit.json"
+    torch_parity_path = tmp_path / "torch_parity.json"
+    reference_torch_parity_path = tmp_path / "reference_torch_parity.json"
+    stability_path = tmp_path / "stability.json"
+    invariance_path = tmp_path / "invariance.json"
+    out_path = tmp_path / "contract.json"
+    response_path.write_text(json.dumps(_response_payload()), encoding="utf-8")
+    cache_audit_path.write_text(json.dumps(_cache_auth_audit()), encoding="utf-8")
+    torch_parity_path.write_text(json.dumps(_torch_parity()), encoding="utf-8")
+    reference_torch_parity_path.write_text(
+        json.dumps(_torch_parity(side="reference")),
+        encoding="utf-8",
+    )
+    stability_path.write_text(json.dumps(_profile_stability()), encoding="utf-8")
+    invariance_path.write_text(json.dumps(_batch_invariance()), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "check_mlx_scorer_production_contract.py"),
+            "--response",
+            str(response_path),
+            "--output",
+            str(out_path),
+            "--cache-auth-audit",
+            str(cache_audit_path),
+            "--torch-parity",
+            str(torch_parity_path),
+            "--reference-torch-parity",
+            str(reference_torch_parity_path),
+            "--profile-stability",
+            str(stability_path),
+            "--batch-invariance",
+            str(invariance_path),
+            "--require-downstream-scorer-drift",
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    manifest = json.loads(out_path.read_text(encoding="utf-8"))
+    assert "downstream_scorer_drift_manifest_not_supplied" in manifest["blockers"]
+    assert manifest["required_gates"]["downstream_scorer_drift"] is True
+
+
 def test_mlx_production_contract_bundle_cli_writes_manifest(tmp_path: Path) -> None:
     contract = build_mlx_scorer_production_contract_manifest(
         _response_payload(),
@@ -768,8 +966,10 @@ def test_mlx_production_contract_bundle_cli_writes_manifest(tmp_path: Path) -> N
         batch_invariance=_batch_invariance(),
         score_calibration=_score_calibration(),
         conv2d_accumulation_probe=_conv2d_accumulation_probe(),
+        downstream_scorer_drift=_downstream_scorer_drift(),
         require_score_calibration=True,
         require_conv2d_accumulation_probe=True,
+        require_downstream_scorer_drift=True,
     )
     contract_path = tmp_path / "contract.json"
     out_path = tmp_path / "bundle.json"
@@ -812,8 +1012,10 @@ def test_mlx_production_contract_bundle_cli_validates_dataset_coverage(
         batch_invariance=_batch_invariance(),
         score_calibration=_score_calibration(),
         conv2d_accumulation_probe=_conv2d_accumulation_probe(),
+        downstream_scorer_drift=_downstream_scorer_drift(),
         require_score_calibration=True,
         require_conv2d_accumulation_probe=True,
+        require_downstream_scorer_drift=True,
     )
     contract_path = tmp_path / "contract.json"
     dataset_path = tmp_path / "dataset.json"
@@ -1183,6 +1385,55 @@ def _conv2d_accumulation_row(mode: str, *, passed: bool) -> dict:
         "shape_match": True,
         "max_abs_delta": 0.0 if passed else 1.0,
         "blockers": [] if passed else ["max_abs_delta_exceeds_threshold:1.0>0.0"],
+    }
+
+
+def _downstream_scorer_drift(
+    *,
+    aggregate_verdict: str = "BELOW_SCORER_PRECISION",
+    drift_units: float = 7.4e-5,
+    scorer_input_mode: str = "contest_uint8",
+    archive_sha256: str = "f" * 64,
+    posenet_sha256: str = "a" * 64,
+    segnet_sha256: str = "b" * 64,
+    checkpoint_mode: str = "trained_archive",
+    n_pairs_actual: int = 100,
+    covered_pair_window: list[int] | None = None,
+) -> dict:
+    window = covered_pair_window or [0, int(n_pairs_actual)]
+    return {
+        "schema": "pr95_mlx_pytorch_full_decoder_downstream_scorer_drift_v1",
+        "schema_version": "pr95_mlx_pytorch_full_decoder_downstream_scorer_drift_v1",
+        "aggregate_verdict": aggregate_verdict,
+        "aggregate_contest_score_drift_units": drift_units,
+        "scorer_input_mode": scorer_input_mode,
+        "checkpoint_mode": checkpoint_mode,
+        "n_pairs_actual": n_pairs_actual,
+        "covered_pair_window": window,
+        "covered_pair_indices_sha256": "4" * 64,
+        "archive_zip_sha256": archive_sha256,
+        "posenet_sha256": posenet_sha256,
+        "segnet_sha256": segnet_sha256,
+        "scorer_components": {
+            "posenet_sha256": posenet_sha256,
+            "segnet_sha256": segnet_sha256,
+        },
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "axis_tag": EVIDENCE_TAG_MLX,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+        "blockers": [
+            "macos_mlx_research_signal_not_contest_authority",
+            "requires_paired_contest_cpu_plus_cuda_for_score_claim",
+            "drift_measurement_is_implementation_parity_not_scorer_response",
+        ],
     }
 
 

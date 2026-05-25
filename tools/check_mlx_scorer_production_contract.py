@@ -26,6 +26,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--batch-invariance", type=Path, default=None)
     parser.add_argument("--score-calibration", type=Path, default=None)
     parser.add_argument("--conv2d-accumulation-probe", type=Path, default=None)
+    parser.add_argument("--downstream-scorer-drift", type=Path, default=None)
     parser.add_argument("--run-id", default=None)
     parser.add_argument(
         "--no-require-cache-identity",
@@ -61,6 +62,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--require-conv2d-accumulation-probe",
         action="store_true",
         help="Require a passing MLX Conv2d accumulation probe manifest.",
+    )
+    parser.add_argument(
+        "--require-downstream-scorer-drift",
+        action="store_true",
+        help=(
+            "Require a passing PR95 MLX downstream scorer-drift manifest before "
+            "spend-triage use."
+        ),
     )
     return parser
 
@@ -104,6 +113,11 @@ def main(argv: list[str] | None = None) -> int:
             if args.conv2d_accumulation_probe is not None
             else None
         ),
+        downstream_scorer_drift=(
+            load_json_object(args.downstream_scorer_drift)
+            if args.downstream_scorer_drift is not None
+            else None
+        ),
         run_id=args.run_id,
         require_cache_identity=not args.no_require_cache_identity,
         require_cache_auth_audit=not args.no_require_cache_auth_audit,
@@ -112,6 +126,7 @@ def main(argv: list[str] | None = None) -> int:
         require_batch_invariance=not args.no_require_batch_invariance,
         require_score_calibration=bool(args.require_score_calibration),
         require_conv2d_accumulation_probe=bool(args.require_conv2d_accumulation_probe),
+        require_downstream_scorer_drift=bool(args.require_downstream_scorer_drift),
     )
     write_production_contract_manifest(manifest, args.output)
     print(json.dumps({"passed": manifest["passed"], "verdict": manifest["verdict"]}, sort_keys=True))

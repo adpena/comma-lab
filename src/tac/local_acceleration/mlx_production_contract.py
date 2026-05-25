@@ -36,8 +36,10 @@ from tac.local_acceleration.mlx_scorer_torch_parity import (
     SWEEP_SCHEMA_VERSION as TORCH_PARITY_SWEEP_SCHEMA_VERSION,
 )
 
-SCHEMA_VERSION = "mlx_scorer_production_contract.v2"
-GATE_SET_VERSION = "mlx_scorer_production_gate_set.v2.cache_auth_torch_profile"
+SCHEMA_VERSION = "mlx_scorer_production_contract.v3"
+GATE_SET_VERSION = (
+    "mlx_scorer_production_gate_set.v3.cache_auth_torch_profile_conv2d_downstream"
+)
 PASS_VERDICT = "PASS_MLX_SCORER_PRODUCTION_CONTRACT"
 FAIL_VERDICT = "FAIL_MLX_SCORER_PRODUCTION_CONTRACT"
 ADVISORY_VERDICT = "ADVISORY_MLX_SCORER_DEV_CONTRACT"
@@ -45,6 +47,23 @@ BUNDLE_SCHEMA_VERSION = "mlx_scorer_production_contract_bundle.v1"
 BUNDLE_PASS_VERDICT = "PASS_MLX_SCORER_PRODUCTION_CONTRACT_BUNDLE"
 BUNDLE_FAIL_VERDICT = "FAIL_MLX_SCORER_PRODUCTION_CONTRACT_BUNDLE"
 MAX_ALLOWED_TORCH_PARITY_ARGMAX_DIFF_PIXELS = 1
+DOWNSTREAM_SCORER_DRIFT_SCHEMA_VERSION = (
+    "pr95_mlx_pytorch_full_decoder_downstream_scorer_drift_v1"
+)
+DOWNSTREAM_SCORER_DRIFT_PASS_VERDICT = "BELOW_SCORER_PRECISION"
+DOWNSTREAM_SCORER_DRIFT_MAX_UNITS = 1.0e-3
+DOWNSTREAM_SCORER_DRIFT_MIN_PAIRS = 100
+STRICT_BUNDLE_REQUIRED_GATES = (
+    "cache_identity",
+    "cache_auth_audit",
+    "torch_parity",
+    "reference_torch_parity",
+    "profile_stability",
+    "score_calibration",
+    "conv2d_accumulation_probe",
+    "downstream_scorer_drift",
+    "strict_gate_policy",
+)
 
 AUTHORITY_FALSE_FIELDS = (
     "score_claim",
@@ -79,6 +98,7 @@ def build_mlx_scorer_production_contract_manifest(
     batch_invariance: dict[str, Any] | None = None,
     score_calibration: dict[str, Any] | None = None,
     conv2d_accumulation_probe: dict[str, Any] | None = None,
+    downstream_scorer_drift: dict[str, Any] | None = None,
     run_id: str | None = None,
     require_cache_identity: bool = True,
     require_cache_auth_audit: bool = True,
@@ -87,6 +107,7 @@ def build_mlx_scorer_production_contract_manifest(
     require_batch_invariance: bool = True,
     require_score_calibration: bool = False,
     require_conv2d_accumulation_probe: bool = False,
+    require_downstream_scorer_drift: bool = False,
 ) -> dict[str, Any]:
     """Validate an MLX scorer-response artifact as a production local signal.
 
@@ -199,6 +220,16 @@ def build_mlx_scorer_production_contract_manifest(
             conv2d_accumulation_probe,
             blockers=blockers,
         )
+    if downstream_scorer_drift is None:
+        missing = "downstream_scorer_drift_manifest_not_supplied"
+        if require_downstream_scorer_drift:
+            blockers.append(missing)
+    else:
+        _check_downstream_scorer_drift_manifest(
+            downstream_scorer_drift,
+            response_payload=response_payload,
+            blockers=blockers,
+        )
 
     strict_gate_policy = bool(
         require_cache_identity
@@ -288,11 +319,15 @@ def build_mlx_scorer_production_contract_manifest(
             "batch_invariance_policy_requested": bool(require_batch_invariance),
             "score_calibration": bool(require_score_calibration),
             "conv2d_accumulation_probe": bool(require_conv2d_accumulation_probe),
+            "downstream_scorer_drift": bool(require_downstream_scorer_drift),
             "strict_gate_policy": strict_gate_policy,
         },
         "numerical_mitigation_summary": {
             "conv2d_accumulation_probe": _conv2d_accumulation_probe_summary(
                 conv2d_accumulation_probe
+            ),
+            "downstream_scorer_drift": _downstream_scorer_drift_summary(
+                downstream_scorer_drift
             ),
         },
         "authority_status": (
@@ -333,6 +368,13 @@ def build_mlx_scorer_production_contract_bundle_manifest(
             child_blockers.append("candidate_generation_only_not_true")
         if contract.get("requires_exact_eval_before_promotion") is not True:
             child_blockers.append("requires_exact_eval_before_promotion_not_true")
+        required_gates = contract.get("required_gates")
+        if not isinstance(required_gates, dict):
+            child_blockers.append("required_gates_missing")
+        else:
+            for gate_name in STRICT_BUNDLE_REQUIRED_GATES:
+                if required_gates.get(gate_name) is not True:
+                    child_blockers.append(f"required_gate_{gate_name}_not_true")
         source_blockers = contract.get("blockers")
         if source_blockers:
             child_blockers.append("source_blockers_not_empty")
@@ -1163,6 +1205,117 @@ def _conv2d_accumulation_probe_summary(
     }
 
 
+def _check_downstream_scorer_drift_manifest(
+    manifest: dict[str, Any],
+    *,
+    response_payload: dict[str, Any],
+    blockers: list[str],
+) -> None:
+    gate_manifest = dict(manifest) if isinstance(manifest, dict) else manifest
+    if isinstance(gate_manifest, dict) and "schema_version" not in gate_manifest:
+        gate_manifest["schema_version"] = gate_manifest.get("schema")
+    _check_optional_gate_manifest(
+        gate_manifest,
+        blockers=blockers,
+        warnings=[],
+        schema_prefix=DOWNSTREAM_SCORER_DRIFT_SCHEMA_VERSION,
+        label="downstream_scorer_drift",
+        require_passed=False,
+    )
+    if not isinstance(manifest, dict):
+        return
+    if manifest.get("schema") != DOWNSTREAM_SCORER_DRIFT_SCHEMA_VERSION:
+        blockers.append("downstream_scorer_drift_schema_invalid")
+    if manifest.get("checkpoint_mode") != "trained_archive":
+        blockers.append("downstream_scorer_drift_checkpoint_mode_not_trained_archive")
+    if manifest.get("aggregate_verdict") != DOWNSTREAM_SCORER_DRIFT_PASS_VERDICT:
+        blockers.append("downstream_scorer_drift_verdict_not_below_precision")
+    if manifest.get("scorer_input_mode") != "contest_uint8":
+        blockers.append("downstream_scorer_drift_scorer_input_mode_not_contest_uint8")
+    if manifest.get("axis_tag") != EVIDENCE_TAG_MLX:
+        blockers.append("downstream_scorer_drift_axis_tag_not_mlx_research_signal")
+    if manifest.get("archive_zip_sha256") != response_payload.get("archive_sha256"):
+        blockers.append("downstream_scorer_drift_archive_sha256_mismatch")
+    for key in ("posenet_sha256", "segnet_sha256"):
+        if _downstream_component_sha256(manifest, key) != _response_component_sha256(
+            response_payload,
+            key=key,
+        ):
+            blockers.append(f"downstream_scorer_drift_{key}_mismatch")
+    drift_units = _safe_float(manifest.get("aggregate_contest_score_drift_units"))
+    if drift_units is None:
+        blockers.append("downstream_scorer_drift_units_invalid")
+    elif drift_units < 0.0:
+        blockers.append("downstream_scorer_drift_units_negative")
+    elif drift_units > DOWNSTREAM_SCORER_DRIFT_MAX_UNITS:
+        blockers.append(
+            "downstream_scorer_drift_units_exceed_threshold:"
+            f"{drift_units}>{DOWNSTREAM_SCORER_DRIFT_MAX_UNITS}"
+        )
+    n_pairs = _safe_int(manifest.get("n_pairs_actual"))
+    if n_pairs is None or n_pairs <= 0:
+        blockers.append("downstream_scorer_drift_n_pairs_actual_invalid")
+    elif n_pairs < DOWNSTREAM_SCORER_DRIFT_MIN_PAIRS:
+        blockers.append(
+            "downstream_scorer_drift_pair_coverage_below_minimum:"
+            f"{n_pairs}<{DOWNSTREAM_SCORER_DRIFT_MIN_PAIRS}"
+        )
+    covered_window = _pair_window({"pair_window": manifest.get("covered_pair_window")})
+    response_window = _pair_window(response_payload)
+    if covered_window is None:
+        blockers.append("downstream_scorer_drift_covered_pair_window_invalid")
+    elif response_window is None or not (
+        covered_window[0] <= response_window[0] and response_window[1] <= covered_window[1]
+    ):
+        blockers.append("downstream_scorer_drift_response_pair_window_not_covered")
+    for field in ("dispatch_attempted", "gpu_launched"):
+        if field in manifest and manifest.get(field) is not False:
+            blockers.append(f"downstream_scorer_drift_{field}_not_false")
+    boundary_blockers = {str(item) for item in manifest.get("blockers") or []}
+    required_boundary_blockers = {
+        "macos_mlx_research_signal_not_contest_authority",
+        "requires_paired_contest_cpu_plus_cuda_for_score_claim",
+    }
+    if not required_boundary_blockers.issubset(boundary_blockers):
+        blockers.append("downstream_scorer_drift_authority_boundary_blockers_missing")
+
+
+def _downstream_scorer_drift_summary(
+    manifest: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if not isinstance(manifest, dict):
+        return None
+    return {
+        "schema": manifest.get("schema"),
+        "aggregate_verdict": manifest.get("aggregate_verdict"),
+        "aggregate_contest_score_drift_units": manifest.get(
+            "aggregate_contest_score_drift_units"
+        ),
+        "scorer_input_mode": manifest.get("scorer_input_mode"),
+        "n_pairs_actual": manifest.get("n_pairs_actual"),
+        "covered_pair_window": manifest.get("covered_pair_window"),
+        "archive_zip_sha256": manifest.get("archive_zip_sha256"),
+        "posenet_sha256": _downstream_component_sha256(manifest, "posenet_sha256"),
+        "segnet_sha256": _downstream_component_sha256(manifest, "segnet_sha256"),
+        "axis_tag": manifest.get("axis_tag"),
+        "score_claim": manifest.get("score_claim"),
+        "promotion_eligible": manifest.get("promotion_eligible"),
+        "ready_for_exact_eval_dispatch": manifest.get(
+            "ready_for_exact_eval_dispatch"
+        ),
+    }
+
+
+def _downstream_component_sha256(manifest: dict[str, Any], key: str) -> Any:
+    value = manifest.get(key)
+    if value is not None:
+        return value
+    components = manifest.get("scorer_components")
+    if isinstance(components, dict):
+        return components.get(key)
+    return None
+
+
 def _check_profile_stability_manifest(
     manifest: dict[str, Any],
     *,
@@ -1521,6 +1674,16 @@ def _safe_int(value: Any) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _safe_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    return out if math.isfinite(out) else None
 
 
 def _check_component_shape(
