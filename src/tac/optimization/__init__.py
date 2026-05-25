@@ -164,6 +164,10 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "tac.optimization.byte_shaving_signal_surface_builder",
         "build_byte_shaving_signal_surface",
     ),
+    "observations_from_queue_observation": (
+        "tac.optimization.inverse_steganalysis_acquisition",
+        "observations_from_queue_observation",
+    ),
     "build_signal_surface_from_candidate_queue": (
         "tac.optimization.byte_shaving_campaign",
         "build_signal_surface_from_candidate_queue",

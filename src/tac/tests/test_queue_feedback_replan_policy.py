@@ -9,6 +9,8 @@ from comma_lab.scheduler.queue_feedback_replan_policy import (
     ACTION_BLOCKED,
     ACTION_EXECUTE_FEEDBACK_FOLLOWUP,
     ACTION_INSPECT_EXACT_HANDOFFS,
+    ACTION_QUEUE_OBSERVATION_MAINTENANCE,
+    ACTION_RECOVER_QUEUE_HEALTH,
     ACTION_REFUSE,
     ACTION_RUN_NEXT_ITERATION,
     ACTION_STOP_MAX_ITERATIONS,
@@ -19,8 +21,10 @@ from comma_lab.scheduler.queue_feedback_replan_policy import (
     QUEUE_FEEDBACK_REPLAN_CONTINUATION_STEP_ID,
     QUEUE_FEEDBACK_REPLAN_MATERIALIZER_CAMPAIGN_TOOL,
     QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA,
+    QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA,
     build_queue_feedback_replan_continuation_queue,
     build_queue_feedback_replan_policy,
+    build_queue_observation_recovery_plan,
     validate_feedback_followup_queue,
 )
 
@@ -130,6 +134,92 @@ def _child_queue(command: list[str] | None = None) -> dict[str, object]:
     }
 
 
+def test_queue_observation_helpers_are_public_package_exports() -> None:
+    from comma_lab.scheduler import (
+        build_queue_observation_recovery_plan as scheduler_export,
+    )
+    from tac.optimization import observations_from_queue_observation
+
+    assert scheduler_export is build_queue_observation_recovery_plan
+    assert callable(observations_from_queue_observation)
+
+
+def test_queue_observation_recovery_plan_builds_required_local_commands() -> None:
+    plan = build_queue_observation_recovery_plan(
+        {
+            "schema": "experiment_queue_observation.v1",
+            "queue_id": "campaign_queue",
+            "healthy": False,
+            "blockers": [
+                "experiment_queue_observation_failed_steps:1",
+                "experiment_queue_observation_blocked_steps:1",
+                "experiment_queue_observation_artifact_postcondition_failures:1",
+                "experiment_queue_observation_orphaned_steps:1",
+            ],
+            "orphaned_step_count": 1,
+            "orphaned_steps": [
+                {
+                    "experiment_id": "old_exp",
+                    "step_id": "old_step",
+                    "status": "queued",
+                }
+            ],
+            "failed_steps": [
+                {
+                    "experiment_id": "exp0",
+                    "step_id": "materialize",
+                    "status": "failed",
+                }
+            ],
+            "blocked_steps": [
+                {
+                    "experiment_id": "exp1",
+                    "step_id": "harvest",
+                    "status": "blocked",
+                }
+            ],
+            "succeeded_artifact_failure_steps": [
+                {
+                    "experiment_id": "exp2",
+                    "step_id": "handoff",
+                    "status": "succeeded",
+                }
+            ],
+        },
+        queue_path="queue.json",
+        state_path="queue.sqlite",
+        reason="fixture recovery",
+    )
+
+    assert plan["schema"] == QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA
+    assert plan["recovery_required"] is True
+    assert plan["required_action_count"] == 4
+    assert plan["score_claim"] is False
+    actions = {item["action"]: item for item in plan["actions"]}
+    assert actions["retire_blocking_orphaned_steps"]["command"] == [
+        sys.executable,
+        "tools/experiment_queue.py",
+        "--queue",
+        "queue.json",
+        "--state",
+        "queue.sqlite",
+        "retire-orphans",
+        "--reason",
+        "fixture recovery",
+    ]
+    assert actions["rewind_failed_step"]["command"][-5:] == [
+        "rewind",
+        "exp0",
+        "materialize",
+        "--reason",
+        "fixture recovery",
+    ]
+    assert actions["rewind_blocked_step"]["experiment_id"] == "exp1"
+    assert actions["rewind_succeeded_step_with_artifact_failure"]["step_id"] == (
+        "handoff"
+    )
+
+
 def test_feedback_replan_policy_executes_safe_followup_queue() -> None:
     policy = build_queue_feedback_replan_policy(
         _run_summary(),
@@ -168,6 +258,95 @@ def test_feedback_replan_policy_counts_only_paired_exact_auth_calibration() -> N
     assert calibration["pair"]["archive_bytes"] == 12345
     assert calibration["score_claim"] is False
     assert calibration["ready_for_exact_eval_dispatch"] is False
+
+
+def test_feedback_replan_policy_prioritizes_queue_health_recovery() -> None:
+    recovery_plan = build_queue_observation_recovery_plan(
+        {
+            "schema": "experiment_queue_observation.v1",
+            "queue_id": "campaign_queue",
+            "healthy": False,
+            "blockers": ["experiment_queue_observation_failed_steps:1"],
+            "failed_steps": [
+                {
+                    "experiment_id": "exp0",
+                    "step_id": "materialize",
+                    "status": "failed",
+                }
+            ],
+        },
+        queue_path=".omx/research/campaign/materializer_execution_queue.json",
+        state_path=".omx/research/campaign/materializer_execution_queue.sqlite",
+    )
+    policy = build_queue_feedback_replan_policy(
+        _run_summary(queue_observation_recovery_plan=recovery_plan),
+        feedback_followup_queue=_child_queue(),
+    )
+
+    assert policy["decision"] == ACTION_RECOVER_QUEUE_HEALTH
+    assert policy["should_continue_feedback_loop"] is False
+    assert policy["ready_for_queue_health_recovery"] is True
+    assert policy["operator_queue_state_mutation_required"] is True
+    assert policy["auto_execute_eligible"] is False
+    assert policy["ready_for_feedback_followup_execution"] is False
+    assert policy["queue_observation_recovery_required"] is True
+    assert policy["recommended_actions"][0]["action"] == ACTION_RECOVER_QUEUE_HEALTH
+    assert policy["recommended_actions"][0]["auto_execute_eligible"] is False
+    assert policy["recommended_actions"][0][
+        "operator_queue_state_mutation_required"
+    ] is True
+    assert policy["recommended_actions"][0]["actions"][0]["action"] == (
+        "rewind_failed_step"
+    )
+    assert policy["score_claim"] is False
+    assert policy["ready_for_exact_eval_dispatch"] is False
+    continuation_queue, continuation_blockers = (
+        build_queue_feedback_replan_continuation_queue(
+            policy,
+            lane_id="queue_recovery_regression",
+            source_policy_path=".omx/research/campaign/queue_feedback_replan_policy.json",
+        )
+    )
+    assert continuation_queue is None
+    assert "queue_feedback_replan_continuation_policy_not_next_iteration" in (
+        continuation_blockers
+    )
+    assert "queue_feedback_replan_continuation_policy_not_continuable" in (
+        continuation_blockers
+    )
+
+
+def test_feedback_replan_policy_keeps_nonblocking_observation_maintenance_advisory() -> None:
+    recovery_plan = build_queue_observation_recovery_plan(
+        {
+            "schema": "experiment_queue_observation.v1",
+            "queue_id": "campaign_queue",
+            "healthy": False,
+            "blockers": ["experiment_queue_observation_orphaned_steps:1"],
+            "orphaned_step_count": 1,
+            "orphaned_steps": [
+                {
+                    "experiment_id": "old_exp",
+                    "step_id": "old_step",
+                    "status": "skipped",
+                }
+            ],
+        },
+        queue_path=".omx/research/campaign/materializer_execution_queue.json",
+        state_path=".omx/research/campaign/materializer_execution_queue.sqlite",
+    )
+    policy = build_queue_feedback_replan_policy(
+        _run_summary(queue_observation_recovery_plan=recovery_plan),
+        feedback_followup_queue=_child_queue(),
+    )
+
+    assert policy["decision"] == ACTION_EXECUTE_FEEDBACK_FOLLOWUP
+    assert policy["queue_observation_recovery_required"] is False
+    assert policy["queue_observation_maintenance_recommended"] is True
+    assert policy["recommended_actions"][0]["action"] == (
+        ACTION_QUEUE_OBSERVATION_MAINTENANCE
+    )
+    assert policy["recommended_actions"][1]["action"] == ACTION_EXECUTE_FEEDBACK_FOLLOWUP
 
 
 def test_feedback_replan_policy_blocks_unpaired_exact_auth_calibration() -> None:

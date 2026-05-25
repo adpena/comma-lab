@@ -1236,6 +1236,12 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
     assert summary["score_claim"] is False
     assert summary["ready_for_exact_eval_dispatch"] is False
     assert queue_path in summary["next_command"]
+    assert "--state .omx/state/experiment_queue_high_level_fixture_campaign3.sqlite" in (
+        summary["next_command"]
+    )
+    assert "--state .omx/state/experiment_queue_high_level_fixture_campaign3.sqlite" in (
+        summary["observe_command"]
+    )
     assert "--execute --max-parallel 0" in summary["next_command"]
     assert summary["latest_rows"][0]["plan"]["top_combo"]["expected_score_gain"] == 0.000134
     assert summary["latest_rows"][0]["compiler_required_count"] == 1
@@ -1261,6 +1267,12 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
         "run_next_materializer_campaign_iteration"
     )
     assert summary["latest_rows"][0]["queue_feedback_replan_policy_should_continue"] is True
+    assert summary["latest_rows"][0]["queue_observation_recovery_required"] is False
+    assert (
+        summary["latest_rows"][0]["queue_observation_maintenance_recommended"]
+        is False
+    )
+    assert summary["latest_rows"][0]["ready_for_queue_health_recovery"] is False
     assert summary["latest_rows"][0]["queue_feedback_replan_policy_blocker_count"] == 0
     assert summary["latest_rows"][0]["queue_feedback_replan_continuation_queue_path"] == (
         ".omx/research/high_level/campaign3/"
@@ -1281,6 +1293,9 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
     assert "feedback_executed=True" in text
     assert "feedback_success=True" in text
     assert "feedback_continue=1" in text
+    assert "queue_recovery_required=0" in text
+    assert "queue_recovery_ready=0" in text
+    assert "queue_maintenance=0" in text
     assert "feedback_continuation_queued=1" in text
     assert "feedback_decision=run_next_materializer_campaign_iteration" in text
     assert "feedback_continue=True" in text
@@ -1288,6 +1303,139 @@ def test_byte_shaving_acquisition_summary_surfaces_latest_local_queue(
     assert "local_mlx_ready=1" in text
     assert "materialize_inverse_scorer_cell_candidate" in text
     assert "not score authority" in text
+
+
+def test_byte_shaving_acquisition_summary_surfaces_queue_recovery_signal(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    root = tmp_path / ".omx" / "research"
+    campaign_dir = root / "high_level" / "campaign_recovery"
+    queue_path = (
+        ".omx/research/high_level/campaign_recovery/materializer_execution_queue.json"
+    )
+    state_path = (
+        ".omx/research/high_level/campaign_recovery/materializer_execution_queue.sqlite"
+    )
+    _write_json(
+        campaign_dir / "byte_shaving_campaign_plan.json",
+        {
+            "combination_ladder": [],
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    _write_json(
+        campaign_dir / "materializer_campaign_run.json",
+        {
+            "schema": "byte_shaving_materializer_campaign_run.v1",
+            "plan": (
+                ".omx/research/high_level/campaign_recovery/"
+                "byte_shaving_campaign_plan.json"
+            ),
+            "queue_id": "high_level_fixture_recovery",
+            "queue_path": queue_path,
+            "state_path": state_path,
+            "experiment_count": 1,
+            "queue_observation_path": (
+                ".omx/research/high_level/campaign_recovery/queue_observation.json"
+            ),
+            "queue_observation_recovery_plan_path": (
+                ".omx/research/high_level/campaign_recovery/"
+                "queue_observation_recovery_plan.json"
+            ),
+            "queue_observation_recovery_required": True,
+            "queue_observation_maintenance_recommended": False,
+            "queue_observation_recovery_plan": {
+                "schema": "queue_observation_recovery_plan.v1",
+                "recovery_required": True,
+                "maintenance_recommended": False,
+                "action_count": 1,
+                "required_action_count": 1,
+                "maintenance_action_count": 0,
+                "actions": [
+                    {
+                        "action": "rewind_failed_step",
+                        "required": True,
+                        "requires_explicit_execution": True,
+                        "score_claim": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ],
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "queue_feedback_replan_policy_path": (
+                ".omx/research/high_level/campaign_recovery/"
+                "queue_feedback_replan_policy.json"
+            ),
+            "queue_feedback_replan_policy_decision": "recover_queue_health",
+            "queue_feedback_replan_policy_should_continue": False,
+            "queue_feedback_replan_policy": {
+                "schema": "queue_feedback_replan_policy.v1",
+                "decision": "recover_queue_health",
+                "should_continue_feedback_loop": False,
+                "queue_observation_recovery_required": True,
+                "queue_observation_maintenance_recommended": False,
+                "ready_for_queue_health_recovery": True,
+                "operator_queue_state_mutation_required": True,
+                "auto_execute_eligible": False,
+                "queue_observation_recovery_plan": {
+                    "schema": "queue_observation_recovery_plan.v1",
+                    "recovery_required": True,
+                    "maintenance_recommended": False,
+                    "action_count": 1,
+                    "required_action_count": 1,
+                    "maintenance_action_count": 0,
+                },
+                "blockers": [],
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "build": {
+                "materializer_work_queue_executable_row_count": 1,
+                "materializer_work_queue_blocked_row_count": 0,
+                "blocked_row_count": 0,
+            },
+            "worker": {
+                "schema": "experiment_queue_worker_result.v1",
+                "failure_count": 0,
+            },
+            "observation": {
+                "status_counts": {"queued": 1},
+                "failed_steps": [],
+                "definition_drift": {},
+            },
+            "commands": [{"returncode": 0}],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    monkeypatch.setattr(mod, "BYTE_SHAVING_ACQUISITION_SCAN_ROOTS", (root,))
+
+    summary = mod._byte_shaving_acquisition_summary()
+    text = mod._format_byte_shaving_acquisition_summary()
+    latest = summary["latest_rows"][0]
+
+    assert summary["queue_observation_recovery_required_count"] == 1
+    assert summary["ready_for_queue_health_recovery_count"] == 1
+    assert summary["queue_observation_required_action_count"] == 1
+    assert latest["queue_observation_recovery_required"] is True
+    assert latest["ready_for_queue_health_recovery"] is True
+    assert latest["operator_queue_state_mutation_required"] is True
+    assert latest["queue_feedback_replan_policy_should_continue"] is False
+    assert latest["queue_observation_recovery_action_count"] == 1
+    assert latest["queue_observation_required_action_count"] == 1
+    assert state_path in summary["next_command"]
+    assert state_path in summary["observe_command"]
+    assert "queue_recovery_required=1" in text
+    assert "queue_recovery_ready=1" in text
+    assert "queue_recovery_actions=1" in text
+    assert "feedback_continue=False" in text
 
 
 def test_byte_shaving_acquisition_summary_blocks_authority_leaks(

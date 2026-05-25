@@ -26,6 +26,7 @@ QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA = (
 QUEUE_FEEDBACK_REPLAN_CONTINUATION_METADATA_SCHEMA = (
     "queue_feedback_replan_continuation_metadata.v1"
 )
+QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA = "queue_observation_recovery_plan.v1"
 MATERIALIZER_CAMPAIGN_RUN_SCHEMA = "byte_shaving_materializer_campaign_run.v1"
 QUEUE_FEEDBACK_REPLAN_CONTINUATION_EXPERIMENT_ID = (
     "queue_feedback_replan_next_materializer_iteration"
@@ -81,6 +82,8 @@ FALSE_AUTHORITY: dict[str, bool] = {
 ACTION_EXECUTE_FEEDBACK_FOLLOWUP = "execute_feedback_followup_queue"
 ACTION_RUN_NEXT_ITERATION = "run_next_materializer_campaign_iteration"
 ACTION_INSPECT_EXACT_HANDOFFS = "inspect_exact_readiness_handoffs"
+ACTION_RECOVER_QUEUE_HEALTH = "recover_queue_health"
+ACTION_QUEUE_OBSERVATION_MAINTENANCE = "queue_observation_maintenance"
 ACTION_BLOCKED = "blocked"
 ACTION_STOP_MAX_ITERATIONS = "stop_max_iterations"
 ACTION_REFUSE = "refuse_false_authority_or_schema"
@@ -121,6 +124,274 @@ def _stable_json_sha256(payload: Mapping[str, Any]) -> str:
         default=str,
     ).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _experiment_queue_command(
+    *,
+    queue_path: str,
+    state_path: str,
+    subcommand: Sequence[str],
+) -> list[str]:
+    return [
+        sys.executable,
+        "tools/experiment_queue.py",
+        "--queue",
+        queue_path,
+        "--state",
+        state_path,
+        *[str(item) for item in subcommand],
+    ]
+
+
+def _blocker_matches(blockers: Sequence[str], prefix: str) -> bool:
+    return any(item == prefix or item.startswith(f"{prefix}:") for item in blockers)
+
+
+def _step_identity(step: Mapping[str, Any]) -> tuple[str | None, str | None]:
+    experiment_id = _nonempty_str(step.get("experiment_id"))
+    step_id = _nonempty_str(step.get("step_id"))
+    return experiment_id, step_id
+
+
+def _recovery_action(
+    *,
+    action: str,
+    reason: str,
+    required: bool,
+    command: Sequence[str] | None = None,
+    step: Mapping[str, Any] | None = None,
+    blocker_sources: Sequence[str] = (),
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "action": action,
+        "reason": reason,
+        "required": bool(required),
+        "local_only": True,
+        "requires_explicit_execution": True,
+        "command": None if command is None else [str(item) for item in command],
+        "blocker_sources": [str(item) for item in blocker_sources],
+    }
+    if step is not None:
+        experiment_id, step_id = _step_identity(step)
+        payload.update(
+            {
+                "experiment_id": experiment_id,
+                "step_id": step_id,
+                "status": step.get("status"),
+            }
+        )
+    return _false_authority_payload(payload)
+
+
+def _append_unique_action(actions: list[dict[str, Any]], action: dict[str, Any]) -> None:
+    key = (
+        action.get("action"),
+        tuple(action.get("command") or []),
+        action.get("experiment_id"),
+        action.get("step_id"),
+        action.get("required"),
+    )
+    for existing in actions:
+        existing_key = (
+            existing.get("action"),
+            tuple(existing.get("command") or []),
+            existing.get("experiment_id"),
+            existing.get("step_id"),
+            existing.get("required"),
+        )
+        if existing_key == key:
+            return
+    actions.append(action)
+
+
+def build_queue_observation_recovery_plan(
+    observation: Mapping[str, Any] | None,
+    *,
+    queue_path: str,
+    state_path: str,
+    reason: str = "queue observation health recovery",
+) -> dict[str, Any]:
+    """Convert queue observation blockers into local recovery/maintenance actions."""
+
+    if not isinstance(observation, Mapping):
+        observation = {
+            "schema": "experiment_queue_observation_unavailable.v1",
+            "healthy": False,
+            "blockers": ["queue_observation_missing_or_invalid"],
+            "blocker_count": 1,
+        }
+    blockers = _string_list(observation.get("blockers"))
+    actions: list[dict[str, Any]] = []
+    state_blockers = [
+        blocker
+        for blocker in blockers
+        if blocker == "experiment_queue_observation_state_missing"
+        or blocker.startswith("experiment_queue_observation_missing_steps:")
+        or blocker.startswith("experiment_queue_observation_changed_steps:")
+        or blocker.startswith("experiment_queue_observation_missing_step_hashes:")
+    ]
+    if state_blockers:
+        _append_unique_action(
+            actions,
+            _recovery_action(
+                action="refresh_queue_state",
+                reason=reason,
+                required=True,
+                command=_experiment_queue_command(
+                    queue_path=queue_path,
+                    state_path=state_path,
+                    subcommand=["init"],
+                ),
+                blocker_sources=state_blockers,
+            ),
+        )
+
+    orphan_count = _safe_int(observation.get("orphaned_step_count"))
+    orphaned_steps = [
+        item for item in _as_list(observation.get("orphaned_steps")) if isinstance(item, Mapping)
+    ]
+    orphan_blockers = [
+        item
+        for item in blockers
+        if item.startswith("experiment_queue_observation_orphaned_steps")
+    ]
+    if orphan_count and not orphaned_steps:
+        _append_unique_action(
+            actions,
+            _recovery_action(
+                action="observe_orphaned_steps",
+                reason="orphan count present without identities",
+                required=True,
+                command=_experiment_queue_command(
+                    queue_path=queue_path,
+                    state_path=state_path,
+                    subcommand=["observe", "--include-orphans", "--format", "json"],
+                ),
+                blocker_sources=orphan_blockers,
+            ),
+        )
+    blocking_orphans = [
+        step
+        for step in orphaned_steps
+        if str(step.get("status") or "") in {"queued", "running", "blocked"}
+    ]
+    if blocking_orphans:
+        _append_unique_action(
+            actions,
+            _recovery_action(
+                action="retire_blocking_orphaned_steps",
+                reason=reason,
+                required=True,
+                command=_experiment_queue_command(
+                    queue_path=queue_path,
+                    state_path=state_path,
+                    subcommand=["retire-orphans", "--reason", reason],
+                ),
+                blocker_sources=orphan_blockers,
+            ),
+        )
+    elif orphaned_steps:
+        _append_unique_action(
+            actions,
+            _recovery_action(
+                action="record_nonblocking_orphaned_steps",
+                reason="nonblocking orphaned rows retained for cleanup/audit",
+                required=False,
+                blocker_sources=orphan_blockers,
+            ),
+        )
+
+    step_blockers = [
+        item
+        for item in blockers
+        if _blocker_matches([item], "experiment_queue_observation_failed_steps")
+        or _blocker_matches([item], "experiment_queue_observation_blocked_steps")
+        or _blocker_matches(
+            [item],
+            "experiment_queue_observation_artifact_postcondition_failures",
+        )
+    ]
+    for action_name, key, action_reason in (
+        ("rewind_failed_step", "failed_steps", "failed queue step"),
+        ("rewind_blocked_step", "blocked_steps", "blocked queue step"),
+        (
+            "rewind_succeeded_step_with_artifact_failure",
+            "succeeded_artifact_failure_steps",
+            "succeeded step has missing or corrupt declared artifact",
+        ),
+    ):
+        for step in _as_list(observation.get(key)):
+            if not isinstance(step, Mapping):
+                continue
+            experiment_id, step_id = _step_identity(step)
+            if experiment_id is None or step_id is None:
+                continue
+            _append_unique_action(
+                actions,
+                _recovery_action(
+                    action=action_name,
+                    reason=action_reason,
+                    required=True,
+                    command=_experiment_queue_command(
+                        queue_path=queue_path,
+                        state_path=state_path,
+                        subcommand=[
+                            "rewind",
+                            experiment_id,
+                            step_id,
+                            "--reason",
+                            reason,
+                        ],
+                    ),
+                    step=step,
+                    blocker_sources=step_blockers,
+                ),
+            )
+
+    if _blocker_matches(
+        blockers,
+        "experiment_queue_observation_artifact_postcondition_failures",
+    ) and not any(
+        item.get("action") == "rewind_succeeded_step_with_artifact_failure"
+        for item in actions
+    ):
+        _append_unique_action(
+            actions,
+            _recovery_action(
+                action="inspect_artifact_postcondition_failures",
+                reason="artifact postcondition failure lacks a succeeded-step identity",
+                required=True,
+                blocker_sources=step_blockers,
+            ),
+        )
+
+    required_actions = [item for item in actions if item.get("required") is True]
+    maintenance_actions = [item for item in actions if item.get("required") is not True]
+    return _false_authority_payload(
+        {
+            "schema": QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA,
+            "source_schema": observation.get("schema"),
+            "queue_id": _nonempty_str(observation.get("queue_id")),
+            "queue_path": queue_path,
+            "queue_state_path": state_path,
+            "observation_healthy": observation.get("healthy") is True,
+            "observation_blockers": blockers,
+            "observation_blocker_count": len(blockers),
+            "recovery_required": bool(required_actions),
+            "maintenance_recommended": bool(maintenance_actions),
+            "required_action_count": len(required_actions),
+            "maintenance_action_count": len(maintenance_actions),
+            "action_count": len(actions),
+            "actions": actions,
+            "commands": [
+                list(item["command"])
+                for item in actions
+                if item.get("command") is not None
+            ],
+            "allowed_use": "local_queue_recovery_planning_only",
+            "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        }
+    )
 
 
 def _command_arg(command_items: Sequence[str], flag: str) -> str | None:
@@ -233,6 +504,20 @@ def _exact_auth_calibration_pair_policy(
             "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_dispatch_authority",
         }
     )
+
+
+def _queue_observation_recovery_plan_from_run(
+    run_summary: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    direct = run_summary.get("queue_observation_recovery_plan")
+    if isinstance(direct, Mapping):
+        return direct
+    request = run_summary.get("queue_feedback_replan_request")
+    if isinstance(request, Mapping):
+        nested = request.get("queue_observation_recovery_plan")
+        if isinstance(nested, Mapping):
+            return nested
+    return None
 
 
 def validate_feedback_followup_queue(
@@ -646,6 +931,17 @@ def build_queue_feedback_replan_policy(
         run_summary.get("queue_feedback_replan_followup_action_functional_path")
     )
     exact_auth_calibration_policy = _exact_auth_calibration_pair_policy(run_summary)
+    queue_observation_recovery_plan = _queue_observation_recovery_plan_from_run(
+        run_summary
+    )
+    queue_observation_recovery_required = (
+        isinstance(queue_observation_recovery_plan, Mapping)
+        and queue_observation_recovery_plan.get("recovery_required") is True
+    )
+    queue_observation_maintenance_recommended = (
+        isinstance(queue_observation_recovery_plan, Mapping)
+        and queue_observation_recovery_plan.get("maintenance_recommended") is True
+    )
 
     if exact_handoff_count:
         warnings.append("exact_readiness_handoffs_available")
@@ -701,6 +997,9 @@ def build_queue_feedback_replan_policy(
     elif calibration_blockers:
         decision = ACTION_BLOCKED
         stop_reason = "exact_auth_calibration_policy_failed"
+    elif queue_observation_recovery_required:
+        decision = ACTION_RECOVER_QUEUE_HEALTH
+        stop_reason = None
     elif not replan_ready:
         decision = ACTION_BLOCKED
         stop_reason = "queue_feedback_replan_not_ready"
@@ -757,6 +1056,39 @@ def build_queue_feedback_replan_policy(
                 "ready_for_exact_eval_dispatch": False,
             }
         )
+    if isinstance(queue_observation_recovery_plan, Mapping):
+        recovery_actions = [
+            dict(item)
+            for item in _as_list(queue_observation_recovery_plan.get("actions"))
+            if isinstance(item, Mapping) and item.get("required") is True
+        ]
+        maintenance_actions = [
+            dict(item)
+            for item in _as_list(queue_observation_recovery_plan.get("actions"))
+            if isinstance(item, Mapping) and item.get("required") is not True
+        ]
+        if recovery_actions:
+            recommended_actions.append(
+                {
+                    "action": ACTION_RECOVER_QUEUE_HEALTH,
+                    "required_action_count": len(recovery_actions),
+                    "actions": recovery_actions,
+                    "operator_queue_state_mutation_required": True,
+                    "auto_execute_eligible": False,
+                    "score_claim": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            )
+        if maintenance_actions:
+            recommended_actions.append(
+                {
+                    "action": ACTION_QUEUE_OBSERVATION_MAINTENANCE,
+                    "maintenance_action_count": len(maintenance_actions),
+                    "actions": maintenance_actions,
+                    "score_claim": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            )
     if decision == ACTION_EXECUTE_FEEDBACK_FOLLOWUP:
         recommended_actions.append(
             {
@@ -799,6 +1131,7 @@ def build_queue_feedback_replan_policy(
         ACTION_EXECUTE_FEEDBACK_FOLLOWUP,
         ACTION_RUN_NEXT_ITERATION,
     }
+    operator_queue_state_mutation_required = decision == ACTION_RECOVER_QUEUE_HEALTH
 
     return _false_authority_payload(
         {
@@ -836,6 +1169,20 @@ def build_queue_feedback_replan_policy(
             "exact_auth_calibration_usable": exact_auth_calibration_policy[
                 "usable_for_feedback_trust_region"
             ],
+            "queue_observation_recovery_plan": queue_observation_recovery_plan,
+            "queue_observation_recovery_required": queue_observation_recovery_required,
+            "queue_observation_maintenance_recommended": (
+                queue_observation_maintenance_recommended
+            ),
+            "ready_for_queue_health_recovery": (
+                decision == ACTION_RECOVER_QUEUE_HEALTH
+            ),
+            "operator_queue_state_mutation_required": (
+                operator_queue_state_mutation_required
+            ),
+            "auto_execute_eligible": (
+                should_continue and not operator_queue_state_mutation_required
+            ),
             "feedback_followup_queue_emitted": followup_queue_emitted,
             "feedback_followup_policy_enabled": followup_policy_enabled,
             "feedback_followup_executed": followup_executed,
@@ -858,6 +1205,8 @@ __all__ = [
     "ACTION_BLOCKED",
     "ACTION_EXECUTE_FEEDBACK_FOLLOWUP",
     "ACTION_INSPECT_EXACT_HANDOFFS",
+    "ACTION_QUEUE_OBSERVATION_MAINTENANCE",
+    "ACTION_RECOVER_QUEUE_HEALTH",
     "ACTION_REFUSE",
     "ACTION_RUN_NEXT_ITERATION",
     "ACTION_STOP_MAX_ITERATIONS",
@@ -870,7 +1219,9 @@ __all__ = [
     "QUEUE_FEEDBACK_REPLAN_FORBIDDEN_COMMAND_FLAGS",
     "QUEUE_FEEDBACK_REPLAN_MATERIALIZER_CAMPAIGN_TOOL",
     "QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA",
+    "QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA",
     "build_queue_feedback_replan_continuation_queue",
     "build_queue_feedback_replan_policy",
+    "build_queue_observation_recovery_plan",
     "validate_feedback_followup_queue",
 ]

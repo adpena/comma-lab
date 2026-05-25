@@ -535,6 +535,283 @@ def test_cli_builds_inverse_action_functional_from_scorer_response(
     assert "Selected Water Buckets" in md_out.read_text(encoding="utf-8")
 
 
+def test_cli_reads_queue_observation_health_feedback(tmp_path: Path) -> None:
+    atoms = tmp_path / "atoms.json"
+    queue_observation = tmp_path / "queue_observation.json"
+    runtime_identity = tmp_path / "runtime_identity.json"
+    cache_identity = tmp_path / "cache_identity.json"
+    output = tmp_path / "action.json"
+    atoms.write_text(
+        json.dumps(
+            {
+                "atoms": [
+                    {
+                        "atom_id": "atom_candidate_a",
+                        "candidate_id": "candidate_a",
+                        "scale": "byte_range",
+                        "scope_axis": "bytes",
+                        "byte_range": [0, 32],
+                        "component": "rate",
+                        "predicted_score_gain": 0.01,
+                        "first_order_marginal_effect": 0.01,
+                        "second_order_interaction_effect": 0.0,
+                        "predicted_rate_gain": 0.01,
+                        "predicted_rate_cost": 0.0,
+                        "uncertainty": 0.0,
+                        "fragility_penalty": 0.0,
+                        "elapsed_seconds": 99.0,
+                        "artifact_bytes": 99_000_000,
+                        "resource_kind": "local_cpu",
+                        **_false_authority(),
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    queue_observation.write_text(
+        json.dumps(
+            {
+                "schema": "experiment_queue_observation.v1",
+                "queue_id": "materializer_queue",
+                "healthy": False,
+                "blockers": ["experiment_queue_observation_failed_steps:1"],
+                "performance": {
+                    "schema": "experiment_queue_performance_summary.v1",
+                    "queue_id": "materializer_queue",
+                    "event_count": 1,
+                    "candidate_id_by_experiment": {
+                        "candidate_a": ["candidate_a"]
+                    },
+                    "by_resource_kind": {},
+                    "by_step": {
+                        "candidate_a.materialize": {
+                            "run_count": 1,
+                            "failure_count": 1,
+                            "resource_kind_counts": {"local_cpu": 1},
+                            "elapsed_seconds_mean": 2.0,
+                            "artifact_record_bytes_mean": 4096.0,
+                        }
+                    },
+                },
+                "failed_steps": [
+                    {
+                        "experiment_id": "candidate_a",
+                        "step_id": "materialize",
+                        "status": "failed",
+                        "resource_kind": "local_cpu",
+                    }
+                ],
+                **_false_authority(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    runtime_identity.write_text(
+        json.dumps(
+            {
+                "runtime_tree_sha256": "d" * 64,
+                "scorer_version": "local_scheduler.v1",
+            }
+        ),
+        encoding="utf-8",
+    )
+    cache_identity.write_text(json.dumps({"cache_sha256": "e" * 64}), encoding="utf-8")
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--atom",
+            str(atoms),
+            "--queue-observation",
+            str(queue_observation),
+            "--queue-performance-runtime-identity",
+            str(runtime_identity),
+            "--queue-performance-cache-identity",
+            str(cache_identity),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(tmp_path),
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    action = json.loads(output.read_text(encoding="utf-8"))
+    assert action["cells"][0]["best_observation_kind"] == (
+        "queue_observation_health_blocker"
+    )
+    assert action["cells"][0]["priority"]["expected_score_gain"] == 0.0
+    assert action["water_bucket"]["selected_count"] == 0
+    assert action["score_claim"] is False
+
+
+def test_cli_requires_identity_for_queue_observation(tmp_path: Path) -> None:
+    atoms = tmp_path / "atoms.json"
+    queue_observation = tmp_path / "queue_observation.json"
+    output = tmp_path / "action.json"
+    atoms.write_text(
+        json.dumps(
+            {
+                "atoms": [
+                    {
+                        "atom_id": "atom_candidate_a",
+                        "candidate_id": "candidate_a",
+                        "scale": "byte",
+                        "scope_axis": "bytes",
+                        "component": "rate",
+                        "predicted_score_gain": 0.01,
+                        **_false_authority(),
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    queue_observation.write_text(
+        json.dumps(
+            {
+                "schema": "experiment_queue_observation.v1",
+                "queue_id": "materializer_queue",
+                "healthy": False,
+                "blockers": ["experiment_queue_observation_state_missing"],
+                "performance": {
+                    "schema": "experiment_queue_performance_summary.v1",
+                    "queue_id": "materializer_queue",
+                    "event_count": 0,
+                    "candidate_id_by_experiment": {"candidate_a": ["candidate_a"]},
+                    "by_resource_kind": {},
+                    "by_step": {},
+                },
+                **_false_authority(),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--atom",
+            str(atoms),
+            "--queue-observation",
+            str(queue_observation),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(tmp_path),
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode != 0
+    assert "--queue-performance-runtime-identity is required" in result.stderr
+    assert not output.exists()
+
+
+def test_cli_rejects_truthy_authority_in_queue_observation(tmp_path: Path) -> None:
+    atoms = tmp_path / "atoms.json"
+    queue_observation = tmp_path / "queue_observation.json"
+    runtime_identity = tmp_path / "runtime_identity.json"
+    cache_identity = tmp_path / "cache_identity.json"
+    output = tmp_path / "action.json"
+    atoms.write_text(
+        json.dumps(
+            {
+                "atoms": [
+                    {
+                        "atom_id": "atom_candidate_a",
+                        "candidate_id": "candidate_a",
+                        "scale": "byte",
+                        "scope_axis": "bytes",
+                        "component": "rate",
+                        "predicted_score_gain": 0.01,
+                        **_false_authority(),
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    queue_observation.write_text(
+        json.dumps(
+            {
+                "schema": "experiment_queue_observation.v1",
+                "queue_id": "materializer_queue",
+                "healthy": False,
+                "blockers": ["experiment_queue_observation_failed_steps:1"],
+                "failed_steps": [
+                    {
+                        "experiment_id": "candidate_a",
+                        "step_id": "materialize",
+                        "status": "failed",
+                        "score_claim": True,
+                    }
+                ],
+                "performance": {
+                    "schema": "experiment_queue_performance_summary.v1",
+                    "queue_id": "materializer_queue",
+                    "event_count": 1,
+                    "candidate_id_by_experiment": {"candidate_a": ["candidate_a"]},
+                    "by_resource_kind": {},
+                    "by_step": {
+                        "candidate_a.materialize": {
+                            "run_count": 1,
+                            "failure_count": 1,
+                            "elapsed_seconds_mean": 1.0,
+                        }
+                    },
+                },
+                **_false_authority(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    runtime_identity.write_text(
+        json.dumps(
+            {
+                "runtime_tree_sha256": "d" * 64,
+                "scorer_version": "local_scheduler.v1",
+            }
+        ),
+        encoding="utf-8",
+    )
+    cache_identity.write_text(json.dumps({"cache_sha256": "e" * 64}), encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--atom",
+            str(atoms),
+            "--queue-observation",
+            str(queue_observation),
+            "--queue-performance-runtime-identity",
+            str(runtime_identity),
+            "--queue-performance-cache-identity",
+            str(cache_identity),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(tmp_path),
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 2
+    assert "queue observation: forbidden truthy authority fields" in result.stderr
+    assert "failed_steps[0].score_claim=truthy" in result.stderr
+    assert not output.exists()
+
+
 def test_cli_reads_materializer_observation_jsonl(tmp_path: Path) -> None:
     scorer = tmp_path / "scorer.json"
     observations = tmp_path / "observations.jsonl"

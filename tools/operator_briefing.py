@@ -1660,6 +1660,13 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
         if isinstance(payload.get("queue_feedback_replan_policy"), dict)
         else {}
     )
+    recovery_plan = (
+        payload.get("queue_observation_recovery_plan")
+        if isinstance(payload.get("queue_observation_recovery_plan"), dict)
+        else feedback_policy.get("queue_observation_recovery_plan")
+    )
+    if not isinstance(recovery_plan, dict):
+        recovery_plan = {}
     row = {
         **base,
         "kind": "byte_shaving_materializer_campaign_run",
@@ -1737,6 +1744,35 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
             payload.get("queue_feedback_replan_policy_should_continue") is True
             or feedback_policy.get("should_continue_feedback_loop") is True
         ),
+        "queue_observation_path": str(payload.get("queue_observation_path") or ""),
+        "queue_observation_recovery_plan_path": str(
+            payload.get("queue_observation_recovery_plan_path") or ""
+        ),
+        "queue_observation_recovery_required": (
+            payload.get("queue_observation_recovery_required") is True
+            or feedback_policy.get("queue_observation_recovery_required") is True
+            or recovery_plan.get("recovery_required") is True
+        ),
+        "queue_observation_maintenance_recommended": (
+            payload.get("queue_observation_maintenance_recommended") is True
+            or feedback_policy.get("queue_observation_maintenance_recommended") is True
+            or recovery_plan.get("maintenance_recommended") is True
+        ),
+        "queue_observation_recovery_action_count": _safe_int(
+            recovery_plan.get("action_count")
+        ),
+        "queue_observation_required_action_count": _safe_int(
+            recovery_plan.get("required_action_count")
+        ),
+        "queue_observation_maintenance_action_count": _safe_int(
+            recovery_plan.get("maintenance_action_count")
+        ),
+        "ready_for_queue_health_recovery": (
+            feedback_policy.get("ready_for_queue_health_recovery") is True
+        ),
+        "operator_queue_state_mutation_required": (
+            feedback_policy.get("operator_queue_state_mutation_required") is True
+        ),
         "queue_feedback_replan_policy_blocker_count": len(
             feedback_policy.get("blockers")
             if isinstance(feedback_policy.get("blockers"), list)
@@ -1782,8 +1818,11 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
 def _byte_shaving_acquisition_next_command(latest: dict[str, object] | None) -> str:
     if latest and latest.get("queue_path"):
         queue_path = latest["queue_path"]
+        state_path = latest.get("state_path")
+        state_arg = f" --state {state_path}" if state_path else ""
         return (
-            f".venv/bin/python tools/experiment_queue.py --queue {queue_path} "
+            f".venv/bin/python tools/experiment_queue.py --queue {queue_path}"
+            f"{state_arg} "
             "run-worker --execute --max-parallel 0"
         )
     return ".venv/bin/python tools/run_byte_shaving_materializer_campaign.py --help"
@@ -1872,6 +1911,25 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
             for row in rows
             if row.get("queue_feedback_replan_policy_should_continue") is True
         ),
+        "queue_observation_recovery_required_count": sum(
+            1 for row in rows if row.get("queue_observation_recovery_required") is True
+        ),
+        "queue_observation_maintenance_recommended_count": sum(
+            1
+            for row in rows
+            if row.get("queue_observation_maintenance_recommended") is True
+        ),
+        "queue_observation_required_action_count": sum(
+            _safe_int(row.get("queue_observation_required_action_count"))
+            for row in rows
+        ),
+        "queue_observation_maintenance_action_count": sum(
+            _safe_int(row.get("queue_observation_maintenance_action_count"))
+            for row in rows
+        ),
+        "ready_for_queue_health_recovery_count": sum(
+            1 for row in rows if row.get("ready_for_queue_health_recovery") is True
+        ),
         "queue_feedback_continuation_queue_count": sum(
             1
             for row in rows
@@ -1886,7 +1944,8 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
         "latest_rows": rows[:5],
         "next_command": _byte_shaving_acquisition_next_command(latest),
         "observe_command": (
-            f".venv/bin/python tools/experiment_queue.py --queue {latest['queue_path']} "
+            f".venv/bin/python tools/experiment_queue.py --queue {latest['queue_path']}"
+            f"{' --state ' + str(latest['state_path']) if latest.get('state_path') else ''} "
             "observe --tail-lines 20"
             if latest and latest.get("queue_path")
             else ""
@@ -1920,6 +1979,12 @@ def _format_byte_shaving_acquisition_summary() -> str:
             "feedback_success="
             f"{payload['queue_feedback_followup_execution_success_count']} "
             f"feedback_continue={payload['queue_feedback_policy_continue_count']} "
+            "queue_recovery_required="
+            f"{payload['queue_observation_recovery_required_count']} "
+            "queue_recovery_ready="
+            f"{payload['ready_for_queue_health_recovery_count']} "
+            "queue_maintenance="
+            f"{payload['queue_observation_maintenance_recommended_count']} "
             "feedback_continuation_queued="
             f"{payload['queue_feedback_continuation_queue_count']} "
             f"local_mlx_ready_steps={payload['local_mlx_ready_step_count']}"
@@ -1966,6 +2031,14 @@ def _format_byte_shaving_acquisition_summary() -> str:
                 f"{row.get('queue_feedback_replan_policy_decision') or '<none>'} "
                 "feedback_continue="
                 f"{row.get('queue_feedback_replan_policy_should_continue') is True} "
+                "queue_recovery_required="
+                f"{row.get('queue_observation_recovery_required') is True} "
+                "queue_recovery_ready="
+                f"{row.get('ready_for_queue_health_recovery') is True} "
+                "queue_maintenance="
+                f"{row.get('queue_observation_maintenance_recommended') is True} "
+                "queue_recovery_actions="
+                f"{row.get('queue_observation_required_action_count', 0)} "
                 "feedback_continuation_queued="
                 f"{row.get('queue_feedback_replan_continuation_queue_emitted') is True} "
                 f"ready_steps={row.get('ready_step_count', 0)} "

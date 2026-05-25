@@ -27,6 +27,7 @@ from tac.optimization.inverse_steganalysis_acquisition import (  # noqa: E402
     action_atoms_from_mlx_acquisition_batch,
     build_discrete_scorer_action_functional,
     inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection,
+    observations_from_queue_observation,
     observations_from_queue_performance_summary,
     paired_exact_auth_calibration_observations_from_review_packets,
 )
@@ -159,6 +160,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--exact-auth-calibration-packet", action="append", default=[])
     parser.add_argument("--exact-auth-calibration-candidate-id", default=None)
     parser.add_argument("--queue-performance-summary", action="append", default=[])
+    parser.add_argument("--queue-observation", action="append", default=[])
     parser.add_argument("--queue-performance-runtime-identity", type=Path, default=None)
     parser.add_argument("--queue-performance-cache-identity", type=Path, default=None)
     parser.add_argument("--queue-performance-candidate-map", type=Path, default=None)
@@ -297,16 +299,16 @@ def main(argv: list[str] | None = None) -> int:
                     source_path=",".join(_repo_rel(path, args.repo_root) for path in packet_paths),
                 )
             )
-        if args.queue_performance_summary:
+        if args.queue_performance_summary or args.queue_observation:
             if args.queue_performance_runtime_identity is None:
                 raise SystemExit(
                     "--queue-performance-runtime-identity is required with "
-                    "--queue-performance-summary"
+                    "--queue-performance-summary or --queue-observation"
                 )
             if args.queue_performance_cache_identity is None:
                 raise SystemExit(
                     "--queue-performance-cache-identity is required with "
-                    "--queue-performance-summary"
+                    "--queue-performance-summary or --queue-observation"
                 )
             runtime_identity = _load_mapping(
                 args.queue_performance_runtime_identity,
@@ -327,6 +329,18 @@ def main(argv: list[str] | None = None) -> int:
                 observations.extend(
                     observations_from_queue_performance_summary(
                         _load_mapping(path, label="queue performance summary"),
+                        runtime_identity=runtime_identity,
+                        cache_identity=cache_identity,
+                        axis=args.queue_performance_axis,
+                        source_path=_repo_rel(path, args.repo_root),
+                        candidate_id_by_experiment=candidate_map,
+                    )
+                )
+            for raw_path in args.queue_observation:
+                path = Path(raw_path)
+                observations.extend(
+                    observations_from_queue_observation(
+                        _load_mapping(path, label="queue observation"),
                         runtime_identity=runtime_identity,
                         cache_identity=cache_identity,
                         axis=args.queue_performance_axis,

@@ -49,6 +49,7 @@ ATOM_SCHEMA = "inverse_steganalysis_atom.v1"
 OBSERVATION_SCHEMA = "inverse_steganalysis_observation.v1"
 EXACT_AUTH_CALIBRATION_SCHEMA = "inverse_steganalysis_exact_auth_calibration.v1"
 QUEUE_PERFORMANCE_SUMMARY_SCHEMA = "experiment_queue_performance_summary.v1"
+QUEUE_OBSERVATION_SCHEMA = "experiment_queue_observation.v1"
 PRIORITY_SCHEMA = "inverse_steganalysis_acquisition_priority.v1"
 ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
 ACTION_CELL_SCHEMA = "inverse_steganalysis_action_cell.v1"
@@ -297,6 +298,17 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
         "step_id": _optional_text(row.get("step_id")),
         "performance_bucket_key": _optional_text(row.get("performance_bucket_key")),
         "performance_summary_schema": _optional_text(row.get("performance_summary_schema")),
+        "queue_observation_schema": _optional_text(row.get("queue_observation_schema")),
+        "queue_observation_health": (
+            None
+            if row.get("queue_observation_health") is None
+            else bool(row.get("queue_observation_health"))
+        ),
+        "queue_observation_status": _optional_text(row.get("queue_observation_status")),
+        "queue_observation_blockers": _list_strings(
+            row.get("queue_observation_blockers")
+        ),
+        "expected_artifact_paths": _list_strings(row.get("expected_artifact_paths")),
         "candidate_ids": _list_strings(row.get("candidate_ids")),
         "work_ids": _list_strings(row.get("work_ids")),
         "backlog_keys": _list_strings(row.get("backlog_keys")),
@@ -373,7 +385,7 @@ def observations_from_queue_performance_summary(
     cache_identity: Mapping[str, Any],
     axis: str = "[local-queue-performance advisory]",
     source_path: str | None = None,
-    candidate_id_by_experiment: Mapping[str, str] | None = None,
+    candidate_id_by_experiment: Mapping[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Convert queue timing/artifact telemetry into planning-only observations.
 
@@ -392,55 +404,21 @@ def observations_from_queue_performance_summary(
     by_step = summary.get("by_step")
     if not isinstance(by_step, Mapping):
         raise InverseSteganalysisAcquisitionError("summary.by_step must be an object")
-    def parse_candidate_lookup(
-        raw: Mapping[str, Any] | None,
-        *,
-        label: str,
-    ) -> dict[str, tuple[str, ...]]:
-        lookup: dict[str, tuple[str, ...]] = {}
-        if raw is None:
-            return lookup
-        if not isinstance(raw, Mapping):
-            raise InverseSteganalysisAcquisitionError(f"{label} must be an object")
-        for raw_key, raw_value in dict(raw).items():
-            key = _text(raw_key, f"{label} key")
-            if isinstance(raw_value, str):
-                values = (_text(raw_value, f"{label}[{key!r}]"),)
-            elif isinstance(raw_value, Sequence) and not isinstance(raw_value, bytes):
-                values = tuple(
-                    _text(value, f"{label}[{key!r}][{index}]")
-                    for index, value in enumerate(raw_value)
-                )
-                if not values:
-                    raise InverseSteganalysisAcquisitionError(
-                        f"{label}[{key!r}] must not be empty"
-                    )
-            else:
-                raise InverseSteganalysisAcquisitionError(
-                    f"{label}[{key!r}] must be a string or list"
-                )
-            lookup[key] = values
-        return lookup
-
-    embedded_lookup = parse_candidate_lookup(
+    embedded_lookup = _parse_candidate_lookup(
         summary.get("candidate_id_by_experiment")
         if summary.get("candidate_id_by_experiment") is not None
         else None,
         label="summary.candidate_id_by_experiment",
     )
-    explicit_lookup = parse_candidate_lookup(
+    explicit_lookup = _parse_candidate_lookup(
         candidate_id_by_experiment,
         label="candidate_id_by_experiment",
     )
-    candidate_lookup = dict(embedded_lookup)
-    for key, values in explicit_lookup.items():
-        embedded_values = candidate_lookup.get(key)
-        if embedded_values is not None and embedded_values != values:
-            raise InverseSteganalysisAcquisitionError(
-                "candidate_id_by_experiment conflicts with "
-                f"summary.candidate_id_by_experiment[{key!r}]"
-            )
-        candidate_lookup[key] = values
+    candidate_lookup = _merge_candidate_lookup(
+        embedded_lookup,
+        explicit_lookup,
+        conflict_label="summary.candidate_id_by_experiment",
+    )
     if by_step and not candidate_lookup:
         raise InverseSteganalysisAcquisitionError(
             "queue performance summary missing candidate_id_by_experiment; "
@@ -518,6 +496,116 @@ def observations_from_queue_performance_summary(
                     }
                 )
             )
+    return observations
+
+
+def observations_from_queue_observation(
+    observation: Mapping[str, Any],
+    *,
+    runtime_identity: Mapping[str, Any],
+    cache_identity: Mapping[str, Any],
+    axis: str = "[local-queue-observation advisory]",
+    source_path: str | None = None,
+    candidate_id_by_experiment: Mapping[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Convert queue health/blocker observations into action feedback rows.
+
+    ``experiment_queue_observation.v1`` carries richer failed/blocked/orphan
+    state than pure performance telemetry. These rows are never score evidence;
+    they are local planning blockers used to prevent the next water-bucket pass
+    from blindly refilling a bucket whose queue proof path is unhealthy.
+    """
+
+    _reject_truthy_authority(observation, label="queue observation")
+    if observation.get("schema") != QUEUE_OBSERVATION_SCHEMA:
+        raise InverseSteganalysisAcquisitionError(
+            f"queue observation schema must be {QUEUE_OBSERVATION_SCHEMA}"
+        )
+    queue_id = _text(observation.get("queue_id"), "queue_observation.queue_id")
+    explicit_lookup = _parse_candidate_lookup(
+        candidate_id_by_experiment,
+        label="candidate_id_by_experiment",
+    )
+    performance = observation.get("performance")
+    performance_lookup: dict[str, tuple[str, ...]] = {}
+    performance_identity: dict[str, dict[str, list[str]]] = {}
+    observations: list[dict[str, Any]] = []
+    if isinstance(performance, Mapping):
+        performance_lookup = _parse_candidate_lookup(
+            performance.get("candidate_id_by_experiment")
+            if performance.get("candidate_id_by_experiment") is not None
+            else None,
+            label="queue_observation.performance.candidate_id_by_experiment",
+        )
+        performance_identity = _performance_identity_by_experiment(performance)
+        observations.extend(
+            observations_from_queue_performance_summary(
+                performance,
+                runtime_identity=runtime_identity,
+                cache_identity=cache_identity,
+                axis=axis,
+                source_path=source_path,
+                candidate_id_by_experiment=explicit_lookup or None,
+            )
+        )
+    elif performance is not None:
+        raise InverseSteganalysisAcquisitionError(
+            "queue_observation.performance must be an object when present"
+        )
+    candidate_lookup = _merge_candidate_lookup(
+        performance_lookup,
+        explicit_lookup,
+        conflict_label="queue_observation.performance.candidate_id_by_experiment",
+    )
+
+    health_sections = (
+        ("failed_steps", "queue_observation_failed_step"),
+        ("blocked_steps", "queue_observation_blocked_step"),
+        (
+            "succeeded_artifact_failure_steps",
+            "queue_observation_succeeded_artifact_failure",
+        ),
+        ("orphaned_steps", "queue_observation_orphaned_step"),
+    )
+    health_rows_before = len(observations)
+    for section, kind in health_sections:
+        for step in _sequence_of_mappings(observation.get(section)):
+            if section == "orphaned_steps" and not _orphaned_step_blocks_queue(
+                step
+            ):
+                continue
+            observations.extend(
+                _queue_health_observations_for_step(
+                    step,
+                    queue_id=queue_id,
+                    section=section,
+                    kind=kind,
+                    axis=axis,
+                    source_path=source_path,
+                    runtime_identity=runtime_identity,
+                    cache_identity=cache_identity,
+                    candidate_lookup=candidate_lookup,
+                    performance_identity=performance_identity,
+                    observation_blockers=_list_strings(observation.get("blockers")),
+                    healthy=observation.get("healthy") is True,
+                )
+            )
+    if (
+        observation.get("healthy") is False
+        and _queue_observation_has_blocking_global_health(observation)
+        and len(observations) == health_rows_before
+    ):
+        observations.extend(
+            _queue_global_health_observations(
+                observation,
+                queue_id=queue_id,
+                axis=axis,
+                source_path=source_path,
+                runtime_identity=runtime_identity,
+                cache_identity=cache_identity,
+                candidate_lookup=candidate_lookup,
+            )
+        )
     return observations
 
 
@@ -2440,13 +2528,21 @@ def _matching_observations_for_atom(
         seen.add(key)
         matched.append(dict(row))
 
+    atom_targets = _atom_feedback_target_ids(atom)
     for row in by_candidate.get(str(atom["candidate_id"]), ()):
+        if _observation_requires_target_intersection(row):
+            continue
         add(row)
 
-    atom_targets = _atom_feedback_target_ids(atom)
     if atom_targets:
         for row in observations:
-            if _observation_feedback_target_ids(row) & atom_targets:
+            row_targets = _observation_feedback_target_ids(row)
+            compare_atom_targets = atom_targets
+            if _observation_requires_target_intersection(row):
+                candidate_ids = _observation_candidate_identity_ids(row)
+                row_targets = row_targets - candidate_ids
+                compare_atom_targets = atom_targets - candidate_ids
+            if row_targets & compare_atom_targets:
                 add(row)
     return matched
 
@@ -2546,6 +2642,26 @@ def _observation_feedback_target_ids(observation: Mapping[str, Any]) -> set[str]
     ):
         ids.update(_list_strings(observation.get(key)))
     return ids
+
+
+def _observation_requires_target_intersection(observation: Mapping[str, Any]) -> bool:
+    if observation.get("observation_kind") != "queue_observation_health_blocker":
+        return False
+    for key in (
+        "work_ids",
+        "backlog_keys",
+        "source_unit_ids",
+        "source_selection_ids",
+    ):
+        if _list_strings(observation.get(key)):
+            return True
+    return False
+
+
+def _observation_candidate_identity_ids(observation: Mapping[str, Any]) -> set[str]:
+    ids = {str(observation.get("candidate_id") or "")}
+    ids.update(_list_strings(observation.get("candidate_ids")))
+    return {item for item in ids if item}
 
 
 def _best_observation(atom: Mapping[str, Any], observations: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None:
@@ -2955,6 +3071,345 @@ def _split_performance_step_key(value: Any) -> tuple[str, str]:
         step_id,
         "performance step_id",
     )
+
+
+def _parse_candidate_lookup(
+    raw: Mapping[str, Any] | None,
+    *,
+    label: str,
+) -> dict[str, tuple[str, ...]]:
+    lookup: dict[str, tuple[str, ...]] = {}
+    if raw is None:
+        return lookup
+    if not isinstance(raw, Mapping):
+        raise InverseSteganalysisAcquisitionError(f"{label} must be an object")
+    for raw_key, raw_value in dict(raw).items():
+        key = _text(raw_key, f"{label} key")
+        if isinstance(raw_value, str):
+            values = (_text(raw_value, f"{label}[{key!r}]"),)
+        elif isinstance(raw_value, Sequence) and not isinstance(
+            raw_value,
+            (str, bytes, bytearray),
+        ):
+            values = tuple(
+                _text(value, f"{label}[{key!r}][{index}]")
+                for index, value in enumerate(raw_value)
+            )
+            if not values:
+                raise InverseSteganalysisAcquisitionError(
+                    f"{label}[{key!r}] must not be empty"
+                )
+        else:
+            raise InverseSteganalysisAcquisitionError(
+                f"{label}[{key!r}] must be a string or list"
+            )
+        lookup[key] = values
+    return lookup
+
+
+def _merge_candidate_lookup(
+    base: Mapping[str, tuple[str, ...]],
+    explicit: Mapping[str, tuple[str, ...]],
+    *,
+    conflict_label: str,
+) -> dict[str, tuple[str, ...]]:
+    out = dict(base)
+    for key, values in explicit.items():
+        existing = out.get(key)
+        if existing is not None and existing != values:
+            raise InverseSteganalysisAcquisitionError(
+                "candidate_id_by_experiment conflicts with "
+                f"{conflict_label}[{key!r}]"
+            )
+        out[key] = values
+    return out
+
+
+def _performance_identity_by_experiment(
+    performance: Mapping[str, Any],
+) -> dict[str, dict[str, list[str]]]:
+    work_ids = _parse_single_value_lookup(
+        performance.get("work_id_by_experiment"),
+        label="performance.work_id_by_experiment",
+    )
+    backlog_keys = _parse_single_value_lookup(
+        performance.get("backlog_key_by_experiment"),
+        label="performance.backlog_key_by_experiment",
+    )
+    source_unit_ids = _parse_candidate_lookup(
+        performance.get("source_unit_ids_by_experiment")
+        if performance.get("source_unit_ids_by_experiment") is not None
+        else None,
+        label="performance.source_unit_ids_by_experiment",
+    )
+    source_selection_ids = _parse_candidate_lookup(
+        performance.get("source_selection_ids_by_experiment")
+        if performance.get("source_selection_ids_by_experiment") is not None
+        else None,
+        label="performance.source_selection_ids_by_experiment",
+    )
+    experiment_ids = set(work_ids) | set(backlog_keys) | set(source_unit_ids) | set(
+        source_selection_ids
+    )
+    out: dict[str, dict[str, list[str]]] = {}
+    for experiment_id in experiment_ids:
+        out[experiment_id] = {
+            "work_ids": list(work_ids.get(experiment_id, ())),
+            "backlog_keys": list(backlog_keys.get(experiment_id, ())),
+            "source_unit_ids": list(source_unit_ids.get(experiment_id, ())),
+            "source_selection_ids": list(source_selection_ids.get(experiment_id, ())),
+        }
+    return out
+
+
+def _parse_single_value_lookup(
+    raw: Any,
+    *,
+    label: str,
+) -> dict[str, tuple[str, ...]]:
+    if raw is None:
+        return {}
+    if not isinstance(raw, Mapping):
+        raise InverseSteganalysisAcquisitionError(f"{label} must be an object")
+    out: dict[str, tuple[str, ...]] = {}
+    for raw_key, raw_value in raw.items():
+        key = _text(raw_key, f"{label} key")
+        out[key] = (_text(raw_value, f"{label}[{key!r}]"),)
+    return out
+
+
+def _queue_health_observations_for_step(
+    step: Mapping[str, Any],
+    *,
+    queue_id: str,
+    section: str,
+    kind: str,
+    axis: str,
+    source_path: str | None,
+    runtime_identity: Mapping[str, Any],
+    cache_identity: Mapping[str, Any],
+    candidate_lookup: Mapping[str, tuple[str, ...]],
+    performance_identity: Mapping[str, Mapping[str, list[str]]],
+    observation_blockers: Sequence[str],
+    healthy: bool,
+) -> list[dict[str, Any]]:
+    experiment_id = _text(step.get("experiment_id"), f"{section}.experiment_id")
+    step_id = _text(step.get("step_id"), f"{section}.step_id")
+    candidate_ids = _queue_step_candidate_ids(
+        step,
+        experiment_id=experiment_id,
+        candidate_lookup=candidate_lookup,
+        section=section,
+    )
+    status = _optional_text(step.get("status")) or kind
+    blockers = _queue_step_health_blockers(
+        step,
+        section=section,
+        kind=kind,
+        status=status,
+        observation_blockers=observation_blockers,
+    )
+    artifact_paths = _queue_step_expected_artifact_paths(step)
+    artifact_bytes = _queue_step_artifact_bytes(step)
+    resource_kind = _resource(step.get("resource_kind") or "local_cpu")
+    identity = performance_identity.get(experiment_id, {})
+    work_ids = list(identity.get("work_ids") or [])
+    backlog_keys = list(identity.get("backlog_keys") or [])
+    source_unit_ids = list(identity.get("source_unit_ids") or [])
+    source_selection_ids = list(identity.get("source_selection_ids") or [])
+    elapsed_seconds = _float_or_none(
+        step.get("timeout_seconds"),
+        f"{section}.timeout_seconds",
+        minimum=0.0,
+        exclusive=True,
+    )
+    base_observation_id = (
+        f"queue_obs_{_slug(queue_id)}_{_slug(experiment_id)}_"
+        f"{_slug(step_id)}_{_slug(kind)}"
+    )
+    out: list[dict[str, Any]] = []
+    for candidate_id in candidate_ids:
+        observation_id = base_observation_id
+        if len(candidate_ids) > 1:
+            observation_id = f"{base_observation_id}_{_slug(candidate_id)}"
+        out.append(
+            normalize_inverse_steganalysis_observation(
+                {
+                    "observation_id": observation_id,
+                    "observation_kind": "queue_observation_health_blocker",
+                    "candidate_id": candidate_id,
+                    "axis": axis,
+                    "source_path": source_path,
+                    "queue_id": queue_id,
+                    "experiment_id": experiment_id,
+                    "step_id": step_id,
+                    "queue_observation_schema": QUEUE_OBSERVATION_SCHEMA,
+                    "queue_observation_health": healthy,
+                    "queue_observation_status": status,
+                    "queue_observation_blockers": blockers,
+                    "candidate_ids": list(candidate_ids),
+                    "work_ids": work_ids,
+                    "backlog_keys": backlog_keys,
+                    "source_unit_ids": source_unit_ids,
+                    "source_selection_ids": source_selection_ids,
+                    "expected_artifact_paths": artifact_paths,
+                    "runtime_identity": runtime_identity,
+                    "cache_identity": cache_identity,
+                    "observed_score_gain": 0.0,
+                    "calibration_error": 1.0,
+                    "elapsed_seconds": elapsed_seconds,
+                    "artifact_bytes": artifact_bytes,
+                    "resource_kind": resource_kind,
+                    "allowed_use": "queue_health_feedback_only",
+                    "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+                }
+            )
+        )
+    return out
+
+
+def _queue_global_health_observations(
+    observation: Mapping[str, Any],
+    *,
+    queue_id: str,
+    axis: str,
+    source_path: str | None,
+    runtime_identity: Mapping[str, Any],
+    cache_identity: Mapping[str, Any],
+    candidate_lookup: Mapping[str, tuple[str, ...]],
+) -> list[dict[str, Any]]:
+    candidate_ids = tuple(
+        dict.fromkeys(candidate_id for values in candidate_lookup.values() for candidate_id in values)
+    )
+    if not candidate_ids:
+        raise InverseSteganalysisAcquisitionError(
+            "unhealthy queue observation has global blockers but no candidate identity; "
+            "pass candidate_id_by_experiment"
+        )
+    blockers = _list_strings(observation.get("blockers"))
+    out: list[dict[str, Any]] = []
+    for candidate_id in candidate_ids:
+        out.append(
+            normalize_inverse_steganalysis_observation(
+                {
+                    "observation_id": (
+                        f"queue_obs_{_slug(queue_id)}_global_health_"
+                        f"{_slug(candidate_id)}"
+                    ),
+                    "observation_kind": "queue_observation_global_health_blocker",
+                    "candidate_id": candidate_id,
+                    "axis": axis,
+                    "source_path": source_path,
+                    "queue_id": queue_id,
+                    "queue_observation_schema": QUEUE_OBSERVATION_SCHEMA,
+                    "queue_observation_health": False,
+                    "queue_observation_status": "global_unhealthy",
+                    "queue_observation_blockers": blockers,
+                    "candidate_ids": list(candidate_ids),
+                    "runtime_identity": runtime_identity,
+                    "cache_identity": cache_identity,
+                    "observed_score_gain": 0.0,
+                    "calibration_error": 1.0,
+                    "artifact_bytes": 0,
+                    "resource_kind": "local_cpu",
+                    "allowed_use": "queue_health_feedback_only",
+                    "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+                }
+            )
+        )
+    return out
+
+
+def _orphaned_step_blocks_queue(step: Mapping[str, Any]) -> bool:
+    return str(step.get("status") or "") in {"queued", "running", "blocked"}
+
+
+def _queue_observation_has_blocking_global_health(
+    observation: Mapping[str, Any],
+) -> bool:
+    blockers = _list_strings(observation.get("blockers"))
+    if any(
+        blocker
+        for blocker in blockers
+        if not blocker.startswith("experiment_queue_observation_orphaned_steps")
+    ):
+        return True
+    orphaned_steps = _sequence_of_mappings(observation.get("orphaned_steps"))
+    if not orphaned_steps:
+        return any(
+            blocker.startswith("experiment_queue_observation_orphaned_steps")
+            for blocker in blockers
+        )
+    return any(_orphaned_step_blocks_queue(step) for step in orphaned_steps)
+
+
+def _queue_step_candidate_ids(
+    step: Mapping[str, Any],
+    *,
+    experiment_id: str,
+    candidate_lookup: Mapping[str, tuple[str, ...]],
+    section: str,
+) -> tuple[str, ...]:
+    mapped = candidate_lookup.get(experiment_id)
+    if mapped:
+        return mapped
+    artifact_candidate_ids = tuple(
+        dict.fromkeys(
+            _text(artifact.get("candidate_id"), f"{section}.artifact.candidate_id")
+            for artifact in _sequence_of_mappings(step.get("expected_artifacts"))
+            if artifact.get("candidate_id") is not None
+        )
+    )
+    if artifact_candidate_ids:
+        return artifact_candidate_ids
+    raise InverseSteganalysisAcquisitionError(
+        "queue observation health step missing candidate identity for "
+        f"experiment {experiment_id!r}; pass candidate_id_by_experiment"
+    )
+
+
+def _queue_step_health_blockers(
+    step: Mapping[str, Any],
+    *,
+    section: str,
+    kind: str,
+    status: str,
+    observation_blockers: Sequence[str],
+) -> list[str]:
+    blockers = [kind, f"queue_observation_step_status:{status}"]
+    blockers.extend(str(item) for item in observation_blockers if str(item))
+    for artifact in _sequence_of_mappings(step.get("expected_artifacts")):
+        if artifact.get("postcondition_passed") is False:
+            path = _optional_text(artifact.get("path")) or "unknown"
+            blockers.append(f"queue_observation_artifact_postcondition_failed:{path}")
+        if artifact.get("exists") is False:
+            path = _optional_text(artifact.get("path")) or "unknown"
+            blockers.append(f"queue_observation_artifact_missing:{path}")
+    return ordered_unique(blockers)
+
+
+def _queue_step_expected_artifact_paths(step: Mapping[str, Any]) -> list[str]:
+    return [
+        path
+        for path in (
+            _optional_text(artifact.get("path"))
+            for artifact in _sequence_of_mappings(step.get("expected_artifacts"))
+        )
+        if path is not None
+    ]
+
+
+def _queue_step_artifact_bytes(step: Mapping[str, Any]) -> int:
+    total = 0
+    for artifact in _sequence_of_mappings(step.get("expected_artifacts")):
+        value = artifact.get("bytes")
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            continue
+        if parsed > 0:
+            total += parsed
+    return total
 
 
 def _dominant_resource_from_counts(value: Any) -> str | None:
@@ -3483,6 +3938,7 @@ __all__ = [
     "MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA",
     "OBSERVATION_SCHEMA",
     "PRIORITY_SCHEMA",
+    "QUEUE_OBSERVATION_SCHEMA",
     "QUEUE_PERFORMANCE_SUMMARY_SCHEMA",
     "RESOURCE_MULTIPLIERS",
     "SCHEMA",
@@ -3501,6 +3957,7 @@ __all__ = [
     "inverse_steganalysis_atoms_from_mlx_effective_spend_triage_selection",
     "normalize_inverse_steganalysis_atom",
     "normalize_inverse_steganalysis_observation",
+    "observations_from_queue_observation",
     "observations_from_queue_performance_summary",
     "paired_exact_auth_calibration_observations_from_review_packets",
 ]

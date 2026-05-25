@@ -54008,6 +54008,47 @@
         }
       },
       "notes": "Typed queue health/blockers, orphan observation retention, exact-readiness state provenance, and harvest state-filter fail-closed hardening."
+    },
+    {
+      "id": "codex_queue_observation_recovery_feedback_20260525",
+      "name": "Queue observation recovery feedback",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/comma_lab/scheduler/queue_feedback_replan_policy.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_queue_feedback_replan_policy.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_queue_observation_recovery_feedback_20260525T0303Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Queue observation blockers feed recovery planning, feedback policy, and inverse-steganalysis action-functional signal."
     }
   ],
   "level_rules": {
@@ -54017,5 +54058,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T02:45:42Z"
+  "updated_at": "2026-05-25T03:04:18Z"
 }

@@ -1118,6 +1118,35 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert summary["observation"]["orphaned_steps"][0]["experiment_id"] == "legacy_exp"
     assert summary["observation"]["orphaned_steps"][0]["step_id"] == "legacy_step"
     assert summary["observation"]["orphaned_steps"][0]["status"] == "skipped"
+    assert summary["queue_observation_path"] == str(run_dir / "queue_observation.json")
+    assert summary["queue_observation_recovery_plan_path"] == str(
+        run_dir / "queue_observation_recovery_plan.json"
+    )
+    recovery_plan = json.loads(
+        (run_dir / "queue_observation_recovery_plan.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert recovery_plan == summary["queue_observation_recovery_plan"]
+    assert recovery_plan["recovery_required"] is False
+    assert recovery_plan["maintenance_recommended"] is True
+    assert recovery_plan["maintenance_action_count"] == 1
+    assert recovery_plan["actions"][0]["action"] == "record_nonblocking_orphaned_steps"
+    assert summary["queue_feedback_replan_request"]["queue_observation_path"] == str(
+        run_dir / "queue_observation.json"
+    )
+    assert summary["queue_feedback_replan_request"][
+        "queue_observation_recovery_plan_path"
+    ] == str(run_dir / "queue_observation_recovery_plan.json")
+    assert summary["queue_feedback_replan_request"][
+        "queue_observation_maintenance_recommended"
+    ] is True
+    feedback_command = summary["queue_feedback_replan_request"]["command_template"]
+    assert [
+        feedback_command[index + 1]
+        for index, item in enumerate(feedback_command[:-1])
+        if item == "--queue-observation"
+    ] == [str(run_dir / "queue_observation.json")]
     assert summary["score_claim"] is False
     assert summary["ready_for_exact_eval_dispatch"] is False
     assert summary["state_path"] == str(state_path)
@@ -2333,6 +2362,41 @@ def test_materializer_campaign_feedback_followup_queue_blocks_non_action_command
 
     assert queue is None
     assert "queue_feedback_replan_output_path_outside_run_dir" in blockers
+
+
+def test_materializer_campaign_feedback_followup_queue_blocks_required_queue_recovery(
+    tmp_path: Path,
+) -> None:
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--materializer-contexts",
+            str(tmp_path / "contexts.json"),
+        ]
+    )
+    queue, blockers = runner._queue_feedback_replan_followup_queue_payload(
+        args,
+        queue_feedback_replan_request={
+            "ready_for_action_functional_feedback": True,
+            "blockers": [],
+            "queue_observation_recovery_required": True,
+            "command_template": [
+                runner.sys.executable,
+                "tools/build_inverse_steganalysis_action_functional.py",
+                "--output",
+                str(tmp_path / "feedback.json"),
+            ],
+        },
+        queue_feedback_replan_request_path=tmp_path / "request.json",
+        run_dir=tmp_path,
+        execution_queue=tmp_path / "source_queue.json",
+        state_path=tmp_path / "source_queue.sqlite",
+        source_queue={"queue_id": "unit_queue"},
+    )
+
+    assert queue is None
+    assert "queue_observation_recovery_required" in blockers
 
 
 def test_materializer_campaign_feedback_followup_local_autopolicy_guard(

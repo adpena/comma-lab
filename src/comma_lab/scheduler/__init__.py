@@ -123,11 +123,15 @@ from .models import (
     TrackStatus,
 )
 from .queue_feedback_replan_policy import (
+    ACTION_QUEUE_OBSERVATION_MAINTENANCE,
+    ACTION_RECOVER_QUEUE_HEALTH,
     QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA,
     QUEUE_FEEDBACK_REPLAN_CONTINUATION_METADATA_SCHEMA,
     QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA,
+    QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA,
     build_queue_feedback_replan_continuation_queue,
     build_queue_feedback_replan_policy,
+    build_queue_observation_recovery_plan,
     validate_feedback_followup_queue,
 )
 from .ssh_experiment_queue_executor import (
@@ -143,6 +147,8 @@ from .ssh_experiment_queue_executor import (
 )
 
 __all__ = [
+    "ACTION_QUEUE_OBSERVATION_MAINTENANCE",
+    "ACTION_RECOVER_QUEUE_HEALTH",
     "ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER",
     "ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND",
     "ARCHIVE_SECTION_PROCEDURALIZE_MATERIALIZER",
@@ -183,6 +189,7 @@ __all__ = [
     "QUEUE_FEEDBACK_REPLAN_CHILD_QUEUE_VALIDATION_SCHEMA",
     "QUEUE_FEEDBACK_REPLAN_CONTINUATION_METADATA_SCHEMA",
     "QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA",
+    "QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA",
     "REGISTRY_SCHEMA",
     "SCHEDULER_RUNTIME_POLICY_SCHEMA",
     "SSH_ARTIFACT_MOBILITY_SCHEMA",
@@ -219,6 +226,7 @@ __all__ = [
     "build_mlx_scorer_response_execution_queue",
     "build_queue_feedback_replan_continuation_queue",
     "build_queue_feedback_replan_policy",
+    "build_queue_observation_recovery_plan",
     "build_remote_git_preflight_command",
     "build_remote_shell_command",
     "build_rsync_pull_command",

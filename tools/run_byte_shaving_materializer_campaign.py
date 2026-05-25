@@ -51,6 +51,7 @@ from comma_lab.scheduler.queue_feedback_replan_policy import (  # noqa: E402
     QUEUE_FEEDBACK_REPLAN_FORBIDDEN_COMMAND_FLAGS,
     build_queue_feedback_replan_continuation_queue,
     build_queue_feedback_replan_policy,
+    build_queue_observation_recovery_plan,
     validate_feedback_followup_queue,
 )
 from comma_lab.scheduler.staircase_dag import (  # noqa: E402
@@ -770,6 +771,7 @@ def _feedback_action_functional_command_hint(
     runtime_identity_path: Path | None,
     cache_identity_path: Path | None,
     feedback_observation_paths: Sequence[str | Path] = (),
+    queue_observation_paths: Sequence[str | Path] = (),
     exact_auth_calibration_inputs: Mapping[str, Any] | None = None,
 ) -> list[str]:
     command = [
@@ -812,6 +814,7 @@ def _feedback_action_functional_command_hint(
             ]
         )
     _append_path_args(command, "--observation", list(feedback_observation_paths))
+    _append_path_args(command, "--queue-observation", list(queue_observation_paths))
     calibration_inputs = (
         exact_auth_calibration_inputs
         if exact_auth_calibration_inputs is not None
@@ -851,12 +854,18 @@ def _queue_feedback_replan_request_payload(
     run_dir: Path,
     execution_queue: Path,
     state_path: Path,
+    queue_observation_path: Path | None = None,
+    queue_observation_recovery_plan_path: Path | None = None,
+    queue_observation_recovery_plan: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     exact_auth_calibration_inputs = _feedback_exact_auth_calibration_inputs(
         args,
         run_dir=run_dir,
     )
     feedback_observation_paths = _feedback_observation_paths(args, run_dir=run_dir)
+    queue_observation_paths = (
+        [queue_observation_path] if queue_observation_path is not None else []
+    )
     blockers = _queue_performance_replan_blockers(
         args,
         queue_performance_summary=queue_performance_summary,
@@ -872,6 +881,7 @@ def _queue_feedback_replan_request_payload(
         runtime_identity_path=runtime_identity_path,
         cache_identity_path=cache_identity_path,
         feedback_observation_paths=feedback_observation_paths,
+        queue_observation_paths=queue_observation_paths,
         exact_auth_calibration_inputs=exact_auth_calibration_inputs,
     )
     return _false_authority_payload(
@@ -894,6 +904,28 @@ def _queue_feedback_replan_request_payload(
             "feedback_observation_paths": feedback_observation_paths,
             "feedback_observation_auto_discovery_root": _display_path(run_dir),
             "feedback_observation_auto_discovery_enabled": True,
+            "queue_observation_path": (
+                None if queue_observation_path is None else _display_path(queue_observation_path)
+            ),
+            "queue_observation_recovery_plan_path": (
+                None
+                if queue_observation_recovery_plan_path is None
+                else _display_path(queue_observation_recovery_plan_path)
+            ),
+            "queue_observation_recovery_plan": (
+                None
+                if queue_observation_recovery_plan is None
+                else dict(queue_observation_recovery_plan)
+            ),
+            "queue_observation_recovery_required": (
+                isinstance(queue_observation_recovery_plan, Mapping)
+                and queue_observation_recovery_plan.get("recovery_required") is True
+            ),
+            "queue_observation_maintenance_recommended": (
+                isinstance(queue_observation_recovery_plan, Mapping)
+                and queue_observation_recovery_plan.get("maintenance_recommended")
+                is True
+            ),
             "exact_auth_calibration_packet_paths": exact_auth_calibration_inputs[
                 "packet_paths"
             ],
@@ -971,6 +1003,8 @@ def _queue_feedback_replan_followup_queue_payload(
     source_queue: Mapping[str, Any],
 ) -> tuple[dict[str, Any] | None, list[str]]:
     blockers = [str(item) for item in _as_sequence(queue_feedback_replan_request.get("blockers"))]
+    if queue_feedback_replan_request.get("queue_observation_recovery_required") is True:
+        blockers.append("queue_observation_recovery_required")
     if queue_feedback_replan_request.get("ready_for_action_functional_feedback") is not True:
         blockers.append("queue_feedback_replan_request_not_ready")
     command = queue_feedback_replan_request.get("command_template")
@@ -1005,6 +1039,8 @@ def _queue_feedback_replan_followup_queue_payload(
         queue_feedback_replan_request.get("queue_performance_summary_path"),
         queue_feedback_replan_request.get("queue_performance_runtime_identity_path"),
         queue_feedback_replan_request.get("queue_performance_cache_identity_path"),
+        queue_feedback_replan_request.get("queue_observation_path"),
+        queue_feedback_replan_request.get("queue_observation_recovery_plan_path"),
         execution_queue,
         state_path,
     ]
@@ -3564,6 +3600,8 @@ def main(argv: list[str] | None = None) -> int:
     commands.append(performance_result)
 
     summary_path = run_dir / "materializer_campaign_run.json"
+    queue_observation_path = run_dir / "queue_observation.json"
+    queue_observation_recovery_plan_path = run_dir / "queue_observation_recovery_plan.json"
     queue_performance_summary_path = run_dir / "queue_performance_summary.json"
     queue_feedback_replan_request_path = run_dir / "queue_feedback_replan_request.json"
     queue_feedback_replan_followup_queue_path = run_dir / "queue_feedback_replan_followup_queue.json"
@@ -3583,6 +3621,31 @@ def main(argv: list[str] | None = None) -> int:
     queue_feedback_replan_followup_policy = _queue_feedback_replan_followup_activation_policy(args)
     queue_feedback_replan_followup_policy_blockers: list[str] = []
     queue_feedback_replan_followup_execution_attempted = False
+    queue_observation = _json_from_stdout(observe_result)
+    if queue_observation is None:
+        queue_observation = _false_authority_payload(
+            {
+                "schema": "experiment_queue_observation_unavailable.v1",
+                "generated_at_utc": _utc_stamp(),
+                "queue_id": queue.get("queue_id"),
+                "state": _display_path(state_path),
+                "observe_returncode": observe_result.returncode,
+                "healthy": False,
+                "blockers": ["queue_observation_command_failed_or_invalid_json"],
+                "blocker_count": 1,
+                "observe_read_only": True,
+                "allowed_use": "local_queue_observation_only",
+                "forbidden_use": "score_claim_or_promotion_or_dispatch_authority",
+            }
+        )
+    _write_json(queue_observation_path, queue_observation)
+    queue_observation_recovery_plan = build_queue_observation_recovery_plan(
+        queue_observation,
+        queue_path=_display_path(execution_queue),
+        state_path=_display_path(state_path),
+        reason="materializer campaign queue observation recovery",
+    )
+    _write_json(queue_observation_recovery_plan_path, queue_observation_recovery_plan)
     queue_performance_summary = _queue_performance_summary_payload(
         performance_result,
         queue=queue,
@@ -3645,6 +3708,9 @@ def main(argv: list[str] | None = None) -> int:
         run_dir=run_dir,
         execution_queue=execution_queue,
         state_path=state_path,
+        queue_observation_path=queue_observation_path,
+        queue_observation_recovery_plan_path=queue_observation_recovery_plan_path,
+        queue_observation_recovery_plan=queue_observation_recovery_plan,
     )
     (
         queue_feedback_replan_followup_queue,
@@ -3864,6 +3930,17 @@ def main(argv: list[str] | None = None) -> int:
             "ready_for_action_functional_feedback"
         ],
         "queue_feedback_replan_blockers": queue_feedback_replan_request["blockers"],
+        "queue_observation_path": _display_path(queue_observation_path),
+        "queue_observation_recovery_plan_path": _display_path(
+            queue_observation_recovery_plan_path
+        ),
+        "queue_observation_recovery_plan": queue_observation_recovery_plan,
+        "queue_observation_recovery_required": queue_observation_recovery_plan[
+            "recovery_required"
+        ],
+        "queue_observation_maintenance_recommended": (
+            queue_observation_recovery_plan["maintenance_recommended"]
+        ),
         "next_run_hint": response_update_placeholder["next_run_hint"],
         "exact_readiness_handoff_count": len(exact_readiness_handoffs),
         "exact_readiness_handoff_paths": exact_readiness_handoffs,
@@ -3877,7 +3954,7 @@ def main(argv: list[str] | None = None) -> int:
         "staircase": staircase_artifacts,
         "ssh_executor_dry_run": ssh_executor_dry_run,
         "ssh_executor_execute": ssh_executor_execute,
-        "observation": _json_from_stdout(observe_result),
+        "observation": queue_observation,
         "performance": queue_performance_summary,
         "queue_feedback_replan_request": queue_feedback_replan_request,
         "response_update_placeholder": response_update_placeholder,
