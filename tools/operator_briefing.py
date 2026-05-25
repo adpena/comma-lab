@@ -1539,6 +1539,18 @@ def _frontier_feedback_refresh_row(path: Path) -> dict[str, object]:
     cycle_command_parts = commands.get("run_frontier_feedback_cycle")
     eureka = eureka_payload
     queue_path = str(artifacts.get("dqs1_followup_queue") or "")
+    retention = payload.get("retention_policy")
+    retention_policy = retention if isinstance(retention, dict) else {}
+    selected_candidate_ids = _first_list(payload, "selected_candidate_ids")
+    eureka_hints = [
+        row for row in eureka.get("planner_hints", []) if isinstance(row, dict)
+    ]
+    active_pairset_profiles = [
+        row.get("pairset_acquisition_profile")
+        for row in eureka_hints
+        if isinstance(row.get("pairset_acquisition_profile"), dict)
+        and row["pairset_acquisition_profile"].get("active") is True
+    ]
     return {
         "kind": "frontier_feedback_refresh",
         "path": rel,
@@ -1546,8 +1558,11 @@ def _frontier_feedback_refresh_row(path: Path) -> dict[str, object]:
         "status": "READY_QUEUE" if queue_path else "BRIDGE_ONLY",
         "queue_path": queue_path,
         "queue_id": str(payload.get("queue_id") or ""),
-        "selected_candidate_ids": _first_list(payload, "selected_candidate_ids"),
-        "selected_candidate_count": len(_first_list(payload, "selected_candidate_ids")),
+        "selected_candidate_ids": selected_candidate_ids,
+        "selected_candidate_count": len(selected_candidate_ids),
+        "selected_drop_many_candidate_count": sum(
+            1 for candidate_id in selected_candidate_ids if "drop_many" in candidate_id
+        ),
         "materializer_feedback_payload_count": _safe_int(
             payload.get("materializer_feedback_payload_count")
         ),
@@ -1559,6 +1574,20 @@ def _frontier_feedback_refresh_row(path: Path) -> dict[str, object]:
             for row in eureka.get("planner_hints", [])
             if isinstance(row, dict) and str(row.get("hint_id") or "").strip()
         ],
+        "eureka_pairset_profile_active": bool(active_pairset_profiles),
+        "eureka_drop_many_counts": (
+            active_pairset_profiles[0].get("drop_many_counts")
+            if active_pairset_profiles
+            else []
+        ),
+        "eureka_max_drop_many": (
+            active_pairset_profiles[0].get("max_drop_many")
+            if active_pairset_profiles
+            else None
+        ),
+        "raw_retention_execute": bool(retention_policy.get("raw_retention_execute")),
+        "raw_retention_action": retention_policy.get("raw_retention_action"),
+        "mlx_retention_execute": bool(retention_policy.get("mlx_retention_execute")),
         "cycle_command": (
             " ".join(str(part) for part in cycle_command_parts)
             if isinstance(cycle_command_parts, list)
@@ -1761,9 +1790,16 @@ def _format_frontier_feedback_cycle_summary() -> str:
                 f"  path: {latest_refresh.get('path')}",
                 f"  queue: {latest_refresh.get('queue_path') or '-'}",
                 f"  selected: {latest_refresh.get('selected_candidate_count')}",
+                f"  selected_drop_many: {latest_refresh.get('selected_drop_many_candidate_count', 0)}",
                 f"  dqs1_observations: {latest_refresh.get('dqs1_observation_count')}",
                 f"  eureka_signals: {latest_refresh.get('eureka_signal_count', 0)}",
                 f"  eureka_hints: {latest_refresh.get('eureka_planner_hint_count', 0)}",
+                f"  eureka_drop_many_counts: {latest_refresh.get('eureka_drop_many_counts', [])}",
+                (
+                    "  raw_retention: "
+                    f"{'execute' if latest_refresh.get('raw_retention_execute') else 'plan'}"
+                    f" {latest_refresh.get('raw_retention_action') or ''}".rstrip()
+                ),
             ]
         )
     lines.append("next command:")

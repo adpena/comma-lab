@@ -7,6 +7,7 @@ import json
 import math
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
+from hashlib import sha256
 from itertools import combinations, pairwise
 from pathlib import Path
 from typing import Any
@@ -26,6 +27,7 @@ from tac.optimization.proxy_candidate_contract import require_no_truthy_authorit
 
 SCHEMA = "decoder_q_pairset_acquisition.v1"
 CANDIDATE_SCHEMA = "decoder_q_pairset_acquisition_candidate.v1"
+EUREKA_EXPANSION_SCHEMA = "decoder_q_pairset_acquisition_eureka_expansion.v1"
 SOURCE_SCHEMA = "decoder_q_selective_selector_pareto.v1"
 TOOL = "tac.optimization.decoder_q_pairset_acquisition"
 
@@ -325,6 +327,24 @@ def _candidate_row(
     predicted_score_mean = source_selector.get("predicted_score_mean")
     predicted = float(predicted_score_mean) if predicted_score_mean is not None else None
     diversity = _diversity_score(stats["pair_indices"])
+    source_payload_bytes = source_selector.get("source_payload_bytes")
+    source_payload = (
+        int(source_payload_bytes)
+        if isinstance(source_payload_bytes, int) and not isinstance(source_payload_bytes, bool)
+        else None
+    )
+    payload_delta = (
+        None if source_payload is None else int(stats["payload_bytes"]) - source_payload
+    )
+    rate_score_delta = (
+        None
+        if payload_delta is None
+        else 25.0 * payload_delta / CONTEST_RATE_DENOMINATOR_BYTES
+    )
+    saved_bytes = None if payload_delta is None else max(0, -payload_delta)
+    repair_score_budget = (
+        None if rate_score_delta is None else max(0.0, -rate_score_delta)
+    )
     source_selector_pairs = list(source_selector.get("selected_pair_indices") or [])
     candidate_matches_source_selector = (
         tuple(stats["pair_indices"]) == tuple(_canonical_pair_indices(
@@ -348,10 +368,30 @@ def _candidate_row(
         "payload_bytes": stats["payload_bytes"],
         "payload_byte_estimate": stats["payload_bytes"],
         "payload_byte_estimate_kind": "dqs1_descriptor_bytes_from_pair_index_encoding",
+        "source_selector_payload_bytes": source_payload,
+        "payload_bytes_delta_vs_source_selector": payload_delta,
         "pair_encoding": stats["pair_encoding"],
         "pair_index_payload_bytes": stats["pair_index_payload_bytes"],
         "pair_encoding_candidates": stats["pair_encoding_candidates"],
         "rate_delta": stats["rate_delta"],
+        "rate_score_delta_vs_source_selector": rate_score_delta,
+        "distortion_repair_budget_from_rate_savings": {
+            "schema": "decoder_q_pairset_rate_saved_distortion_repair_budget.v1",
+            "active": bool(repair_score_budget and repair_score_budget > 0.0),
+            "source_selector_payload_bytes": source_payload,
+            "candidate_payload_bytes": int(stats["payload_bytes"]),
+            "saved_bytes_vs_source_selector": saved_bytes,
+            "score_budget": repair_score_budget,
+            "segnet_distortion_budget_at_fixed_pose": (
+                None if repair_score_budget is None else repair_score_budget / 100.0
+            ),
+            "posenet_score_term_budget_at_fixed_seg": repair_score_budget,
+            "allowed_use": (
+                "planning_only_rate_savings_budget_for_segnet_posenet_repair"
+            ),
+            "forbidden_use": "score_claim_or_distortion_authority",
+            **FALSE_ACQUISITION_AUTHORITY,
+        },
         "diversity_score": diversity,
         "acquisition_score": _acquisition_score(
             predicted_score_mean=predicted,
@@ -405,6 +445,172 @@ def _bounded_drop_two_pairs(rank_order_pairs: Sequence[int], *, limit: int) -> l
     return out
 
 
+def _parse_drop_many_counts(
+    values: Sequence[int] | None,
+    *,
+    max_count: int,
+    eureka_active: bool,
+) -> list[int]:
+    if max_count <= 2:
+        return []
+    default = (3, 4, 6, 8) if eureka_active else ()
+    raw_values = values if values is not None else default
+    out = sorted({int(value) for value in raw_values if 2 < int(value) <= max_count})
+    if values is not None and not out:
+        raise DecoderQPairsetAcquisitionError(
+            "drop_many_counts must include at least one count in 3..max_count"
+        )
+    return out
+
+
+def _drop_many_id(
+    *,
+    dropped_pairs: Sequence[int],
+    rank_by_pair: Mapping[int, int],
+) -> str:
+    pairs = sorted(int(pair) for pair in dropped_pairs)
+    ranks = sorted(int(rank_by_pair[int(pair)]) for pair in pairs)
+    prefix = f"pairset_drop_many_k{len(pairs):03d}"
+    if len(pairs) <= 4:
+        rank_part = "_".join(f"{rank:03d}" for rank in ranks)
+        pair_part = "_".join(f"{pair:04d}" for pair in pairs)
+        return f"{prefix}_r{rank_part}_p{pair_part}"
+    digest = sha256(
+        ",".join(str(pair) for pair in pairs).encode("utf-8")
+    ).hexdigest()[:10]
+    return f"{prefix}_h{digest}"
+
+
+def _spaced_from_ordered(values: Sequence[int], count: int) -> tuple[int, ...]:
+    if count <= 0 or count > len(values):
+        return ()
+    if count == 1:
+        return (int(values[len(values) // 2]),)
+    positions = [
+        round(index * (len(values) - 1) / (count - 1))
+        for index in range(count)
+    ]
+    selected = [int(values[position]) for position in positions]
+    seen = set(selected)
+    if len(seen) < count:
+        for value in values:
+            if int(value) in seen:
+                continue
+            selected.append(int(value))
+            seen.add(int(value))
+            if len(seen) == count:
+                break
+    return tuple(sorted(seen))
+
+
+def _bounded_drop_many_sets(
+    rank_order_pairs: Sequence[int],
+    *,
+    drop_counts: Sequence[int],
+    limit: int,
+) -> list[tuple[int, ...]]:
+    if limit <= 0:
+        return []
+    tail_first = list(reversed([int(pair) for pair in rank_order_pairs]))
+    out: list[tuple[int, ...]] = []
+    seen: set[tuple[int, ...]] = set()
+
+    def add(values: Sequence[int]) -> None:
+        if len(out) >= limit:
+            return
+        key = tuple(sorted({int(value) for value in values}))
+        if len(key) != len(values) or key in seen:
+            return
+        seen.add(key)
+        out.append(key)
+
+    for drop_count in drop_counts:
+        if drop_count <= 2 or drop_count >= len(tail_first):
+            continue
+        add(tail_first[:drop_count])
+        tail_window = tail_first[: min(len(tail_first), max(drop_count * 3, drop_count + 4))]
+        add(_spaced_from_ordered(tail_window, drop_count))
+        for start in range(1, max(1, min(len(tail_first) - drop_count + 1, drop_count + 3))):
+            add(tail_first[start : start + drop_count])
+            if len(out) >= limit:
+                break
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _eureka_planner_hint_ids(eureka_planning: Mapping[str, Any] | None) -> list[str]:
+    if not isinstance(eureka_planning, Mapping):
+        return []
+    try:
+        require_no_truthy_authority_fields(
+            eureka_planning,
+            context="decoder_q_pairset_acquisition.eureka_planning",
+        )
+    except ValueError as exc:
+        raise DecoderQPairsetAcquisitionError(str(exc)) from exc
+    hints = eureka_planning.get("planner_hints")
+    if not isinstance(hints, list):
+        return []
+    hint_ids: list[str] = []
+    for index, hint in enumerate(hints):
+        if not isinstance(hint, Mapping):
+            continue
+        try:
+            require_no_truthy_authority_fields(
+                hint,
+                context=f"decoder_q_pairset_acquisition.eureka_hint[{index}]",
+            )
+        except ValueError as exc:
+            raise DecoderQPairsetAcquisitionError(str(exc)) from exc
+        hint_id = str(hint.get("hint_id") or "")
+        if hint_id:
+            hint_ids.append(hint_id)
+    return hint_ids
+
+
+def _eureka_pairset_profile(
+    eureka_planning: Mapping[str, Any] | None,
+) -> Mapping[str, Any]:
+    if not isinstance(eureka_planning, Mapping):
+        return {}
+    hints = eureka_planning.get("planner_hints")
+    if not isinstance(hints, list):
+        return {}
+    for hint in hints:
+        if not isinstance(hint, Mapping):
+            continue
+        profile = hint.get("pairset_acquisition_profile")
+        if isinstance(profile, Mapping):
+            return profile
+    profile = eureka_planning.get("pairset_acquisition_profile")
+    return profile if isinstance(profile, Mapping) else {}
+
+
+def _profile_int(
+    profile: Mapping[str, Any],
+    key: str,
+) -> int | None:
+    value = profile.get(key)
+    if value is None:
+        return None
+    return _as_int(value, label=f"eureka_pairset_profile.{key}")
+
+
+def _profile_int_list(
+    profile: Mapping[str, Any],
+    key: str,
+) -> list[int] | None:
+    value = profile.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, list):
+        raise DecoderQPairsetAcquisitionError(
+            f"eureka_pairset_profile.{key} must be a list"
+        )
+    return [_as_int(item, label=f"eureka_pairset_profile.{key}[{index}]") for index, item in enumerate(value)]
+
+
 def _observed_candidate_ids_from_dqs1_observations(
     observations: Sequence[Mapping[str, Any]] | None,
 ) -> list[str]:
@@ -440,10 +646,13 @@ def build_decoder_q_pairset_acquisition_plan(
     diversity_ks: Sequence[int] | None = None,
     include_drop_one: bool = True,
     max_drop_two: int = 128,
+    drop_many_counts: Sequence[int] | None = None,
+    max_drop_many: int | None = None,
     max_swap_in: int = 32,
     diversity_weight: float = 0.15,
     dqs1_observations: Sequence[Mapping[str, Any]] | None = None,
     include_observed_candidates: bool = False,
+    eureka_planning: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build local-only DQS1 pair-set acquisition candidates from selector Pareto rows."""
 
@@ -456,6 +665,33 @@ def build_decoder_q_pairset_acquisition_plan(
     diversity_weight = _as_float(diversity_weight, label="diversity_weight")
     if diversity_weight < 0.0:
         raise DecoderQPairsetAcquisitionError("diversity_weight must be non-negative")
+    if isinstance(max_drop_two, bool) or max_drop_two < 0:
+        raise DecoderQPairsetAcquisitionError("max_drop_two must be non-negative")
+    if isinstance(max_swap_in, bool) or max_swap_in < 0:
+        raise DecoderQPairsetAcquisitionError("max_swap_in must be non-negative")
+    hint_ids = _eureka_planner_hint_ids(eureka_planning)
+    eureka_expand_beyond_drop_two = (
+        "dqs1_expand_beyond_drop_two_near_boundary" in set(hint_ids)
+    )
+    profile = _eureka_pairset_profile(eureka_planning)
+    profile_max_drop_many = _profile_int(profile, "max_drop_many")
+    profile_drop_many_counts = _profile_int_list(profile, "drop_many_counts")
+    effective_max_drop_many = (
+        max_drop_many
+        if max_drop_many is not None
+        else (
+            profile_max_drop_many
+            if profile_max_drop_many is not None
+            else (96 if eureka_expand_beyond_drop_two else 0)
+        )
+    )
+    if isinstance(effective_max_drop_many, bool) or effective_max_drop_many < 0:
+        raise DecoderQPairsetAcquisitionError("max_drop_many must be non-negative")
+    effective_drop_many_counts = _parse_drop_many_counts(
+        drop_many_counts if drop_many_counts is not None else profile_drop_many_counts,
+        max_count=max(0, len(best_order) - 1),
+        eureka_active=eureka_expand_beyond_drop_two,
+    )
 
     rows: list[dict[str, Any]] = []
     seen_pair_sets: set[tuple[int, ...]] = set()
@@ -525,6 +761,40 @@ def build_decoder_q_pairset_acquisition_plan(
                     "op": "drop_two",
                     "dropped_pair_indices": sorted([left, right]),
                     "dropped_pair_ranks": sorted([left_rank, right_rank]),
+                },
+            )
+
+        for dropped in _bounded_drop_many_sets(
+            best_order,
+            drop_counts=effective_drop_many_counts,
+            limit=effective_max_drop_many,
+        ):
+            drop_set = set(dropped)
+            selected = [candidate for candidate in best_order if candidate not in drop_set]
+            dropped_ranks = sorted(rank_by_pair[pair] for pair in dropped)
+            add_row(
+                _drop_many_id(dropped_pairs=dropped, rank_by_pair=rank_by_pair),
+                "drop_many_beam_pairwise_interaction_waterfill",
+                selected,
+                best,
+                operation={
+                    "op": "drop_many",
+                    "drop_count": len(dropped),
+                    "dropped_pair_indices": sorted(dropped),
+                    "dropped_pair_ranks": dropped_ranks,
+                    "generation_policy": (
+                        "bounded_tail_beam_plus_spaced_tail_waterfill"
+                    ),
+                    "eureka_planner_hint_ids": hint_ids,
+                    "rate_distortion_policy": (
+                        "rate_gain_probe_with_distortion_authority_false"
+                    ),
+                    "master_gradient_status": (
+                        "rank_order_proxy_until_pair_gradient_binding_lands"
+                    ),
+                    "inverse_scorer_status": (
+                        "planner_consumer_requested_not_score_authority"
+                    ),
                 },
             )
 
@@ -615,6 +885,11 @@ def build_decoder_q_pairset_acquisition_plan(
         "drop_two_candidate_count": sum(1 for row in ranked if row["selector_kind"] == "drop_two_from_best"),
         "swap_in_candidate_count": sum(1 for row in ranked if row["selector_kind"] == "swap_in_alternative"),
         "diversity_candidate_count": sum(1 for row in ranked if row["selector_kind"] == "diversity_spaced"),
+        "drop_many_candidate_count": sum(
+            1
+            for row in ranked
+            if row["selector_kind"] == "drop_many_beam_pairwise_interaction_waterfill"
+        ),
     }
 
     return {
@@ -637,8 +912,67 @@ def build_decoder_q_pairset_acquisition_plan(
             ),
             "include_drop_one": include_drop_one,
             "max_drop_two": max_drop_two,
+            "max_drop_many": effective_max_drop_many,
+            "drop_many_counts": effective_drop_many_counts,
             "max_swap_in": max_swap_in,
             "diversity_weight": diversity_weight,
+            "eureka_expansion": {
+                "schema": EUREKA_EXPANSION_SCHEMA,
+                "active": eureka_expand_beyond_drop_two,
+                "planner_hint_ids": hint_ids,
+                "drop_many_candidate_generation_active": (
+                    eureka_expand_beyond_drop_two
+                    and effective_max_drop_many > 0
+                    and bool(effective_drop_many_counts)
+                ),
+                "levels_considered": [
+                    "bit",
+                    "byte",
+                    "packet_member",
+                    "tensor_channel",
+                    "pixel",
+                    "region",
+                    "boundary",
+                    "frame",
+                    "pair",
+                    "batch",
+                    "full_video",
+                    "scorer_axis",
+                    "receiver_runtime",
+                ],
+                "executable_family_this_pass": (
+                    "dqs1_pairset_drop_many_local_first"
+                    if eureka_expand_beyond_drop_two
+                    else None
+                ),
+                "blocked_family_requests": [
+                    {
+                        "family": "global_low_impact_full_pair_drop_probe",
+                        "blocker": (
+                            "requires pair-frame scorer-geometry lattice binding "
+                            "before full-board pair/frame drops are queue-executable"
+                        ),
+                        **FALSE_ACQUISITION_AUTHORITY,
+                    },
+                    {
+                        "family": "within_selected_set_mask_feather_probe",
+                        "blocker": (
+                            "requires receiver/materializer support for "
+                            "non-pair-drop mask semantics"
+                        ),
+                        **FALSE_ACQUISITION_AUTHORITY,
+                    },
+                    {
+                        "family": "inverse_scorer_null_direction_masked_variant",
+                        "blocker": (
+                            "requires inverse-scorer action cell to runtime "
+                            "materializer binding"
+                        ),
+                        **FALSE_ACQUISITION_AUTHORITY,
+                    },
+                ],
+                **FALSE_ACQUISITION_AUTHORITY,
+            },
             "observation_skip": {
                 "schema": "dqs1_pairset_acquisition_observation_skip.v1",
                 "active": bool(observed_candidate_ids)
@@ -667,6 +1001,7 @@ build_pairset_acquisition_plan = build_decoder_q_pairset_acquisition_plan
 
 __all__ = [
     "CANDIDATE_SCHEMA",
+    "EUREKA_EXPANSION_SCHEMA",
     "FALSE_ACQUISITION_AUTHORITY",
     "SCHEMA",
     "SOURCE_SCHEMA",

@@ -324,6 +324,8 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
         results_root=str(tmp_path / "results"),
         queue_id="frontier_feedback_unit",
         candidate_limit=2,
+        raw_retention_execute=True,
+        raw_retention_cold_store_roots=(str(tmp_path / "cold_store"),),
     )
 
     assert report["schema"] == FEEDBACK_REFRESH_SCHEMA
@@ -359,6 +361,10 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     queue = report["queue"]
     assert queue["queue_id"] == "frontier_feedback_unit"
     assert len(queue["experiments"]) == 2
+    first_steps = {step["id"]: step for step in queue["experiments"][0]["steps"]}
+    raw_retention_command = first_steps["plan_raw_artifact_retention"]["command"]
+    assert "--execute" in raw_retention_command
+    assert "--cold-store-root" in raw_retention_command
     assert all(
         experiment["metadata"]["materializer_feedback_bridge"] == bridge
         for experiment in queue["experiments"]

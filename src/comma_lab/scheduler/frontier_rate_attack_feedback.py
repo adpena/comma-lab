@@ -9,6 +9,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from comma_lab.storage_tiers import DEFAULT_RESERVE_FREE_GB
 from tac.optimization.dqs1_materializer_feedback_bridge import (
     DQS1_OBSERVATION_SOURCE_SCHEMA,
     DQS1_OBSERVATION_SWEEP_CONFIG_ID,
@@ -45,6 +46,9 @@ DISCOVERED_MATERIALIZER_FEEDBACK_SCHEMA = (
 )
 LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA = "frontier_rate_attack_local_cpu_eureka_discovery.v1"
 LOCAL_CPU_EUREKA_PLANNER_HINT_SCHEMA = "frontier_rate_attack_local_cpu_eureka_planner_hint.v1"
+LOCAL_CPU_EUREKA_PAIRSET_PROFILE_SCHEMA = (
+    "frontier_rate_attack_local_cpu_eureka_pairset_acquisition_profile.v1"
+)
 
 
 class FrontierRateAttackFeedbackError(ExperimentQueueError):
@@ -464,6 +468,61 @@ def _eureka_planner_hints(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, A
                     "master_gradient_constrained_low_sensitivity_drop",
                     "inverse_scorer_null_direction_masked_variant",
                 ],
+                "pairset_acquisition_profile": {
+                    "schema": LOCAL_CPU_EUREKA_PAIRSET_PROFILE_SCHEMA,
+                    "active": True,
+                    "max_drop_two": 512,
+                    "max_drop_many": 96,
+                    "drop_many_counts": [3, 4, 6, 8],
+                    "candidate_family": "dqs1_pairset_drop_many_local_first",
+                    "rate_distortion_levels_considered": [
+                        "bit",
+                        "byte",
+                        "packet_member",
+                        "tensor_channel",
+                        "pixel",
+                        "region",
+                        "boundary",
+                        "frame",
+                        "pair",
+                        "batch",
+                        "full_video",
+                        "scorer_axis",
+                        "receiver_runtime",
+                    ],
+                    "starting_point_policy": (
+                        "expand from near-frontier drop-two rows into bounded "
+                        "drop-many local probes before exact-axis authority"
+                    ),
+                    "blocked_family_requests": [
+                        {
+                            "family": "global_low_impact_full_pair_drop_probe",
+                            "blocker": (
+                                "requires pair-frame scorer-geometry lattice "
+                                "binding before full-board pair/frame drops are "
+                                "queue-executable"
+                            ),
+                            **FALSE_AUTHORITY,
+                        },
+                        {
+                            "family": "within_selected_set_mask_feather_probe",
+                            "blocker": (
+                                "requires receiver/materializer support for "
+                                "non-pair-drop mask semantics"
+                            ),
+                            **FALSE_AUTHORITY,
+                        },
+                        {
+                            "family": "inverse_scorer_null_direction_masked_variant",
+                            "blocker": (
+                                "requires inverse-scorer action cell to runtime "
+                                "materializer binding"
+                            ),
+                            **FALSE_AUTHORITY,
+                        },
+                    ],
+                    **FALSE_AUTHORITY,
+                },
                 "rationale": (
                     "drop-two local CPU drift rows are close enough to the frontier "
                     "to guide acquisition, but too conservative to treat as the "
@@ -659,7 +718,15 @@ def build_frontier_rate_attack_feedback_refresh(
     local_cpu_concurrency: int = 1,
     local_io_concurrency: int = 1,
     include_raw_retention_plan: bool = True,
+    raw_retention_execute: bool = False,
+    raw_retention_action: str = "move",
+    raw_retention_cold_store_roots: Sequence[str] = (),
+    raw_retention_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
     include_mlx_retention_plan: bool = True,
+    mlx_retention_execute: bool = False,
+    mlx_retention_action: str = "move",
+    mlx_retention_cold_store_roots: Sequence[str] = (),
+    mlx_retention_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
 ) -> dict[str, Any]:
     """Build a forest-level feedback refresh and optional DQS1 follow-up queue."""
 
@@ -697,7 +764,15 @@ def build_frontier_rate_attack_feedback_refresh(
             local_cpu_concurrency=local_cpu_concurrency,
             local_io_concurrency=local_io_concurrency,
             include_raw_retention_plan=include_raw_retention_plan,
+            raw_retention_execute=raw_retention_execute,
+            raw_retention_action=raw_retention_action,
+            raw_retention_cold_store_roots=tuple(raw_retention_cold_store_roots),
+            raw_retention_cold_store_reserve_gb=raw_retention_cold_store_reserve_gb,
             include_mlx_retention_plan=include_mlx_retention_plan,
+            mlx_retention_execute=mlx_retention_execute,
+            mlx_retention_action=mlx_retention_action,
+            mlx_retention_cold_store_roots=tuple(mlx_retention_cold_store_roots),
+            mlx_retention_cold_store_reserve_gb=mlx_retention_cold_store_reserve_gb,
         )
         queue_payload = normalize_queue_definition(result.queue)
         if eureka_planning.get("active") is True:
@@ -741,6 +816,20 @@ def build_frontier_rate_attack_feedback_refresh(
         "materializer_feedback_bridge": bridge,
         "queue_summary": None if queue_payload is None else _queue_summary(queue_payload),
         "queue": queue_payload,
+        "retention_policy": {
+            "schema": "frontier_rate_attack_feedback_retention_policy.v1",
+            "raw_retention_plan_included": include_raw_retention_plan,
+            "raw_retention_execute": raw_retention_execute,
+            "raw_retention_action": raw_retention_action,
+            "raw_retention_cold_store_roots": list(raw_retention_cold_store_roots),
+            "raw_retention_cold_store_reserve_gb": raw_retention_cold_store_reserve_gb,
+            "mlx_retention_plan_included": include_mlx_retention_plan,
+            "mlx_retention_execute": mlx_retention_execute,
+            "mlx_retention_action": mlx_retention_action,
+            "mlx_retention_cold_store_roots": list(mlx_retention_cold_store_roots),
+            "mlx_retention_cold_store_reserve_gb": mlx_retention_cold_store_reserve_gb,
+            **FALSE_AUTHORITY,
+        },
         "allowed_use": "queue_owned_frontier_feedback_replanning_only",
         "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
         **FALSE_AUTHORITY,
@@ -752,6 +841,7 @@ __all__ = [
     "FEEDBACK_REFRESH_SCHEMA",
     "FRONTIER_RATE_ATTACK_FEEDBACK_REFRESH_SCHEMA",
     "LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA",
+    "LOCAL_CPU_EUREKA_PAIRSET_PROFILE_SCHEMA",
     "LOCAL_CPU_EUREKA_PLANNER_HINT_SCHEMA",
     "MATERIALIZER_FEEDBACK_DISCOVERY_SCHEMA",
     "FrontierRateAttackFeedbackError",

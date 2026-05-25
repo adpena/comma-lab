@@ -228,10 +228,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="do not add the post-local-CPU raw/inflated scratch retention planning step",
     )
     parser.add_argument(
+        "--execute-raw-retention",
+        action="store_true",
+        help=(
+            "make the raw/inflated scratch retention step execute inside the "
+            "queue instead of only writing a plan"
+        ),
+    )
+    parser.add_argument("--raw-retention-action", choices=("move", "delete"), default="move")
+    parser.add_argument("--raw-retention-cold-store-root", action="append", default=[])
+    parser.add_argument("--raw-retention-cold-store-reserve-gb", type=float, default=40.0)
+    parser.add_argument(
         "--skip-mlx-retention-plan",
         action="store_true",
         help="do not add the post-response mlx_delta_cache retention planning step",
     )
+    parser.add_argument(
+        "--execute-mlx-retention",
+        action="store_true",
+        help="make the MLX cache retention step execute inside the queue",
+    )
+    parser.add_argument("--mlx-retention-action", choices=("move", "delete"), default="move")
+    parser.add_argument("--mlx-retention-cold-store-root", action="append", default=[])
+    parser.add_argument("--mlx-retention-cold-store-reserve-gb", type=float, default=40.0)
     parser.add_argument(
         "--include-scheduler-preflight",
         action="store_true",
@@ -361,7 +380,15 @@ def main(argv: list[str] | None = None) -> int:
         mlx_batch_pairs=args.mlx_batch_pairs,
         mlx_cache_batch_pairs=args.mlx_cache_batch_pairs,
         include_raw_retention_plan=not args.skip_raw_retention_plan,
+        raw_retention_execute=args.execute_raw_retention,
+        raw_retention_action=args.raw_retention_action,
+        raw_retention_cold_store_roots=tuple(args.raw_retention_cold_store_root),
+        raw_retention_cold_store_reserve_gb=args.raw_retention_cold_store_reserve_gb,
         include_mlx_retention_plan=not args.skip_mlx_retention_plan,
+        mlx_retention_execute=args.execute_mlx_retention,
+        mlx_retention_action=args.mlx_retention_action,
+        mlx_retention_cold_store_roots=tuple(args.mlx_retention_cold_store_root),
+        mlx_retention_cold_store_reserve_gb=args.mlx_retention_cold_store_reserve_gb,
         include_scheduler_preflight=args.include_scheduler_preflight,
         scheduler_storage_tiers=tuple(args.scheduler_storage_tier),
         scheduler_storage_workload_subdir=args.scheduler_storage_workload_subdir,

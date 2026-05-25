@@ -10,6 +10,7 @@ import pytest
 
 from tac.optimization.decoder_q_pairset_acquisition import (
     CANDIDATE_SCHEMA,
+    EUREKA_EXPANSION_SCHEMA,
     FALSE_ACQUISITION_AUTHORITY,
     SCHEMA,
     DecoderQPairsetAcquisitionError,
@@ -267,6 +268,83 @@ def test_pairset_acquisition_defaults_include_dense_response_tail() -> None:
     )
 
 
+def test_pairset_acquisition_eureka_expands_into_bounded_drop_many() -> None:
+    eureka_planning = {
+        "schema": "frontier_rate_attack_local_cpu_eureka_discovery.v1",
+        "active": True,
+        "signal_count": 2,
+        "planner_hints": [
+            {
+                "schema": "frontier_rate_attack_local_cpu_eureka_planner_hint.v1",
+                "hint_id": "dqs1_expand_beyond_drop_two_near_boundary",
+                "pairset_acquisition_profile": {
+                    "schema": (
+                        "frontier_rate_attack_local_cpu_eureka_pairset_acquisition_profile.v1"
+                    ),
+                    "active": True,
+                    "max_drop_many": 5,
+                    "drop_many_counts": [3, 4],
+                    **FALSE_ACQUISITION_AUTHORITY,
+                },
+                **FALSE_ACQUISITION_AUTHORITY,
+            }
+        ],
+        **FALSE_ACQUISITION_AUTHORITY,
+    }
+
+    plan = build_decoder_q_pairset_acquisition_plan(
+        _large_selector_pareto(),
+        max_drop_two=0,
+        max_swap_in=0,
+        include_drop_one=False,
+        prefix_ks=[32],
+        diversity_ks=[32],
+        eureka_planning=eureka_planning,
+    )
+
+    expansion = plan["selection_policy"]["eureka_expansion"]
+    assert expansion["schema"] == EUREKA_EXPANSION_SCHEMA
+    assert expansion["active"] is True
+    assert expansion["drop_many_candidate_generation_active"] is True
+    assert "pair" in expansion["levels_considered"]
+    assert "full_video" in expansion["levels_considered"]
+    assert plan["selection_policy"]["drop_many_counts"] == [3, 4]
+    assert plan["selection_policy"]["max_drop_many"] == 5
+    assert plan["summary"]["drop_many_candidate_count"] == 5
+
+    drop_many = [
+        row
+        for row in plan["candidates"]  # type: ignore[index]
+        if row["selector_kind"] == "drop_many_beam_pairwise_interaction_waterfill"
+    ]
+    assert drop_many
+    assert all(row["acquisition_id"].startswith("pairset_drop_many_") for row in drop_many)
+    assert all(row["acquisition_operation"]["op"] == "drop_many" for row in drop_many)
+    assert any(
+        row["distortion_repair_budget_from_rate_savings"]["active"] is True
+        for row in drop_many
+    )
+    best_budget = next(
+        row["distortion_repair_budget_from_rate_savings"]
+        for row in drop_many
+        if row["distortion_repair_budget_from_rate_savings"]["active"] is True
+    )
+    assert best_budget["saved_bytes_vs_source_selector"] > 0
+    assert best_budget["score_budget"] > 0.0
+    assert best_budget["segnet_distortion_budget_at_fixed_pose"] == pytest.approx(
+        best_budget["score_budget"] / 100.0
+    )
+    assert best_budget["posenet_score_term_budget_at_fixed_seg"] == pytest.approx(
+        best_budget["score_budget"]
+    )
+    assert all(
+        "dqs1_expand_beyond_drop_two_near_boundary"
+        in row["acquisition_operation"]["eureka_planner_hint_ids"]
+        for row in drop_many
+    )
+    assert all(row["score_claim"] is False for row in drop_many)
+
+
 def test_pairset_acquisition_suppresses_observed_dqs1_candidates() -> None:
     plan = build_decoder_q_pairset_acquisition_plan(
         _selector_pareto(),
@@ -325,6 +403,12 @@ def test_pairset_acquisition_preserves_selector_metadata_and_valid_pairs() -> No
     assert prefix["selected_pair_indices"] == [10, 20, 30, 40]
     assert prefix["source_selector_kind"] == "top_rank_prefix"
     assert prefix["payload_byte_estimate"] == prefix["payload_bytes"]
+    assert prefix["source_selector_payload_bytes"] == 14
+    assert (
+        prefix["payload_bytes_delta_vs_source_selector"]
+        == prefix["payload_bytes"] - 14
+    )
+    assert prefix["distortion_repair_budget_from_rate_savings"]["active"] is False
     assert prefix["predicted_score_mean"] == pytest.approx(0.1919)
     assert prefix["predicted_score_scope"] == "candidate_specific"
     assert prefix["exact_cpu_calibrated_estimate"]["predicted_score"] == pytest.approx(0.1919)
@@ -378,11 +462,29 @@ def test_pairset_acquisition_rejects_authority_and_bad_pairs() -> None:
 def test_pairset_acquisition_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     selector_path = tmp_path / "selector_pareto.json"
     observations_path = tmp_path / "dqs1_observations.jsonl"
+    eureka_path = tmp_path / "eureka_planning.json"
     json_out = tmp_path / "pairset_acquisition.json"
     md_out = tmp_path / "pairset_acquisition.md"
     selector_path.write_text(json.dumps(_selector_pareto()), encoding="utf-8")
     observations_path.write_text(
         json.dumps(_dqs1_observation("pairset_prefix_k004"), sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    eureka_path.write_text(
+        json.dumps(
+            {
+                "schema": "frontier_rate_attack_local_cpu_eureka_discovery.v1",
+                "active": True,
+                "planner_hints": [
+                    {
+                        "hint_id": "dqs1_expand_beyond_drop_two_near_boundary",
+                        **FALSE_ACQUISITION_AUTHORITY,
+                    }
+                ],
+                **FALSE_ACQUISITION_AUTHORITY,
+            },
+            sort_keys=True,
+        ),
         encoding="utf-8",
     )
 
@@ -398,8 +500,14 @@ def test_pairset_acquisition_cli_writes_json_and_markdown(tmp_path: Path) -> Non
             "2,4",
             "--max-drop-two",
             "3",
+            "--drop-many-counts",
+            "3",
+            "--max-drop-many",
+            "2",
             "--max-swap-in",
             "2",
+            "--eureka-planning-json",
+            str(eureka_path),
             "--dqs1-observation-jsonl",
             str(observations_path),
             "--json-out",
@@ -419,9 +527,11 @@ def test_pairset_acquisition_cli_writes_json_and_markdown(tmp_path: Path) -> Non
     assert stdout_payload["ready_for_exact_eval_dispatch"] is False
     assert stdout_payload["dispatch_attempted"] is False
     assert stdout_payload["suppressed_observed_candidate_count"] == 1
+    assert stdout_payload["drop_many_candidate_count"] == 1
     payload = json.loads(json_out.read_text(encoding="utf-8"))
     assert payload["schema"] == SCHEMA
     assert payload["summary"]["candidate_count"] > 0
+    assert payload["summary"]["drop_many_candidate_count"] == 1
     assert "pairset_prefix_k004" not in {
         row["acquisition_id"] for row in payload["candidates"]
     }

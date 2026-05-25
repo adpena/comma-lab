@@ -3187,7 +3187,10 @@ def test_operator_briefing_surfaces_frontier_feedback_cycle_autopolicy(
             "artifacts": {
                 "dqs1_followup_queue": str(queue_path),
             },
-            "selected_candidate_ids": ["pairset_drop_two_a", "pairset_drop_two_b"],
+            "selected_candidate_ids": [
+                "pairset_drop_two_a",
+                "pairset_drop_many_k004_a",
+            ],
             "materializer_feedback_payload_count": 2,
             "dqs1_observation_count": 0,
             "local_cpu_eureka_planning": {
@@ -3195,7 +3198,14 @@ def test_operator_briefing_surfaces_frontier_feedback_cycle_autopolicy(
                 "signal_count": 2,
                 "planner_hint_count": 1,
                 "planner_hints": [
-                    {"hint_id": "dqs1_expand_beyond_drop_two_near_boundary"}
+                    {
+                        "hint_id": "dqs1_expand_beyond_drop_two_near_boundary",
+                        "pairset_acquisition_profile": {
+                            "active": True,
+                            "drop_many_counts": [3, 4, 6, 8],
+                            "max_drop_many": 96,
+                        },
+                    }
                 ],
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -3272,9 +3282,13 @@ def test_operator_briefing_surfaces_frontier_feedback_cycle_autopolicy(
     assert summary["latest_refresh"]["eureka_planner_hint_ids"] == [
         "dqs1_expand_beyond_drop_two_near_boundary"
     ]
+    assert summary["latest_refresh"]["selected_drop_many_candidate_count"] == 1
+    assert summary["latest_refresh"]["eureka_pairset_profile_active"] is True
+    assert summary["latest_refresh"]["eureka_drop_many_counts"] == [3, 4, 6, 8]
     text = mod._format_frontier_feedback_cycle_summary()
     assert "authority: planning/local only" in text
     assert "eureka_hints: 1" in text
+    assert "selected_drop_many: 1" in text
 
 
 def test_operator_briefing_blocks_frontier_feedback_cycle_authority_leak(

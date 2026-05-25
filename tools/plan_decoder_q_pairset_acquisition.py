@@ -43,6 +43,102 @@ def _parse_csv_ints(text: str | None) -> list[int] | None:
     return values or None
 
 
+def _false_authority_fields() -> tuple[str, ...]:
+    return (
+        "score_claim",
+        "score_claim_valid",
+        "promotion_eligible",
+        "rank_or_kill_eligible",
+        "ready_for_exact_eval_dispatch",
+        "dispatch_attempted",
+        "gpu_launched",
+        "promotable",
+    )
+
+
+def _truthy_authority(value: object) -> bool:
+    if value is True:
+        return True
+    if isinstance(value, int | float) and not isinstance(value, bool):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return False
+
+
+def _assert_no_authority(payload: object, *, label: str) -> None:
+    fields = set(_false_authority_fields())
+
+    def visit(value: object, path: str) -> None:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                next_path = f"{path}.{key}" if path else str(key)
+                if key in fields and _truthy_authority(child):
+                    raise DecoderQPairsetAcquisitionError(
+                        f"{label} leaks authority at {next_path}"
+                    )
+                visit(child, next_path)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                visit(child, f"{path}[{index}]")
+
+    visit(payload, "")
+
+
+def _load_eureka_planning(paths: list[Path]) -> dict[str, object] | None:
+    if not paths:
+        return None
+    hint_rows: list[dict[str, object]] = []
+    source_paths: list[str] = []
+    signal_count = 0
+    for path in paths:
+        payload = load_json_object(path)
+        _assert_no_authority(payload, label=str(path))
+        planning = payload.get("local_cpu_eureka_planning")
+        if not isinstance(planning, dict):
+            planning = payload
+        hints = planning.get("planner_hints")
+        if isinstance(hints, list):
+            for hint in hints:
+                if isinstance(hint, dict):
+                    hint_rows.append(hint)
+        try:
+            signal_count += int(planning.get("signal_count") or 0)
+        except (TypeError, ValueError):
+            pass
+        source_paths.append(path.as_posix())
+    if not hint_rows:
+        return {
+            "schema": "decoder_q_pairset_acquisition_cli_eureka_planning.v1",
+            "active": False,
+            "source_paths": source_paths,
+            "signal_count": signal_count,
+            "planner_hint_count": 0,
+            "planner_hints": [],
+            "inactive_reason": "no_planner_hints",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+        }
+    return {
+        "schema": "decoder_q_pairset_acquisition_cli_eureka_planning.v1",
+        "active": True,
+        "source_paths": source_paths,
+        "signal_count": signal_count,
+        "planner_hint_count": len(hint_rows),
+        "planner_hints": hint_rows,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--selector-pareto", type=Path, required=True)
@@ -51,8 +147,31 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--diversity-ks", help="Comma-separated diversity-spaced pair-set sizes.")
     parser.add_argument("--no-drop-one", action="store_true")
     parser.add_argument("--max-drop-two", type=int, default=128)
+    parser.add_argument(
+        "--drop-many-counts",
+        help="Comma-separated pair-drop counts for bounded eureka drop-many probes.",
+    )
+    parser.add_argument(
+        "--max-drop-many",
+        type=int,
+        default=None,
+        help=(
+            "Maximum bounded drop-many candidates. Defaults to 0 unless an "
+            "eureka planning hint activates beyond-drop-two expansion."
+        ),
+    )
     parser.add_argument("--max-swap-in", type=int, default=32)
     parser.add_argument("--diversity-weight", type=float, default=0.15)
+    parser.add_argument(
+        "--eureka-planning-json",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "frontier feedback refresh/cycle/eureka planning JSON. When it "
+            "contains the beyond-drop-two hint, bounded drop-many probes become active."
+        ),
+    )
     parser.add_argument(
         "--dqs1-observation-jsonl",
         "--dqs1-observations",
@@ -174,10 +293,13 @@ def main(argv: list[str] | None = None) -> int:
             diversity_ks=_parse_csv_ints(args.diversity_ks),
             include_drop_one=not args.no_drop_one,
             max_drop_two=args.max_drop_two,
+            drop_many_counts=_parse_csv_ints(args.drop_many_counts),
+            max_drop_many=args.max_drop_many,
             max_swap_in=args.max_swap_in,
             diversity_weight=args.diversity_weight,
             dqs1_observations=dqs1_observations,
             include_observed_candidates=args.include_observed_dqs1_candidate,
+            eureka_planning=_load_eureka_planning(args.eureka_planning_json),
         )
         write_json(args.json_out, plan)
         if args.md_out is not None:
@@ -197,6 +319,9 @@ def main(argv: list[str] | None = None) -> int:
                     "suppressed_observed_candidate_count"
                 ],
                 "recommended_acquisition_id": plan["summary"]["recommended_acquisition_id"],
+                "drop_many_candidate_count": plan["summary"][
+                    "drop_many_candidate_count"
+                ],
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,

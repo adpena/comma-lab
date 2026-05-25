@@ -1,0 +1,1781 @@
+{
+  "artifact_catalog_metadata": {
+    "artifact_paths": [
+      ".omx/research/dqs1_followup_raw_artifact_move_20260525T141104Z.json",
+      ".omx/research/dqs1_followup_raw_artifact_move_20260525T141104Z.json.journal.jsonl"
+    ],
+    "cleanup_plan_path": ".omx/research/dqs1_followup_raw_artifact_move_20260525T141104Z.json",
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "journal_path": ".omx/research/dqs1_followup_raw_artifact_move_20260525T141104Z.json.journal.jsonl",
+    "lifecycle_kind": "HISTORICAL_PROVENANCE",
+    "policy_id": "operator_storage_waterfall.v1",
+    "policy_schema": "comma_lab.operator_storage_waterfall.v1",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "comma_lab.operator_storage_waterfall_artifact_catalog_metadata.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "storage_plan_path": null,
+    "tracked_local_boundary": {
+      ".omx/research/dqs1_followup_raw_artifact_move_20260525T141104Z.json": {
+        "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+        "git_boundary": "trackable_when_promoted",
+        "lifecycle_kind": "HISTORICAL_PROVENANCE",
+        "local_only": false
+      },
+      ".omx/research/dqs1_followup_raw_artifact_move_20260525T141104Z.json.journal.jsonl": {
+        "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+        "git_boundary": "trackable_when_promoted",
+        "lifecycle_kind": "HISTORICAL_PROVENANCE",
+        "local_only": false
+      }
+    }
+  },
+  "execution": {
+    "action": "move",
+    "cold_store_contract": {
+      "device_id": 16777274,
+      "free_bytes": 1776724119552,
+      "path": "/Volumes/VertigoDataTier/pact/cold_store",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "repo_device_id": 16777234,
+      "repo_root": "/Users/adpena/Projects/pact",
+      "required_bytes": 58599267432,
+      "reserve_bytes": 0,
+      "same_device_as_repo": false,
+      "schema": "comma_lab.artifact_retention_cold_store_contract.v1",
+      "score_claim": false,
+      "tier_index": 0,
+      "write_probe_passed": true
+    },
+    "cold_store_contracts": [
+      {
+        "device_id": 16777274,
+        "free_bytes": 1776724119552,
+        "path": "/Volumes/VertigoDataTier/pact/cold_store",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "repo_device_id": 16777234,
+        "repo_root": "/Users/adpena/Projects/pact",
+        "required_bytes": 58599267432,
+        "reserve_bytes": 0,
+        "same_device_as_repo": false,
+        "schema": "comma_lab.artifact_retention_cold_store_contract.v1",
+        "score_claim": false,
+        "tier_index": 0,
+        "write_probe_passed": true
+      }
+    ],
+    "cold_store_reserve_bytes": 0,
+    "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+    "cold_store_roots": [
+      "/Volumes/VertigoDataTier/pact/cold_store"
+    ],
+    "executed_bytes": 58599267432,
+    "executed_count": 20,
+    "generated_at_utc": "2026-05-25T14:37:18.739664+00:00",
+    "journal_path": ".omx/research/dqs1_followup_raw_artifact_move_20260525T141104Z.json.journal.jsonl",
+    "local_bytes_reclaimed": 58599267432,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "rows": [
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "c8b5215b71575d5e91318eb0c85d53a934e26b1c8dbd862dfc5d30c1a10fd223",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "e3bac4e7978eebd37d2782a7231350e0e12de713cadebba60859b9fa5a7e5fea",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "f535baf90658c127c5b4a1e951c9cf7d5872f025dfe1faabcc92f6185b1c823f",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "738ba4fb68496d427918872bd2642723a318f3bbb934a2591f99c42de9e897a6"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1773061709952,
+        "cold_store_free_bytes_before_planned": 1776724119552,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/inflated",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 3662409600,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "80c0445e57285ced8761b2ce27d3305025354957bd9414b3e376219c7e6e9910"
+              }
+            ],
+            "sha256": "1f2b6fb0da71919da406c96927b17fd73869bd6332c579991edd0f610c172079"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "80c0445e57285ced8761b2ce27d3305025354957bd9414b3e376219c7e6e9910"
+              }
+            ],
+            "sha256": "1f2b6fb0da71919da406c96927b17fd73869bd6332c579991edd0f610c172079"
+          }
+        },
+        "kind": "local_cpu_advisory_inflated_raw",
+        "local_bytes_reclaimed": 3662409600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/inflated",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "022ac0f391bc9408c357575496c3b680fc5cf9da6ca85d23c3ff994c370a1347",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "global_mutated",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_controls.json",
+          "manifest_sha256": "490ba47fb4a1a6858e33ccafb4d03468115ab79fc8f84dfdd27c360849d38870",
+          "raw_sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1769399300352,
+        "cold_store_free_bytes_before_planned": 1773061709952,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_work/global_mutated/inflated",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 3662409600,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+              }
+            ],
+            "sha256": "051e55426ddefd0e5e8f6d57973ef7144eacfdf76e7f35d0e184432cd47ce7f9"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+              }
+            ],
+            "sha256": "051e55426ddefd0e5e8f6d57973ef7144eacfdf76e7f35d0e184432cd47ce7f9"
+          }
+        },
+        "kind": "locality_inflated_raw",
+        "local_bytes_reclaimed": 3662409600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_work/global_mutated/inflated",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "parent",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_controls.json",
+          "manifest_sha256": "490ba47fb4a1a6858e33ccafb4d03468115ab79fc8f84dfdd27c360849d38870",
+          "raw_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1765736890752,
+        "cold_store_free_bytes_before_planned": 1769399300352,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_work/parent/inflated",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 3662409600,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+              }
+            ],
+            "sha256": "9438f3f0feeaad151f3de05e5b9f58a64302e3f44cbedd6f93b78246cbab3571"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+              }
+            ],
+            "sha256": "9438f3f0feeaad151f3de05e5b9f58a64302e3f44cbedd6f93b78246cbab3571"
+          }
+        },
+        "kind": "locality_inflated_raw",
+        "local_bytes_reclaimed": 3662409600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_work/parent/inflated",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "c8b5215b71575d5e91318eb0c85d53a934e26b1c8dbd862dfc5d30c1a10fd223",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "selective",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_controls.json",
+          "manifest_sha256": "490ba47fb4a1a6858e33ccafb4d03468115ab79fc8f84dfdd27c360849d38870",
+          "raw_sha256": "80c0445e57285ced8761b2ce27d3305025354957bd9414b3e376219c7e6e9910"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1762074481152,
+        "cold_store_free_bytes_before_planned": 1765736890752,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_work/selective/inflated",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 3662409600,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "80c0445e57285ced8761b2ce27d3305025354957bd9414b3e376219c7e6e9910"
+              }
+            ],
+            "sha256": "1f2b6fb0da71919da406c96927b17fd73869bd6332c579991edd0f610c172079"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "80c0445e57285ced8761b2ce27d3305025354957bd9414b3e376219c7e6e9910"
+              }
+            ],
+            "sha256": "1f2b6fb0da71919da406c96927b17fd73869bd6332c579991edd0f610c172079"
+          }
+        },
+        "kind": "locality_inflated_raw",
+        "local_bytes_reclaimed": 3662409600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_work/selective/inflated",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "623a00ca979dc9787c1f1b766aa2bd36bd66b674f2960cff82c65853a174333b",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "e980cdbcd1b2517c5dbf32024259d833decde505696781e315df2dfbc36be21e",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "4a51ab3fe4b511b833b24ef1d1cdfcdffee893d077bf3e5109710b66740c5a60",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "d0dcb20ec209e23aa6bd9d2b50c257c69f8aa0928c95c3f60cca07c53c46c176"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1758412071552,
+        "cold_store_free_bytes_before_planned": 1762074481152,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/inflated",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 3662409600,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "916efcf244f7c6cc273bd433c5fe581089a170e1df88a5fe4f6cd86ac8e509c1"
+              }
+            ],
+            "sha256": "d862e8c15f93c380059818ce6a6b226cb7dcd64bb1eb02b8e1e729e5ddd808df"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "916efcf244f7c6cc273bd433c5fe581089a170e1df88a5fe4f6cd86ac8e509c1"
+              }
+            ],
+            "sha256": "d862e8c15f93c380059818ce6a6b226cb7dcd64bb1eb02b8e1e729e5ddd808df"
+          }
+        },
+        "kind": "local_cpu_advisory_inflated_raw",
+        "local_bytes_reclaimed": 3662409600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/inflated",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "022ac0f391bc9408c357575496c3b680fc5cf9da6ca85d23c3ff994c370a1347",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "global_mutated",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_controls.json",
+          "manifest_sha256": "037c6a2231aaa29f9c908504641a741b40a9da5e4fb2d8f4c8dddba06c33f76b",
+          "raw_sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1754749661952,
+        "cold_store_free_bytes_before_planned": 1758412071552,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_work/global_mutated/inflated",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 3662409600,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+              }
+            ],
+            "sha256": "051e55426ddefd0e5e8f6d57973ef7144eacfdf76e7f35d0e184432cd47ce7f9"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+              }
+            ],
+            "sha256": "051e55426ddefd0e5e8f6d57973ef7144eacfdf76e7f35d0e184432cd47ce7f9"
+          }
+        },
+        "kind": "locality_inflated_raw",
+        "local_bytes_reclaimed": 3662409600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_work/global_mutated/inflated",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "parent",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_controls.json",
+          "manifest_sha256": "037c6a2231aaa29f9c908504641a741b40a9da5e4fb2d8f4c8dddba06c33f76b",
+          "raw_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1751087252352,
+        "cold_store_free_bytes_before_planned": 1754749661952,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_work/parent/inflated",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 3662409600,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+              }
+            ],
+            "sha256": "9438f3f0feeaad151f3de05e5b9f58a64302e3f44cbedd6f93b78246cbab3571"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+              }
+            ],
+            "sha256": "9438f3f0feeaad151f3de05e5b9f58a64302e3f44cbedd6f93b78246cbab3571"
+          }
+        },
+        "kind": "locality_inflated_raw",
+        "local_bytes_reclaimed": 3662409600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_work/parent/inflated",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "623a00ca979dc9787c1f1b766aa2bd36bd66b674f2960cff82c65853a174333b",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "selective",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_controls.json",
+          "manifest_sha256": "037c6a2231aaa29f9c908504641a741b40a9da5e4fb2d8f4c8dddba06c33f76b",
+          "raw_sha256": "916efcf244f7c6cc273bd433c5fe581089a170e1df88a5fe4f6cd86ac8e509c1"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1747424842752,
+        "cold_store_free_bytes_before_planned": 1751087252352,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_work/selective/inflated",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 3662409600,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "916efcf244f7c6cc273bd433c5fe581089a170e1df88a5fe4f6cd86ac8e509c1"
+              }
+            ],
+            "sha256": "d862e8c15f93c380059818ce6a6b226cb7dcd64bb1eb02b8e1e729e5ddd808df"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "916efcf244f7c6cc273bd433c5fe581089a170e1df88a5fe4f6cd86ac8e509c1"
+              }
+            ],
+            "sha256": "d862e8c15f93c380059818ce6a6b226cb7dcd64bb1eb02b8e1e729e5ddd808df"
+          }
+        },
+        "kind": "locality_inflated_raw",
+        "local_bytes_reclaimed": 3662409600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_work/selective/inflated",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "79354f8601391b88df3776031fe2c3ec921668cde23fd71916dc5811c65d7070",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "d4d73fc3ad98186b57934f9101e70cc12db84b82c160e54014acc2418d37299f",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "a12a7657edfeb5a03f0b3462a637a0485dcfe872b4ed5ffeca8192e493360781",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "fa9577fc4968854db4391a9f8d16ea90fcbf45dbd9868b30ac6675dbfc1a32ea"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1743762433152,
+        "cold_store_free_bytes_before_planned": 1747424842752,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/inflated",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 3662409600,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "22b65f3c0a1157c45f16f827b47de79e9de4b4e5f5f9e5ab643176602fdde5d5"
+              }
+            ],
+            "sha256": "8dd567e5cbaa12555b3fd87a022475d93c7f48c44b3264844195f37f7b5fb2cf"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "22b65f3c0a1157c45f16f827b47de79e9de4b4e5f5f9e5ab643176602fdde5d5"
+              }
+            ],
+            "sha256": "8dd567e5cbaa12555b3fd87a022475d93c7f48c44b3264844195f37f7b5fb2cf"
+          }
+        },
+        "kind": "local_cpu_advisory_inflated_raw",
+        "local_bytes_reclaimed": 3662409600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/inflated",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "022ac0f391bc9408c357575496c3b680fc5cf9da6ca85d23c3ff994c370a1347",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "global_mutated",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_controls.json",
+          "manifest_sha256": "39ddb477972cdacff2ade8bcb3240c2ec93460ad00c25fa5931debb7cd3eef1a",
+          "raw_sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1740100023552,
+        "cold_store_free_bytes_before_planned": 1743762433152,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_work/global_mutated/inflated",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 3662409600,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+              }
+            ],
+            "sha256": "051e55426ddefd0e5e8f6d57973ef7144eacfdf76e7f35d0e184432cd47ce7f9"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+              }
+            ],
+            "sha256": "051e55426ddefd0e5e8f6d57973ef7144eacfdf76e7f35d0e184432cd47ce7f9"
+          }
+        },
+        "kind": "locality_inflated_raw",
+        "local_bytes_reclaimed": 3662409600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_work/global_mutated/inflated",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "parent",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_controls.json",
+          "manifest_sha256": "39ddb477972cdacff2ade8bcb3240c2ec93460ad00c25fa5931debb7cd3eef1a",
+          "raw_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1736437613952,
+        "cold_store_free_bytes_before_planned": 1740100023552,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_work/parent/inflated",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 3662409600,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+              }
+            ],
+            "sha256": "9438f3f0feeaad151f3de05e5b9f58a64302e3f44cbedd6f93b78246cbab3571"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+              }
+            ],
+            "sha256": "9438f3f0feeaad151f3de05e5b9f58a64302e3f44cbedd6f93b78246cbab3571"
+          }
+        },
+        "kind": "locality_inflated_raw",
+        "local_bytes_reclaimed": 3662409600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_work/parent/inflated",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "79354f8601391b88df3776031fe2c3ec921668cde23fd71916dc5811c65d7070",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "selective",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_controls.json",
+          "manifest_sha256": "39ddb477972cdacff2ade8bcb3240c2ec93460ad00c25fa5931debb7cd3eef1a",
+          "raw_sha256": "22b65f3c0a1157c45f16f827b47de79e9de4b4e5f5f9e5ab643176602fdde5d5"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1732775204352,
+        "cold_store_free_bytes_before_planned": 1736437613952,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_work/selective/inflated",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 3662409600,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "22b65f3c0a1157c45f16f827b47de79e9de4b4e5f5f9e5ab643176602fdde5d5"
+              }
+            ],
+            "sha256": "8dd567e5cbaa12555b3fd87a022475d93c7f48c44b3264844195f37f7b5fb2cf"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "22b65f3c0a1157c45f16f827b47de79e9de4b4e5f5f9e5ab643176602fdde5d5"
+              }
+            ],
+            "sha256": "8dd567e5cbaa12555b3fd87a022475d93c7f48c44b3264844195f37f7b5fb2cf"
+          }
+        },
+        "kind": "locality_inflated_raw",
+        "local_bytes_reclaimed": 3662409600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_work/selective/inflated",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "8a1d4a715543aec5852582f9efb12dc95b9035720ad5eef694a07e84af65fb79",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "bf1ab3b7cf7003a9b2e73d27280bd92c99874e6fb4b1be0655d57ca7e932baed",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "8b57ea1d267fa280d8e07dd2ad1c23df25b8f8eee5d507d968533e782751002e",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "546c54e1f204549737f02b975d40f65c4eae1dfb1de0bcd31a4808f07038fa00"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1729112794752,
+        "cold_store_free_bytes_before_planned": 1732775204352,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/inflated",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 3662409600,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "a698d35a45cf92d1b4e9a959fa5f9df8610bf94e1df8eca4aadf86c88dd6fd1b"
+              }
+            ],
+            "sha256": "71622990c8e2aa60e5bf6ac362827ff630852fa76bcf622546d166a4cba32fc4"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "a698d35a45cf92d1b4e9a959fa5f9df8610bf94e1df8eca4aadf86c88dd6fd1b"
+              }
+            ],
+            "sha256": "71622990c8e2aa60e5bf6ac362827ff630852fa76bcf622546d166a4cba32fc4"
+          }
+        },
+        "kind": "local_cpu_advisory_inflated_raw",
+        "local_bytes_reclaimed": 3662409600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/inflated",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "022ac0f391bc9408c357575496c3b680fc5cf9da6ca85d23c3ff994c370a1347",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "global_mutated",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_controls.json",
+          "manifest_sha256": "d0f748e69fad46470628d040b56589ea161ef92a6f20f01172552e0a0fcbd0f7",
+          "raw_sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1725450385152,
+        "cold_store_free_bytes_before_planned": 1729112794752,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_work/global_mutated/inflated",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 3662409600,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+              }
+            ],
+            "sha256": "051e55426ddefd0e5e8f6d57973ef7144eacfdf76e7f35d0e184432cd47ce7f9"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+              }
+            ],
+            "sha256": "051e55426ddefd0e5e8f6d57973ef7144eacfdf76e7f35d0e184432cd47ce7f9"
+          }
+        },
+        "kind": "locality_inflated_raw",
+        "local_bytes_reclaimed": 3662409600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_work/global_mutated/inflated",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "parent",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_controls.json",
+          "manifest_sha256": "d0f748e69fad46470628d040b56589ea161ef92a6f20f01172552e0a0fcbd0f7",
+          "raw_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1721787975552,
+        "cold_store_free_bytes_before_planned": 1725450385152,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_work/parent/inflated",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 3662409600,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+              }
+            ],
+            "sha256": "9438f3f0feeaad151f3de05e5b9f58a64302e3f44cbedd6f93b78246cbab3571"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+              }
+            ],
+            "sha256": "9438f3f0feeaad151f3de05e5b9f58a64302e3f44cbedd6f93b78246cbab3571"
+          }
+        },
+        "kind": "locality_inflated_raw",
+        "local_bytes_reclaimed": 3662409600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_work/parent/inflated",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "8a1d4a715543aec5852582f9efb12dc95b9035720ad5eef694a07e84af65fb79",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "selective",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_controls.json",
+          "manifest_sha256": "d0f748e69fad46470628d040b56589ea161ef92a6f20f01172552e0a0fcbd0f7",
+          "raw_sha256": "a698d35a45cf92d1b4e9a959fa5f9df8610bf94e1df8eca4aadf86c88dd6fd1b"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1718125565952,
+        "cold_store_free_bytes_before_planned": 1721787975552,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_work/selective/inflated",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 3662409600,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "a698d35a45cf92d1b4e9a959fa5f9df8610bf94e1df8eca4aadf86c88dd6fd1b"
+              }
+            ],
+            "sha256": "71622990c8e2aa60e5bf6ac362827ff630852fa76bcf622546d166a4cba32fc4"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 3662409600,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 3662409600,
+                "path": "0.raw",
+                "sha256": "a698d35a45cf92d1b4e9a959fa5f9df8610bf94e1df8eca4aadf86c88dd6fd1b"
+              }
+            ],
+            "sha256": "71622990c8e2aa60e5bf6ac362827ff630852fa76bcf622546d166a4cba32fc4"
+          }
+        },
+        "kind": "locality_inflated_raw",
+        "local_bytes_reclaimed": 3662409600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_work/selective/inflated",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 178458,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "c8b5215b71575d5e91318eb0c85d53a934e26b1c8dbd862dfc5d30c1a10fd223",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "e3bac4e7978eebd37d2782a7231350e0e12de713cadebba60859b9fa5a7e5fea",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "f535baf90658c127c5b4a1e951c9cf7d5872f025dfe1faabcc92f6185b1c823f",
+          "kind": "local_cpu_advisory_extracted_scratch",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "738ba4fb68496d427918872bd2642723a318f3bbb934a2591f99c42de9e897a6"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1718125387494,
+        "cold_store_free_bytes_before_planned": 1718125565952,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/extracted",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 178458,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 178458,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 178458,
+                "path": "x",
+                "sha256": "88989e120dd5b9d4f9f1e4cd12d79745400f9d3d9ea3eeabf9ae123e24a4de6a"
+              }
+            ],
+            "sha256": "4cdbdcd4b743410f22e2208ecc72d2bcf966b30c9b4cc21e4d035bd150a56a09"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 178458,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 178458,
+                "path": "x",
+                "sha256": "88989e120dd5b9d4f9f1e4cd12d79745400f9d3d9ea3eeabf9ae123e24a4de6a"
+              }
+            ],
+            "sha256": "4cdbdcd4b743410f22e2208ecc72d2bcf966b30c9b4cc21e4d035bd150a56a09"
+          }
+        },
+        "kind": "local_cpu_advisory_extracted_scratch",
+        "local_bytes_reclaimed": 178458,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/extracted",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 178458,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "623a00ca979dc9787c1f1b766aa2bd36bd66b674f2960cff82c65853a174333b",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "e980cdbcd1b2517c5dbf32024259d833decde505696781e315df2dfbc36be21e",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "4a51ab3fe4b511b833b24ef1d1cdfcdffee893d077bf3e5109710b66740c5a60",
+          "kind": "local_cpu_advisory_extracted_scratch",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "d0dcb20ec209e23aa6bd9d2b50c257c69f8aa0928c95c3f60cca07c53c46c176"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1718125209036,
+        "cold_store_free_bytes_before_planned": 1718125387494,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/extracted",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 178458,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 178458,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 178458,
+                "path": "x",
+                "sha256": "539773525847071298acdc969d00831de2064c4b297d8f7fc289572520ffdb11"
+              }
+            ],
+            "sha256": "99cf1af86325d1cd67bd201c3ff8784196a90f0d122235b85bb826c975452a24"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 178458,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 178458,
+                "path": "x",
+                "sha256": "539773525847071298acdc969d00831de2064c4b297d8f7fc289572520ffdb11"
+              }
+            ],
+            "sha256": "99cf1af86325d1cd67bd201c3ff8784196a90f0d122235b85bb826c975452a24"
+          }
+        },
+        "kind": "local_cpu_advisory_extracted_scratch",
+        "local_bytes_reclaimed": 178458,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/extracted",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 178458,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "79354f8601391b88df3776031fe2c3ec921668cde23fd71916dc5811c65d7070",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "d4d73fc3ad98186b57934f9101e70cc12db84b82c160e54014acc2418d37299f",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "a12a7657edfeb5a03f0b3462a637a0485dcfe872b4ed5ffeca8192e493360781",
+          "kind": "local_cpu_advisory_extracted_scratch",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "fa9577fc4968854db4391a9f8d16ea90fcbf45dbd9868b30ac6675dbfc1a32ea"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1718125030578,
+        "cold_store_free_bytes_before_planned": 1718125209036,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/extracted",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 178458,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 178458,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 178458,
+                "path": "x",
+                "sha256": "6d032c5fc0e1472aae6141938dbb648647ae392687461d731e3318c7400d5fac"
+              }
+            ],
+            "sha256": "f981d147fc2b08f9b6d8a0d84c54c83d7f17c0a996b5306b4c15552ad7328568"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 178458,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 178458,
+                "path": "x",
+                "sha256": "6d032c5fc0e1472aae6141938dbb648647ae392687461d731e3318c7400d5fac"
+              }
+            ],
+            "sha256": "f981d147fc2b08f9b6d8a0d84c54c83d7f17c0a996b5306b4c15552ad7328568"
+          }
+        },
+        "kind": "local_cpu_advisory_extracted_scratch",
+        "local_bytes_reclaimed": 178458,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/extracted",
+        "preflight_revalidated": true,
+        "status": "moved"
+      },
+      {
+        "action": "move",
+        "blockers": [],
+        "bytes": 178458,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "8a1d4a715543aec5852582f9efb12dc95b9035720ad5eef694a07e84af65fb79",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "bf1ab3b7cf7003a9b2e73d27280bd92c99874e6fb4b1be0655d57ca7e932baed",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "8b57ea1d267fa280d8e07dd2ad1c23df25b8f8eee5d507d968533e782751002e",
+          "kind": "local_cpu_advisory_extracted_scratch",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "546c54e1f204549737f02b975d40f65c4eae1dfb1de0bcd31a4808f07038fa00"
+        },
+        "certified_rebuildable": true,
+        "cold_store_free_bytes_after_planned": 1718124852120,
+        "cold_store_free_bytes_before_planned": 1718125030578,
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/cold_store/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/extracted",
+        "cold_store_reserve_bytes": 0,
+        "cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+        "cold_store_tier_index": 0,
+        "cold_store_verification": {
+          "bytes_estimate": 178458,
+          "destination_device_id": 16777274,
+          "destination_digest": {
+            "bytes": 178458,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 178458,
+                "path": "x",
+                "sha256": "811e23cb6d176be00c1df54666481d85d51c7d7613e525be37e3aaa58a2e0ab9"
+              }
+            ],
+            "sha256": "d03641330084162cc426f1f8d8ad270ed07521361fb9f450de1e0ade8c94b425"
+          },
+          "method": "copy_verify_delete",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_device_as_source": false,
+          "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+          "score_claim": false,
+          "source_device_id": 16777234,
+          "source_digest": {
+            "bytes": 178458,
+            "file_count": 1,
+            "files": [
+              {
+                "bytes": 178458,
+                "path": "x",
+                "sha256": "811e23cb6d176be00c1df54666481d85d51c7d7613e525be37e3aaa58a2e0ab9"
+              }
+            ],
+            "sha256": "d03641330084162cc426f1f8d8ad270ed07521361fb9f450de1e0ade8c94b425"
+          }
+        },
+        "kind": "local_cpu_advisory_extracted_scratch",
+        "local_bytes_reclaimed": 178458,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/extracted",
+        "preflight_revalidated": true,
+        "status": "moved"
+      }
+    ],
+    "schema": "comma_lab.artifact_retention_execution.v1",
+    "score_claim": false,
+    "skipped_count": 0,
+    "tiered_cold_store": false
+  },
+  "operator_storage_policy": {
+    "cold_store_roots": [
+      "/Volumes/VertigoDataTier/pact/cold_store"
+    ],
+    "cold_store_subdir": "cold_store",
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "explicit_cold_store_override": true,
+    "explicit_storage_tier_override": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "local_disk_enabled": false,
+    "local_disk_enabled_by_default": false,
+    "local_disk_requires_explicit_opt_in": true,
+    "policy_id": "operator_storage_waterfall.v1",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "comma_lab.operator_storage_waterfall.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "storage_tier_cli_specs": [
+      "vertigo=/Volumes/VertigoDataTier/pact",
+      "apdatastore=/Volumes/APDataStore/pact"
+    ],
+    "work_tier_order": [
+      {
+        "allow_local_disk": false,
+        "name": "vertigo",
+        "priority": 0,
+        "root": "/Volumes/VertigoDataTier/pact",
+        "source": "operator_policy"
+      },
+      {
+        "allow_local_disk": false,
+        "name": "apdatastore",
+        "priority": 1,
+        "root": "/Volumes/APDataStore/pact",
+        "source": "operator_policy"
+      }
+    ]
+  },
+  "plan": {
+    "blocked_candidate_count": 0,
+    "blocked_candidates": [],
+    "candidate_count": 20,
+    "candidates": [
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "c8b5215b71575d5e91318eb0c85d53a934e26b1c8dbd862dfc5d30c1a10fd223",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "e3bac4e7978eebd37d2782a7231350e0e12de713cadebba60859b9fa5a7e5fea",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "f535baf90658c127c5b4a1e951c9cf7d5872f025dfe1faabcc92f6185b1c823f",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "738ba4fb68496d427918872bd2642723a318f3bbb934a2591f99c42de9e897a6"
+        },
+        "certified_rebuildable": true,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "022ac0f391bc9408c357575496c3b680fc5cf9da6ca85d23c3ff994c370a1347",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "global_mutated",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_controls.json",
+          "manifest_sha256": "490ba47fb4a1a6858e33ccafb4d03468115ab79fc8f84dfdd27c360849d38870",
+          "raw_sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_work/global_mutated/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "parent",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_controls.json",
+          "manifest_sha256": "490ba47fb4a1a6858e33ccafb4d03468115ab79fc8f84dfdd27c360849d38870",
+          "raw_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_work/parent/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "c8b5215b71575d5e91318eb0c85d53a934e26b1c8dbd862dfc5d30c1a10fd223",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "selective",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_controls.json",
+          "manifest_sha256": "490ba47fb4a1a6858e33ccafb4d03468115ab79fc8f84dfdd27c360849d38870",
+          "raw_sha256": "80c0445e57285ced8761b2ce27d3305025354957bd9414b3e376219c7e6e9910"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/locality_work/selective/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "623a00ca979dc9787c1f1b766aa2bd36bd66b674f2960cff82c65853a174333b",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "e980cdbcd1b2517c5dbf32024259d833decde505696781e315df2dfbc36be21e",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "4a51ab3fe4b511b833b24ef1d1cdfcdffee893d077bf3e5109710b66740c5a60",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "d0dcb20ec209e23aa6bd9d2b50c257c69f8aa0928c95c3f60cca07c53c46c176"
+        },
+        "certified_rebuildable": true,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "022ac0f391bc9408c357575496c3b680fc5cf9da6ca85d23c3ff994c370a1347",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "global_mutated",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_controls.json",
+          "manifest_sha256": "037c6a2231aaa29f9c908504641a741b40a9da5e4fb2d8f4c8dddba06c33f76b",
+          "raw_sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_work/global_mutated/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "parent",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_controls.json",
+          "manifest_sha256": "037c6a2231aaa29f9c908504641a741b40a9da5e4fb2d8f4c8dddba06c33f76b",
+          "raw_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_work/parent/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "623a00ca979dc9787c1f1b766aa2bd36bd66b674f2960cff82c65853a174333b",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "selective",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_controls.json",
+          "manifest_sha256": "037c6a2231aaa29f9c908504641a741b40a9da5e4fb2d8f4c8dddba06c33f76b",
+          "raw_sha256": "916efcf244f7c6cc273bd433c5fe581089a170e1df88a5fe4f6cd86ac8e509c1"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/locality_work/selective/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "79354f8601391b88df3776031fe2c3ec921668cde23fd71916dc5811c65d7070",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "d4d73fc3ad98186b57934f9101e70cc12db84b82c160e54014acc2418d37299f",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "a12a7657edfeb5a03f0b3462a637a0485dcfe872b4ed5ffeca8192e493360781",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "fa9577fc4968854db4391a9f8d16ea90fcbf45dbd9868b30ac6675dbfc1a32ea"
+        },
+        "certified_rebuildable": true,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "022ac0f391bc9408c357575496c3b680fc5cf9da6ca85d23c3ff994c370a1347",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "global_mutated",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_controls.json",
+          "manifest_sha256": "39ddb477972cdacff2ade8bcb3240c2ec93460ad00c25fa5931debb7cd3eef1a",
+          "raw_sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_work/global_mutated/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "parent",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_controls.json",
+          "manifest_sha256": "39ddb477972cdacff2ade8bcb3240c2ec93460ad00c25fa5931debb7cd3eef1a",
+          "raw_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_work/parent/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "79354f8601391b88df3776031fe2c3ec921668cde23fd71916dc5811c65d7070",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "selective",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_controls.json",
+          "manifest_sha256": "39ddb477972cdacff2ade8bcb3240c2ec93460ad00c25fa5931debb7cd3eef1a",
+          "raw_sha256": "22b65f3c0a1157c45f16f827b47de79e9de4b4e5f5f9e5ab643176602fdde5d5"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/locality_work/selective/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "8a1d4a715543aec5852582f9efb12dc95b9035720ad5eef694a07e84af65fb79",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "bf1ab3b7cf7003a9b2e73d27280bd92c99874e6fb4b1be0655d57ca7e932baed",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "8b57ea1d267fa280d8e07dd2ad1c23df25b8f8eee5d507d968533e782751002e",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "546c54e1f204549737f02b975d40f65c4eae1dfb1de0bcd31a4808f07038fa00"
+        },
+        "certified_rebuildable": true,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "022ac0f391bc9408c357575496c3b680fc5cf9da6ca85d23c3ff994c370a1347",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "global_mutated",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_controls.json",
+          "manifest_sha256": "d0f748e69fad46470628d040b56589ea161ef92a6f20f01172552e0a0fcbd0f7",
+          "raw_sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_work/global_mutated/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "parent",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_controls.json",
+          "manifest_sha256": "d0f748e69fad46470628d040b56589ea161ef92a6f20f01172552e0a0fcbd0f7",
+          "raw_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_work/parent/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "8a1d4a715543aec5852582f9efb12dc95b9035720ad5eef694a07e84af65fb79",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "selective",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_controls.json",
+          "manifest_sha256": "d0f748e69fad46470628d040b56589ea161ef92a6f20f01172552e0a0fcbd0f7",
+          "raw_sha256": "a698d35a45cf92d1b4e9a959fa5f9df8610bf94e1df8eca4aadf86c88dd6fd1b"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/locality_work/selective/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 178458,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "c8b5215b71575d5e91318eb0c85d53a934e26b1c8dbd862dfc5d30c1a10fd223",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "e3bac4e7978eebd37d2782a7231350e0e12de713cadebba60859b9fa5a7e5fea",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "f535baf90658c127c5b4a1e951c9cf7d5872f025dfe1faabcc92f6185b1c823f",
+          "kind": "local_cpu_advisory_extracted_scratch",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "738ba4fb68496d427918872bd2642723a318f3bbb934a2591f99c42de9e897a6"
+        },
+        "certified_rebuildable": true,
+        "kind": "local_cpu_advisory_extracted_scratch",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479/local_cpu_advisory_work/extracted"
+      },
+      {
+        "blockers": [],
+        "bytes": 178458,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "623a00ca979dc9787c1f1b766aa2bd36bd66b674f2960cff82c65853a174333b",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "e980cdbcd1b2517c5dbf32024259d833decde505696781e315df2dfbc36be21e",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "4a51ab3fe4b511b833b24ef1d1cdfcdffee893d077bf3e5109710b66740c5a60",
+          "kind": "local_cpu_advisory_extracted_scratch",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "d0dcb20ec209e23aa6bd9d2b50c257c69f8aa0928c95c3f60cca07c53c46c176"
+        },
+        "certified_rebuildable": true,
+        "kind": "local_cpu_advisory_extracted_scratch",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467/local_cpu_advisory_work/extracted"
+      },
+      {
+        "blockers": [],
+        "bytes": 178458,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "79354f8601391b88df3776031fe2c3ec921668cde23fd71916dc5811c65d7070",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "d4d73fc3ad98186b57934f9101e70cc12db84b82c160e54014acc2418d37299f",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "a12a7657edfeb5a03f0b3462a637a0485dcfe872b4ed5ffeca8192e493360781",
+          "kind": "local_cpu_advisory_extracted_scratch",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "fa9577fc4968854db4391a9f8d16ea90fcbf45dbd9868b30ac6675dbfc1a32ea"
+        },
+        "certified_rebuildable": true,
+        "kind": "local_cpu_advisory_extracted_scratch",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496/local_cpu_advisory_work/extracted"
+      },
+      {
+        "blockers": [],
+        "bytes": 178458,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "8a1d4a715543aec5852582f9efb12dc95b9035720ad5eef694a07e84af65fb79",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "bf1ab3b7cf7003a9b2e73d27280bd92c99874e6fb4b1be0655d57ca7e932baed",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "8b57ea1d267fa280d8e07dd2ad1c23df25b8f8eee5d507d968533e782751002e",
+          "kind": "local_cpu_advisory_extracted_scratch",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "546c54e1f204549737f02b975d40f65c4eae1dfb1de0bcd31a4808f07038fa00"
+        },
+        "certified_rebuildable": true,
+        "kind": "local_cpu_advisory_extracted_scratch",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459/local_cpu_advisory_work/extracted"
+      }
+    ],
+    "exclude_paths": [],
+    "generated_at_utc": "2026-05-25T14:11:24.059104+00:00",
+    "include_kinds": [
+      "inverse_scorer_inflate_parity_raw_output",
+      "local_cpu_advisory_extracted_scratch",
+      "local_cpu_advisory_inflated_raw",
+      "locality_inflated_raw"
+    ],
+    "min_bytes": 1,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "repo_root": "/Users/adpena/Projects/pact",
+    "roots": [
+      "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_009_p0327_0459",
+      "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_005_p0327_0467",
+      "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_003_p0327_0479",
+      "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r013_008_p0327_0496"
+    ],
+    "schema": "comma_lab.artifact_retention_plan.v1",
+    "score_claim": false,
+    "total_reclaimable_bytes": 58599267432
+  }
+}

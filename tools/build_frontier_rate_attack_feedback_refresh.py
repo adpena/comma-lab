@@ -96,9 +96,64 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Do not add the raw/inflated artifact retention planning step.",
     )
     parser.add_argument(
+        "--execute-raw-retention",
+        action="store_true",
+        help=(
+            "Make the raw/inflated retention step execute inside the generated "
+            "queue instead of only writing a plan."
+        ),
+    )
+    parser.add_argument(
+        "--raw-retention-action",
+        choices=("move", "delete"),
+        default="move",
+        help="Action for --execute-raw-retention.",
+    )
+    parser.add_argument(
+        "--raw-retention-cold-store-root",
+        action="append",
+        default=[],
+        help=(
+            "Cold-store root for executed raw retention moves. May repeat; "
+            "defaults to currently attached operator storage tiers."
+        ),
+    )
+    parser.add_argument(
+        "--raw-retention-cold-store-reserve-gb",
+        type=float,
+        default=40.0,
+        help="Free GiB to preserve on each cold-store tier for raw retention moves.",
+    )
+    parser.add_argument(
         "--skip-mlx-retention-plan",
         action="store_true",
         help="Do not add the mlx_delta_cache retention planning step.",
+    )
+    parser.add_argument(
+        "--execute-mlx-retention",
+        action="store_true",
+        help="Make the MLX cache retention step execute inside the generated queue.",
+    )
+    parser.add_argument(
+        "--mlx-retention-action",
+        choices=("move", "delete"),
+        default="move",
+        help="Action for --execute-mlx-retention.",
+    )
+    parser.add_argument(
+        "--mlx-retention-cold-store-root",
+        action="append",
+        default=[],
+        help=(
+            "Cold-store root for executed MLX cache moves. May repeat; defaults "
+            "to currently attached operator storage tiers."
+        ),
+    )
+    parser.add_argument(
+        "--mlx-retention-cold-store-reserve-gb",
+        type=float,
+        default=40.0,
+        help="Free GiB to preserve on each cold-store tier for MLX cache moves.",
     )
     return parser.parse_args(argv)
 
@@ -187,7 +242,17 @@ def main(argv: list[str] | None = None) -> int:
             local_cpu_concurrency=args.local_cpu_concurrency,
             local_io_concurrency=args.local_io_concurrency,
             include_raw_retention_plan=not args.skip_raw_retention_plan,
+            raw_retention_execute=args.execute_raw_retention,
+            raw_retention_action=args.raw_retention_action,
+            raw_retention_cold_store_roots=tuple(args.raw_retention_cold_store_root),
+            raw_retention_cold_store_reserve_gb=(
+                args.raw_retention_cold_store_reserve_gb
+            ),
             include_mlx_retention_plan=not args.skip_mlx_retention_plan,
+            mlx_retention_execute=args.execute_mlx_retention,
+            mlx_retention_action=args.mlx_retention_action,
+            mlx_retention_cold_store_roots=tuple(args.mlx_retention_cold_store_root),
+            mlx_retention_cold_store_reserve_gb=args.mlx_retention_cold_store_reserve_gb,
         )
         artifacts = _write_outputs(output_dir, report)
     except (

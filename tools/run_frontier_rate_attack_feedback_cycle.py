@@ -60,6 +60,14 @@ DEFAULT_BASELINE_ARCHIVE_SIZE_BYTES = 178_560
 DEFAULT_BASELINE_CANDIDATE_ID = "dqs1_top32_gap_uleb"
 
 
+def _effective_raw_retention_execute(args: argparse.Namespace) -> bool:
+    return (
+        bool(args.execute_followup)
+        if args.execute_raw_retention is None
+        else bool(args.execute_raw_retention)
+    )
+
+
 def _display_path(path: str | Path) -> str:
     return repo_rel(path, REPO_ROOT)
 
@@ -144,6 +152,7 @@ def _build_refresh(
     queue_id: str,
     dqs1_observation_paths: tuple[str | Path, ...],
 ) -> dict[str, Any]:
+    raw_retention_execute = _effective_raw_retention_execute(args)
     return build_frontier_rate_attack_feedback_refresh(
         repo_root=REPO_ROOT,
         frontier_artifact_roots=tuple(args.frontier_artifact_root),
@@ -157,7 +166,15 @@ def _build_refresh(
         local_cpu_concurrency=args.local_cpu_concurrency,
         local_io_concurrency=args.local_io_concurrency,
         include_raw_retention_plan=not args.skip_raw_retention_plan,
+        raw_retention_execute=raw_retention_execute,
+        raw_retention_action=args.raw_retention_action,
+        raw_retention_cold_store_roots=tuple(args.raw_retention_cold_store_root),
+        raw_retention_cold_store_reserve_gb=args.raw_retention_cold_store_reserve_gb,
         include_mlx_retention_plan=not args.skip_mlx_retention_plan,
+        mlx_retention_execute=bool(args.execute_mlx_retention),
+        mlx_retention_action=args.mlx_retention_action,
+        mlx_retention_cold_store_roots=tuple(args.mlx_retention_cold_store_root),
+        mlx_retention_cold_store_reserve_gb=args.mlx_retention_cold_store_reserve_gb,
     )
 
 
@@ -186,8 +203,25 @@ def _autopilot_command(
         args.results_root,
         "--min-free-disk-gb",
         str(args.min_free_disk_gb),
-        "--no-post-harvest-retention",
     ]
+    raw_retention_execute = _effective_raw_retention_execute(args)
+    post_harvest_retention = args.post_harvest_retention
+    if post_harvest_retention is None:
+        post_harvest_retention = not raw_retention_execute
+    if post_harvest_retention:
+        command.extend(["--retention-action", args.raw_retention_action])
+        command.extend(
+            [
+                "--retention-min-bytes",
+                str(args.post_harvest_retention_min_bytes),
+            ]
+        )
+        for root in args.raw_retention_cold_store_root:
+            command.extend(["--retention-cold-store-root", root])
+        if args.include_mlx_cache_post_harvest_retention:
+            command.append("--include-mlx-cache-retention")
+    else:
+        command.append("--no-post-harvest-retention")
     if args.state is not None:
         command.extend(["--state", args.state])
     if args.execute_followup:
@@ -220,7 +254,73 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--local-cpu-concurrency", type=int, default=2)
     parser.add_argument("--local-io-concurrency", type=int, default=2)
     parser.add_argument("--skip-raw-retention-plan", action="store_true")
+    parser.add_argument(
+        "--execute-raw-retention",
+        dest="execute_raw_retention",
+        action="store_true",
+        default=None,
+        help=(
+            "Execute raw/inflated retention inside the generated queue. Defaults "
+            "to enabled when --execute-followup is used."
+        ),
+    )
+    parser.add_argument(
+        "--no-execute-raw-retention",
+        dest="execute_raw_retention",
+        action="store_false",
+        help="Keep generated raw/inflated retention planning-only.",
+    )
+    parser.add_argument(
+        "--raw-retention-action",
+        choices=("move", "delete"),
+        default="move",
+        help="Action for queue-owned raw/inflated retention execution.",
+    )
+    parser.add_argument(
+        "--raw-retention-cold-store-root",
+        action="append",
+        default=[],
+        help=(
+            "Cold-store root for queue-owned raw retention moves. May repeat; "
+            "defaults to currently attached operator storage tiers."
+        ),
+    )
+    parser.add_argument(
+        "--raw-retention-cold-store-reserve-gb",
+        type=float,
+        default=40.0,
+    )
     parser.add_argument("--skip-mlx-retention-plan", action="store_true")
+    parser.add_argument("--execute-mlx-retention", action="store_true")
+    parser.add_argument("--mlx-retention-action", choices=("move", "delete"), default="move")
+    parser.add_argument("--mlx-retention-cold-store-root", action="append", default=[])
+    parser.add_argument("--mlx-retention-cold-store-reserve-gb", type=float, default=40.0)
+    parser.add_argument(
+        "--post-harvest-retention",
+        dest="post_harvest_retention",
+        action="store_true",
+        default=None,
+        help=(
+            "Enable autopilot post-harvest retention. Defaults to off when the "
+            "generated queue owns raw retention execution."
+        ),
+    )
+    parser.add_argument(
+        "--no-post-harvest-retention",
+        dest="post_harvest_retention",
+        action="store_false",
+        help="Disable autopilot post-harvest retention.",
+    )
+    parser.add_argument(
+        "--post-harvest-retention-min-bytes",
+        default="1",
+        help="Minimum candidate size forwarded to autopilot post-harvest retention.",
+    )
+    parser.add_argument(
+        "--include-mlx-cache-post-harvest-retention",
+        action="store_true",
+        help="Forward MLX cache retention to the autopilot post-harvest actuator.",
+    )
     parser.add_argument(
         "--execute-followup",
         action="store_true",
@@ -296,6 +396,17 @@ def main(argv: list[str] | None = None) -> int:
 
         followup: dict[str, Any] = {
             "execute_followup": bool(args.execute_followup),
+            "queue_raw_retention_execute": _effective_raw_retention_execute(args),
+            "post_harvest_retention_policy": (
+                "auto_disabled_when_queue_raw_retention_executes"
+                if args.post_harvest_retention is None
+                and _effective_raw_retention_execute(args)
+                else (
+                    "auto_enabled_when_queue_raw_retention_is_plan_only"
+                    if args.post_harvest_retention is None
+                    else "explicit_operator_setting"
+                )
+            ),
             "autopilot_command": None,
             "autopilot_result": None,
             **FALSE_AUTHORITY,
@@ -377,6 +488,7 @@ def main(argv: list[str] | None = None) -> int:
                 "artifacts": initial_artifacts,
                 "selected_candidate_ids": initial_report.get("selected_candidate_ids"),
                 "queue_summary": initial_report.get("queue_summary"),
+                "retention_policy": initial_report.get("retention_policy"),
                 "queue_validate": initial_validate,
                 **FALSE_AUTHORITY,
             },
@@ -393,6 +505,7 @@ def main(argv: list[str] | None = None) -> int:
                 "artifacts": post_artifacts,
                 "selected_candidate_ids": post_report.get("selected_candidate_ids"),
                 "queue_summary": post_report.get("queue_summary"),
+                "retention_policy": post_report.get("retention_policy"),
                 "queue_validate": post_validate,
                 **FALSE_AUTHORITY,
             },

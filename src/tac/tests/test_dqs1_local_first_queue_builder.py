@@ -353,6 +353,30 @@ def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: P
     )
 
 
+def test_dqs1_queue_builder_can_make_raw_retention_queue_executed(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+    cold_root = tmp_path / "cold_store"
+    queue = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="results",
+        queue_id="dqs1_retention_execute_unit",
+        raw_retention_execute=True,
+        raw_retention_action="move",
+        raw_retention_cold_store_roots=(str(cold_root),),
+        raw_retention_cold_store_reserve_gb=7.5,
+    ).queue
+
+    steps = {step["id"]: step for step in queue["experiments"][0]["steps"]}
+    command = steps["plan_raw_artifact_retention"]["command"]
+    assert "--execute" in command
+    assert command[command.index("--action") + 1] == "move"
+    assert command[command.index("--cold-store-root") + 1] == str(cold_root)
+    assert command[command.index("--cold-store-reserve-gb") + 1] == "7.5"
+
+
 def test_dqs1_queue_builder_skips_completed_candidate_from_extra_results_root(
     tmp_path: Path,
 ) -> None:

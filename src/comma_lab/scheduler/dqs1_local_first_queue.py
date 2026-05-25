@@ -10,6 +10,7 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
+from comma_lab.operator_storage_waterfall import operator_cold_store_roots
 from comma_lab.storage_tiers import DEFAULT_RESERVE_FREE_GB
 from tac.optimization.decoder_q_constants import FEC6_PAIR_COUNT
 from tac.optimization.dqs1_materializer_feedback_bridge import (
@@ -64,6 +65,7 @@ DEFAULT_MLX_REFERENCE_CACHE_DIR = "experiments/results/mlx_scorer_input_cache_re
 DEFAULT_SCHEDULER_PREFLIGHT_EXPERIMENT_ID = "dqs1_scheduler_preflight"
 SAFE_OPERATOR_ACTION = "materialize_pairset_archive_and_run_local_controls"
 LOCAL_CPU_CONTEST_DRIFT_EUREKA_SCHEMA = EUREKA_SIGNAL_SCHEMA
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 _FALSE_AUTHORITY_FIELDS = (
     "score_claim",
@@ -650,6 +652,59 @@ def _false_authority_postcondition(
     return condition
 
 
+def _retention_command(
+    *,
+    roots: list[str],
+    json_output: str,
+    include_kind: str | None = None,
+    execute: bool = False,
+    action: str = "move",
+    cold_store_roots: tuple[str, ...] = (),
+    cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
+) -> list[str]:
+    if action not in {"move", "delete"}:
+        raise ExperimentQueueError("retention action must be move or delete")
+    if cold_store_roots:
+        effective_cold_roots = cold_store_roots
+    else:
+        repo_device = REPO_ROOT.stat().st_dev
+        existing_external_roots: list[str] = []
+        for root in operator_cold_store_roots():
+            path = Path(root)
+            try:
+                if path.is_dir() and path.stat().st_dev != repo_device:
+                    existing_external_roots.append(root)
+            except OSError:
+                continue
+        effective_cold_roots = tuple(existing_external_roots)
+    if execute and action == "move" and not effective_cold_roots:
+        raise ExperimentQueueError(
+            "retention cold-store roots are required for executed move retention"
+        )
+    command = [
+        ".venv/bin/python",
+        "tools/compact_experiment_artifacts.py",
+        *roots,
+    ]
+    if include_kind is not None:
+        command.extend(["--include-kind", include_kind])
+    command.extend(
+        [
+            "--min-bytes",
+            "1",
+            "--json-output",
+            json_output,
+        ]
+    )
+    if execute:
+        command.extend(["--execute", "--action", action])
+        command.extend(["--cold-store-reserve-gb", str(cold_store_reserve_gb)])
+        if action == "move":
+            for cold_store_root in effective_cold_roots:
+                command.extend(["--cold-store-root", cold_store_root])
+    return command
+
+
 def _eureka_false_authority_postcondition(path: str) -> dict[str, Any]:
     return {
         "type": "json_false_authority",
@@ -828,7 +883,15 @@ def build_dqs1_local_first_queue(
     mlx_batch_pairs: int = 1,
     mlx_cache_batch_pairs: int = 8,
     include_raw_retention_plan: bool = True,
+    raw_retention_execute: bool = False,
+    raw_retention_action: str = "move",
+    raw_retention_cold_store_roots: tuple[str, ...] = (),
+    raw_retention_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
     include_mlx_retention_plan: bool = True,
+    mlx_retention_execute: bool = False,
+    mlx_retention_action: str = "move",
+    mlx_retention_cold_store_roots: tuple[str, ...] = (),
+    mlx_retention_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
     preflight_dependency: str | None = None,
     materializer_feedback_bridge: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -863,6 +926,12 @@ def build_dqs1_local_first_queue(
             "include_mlx_local_advisory_debug requires allow_large_mlx_cache=True "
             "because DQS1 full-sample tensor caches are multi-GB artifacts"
         )
+    for label, action in {
+        "raw_retention_action": raw_retention_action,
+        "mlx_retention_action": mlx_retention_action,
+    }.items():
+        if action not in {"move", "delete"}:
+            raise ExperimentQueueError(f"{label} must be move or delete")
     date = lane_date or _lane_date_from_summary_path(selection.action_summary_path)
     selected_pairs = ",".join(str(index) for index in selection.selected_pair_indices)
     materialized_root = f"{results_root}/materialized/{selection.candidate_slug}"
@@ -1045,15 +1114,14 @@ def build_dqs1_local_first_queue(
                 "id": "plan_raw_artifact_retention",
                 "requires": ["local_cpu_advisory"],
                 "timeout_seconds": 1200,
-                "command": [
-                    ".venv/bin/python",
-                    "tools/compact_experiment_artifacts.py",
-                    materialized_root,
-                    "--min-bytes",
-                    "1",
-                    "--json-output",
-                    raw_retention_plan,
-                ],
+                "command": _retention_command(
+                    roots=[materialized_root],
+                    json_output=raw_retention_plan,
+                    execute=raw_retention_execute,
+                    action=raw_retention_action,
+                    cold_store_roots=raw_retention_cold_store_roots,
+                    cold_store_reserve_gb=raw_retention_cold_store_reserve_gb,
+                ),
                 "resources": {"kind": "local_io_heavy"},
                 "postconditions": [
                     {
@@ -1160,17 +1228,15 @@ def build_dqs1_local_first_queue(
                     "id": "plan_mlx_delta_cache_retention",
                     "requires": ["local_mlx_advisory_response"],
                     "timeout_seconds": 1200,
-                    "command": [
-                        ".venv/bin/python",
-                        "tools/compact_experiment_artifacts.py",
-                        materialized_root,
-                        "--include-kind",
-                        "mlx_scorer_input_cache",
-                        "--min-bytes",
-                        "1",
-                        "--json-output",
-                        mlx_retention_plan,
-                    ],
+                    "command": _retention_command(
+                        roots=[materialized_root],
+                        json_output=mlx_retention_plan,
+                        include_kind="mlx_scorer_input_cache",
+                        execute=mlx_retention_execute,
+                        action=mlx_retention_action,
+                        cold_store_roots=mlx_retention_cold_store_roots,
+                        cold_store_reserve_gb=mlx_retention_cold_store_reserve_gb,
+                    ),
                     "resources": {"kind": "local_io_heavy"},
                     "postconditions": [
                         {
@@ -1298,7 +1364,15 @@ def build_dqs1_local_first_queue_from_selections(
     mlx_batch_pairs: int = 1,
     mlx_cache_batch_pairs: int = 8,
     include_raw_retention_plan: bool = True,
+    raw_retention_execute: bool = False,
+    raw_retention_action: str = "move",
+    raw_retention_cold_store_roots: tuple[str, ...] = (),
+    raw_retention_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
     include_mlx_retention_plan: bool = True,
+    mlx_retention_execute: bool = False,
+    mlx_retention_action: str = "move",
+    mlx_retention_cold_store_roots: tuple[str, ...] = (),
+    mlx_retention_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
     include_scheduler_preflight: bool = False,
     scheduler_storage_tiers: tuple[str, ...] = (),
     scheduler_storage_workload_subdir: str | None = None,
@@ -1366,7 +1440,15 @@ def build_dqs1_local_first_queue_from_selections(
             mlx_batch_pairs=mlx_batch_pairs,
             mlx_cache_batch_pairs=mlx_cache_batch_pairs,
             include_raw_retention_plan=include_raw_retention_plan,
+            raw_retention_execute=raw_retention_execute,
+            raw_retention_action=raw_retention_action,
+            raw_retention_cold_store_roots=raw_retention_cold_store_roots,
+            raw_retention_cold_store_reserve_gb=raw_retention_cold_store_reserve_gb,
             include_mlx_retention_plan=include_mlx_retention_plan,
+            mlx_retention_execute=mlx_retention_execute,
+            mlx_retention_action=mlx_retention_action,
+            mlx_retention_cold_store_roots=mlx_retention_cold_store_roots,
+            mlx_retention_cold_store_reserve_gb=mlx_retention_cold_store_reserve_gb,
             preflight_dependency=preflight_dependency,
             materializer_feedback_bridge=materializer_feedback_bridge,
         )
@@ -1429,7 +1511,15 @@ def build_queue_from_action_summary(
     mlx_batch_pairs: int = 1,
     mlx_cache_batch_pairs: int = 8,
     include_raw_retention_plan: bool = True,
+    raw_retention_execute: bool = False,
+    raw_retention_action: str = "move",
+    raw_retention_cold_store_roots: tuple[str, ...] = (),
+    raw_retention_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
     include_mlx_retention_plan: bool = True,
+    mlx_retention_execute: bool = False,
+    mlx_retention_action: str = "move",
+    mlx_retention_cold_store_roots: tuple[str, ...] = (),
+    mlx_retention_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
     include_scheduler_preflight: bool = False,
     scheduler_storage_tiers: tuple[str, ...] = (),
     scheduler_storage_workload_subdir: str | None = None,
@@ -1495,7 +1585,15 @@ def build_queue_from_action_summary(
             mlx_batch_pairs=mlx_batch_pairs,
             mlx_cache_batch_pairs=mlx_cache_batch_pairs,
             include_raw_retention_plan=include_raw_retention_plan,
+            raw_retention_execute=raw_retention_execute,
+            raw_retention_action=raw_retention_action,
+            raw_retention_cold_store_roots=raw_retention_cold_store_roots,
+            raw_retention_cold_store_reserve_gb=raw_retention_cold_store_reserve_gb,
             include_mlx_retention_plan=include_mlx_retention_plan,
+            mlx_retention_execute=mlx_retention_execute,
+            mlx_retention_action=mlx_retention_action,
+            mlx_retention_cold_store_roots=mlx_retention_cold_store_roots,
+            mlx_retention_cold_store_reserve_gb=mlx_retention_cold_store_reserve_gb,
             include_scheduler_preflight=include_scheduler_preflight,
             scheduler_storage_tiers=scheduler_storage_tiers,
             scheduler_storage_workload_subdir=scheduler_storage_workload_subdir,
