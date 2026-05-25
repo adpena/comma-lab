@@ -2965,6 +2965,30 @@ def test_materializer_work_queue_wraps_family_agnostic_empirical_sweep(
     assert step["id"] == MATERIALIZER_EXECUTION_STEP_ID
     assert step["command"][1] == "tools/run_family_agnostic_materializer_sweep.py"
 
+    exact_queue = build_materializer_execution_queue(
+        queue,
+        queue_id="family_sweep_exact_fixture",
+        repo_root=tmp_path,
+        source_work_queue_path=tmp_path / "family_sweep_work_queue.json",
+        include_exact_readiness_followup=True,
+    )
+    experiment = exact_queue["experiments"][0]
+    assert [item["id"] for item in experiment["steps"]] == [
+        MATERIALIZER_EXECUTION_STEP_ID,
+        MATERIALIZER_HARVEST_STEP_ID,
+        MATERIALIZER_DISPATCH_PLAN_STEP_ID,
+    ]
+    assert experiment["metadata"]["exact_readiness_followup_requested"] is True
+    assert experiment["metadata"]["exact_readiness_followup_enabled"] is True
+    assert experiment["metadata"]["exact_readiness_followup_skipped_reason"] is None
+    harvest_step = experiment["steps"][1]
+    sweep_arg = harvest_step["command"][
+        harvest_step["command"].index("--sweep-manifest") + 1
+    ]
+    assert sweep_arg.startswith(f"{experiment['id']}=")
+    assert sweep_arg.endswith("sweep/sweep.json")
+    assert "--chain-manifest" not in harvest_step["command"]
+
 
 def test_materializer_work_queue_wraps_packet_member_zip_header_elide(
     tmp_path: Path,

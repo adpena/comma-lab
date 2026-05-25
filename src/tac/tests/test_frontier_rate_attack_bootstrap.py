@@ -152,16 +152,23 @@ def test_frontier_bootstrap_can_append_exact_readiness_followups(
     assert bootstrap["exact_readiness_followup_requested"] is True
     assert bootstrap["exact_readiness_followup_require_ready"] is True
     assert metadata["exact_readiness_followup_requested"] is True
-    assert experiment["metadata"]["exact_readiness_followup_enabled"] is False
-    assert experiment["metadata"]["exact_readiness_followup_skipped_reason"] == (
-        "materializer_manifest_not_harvestable_for_exact_readiness"
-    )
+    assert experiment["metadata"]["exact_readiness_followup_enabled"] is True
+    assert experiment["metadata"]["exact_readiness_followup_skipped_reason"] is None
     assert [step["id"] for step in experiment["steps"]] == [
         MATERIALIZER_EXECUTION_STEP_ID,
+        "harvest_materializer_chains",
+        "build_exact_eval_dispatch_plan",
     ]
+    harvest_step = experiment["steps"][1]
+    sweep_arg = harvest_step["command"][
+        harvest_step["command"].index("--sweep-manifest") + 1
+    ]
+    assert sweep_arg.startswith(f"{experiment['id']}=")
+    assert sweep_arg.endswith("packet_member_recompress_v1/sweep.json")
+    assert "--exact-readiness-require-ready" in harvest_step["command"]
 
 
-def test_frontier_bootstrap_exact_followup_request_stays_fail_closed_on_sweeps(
+def test_frontier_bootstrap_exact_followup_request_harvests_sweep_candidates(
     tmp_path: Path,
 ) -> None:
     archive_path = _write_archive(tmp_path / "archive.zip", member_name="payload.bin")
@@ -186,12 +193,12 @@ def test_frontier_bootstrap_exact_followup_request_stays_fail_closed_on_sweeps(
 
     experiment = payloads["queue"]["experiments"][0]
     assert experiment["metadata"]["exact_readiness_followup_requested"] is True
-    assert experiment["metadata"]["exact_readiness_followup_enabled"] is False
-    assert experiment["metadata"]["exact_readiness_followup_skipped_reason"] == (
-        "materializer_manifest_not_harvestable_for_exact_readiness"
-    )
+    assert experiment["metadata"]["exact_readiness_followup_enabled"] is True
+    assert experiment["metadata"]["exact_readiness_followup_skipped_reason"] is None
     assert [step["id"] for step in experiment["steps"]] == [
         MATERIALIZER_EXECUTION_STEP_ID,
+        "harvest_materializer_chains",
+        "build_exact_eval_dispatch_plan",
     ]
 
 
@@ -262,13 +269,18 @@ def test_frontier_bootstrap_cli_writes_valid_queue(tmp_path: Path) -> None:
     queue = json.loads(queue_path.read_text(encoding="utf-8"))
     assert queue["experiments"][0]["metadata"][
         "exact_readiness_followup_enabled"
-    ] is False
+    ] is True
     assert queue["experiments"][0]["metadata"][
         "exact_readiness_followup_skipped_reason"
-    ] == "materializer_manifest_not_harvestable_for_exact_readiness"
+    ] is None
     assert [step["id"] for step in queue["experiments"][0]["steps"]] == [
         MATERIALIZER_EXECUTION_STEP_ID,
+        "harvest_materializer_chains",
+        "build_exact_eval_dispatch_plan",
     ]
+    harvest_step = queue["experiments"][0]["steps"][1]
+    assert "--sweep-manifest" in harvest_step["command"]
+    assert "--chain-manifest" not in harvest_step["command"]
 
     validate = subprocess.run(
         [

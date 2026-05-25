@@ -34,6 +34,9 @@ from tac.optimization.inverse_scorer_cell_chain import (
 from tac.optimization.inverse_scorer_cell_chain import (
     CHAIN_SCHEMA as INVERSE_SCORER_CELL_CHAIN_SCHEMA,
 )
+from tac.optimization.materializer_feedback import (
+    FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA,
+)
 from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
     ordered_unique,
@@ -97,6 +100,7 @@ def harvest_materializer_chain_manifests(
     experiment_queue_id: str | None = None,
     chain_manifest_paths: Sequence[str | Path] = (),
     chain_roots: Sequence[str | Path] = (),
+    sweep_manifest_specs: Sequence[str | Path] = (),
     renderer_payload_dfl1_inflate_parity_proofs: Sequence[str | Path] = (),
     allowed_artifact_roots: Sequence[str | Path] = (),
     require_succeeded_state: bool = True,
@@ -120,6 +124,7 @@ def harvest_materializer_chain_manifests(
         work_queue_path=work_queue_path,
         chain_manifest_paths=chain_manifest_paths,
         chain_roots=chain_roots,
+        sweep_manifest_specs=sweep_manifest_specs,
     )
 
     accepted_paths: list[Path] = []
@@ -140,6 +145,14 @@ def harvest_materializer_chain_manifests(
             "accepted": False,
             "blockers": [],
         }
+        for key in (
+            "sweep_manifest_path",
+            "sweep_observation_id",
+            "sweep_rate_positive",
+            "sweep_receiver_contract_satisfied",
+        ):
+            if key in discovery:
+                row[key] = discovery.get(key)
         state_blockers = _state_blockers(
             row,
             require_succeeded_state=require_succeeded_state,
@@ -185,6 +198,7 @@ def harvest_materializer_chain_manifests(
             "experiment_queue_id": experiment_queue_id,
             "require_succeeded_state": require_succeeded_state,
             "discovered_manifest_count": len(discoveries),
+            "sweep_manifest_count": len(sweep_manifest_specs),
             "unique_manifest_count": len(inspected_rows),
             "accepted_manifest_count": len(accepted_rows),
             "rejected_manifest_count": len(rejected_rows),
@@ -636,8 +650,19 @@ def _discover_chain_manifest_candidates(
     work_queue_path: str | Path | None,
     chain_manifest_paths: Sequence[str | Path],
     chain_roots: Sequence[str | Path],
+    sweep_manifest_specs: Sequence[str | Path],
 ) -> list[dict[str, Any]]:
     discoveries: list[dict[str, Any]] = []
+    for raw_spec in sweep_manifest_specs:
+        work_id, path = _parse_sweep_manifest_spec(raw_spec)
+        discoveries.extend(
+            _sweep_manifest_candidates(
+                path,
+                repo_root=repo_root,
+                work_id=work_id,
+                source="explicit_sweep_manifest",
+            )
+        )
     if work_queue_path is not None:
         discoveries.extend(
             _work_queue_manifest_candidates(
@@ -699,6 +724,22 @@ def _work_queue_manifest_candidates(
                 path = condition.get("path")
             else:
                 continue
+            if (
+                schema == FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA
+                and isinstance(path, str)
+                and path.strip()
+            ):
+                discoveries.extend(
+                    _sweep_manifest_candidates(
+                        path,
+                        repo_root=repo_root,
+                        work_id=work_id or None,
+                        source="materializer_work_queue_sweep_postcondition",
+                        work_queue_path=work_queue_path,
+                        backlog_key=raw_row.get("backlog_key"),
+                    )
+                )
+                continue
             if schema not in SUPPORTED_MATERIALIZER_MANIFEST_SCHEMAS:
                 continue
             if not isinstance(path, str) or not path.strip():
@@ -713,6 +754,87 @@ def _work_queue_manifest_candidates(
                     "backlog_key": raw_row.get("backlog_key"),
                 }
             )
+    return discoveries
+
+
+def _parse_sweep_manifest_spec(raw_spec: str | Path) -> tuple[str | None, str | Path]:
+    if isinstance(raw_spec, Path):
+        return None, raw_spec
+    text = str(raw_spec)
+    if "=" not in text:
+        return None, text
+    work_id, path = text.split("=", 1)
+    work_id = work_id.strip()
+    path = path.strip()
+    if not work_id or not path:
+        raise ExperimentQueueError(
+            "sweep manifest specs must be PATH or work_id=PATH"
+        )
+    return work_id, path
+
+
+def _sweep_manifest_candidates(
+    sweep_manifest_path: str | Path,
+    *,
+    repo_root: Path,
+    work_id: str | None,
+    source: str,
+    work_queue_path: Path | None = None,
+    backlog_key: Any = None,
+) -> list[dict[str, Any]]:
+    path = _resolve_path(sweep_manifest_path, repo_root=repo_root)
+    if not path.is_file():
+        raise ExperimentQueueError(f"materializer sweep manifest missing: {path}")
+    if path.is_symlink():
+        raise ExperimentQueueError(f"materializer sweep manifest is symlink: {path}")
+    payload = _load_json(path)
+    if not isinstance(payload, Mapping):
+        raise ExperimentQueueError("materializer sweep manifest must be an object")
+    if payload.get("schema") != FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA:
+        raise ExperimentQueueError(
+            "expected "
+            f"{FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA}, "
+            f"got {payload.get('schema')!r}"
+        )
+    try:
+        require_no_truthy_authority_fields(
+            payload,
+            context="family_agnostic_materializer_sweep",
+        )
+    except ValueError as exc:
+        raise ExperimentQueueError(str(exc)) from exc
+    discoveries: list[dict[str, Any]] = []
+    for index, observation in enumerate(payload.get("observations") or []):
+        if not isinstance(observation, Mapping):
+            continue
+        try:
+            require_no_truthy_authority_fields(
+                observation,
+                context=f"family_agnostic_materializer_sweep.observations.{index}",
+            )
+        except ValueError as exc:
+            raise ExperimentQueueError(str(exc)) from exc
+        manifest_path = observation.get("manifest_path") or observation.get("source_path")
+        if not isinstance(manifest_path, str) or not manifest_path.strip():
+            continue
+        discoveries.append(
+            {
+                "source": source,
+                "work_queue_path": _repo_rel(work_queue_path, repo_root)
+                if work_queue_path is not None
+                else None,
+                "sweep_manifest_path": _repo_rel(path, repo_root),
+                "sweep_observation_id": observation.get("observation_id"),
+                "sweep_rate_positive": observation.get("rate_positive") is True,
+                "sweep_receiver_contract_satisfied": (
+                    observation.get("receiver_contract_satisfied") is True
+                ),
+                "path": manifest_path,
+                "schema": None,
+                "work_id": work_id,
+                "backlog_key": backlog_key,
+            }
+        )
     return discoveries
 
 

@@ -253,6 +253,12 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
         source_archive=source_archive,
         candidate_archive=candidate_archive,
     )
+    delta_status = str(serialized_delta.get("status") or "").strip()
+    realized_saved_bytes = serialized_delta.get("realized_saved_bytes")
+    rate_positive = (
+        delta_status == "realized_saving"
+        and serialized_delta.get("savings_realized") is True
+    )
     receiver_verification = manifest.get("receiver_verification")
     receiver_map = (
         receiver_verification if isinstance(receiver_verification, Mapping) else {}
@@ -310,6 +316,15 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
         **_member_candidate_fields("candidate", candidate_member),
         **_member_candidate_fields("source", source_member),
         "serialized_archive_delta": serialized_delta,
+        "materializer_rate_outcome": manifest.get("materializer_rate_outcome")
+        or delta_status,
+        "rate_positive": rate_positive,
+        "realized_saved_bytes": realized_saved_bytes,
+        "signal_semantics": (
+            "realized_archive_saving"
+            if rate_positive
+            else "successful_quality_spend_not_byte_saving_progress"
+        ),
         "score_affecting_payload_changed": archive_changed,
         "charged_bits_changed": byte_changed,
         "score_affecting_change_proof": _score_affecting_change_proof(

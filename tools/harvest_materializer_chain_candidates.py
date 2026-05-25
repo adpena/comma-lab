@@ -38,6 +38,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--chain-manifest", type=Path, action="append", default=[])
     parser.add_argument("--chain-root", type=Path, action="append", default=[])
     parser.add_argument(
+        "--sweep-manifest",
+        action="append",
+        default=[],
+        help=(
+            "Harvest candidate manifests referenced by a "
+            "family_agnostic_materializer_empirical_sweep.v1 payload. Use "
+            "work_id=path to bind experiment-queue state custody."
+        ),
+    )
+    parser.add_argument(
         "--renderer-payload-dfl1-inflate-parity-proof",
         type=Path,
         action="append",
@@ -134,9 +144,11 @@ def main(argv: list[str] | None = None) -> int:
         args.work_queue is None
         and not args.chain_manifest
         and not args.chain_root
+        and not args.sweep_manifest
     ):
         raise SystemExit(
-            "provide at least one of --work-queue, --chain-manifest, or --chain-root"
+            "provide at least one of --work-queue, --chain-manifest, "
+            "--chain-root, or --sweep-manifest"
         )
     if args.state is not None and not str(args.queue_id or "").strip():
         raise SystemExit("--queue-id is required when --state is provided")
@@ -164,6 +176,7 @@ def main(argv: list[str] | None = None) -> int:
         experiment_queue_id=args.queue_id,
         chain_manifest_paths=args.chain_manifest,
         chain_roots=args.chain_root,
+        sweep_manifest_specs=args.sweep_manifest,
         renderer_payload_dfl1_inflate_parity_proofs=(
             args.renderer_payload_dfl1_inflate_parity_proof
         ),

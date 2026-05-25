@@ -3428,7 +3428,11 @@ def _materializer_chain_manifest_path(
     *,
     row_id: str,
 ) -> str:
-    path, _saw_manifest_postcondition = _harvestable_materializer_manifest_path(postconditions)
+    path, kind, _saw_manifest_postcondition = (
+        _harvestable_materializer_manifest_reference(postconditions)
+    )
+    if kind == "sweep_manifest":
+        path = None
     if path is not None:
         return path
     raise ExperimentQueueError(
@@ -3439,13 +3443,22 @@ def _materializer_chain_manifest_path(
 def _harvestable_materializer_manifest_path(
     postconditions: Sequence[Mapping[str, Any]],
 ) -> tuple[str | None, bool]:
+    path, _kind, saw_manifest_postcondition = (
+        _harvestable_materializer_manifest_reference(postconditions)
+    )
+    return path, saw_manifest_postcondition
+
+
+def _harvestable_materializer_manifest_reference(
+    postconditions: Sequence[Mapping[str, Any]],
+) -> tuple[str | None, str | None, bool]:
     saw_manifest_postcondition = False
     for condition in postconditions:
         if condition.get("type") != "materializer_chain_complete":
             continue
         path = condition.get("path")
         if isinstance(path, str) and path.strip():
-            return path, True
+            return path, "chain_manifest", True
     for condition in postconditions:
         if condition.get("type") != "json_completion_contract":
             continue
@@ -3454,11 +3467,12 @@ def _harvestable_materializer_manifest_path(
             saw_manifest_postcondition = True
         required_equals = condition.get("required_equals")
         schema = required_equals.get("schema") if isinstance(required_equals, Mapping) else condition.get("schema")
-        if schema not in HARVESTABLE_MATERIALIZER_MANIFEST_SCHEMAS:
-            continue
         if isinstance(path, str) and path.strip():
-            return path, saw_manifest_postcondition
-    return None, saw_manifest_postcondition
+            if schema in HARVESTABLE_MATERIALIZER_MANIFEST_SCHEMAS:
+                return path, "chain_manifest", saw_manifest_postcondition
+            if schema == FAMILY_AGNOSTIC_MATERIALIZER_SWEEP_SCHEMA:
+                return path, "sweep_manifest", saw_manifest_postcondition
+    return None, None, saw_manifest_postcondition
 
 
 def _planning_only_exact_readiness_skip_reason(row: Mapping[str, Any]) -> str | None:
@@ -3479,7 +3493,9 @@ def _materializer_exact_readiness_skip_reason(
     planning_reason = _planning_only_exact_readiness_skip_reason(row)
     if planning_reason is not None:
         return planning_reason
-    path, saw_manifest_postcondition = _harvestable_materializer_manifest_path(postconditions)
+    path, _kind, saw_manifest_postcondition = (
+        _harvestable_materializer_manifest_reference(postconditions)
+    )
     if path is None and saw_manifest_postcondition:
         return "materializer_manifest_not_harvestable_for_exact_readiness"
     return None
@@ -3504,11 +3520,15 @@ def _materializer_exact_readiness_followup_steps(
     dispatch_max_total_cost: float,
     dispatch_estimated_cost_per_dispatch: float,
 ) -> list[dict[str, Any]]:
-    chain_manifest_path = _materializer_chain_manifest_path(
-        postconditions,
-        row_id=row_id,
+    manifest_ref_path, manifest_ref_kind, _saw_manifest_postcondition = (
+        _harvestable_materializer_manifest_reference(postconditions)
     )
-    manifest_path = _resolve_repo_path(chain_manifest_path, repo_root=repo_root)
+    if manifest_ref_path is None or manifest_ref_kind is None:
+        raise ExperimentQueueError(
+            "include_exact_readiness_followup requires a harvestable "
+            f"materializer manifest postcondition for {row_id}"
+        )
+    manifest_path = _resolve_repo_path(manifest_ref_path, repo_root=repo_root)
     source_queue_path = handoff_dir / "source_queue.json"
     harvest_report_path = handoff_dir / "harvest_report.json"
     readiness_dir = handoff_dir / "exact_readiness"
@@ -3542,8 +3562,6 @@ def _materializer_exact_readiness_followup_steps(
         _repo_rel(source_state_path, repo_root),
         "--queue-id",
         queue_id,
-        "--chain-manifest",
-        _repo_rel(manifest_path, repo_root),
         "--source-queue-out",
         _repo_rel(source_queue_path, repo_root),
         "--report-out",
@@ -3554,6 +3572,20 @@ def _materializer_exact_readiness_followup_steps(
         _repo_rel(bridge_report_path, repo_root),
         "--require-accepted",
     ]
+    if manifest_ref_kind == "sweep_manifest":
+        harvest_command.extend(
+            [
+                "--sweep-manifest",
+                f"{row_id}={_repo_rel(manifest_path, repo_root)}",
+            ]
+        )
+    else:
+        harvest_command.extend(
+            [
+                "--chain-manifest",
+                _repo_rel(manifest_path, repo_root),
+            ]
+        )
     if dfl1_parity_proof_path is not None:
         harvest_command.extend(
             [
@@ -4108,14 +4140,19 @@ def build_materializer_execution_queue(
             postconditions = _normalize_materializer_queue_postconditions(row.get("postconditions"))
             if _materializer_exact_readiness_skip_reason(row, postconditions) is not None:
                 continue
-            chain_manifest_path = _resolve_repo_path(
-                _materializer_chain_manifest_path(
-                    postconditions,
-                    row_id=str(row.get("work_id") or index),
-                ),
+            manifest_ref_path, _manifest_ref_kind, _saw_manifest_postcondition = (
+                _harvestable_materializer_manifest_reference(postconditions)
+            )
+            if manifest_ref_path is None:
+                raise ExperimentQueueError(
+                    "include_exact_readiness_followup requires a harvestable "
+                    f"materializer manifest postcondition for {row.get('work_id') or index}"
+                )
+            materializer_manifest_path = _resolve_repo_path(
+                manifest_ref_path,
                 repo_root=repo,
             )
-            handoff_dir = chain_manifest_path.parent / "exact_eval_handoff"
+            handoff_dir = materializer_manifest_path.parent / "exact_eval_handoff"
             if not _path_under_root(handoff_dir, expected_output_root):
                 raise ExperimentQueueError(
                     "materializer exact-readiness follow-up path outside "
@@ -4210,11 +4247,16 @@ def build_materializer_execution_queue(
             }
         ]
         if exact_readiness_followup_enabled:
-            chain_manifest_path = _resolve_repo_path(
-                _materializer_chain_manifest_path(
-                    postconditions,
-                    row_id=str(row.get("work_id") or experiment_id),
-                ),
+            manifest_ref_path, _manifest_ref_kind, _saw_manifest_postcondition = (
+                _harvestable_materializer_manifest_reference(postconditions)
+            )
+            if manifest_ref_path is None:
+                raise ExperimentQueueError(
+                    "include_exact_readiness_followup requires a harvestable "
+                    f"materializer manifest postcondition for {row.get('work_id') or experiment_id}"
+                )
+            materializer_manifest_path = _resolve_repo_path(
+                manifest_ref_path,
                 repo_root=repo,
             )
             steps.extend(
@@ -4226,7 +4268,8 @@ def build_materializer_execution_queue(
                     source_state_path=_resolve_repo_path(state_ref, repo_root=repo),
                     work_row=row,
                     postconditions=postconditions,
-                    handoff_dir=chain_manifest_path.parent / "exact_eval_handoff",
+                    handoff_dir=materializer_manifest_path.parent
+                    / "exact_eval_handoff",
                     materializer_step_id=MATERIALIZER_EXECUTION_STEP_ID,
                     step_timeout_seconds=step_timeout_seconds,
                     require_ready=exact_readiness_followup_require_ready,

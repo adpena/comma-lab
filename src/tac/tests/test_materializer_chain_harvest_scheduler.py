@@ -58,6 +58,9 @@ from tac.optimization.proxy_candidate_contract import truthy_authority_field_vio
 from tac.optimization.serialized_archive_economics import (
     build_serialized_archive_delta_contract,
 )
+from tools.run_family_agnostic_materializer_sweep import (
+    build_materializer_empirical_sweep,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = REPO_ROOT / "tools" / "harvest_materializer_chain_candidates.py"
@@ -614,6 +617,110 @@ def test_harvest_work_queue_family_agnostic_candidate_manifest(
     assert "runtime_consumption_proof_missing" in row["dispatch_blockers"]
     assert row["runtime_consumption_proof_status"] == "missing"
     assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_harvest_family_agnostic_sweep_manifest_revalidates_candidate_manifests(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    archive = repo / "source.zip"
+    payload = (b"ABCD" * 4096) + (b"\x00" * 4096)
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr(
+            "payload.bin",
+            payload,
+            compress_type=zipfile.ZIP_DEFLATED,
+            compresslevel=1,
+        )
+    sweep_dir = repo / "sweep"
+    sweep_payload = build_materializer_empirical_sweep(
+        target_kind="packet_member_recompress_v1",
+        archives=[f"frontier={archive}"],
+        output_dir=sweep_dir,
+        member_name="payload.bin",
+        zip_compression_methods=("deflated",),
+        zip_compresslevels=(9,),
+    )
+    sweep_manifest = _write_json(sweep_dir / "sweep.json", sweep_payload)
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        sweep_manifest_specs=[f"sweep_work={sweep_manifest}"],
+        require_succeeded_state=False,
+    )
+
+    report = result["report"]
+    queue = result["source_queue"]
+    row = queue["top_k"][0]
+    assert report["accepted_manifest_count"] == 1
+    assert report["sweep_manifest_count"] == 1
+    assert report["rows"][0]["source"] == "explicit_sweep_manifest"
+    assert report["rows"][0]["sweep_rate_positive"] is True
+    assert report["rows"][0]["work_id"] == "sweep_work"
+    assert row["candidate_family"] == "packet_member_recompress"
+    assert row["rate_positive"] is True
+    assert row["realized_saved_bytes"] > 0
+    assert row["runtime_consumption_proof_status"] == "present"
+    assert row["receiver_contract_satisfied"] is True
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_harvest_cli_accepts_family_agnostic_sweep_manifest(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    archive = repo / "source.zip"
+    payload = b"ABCD" * 4096
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr(
+            "payload.bin",
+            payload,
+            compress_type=zipfile.ZIP_DEFLATED,
+            compresslevel=1,
+        )
+    sweep_dir = repo / "sweep"
+    sweep_payload = build_materializer_empirical_sweep(
+        target_kind="packet_member_recompress_v1",
+        archives=[f"frontier={archive}"],
+        output_dir=sweep_dir,
+        member_name="payload.bin",
+        zip_compression_methods=("deflated",),
+        zip_compresslevels=(9,),
+    )
+    sweep_manifest = _write_json(sweep_dir / "sweep.json", sweep_payload)
+    source_queue_out = repo / "source_queue.json"
+    report_out = repo / "harvest_report.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--repo-root",
+            str(repo),
+            "--sweep-manifest",
+            f"sweep_work={sweep_manifest}",
+            "--source-queue-out",
+            str(source_queue_out),
+            "--report-out",
+            str(report_out),
+            "--require-accepted",
+        ],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    source_queue = json.loads(source_queue_out.read_text(encoding="utf-8"))
+    report = json.loads(report_out.read_text(encoding="utf-8"))
+    assert source_queue["n_candidates"] == 1
+    assert report["accepted_manifest_count"] == 1
+    assert report["sweep_manifest_count"] == 1
+    assert "harvested 1/1 materializer chain manifest" in completed.stdout
 
 
 def test_harvest_family_agnostic_packet_recompress_payload_identity_proof(
