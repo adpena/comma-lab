@@ -102,6 +102,7 @@ PORTFOLIO_SCHEMA = "byte_shaving_campaign_dqs1_operator_portfolio.v1"
 TOOL_NAME = "comma_lab.scheduler.byte_shaving_campaign_queue"
 BYTE_RANGE_CHAIN_TOOL = "tools/run_byte_range_entropy_recode_chain.py"
 FAMILY_AGNOSTIC_MATERIALIZER_TOOL = "tools/run_family_agnostic_materializer.py"
+FAMILY_AGNOSTIC_MATERIALIZER_SWEEP_TOOL = "tools/run_family_agnostic_materializer_sweep.py"
 SHELL_INFLATE_PARITY_TOOL = "tools/prove_shell_inflate_parity.py"
 INVERSE_ACTION_FUNCTIONAL_TOOL = "tools/build_inverse_steganalysis_action_functional.py"
 INVERSE_SCORER_CELL_TOOL = "tools/materialize_inverse_scorer_cell_candidate.py"
@@ -118,6 +119,8 @@ MATERIALIZER_DISPATCH_PLAN_STEP_ID = "build_exact_eval_dispatch_plan"
 MATERIALIZER_HARVEST_REPORT_SCHEMA = "materializer_chain_harvest_report.v1"
 MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA = "materializer_chain_exact_readiness_bridge_report.v1"
 MATERIALIZER_EXACT_EVAL_DISPATCH_PLAN_SCHEMA = "materializer_exact_eval_dispatch_plan.v1"
+FAMILY_AGNOSTIC_MATERIALIZER_SWEEP_SCHEMA = "family_agnostic_materializer_empirical_sweep.v1"
+FAMILY_AGNOSTIC_MATERIALIZER_SWEEP_OBSERVATION_SCHEMA = "family_agnostic_materializer_empirical_observation.v1"
 OPTIMIZER_CANDIDATE_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
 HARVESTABLE_MATERIALIZER_MANIFEST_SCHEMAS = frozenset(
     {
@@ -2111,6 +2114,332 @@ def _family_agnostic_materializer_command(
     )
 
 
+def _sweep_archive_specs_context_value(context: Mapping[str, Any]) -> list[str]:
+    specs: list[str] = []
+    for key in (
+        "sweep_archives",
+        "sweep_archive_specs",
+        "materializer_sweep_archives",
+        "materializer_sweep_archive_specs",
+    ):
+        value = context.get(key)
+        if isinstance(value, Mapping):
+            label = _context_string_any(value, ("label", "archive_label"))
+            path = _context_string_any(value, ("path", "archive_path", "source_archive"))
+            if path is not None:
+                specs.append(f"{label}={path}" if label else path)
+            continue
+        if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray, str)):
+            for item in value:
+                if isinstance(item, Mapping):
+                    label = _context_string_any(item, ("label", "archive_label"))
+                    path = _context_string_any(
+                        item,
+                        ("path", "archive_path", "source_archive"),
+                    )
+                    if path is not None:
+                        specs.append(f"{label}={path}" if label else path)
+                elif isinstance(item, (str, Path)) and str(item).strip():
+                    specs.append(str(item).strip())
+            continue
+        if isinstance(value, (str, Path)) and str(value).strip():
+            specs.append(str(value).strip())
+    return ordered_unique(specs)
+
+
+def _sweep_input_path_from_archive_spec(spec: str) -> str:
+    return spec.split("=", 1)[1].strip() if "=" in spec else spec.strip()
+
+
+def _context_has_family_materializer_sweep(context: Mapping[str, Any]) -> bool:
+    return bool(_sweep_archive_specs_context_value(context))
+
+
+def _family_agnostic_materializer_sweep_command(
+    context: Mapping[str, Any],
+    *,
+    target_kind: str,
+) -> tuple[list[str], list[str], dict[str, Any]]:
+    blockers: list[str] = _string_list_context_value(context, "context_blockers")
+    archive_specs = _sweep_archive_specs_context_value(context)
+    if not archive_specs:
+        blockers.append("materializer_sweep_context_missing:archives")
+    output_dir = _context_string_any(
+        context,
+        ("sweep_output_dir", "output_dir", "materializer_sweep_output_dir"),
+    )
+    if output_dir is None:
+        blockers.append("materializer_sweep_context_missing:output_dir")
+    output_json = _context_string_any(
+        context,
+        ("sweep_output_json", "output_json", "json_out"),
+    )
+    observation_jsonl = _context_string_any(
+        context,
+        ("sweep_observation_jsonl", "observation_jsonl", "observations_jsonl"),
+    )
+    if output_dir is not None:
+        output_root = Path(output_dir)
+        if output_json is None:
+            output_json = (output_root / "sweep.json").as_posix()
+        if observation_jsonl is None:
+            observation_jsonl = (output_root / "observations.jsonl").as_posix()
+
+    supported_targets = {
+        ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+        TENSOR_FACTORIZE_TARGET_KIND,
+    }
+    if target_kind not in supported_targets:
+        blockers.append(f"family_agnostic_materializer_sweep_target_unknown:{target_kind}")
+    input_paths = [_sweep_input_path_from_archive_spec(spec) for spec in archive_specs]
+    command: list[str] = []
+    if not blockers:
+        assert output_dir is not None
+        assert output_json is not None
+        assert observation_jsonl is not None
+        command = [
+            ".venv/bin/python",
+            FAMILY_AGNOSTIC_MATERIALIZER_SWEEP_TOOL,
+            "--target-kind",
+            target_kind,
+            "--output-dir",
+            output_dir,
+            "--output-json",
+            output_json,
+            "--observation-jsonl",
+            observation_jsonl,
+        ]
+        for spec in archive_specs:
+            command.extend(["--archive", spec])
+
+    if target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND:
+        section_manifest = _path_context_value(context, "section_manifest")
+        if section_manifest is None:
+            blockers.append("materializer_sweep_context_missing:section_manifest")
+        else:
+            input_paths.append(section_manifest)
+            if command:
+                command.extend(["--section-manifest", section_manifest])
+        section_names = _string_list_context_value(context, "section_name")
+        section_names.extend(_string_list_context_value(context, "section_names"))
+        section_names.extend(_string_list_context_value(context, "target_sections"))
+        for section_name in ordered_unique(section_names):
+            if command:
+                command.extend(["--section-name", section_name])
+        qualities = _string_list_context_value(context, "brotli_quality")
+        qualities.extend(_string_list_context_value(context, "brotli_qualities"))
+        qualities.extend(_string_list_context_value(context, "quality"))
+        qualities.extend(_string_list_context_value(context, "qualities"))
+        for quality in ordered_unique(qualities):
+            if command:
+                command.extend(["--brotli-quality", quality])
+    elif target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
+        packet_member_manifest = _path_context_value(context, "packet_member_manifest")
+        if packet_member_manifest is not None:
+            input_paths.append(packet_member_manifest)
+            if command:
+                command.extend(["--packet-member-manifest", packet_member_manifest])
+        member_name = _context_string_any(
+            context,
+            ("member_name", "archive_member_name", "packet_member_name"),
+        )
+        if member_name is not None and command:
+            command.extend(["--member-name", member_name])
+        methods = _string_list_context_value(context, "zip_compression_method")
+        methods.extend(_string_list_context_value(context, "zip_compression_methods"))
+        methods.extend(_string_list_context_value(context, "compression_method"))
+        for method in ordered_unique(methods):
+            if command:
+                command.extend(["--zip-compression-method", method])
+        levels = _string_list_context_value(context, "zip_compresslevel")
+        levels.extend(_string_list_context_value(context, "zip_compresslevels"))
+        levels.extend(_string_list_context_value(context, "compresslevel"))
+        for level in ordered_unique(levels):
+            if command:
+                command.extend(["--zip-compresslevel", level])
+    elif target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
+        packet_member_manifest = _path_context_value(context, "packet_member_manifest")
+        if packet_member_manifest is not None:
+            input_paths.append(packet_member_manifest)
+            if command:
+                command.extend(["--packet-member-manifest", packet_member_manifest])
+        header_elision_contract = _path_context_value(context, "header_elision_contract")
+        if header_elision_contract is not None:
+            input_paths.append(header_elision_contract)
+            if command:
+                command.extend(["--header-elision-contract", header_elision_contract])
+        member_selection = _context_string_any(
+            context,
+            ("member_selection", "zip_member_selection", "packet_member_selection"),
+        )
+        if command and (
+            context.get("all_members") is True
+            or member_selection in {"all", "*", "all_members"}
+        ):
+            command.append("--all-members")
+        member_name = _context_string_any(
+            context,
+            ("member_name", "archive_member_name", "packet_member_name"),
+        )
+        if member_name is not None and command:
+            command.extend(["--member-name", member_name])
+        member_names = _string_list_context_value(context, "member_names")
+        member_names.extend(_string_list_context_value(context, "archive_member_names"))
+        member_names.extend(_string_list_context_value(context, "packet_member_names"))
+        for selected_member_name in ordered_unique(member_names):
+            if command:
+                command.extend(["--member-names", selected_member_name])
+    elif target_kind == TENSOR_FACTORIZE_TARGET_KIND:
+        tensor_manifest = _path_context_value(context, "tensor_manifest")
+        if tensor_manifest is None:
+            blockers.append("materializer_sweep_context_missing:tensor_manifest")
+        else:
+            input_paths.append(tensor_manifest)
+            if command:
+                command.extend(["--tensor-manifest", tensor_manifest])
+        factorization_contract = _path_context_value(context, "factorization_contract")
+        rank = _finite_int(context.get("rank"))
+        if factorization_contract is None and rank is None:
+            blockers.append("materializer_sweep_context_missing:factorization_contract_or_rank")
+        elif factorization_contract is not None:
+            input_paths.append(factorization_contract)
+            if command:
+                command.extend(["--factorization-contract", factorization_contract])
+        if rank is not None and command:
+            command.extend(["--rank", str(rank)])
+
+    min_free_bytes = _finite_int(context.get("min_free_bytes"))
+    if min_free_bytes is not None and command:
+        command.extend(["--min-free-bytes", str(min_free_bytes)])
+    if context.get("allow_overwrite") is True and command:
+        command.append("--allow-overwrite")
+
+    if blockers:
+        return [], ordered_unique(blockers), {}
+    assert output_dir is not None
+    assert output_json is not None
+    assert observation_jsonl is not None
+    artifact_paths = [output_dir, output_json, observation_jsonl]
+    return (
+        command,
+        [],
+        {
+            "artifact_paths": artifact_paths,
+            "input_artifact_paths": ordered_unique(input_paths),
+            "pullback_artifact_paths": artifact_paths,
+            "include_postcondition_paths": True,
+            "family_agnostic_materializer_sweep_contract": {
+                "schema": "family_agnostic_materializer_sweep_command_contract.v1",
+                "target_kind": target_kind,
+                "output_json": output_json,
+                "observation_jsonl": observation_jsonl,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        },
+    )
+
+
+def _materializer_sweep_postconditions(
+    *,
+    output_json: str,
+    observation_jsonl: str,
+    target_kind: str,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "type": "json_equals",
+            "path": output_json,
+            "key": "schema",
+            "equals": FAMILY_AGNOSTIC_MATERIALIZER_SWEEP_SCHEMA,
+        },
+        {
+            "type": "json_completion_contract",
+            "path": output_json,
+            "required_equals": {
+                "schema": FAMILY_AGNOSTIC_MATERIALIZER_SWEEP_SCHEMA,
+                "target_kind": target_kind,
+            },
+            "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+            ],
+            "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched",
+            ],
+            "required_positive_int": ["observation_count"],
+            "required_nonempty": ["observations", "planner_feedback"],
+            "forbidden_statuses": ["failed"],
+        },
+        {
+            "type": "jsonl_false_authority",
+            "path": observation_jsonl,
+            "schema_equals": FAMILY_AGNOSTIC_MATERIALIZER_SWEEP_OBSERVATION_SCHEMA,
+            "require_nonempty": True,
+        },
+    ]
+
+
+def _family_agnostic_materializer_queue_adapter(
+    context: Mapping[str, Any],
+    *,
+    target_kind: str,
+    schema: str,
+) -> tuple[list[str], list[str], dict[str, Any], list[dict[str, Any]]]:
+    if _context_has_family_materializer_sweep(context):
+        command, blockers, telemetry = _family_agnostic_materializer_sweep_command(
+            context,
+            target_kind=target_kind,
+        )
+        if blockers:
+            return command, blockers, telemetry, []
+        contract = telemetry.get("family_agnostic_materializer_sweep_contract")
+        if not isinstance(contract, Mapping):
+            return command, ["materializer_sweep_contract_missing"], telemetry, []
+        output_json = _context_string_any(contract, ("output_json",))
+        observation_jsonl = _context_string_any(contract, ("observation_jsonl",))
+        if output_json is None or observation_jsonl is None:
+            return command, ["materializer_sweep_output_paths_missing"], telemetry, []
+        return (
+            command,
+            [],
+            telemetry,
+            _materializer_sweep_postconditions(
+                output_json=output_json,
+                observation_jsonl=observation_jsonl,
+                target_kind=target_kind,
+            ),
+        )
+
+    command, blockers, telemetry = _family_agnostic_materializer_command(
+        context,
+        target_kind=target_kind,
+    )
+    postconditions: list[dict[str, Any]] = []
+    manifest_out = _path_context_value(context, "output_manifest")
+    if manifest_out is None:
+        manifest_out = _path_context_value(context, "manifest_out")
+    if manifest_out is None:
+        manifest_out = _path_context_value(context, "json_out")
+    output_archive = _path_context_value(context, "output_archive")
+    if manifest_out is None and output_archive is not None:
+        manifest_out = Path(output_archive).with_suffix(".json").as_posix()
+    if command and manifest_out is not None:
+        postconditions = _materializer_candidate_postconditions(
+            manifest_path=manifest_out,
+            schema=schema,
+            target_kind=target_kind,
+        )
+    return command, blockers, telemetry, postconditions
+
+
 def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
     blockers = ["materializer_work_queue_local_proof_chain_only"]
     if target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND:
@@ -2478,135 +2807,79 @@ def build_materializer_work_queue(
             and operation_family == "section_entropy_recode"
             and target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
         ):
-            command, command_blockers, telemetry = _family_agnostic_materializer_command(
+            command, command_blockers, telemetry, postconditions = (
+                _family_agnostic_materializer_queue_adapter(
                 context,
                 target_kind=ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+                schema=ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+                )
             )
             blockers.extend(command_blockers)
-            manifest_out = _path_context_value(context, "output_manifest")
-            if manifest_out is None:
-                manifest_out = _path_context_value(context, "manifest_out")
-            if manifest_out is None:
-                manifest_out = _path_context_value(context, "json_out")
-            output_archive = _path_context_value(context, "output_archive")
-            if manifest_out is None and output_archive is not None:
-                manifest_out = Path(output_archive).with_suffix(".json").as_posix()
-            if command and manifest_out is not None:
-                postconditions = _materializer_candidate_postconditions(
-                    manifest_path=manifest_out,
-                    schema=ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
-                    target_kind=ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
-                )
         elif (
             unit_kind == "packet_member"
             and operation_family == "member_recompress"
             and target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND
         ):
-            command, command_blockers, telemetry = _family_agnostic_materializer_command(
+            command, command_blockers, telemetry, postconditions = (
+                _family_agnostic_materializer_queue_adapter(
                 context,
                 target_kind=PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                schema=PACKET_MEMBER_RECOMPRESS_SCHEMA,
+                )
             )
             blockers.extend(command_blockers)
-            manifest_out = _path_context_value(context, "output_manifest")
-            if manifest_out is None:
-                manifest_out = _path_context_value(context, "manifest_out")
-            output_archive = _path_context_value(context, "output_archive")
-            if manifest_out is None and output_archive is not None:
-                manifest_out = Path(output_archive).with_suffix(".json").as_posix()
-            if command and manifest_out is not None:
-                postconditions = _materializer_candidate_postconditions(
-                    manifest_path=manifest_out,
-                    schema=PACKET_MEMBER_RECOMPRESS_SCHEMA,
-                    target_kind=PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
-                )
         elif (
             unit_kind == "packet_member"
             and operation_family == "member_merge"
             and target_kind == PACKET_MEMBER_MERGE_TARGET_KIND
         ):
-            command, command_blockers, telemetry = _family_agnostic_materializer_command(
+            command, command_blockers, telemetry, postconditions = (
+                _family_agnostic_materializer_queue_adapter(
                 context,
                 target_kind=PACKET_MEMBER_MERGE_TARGET_KIND,
+                schema=PACKET_MEMBER_MERGE_SCHEMA,
+                )
             )
             blockers.extend(command_blockers)
-            manifest_out = _path_context_value(context, "output_manifest")
-            if manifest_out is None:
-                manifest_out = _path_context_value(context, "manifest_out")
-            output_archive = _path_context_value(context, "output_archive")
-            if manifest_out is None and output_archive is not None:
-                manifest_out = Path(output_archive).with_suffix(".json").as_posix()
-            if command and manifest_out is not None:
-                postconditions = _materializer_candidate_postconditions(
-                    manifest_path=manifest_out,
-                    schema=PACKET_MEMBER_MERGE_SCHEMA,
-                    target_kind=PACKET_MEMBER_MERGE_TARGET_KIND,
-                )
         elif (
             unit_kind == "packet_member"
             and operation_family == "native_renderer_payload"
             and target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND
         ):
-            command, command_blockers, telemetry = _family_agnostic_materializer_command(
+            command, command_blockers, telemetry, postconditions = (
+                _family_agnostic_materializer_queue_adapter(
                 context,
                 target_kind=RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+                schema=RENDERER_PAYLOAD_DFL1_SCHEMA,
+                )
             )
             blockers.extend(command_blockers)
-            manifest_out = _path_context_value(context, "output_manifest")
-            if manifest_out is None:
-                manifest_out = _path_context_value(context, "manifest_out")
-            output_archive = _path_context_value(context, "output_archive")
-            if manifest_out is None and output_archive is not None:
-                manifest_out = Path(output_archive).with_suffix(".json").as_posix()
-            if command and manifest_out is not None:
-                postconditions = _materializer_candidate_postconditions(
-                    manifest_path=manifest_out,
-                    schema=RENDERER_PAYLOAD_DFL1_SCHEMA,
-                    target_kind=RENDERER_PAYLOAD_DFL1_TARGET_KIND,
-                )
         elif (
             unit_kind == "packet_member"
             and operation_family == "zip_header_elide"
             and target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND
         ):
-            command, command_blockers, telemetry = _family_agnostic_materializer_command(
+            command, command_blockers, telemetry, postconditions = (
+                _family_agnostic_materializer_queue_adapter(
                 context,
                 target_kind=PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+                schema=PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
+                )
             )
             blockers.extend(command_blockers)
-            manifest_out = _path_context_value(context, "output_manifest")
-            if manifest_out is None:
-                manifest_out = _path_context_value(context, "manifest_out")
-            output_archive = _path_context_value(context, "output_archive")
-            if manifest_out is None and output_archive is not None:
-                manifest_out = Path(output_archive).with_suffix(".json").as_posix()
-            if command and manifest_out is not None:
-                postconditions = _materializer_candidate_postconditions(
-                    manifest_path=manifest_out,
-                    schema=PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
-                    target_kind=PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
-                )
         elif (
             unit_kind == "tensor"
             and operation_family == "factorize_tensor"
             and target_kind == TENSOR_FACTORIZE_TARGET_KIND
         ):
-            command, command_blockers, telemetry = _family_agnostic_materializer_command(
+            command, command_blockers, telemetry, postconditions = (
+                _family_agnostic_materializer_queue_adapter(
                 context,
                 target_kind=TENSOR_FACTORIZE_TARGET_KIND,
+                schema=TENSOR_FACTORIZE_SCHEMA,
+                )
             )
             blockers.extend(command_blockers)
-            manifest_out = _path_context_value(context, "output_manifest")
-            if manifest_out is None:
-                manifest_out = _path_context_value(context, "manifest_out")
-            output_archive = _path_context_value(context, "output_archive")
-            if manifest_out is None and output_archive is not None:
-                manifest_out = Path(output_archive).with_suffix(".json").as_posix()
-            if command and manifest_out is not None:
-                postconditions = _materializer_candidate_postconditions(
-                    manifest_path=manifest_out,
-                    schema=TENSOR_FACTORIZE_SCHEMA,
-                    target_kind=TENSOR_FACTORIZE_TARGET_KIND,
-                )
         elif (
             unit_kind == "scorer_inverse_surface_cell"
             and operation_family == "probe_inverse_scorer_surface_cell"

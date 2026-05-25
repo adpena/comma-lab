@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -8,6 +9,7 @@ import zipfile
 from io import BytesIO
 from pathlib import Path
 
+import brotli
 import numpy as np
 
 from tools.run_family_agnostic_materializer_sweep import (
@@ -64,6 +66,26 @@ def _write_tensor_zip(path: Path) -> None:
     np.save(payload, matrix, allow_pickle=False)
     with zipfile.ZipFile(path, "w") as zf:
         zf.writestr("weights.npy", payload.getvalue(), compress_type=zipfile.ZIP_STORED)
+
+
+def _write_section_recode_zip(path: Path) -> dict[str, object]:
+    raw = (b"abcdef0123456789" * 4096) + (b"A" * 8192)
+    compressed = brotli.compress(raw, quality=1)
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr("payload.bin", compressed, compress_type=zipfile.ZIP_STORED)
+    return {
+        "schema": "archive_section_manifest.v1",
+        "member_name": "payload.bin",
+        "sections": [
+            {
+                "name": "payload_brotli",
+                "index": 0,
+                "offset": 0,
+                "length": len(compressed),
+                "sha256": hashlib.sha256(compressed).hexdigest(),
+            }
+        ],
+    }
 
 
 def test_materializer_empirical_sweep_summarizes_rate_positive_and_zero(
@@ -196,6 +218,42 @@ def test_materializer_empirical_sweep_supports_tensor_factorize(
     )
     assert row["score_claim"] is False
     assert Path(row["manifest_path"]).is_file()
+
+
+def test_materializer_empirical_sweep_supports_archive_section_entropy_recode(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "section_recode.zip"
+    section_manifest = _write_section_recode_zip(archive)
+
+    payload = build_materializer_empirical_sweep(
+        target_kind="archive_section_entropy_recode_v1",
+        archives=[f"section={archive}"],
+        output_dir=tmp_path / "sweep",
+        section_manifest=section_manifest,
+        section_names=("payload_brotli",),
+        brotli_qualities=(5, 9),
+    )
+
+    row = payload["observations"][0]
+    assert payload["materializer_id"] == "archive_section_entropy_recode_adapter"
+    assert payload["planner_feedback"]["target_kind"] == (
+        "archive_section_entropy_recode_v1"
+    )
+    assert row["selected_materialization_key"] == "section_recode"
+    assert row["section_recode"]["selected_section_names"] == ["payload_brotli"]
+    assert row["saved_bytes"] > 0
+    assert row["rate_positive"] is True
+    assert row["receiver_contract_satisfied"] is False
+    assert row["observed_score_gain"] == 0.0
+    assert "section_length_changed_requires_runtime_consumption_proof" in (
+        row["readiness_blockers"]
+    )
+    assert row["recommended_planner_action"] == (
+        "repair_receiver_contract_before_exact_readiness"
+    )
+    assert row["score_claim"] is False
+    assert Path(row["candidate_archive_path"]).is_file()
 
 
 def test_materializer_empirical_sweep_cli_writes_json_and_jsonl(

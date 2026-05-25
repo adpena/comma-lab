@@ -20,6 +20,8 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.optimization.family_agnostic_materializers import (  # noqa: E402
+    ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID,
+    ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_MATERIALIZER_ID,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID,
@@ -27,6 +29,7 @@ from tac.optimization.family_agnostic_materializers import (  # noqa: E402
     TENSOR_FACTORIZE_MATERIALIZER_ID,
     TENSOR_FACTORIZE_TARGET_KIND,
     FamilyAgnosticMaterializerError,
+    materialize_archive_section_entropy_recode_candidate,
     materialize_packet_member_recompress_candidate,
     materialize_packet_member_zip_header_elide_candidate,
     materialize_tensor_factorize_candidate,
@@ -73,6 +76,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--target-kind",
         default=PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
         choices=(
+            ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
             PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
             PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
             TENSOR_FACTORIZE_TARGET_KIND,
@@ -90,6 +94,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--member-name")
     parser.add_argument("--member-names", action="append", default=[])
     parser.add_argument("--all-members", action="store_true")
+    parser.add_argument("--section-manifest", type=Path)
+    parser.add_argument("--section-name", action="append", default=[])
+    parser.add_argument("--brotli-quality", action="append", type=int, default=[])
     parser.add_argument("--packet-member-manifest", type=Path)
     parser.add_argument("--header-elision-contract", type=Path)
     parser.add_argument("--zip-compression-method", action="append", default=[])
@@ -115,6 +122,9 @@ def main(argv: list[str] | None = None) -> int:
             output_dir=args.output_dir,
             member_name=args.member_name,
             member_names=tuple(args.member_names),
+            section_manifest=args.section_manifest,
+            section_names=tuple(args.section_name),
+            brotli_qualities=tuple(args.brotli_quality),
             packet_member_manifest=args.packet_member_manifest,
             header_elision_contract=args.header_elision_contract,
             zip_compression_methods=tuple(args.zip_compression_method),
@@ -156,6 +166,9 @@ def build_materializer_empirical_sweep(
     member_name: str | None = None,
     member_names: Sequence[str] = (),
     all_members: bool = False,
+    section_manifest: str | Path | Mapping[str, Any] | None = None,
+    section_names: Sequence[str] = (),
+    brotli_qualities: Sequence[int] = (),
     packet_member_manifest: str | Path | Mapping[str, Any] | None = None,
     header_elision_contract: str | Path | Mapping[str, Any] | None = None,
     zip_compression_methods: Sequence[str] = (),
@@ -167,11 +180,16 @@ def build_materializer_empirical_sweep(
     allow_overwrite: bool = False,
 ) -> dict[str, Any]:
     if target_kind not in {
+        ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
         TENSOR_FACTORIZE_TARGET_KIND,
     }:
         raise FamilyAgnosticMaterializerError(f"unsupported target kind: {target_kind}")
+    if target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND and section_manifest is None:
+        raise FamilyAgnosticMaterializerError(
+            "archive_section_entropy_recode_v1 requires section_manifest"
+        )
     if target_kind == TENSOR_FACTORIZE_TARGET_KIND and tensor_manifest is None:
         raise FamilyAgnosticMaterializerError(
             "tensor_factorize_v1 requires tensor_manifest"
@@ -202,6 +220,9 @@ def build_materializer_empirical_sweep(
             archive=archive,
             candidate_path=candidate_path,
             proof_path=proof_path,
+            section_manifest=section_manifest,
+            section_names=section_names,
+            brotli_qualities=brotli_qualities,
             packet_member_manifest=packet_member_manifest,
             member_name=member_name,
             member_names=member_names,
@@ -258,6 +279,9 @@ def _materialize_target(
     archive: Path,
     candidate_path: Path,
     proof_path: Path,
+    section_manifest: str | Path | Mapping[str, Any] | None,
+    section_names: Sequence[str],
+    brotli_qualities: Sequence[int],
     packet_member_manifest: str | Path | Mapping[str, Any] | None,
     member_name: str | None,
     member_names: Sequence[str],
@@ -271,6 +295,22 @@ def _materialize_target(
     allow_overwrite: bool,
     min_free_bytes: int,
 ) -> dict[str, Any]:
+    if target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND:
+        if section_manifest is None:
+            raise FamilyAgnosticMaterializerError(
+                "archive_section_entropy_recode_v1 requires section_manifest"
+            )
+        return materialize_archive_section_entropy_recode_candidate(
+            archive_path=archive,
+            output_archive=candidate_path,
+            section_manifest=section_manifest,
+            section_names=section_names,
+            brotli_qualities=tuple(brotli_qualities or (9, 10, 11)),
+            runtime_consumption_proof_out=proof_path,
+            repo_root=REPO_ROOT,
+            allow_overwrite=allow_overwrite,
+            min_free_bytes=min_free_bytes,
+        )
     if target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
         return materialize_packet_member_zip_header_elide_candidate(
             archive_path=archive,
@@ -322,6 +362,8 @@ def _materialize_target(
 
 
 def _target_materializer_id(target_kind: str) -> str:
+    if target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND:
+        return ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID
     if target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
         return PACKET_MEMBER_RECOMPRESS_MATERIALIZER_ID
     if target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
@@ -407,6 +449,7 @@ def _observation_from_manifest(
         "selected_materialization_key": selected_key,
         "selected_materialization": dict(selected),
         "selected_elision": dict(selected) if selected_key == "selected_elision" else {},
+        "section_recode": dict(selected) if selected_key == "section_recode" else {},
         "selected_compression": (
             dict(selected) if selected_key == "selected_compression" else {}
         ),
@@ -432,6 +475,7 @@ def _recommended_planner_action(
     if rate_positive:
         return "repair_receiver_contract_before_exact_readiness"
     suffix_by_target = {
+        ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND: "archive_section_entropy_recode",
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND: "member_recompress",
         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND: "header_elide",
         TENSOR_FACTORIZE_TARGET_KIND: "tensor_factorize",

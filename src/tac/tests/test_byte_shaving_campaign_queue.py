@@ -2081,6 +2081,7 @@ def test_materializer_work_queue_wraps_archive_section_entropy_recode_adapter(
         contexts={
             backlog_row["backlog_key"]: {
                 "archive_path": str(source_archive),
+                "archive_paths": [str(source_archive)],
                 "section_manifest": str(section_manifest),
                 "output_archive": str(output_archive),
                 "output_manifest": str(manifest),
@@ -2308,6 +2309,148 @@ def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
     assert "tensor_factorize_requires_cooperative_receiver" in tensor_row["dispatch_blockers"]
     assert tensor_row["score_claim"] is False
     assert tensor_row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_work_queue_wraps_family_agnostic_empirical_sweep(
+    tmp_path: Path,
+) -> None:
+    archive_a = tmp_path / "source_a.zip"
+    archive_b = tmp_path / "source_b.zip"
+    packet_manifest = tmp_path / "packet_members.json"
+    sweep_dir = tmp_path / "sweep"
+    sweep_json = sweep_dir / "sweep.json"
+    observations_jsonl = sweep_dir / "observations.jsonl"
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "backlog_key": "packet_member_recompress_sweep_fixture",
+                "unit_kind": "packet_member",
+                "operation_family": "member_recompress",
+                "target_kind": PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                "materializer_id": PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
+            },
+        ],
+    }
+
+    queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts={
+            "packet_member_recompress_sweep_fixture": {
+                "sweep_archives": [f"a={archive_a}", f"b={archive_b}"],
+                "packet_member_manifest": str(packet_manifest),
+                "member_name": "payload.bin",
+                "zip_compression_method": ["deflated"],
+                "zip_compresslevel": [9],
+                "sweep_output_dir": str(sweep_dir),
+                "sweep_output_json": str(sweep_json),
+                "sweep_observation_jsonl": str(observations_jsonl),
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    row = queue["rows"][0]
+    assert queue["executable_row_count"] == 1
+    assert row["tool"] == "tools/run_family_agnostic_materializer_sweep.py"
+    assert row["command"][:6] == [
+        ".venv/bin/python",
+        "tools/run_family_agnostic_materializer_sweep.py",
+        "--target-kind",
+        PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        "--output-dir",
+        str(sweep_dir),
+    ]
+    assert row["command"].count("--archive") == 2
+    assert ["--packet-member-manifest", str(packet_manifest)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--member-name", "payload.bin"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert row["telemetry"]["family_agnostic_materializer_sweep_contract"] == {
+        "schema": "family_agnostic_materializer_sweep_command_contract.v1",
+        "target_kind": PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        "output_json": str(sweep_json),
+        "observation_jsonl": str(observations_jsonl),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    assert row["telemetry"]["input_artifact_paths"] == [
+        str(archive_a),
+        str(archive_b),
+        str(packet_manifest),
+    ]
+    assert row["postconditions"][0] == {
+        "type": "json_equals",
+        "path": str(sweep_json),
+        "key": "schema",
+        "equals": "family_agnostic_materializer_empirical_sweep.v1",
+    }
+    assert row["postconditions"][2] == {
+        "type": "jsonl_false_authority",
+        "path": str(observations_jsonl),
+        "schema_equals": "family_agnostic_materializer_empirical_observation.v1",
+        "require_nonempty": True,
+    }
+    sweep_dir.mkdir(parents=True)
+    sweep_json.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_materializer_empirical_sweep.v1",
+                "target_kind": PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                "observation_count": 1,
+                "observations": [{"observation_id": "obs"}],
+                "planner_feedback": {"schema": "feedback"},
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    observations_jsonl.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_materializer_empirical_observation.v1",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    assert all(_condition_passes(condition, repo_root=tmp_path) for condition in row["postconditions"])
+
+    observations_jsonl.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_materializer_empirical_observation.v1",
+                "score_claim": True,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    assert _condition_passes(row["postconditions"][2], repo_root=tmp_path) is False
+    execution_queue = build_materializer_execution_queue(
+        queue,
+        queue_id="family_sweep_fixture",
+        repo_root=tmp_path,
+    )
+    step = execution_queue["experiments"][0]["steps"][0]
+    assert step["id"] == MATERIALIZER_EXECUTION_STEP_ID
+    assert step["command"][1] == "tools/run_family_agnostic_materializer_sweep.py"
 
 
 def test_materializer_work_queue_wraps_packet_member_zip_header_elide(
