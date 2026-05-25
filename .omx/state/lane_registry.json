@@ -54049,6 +54049,47 @@
         }
       },
       "notes": "Queue observation blockers feed recovery planning, feedback policy, and inverse-steganalysis action-functional signal."
+    },
+    {
+      "id": "codex_queue_health_group_prior_20260525",
+      "name": "Queue health grouped prior for inverse action planning",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "queue_health_group_prior_action_functional_patch"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "pytest_inverse_action_functional_queue_health_group_prior_155_passed"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_queue_health_group_prior_20260525T032529Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -54058,5 +54099,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T03:04:18Z"
+  "updated_at": "2026-05-25T03:26:04Z"
 }

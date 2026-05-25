@@ -53,6 +53,7 @@ QUEUE_OBSERVATION_SCHEMA = "experiment_queue_observation.v1"
 PRIORITY_SCHEMA = "inverse_steganalysis_acquisition_priority.v1"
 ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
 ACTION_CELL_SCHEMA = "inverse_steganalysis_action_cell.v1"
+QUEUE_HEALTH_FEEDBACK_SCHEMA = "inverse_steganalysis_queue_health_feedback.v1"
 INVERSE_SCORER_SURFACE_SCHEMA = "scorer_inverse_decision_surface.v1"
 BYTE_SHAVING_OPERATION_SET_PROVENANCE_SCHEMA = (
     "inverse_steganalysis_byte_shaving_operation_set_provenance.v1"
@@ -79,6 +80,12 @@ CONTEST_RATE_SCORE_PER_BYTE = CANONICAL_RATE_MULTIPLIER / float(
 )
 MLX_EVIDENCE_GRADE = "macOS-MLX-research-signal"
 MLX_EVIDENCE_TAG = "[macOS-MLX research-signal]"
+QUEUE_HEALTH_BLOCKER_OBSERVATION_KINDS = frozenset(
+    {
+        "queue_observation_health_blocker",
+        "queue_observation_global_health_blocker",
+    }
+)
 
 ALLOWED_SCALES = frozenset(
     {
@@ -799,7 +806,15 @@ def compute_acquisition_priority(
         )
     )
     resource_multiplier = RESOURCE_MULTIPLIERS.get(resource_kind, DEFAULT_RESOURCE_MULTIPLIER)
-    expected_gain = max(0.0, base_gain - calibration_penalty - fragility_penalty) + uncertainty_bonus
+    queue_health_blocked = (
+        obs_row is not None and _is_queue_health_blocker_observation(obs_row)
+    )
+    expected_gain = (
+        0.0
+        if queue_health_blocked
+        else max(0.0, base_gain - calibration_penalty - fragility_penalty)
+        + uncertainty_bonus
+    )
     artifact_gb = max(artifact_bytes / 1_000_000_000.0, MIN_ARTIFACT_GB)
     terms = AcquisitionPriorityTerms(
         predicted_score_gain=predicted_gain,
@@ -926,17 +941,23 @@ def build_discrete_scorer_action_functional(
     total_fragility_penalty = 0.0
     total_expected_gain = 0.0
     blocked_cells = 0
+    queue_health_blocked_cells = 0
     for index, raw_atom in enumerate(atoms):
         if max_cells is not None and index >= max_cells:
             raise InverseSteganalysisAcquisitionError(
                 f"inverse action functional cell count exceeds max_cells={max_cells}"
             )
         atom = normalize_inverse_steganalysis_atom(raw_atom)
-        best_obs = _best_observation(
-            atom,
-            _matching_observations_for_atom(atom, obs_rows, by_candidate),
+        matched_observations = _matching_observations_for_atom(atom, obs_rows, by_candidate)
+        best_obs = _best_observation(atom, matched_observations)
+        queue_health_feedback = _queue_health_feedback_for_observations(
+            matched_observations,
+            atom=atom,
         )
-        priority = compute_acquisition_priority(atom, best_obs)
+        priority = _apply_queue_health_feedback_to_priority(
+            compute_acquisition_priority(atom, best_obs),
+            queue_health_feedback,
+        )
         measure = _cell_measure(atom)
         first_order = _float(atom["first_order_marginal_effect"], "first_order_marginal_effect")
         second_order = _float(atom["second_order_interaction_effect"], "second_order_interaction_effect")
@@ -948,9 +969,12 @@ def build_discrete_scorer_action_functional(
         marginal_utility = expected_gain / float(byte_cost)
         residual = marginal_utility - lambda_rate
         guard = dict(atom["discontinuity_guard"])
-        blocked = bool(guard.get("blocked"))
+        queue_health_blocked = bool(queue_health_feedback["blocks_water_bucket"])
+        blocked = bool(guard.get("blocked")) or queue_health_blocked
         if blocked:
             blocked_cells += 1
+        if queue_health_blocked:
+            queue_health_blocked_cells += 1
         total_first_order += first_order
         total_second_order += second_order
         total_synergy += synergy
@@ -981,6 +1005,15 @@ def build_discrete_scorer_action_functional(
                     "euler_lagrange_residual": residual,
                     "water_bucket_selectable": residual > 0.0 and not blocked,
                     "discontinuity_guard": guard,
+                    "queue_health_feedback": queue_health_feedback,
+                    "queue_health_blocked": queue_health_blocked,
+                    "queue_health_group_ids": queue_health_feedback["group_ids"],
+                    "queue_health_repeat_count": queue_health_feedback[
+                        "repeated_observation_count"
+                    ],
+                    "queue_health_penalty_applied": queue_health_feedback[
+                        "queue_health_penalty_applied"
+                    ],
                     "best_observation_id": None if best_obs is None else best_obs["observation_id"],
                     "best_observation_kind": (
                         None if best_obs is None else best_obs.get("observation_kind")
@@ -1046,9 +1079,11 @@ def build_discrete_scorer_action_functional(
                 "lambda_rate": lambda_rate,
             },
             "observation_feedback": _observation_feedback_summary(obs_rows),
+            "queue_health_feedback": _queue_health_feedback_for_observations(obs_rows),
             "integral_totals": {
                 "cell_count": len(cells),
                 "blocked_cell_count": blocked_cells,
+                "queue_health_blocked_cell_count": queue_health_blocked_cells,
                 "first_order_marginal_effect_sum": total_first_order,
                 "second_order_interaction_effect_sum": total_second_order,
                 "synergy_effect_sum": total_synergy,
@@ -2728,10 +2763,241 @@ def _observation_feedback_summary(
             "observation_kind_counts": dict(sorted(kind_counts.items())),
             "exact_auth_calibration_count": len(exact_auth_refs),
             "exact_auth_calibration_refs": exact_auth_refs,
+            "queue_health_group_priors": _queue_health_feedback_for_observations(
+                observations
+            ),
             "allowed_use": "action_functional_calibration_interpretability_only",
         },
         "observation_feedback_is_not_score_authority",
     )
+
+
+def _is_queue_health_blocker_observation(row: Mapping[str, Any]) -> bool:
+    return str(row.get("observation_kind") or "") in QUEUE_HEALTH_BLOCKER_OBSERVATION_KINDS
+
+
+def _queue_health_feedback_for_observations(
+    observations: Sequence[Mapping[str, Any]],
+    *,
+    atom: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    health_rows = [
+        dict(row)
+        for row in observations
+        if _is_queue_health_blocker_observation(row)
+    ]
+    hard_blocking_ids = {
+        str(row.get("observation_id"))
+        for row in health_rows
+        if atom is None or _queue_health_observation_hard_blocks_atom(row, atom)
+    }
+    groups_by_key: dict[str, dict[str, Any]] = {}
+    for row in health_rows:
+        group_key = _queue_health_feedback_group_key(row)
+        group = groups_by_key.setdefault(
+            group_key,
+            {
+                "group_key": group_key,
+                "observation_ids": [],
+                "hard_blocking_observation_ids": [],
+                "observation_kinds": [],
+                "candidate_ids": [],
+                "experiment_ids": [],
+                "step_ids": [],
+                "statuses": [],
+                "blockers": [],
+                "work_ids": [],
+                "backlog_keys": [],
+                "source_unit_ids": [],
+                "source_selection_ids": [],
+                "expected_artifact_paths": [],
+            },
+        )
+        _extend_unique(group["observation_ids"], [_optional_text(row.get("observation_id"))])
+        observation_id = _optional_text(row.get("observation_id"))
+        if observation_id in hard_blocking_ids:
+            _extend_unique(group["hard_blocking_observation_ids"], [observation_id])
+        _extend_unique(group["observation_kinds"], [_optional_text(row.get("observation_kind"))])
+        _extend_unique(group["candidate_ids"], [row.get("candidate_id")])
+        _extend_unique(group["experiment_ids"], [row.get("experiment_id")])
+        _extend_unique(group["step_ids"], [row.get("step_id")])
+        _extend_unique(group["statuses"], [row.get("queue_observation_status")])
+        _extend_unique(group["blockers"], _list_strings(row.get("queue_observation_blockers")))
+        _extend_unique(group["work_ids"], _list_strings(row.get("work_ids")))
+        _extend_unique(group["backlog_keys"], _list_strings(row.get("backlog_keys")))
+        _extend_unique(group["source_unit_ids"], _list_strings(row.get("source_unit_ids")))
+        _extend_unique(
+            group["source_selection_ids"],
+            _list_strings(row.get("source_selection_ids")),
+        )
+        _extend_unique(
+            group["expected_artifact_paths"],
+            _list_strings(row.get("expected_artifact_paths")),
+        )
+
+    groups = []
+    for group in sorted(groups_by_key.values(), key=lambda item: str(item["group_key"])):
+        observation_count = len(group["observation_ids"])
+        hard_blocking_observation_count = len(group["hard_blocking_observation_ids"])
+        groups.append(
+            {
+                **group,
+                "observation_count": observation_count,
+                "hard_blocking_observation_count": hard_blocking_observation_count,
+                "repeated": observation_count > 1,
+                "blocks_water_bucket": (
+                    observation_count > 0
+                    if atom is None
+                    else hard_blocking_observation_count > 0
+                ),
+            }
+        )
+    repeated_groups = [group for group in groups if group["repeated"]]
+    repeated_observation_count = sum(
+        int(group["observation_count"]) for group in repeated_groups
+    )
+    blocks_water_bucket = (
+        bool(health_rows)
+        if atom is None
+        else any(group["blocks_water_bucket"] for group in groups)
+    )
+    if blocks_water_bucket:
+        planning_penalty_multiplier = 0.0
+    elif repeated_observation_count:
+        planning_penalty_multiplier = 1.0 / float(1 + repeated_observation_count)
+    else:
+        planning_penalty_multiplier = 1.0
+    blockers: list[str] = []
+    statuses: list[str] = []
+    source_unit_ids: list[str] = []
+    source_selection_ids: list[str] = []
+    for group in groups:
+        _extend_unique(blockers, group["blockers"])
+        _extend_unique(statuses, group["statuses"])
+        _extend_unique(source_unit_ids, group["source_unit_ids"])
+        _extend_unique(source_selection_ids, group["source_selection_ids"])
+    return _false_authority(
+        {
+            "schema": QUEUE_HEALTH_FEEDBACK_SCHEMA,
+            "observation_count": len(health_rows),
+            "group_count": len(groups),
+            "group_ids": [str(group["group_key"]) for group in groups],
+            "repeated_group_count": len(repeated_groups),
+            "repeated_observation_count": repeated_observation_count,
+            "global_blocker_count": sum(
+                1
+                for row in health_rows
+                if row.get("observation_kind")
+                == "queue_observation_global_health_blocker"
+            ),
+            "step_blocker_count": sum(
+                1
+                for row in health_rows
+                if row.get("observation_kind") == "queue_observation_health_blocker"
+            ),
+            "blocks_water_bucket": blocks_water_bucket,
+            "recovery_required": bool(health_rows),
+            "planning_penalty_multiplier": planning_penalty_multiplier,
+            "queue_health_penalty_applied": planning_penalty_multiplier < 1.0,
+            "blockers": blockers,
+            "statuses": statuses,
+            "source_unit_ids": source_unit_ids,
+            "source_selection_ids": source_selection_ids,
+            "groups": groups,
+            "allowed_use": "queue_recovery_and_action_planning_only",
+        },
+        "queue_health_feedback_is_not_score_authority",
+        "queue_health_feedback_requires_recovery_before_water_bucket_selection",
+    )
+
+
+def _queue_health_feedback_group_key(row: Mapping[str, Any]) -> str:
+    materializer = _optional_text(
+        _first(row.get("materializer_id"), row.get("materializer"))
+    )
+    receiver_contract_kind = _optional_text(row.get("receiver_contract_kind"))
+    target_kind = _optional_text(row.get("target_kind"))
+    if materializer and receiver_contract_kind:
+        return f"materializer_receiver:{materializer}:{receiver_contract_kind}"
+    if materializer and target_kind:
+        return f"materializer_target:{materializer}:{target_kind}"
+    if receiver_contract_kind and target_kind:
+        return f"receiver_target:{receiver_contract_kind}:{target_kind}"
+    for key in (
+        "source_selection_ids",
+        "source_unit_ids",
+        "work_ids",
+        "backlog_keys",
+        "expected_artifact_paths",
+    ):
+        values = _list_strings(row.get(key))
+        if values:
+            return f"{key}:{'|'.join(values)}"
+    experiment_id = _optional_text(row.get("experiment_id"))
+    step_id = _optional_text(row.get("step_id"))
+    if experiment_id and step_id:
+        return f"step:{experiment_id}.{step_id}"
+    candidate_id = _optional_text(row.get("candidate_id"))
+    if candidate_id:
+        return f"candidate:{candidate_id}"
+    observation_id = _optional_text(row.get("observation_id"))
+    return f"observation:{observation_id or 'unknown'}"
+
+
+def _queue_health_observation_hard_blocks_atom(
+    row: Mapping[str, Any],
+    atom: Mapping[str, Any],
+) -> bool:
+    if row.get("observation_kind") == "queue_observation_global_health_blocker":
+        return True
+    if _optional_text(row.get("candidate_id")) == _optional_text(
+        atom.get("candidate_id")
+    ):
+        return True
+    atom_targets = _atom_feedback_target_ids(atom)
+    for key in (
+        "work_ids",
+        "backlog_keys",
+        "source_unit_ids",
+        "source_selection_ids",
+        "expected_artifact_paths",
+    ):
+        if set(_list_strings(row.get(key))) & atom_targets:
+            return True
+    return False
+
+
+def _apply_queue_health_feedback_to_priority(
+    priority: Mapping[str, Any],
+    queue_health_feedback: Mapping[str, Any],
+) -> dict[str, Any]:
+    multiplier = _float(
+        queue_health_feedback.get("planning_penalty_multiplier", 1.0),
+        "queue_health_feedback.planning_penalty_multiplier",
+        minimum=0.0,
+    )
+    if multiplier >= 1.0:
+        return dict(priority)
+    out = dict(priority)
+    for key in (
+        "expected_score_gain",
+        "score_gain_per_second",
+        "score_gain_per_gb",
+        "acquisition_priority",
+    ):
+        out[key] = float(out[key]) * multiplier
+    out["queue_health_penalty_multiplier"] = multiplier
+    out["queue_health_penalty_applied"] = True
+    return out
+
+
+def _extend_unique(out: list[str], values: Sequence[Any]) -> None:
+    seen = set(out)
+    for value in values:
+        text = _optional_text(value)
+        if text and text not in seen:
+            seen.add(text)
+            out.append(text)
 
 
 def _false_authority(row: Mapping[str, Any], *blockers: str) -> dict[str, Any]:
@@ -3241,6 +3507,13 @@ def _queue_health_observations_for_step(
                     "axis": axis,
                     "source_path": source_path,
                     "queue_id": queue_id,
+                    "target_kind": _optional_text(step.get("target_kind")),
+                    "materializer_id": _optional_text(
+                        _first(step.get("materializer_id"), step.get("materializer"))
+                    ),
+                    "receiver_contract_kind": _optional_text(
+                        step.get("receiver_contract_kind")
+                    ),
                     "experiment_id": experiment_id,
                     "step_id": step_id,
                     "queue_observation_schema": QUEUE_OBSERVATION_SCHEMA,
@@ -3938,6 +4211,7 @@ __all__ = [
     "MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA",
     "OBSERVATION_SCHEMA",
     "PRIORITY_SCHEMA",
+    "QUEUE_HEALTH_FEEDBACK_SCHEMA",
     "QUEUE_OBSERVATION_SCHEMA",
     "QUEUE_PERFORMANCE_SUMMARY_SCHEMA",
     "RESOURCE_MULTIPLIERS",

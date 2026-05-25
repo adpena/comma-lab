@@ -1271,6 +1271,73 @@ def test_queue_observation_health_blocker_suppresses_water_bucket_cell() -> None
     assert action["score_claim"] is False
 
 
+def test_queue_health_blocker_hard_blocks_uncertainty_bonus() -> None:
+    runtime_identity = {
+        "runtime_tree_sha256": "d" * 64,
+        "scorer_version": "local_scheduler.v1",
+    }
+    cache_identity = {"cache_sha256": "e" * 64}
+    observation_payload = {
+        "schema": "experiment_queue_observation.v1",
+        "queue_id": "materializer_queue",
+        "healthy": False,
+        "blockers": ["experiment_queue_observation_blocked_steps:1"],
+        "performance": {
+            "schema": "experiment_queue_performance_summary.v1",
+            "queue_id": "materializer_queue",
+            "event_count": 1,
+            "candidate_id_by_experiment": {"packetir_opset": ["candidate_parent"]},
+            "by_resource_kind": {},
+            "by_step": {
+                "packetir_opset.materialize": {
+                    "run_count": 1,
+                    "success_count": 1,
+                    "failure_count": 0,
+                    "resource_kind_counts": {"local_cpu": 1},
+                    "elapsed_seconds_mean": 1.25,
+                    "artifact_record_bytes_mean": 4096.0,
+                }
+            },
+        },
+        "blocked_steps": [
+            {
+                "experiment_id": "packetir_opset",
+                "step_id": "materialize",
+                "status": "blocked",
+                "resource_kind": "local_cpu",
+            }
+        ],
+        **_planning_false_authority(),
+    }
+    atom = _atom(
+        "candidate_parent",
+        uncertainty=10.0,
+        calibration_error=0.0,
+        fragility_penalty=0.0,
+        first_order_marginal_effect=0.01,
+        second_order_interaction_effect=0.0,
+        predicted_score_gain=0.01,
+    )
+
+    observations = observations_from_queue_observation(
+        observation_payload,
+        runtime_identity=runtime_identity,
+        cache_identity=cache_identity,
+    )
+    action = build_discrete_scorer_action_functional([atom], observations=observations)
+    cell = action["cells"][0]
+
+    assert cell["best_observation_kind"] == "queue_observation_health_blocker"
+    assert cell["queue_health_blocked"] is True
+    assert cell["queue_health_feedback"]["blocks_water_bucket"] is True
+    assert cell["queue_health_penalty_applied"] is True
+    assert cell["priority"]["expected_score_gain"] == 0.0
+    assert cell["priority"]["queue_health_penalty_multiplier"] == 0.0
+    assert cell["water_bucket_selectable"] is False
+    assert action["integral_totals"]["queue_health_blocked_cell_count"] == 1
+    assert action["water_bucket"]["selected_count"] == 0
+
+
 def test_queue_observation_health_blocker_matches_precise_source_unit() -> None:
     runtime_identity = {
         "runtime_tree_sha256": "d" * 64,
@@ -1380,6 +1447,246 @@ def test_queue_observation_health_blocker_matches_precise_source_unit() -> None:
     assert cells["atom_direct"]["priority"]["expected_score_gain"] == 0.0
     assert cells["atom_other"]["best_observation_kind"] == "queue_performance_step"
     assert cells["atom_other"]["priority"]["expected_score_gain"] > 0.0
+
+
+def test_queue_health_feedback_groups_repeated_blockers_by_source_selection() -> None:
+    runtime_identity = {
+        "runtime_tree_sha256": "d" * 64,
+        "scorer_version": "local_scheduler.v1",
+    }
+    cache_identity = {"cache_sha256": "e" * 64}
+    source_unit_id = "inverse_action_atom_direct_decoder_blob_0000"
+    observation_payload = {
+        "schema": "experiment_queue_observation.v1",
+        "queue_id": "materializer_queue",
+        "healthy": False,
+        "blockers": ["experiment_queue_observation_blocked_steps:2"],
+        "performance": {
+            "schema": "experiment_queue_performance_summary.v1",
+            "queue_id": "materializer_queue",
+            "event_count": 2,
+            "candidate_id_by_experiment": {
+                "packetir_opset": ["candidate_parent"]
+            },
+            "source_unit_ids_by_experiment": {
+                "packetir_opset": [source_unit_id]
+            },
+            "source_selection_ids_by_experiment": {
+                "packetir_opset": ["compiled_direct_selection"]
+            },
+            "by_resource_kind": {},
+            "by_step": {
+                "packetir_opset.materialize": {
+                    "run_count": 1,
+                    "success_count": 0,
+                    "failure_count": 1,
+                    "resource_kind_counts": {"local_cpu": 1},
+                    "elapsed_seconds_mean": 1.25,
+                    "artifact_record_bytes_mean": 4096.0,
+                    "source_unit_ids": [source_unit_id],
+                    "source_selection_ids": ["compiled_direct_selection"],
+                },
+                "packetir_opset.proof": {
+                    "run_count": 1,
+                    "success_count": 0,
+                    "failure_count": 1,
+                    "resource_kind_counts": {"local_cpu": 1},
+                    "elapsed_seconds_mean": 0.75,
+                    "artifact_record_bytes_mean": 1024.0,
+                    "source_unit_ids": [source_unit_id],
+                    "source_selection_ids": ["compiled_direct_selection"],
+                },
+            },
+        },
+        "blocked_steps": [
+            {
+                "experiment_id": "packetir_opset",
+                "step_id": "materialize",
+                "status": "blocked",
+                "resource_kind": "local_cpu",
+            },
+            {
+                "experiment_id": "packetir_opset",
+                "step_id": "proof",
+                "status": "blocked",
+                "resource_kind": "local_cpu",
+            },
+        ],
+        **_planning_false_authority(),
+    }
+    atom = _atom(
+        "candidate_parent",
+        atom_id="atom_direct",
+        uncertainty=0.0,
+        fragility_penalty=0.0,
+        operation_set_compiler={
+            "schema": "inverse_action_operation_set_compiler_hint.v1",
+            "operation_set_id": "compiled_direct_selection",
+            "selected_operations": [
+                {
+                    "unit_id": "decoder_blob",
+                    "target_kind": "archive_section_entropy_recode_v1",
+                    "archive_section": "decoder_blob",
+                    "candidate_saved_bytes": 256,
+                }
+            ],
+        },
+    )
+
+    observations = observations_from_queue_observation(
+        observation_payload,
+        runtime_identity=runtime_identity,
+        cache_identity=cache_identity,
+    )
+    action = build_discrete_scorer_action_functional([atom], observations=observations)
+    cell = action["cells"][0]
+    root_feedback = action["queue_health_feedback"]
+    cell_feedback = cell["queue_health_feedback"]
+
+    assert action["observation_feedback"]["queue_health_group_priors"] == root_feedback
+    assert root_feedback["observation_count"] == 2
+    assert root_feedback["repeated_group_count"] == 1
+    assert root_feedback["groups"][0]["group_key"] == (
+        "source_selection_ids:compiled_direct_selection"
+    )
+    assert root_feedback["groups"][0]["observation_count"] == 2
+    assert root_feedback["groups"][0]["hard_blocking_observation_count"] == 2
+    assert cell_feedback["groups"] == root_feedback["groups"]
+    assert cell_feedback["source_unit_ids"] == [source_unit_id]
+    assert cell_feedback["source_selection_ids"] == ["compiled_direct_selection"]
+    assert cell["queue_health_group_ids"] == [
+        "source_selection_ids:compiled_direct_selection"
+    ]
+    assert cell["queue_health_repeat_count"] == 2
+    assert cell["queue_health_penalty_applied"] is True
+    assert root_feedback["score_claim"] is False
+    assert root_feedback["promotion_eligible"] is False
+    assert cell["water_bucket_selectable"] is False
+
+
+def test_repeated_queue_health_group_penalizes_related_materializer_only() -> None:
+    runtime_identity = {
+        "runtime_tree_sha256": "d" * 64,
+        "scorer_version": "local_scheduler.v1",
+    }
+    cache_identity = {"cache_sha256": "e" * 64}
+    observation_payload = {
+        "schema": "experiment_queue_observation.v1",
+        "queue_id": "materializer_queue",
+        "healthy": False,
+        "blockers": ["experiment_queue_observation_blocked_steps:2"],
+        "performance": {
+            "schema": "experiment_queue_performance_summary.v1",
+            "queue_id": "materializer_queue",
+            "event_count": 2,
+            "candidate_id_by_experiment": {
+                "failed_opset": ["failed_candidate"]
+            },
+            "by_resource_kind": {},
+            "by_step": {
+                "failed_opset.materialize": {
+                    "run_count": 1,
+                    "success_count": 0,
+                    "failure_count": 1,
+                    "resource_kind_counts": {"local_cpu": 1},
+                    "elapsed_seconds_mean": 1.25,
+                    "artifact_record_bytes_mean": 4096.0,
+                },
+                "failed_opset.proof": {
+                    "run_count": 1,
+                    "success_count": 0,
+                    "failure_count": 1,
+                    "resource_kind_counts": {"local_cpu": 1},
+                    "elapsed_seconds_mean": 0.75,
+                    "artifact_record_bytes_mean": 1024.0,
+                },
+            },
+        },
+        "blocked_steps": [
+            {
+                "experiment_id": "failed_opset",
+                "step_id": "materialize",
+                "status": "blocked",
+                "resource_kind": "local_cpu",
+                "target_kind": "archive_section_entropy_recode_v1",
+                "materializer_id": "entropy_adapter",
+            },
+            {
+                "experiment_id": "failed_opset",
+                "step_id": "proof",
+                "status": "blocked",
+                "resource_kind": "local_cpu",
+                "target_kind": "archive_section_entropy_recode_v1",
+                "materializer_id": "entropy_adapter",
+            },
+        ],
+        **_planning_false_authority(),
+    }
+    related_atom = _atom(
+        "new_candidate",
+        atom_id="atom_related",
+        uncertainty=0.0,
+        fragility_penalty=0.0,
+        operation_set_compiler={
+            "schema": "inverse_action_operation_set_compiler_hint.v1",
+            "operation_set_id": "new_entropy_selection",
+            "selected_operations": [
+                {
+                    "unit_id": "decoder_blob",
+                    "target_kind": "archive_section_entropy_recode_v1",
+                    "materializer_id": "entropy_adapter",
+                    "candidate_saved_bytes": 256,
+                }
+            ],
+        },
+    )
+    unrelated_atom = _atom(
+        "other_candidate",
+        atom_id="atom_unrelated",
+        uncertainty=0.0,
+        fragility_penalty=0.0,
+        operation_set_compiler={
+            "schema": "inverse_action_operation_set_compiler_hint.v1",
+            "operation_set_id": "other_selection",
+            "selected_operations": [
+                {
+                    "unit_id": "sidecar_member",
+                    "target_kind": "packet_member_recompress_v1",
+                    "materializer_id": "zip_adapter",
+                    "candidate_saved_bytes": 128,
+                }
+            ],
+        },
+    )
+
+    observations = observations_from_queue_observation(
+        observation_payload,
+        runtime_identity=runtime_identity,
+        cache_identity=cache_identity,
+    )
+    action = build_discrete_scorer_action_functional(
+        [related_atom, unrelated_atom],
+        observations=observations,
+    )
+    cells = {cell["atom_id"]: cell for cell in action["cells"]}
+    related = cells["atom_related"]
+    unrelated = cells["atom_unrelated"]
+
+    assert related["queue_health_group_ids"] == [
+        "materializer_target:entropy_adapter:archive_section_entropy_recode_v1"
+    ]
+    assert related["queue_health_blocked"] is False
+    assert related["queue_health_feedback"]["blocks_water_bucket"] is False
+    assert related["queue_health_penalty_applied"] is True
+    assert related["priority"]["queue_health_penalty_multiplier"] == pytest.approx(
+        1.0 / 3.0
+    )
+    assert unrelated["queue_health_group_ids"] == []
+    assert unrelated["queue_health_penalty_applied"] is False
+    assert unrelated["priority"]["expected_score_gain"] > related["priority"][
+        "expected_score_gain"
+    ]
+    assert unrelated["water_bucket_selectable"] is True
 
 
 def test_queue_observation_global_blocker_suppresses_mapped_candidates() -> None:
