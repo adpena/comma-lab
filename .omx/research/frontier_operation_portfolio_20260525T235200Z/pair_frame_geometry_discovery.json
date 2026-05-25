@@ -77,7 +77,10 @@
   "dispatch_attempted": false,
   "duplicate_request_count": 0,
   "exact_cuda_auth_eval": false,
-  "explicit_pair_frame_geometry_paths": [],
+  "explicit_pair_frame_geometry_paths": [
+    ".omx/research/codex_dqs1_pair_frame_geometry_auto_refresh_20260525T170139Z/pair_frame_scorer_geometry_lattice.json",
+    ".omx/research/codex_pair_frame_geometry_lattice_20260525T151102Z/pair_frame_scorer_geometry_lattice.json"
+  ],
   "field_selection_ready_for_exact_eval_dispatch": false,
   "frontier_artifact_roots": [
     ".omx/research"

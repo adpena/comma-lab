@@ -247,7 +247,7 @@
   "exact_cuda_auth_eval": false,
   "field_selection_ready_for_exact_eval_dispatch": false,
   "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
-  "generated_at_utc": "2026-05-25T23:50:56Z",
+  "generated_at_utc": "2026-05-25T23:57:07Z",
   "gpu_launched": false,
   "local_cpu_eureka_planning": {
     "active": true,
@@ -4639,7 +4639,7 @@
     "field_selection_ready_for_exact_eval_dispatch": false,
     "followup_signal_operation_count": 14,
     "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
-    "generated_at_utc": "2026-05-25T23:50:56Z",
+    "generated_at_utc": "2026-05-25T23:57:07Z",
     "gpu_launched": false,
     "master_gradient_summary": {
       "active": true,
@@ -4937,7 +4937,8 @@
           "runtime_consumption_proof_kind_mismatch",
           "packet_member_merge_v1_runtime_adapter_not_ready",
           "packet_member_merge_runtime_adapter_probe_schema_mismatch",
-          "packet_member_merge_receiver_contract_not_satisfied"
+          "packet_member_merge_receiver_contract_not_satisfied",
+          "chain_exact_readiness_bridges_have_no_ready_candidate"
         ],
         "charged_bits_changed": false,
         "component_behavior": {},
@@ -4959,6 +4960,45 @@
             "packet_member_merge_v1",
             "packet_member_zip_header_elide_v1"
           ],
+          "exact_readiness_bridge_summary": {
+            "blocked_candidate_count": 3,
+            "bridge_report_count": 3,
+            "candidate_count": 3,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_candidate_count": 0,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "frontier_rate_attack_chain_exact_readiness_bridge_summary.v1",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "top_blockers": [
+              "archive_manifest_missing",
+              "bridge_report_is_not_dispatch_authority",
+              "inflate_sh_missing",
+              "lane_claim_required_before_gpu_or_remote_eval",
+              "optimizer_candidate_queue_is_planning_only",
+              "report_txt_missing",
+              "requires_exact_eval_readiness_gate",
+              "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+              "requires_non_proxy_score_evidence_before_promotion",
+              "runtime_content_tree_sha256_missing",
+              "runtime_tree_sha256_missing",
+              "use_per_candidate_exact_ready_queue_only_when_present",
+              "runtime_consumption_proof_false_authority_violation:charged_bits_changed",
+              "runtime_consumption_proof_not_proven",
+              "unknown_uncleared_source_dispatch_blocker:family_agnostic_receiver_contract_not_satisfied",
+              "unknown_uncleared_source_dispatch_blocker:runtime_consumption_proof_not_passed"
+            ]
+          },
           "missing_chain_targets": [],
           "operator_model": "score_R_T_of_T_archive_equals_distortion_plus_rate_under_exact_runtime_proof",
           "synergy_terms_to_measure": [
@@ -6337,6 +6377,13 @@
           "renderer_payload_dfl1_v1_runtime_adapter_not_ready",
           "renderer_payload_dfl1_full_frame_inflate_parity_not_satisfied",
           "renderer_payload_dfl1_receiver_contract_not_satisfied",
+          "exact_readiness_bridge_report_not_ready",
+          "exact_readiness_bridge:above_active_floor_archive_bytes_without_operator_override:345422>185578, active_score_frontier=0.206316386616; above rate-only byte floor",
+          "exact_readiness_bridge:archive_manifest_missing",
+          "exact_readiness_bridge:bridge_report_is_not_dispatch_authority",
+          "exact_readiness_bridge:inflate_sh_missing",
+          "exact_readiness_bridge:lane_claim_required_before_gpu_or_remote_eval",
+          "exact_readiness_bridge:optimizer_candidate_queue_is_planning_only",
           "receiver_runtime_or_inflate_parity_missing_for_rate_positive_candidate"
         ],
         "charged_bits_changed": false,
@@ -6347,6 +6394,113 @@
           "/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/rows/001_robust_current_correct_4dd46fed78ed/candidate.json"
         ],
         "evidence_summary": {
+          "exact_readiness_bridge": {
+            "allowed_use": "operation_portfolio_exact_readiness_planning_only",
+            "blocked_candidate_count": 1,
+            "blocker_counts": {
+              "above_active_floor_archive_bytes_without_operator_override:345422>185578, active_score_frontier=0.206316386616; above rate-only byte floor": 1,
+              "archive_manifest_missing": 1,
+              "bridge_report_is_not_dispatch_authority": 1,
+              "inflate_sh_missing": 1,
+              "lane_claim_required_before_gpu_or_remote_eval": 1,
+              "optimizer_candidate_queue_is_planning_only": 1,
+              "renderer_payload_dfl1_strict_full_frame_inflate_parity_missing": 1,
+              "report_txt_missing": 1,
+              "requires_exact_eval_readiness_gate": 1,
+              "requires_lane_dispatch_claim_before_gpu_or_remote_eval": 1,
+              "requires_non_proxy_score_evidence_before_promotion": 1,
+              "runtime_consumption_proof_not_proven": 1,
+              "runtime_content_tree_sha256_missing": 1,
+              "runtime_tree_sha256_missing": 1,
+              "unknown_uncleared_source_dispatch_blocker:family_agnostic_receiver_contract_not_satisfied": 1,
+              "unknown_uncleared_source_dispatch_blocker:renderer_payload_dfl1_full_frame_inflate_parity_missing": 1,
+              "unknown_uncleared_source_dispatch_blocker:renderer_payload_dfl1_full_frame_inflate_parity_not_satisfied": 1,
+              "unknown_uncleared_source_dispatch_blocker:renderer_payload_dfl1_full_frame_inflate_parity_proof_missing": 1,
+              "unknown_uncleared_source_dispatch_blocker:renderer_payload_dfl1_receiver_contract_not_satisfied": 1,
+              "unknown_uncleared_source_dispatch_blocker:renderer_payload_dfl1_v1_runtime_adapter_not_ready": 1,
+              "unknown_uncleared_source_dispatch_blocker:runtime_consumption_proof_not_passed": 1,
+              "use_per_candidate_exact_ready_queue_only_when_present": 1
+            },
+            "bridge_report_count": 1,
+            "candidate_count": 1,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "forbidden_use": "score_claim_or_dispatch_authority",
+            "gpu_launched": false,
+            "invalid_bridge_report_paths": [],
+            "missing_bridge_report_paths": [],
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_candidate_count": 0,
+            "ready_for_chain_exact_readiness": false,
+            "ready_for_exact_eval_dispatch": false,
+            "reports": [
+              {
+                "blocked_candidate_count": 1,
+                "candidate_count": 1,
+                "candidate_ids": [
+                  "renderer_payload_dfl1_e20295f0a662"
+                ],
+                "charged_bits_changed": false,
+                "contest_cuda_auth_eval": false,
+                "dispatch_attempted": false,
+                "exact_cuda_auth_eval": false,
+                "field_selection_ready_for_exact_eval_dispatch": false,
+                "gpu_launched": false,
+                "path": "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+                "promotable": false,
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "ready_candidate_count": 0,
+                "ready_for_exact_eval_dispatch": false,
+                "row_blockers_sample": [
+                  "renderer_payload_dfl1_strict_full_frame_inflate_parity_missing",
+                  "unknown_uncleared_source_dispatch_blocker:family_agnostic_receiver_contract_not_satisfied",
+                  "unknown_uncleared_source_dispatch_blocker:renderer_payload_dfl1_full_frame_inflate_parity_missing",
+                  "unknown_uncleared_source_dispatch_blocker:renderer_payload_dfl1_full_frame_inflate_parity_proof_missing",
+                  "unknown_uncleared_source_dispatch_blocker:runtime_consumption_proof_not_passed",
+                  "unknown_uncleared_source_dispatch_blocker:renderer_payload_dfl1_v1_runtime_adapter_not_ready",
+                  "unknown_uncleared_source_dispatch_blocker:renderer_payload_dfl1_full_frame_inflate_parity_not_satisfied",
+                  "unknown_uncleared_source_dispatch_blocker:renderer_payload_dfl1_receiver_contract_not_satisfied",
+                  "inflate_sh_missing",
+                  "report_txt_missing",
+                  "archive_manifest_missing",
+                  "runtime_tree_sha256_missing"
+                ],
+                "score_affecting_payload_changed": false,
+                "score_claim": false,
+                "score_claim_eligible": false,
+                "score_claim_valid": false
+              }
+            ],
+            "schema": "frontier_rate_attack_materializer_exact_readiness_bridge_summary.v1",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "top_blockers": [
+              "above_active_floor_archive_bytes_without_operator_override:345422>185578, active_score_frontier=0.206316386616; above rate-only byte floor",
+              "archive_manifest_missing",
+              "bridge_report_is_not_dispatch_authority",
+              "inflate_sh_missing",
+              "lane_claim_required_before_gpu_or_remote_eval",
+              "optimizer_candidate_queue_is_planning_only",
+              "renderer_payload_dfl1_strict_full_frame_inflate_parity_missing",
+              "report_txt_missing",
+              "requires_exact_eval_readiness_gate",
+              "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+              "requires_non_proxy_score_evidence_before_promotion",
+              "runtime_consumption_proof_not_proven",
+              "runtime_content_tree_sha256_missing",
+              "runtime_tree_sha256_missing",
+              "unknown_uncleared_source_dispatch_blocker:family_agnostic_receiver_contract_not_satisfied",
+              "unknown_uncleared_source_dispatch_blocker:renderer_payload_dfl1_full_frame_inflate_parity_missing"
+            ]
+          },
           "max_saved_bytes": 380,
           "negative_or_zero_rate_count": 0,
           "observation_count": 1,
@@ -6395,6 +6549,13 @@
           "packet_member_merge_runtime_adapter_probe_schema_mismatch",
           "packet_member_merge_shadow_archive_reconstruction_not_proven",
           "packet_member_merge_receiver_contract_not_satisfied",
+          "exact_readiness_bridge_report_not_ready",
+          "exact_readiness_bridge:above_active_floor_archive_bytes_without_operator_override:345544>185578, active_score_frontier=0.206316386616; above rate-only byte floor",
+          "exact_readiness_bridge:archive_manifest_missing",
+          "exact_readiness_bridge:bridge_report_is_not_dispatch_authority",
+          "exact_readiness_bridge:inflate_sh_missing",
+          "exact_readiness_bridge:lane_claim_required_before_gpu_or_remote_eval",
+          "exact_readiness_bridge:optimizer_candidate_queue_is_planning_only",
           "receiver_runtime_or_inflate_parity_missing_for_rate_positive_candidate"
         ],
         "charged_bits_changed": false,
@@ -6405,6 +6566,115 @@
           "/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/rows/001_robust_current_correct_4dd46fed78ed/candidate.json"
         ],
         "evidence_summary": {
+          "exact_readiness_bridge": {
+            "allowed_use": "operation_portfolio_exact_readiness_planning_only",
+            "blocked_candidate_count": 1,
+            "blocker_counts": {
+              "above_active_floor_archive_bytes_without_operator_override:345544>185578, active_score_frontier=0.206316386616; above rate-only byte floor": 1,
+              "archive_manifest_missing": 1,
+              "bridge_report_is_not_dispatch_authority": 1,
+              "inflate_sh_missing": 1,
+              "lane_claim_required_before_gpu_or_remote_eval": 1,
+              "optimizer_candidate_queue_is_planning_only": 1,
+              "report_txt_missing": 1,
+              "requires_exact_eval_readiness_gate": 1,
+              "requires_lane_dispatch_claim_before_gpu_or_remote_eval": 1,
+              "requires_non_proxy_score_evidence_before_promotion": 1,
+              "runtime_consumption_proof_false_authority_violation:charged_bits_changed": 1,
+              "runtime_consumption_proof_false_authority_violation:score_affecting_payload_changed": 1,
+              "runtime_consumption_proof_not_proven": 1,
+              "runtime_content_tree_sha256_missing": 1,
+              "runtime_tree_sha256_missing": 1,
+              "unknown_uncleared_source_dispatch_blocker:family_agnostic_receiver_contract_not_satisfied": 1,
+              "unknown_uncleared_source_dispatch_blocker:packet_member_merge_exact_readiness_refused_until_byte_closed_runtime_adapter_lands": 1,
+              "unknown_uncleared_source_dispatch_blocker:packet_member_merge_receiver_contract_not_satisfied": 1,
+              "unknown_uncleared_source_dispatch_blocker:packet_member_merge_runtime_adapter_probe_schema_mismatch": 1,
+              "unknown_uncleared_source_dispatch_blocker:packet_member_merge_shadow_archive_reconstruction_not_proven": 1,
+              "unknown_uncleared_source_dispatch_blocker:packet_member_merge_v1_runtime_adapter_not_ready": 1,
+              "unknown_uncleared_source_dispatch_blocker:runtime_consumption_proof_kind_mismatch": 1,
+              "unknown_uncleared_source_dispatch_blocker:runtime_consumption_proof_not_passed": 1,
+              "use_per_candidate_exact_ready_queue_only_when_present": 1
+            },
+            "bridge_report_count": 1,
+            "candidate_count": 1,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "forbidden_use": "score_claim_or_dispatch_authority",
+            "gpu_launched": false,
+            "invalid_bridge_report_paths": [],
+            "missing_bridge_report_paths": [],
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_candidate_count": 0,
+            "ready_for_chain_exact_readiness": false,
+            "ready_for_exact_eval_dispatch": false,
+            "reports": [
+              {
+                "blocked_candidate_count": 1,
+                "candidate_count": 1,
+                "candidate_ids": [
+                  "packet_member_merge_cbe7d79124ba"
+                ],
+                "charged_bits_changed": false,
+                "contest_cuda_auth_eval": false,
+                "dispatch_attempted": false,
+                "exact_cuda_auth_eval": false,
+                "field_selection_ready_for_exact_eval_dispatch": false,
+                "gpu_launched": false,
+                "path": "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+                "promotable": false,
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "ready_candidate_count": 0,
+                "ready_for_exact_eval_dispatch": false,
+                "row_blockers_sample": [
+                  "unknown_uncleared_source_dispatch_blocker:family_agnostic_receiver_contract_not_satisfied",
+                  "unknown_uncleared_source_dispatch_blocker:packet_member_merge_exact_readiness_refused_until_byte_closed_runtime_adapter_lands",
+                  "unknown_uncleared_source_dispatch_blocker:runtime_consumption_proof_not_passed",
+                  "unknown_uncleared_source_dispatch_blocker:runtime_consumption_proof_kind_mismatch",
+                  "unknown_uncleared_source_dispatch_blocker:packet_member_merge_v1_runtime_adapter_not_ready",
+                  "unknown_uncleared_source_dispatch_blocker:packet_member_merge_runtime_adapter_probe_schema_mismatch",
+                  "unknown_uncleared_source_dispatch_blocker:packet_member_merge_shadow_archive_reconstruction_not_proven",
+                  "unknown_uncleared_source_dispatch_blocker:packet_member_merge_receiver_contract_not_satisfied",
+                  "inflate_sh_missing",
+                  "report_txt_missing",
+                  "archive_manifest_missing",
+                  "runtime_tree_sha256_missing"
+                ],
+                "score_affecting_payload_changed": false,
+                "score_claim": false,
+                "score_claim_eligible": false,
+                "score_claim_valid": false
+              }
+            ],
+            "schema": "frontier_rate_attack_materializer_exact_readiness_bridge_summary.v1",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "top_blockers": [
+              "above_active_floor_archive_bytes_without_operator_override:345544>185578, active_score_frontier=0.206316386616; above rate-only byte floor",
+              "archive_manifest_missing",
+              "bridge_report_is_not_dispatch_authority",
+              "inflate_sh_missing",
+              "lane_claim_required_before_gpu_or_remote_eval",
+              "optimizer_candidate_queue_is_planning_only",
+              "report_txt_missing",
+              "requires_exact_eval_readiness_gate",
+              "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+              "requires_non_proxy_score_evidence_before_promotion",
+              "runtime_consumption_proof_false_authority_violation:charged_bits_changed",
+              "runtime_consumption_proof_false_authority_violation:score_affecting_payload_changed",
+              "runtime_consumption_proof_not_proven",
+              "runtime_content_tree_sha256_missing",
+              "runtime_tree_sha256_missing",
+              "unknown_uncleared_source_dispatch_blocker:family_agnostic_receiver_contract_not_satisfied"
+            ]
+          },
           "max_saved_bytes": 258,
           "negative_or_zero_rate_count": 0,
           "observation_count": 1,
@@ -6709,6 +6979,13 @@
       {
         "allowed_use": "operation_portfolio_acquisition_planning_only",
         "blockers": [
+          "exact_readiness_bridge_report_not_ready",
+          "exact_readiness_bridge:above_active_floor_archive_bytes_without_operator_override:345646>185578, active_score_frontier=0.206316386616; above rate-only byte floor",
+          "exact_readiness_bridge:archive_manifest_missing",
+          "exact_readiness_bridge:bridge_report_is_not_dispatch_authority",
+          "exact_readiness_bridge:inflate_sh_missing",
+          "exact_readiness_bridge:lane_claim_required_before_gpu_or_remote_eval",
+          "exact_readiness_bridge:optimizer_candidate_queue_is_planning_only",
           "exact_readiness_and_auth_axis_eval_still_required"
         ],
         "charged_bits_changed": false,
@@ -6719,6 +6996,98 @@
           "/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/rows/001_robust_current_correct_4dd46fed78ed/candidate.json"
         ],
         "evidence_summary": {
+          "exact_readiness_bridge": {
+            "allowed_use": "operation_portfolio_exact_readiness_planning_only",
+            "blocked_candidate_count": 1,
+            "blocker_counts": {
+              "above_active_floor_archive_bytes_without_operator_override:345646>185578, active_score_frontier=0.206316386616; above rate-only byte floor": 1,
+              "archive_manifest_missing": 1,
+              "bridge_report_is_not_dispatch_authority": 1,
+              "inflate_sh_missing": 1,
+              "lane_claim_required_before_gpu_or_remote_eval": 1,
+              "optimizer_candidate_queue_is_planning_only": 1,
+              "report_txt_missing": 1,
+              "requires_exact_eval_readiness_gate": 1,
+              "requires_lane_dispatch_claim_before_gpu_or_remote_eval": 1,
+              "requires_non_proxy_score_evidence_before_promotion": 1,
+              "runtime_consumption_proof_false_authority_violation:charged_bits_changed": 1,
+              "runtime_content_tree_sha256_missing": 1,
+              "runtime_tree_sha256_missing": 1,
+              "use_per_candidate_exact_ready_queue_only_when_present": 1
+            },
+            "bridge_report_count": 1,
+            "candidate_count": 1,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "forbidden_use": "score_claim_or_dispatch_authority",
+            "gpu_launched": false,
+            "invalid_bridge_report_paths": [],
+            "missing_bridge_report_paths": [],
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_candidate_count": 0,
+            "ready_for_chain_exact_readiness": false,
+            "ready_for_exact_eval_dispatch": false,
+            "reports": [
+              {
+                "blocked_candidate_count": 1,
+                "candidate_count": 1,
+                "candidate_ids": [
+                  "packet_member_zip_header_elide_544c5f580ec2"
+                ],
+                "charged_bits_changed": false,
+                "contest_cuda_auth_eval": false,
+                "dispatch_attempted": false,
+                "exact_cuda_auth_eval": false,
+                "field_selection_ready_for_exact_eval_dispatch": false,
+                "gpu_launched": false,
+                "path": "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+                "promotable": false,
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "ready_candidate_count": 0,
+                "ready_for_exact_eval_dispatch": false,
+                "row_blockers_sample": [
+                  "inflate_sh_missing",
+                  "report_txt_missing",
+                  "archive_manifest_missing",
+                  "runtime_tree_sha256_missing",
+                  "runtime_content_tree_sha256_missing",
+                  "runtime_consumption_proof_false_authority_violation:charged_bits_changed",
+                  "above_active_floor_archive_bytes_without_operator_override:345646>185578, active_score_frontier=0.206316386616; above rate-only byte floor"
+                ],
+                "score_affecting_payload_changed": false,
+                "score_claim": false,
+                "score_claim_eligible": false,
+                "score_claim_valid": false
+              }
+            ],
+            "schema": "frontier_rate_attack_materializer_exact_readiness_bridge_summary.v1",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "top_blockers": [
+              "above_active_floor_archive_bytes_without_operator_override:345646>185578, active_score_frontier=0.206316386616; above rate-only byte floor",
+              "archive_manifest_missing",
+              "bridge_report_is_not_dispatch_authority",
+              "inflate_sh_missing",
+              "lane_claim_required_before_gpu_or_remote_eval",
+              "optimizer_candidate_queue_is_planning_only",
+              "report_txt_missing",
+              "requires_exact_eval_readiness_gate",
+              "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+              "requires_non_proxy_score_evidence_before_promotion",
+              "runtime_consumption_proof_false_authority_violation:charged_bits_changed",
+              "runtime_content_tree_sha256_missing",
+              "runtime_tree_sha256_missing",
+              "use_per_candidate_exact_ready_queue_only_when_present"
+            ]
+          },
           "max_saved_bytes": 156,
           "negative_or_zero_rate_count": 0,
           "observation_count": 1,
@@ -8681,6 +9050,13 @@
         "allowed_use": "operation_portfolio_acquisition_planning_only",
         "blockers": [
           "candidate_not_rate_positive",
+          "exact_readiness_bridge_report_not_ready",
+          "exact_readiness_bridge:above_active_floor_archive_bytes_without_operator_override:346358>185578, active_score_frontier=0.206316386616; above rate-only byte floor",
+          "exact_readiness_bridge:archive_manifest_missing",
+          "exact_readiness_bridge:bridge_report_is_not_dispatch_authority",
+          "exact_readiness_bridge:inflate_sh_missing",
+          "exact_readiness_bridge:lane_claim_required_before_gpu_or_remote_eval",
+          "exact_readiness_bridge:optimizer_candidate_queue_is_planning_only",
           "same_archive_target_member_negative_rate_feedback"
         ],
         "charged_bits_changed": false,
@@ -8693,6 +9069,162 @@
           "/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/per_member/renderer.bin/packet_member_recompress_v1/rows/001_robust_current_correct_4dd46fed78ed/candidate.json"
         ],
         "evidence_summary": {
+          "exact_readiness_bridge": {
+            "allowed_use": "operation_portfolio_exact_readiness_planning_only",
+            "blocked_candidate_count": 3,
+            "blocker_counts": {
+              "above_active_floor_archive_bytes_without_operator_override:346358>185578, active_score_frontier=0.206316386616; above rate-only byte floor": 3,
+              "archive_manifest_missing": 3,
+              "bridge_report_is_not_dispatch_authority": 3,
+              "inflate_sh_missing": 3,
+              "lane_claim_required_before_gpu_or_remote_eval": 3,
+              "optimizer_candidate_queue_is_planning_only": 3,
+              "report_txt_missing": 3,
+              "requires_exact_eval_readiness_gate": 3,
+              "requires_lane_dispatch_claim_before_gpu_or_remote_eval": 3,
+              "requires_non_proxy_score_evidence_before_promotion": 3,
+              "runtime_content_tree_sha256_missing": 3,
+              "runtime_tree_sha256_missing": 3,
+              "unknown_uncleared_source_dispatch_blocker:candidate_not_rate_positive": 3,
+              "use_per_candidate_exact_ready_queue_only_when_present": 3
+            },
+            "bridge_report_count": 3,
+            "candidate_count": 3,
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "forbidden_use": "score_claim_or_dispatch_authority",
+            "gpu_launched": false,
+            "invalid_bridge_report_paths": [],
+            "missing_bridge_report_paths": [],
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_candidate_count": 0,
+            "ready_for_chain_exact_readiness": false,
+            "ready_for_exact_eval_dispatch": false,
+            "reports": [
+              {
+                "blocked_candidate_count": 1,
+                "candidate_count": 1,
+                "candidate_ids": [
+                  "packet_member_recompress_ad3dc8761fd5"
+                ],
+                "charged_bits_changed": false,
+                "contest_cuda_auth_eval": false,
+                "dispatch_attempted": false,
+                "exact_cuda_auth_eval": false,
+                "field_selection_ready_for_exact_eval_dispatch": false,
+                "gpu_launched": false,
+                "path": "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/per_member/masks.mkv/packet_member_recompress_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+                "promotable": false,
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "ready_candidate_count": 0,
+                "ready_for_exact_eval_dispatch": false,
+                "row_blockers_sample": [
+                  "unknown_uncleared_source_dispatch_blocker:candidate_not_rate_positive",
+                  "inflate_sh_missing",
+                  "report_txt_missing",
+                  "archive_manifest_missing",
+                  "runtime_tree_sha256_missing",
+                  "runtime_content_tree_sha256_missing",
+                  "above_active_floor_archive_bytes_without_operator_override:346358>185578, active_score_frontier=0.206316386616; above rate-only byte floor"
+                ],
+                "score_affecting_payload_changed": false,
+                "score_claim": false,
+                "score_claim_eligible": false,
+                "score_claim_valid": false
+              },
+              {
+                "blocked_candidate_count": 1,
+                "candidate_count": 1,
+                "candidate_ids": [
+                  "packet_member_recompress_ad3dc8761fd5"
+                ],
+                "charged_bits_changed": false,
+                "contest_cuda_auth_eval": false,
+                "dispatch_attempted": false,
+                "exact_cuda_auth_eval": false,
+                "field_selection_ready_for_exact_eval_dispatch": false,
+                "gpu_launched": false,
+                "path": "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/per_member/optimized_poses.pt/packet_member_recompress_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+                "promotable": false,
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "ready_candidate_count": 0,
+                "ready_for_exact_eval_dispatch": false,
+                "row_blockers_sample": [
+                  "unknown_uncleared_source_dispatch_blocker:candidate_not_rate_positive",
+                  "inflate_sh_missing",
+                  "report_txt_missing",
+                  "archive_manifest_missing",
+                  "runtime_tree_sha256_missing",
+                  "runtime_content_tree_sha256_missing",
+                  "above_active_floor_archive_bytes_without_operator_override:346358>185578, active_score_frontier=0.206316386616; above rate-only byte floor"
+                ],
+                "score_affecting_payload_changed": false,
+                "score_claim": false,
+                "score_claim_eligible": false,
+                "score_claim_valid": false
+              },
+              {
+                "blocked_candidate_count": 1,
+                "candidate_count": 1,
+                "candidate_ids": [
+                  "packet_member_recompress_ad3dc8761fd5"
+                ],
+                "charged_bits_changed": false,
+                "contest_cuda_auth_eval": false,
+                "dispatch_attempted": false,
+                "exact_cuda_auth_eval": false,
+                "field_selection_ready_for_exact_eval_dispatch": false,
+                "gpu_launched": false,
+                "path": "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/per_member/renderer.bin/packet_member_recompress_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+                "promotable": false,
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "ready_candidate_count": 0,
+                "ready_for_exact_eval_dispatch": false,
+                "row_blockers_sample": [
+                  "unknown_uncleared_source_dispatch_blocker:candidate_not_rate_positive",
+                  "inflate_sh_missing",
+                  "report_txt_missing",
+                  "archive_manifest_missing",
+                  "runtime_tree_sha256_missing",
+                  "runtime_content_tree_sha256_missing",
+                  "above_active_floor_archive_bytes_without_operator_override:346358>185578, active_score_frontier=0.206316386616; above rate-only byte floor"
+                ],
+                "score_affecting_payload_changed": false,
+                "score_claim": false,
+                "score_claim_eligible": false,
+                "score_claim_valid": false
+              }
+            ],
+            "schema": "frontier_rate_attack_materializer_exact_readiness_bridge_summary.v1",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "top_blockers": [
+              "above_active_floor_archive_bytes_without_operator_override:346358>185578, active_score_frontier=0.206316386616; above rate-only byte floor",
+              "archive_manifest_missing",
+              "bridge_report_is_not_dispatch_authority",
+              "inflate_sh_missing",
+              "lane_claim_required_before_gpu_or_remote_eval",
+              "optimizer_candidate_queue_is_planning_only",
+              "report_txt_missing",
+              "requires_exact_eval_readiness_gate",
+              "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+              "requires_non_proxy_score_evidence_before_promotion",
+              "runtime_content_tree_sha256_missing",
+              "runtime_tree_sha256_missing",
+              "unknown_uncleared_source_dispatch_blocker:candidate_not_rate_positive",
+              "use_per_candidate_exact_ready_queue_only_when_present"
+            ]
+          },
           "max_saved_bytes": -556,
           "negative_or_zero_rate_count": 3,
           "observation_count": 3,
@@ -9034,7 +9566,7 @@
       "--action-summary",
       ".omx/research/codex_frontier_rate_attack_feedback_cycle_harvest_closure_20260525T223819Z/post_harvest_component_marginal_refresh/action_summary.json",
       "--results-root",
-      "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+      "experiments/results/frontier_operation_portfolio",
       "--output-dir",
       ".omx/research/frontier_operation_portfolio_20260525T235200Z_cycle"
     ],
@@ -9125,7 +9657,10 @@
     "dispatch_attempted": false,
     "duplicate_request_count": 0,
     "exact_cuda_auth_eval": false,
-    "explicit_pair_frame_geometry_paths": [],
+    "explicit_pair_frame_geometry_paths": [
+      ".omx/research/codex_dqs1_pair_frame_geometry_auto_refresh_20260525T170139Z/pair_frame_scorer_geometry_lattice.json",
+      ".omx/research/codex_pair_frame_geometry_lattice_20260525T151102Z/pair_frame_scorer_geometry_lattice.json"
+    ],
     "field_selection_ready_for_exact_eval_dispatch": false,
     "frontier_artifact_roots": [
       ".omx/research"
@@ -12751,9 +13286,9 @@
               "--lane-id",
               "lane_dqs1_pairset_geometry_lowimpact_k003_h9dfec80f80_local_first_20260525",
               "--json-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/decoder_q_selective_window_bridge_plan.json",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/decoder_q_selective_window_bridge_plan.json",
               "--md-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/decoder_q_selective_window_bridge_plan.md"
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/decoder_q_selective_window_bridge_plan.md"
             ],
             "id": "build_bridge_plan",
             "kind": "command",
@@ -12764,7 +13299,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/decoder_q_selective_window_bridge_plan.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/decoder_q_selective_window_bridge_plan.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -12792,13 +13327,13 @@
               ".venv/bin/python",
               "tools/plan_decoder_q_selective_runtime_packet.py",
               "--bridge-plan",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/decoder_q_selective_window_bridge_plan.json",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/decoder_q_selective_window_bridge_plan.json",
               "--base-archive",
               "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
               "--json-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k003_h9dfec80f80.json",
+              "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k003_h9dfec80f80.json",
               "--md-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k003_h9dfec80f80.md",
+              "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k003_h9dfec80f80.md",
               "--frame-policy",
               "pair_all_frames",
               "--selected-pairs",
@@ -12813,7 +13348,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k003_h9dfec80f80.json",
+                "path": "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k003_h9dfec80f80.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -12843,15 +13378,15 @@
               ".venv/bin/python",
               "tools/materialize_decoder_q_selective_runtime_candidate.py",
               "--plan",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k003_h9dfec80f80.json",
+              "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k003_h9dfec80f80.json",
               "--base-submission-dir",
               "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
               "--output-dir",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/submission_dir",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/submission_dir",
               "--frame-policy",
               "pair_all_frames",
               "--manifest-output",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/materialization_manifest.json"
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/materialization_manifest.json"
             ],
             "id": "materialize",
             "kind": "command",
@@ -12862,7 +13397,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/materialization_manifest.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/materialization_manifest.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -12896,7 +13431,7 @@
               "--global-mutated-archive",
               "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
               "--selective-submission-dir",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/submission_dir",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/submission_dir",
               "--selected-pairs",
               "59,68,98,109,112,134,151,167,229,242,257,259,320,327,371,376,378,412,430,440,459,467,479,492,496,501,544,555,588",
               "--frame-policy",
@@ -12909,9 +13444,9 @@
               "3",
               "--reuse-existing-inflates",
               "--work-dir",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/locality_work",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/locality_work",
               "--json-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/locality_controls.json"
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/locality_controls.json"
             ],
             "id": "locality_controls",
             "kind": "command",
@@ -12919,7 +13454,7 @@
               {
                 "equals": true,
                 "key": "locality_controls_passed",
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/locality_controls.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/locality_controls.json",
                 "type": "json_equals"
               },
               {
@@ -12930,7 +13465,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/locality_controls.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/locality_controls.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -12960,9 +13495,9 @@
               ".venv/bin/python",
               "experiments/contest_auth_eval.py",
               "--archive",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/submission_dir/archive.zip",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/submission_dir/archive.zip",
               "--inflate-sh",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/submission_dir/inflate.sh",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/submission_dir/inflate.sh",
               "--upstream-dir",
               "upstream",
               "--video-names-file",
@@ -12970,9 +13505,9 @@
               "--device",
               "cpu",
               "--work-dir",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/local_cpu_advisory_work",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/local_cpu_advisory_work",
               "--json-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/local_cpu_advisory.json",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/local_cpu_advisory.json",
               "--inflate-timeout",
               "1800",
               "--evaluate-timeout",
@@ -12990,7 +13525,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/local_cpu_advisory.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/local_cpu_advisory.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -13019,11 +13554,11 @@
             "command": [
               ".venv/bin/python",
               "tools/compact_experiment_artifacts.py",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80",
               "--min-bytes",
               "1",
               "--json-output",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/raw_artifact_retention_plan.json"
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/raw_artifact_retention_plan.json"
             ],
             "id": "plan_raw_artifact_retention",
             "kind": "command",
@@ -13031,12 +13566,12 @@
               {
                 "equals": 0,
                 "key": "plan.blocked_candidate_count",
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/raw_artifact_retention_plan.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/raw_artifact_retention_plan.json",
                 "type": "json_equals"
               },
               {
                 "false_or_missing": [],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/raw_artifact_retention_plan.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/raw_artifact_retention_plan.json",
                 "required_false": [
                   "plan.score_claim",
                   "plan.promotion_eligible",
@@ -13070,7 +13605,7 @@
               "--candidate-id",
               "pairset_geometry_lowimpact_k003_h9dfec80f80",
               "--candidate-local-json",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/local_cpu_advisory.json",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/local_cpu_advisory.json",
               "--auth-frontier-score-from-pointer",
               "--eureka-out",
               ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k003_h9dfec80f80_20260525T223819Z.json",
@@ -16706,9 +17241,9 @@
               "--lane-id",
               "lane_dqs1_pairset_geometry_lowimpact_k004_h3d2fc811a7_local_first_20260525",
               "--json-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/decoder_q_selective_window_bridge_plan.json",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/decoder_q_selective_window_bridge_plan.json",
               "--md-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/decoder_q_selective_window_bridge_plan.md"
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/decoder_q_selective_window_bridge_plan.md"
             ],
             "id": "build_bridge_plan",
             "kind": "command",
@@ -16719,7 +17254,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/decoder_q_selective_window_bridge_plan.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/decoder_q_selective_window_bridge_plan.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -16747,13 +17282,13 @@
               ".venv/bin/python",
               "tools/plan_decoder_q_selective_runtime_packet.py",
               "--bridge-plan",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/decoder_q_selective_window_bridge_plan.json",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/decoder_q_selective_window_bridge_plan.json",
               "--base-archive",
               "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
               "--json-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k004_h3d2fc811a7.json",
+              "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k004_h3d2fc811a7.json",
               "--md-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k004_h3d2fc811a7.md",
+              "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k004_h3d2fc811a7.md",
               "--frame-policy",
               "pair_all_frames",
               "--selected-pairs",
@@ -16768,7 +17303,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k004_h3d2fc811a7.json",
+                "path": "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k004_h3d2fc811a7.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -16798,15 +17333,15 @@
               ".venv/bin/python",
               "tools/materialize_decoder_q_selective_runtime_candidate.py",
               "--plan",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k004_h3d2fc811a7.json",
+              "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k004_h3d2fc811a7.json",
               "--base-submission-dir",
               "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
               "--output-dir",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/submission_dir",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/submission_dir",
               "--frame-policy",
               "pair_all_frames",
               "--manifest-output",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/materialization_manifest.json"
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/materialization_manifest.json"
             ],
             "id": "materialize",
             "kind": "command",
@@ -16817,7 +17352,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/materialization_manifest.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/materialization_manifest.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -16851,7 +17386,7 @@
               "--global-mutated-archive",
               "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
               "--selective-submission-dir",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/submission_dir",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/submission_dir",
               "--selected-pairs",
               "59,68,98,109,112,134,151,167,229,242,257,259,320,327,371,376,378,430,440,459,467,479,492,496,501,544,555,588",
               "--frame-policy",
@@ -16864,9 +17399,9 @@
               "3",
               "--reuse-existing-inflates",
               "--work-dir",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/locality_work",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/locality_work",
               "--json-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/locality_controls.json"
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/locality_controls.json"
             ],
             "id": "locality_controls",
             "kind": "command",
@@ -16874,7 +17409,7 @@
               {
                 "equals": true,
                 "key": "locality_controls_passed",
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/locality_controls.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/locality_controls.json",
                 "type": "json_equals"
               },
               {
@@ -16885,7 +17420,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/locality_controls.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/locality_controls.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -16915,9 +17450,9 @@
               ".venv/bin/python",
               "experiments/contest_auth_eval.py",
               "--archive",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/submission_dir/archive.zip",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/submission_dir/archive.zip",
               "--inflate-sh",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/submission_dir/inflate.sh",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/submission_dir/inflate.sh",
               "--upstream-dir",
               "upstream",
               "--video-names-file",
@@ -16925,9 +17460,9 @@
               "--device",
               "cpu",
               "--work-dir",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/local_cpu_advisory_work",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/local_cpu_advisory_work",
               "--json-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/local_cpu_advisory.json",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/local_cpu_advisory.json",
               "--inflate-timeout",
               "1800",
               "--evaluate-timeout",
@@ -16945,7 +17480,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/local_cpu_advisory.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/local_cpu_advisory.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -16974,11 +17509,11 @@
             "command": [
               ".venv/bin/python",
               "tools/compact_experiment_artifacts.py",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7",
               "--min-bytes",
               "1",
               "--json-output",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/raw_artifact_retention_plan.json"
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/raw_artifact_retention_plan.json"
             ],
             "id": "plan_raw_artifact_retention",
             "kind": "command",
@@ -16986,12 +17521,12 @@
               {
                 "equals": 0,
                 "key": "plan.blocked_candidate_count",
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/raw_artifact_retention_plan.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/raw_artifact_retention_plan.json",
                 "type": "json_equals"
               },
               {
                 "false_or_missing": [],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/raw_artifact_retention_plan.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/raw_artifact_retention_plan.json",
                 "required_false": [
                   "plan.score_claim",
                   "plan.promotion_eligible",
@@ -17025,7 +17560,7 @@
               "--candidate-id",
               "pairset_geometry_lowimpact_k004_h3d2fc811a7",
               "--candidate-local-json",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/local_cpu_advisory.json",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/local_cpu_advisory.json",
               "--auth-frontier-score-from-pointer",
               "--eureka-out",
               ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k004_h3d2fc811a7_20260525T223819Z.json",
@@ -20657,9 +21192,9 @@
               "--lane-id",
               "lane_dqs1_pairset_geometry_lowimpact_k006_h7ce3073a1a_local_first_20260525",
               "--json-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/decoder_q_selective_window_bridge_plan.json",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/decoder_q_selective_window_bridge_plan.json",
               "--md-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/decoder_q_selective_window_bridge_plan.md"
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/decoder_q_selective_window_bridge_plan.md"
             ],
             "id": "build_bridge_plan",
             "kind": "command",
@@ -20670,7 +21205,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/decoder_q_selective_window_bridge_plan.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/decoder_q_selective_window_bridge_plan.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -20698,13 +21233,13 @@
               ".venv/bin/python",
               "tools/plan_decoder_q_selective_runtime_packet.py",
               "--bridge-plan",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/decoder_q_selective_window_bridge_plan.json",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/decoder_q_selective_window_bridge_plan.json",
               "--base-archive",
               "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
               "--json-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k006_h7ce3073a1a.json",
+              "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k006_h7ce3073a1a.json",
               "--md-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k006_h7ce3073a1a.md",
+              "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k006_h7ce3073a1a.md",
               "--frame-policy",
               "pair_all_frames",
               "--selected-pairs",
@@ -20719,7 +21254,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k006_h7ce3073a1a.json",
+                "path": "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k006_h7ce3073a1a.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -20749,15 +21284,15 @@
               ".venv/bin/python",
               "tools/materialize_decoder_q_selective_runtime_candidate.py",
               "--plan",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k006_h7ce3073a1a.json",
+              "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k006_h7ce3073a1a.json",
               "--base-submission-dir",
               "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
               "--output-dir",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/submission_dir",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/submission_dir",
               "--frame-policy",
               "pair_all_frames",
               "--manifest-output",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/materialization_manifest.json"
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/materialization_manifest.json"
             ],
             "id": "materialize",
             "kind": "command",
@@ -20768,7 +21303,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/materialization_manifest.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/materialization_manifest.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -20802,7 +21337,7 @@
               "--global-mutated-archive",
               "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
               "--selective-submission-dir",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/submission_dir",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/submission_dir",
               "--selected-pairs",
               "59,68,98,109,112,134,151,167,229,242,320,327,371,376,378,430,440,459,467,479,492,496,501,544,555,588",
               "--frame-policy",
@@ -20815,9 +21350,9 @@
               "3",
               "--reuse-existing-inflates",
               "--work-dir",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/locality_work",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/locality_work",
               "--json-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/locality_controls.json"
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/locality_controls.json"
             ],
             "id": "locality_controls",
             "kind": "command",
@@ -20825,7 +21360,7 @@
               {
                 "equals": true,
                 "key": "locality_controls_passed",
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/locality_controls.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/locality_controls.json",
                 "type": "json_equals"
               },
               {
@@ -20836,7 +21371,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/locality_controls.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/locality_controls.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -20866,9 +21401,9 @@
               ".venv/bin/python",
               "experiments/contest_auth_eval.py",
               "--archive",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/submission_dir/archive.zip",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/submission_dir/archive.zip",
               "--inflate-sh",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/submission_dir/inflate.sh",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/submission_dir/inflate.sh",
               "--upstream-dir",
               "upstream",
               "--video-names-file",
@@ -20876,9 +21411,9 @@
               "--device",
               "cpu",
               "--work-dir",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/local_cpu_advisory_work",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/local_cpu_advisory_work",
               "--json-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/local_cpu_advisory.json",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/local_cpu_advisory.json",
               "--inflate-timeout",
               "1800",
               "--evaluate-timeout",
@@ -20896,7 +21431,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/local_cpu_advisory.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/local_cpu_advisory.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -20925,11 +21460,11 @@
             "command": [
               ".venv/bin/python",
               "tools/compact_experiment_artifacts.py",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a",
               "--min-bytes",
               "1",
               "--json-output",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/raw_artifact_retention_plan.json"
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/raw_artifact_retention_plan.json"
             ],
             "id": "plan_raw_artifact_retention",
             "kind": "command",
@@ -20937,12 +21472,12 @@
               {
                 "equals": 0,
                 "key": "plan.blocked_candidate_count",
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/raw_artifact_retention_plan.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/raw_artifact_retention_plan.json",
                 "type": "json_equals"
               },
               {
                 "false_or_missing": [],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/raw_artifact_retention_plan.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/raw_artifact_retention_plan.json",
                 "required_false": [
                   "plan.score_claim",
                   "plan.promotion_eligible",
@@ -20976,7 +21511,7 @@
               "--candidate-id",
               "pairset_geometry_lowimpact_k006_h7ce3073a1a",
               "--candidate-local-json",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/local_cpu_advisory.json",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/local_cpu_advisory.json",
               "--auth-frontier-score-from-pointer",
               "--eureka-out",
               ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k006_h7ce3073a1a_20260525T223819Z.json",
@@ -24604,9 +25139,9 @@
               "--lane-id",
               "lane_dqs1_pairset_geometry_lowimpact_k008_hc4a555f7ab_local_first_20260525",
               "--json-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/decoder_q_selective_window_bridge_plan.json",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/decoder_q_selective_window_bridge_plan.json",
               "--md-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/decoder_q_selective_window_bridge_plan.md"
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/decoder_q_selective_window_bridge_plan.md"
             ],
             "id": "build_bridge_plan",
             "kind": "command",
@@ -24617,7 +25152,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/decoder_q_selective_window_bridge_plan.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/decoder_q_selective_window_bridge_plan.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -24645,13 +25180,13 @@
               ".venv/bin/python",
               "tools/plan_decoder_q_selective_runtime_packet.py",
               "--bridge-plan",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/decoder_q_selective_window_bridge_plan.json",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/decoder_q_selective_window_bridge_plan.json",
               "--base-archive",
               "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
               "--json-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k008_hc4a555f7ab.json",
+              "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k008_hc4a555f7ab.json",
               "--md-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k008_hc4a555f7ab.md",
+              "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k008_hc4a555f7ab.md",
               "--frame-policy",
               "pair_all_frames",
               "--selected-pairs",
@@ -24666,7 +25201,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k008_hc4a555f7ab.json",
+                "path": "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k008_hc4a555f7ab.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -24696,15 +25231,15 @@
               ".venv/bin/python",
               "tools/materialize_decoder_q_selective_runtime_candidate.py",
               "--plan",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k008_hc4a555f7ab.json",
+              "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k008_hc4a555f7ab.json",
               "--base-submission-dir",
               "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
               "--output-dir",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/submission_dir",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/submission_dir",
               "--frame-policy",
               "pair_all_frames",
               "--manifest-output",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/materialization_manifest.json"
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/materialization_manifest.json"
             ],
             "id": "materialize",
             "kind": "command",
@@ -24715,7 +25250,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/materialization_manifest.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/materialization_manifest.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -24749,7 +25284,7 @@
               "--global-mutated-archive",
               "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
               "--selective-submission-dir",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/submission_dir",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/submission_dir",
               "--selected-pairs",
               "59,68,98,109,112,134,151,167,229,242,327,371,376,430,440,459,467,479,492,496,501,544,555,588",
               "--frame-policy",
@@ -24762,9 +25297,9 @@
               "3",
               "--reuse-existing-inflates",
               "--work-dir",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/locality_work",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/locality_work",
               "--json-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/locality_controls.json"
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/locality_controls.json"
             ],
             "id": "locality_controls",
             "kind": "command",
@@ -24772,7 +25307,7 @@
               {
                 "equals": true,
                 "key": "locality_controls_passed",
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/locality_controls.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/locality_controls.json",
                 "type": "json_equals"
               },
               {
@@ -24783,7 +25318,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/locality_controls.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/locality_controls.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -24813,9 +25348,9 @@
               ".venv/bin/python",
               "experiments/contest_auth_eval.py",
               "--archive",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/submission_dir/archive.zip",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/submission_dir/archive.zip",
               "--inflate-sh",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/submission_dir/inflate.sh",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/submission_dir/inflate.sh",
               "--upstream-dir",
               "upstream",
               "--video-names-file",
@@ -24823,9 +25358,9 @@
               "--device",
               "cpu",
               "--work-dir",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/local_cpu_advisory_work",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/local_cpu_advisory_work",
               "--json-out",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/local_cpu_advisory.json",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/local_cpu_advisory.json",
               "--inflate-timeout",
               "1800",
               "--evaluate-timeout",
@@ -24843,7 +25378,7 @@
                   "dispatch_attempted",
                   "gpu_launched"
                 ],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/local_cpu_advisory.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/local_cpu_advisory.json",
                 "required_false": [
                   "score_claim",
                   "promotion_eligible",
@@ -24872,11 +25407,11 @@
             "command": [
               ".venv/bin/python",
               "tools/compact_experiment_artifacts.py",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab",
               "--min-bytes",
               "1",
               "--json-output",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/raw_artifact_retention_plan.json"
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/raw_artifact_retention_plan.json"
             ],
             "id": "plan_raw_artifact_retention",
             "kind": "command",
@@ -24884,12 +25419,12 @@
               {
                 "equals": 0,
                 "key": "plan.blocked_candidate_count",
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/raw_artifact_retention_plan.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/raw_artifact_retention_plan.json",
                 "type": "json_equals"
               },
               {
                 "false_or_missing": [],
-                "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/raw_artifact_retention_plan.json",
+                "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/raw_artifact_retention_plan.json",
                 "required_false": [
                   "plan.score_claim",
                   "plan.promotion_eligible",
@@ -24923,7 +25458,7 @@
               "--candidate-id",
               "pairset_geometry_lowimpact_k008_hc4a555f7ab",
               "--candidate-local-json",
-              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/local_cpu_advisory.json",
+              "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/local_cpu_advisory.json",
               "--auth-frontier-score-from-pointer",
               "--eureka-out",
               ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k008_hc4a555f7ab_20260525T223819Z.json",
@@ -24985,10 +25520,10 @@
         ]
       }
     ],
-    "queue_id": "frontier_rate_attack_feedback_dqs1_followup_20260525T235200Z",
+    "queue_id": "frontier_operation_portfolio_20260525T235200Z",
     "schema": "experiment_queue.v1"
   },
-  "queue_id": "frontier_rate_attack_feedback_dqs1_followup_20260525T235200Z",
+  "queue_id": "frontier_operation_portfolio_20260525T235200Z",
   "queue_summary": {
     "charged_bits_changed": false,
     "contest_cuda_auth_eval": false,
@@ -24999,7 +25534,7 @@
     "gpu_launched": false,
     "promotable": false,
     "promotion_eligible": false,
-    "queue_id": "frontier_rate_attack_feedback_dqs1_followup_20260525T235200Z",
+    "queue_id": "frontier_operation_portfolio_20260525T235200Z",
     "rank_or_kill_eligible": false,
     "ready_for_exact_eval_dispatch": false,
     "score_affecting_payload_changed": false,
@@ -25016,7 +25551,7 @@
   },
   "rank_or_kill_eligible": false,
   "ready_for_exact_eval_dispatch": false,
-  "results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+  "results_root": "experiments/results/frontier_operation_portfolio",
   "retention_policy": {
     "charged_bits_changed": false,
     "contest_cuda_auth_eval": false,

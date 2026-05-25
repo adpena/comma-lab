@@ -68,6 +68,9 @@ OPERATION_PORTFOLIO_ROW_SCHEMA = "frontier_rate_attack_operation_portfolio_row.v
 OPERATION_PORTFOLIO_TAXONOMY_SCHEMA = (
     "frontier_rate_attack_operation_portfolio_taxonomy.v1"
 )
+MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA = (
+    "materializer_chain_exact_readiness_bridge_report.v1"
+)
 
 _OPERATION_LEVELS = (
     "bit",
@@ -1447,6 +1450,128 @@ def _operation_row(
     }
 
 
+def _materializer_target_root_for_source_path(path: Path) -> Path | None:
+    if path.name == "candidate.json" and path.parent.parent.name == "rows":
+        return path.parent.parent.parent
+    if path.name in {"sweep.json", "observations.jsonl"}:
+        return path.parent
+    return None
+
+
+def _exact_readiness_bridge_paths_for_sources(
+    source_paths: Sequence[Any],
+    *,
+    repo_root: Path,
+) -> list[Path]:
+    paths: list[Path] = []
+    seen: set[str] = set()
+    for value in source_paths:
+        text = str(value or "").strip()
+        if not text:
+            continue
+        source_path = _resolve_path(text, repo_root=repo_root)
+        target_root = _materializer_target_root_for_source_path(source_path)
+        if target_root is None:
+            continue
+        bridge_path = (
+            target_root / "exact_eval_handoff" / "exact_readiness_bridge_report.json"
+        )
+        key = bridge_path.resolve(strict=False).as_posix()
+        if key in seen:
+            continue
+        seen.add(key)
+        paths.append(bridge_path)
+    return paths
+
+
+def _exact_readiness_bridge_summary(
+    bridge_paths: Sequence[Path],
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    reports: list[dict[str, Any]] = []
+    blocker_counts: dict[str, int] = {}
+    missing_paths: list[str] = []
+    invalid_paths: list[dict[str, str]] = []
+    for path in bridge_paths:
+        if not path.is_file():
+            missing_paths.append(_repo_rel(path, repo_root))
+            continue
+        try:
+            payload = _load_json(path)
+            require_no_truthy_authority_fields(
+                payload,
+                context=f"{path} exact-readiness bridge",
+            )
+        except (FrontierRateAttackFeedbackError, ValueError) as exc:
+            invalid_paths.append({"path": _repo_rel(path, repo_root), "reason": str(exc)})
+            continue
+        if payload.get("schema") != MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA:
+            invalid_paths.append(
+                {
+                    "path": _repo_rel(path, repo_root),
+                    "reason": "schema_mismatch",
+                    "schema": str(payload.get("schema") or ""),
+                }
+            )
+            continue
+        row_blockers: list[str] = []
+        for row in payload.get("rows") or []:
+            if not isinstance(row, Mapping):
+                continue
+            for blocker in _string_list(row.get("blockers")):
+                row_blockers.append(blocker)
+                blocker_counts[blocker] = blocker_counts.get(blocker, 0) + 1
+        for blocker in _string_list(payload.get("dispatch_blockers")):
+            blocker_counts[blocker] = blocker_counts.get(blocker, 0) + 1
+        reports.append(
+            {
+                "path": _repo_rel(path, repo_root),
+                "candidate_count": _finite_int_or_none(payload.get("candidate_count")) or 0,
+                "ready_candidate_count": _finite_int_or_none(
+                    payload.get("ready_candidate_count")
+                )
+                or 0,
+                "blocked_candidate_count": _finite_int_or_none(
+                    payload.get("blocked_candidate_count")
+                )
+                or 0,
+                "candidate_ids": [
+                    str(row.get("candidate_id") or "")
+                    for row in payload.get("rows") or []
+                    if isinstance(row, Mapping) and row.get("candidate_id")
+                ],
+                "row_blockers_sample": _unique_strings(row_blockers)[:12],
+                **FALSE_AUTHORITY,
+            }
+        )
+    ready_count = sum(int(report["ready_candidate_count"]) for report in reports)
+    candidate_count = sum(int(report["candidate_count"]) for report in reports)
+    blocked_count = sum(int(report["blocked_candidate_count"]) for report in reports)
+    return {
+        "schema": "frontier_rate_attack_materializer_exact_readiness_bridge_summary.v1",
+        "bridge_report_count": len(reports),
+        "candidate_count": candidate_count,
+        "ready_candidate_count": ready_count,
+        "blocked_candidate_count": blocked_count,
+        "missing_bridge_report_paths": missing_paths,
+        "invalid_bridge_report_paths": invalid_paths,
+        "blocker_counts": dict(sorted(blocker_counts.items())),
+        "top_blockers": [
+            blocker
+            for blocker, _count in sorted(
+                blocker_counts.items(),
+                key=lambda item: (-item[1], item[0]),
+            )[:16]
+        ],
+        "reports": reports,
+        "ready_for_chain_exact_readiness": bool(candidate_count and ready_count == candidate_count),
+        "allowed_use": "operation_portfolio_exact_readiness_planning_only",
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def _operation_portfolio_taxonomy() -> dict[str, Any]:
     return {
         "schema": OPERATION_PORTFOLIO_TAXONOMY_SCHEMA,
@@ -1479,6 +1604,8 @@ def _operation_portfolio_taxonomy() -> dict[str, Any]:
 def _materializer_operation_rows(
     payloads: Sequence[Mapping[str, Any]],
     source_paths: Sequence[str],
+    *,
+    repo_root: Path,
 ) -> list[dict[str, Any]]:
     grouped: dict[str, dict[str, Any]] = {}
     for payload_index, payload in enumerate(payloads):
@@ -1544,6 +1671,21 @@ def _materializer_operation_rows(
         max_saved = max(saved_values) if saved_values else 0
         metadata = _TARGET_OPERATION_METADATA.get(target, {})
         blockers = list(group["blockers"])
+        exact_readiness_bridge = _exact_readiness_bridge_summary(
+            _exact_readiness_bridge_paths_for_sources(
+                group["source_paths"],
+                repo_root=repo_root,
+            ),
+            repo_root=repo_root,
+        )
+        if exact_readiness_bridge["bridge_report_count"]:
+            blockers.append("exact_readiness_bridge_report_not_ready")
+            if exact_readiness_bridge["ready_candidate_count"]:
+                blockers.append("exact_readiness_bridge_has_ready_candidates_pending_authority")
+        blockers.extend(
+            f"exact_readiness_bridge:{blocker}"
+            for blocker in exact_readiness_bridge["top_blockers"][:6]
+        )
         followup_signal = bool(
             receiver_positive or receiver_negative or positive_rows or negative_count
         )
@@ -1593,6 +1735,7 @@ def _materializer_operation_rows(
                     "total_positive_saved_bytes": sum(
                         value for value in saved_values if value > 0
                     ),
+                    "exact_readiness_bridge": exact_readiness_bridge,
                 },
                 blockers=blockers,
                 queue_executable=queue_executable,
@@ -1630,11 +1773,45 @@ def _materializer_chain_operation_rows(
         for blocker in _string_list(by_target[target].get("blockers"))
         if "receiver" in blocker or "runtime" in blocker or "parity" in blocker
     ]
+    exact_bridge_summaries: list[Mapping[str, Any]] = []
+    seen_bridge_summary_keys: set[str] = set()
+    for target in present:
+        if not isinstance(by_target[target].get("evidence_summary"), Mapping):
+            continue
+        summary = by_target[target]["evidence_summary"].get("exact_readiness_bridge")
+        if not isinstance(summary, Mapping):
+            continue
+        report_paths = [
+            str(report.get("path") or "")
+            for report in summary.get("reports") or []
+            if isinstance(report, Mapping) and report.get("path")
+        ]
+        key = "|".join(sorted(report_paths)) or target
+        if key in seen_bridge_summary_keys:
+            continue
+        seen_bridge_summary_keys.add(key)
+        exact_bridge_summaries.append(summary)
+    exact_ready_candidates = sum(
+        int(summary.get("ready_candidate_count") or 0)
+        for summary in exact_bridge_summaries
+    )
+    exact_candidate_count = sum(
+        int(summary.get("candidate_count") or 0) for summary in exact_bridge_summaries
+    )
+    exact_blocker_counts: dict[str, int] = {}
+    for summary in exact_bridge_summaries:
+        for blocker, count in (summary.get("blocker_counts") or {}).items():
+            parsed = _finite_int_or_none(count)
+            exact_blocker_counts[str(blocker)] = exact_blocker_counts.get(
+                str(blocker), 0
+            ) + (parsed or 0)
     blockers = [
         "chain_requires_single_runtime_consumption_proof",
         "chain_requires_exact_readiness_handoff_after_composition",
         *receiver_blockers,
     ]
+    if exact_bridge_summaries and exact_ready_candidates < exact_candidate_count:
+        blockers.append("chain_exact_readiness_bridges_have_no_ready_candidate")
     return [
         _operation_row(
             operation_id="chain_dfl1_merge_header_elide_minimal_envelope",
@@ -1661,6 +1838,26 @@ def _materializer_chain_operation_rows(
                     "rate_positive_bytes_can_fund_segnet_posenet_repair_only_after_"
                     "single_receiver_runtime_proof_and_component_guard"
                 ),
+                "exact_readiness_bridge_summary": {
+                    "schema": (
+                        "frontier_rate_attack_chain_exact_readiness_bridge_summary.v1"
+                    ),
+                    "bridge_report_count": len(exact_bridge_summaries),
+                    "candidate_count": exact_candidate_count,
+                    "ready_candidate_count": exact_ready_candidates,
+                    "blocked_candidate_count": sum(
+                        int(summary.get("blocked_candidate_count") or 0)
+                        for summary in exact_bridge_summaries
+                    ),
+                    "top_blockers": [
+                        blocker
+                        for blocker, _count in sorted(
+                            exact_blocker_counts.items(),
+                            key=lambda item: (-item[1], item[0]),
+                        )[:16]
+                    ],
+                    **FALSE_AUTHORITY,
+                },
                 "synergy_terms_to_measure": [
                     "header_elide_after_merge_member_name_constants",
                     "dfl1_binary_header_after_payload_member_rename",
@@ -2042,6 +2239,7 @@ def build_frontier_operation_portfolio(
     materializer_rows = _materializer_operation_rows(
         materializer_feedback_payloads,
         materializer_feedback_source_paths,
+        repo_root=repo,
     )
     targeted_correction_budget = _targeted_correction_budget_summary(
         component_summary=component_summary,

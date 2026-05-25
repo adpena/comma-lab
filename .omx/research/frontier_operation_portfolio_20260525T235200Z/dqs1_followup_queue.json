@@ -3588,9 +3588,9 @@
             "--lane-id",
             "lane_dqs1_pairset_geometry_lowimpact_k003_h9dfec80f80_local_first_20260525",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/decoder_q_selective_window_bridge_plan.json",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/decoder_q_selective_window_bridge_plan.json",
             "--md-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/decoder_q_selective_window_bridge_plan.md"
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/decoder_q_selective_window_bridge_plan.md"
           ],
           "id": "build_bridge_plan",
           "kind": "command",
@@ -3601,7 +3601,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/decoder_q_selective_window_bridge_plan.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/decoder_q_selective_window_bridge_plan.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -3629,13 +3629,13 @@
             ".venv/bin/python",
             "tools/plan_decoder_q_selective_runtime_packet.py",
             "--bridge-plan",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/decoder_q_selective_window_bridge_plan.json",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/decoder_q_selective_window_bridge_plan.json",
             "--base-archive",
             "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k003_h9dfec80f80.json",
+            "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k003_h9dfec80f80.json",
             "--md-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k003_h9dfec80f80.md",
+            "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k003_h9dfec80f80.md",
             "--frame-policy",
             "pair_all_frames",
             "--selected-pairs",
@@ -3650,7 +3650,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k003_h9dfec80f80.json",
+              "path": "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k003_h9dfec80f80.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -3680,15 +3680,15 @@
             ".venv/bin/python",
             "tools/materialize_decoder_q_selective_runtime_candidate.py",
             "--plan",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k003_h9dfec80f80.json",
+            "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k003_h9dfec80f80.json",
             "--base-submission-dir",
             "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
             "--output-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/submission_dir",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/submission_dir",
             "--frame-policy",
             "pair_all_frames",
             "--manifest-output",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/materialization_manifest.json"
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/materialization_manifest.json"
           ],
           "id": "materialize",
           "kind": "command",
@@ -3699,7 +3699,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/materialization_manifest.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/materialization_manifest.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -3733,7 +3733,7 @@
             "--global-mutated-archive",
             "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
             "--selective-submission-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/submission_dir",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/submission_dir",
             "--selected-pairs",
             "59,68,98,109,112,134,151,167,229,242,257,259,320,327,371,376,378,412,430,440,459,467,479,492,496,501,544,555,588",
             "--frame-policy",
@@ -3746,9 +3746,9 @@
             "3",
             "--reuse-existing-inflates",
             "--work-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/locality_work",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/locality_work",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/locality_controls.json"
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/locality_controls.json"
           ],
           "id": "locality_controls",
           "kind": "command",
@@ -3756,7 +3756,7 @@
             {
               "equals": true,
               "key": "locality_controls_passed",
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/locality_controls.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/locality_controls.json",
               "type": "json_equals"
             },
             {
@@ -3767,7 +3767,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/locality_controls.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/locality_controls.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -3797,9 +3797,9 @@
             ".venv/bin/python",
             "experiments/contest_auth_eval.py",
             "--archive",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/submission_dir/archive.zip",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/submission_dir/archive.zip",
             "--inflate-sh",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/submission_dir/inflate.sh",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/submission_dir/inflate.sh",
             "--upstream-dir",
             "upstream",
             "--video-names-file",
@@ -3807,9 +3807,9 @@
             "--device",
             "cpu",
             "--work-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/local_cpu_advisory_work",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/local_cpu_advisory_work",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/local_cpu_advisory.json",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/local_cpu_advisory.json",
             "--inflate-timeout",
             "1800",
             "--evaluate-timeout",
@@ -3827,7 +3827,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/local_cpu_advisory.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/local_cpu_advisory.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -3856,11 +3856,11 @@
           "command": [
             ".venv/bin/python",
             "tools/compact_experiment_artifacts.py",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80",
             "--min-bytes",
             "1",
             "--json-output",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/raw_artifact_retention_plan.json"
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/raw_artifact_retention_plan.json"
           ],
           "id": "plan_raw_artifact_retention",
           "kind": "command",
@@ -3868,12 +3868,12 @@
             {
               "equals": 0,
               "key": "plan.blocked_candidate_count",
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/raw_artifact_retention_plan.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/raw_artifact_retention_plan.json",
               "type": "json_equals"
             },
             {
               "false_or_missing": [],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/raw_artifact_retention_plan.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/raw_artifact_retention_plan.json",
               "required_false": [
                 "plan.score_claim",
                 "plan.promotion_eligible",
@@ -3907,7 +3907,7 @@
             "--candidate-id",
             "pairset_geometry_lowimpact_k003_h9dfec80f80",
             "--candidate-local-json",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k003_h9dfec80f80/local_cpu_advisory.json",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k003_h9dfec80f80/local_cpu_advisory.json",
             "--auth-frontier-score-from-pointer",
             "--eureka-out",
             ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k003_h9dfec80f80_20260525T223819Z.json",
@@ -7543,9 +7543,9 @@
             "--lane-id",
             "lane_dqs1_pairset_geometry_lowimpact_k004_h3d2fc811a7_local_first_20260525",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/decoder_q_selective_window_bridge_plan.json",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/decoder_q_selective_window_bridge_plan.json",
             "--md-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/decoder_q_selective_window_bridge_plan.md"
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/decoder_q_selective_window_bridge_plan.md"
           ],
           "id": "build_bridge_plan",
           "kind": "command",
@@ -7556,7 +7556,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/decoder_q_selective_window_bridge_plan.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/decoder_q_selective_window_bridge_plan.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -7584,13 +7584,13 @@
             ".venv/bin/python",
             "tools/plan_decoder_q_selective_runtime_packet.py",
             "--bridge-plan",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/decoder_q_selective_window_bridge_plan.json",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/decoder_q_selective_window_bridge_plan.json",
             "--base-archive",
             "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k004_h3d2fc811a7.json",
+            "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k004_h3d2fc811a7.json",
             "--md-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k004_h3d2fc811a7.md",
+            "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k004_h3d2fc811a7.md",
             "--frame-policy",
             "pair_all_frames",
             "--selected-pairs",
@@ -7605,7 +7605,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k004_h3d2fc811a7.json",
+              "path": "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k004_h3d2fc811a7.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -7635,15 +7635,15 @@
             ".venv/bin/python",
             "tools/materialize_decoder_q_selective_runtime_candidate.py",
             "--plan",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k004_h3d2fc811a7.json",
+            "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k004_h3d2fc811a7.json",
             "--base-submission-dir",
             "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
             "--output-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/submission_dir",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/submission_dir",
             "--frame-policy",
             "pair_all_frames",
             "--manifest-output",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/materialization_manifest.json"
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/materialization_manifest.json"
           ],
           "id": "materialize",
           "kind": "command",
@@ -7654,7 +7654,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/materialization_manifest.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/materialization_manifest.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -7688,7 +7688,7 @@
             "--global-mutated-archive",
             "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
             "--selective-submission-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/submission_dir",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/submission_dir",
             "--selected-pairs",
             "59,68,98,109,112,134,151,167,229,242,257,259,320,327,371,376,378,430,440,459,467,479,492,496,501,544,555,588",
             "--frame-policy",
@@ -7701,9 +7701,9 @@
             "3",
             "--reuse-existing-inflates",
             "--work-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/locality_work",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/locality_work",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/locality_controls.json"
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/locality_controls.json"
           ],
           "id": "locality_controls",
           "kind": "command",
@@ -7711,7 +7711,7 @@
             {
               "equals": true,
               "key": "locality_controls_passed",
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/locality_controls.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/locality_controls.json",
               "type": "json_equals"
             },
             {
@@ -7722,7 +7722,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/locality_controls.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/locality_controls.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -7752,9 +7752,9 @@
             ".venv/bin/python",
             "experiments/contest_auth_eval.py",
             "--archive",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/submission_dir/archive.zip",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/submission_dir/archive.zip",
             "--inflate-sh",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/submission_dir/inflate.sh",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/submission_dir/inflate.sh",
             "--upstream-dir",
             "upstream",
             "--video-names-file",
@@ -7762,9 +7762,9 @@
             "--device",
             "cpu",
             "--work-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/local_cpu_advisory_work",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/local_cpu_advisory_work",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/local_cpu_advisory.json",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/local_cpu_advisory.json",
             "--inflate-timeout",
             "1800",
             "--evaluate-timeout",
@@ -7782,7 +7782,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/local_cpu_advisory.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/local_cpu_advisory.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -7811,11 +7811,11 @@
           "command": [
             ".venv/bin/python",
             "tools/compact_experiment_artifacts.py",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7",
             "--min-bytes",
             "1",
             "--json-output",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/raw_artifact_retention_plan.json"
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/raw_artifact_retention_plan.json"
           ],
           "id": "plan_raw_artifact_retention",
           "kind": "command",
@@ -7823,12 +7823,12 @@
             {
               "equals": 0,
               "key": "plan.blocked_candidate_count",
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/raw_artifact_retention_plan.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/raw_artifact_retention_plan.json",
               "type": "json_equals"
             },
             {
               "false_or_missing": [],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/raw_artifact_retention_plan.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/raw_artifact_retention_plan.json",
               "required_false": [
                 "plan.score_claim",
                 "plan.promotion_eligible",
@@ -7862,7 +7862,7 @@
             "--candidate-id",
             "pairset_geometry_lowimpact_k004_h3d2fc811a7",
             "--candidate-local-json",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k004_h3d2fc811a7/local_cpu_advisory.json",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k004_h3d2fc811a7/local_cpu_advisory.json",
             "--auth-frontier-score-from-pointer",
             "--eureka-out",
             ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k004_h3d2fc811a7_20260525T223819Z.json",
@@ -11494,9 +11494,9 @@
             "--lane-id",
             "lane_dqs1_pairset_geometry_lowimpact_k006_h7ce3073a1a_local_first_20260525",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/decoder_q_selective_window_bridge_plan.json",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/decoder_q_selective_window_bridge_plan.json",
             "--md-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/decoder_q_selective_window_bridge_plan.md"
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/decoder_q_selective_window_bridge_plan.md"
           ],
           "id": "build_bridge_plan",
           "kind": "command",
@@ -11507,7 +11507,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/decoder_q_selective_window_bridge_plan.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/decoder_q_selective_window_bridge_plan.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -11535,13 +11535,13 @@
             ".venv/bin/python",
             "tools/plan_decoder_q_selective_runtime_packet.py",
             "--bridge-plan",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/decoder_q_selective_window_bridge_plan.json",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/decoder_q_selective_window_bridge_plan.json",
             "--base-archive",
             "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k006_h7ce3073a1a.json",
+            "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k006_h7ce3073a1a.json",
             "--md-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k006_h7ce3073a1a.md",
+            "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k006_h7ce3073a1a.md",
             "--frame-policy",
             "pair_all_frames",
             "--selected-pairs",
@@ -11556,7 +11556,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k006_h7ce3073a1a.json",
+              "path": "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k006_h7ce3073a1a.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -11586,15 +11586,15 @@
             ".venv/bin/python",
             "tools/materialize_decoder_q_selective_runtime_candidate.py",
             "--plan",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k006_h7ce3073a1a.json",
+            "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k006_h7ce3073a1a.json",
             "--base-submission-dir",
             "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
             "--output-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/submission_dir",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/submission_dir",
             "--frame-policy",
             "pair_all_frames",
             "--manifest-output",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/materialization_manifest.json"
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/materialization_manifest.json"
           ],
           "id": "materialize",
           "kind": "command",
@@ -11605,7 +11605,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/materialization_manifest.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/materialization_manifest.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -11639,7 +11639,7 @@
             "--global-mutated-archive",
             "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
             "--selective-submission-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/submission_dir",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/submission_dir",
             "--selected-pairs",
             "59,68,98,109,112,134,151,167,229,242,320,327,371,376,378,430,440,459,467,479,492,496,501,544,555,588",
             "--frame-policy",
@@ -11652,9 +11652,9 @@
             "3",
             "--reuse-existing-inflates",
             "--work-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/locality_work",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/locality_work",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/locality_controls.json"
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/locality_controls.json"
           ],
           "id": "locality_controls",
           "kind": "command",
@@ -11662,7 +11662,7 @@
             {
               "equals": true,
               "key": "locality_controls_passed",
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/locality_controls.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/locality_controls.json",
               "type": "json_equals"
             },
             {
@@ -11673,7 +11673,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/locality_controls.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/locality_controls.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -11703,9 +11703,9 @@
             ".venv/bin/python",
             "experiments/contest_auth_eval.py",
             "--archive",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/submission_dir/archive.zip",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/submission_dir/archive.zip",
             "--inflate-sh",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/submission_dir/inflate.sh",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/submission_dir/inflate.sh",
             "--upstream-dir",
             "upstream",
             "--video-names-file",
@@ -11713,9 +11713,9 @@
             "--device",
             "cpu",
             "--work-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/local_cpu_advisory_work",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/local_cpu_advisory_work",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/local_cpu_advisory.json",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/local_cpu_advisory.json",
             "--inflate-timeout",
             "1800",
             "--evaluate-timeout",
@@ -11733,7 +11733,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/local_cpu_advisory.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/local_cpu_advisory.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -11762,11 +11762,11 @@
           "command": [
             ".venv/bin/python",
             "tools/compact_experiment_artifacts.py",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a",
             "--min-bytes",
             "1",
             "--json-output",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/raw_artifact_retention_plan.json"
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/raw_artifact_retention_plan.json"
           ],
           "id": "plan_raw_artifact_retention",
           "kind": "command",
@@ -11774,12 +11774,12 @@
             {
               "equals": 0,
               "key": "plan.blocked_candidate_count",
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/raw_artifact_retention_plan.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/raw_artifact_retention_plan.json",
               "type": "json_equals"
             },
             {
               "false_or_missing": [],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/raw_artifact_retention_plan.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/raw_artifact_retention_plan.json",
               "required_false": [
                 "plan.score_claim",
                 "plan.promotion_eligible",
@@ -11813,7 +11813,7 @@
             "--candidate-id",
             "pairset_geometry_lowimpact_k006_h7ce3073a1a",
             "--candidate-local-json",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k006_h7ce3073a1a/local_cpu_advisory.json",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k006_h7ce3073a1a/local_cpu_advisory.json",
             "--auth-frontier-score-from-pointer",
             "--eureka-out",
             ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k006_h7ce3073a1a_20260525T223819Z.json",
@@ -15441,9 +15441,9 @@
             "--lane-id",
             "lane_dqs1_pairset_geometry_lowimpact_k008_hc4a555f7ab_local_first_20260525",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/decoder_q_selective_window_bridge_plan.json",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/decoder_q_selective_window_bridge_plan.json",
             "--md-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/decoder_q_selective_window_bridge_plan.md"
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/decoder_q_selective_window_bridge_plan.md"
           ],
           "id": "build_bridge_plan",
           "kind": "command",
@@ -15454,7 +15454,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/decoder_q_selective_window_bridge_plan.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/decoder_q_selective_window_bridge_plan.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -15482,13 +15482,13 @@
             ".venv/bin/python",
             "tools/plan_decoder_q_selective_runtime_packet.py",
             "--bridge-plan",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/decoder_q_selective_window_bridge_plan.json",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/decoder_q_selective_window_bridge_plan.json",
             "--base-archive",
             "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k008_hc4a555f7ab.json",
+            "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k008_hc4a555f7ab.json",
             "--md-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k008_hc4a555f7ab.md",
+            "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k008_hc4a555f7ab.md",
             "--frame-policy",
             "pair_all_frames",
             "--selected-pairs",
@@ -15503,7 +15503,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k008_hc4a555f7ab.json",
+              "path": "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k008_hc4a555f7ab.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -15533,15 +15533,15 @@
             ".venv/bin/python",
             "tools/materialize_decoder_q_selective_runtime_candidate.py",
             "--plan",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/geometry_lowimpact_k008_hc4a555f7ab.json",
+            "experiments/results/frontier_operation_portfolio/selector_pareto/packet_plans/geometry_lowimpact_k008_hc4a555f7ab.json",
             "--base-submission-dir",
             "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
             "--output-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/submission_dir",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/submission_dir",
             "--frame-policy",
             "pair_all_frames",
             "--manifest-output",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/materialization_manifest.json"
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/materialization_manifest.json"
           ],
           "id": "materialize",
           "kind": "command",
@@ -15552,7 +15552,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/materialization_manifest.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/materialization_manifest.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -15586,7 +15586,7 @@
             "--global-mutated-archive",
             "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
             "--selective-submission-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/submission_dir",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/submission_dir",
             "--selected-pairs",
             "59,68,98,109,112,134,151,167,229,242,327,371,376,430,440,459,467,479,492,496,501,544,555,588",
             "--frame-policy",
@@ -15599,9 +15599,9 @@
             "3",
             "--reuse-existing-inflates",
             "--work-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/locality_work",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/locality_work",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/locality_controls.json"
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/locality_controls.json"
           ],
           "id": "locality_controls",
           "kind": "command",
@@ -15609,7 +15609,7 @@
             {
               "equals": true,
               "key": "locality_controls_passed",
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/locality_controls.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/locality_controls.json",
               "type": "json_equals"
             },
             {
@@ -15620,7 +15620,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/locality_controls.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/locality_controls.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -15650,9 +15650,9 @@
             ".venv/bin/python",
             "experiments/contest_auth_eval.py",
             "--archive",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/submission_dir/archive.zip",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/submission_dir/archive.zip",
             "--inflate-sh",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/submission_dir/inflate.sh",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/submission_dir/inflate.sh",
             "--upstream-dir",
             "upstream",
             "--video-names-file",
@@ -15660,9 +15660,9 @@
             "--device",
             "cpu",
             "--work-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/local_cpu_advisory_work",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/local_cpu_advisory_work",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/local_cpu_advisory.json",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/local_cpu_advisory.json",
             "--inflate-timeout",
             "1800",
             "--evaluate-timeout",
@@ -15680,7 +15680,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/local_cpu_advisory.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/local_cpu_advisory.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -15709,11 +15709,11 @@
           "command": [
             ".venv/bin/python",
             "tools/compact_experiment_artifacts.py",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab",
             "--min-bytes",
             "1",
             "--json-output",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/raw_artifact_retention_plan.json"
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/raw_artifact_retention_plan.json"
           ],
           "id": "plan_raw_artifact_retention",
           "kind": "command",
@@ -15721,12 +15721,12 @@
             {
               "equals": 0,
               "key": "plan.blocked_candidate_count",
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/raw_artifact_retention_plan.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/raw_artifact_retention_plan.json",
               "type": "json_equals"
             },
             {
               "false_or_missing": [],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/raw_artifact_retention_plan.json",
+              "path": "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/raw_artifact_retention_plan.json",
               "required_false": [
                 "plan.score_claim",
                 "plan.promotion_eligible",
@@ -15760,7 +15760,7 @@
             "--candidate-id",
             "pairset_geometry_lowimpact_k008_hc4a555f7ab",
             "--candidate-local-json",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/geometry_lowimpact_k008_hc4a555f7ab/local_cpu_advisory.json",
+            "experiments/results/frontier_operation_portfolio/materialized/geometry_lowimpact_k008_hc4a555f7ab/local_cpu_advisory.json",
             "--auth-frontier-score-from-pointer",
             "--eureka-out",
             ".omx/research/local_cpu_contest_drift_eureka_pairset_geometry_lowimpact_k008_hc4a555f7ab_20260525T223819Z.json",
@@ -15822,6 +15822,6 @@
       ]
     }
   ],
-  "queue_id": "frontier_rate_attack_feedback_dqs1_followup_20260525T235200Z",
+  "queue_id": "frontier_operation_portfolio_20260525T235200Z",
   "schema": "experiment_queue.v1"
 }

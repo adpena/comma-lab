@@ -268,6 +268,30 @@ def _write_materializer_feedback(root: Path) -> Path:
             ],
         },
     )
+    _write_json(
+        root / "receiver_smoke" / "exact_eval_handoff" / "exact_readiness_bridge_report.json",
+        {
+            "schema": "materializer_chain_exact_readiness_bridge_report.v1",
+            **_false_authority(),
+            "candidate_count": 1,
+            "ready_candidate_count": 0,
+            "blocked_candidate_count": 1,
+            "dispatch_blockers": [
+                "bridge_report_is_not_dispatch_authority",
+                "requires_exact_eval_readiness_gate",
+            ],
+            "rows": [
+                {
+                    **_false_authority(),
+                    "candidate_id": "receiver_smoke_candidate",
+                    "blockers": [
+                        "inflate_sh_missing",
+                        "runtime_tree_sha256_missing",
+                    ],
+                }
+            ],
+        },
+    )
     _write_jsonl(
         root / "tensor_probe" / "observations.jsonl",
         [
@@ -506,6 +530,21 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
         "packet_member_merge_v1",
         "packet_member_zip_header_elide_v1",
     ]
+    chain_bridge = chain_row["evidence_summary"]["exact_readiness_bridge_summary"]
+    assert chain_bridge["bridge_report_count"] == 1
+    assert chain_bridge["ready_candidate_count"] == 0
+    assert "inflate_sh_missing" in chain_bridge["top_blockers"]
+    assert "chain_exact_readiness_bridges_have_no_ready_candidate" in chain_row[
+        "blockers"
+    ]
+    merge_row = next(
+        row
+        for row in operation_portfolio["rows"]
+        if row["operation_id"] == "materializer_packet_member_merge_v1"
+    )
+    merge_bridge = merge_row["evidence_summary"]["exact_readiness_bridge"]
+    assert merge_bridge["bridge_report_count"] == 1
+    assert "exact_readiness_bridge:inflate_sh_missing" in merge_row["blockers"]
     recompress_row = next(
         row
         for row in operation_portfolio["rows"]
