@@ -266,7 +266,7 @@
   "score_claim": false,
   "score_claim_eligible": false,
   "score_claim_valid": false,
-  "source_observation_generated_at_utc": "2026-05-25T04:52:10Z",
+  "source_observation_generated_at_utc": "2026-05-25T05:09:21Z",
   "source_queue_sha256": "ce39d8f8bff78b4fcea222963ae0400ef609834c38e51f7977f00f7d38f8e13f",
   "source_schema": "experiment_queue_observation.v1",
   "source_state_watermark": {

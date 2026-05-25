@@ -2,46 +2,46 @@
   "allowed_use": "local_queue_health_recovery_materialization_only",
   "artifact_records": [
     {
-      "allow_overwrite": false,
+      "allow_overwrite": true,
       "bytes": 41518,
-      "exists_before": false,
+      "exists_before": true,
       "path": "/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_observation.json",
-      "sha256": "3ac948c28bbe4129987e63ee7de7dc646f14298cc4acb450c3c3a32761e90a93",
+      "sha256": "8d2114727fe5a73d74e0e3ff16f844804544ef6c21a14a24c4ad49ac7a7a58f1",
       "write_requested": true,
       "written": true
     },
     {
-      "allow_overwrite": false,
+      "allow_overwrite": true,
       "bytes": 12767,
-      "exists_before": false,
+      "exists_before": true,
       "path": "/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_observation_recovery_plan.json",
-      "sha256": "1413e482e8031a8067c1e132c145105a7ebf84e979f0da8d39bc11f8332c8eed",
+      "sha256": "6ee84b185a4443191dcf860aa9274f5e9477919d76d421625df3e3d952b6f081",
       "write_requested": true,
       "written": true
     },
     {
-      "allow_overwrite": false,
+      "allow_overwrite": true,
       "bytes": 20278,
-      "exists_before": false,
+      "exists_before": true,
       "path": "/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_feedback_replan_policy.json",
-      "sha256": "97ef0c54ed99b2e91be39beb575b78e43df3e9f31b559cd496bb2e338d015895",
+      "sha256": "9649db65abb8426e4a636d97e1b4fcac15fe08ef00193931af9f28887def15a1",
       "write_requested": true,
       "written": true
     },
     {
-      "allow_overwrite": false,
-      "bytes": 5410,
+      "allow_overwrite": true,
+      "bytes": 4196,
       "exists_before": false,
-      "path": "/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_observation_recovery_queue.json",
-      "sha256": "a18ccf55a1311a454dec3a7f2c79bc1974534624cb0f55cdcf8e5e4bbedb4d5c",
+      "path": "/Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_source_failure_diagnostics.json",
+      "sha256": "ef7ad46ba7192d279af8ae366629f9b0ed01c978dd9d358f83f2c865377ca7aa",
       "write_requested": true,
       "written": true
     }
   ],
   "authority_contract": "byte_shaving_queue_recovery_materialization_no_score_authority",
   "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
-  "lane_id": "codex_live_queue_recovery_bridge_20260525",
-  "overwrite": false,
+  "lane_id": "codex_materializer_invalid_template_replan_20260525",
+  "overwrite": true,
   "promotion_eligible": false,
   "queue_feedback_replan_policy_decision": "recover_queue_health",
   "queue_feedback_replan_policy_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_feedback_replan_policy.json",
@@ -55,12 +55,15 @@
   "queue_observation_ready_step_count": 0,
   "queue_observation_recovery_action_count": 1,
   "queue_observation_recovery_plan_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_observation_recovery_plan.json",
-  "queue_observation_recovery_queue_blockers": [],
-  "queue_observation_recovery_queue_emitted": true,
+  "queue_observation_recovery_queue_blockers": [
+    "source_failure_non_rewindable:candidate_archive_template_invalid_strict_single_member_zip:invalid ZIP archive: /Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/template.zip"
+  ],
+  "queue_observation_recovery_queue_emitted": false,
   "queue_observation_recovery_queue_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_observation_recovery_queue.json",
   "queue_observation_recovery_queue_state_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_observation_recovery_queue.sqlite",
   "queue_observation_recovery_required": true,
   "queue_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_execution_queue.json",
+  "queue_source_failure_diagnostics_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_source_failure_diagnostics.json",
   "rank_or_kill_eligible": false,
   "ready_for_exact_eval_dispatch": false,
   "ready_for_queue_health_recovery": true,
@@ -69,6 +72,17 @@
   "schema": "byte_shaving_materializer_campaign_queue_recovery_materialization.v1",
   "score_claim": false,
   "score_claim_valid": false,
+  "source_failure_blockers": [
+    "candidate_archive_template_invalid_strict_single_member_zip:invalid ZIP archive: /Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/template.zip"
+  ],
+  "source_failure_diagnostic_count": 1,
+  "source_failure_non_rewindable_count": 1,
+  "source_failure_recommended_next_action": "repair_materializer_contexts_and_rebuild_source_queue",
+  "source_failure_recovery_queue_execution_blockers": [
+    "source_failure_non_rewindable:candidate_archive_template_invalid_strict_single_member_zip:invalid ZIP archive: /Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/template.zip"
+  ],
+  "source_failure_recovery_queue_execution_recommended": false,
+  "source_failure_requires_context_repair": true,
   "state_path": ".omx/state/experiment_queue_high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3.sqlite",
   "write_requested": true
 }

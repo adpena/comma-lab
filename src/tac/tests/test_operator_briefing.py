@@ -1627,6 +1627,170 @@ def test_materialize_byte_shaving_queue_recovery_emits_paused_recovery_queue(
     assert "rewind" in command
     assert "exp0" in command
     assert "materialize" in command
+    overwrite_proc = subprocess.run(
+        [
+            sys.executable,
+            str(RECOVERY_TOOL),
+            "--repo-root",
+            str(tmp_path),
+            "--run-summary",
+            str(run_summary),
+            "--lane-id",
+            "unit_live_queue_recovery",
+            "--write",
+            "--overwrite",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    overwrite_payload = json.loads(overwrite_proc.stdout)
+    assert overwrite_payload["overwrite"] is True
+    assert all(
+        record["exists_before"] is True
+        for record in overwrite_payload["artifact_records"]
+    )
+
+
+def test_materialize_byte_shaving_queue_recovery_refuses_invalid_template_rewind(
+    tmp_path: Path,
+) -> None:
+    from comma_lab.scheduler.experiment_queue import (
+        connect_state,
+        initialize_queue_state,
+        load_queue_definition,
+    )
+
+    run_dir = tmp_path / ".omx" / "research" / "campaign_bad_template"
+    queue_ref = ".omx/research/campaign_bad_template/materializer_execution_queue.json"
+    state_ref = ".omx/state/experiment_queue_bad_template.sqlite"
+    template_ref = ".omx/research/campaign_bad_template/template.zip"
+    action_ref = ".omx/research/campaign_bad_template/action.json"
+    (tmp_path / template_ref).parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / template_ref).write_text("fixture only; not a zip\n", encoding="utf-8")
+    _write_json(tmp_path / action_ref, {"schema": "fixture"})
+    queue = load_queue_definition(
+        _write_json(
+            tmp_path / queue_ref,
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "bad_template_queue",
+                "controls": {"mode": "running"},
+                "experiments": [
+                    {
+                        "id": "exp0",
+                        "status": "queued",
+                        "steps": [
+                            {
+                                "id": "materialize",
+                                "kind": "command",
+                                "command": [
+                                    sys.executable,
+                                    "tools/run_inverse_scorer_cell_candidate_chain.py",
+                                    "--candidate-archive-template",
+                                    template_ref,
+                                    "--inverse-action-functional",
+                                    action_ref,
+                                    "--raw-contest-video-digest",
+                                    "f" * 64,
+                                    "--output-dir",
+                                    ".omx/research/campaign_bad_template/out",
+                                ],
+                                "resources": {"kind": "local_mlx"},
+                            }
+                        ],
+                    }
+                ],
+            },
+        )
+    )
+    with connect_state(tmp_path / state_ref) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'failed',
+                attempts = 1,
+                updated_at_utc = '2026-05-25T00:00:00Z'
+            WHERE queue_id = 'bad_template_queue'
+              AND experiment_id = 'exp0'
+              AND step_id = 'materialize'
+            """
+        )
+        conn.commit()
+    run_summary = _write_json(
+        run_dir / "materializer_campaign_run.json",
+        {
+            "schema": "byte_shaving_materializer_campaign_run.v1",
+            "run_dir": ".omx/research/campaign_bad_template",
+            "plan": ".omx/research/campaign_bad_template/byte_shaving_campaign_plan.json",
+            "queue_id": "bad_template_queue",
+            "queue_path": queue_ref,
+            "state_path": state_ref,
+            "experiment_count": 1,
+            "build": {"materializer_work_queue_executable_row_count": 1},
+            "worker": {"failure_count": 0},
+            "commands": [
+                {
+                    "returncode": 0,
+                    "command": [
+                        sys.executable,
+                        "tools/build_byte_shaving_campaign_queue.py",
+                        "--plan",
+                        ".omx/research/campaign_bad_template/byte_shaving_campaign_plan.json",
+                        "--materializer-contexts",
+                        ".omx/research/campaign_bad_template/materializer_contexts.json",
+                    ],
+                }
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(RECOVERY_TOOL),
+            "--repo-root",
+            str(tmp_path),
+            "--run-summary",
+            str(run_summary),
+            "--lane-id",
+            "unit_live_queue_recovery",
+            "--write",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    payload = json.loads(proc.stdout)
+    diagnostics_path = run_dir / "queue_source_failure_diagnostics.json"
+    diagnostics = json.loads(diagnostics_path.read_text(encoding="utf-8"))
+
+    assert payload["queue_observation_recovery_required"] is True
+    assert payload["queue_observation_recovery_queue_emitted"] is False
+    assert payload["source_failure_diagnostic_count"] == 1
+    assert payload["source_failure_non_rewindable_count"] == 1
+    assert payload["source_failure_recovery_queue_execution_recommended"] is False
+    assert payload["source_failure_requires_context_repair"] is True
+    assert any(
+        blocker.startswith("candidate_archive_template_invalid_strict_single_member_zip")
+        for blocker in payload["source_failure_blockers"]
+    )
+    assert any(
+        blocker.startswith(
+            "source_failure_non_rewindable:"
+            "candidate_archive_template_invalid_strict_single_member_zip"
+        )
+        for blocker in payload["queue_observation_recovery_queue_blockers"]
+    )
+    assert diagnostics["diagnostic_count"] == 1
+    assert diagnostics["recovery_queue_execution_recommended"] is False
+    assert diagnostics["diagnostics"][0]["rewind_likely_repeats_failure"] is True
+    assert not (run_dir / "queue_observation_recovery_queue.json").exists()
 
 
 def test_byte_shaving_acquisition_summary_blocks_missing_live_queue_state(
@@ -2032,6 +2196,176 @@ def test_byte_shaving_acquisition_summary_surfaces_queue_recovery_signal(
     assert "queue_recovery_source_blockers=experiment_queue_observation_failed_steps:1" in text
     assert "queue_recovery_actions=1" in text
     assert "feedback_continue=False" in text
+
+
+def test_byte_shaving_acquisition_summary_gates_non_rewindable_source_failure(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    root = tmp_path / ".omx" / "research"
+    campaign_dir = root / "high_level" / "campaign_bad_template"
+    queue_ref = (
+        ".omx/research/high_level/campaign_bad_template/"
+        "materializer_execution_queue.json"
+    )
+    state_ref = (
+        ".omx/research/high_level/campaign_bad_template/"
+        "materializer_execution_queue.sqlite"
+    )
+    queue = load_queue_definition(
+        _write_json(
+            tmp_path / queue_ref,
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "bad_template_recovery",
+                "controls": {"mode": "running"},
+                "experiments": [
+                    {
+                        "id": "exp0",
+                        "status": "queued",
+                        "steps": [
+                            {
+                                "id": "materialize",
+                                "kind": "command",
+                                "command": [
+                                    sys.executable,
+                                    "tools/run_inverse_scorer_cell_candidate_chain.py",
+                                    "--candidate-archive-template",
+                                    ".omx/research/high_level/campaign_bad_template/template.zip",
+                                ],
+                                "resources": {"kind": "local_mlx"},
+                            }
+                        ],
+                    }
+                ],
+            },
+        )
+    )
+    with connect_state(tmp_path / state_ref) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'failed',
+                attempts = 1,
+                updated_at_utc = '2026-05-25T00:00:00Z'
+            WHERE queue_id = 'bad_template_recovery'
+              AND experiment_id = 'exp0'
+              AND step_id = 'materialize'
+            """
+        )
+        conn.commit()
+    _write_json(
+        campaign_dir / "byte_shaving_campaign_plan.json",
+        {
+            "combination_ladder": [],
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    _write_json(
+        campaign_dir / "queue_observation_recovery_queue.json",
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "stale_recovery_queue",
+            "controls": {"mode": "paused"},
+            "experiments": [],
+        },
+    )
+    _write_json(
+        campaign_dir / "queue_source_failure_diagnostics.json",
+        {
+            "schema": "byte_shaving_materializer_source_failure_diagnostics.v1",
+            "diagnostics_path": (
+                ".omx/research/high_level/campaign_bad_template/"
+                "queue_source_failure_diagnostics.json"
+            ),
+            "diagnostic_count": 1,
+            "non_rewindable_source_failure_count": 1,
+            "recovery_queue_execution_recommended": False,
+            "recovery_queue_execution_blockers": [
+                (
+                    "source_failure_non_rewindable:"
+                    "candidate_archive_template_invalid_strict_single_member_zip:"
+                    "invalid ZIP archive"
+                )
+            ],
+            "blockers": [
+                (
+                    "candidate_archive_template_invalid_strict_single_member_zip:"
+                    "invalid ZIP archive"
+                )
+            ],
+            "requires_context_repair": True,
+            "recommended_next_action": (
+                "repair_materializer_contexts_and_rebuild_source_queue"
+            ),
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    _write_json(
+        campaign_dir / "materializer_campaign_run.json",
+        {
+            "schema": "byte_shaving_materializer_campaign_run.v1",
+            "run_dir": ".omx/research/high_level/campaign_bad_template",
+            "plan": (
+                ".omx/research/high_level/campaign_bad_template/"
+                "byte_shaving_campaign_plan.json"
+            ),
+            "queue_id": "bad_template_recovery",
+            "queue_path": queue_ref,
+            "state_path": state_ref,
+            "experiment_count": 1,
+            "queue_observation_recovery_queue_path": (
+                ".omx/research/high_level/campaign_bad_template/"
+                "queue_observation_recovery_queue.json"
+            ),
+            "queue_observation_recovery_queue_state_path": (
+                ".omx/research/high_level/campaign_bad_template/"
+                "queue_observation_recovery_queue.sqlite"
+            ),
+            "queue_observation_recovery_queue_emitted": True,
+            "queue_observation_recovery_execution_success": False,
+            "build": {"materializer_work_queue_executable_row_count": 1},
+            "worker": {"failure_count": 0},
+            "commands": [{"returncode": 0}],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    monkeypatch.setattr(mod, "BYTE_SHAVING_ACQUISITION_SCAN_ROOTS", (root,))
+
+    summary = mod._byte_shaving_acquisition_summary()
+    text = mod._format_byte_shaving_acquisition_summary()
+    latest = summary["latest_rows"][0]
+
+    assert summary["source_failure_diagnostic_count"] == 1
+    assert summary["source_failure_non_rewindable_count"] == 1
+    assert summary["source_failure_recovery_gated_count"] == 1
+    assert latest["queue_observation_recovery_queue_emitted"] is True
+    assert latest["source_failure_diagnostic_count"] == 1
+    assert latest["source_failure_non_rewindable_count"] == 1
+    assert latest["source_failure_recovery_queue_execution_recommended"] is False
+    assert latest["source_failure_requires_context_repair"] is True
+    assert (
+        ".omx/research/high_level/campaign_bad_template/"
+        "materializer_execution_queue.json"
+    ) in summary["next_command"]
+    assert "queue_observation_recovery_queue.json" not in summary["next_command"]
+    assert summary["next_command"].endswith(" observe --tail-lines 20")
+    assert (
+        ".omx/research/high_level/campaign_bad_template/"
+        "materializer_execution_queue.sqlite"
+    ) in summary["observe_command"]
+    assert "source_non_rewindable=1" in text
+    assert "source_recovery_recommended=False" in text
+    assert "source_failure_blockers=candidate_archive_template_invalid" in text
+    assert "source_failure_recovery_blockers=source_failure_non_rewindable" in text
 
 
 def test_byte_shaving_acquisition_summary_surfaces_post_recovery_replan_signal(

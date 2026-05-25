@@ -74,7 +74,6 @@ L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH = (
     ".omx/research/l5_v2_packetir_section_entropy_matrix_20260516_codex.json"
 )
 
-from tac.authority_contract import apply_false_authority_contract  # noqa: E402
 from comma_lab.scheduler.experiment_queue import (  # noqa: E402
     default_state_path,
     load_queue_definition,
@@ -85,6 +84,7 @@ from comma_lab.scheduler.experiment_queue_observer import (  # noqa: E402
 from comma_lab.scheduler.queue_feedback_replan_policy import (  # noqa: E402
     build_queue_observation_recovery_plan,
 )
+from tac.authority_contract import apply_false_authority_contract  # noqa: E402
 from tac.optimization.atw_v2_phase2_gate import (  # noqa: E402
     atw_v2_phase2_gate_status,
 )
@@ -1633,6 +1633,22 @@ def _byte_shaving_campaign_plan_digest(path_ref: object) -> dict[str, object]:
     }
 
 
+def _source_failure_diagnostics_from_payload(
+    payload: dict[str, object],
+    run_dir_path: Path,
+) -> dict[str, object]:
+    embedded = payload.get("queue_source_failure_diagnostics")
+    if isinstance(embedded, dict):
+        return embedded
+    path = _repo_path_from_ref(payload.get("queue_source_failure_diagnostics_path"))
+    if path is None:
+        path = run_dir_path / "queue_source_failure_diagnostics.json"
+    if not path.is_file():
+        return {}
+    loaded = _load_json_file(path)
+    return loaded if "_error" not in loaded else {}
+
+
 def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
     payload = _load_json_file(path)
     base: dict[str, object] = {
@@ -1804,6 +1820,27 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
     adjacent_recovery_plan_path = run_dir_path / "queue_observation_recovery_plan.json"
     adjacent_observation_path = run_dir_path / "queue_observation.json"
     adjacent_recovery_queue_exists = adjacent_recovery_queue_path.is_file()
+    source_failure_diagnostics = _source_failure_diagnostics_from_payload(
+        payload,
+        run_dir_path,
+    )
+    source_failure_blockers = _unique_strings(
+        source_failure_diagnostics.get("blockers")
+        if isinstance(source_failure_diagnostics.get("blockers"), list)
+        else []
+    )
+    source_failure_execution_blockers = _unique_strings(
+        source_failure_diagnostics.get("recovery_queue_execution_blockers")
+        if isinstance(
+            source_failure_diagnostics.get("recovery_queue_execution_blockers"),
+            list,
+        )
+        else []
+    )
+    source_failure_recovery_recommended = (
+        source_failure_diagnostics.get("recovery_queue_execution_recommended")
+        is not False
+    )
     recovery_execution = (
         payload.get("queue_observation_recovery_execution")
         if isinstance(payload.get("queue_observation_recovery_execution"), dict)
@@ -2027,6 +2064,43 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
         ),
         "queue_observation_recovery_source_observation_blockers": (
             recovery_source_after_blockers
+        ),
+        "queue_source_failure_diagnostics_path": str(
+            payload.get("queue_source_failure_diagnostics_path")
+            or source_failure_diagnostics.get("diagnostics_path")
+            or ""
+        ),
+        "source_failure_diagnostic_count": _safe_int(
+            payload.get("source_failure_diagnostic_count")
+            if payload.get("source_failure_diagnostic_count") is not None
+            else source_failure_diagnostics.get("diagnostic_count")
+        ),
+        "source_failure_non_rewindable_count": _safe_int(
+            payload.get("source_failure_non_rewindable_count")
+            if payload.get("source_failure_non_rewindable_count") is not None
+            else source_failure_diagnostics.get(
+                "non_rewindable_source_failure_count"
+            )
+        ),
+        "source_failure_recovery_queue_execution_recommended": (
+            payload.get("source_failure_recovery_queue_execution_recommended")
+            is True
+            if payload.get("source_failure_recovery_queue_execution_recommended")
+            is not None
+            else source_failure_recovery_recommended
+        ),
+        "source_failure_recovery_queue_execution_blockers": (
+            source_failure_execution_blockers
+        ),
+        "source_failure_blockers": source_failure_blockers,
+        "source_failure_requires_context_repair": (
+            payload.get("source_failure_requires_context_repair") is True
+            or source_failure_diagnostics.get("requires_context_repair") is True
+        ),
+        "source_failure_recommended_next_action": str(
+            payload.get("source_failure_recommended_next_action")
+            or source_failure_diagnostics.get("recommended_next_action")
+            or ""
         ),
         "post_recovery_feedback_replan_triggered": (
             payload.get("post_recovery_feedback_replan_triggered") is True
@@ -2324,6 +2398,16 @@ def _byte_shaving_acquisition_next_command(latest: dict[str, object] | None) -> 
         )
     if (
         latest
+        and latest.get("source_failure_recovery_queue_execution_recommended") is False
+        and latest.get("queue_path")
+    ):
+        return _experiment_queue_command(
+            latest["queue_path"],
+            latest.get("state_path"),
+            "observe --tail-lines 20",
+        )
+    if (
+        latest
         and latest.get("queue_observation_recovery_queue_emitted") is True
         and latest.get("queue_observation_recovery_execution_success") is not True
         and latest.get("queue_observation_recovery_queue_path")
@@ -2440,6 +2524,23 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
             1
             for row in rows
             if row.get("queue_observation_recovery_queue_emitted") is True
+        ),
+        "source_failure_diagnostic_count": sum(
+            _safe_int(row.get("source_failure_diagnostic_count")) for row in rows
+        ),
+        "source_failure_non_rewindable_count": sum(
+            _safe_int(row.get("source_failure_non_rewindable_count")) for row in rows
+        ),
+        "source_failure_recovery_gated_count": sum(
+            1
+            for row in rows
+            if row.get("source_failure_recovery_queue_execution_recommended")
+            is False
+        ),
+        "source_failure_blocker_count": sum(
+            len(row.get("source_failure_blockers"))
+            for row in rows
+            if isinstance(row.get("source_failure_blockers"), list)
         ),
         "queue_observation_recovery_executed_count": sum(
             1 for row in rows if row.get("queue_observation_recovery_executed") is True
@@ -2577,6 +2678,18 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
             )
             else
             _experiment_queue_command(
+                latest["queue_path"],
+                latest.get("state_path"),
+                "observe --tail-lines 20",
+            )
+            if (
+                latest
+                and latest.get("source_failure_recovery_queue_execution_recommended")
+                is False
+                and latest.get("queue_path")
+            )
+            else
+            _experiment_queue_command(
                 latest["queue_observation_recovery_queue_path"],
                 latest.get("queue_observation_recovery_queue_state_path"),
                 "observe --tail-lines 20",
@@ -2636,6 +2749,14 @@ def _format_byte_shaving_acquisition_summary() -> str:
             f"{payload['live_queue_observation_blocker_count']} "
             "queue_recovery_queued="
             f"{payload['queue_observation_recovery_queue_count']} "
+            "source_failure_diagnostics="
+            f"{payload['source_failure_diagnostic_count']} "
+            "source_non_rewindable="
+            f"{payload['source_failure_non_rewindable_count']} "
+            "source_recovery_gated="
+            f"{payload['source_failure_recovery_gated_count']} "
+            "source_failure_blockers="
+            f"{payload['source_failure_blocker_count']} "
             "queue_recovery_executed="
             f"{payload['queue_observation_recovery_executed_count']} "
             "queue_recovery_success="
@@ -2724,6 +2845,12 @@ def _format_byte_shaving_acquisition_summary() -> str:
                 f"{row.get('live_queue_observation_failed_step_count', 0)} "
                 "queue_recovery_queued="
                 f"{row.get('queue_observation_recovery_queue_emitted') is True} "
+                "source_failure_diagnostics="
+                f"{row.get('source_failure_diagnostic_count', 0)} "
+                "source_non_rewindable="
+                f"{row.get('source_failure_non_rewindable_count', 0)} "
+                "source_recovery_recommended="
+                f"{row.get('source_failure_recovery_queue_execution_recommended')} "
                 "queue_recovery_executed="
                 f"{row.get('queue_observation_recovery_executed') is True} "
                 "queue_recovery_success="
@@ -2782,6 +2909,25 @@ def _format_byte_shaving_acquisition_summary() -> str:
                 lines.append(
                     "    queue_recovery_source_blockers="
                     + ", ".join(str(item) for item in source_blockers[:5])
+                )
+            source_failure_blockers = row.get("source_failure_blockers")
+            if isinstance(source_failure_blockers, list) and source_failure_blockers:
+                lines.append(
+                    "    source_failure_blockers="
+                    + ", ".join(str(item) for item in source_failure_blockers[:5])
+                )
+            source_failure_recovery_blockers = row.get(
+                "source_failure_recovery_queue_execution_blockers"
+            )
+            if (
+                isinstance(source_failure_recovery_blockers, list)
+                and source_failure_recovery_blockers
+            ):
+                lines.append(
+                    "    source_failure_recovery_blockers="
+                    + ", ".join(
+                        str(item) for item in source_failure_recovery_blockers[:5]
+                    )
                 )
             live_blockers = row.get("live_queue_observation_blockers")
             if isinstance(live_blockers, list) and live_blockers:

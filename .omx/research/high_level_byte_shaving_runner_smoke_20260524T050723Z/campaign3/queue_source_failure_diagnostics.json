@@ -1,0 +1,66 @@
+{
+  "allowed_use": "local_source_failure_diagnosis_only",
+  "authority_contract": "byte_shaving_source_failure_diagnostics_no_score_authority",
+  "blockers": [
+    "candidate_archive_template_invalid_strict_single_member_zip:invalid ZIP archive: /Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/template.zip"
+  ],
+  "diagnostic_count": 1,
+  "diagnostics": [
+    {
+      "allowed_use": "local_source_failure_diagnosis_only",
+      "authority_contract": "byte_shaving_source_failure_diagnostic_no_score_authority",
+      "blockers": [
+        "candidate_archive_template_invalid_strict_single_member_zip:invalid ZIP archive: /Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/template.zip"
+      ],
+      "candidate_archive_template": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/template.zip",
+      "candidate_archive_template_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/template.zip",
+      "candidate_archive_template_valid_strict_single_member_zip": false,
+      "experiment_id": "materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter",
+      "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recovery_queue_execution_recommended": false,
+      "requires_context_repair": true,
+      "rewind_likely_repeats_failure": true,
+      "schema": "byte_shaving_materializer_source_failure_diagnostic.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_command_kind": "inverse_scorer_cell_candidate_chain",
+      "source_selection_ids": [
+        "combo_0001",
+        "top_0001",
+        "top_0002"
+      ],
+      "source_unit_ids": [
+        "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+        "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001"
+      ],
+      "step_id": "materialize_local_proof_chain",
+      "work_ids": [
+        "materializer_work_adapter_not_executable_inverse_scorer_cell_candidate_v1_scorer_inverse_surface_cell_materialize_inverse_scorer_cell_candidate_inverse_scorer_cell_candidate_adapter"
+      ]
+    }
+  ],
+  "diagnostics_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/queue_source_failure_diagnostics.json",
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "materializer_contexts_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/materializer_contexts_campaign3.json",
+  "non_rewindable_source_failure_count": 1,
+  "promotion_eligible": false,
+  "queue_id": "high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3",
+  "queue_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_execution_queue.json",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_next_action": "repair_materializer_contexts_and_rebuild_source_queue",
+  "recovery_queue_execution_blockers": [
+    "source_failure_non_rewindable:candidate_archive_template_invalid_strict_single_member_zip:invalid ZIP archive: /Users/adpena/Projects/pact/.omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/template.zip"
+  ],
+  "recovery_queue_execution_recommended": false,
+  "requires_context_repair": true,
+  "run_summary_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/materializer_campaign_run.json",
+  "schema": "byte_shaving_materializer_source_failure_diagnostics.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "source_campaign_plan_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3/byte_shaving_campaign_plan.json",
+  "state_path": ".omx/state/experiment_queue_high_level_byte_shaving_runner_smoke_20260524T050723Z_campaign3.sqlite"
+}

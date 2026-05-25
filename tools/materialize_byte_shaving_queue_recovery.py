@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import shlex
 import sys
 from pathlib import Path
 from typing import Any
@@ -28,14 +29,21 @@ from comma_lab.scheduler.queue_feedback_replan_policy import (  # noqa: E402
     build_queue_observation_recovery_queue,
 )
 from tac.authority_contract import apply_false_authority_contract  # noqa: E402
+from tac.hnerv_lowlevel_packer import (  # noqa: E402
+    HnervLowlevelPackError,
+    read_strict_single_member_zip,
+)
 from tac.repo_io import (  # noqa: E402
     ArtifactWriteError,
     json_text,
     read_json,
+    sha256_file,
     write_json_artifact,
 )
 
 RECOVERY_SUMMARY_SCHEMA = "byte_shaving_materializer_campaign_queue_recovery_materialization.v1"
+SOURCE_FAILURE_DIAGNOSTICS_SCHEMA = "byte_shaving_materializer_source_failure_diagnostics.v1"
+SOURCE_FAILURE_DIAGNOSTIC_SCHEMA = "byte_shaving_materializer_source_failure_diagnostic.v1"
 
 
 def _repo_rel(path: Path, *, repo_root: Path) -> str:
@@ -65,6 +73,178 @@ def _load_optional_json(path_ref: object, *, repo_root: Path) -> dict[str, Any] 
     return payload if isinstance(payload, dict) else None
 
 
+def _command_tokens(command: object) -> list[str]:
+    if isinstance(command, list):
+        return [str(item) for item in command]
+    if isinstance(command, str):
+        try:
+            return shlex.split(command)
+        except ValueError:
+            return [command]
+    return []
+
+
+def _option_value(tokens: list[str], option: str) -> str | None:
+    for index, token in enumerate(tokens):
+        if token == option and index + 1 < len(tokens):
+            return tokens[index + 1]
+        prefix = f"{option}="
+        if token.startswith(prefix):
+            return token[len(prefix) :]
+    return None
+
+
+def _source_step_map(queue: dict[str, Any]) -> dict[tuple[str, str], dict[str, Any]]:
+    steps: dict[tuple[str, str], dict[str, Any]] = {}
+    for experiment in queue.get("experiments") or []:
+        if not isinstance(experiment, dict):
+            continue
+        experiment_id = str(experiment.get("id") or "")
+        for step in experiment.get("steps") or []:
+            if not isinstance(step, dict):
+                continue
+            step_id = str(step.get("id") or "")
+            if experiment_id and step_id:
+                steps[(experiment_id, step_id)] = step
+    return steps
+
+
+def _strict_template_blockers(path_ref: str | None, *, repo_root: Path) -> list[str]:
+    if not path_ref:
+        return ["materializer_source_command_missing_candidate_archive_template"]
+    path = _resolve(path_ref, repo_root=repo_root)
+    if path is None:
+        return ["materializer_source_command_missing_candidate_archive_template"]
+    if not path.exists():
+        return ["candidate_archive_template_missing"]
+    if path.is_symlink():
+        return ["candidate_archive_template_is_symlink"]
+    try:
+        read_strict_single_member_zip(path)
+    except (HnervLowlevelPackError, OSError) as exc:
+        return [f"candidate_archive_template_invalid_strict_single_member_zip:{exc}"]
+    return []
+
+
+def _run_summary_option_value(
+    run_summary: dict[str, Any],
+    option: str,
+) -> str | None:
+    commands = run_summary.get("commands") if isinstance(run_summary.get("commands"), list) else []
+    for command_record in commands:
+        if not isinstance(command_record, dict):
+            continue
+        value = _option_value(_command_tokens(command_record.get("command")), option)
+        if value:
+            return value
+    return None
+
+
+def build_source_failure_diagnostics(
+    *,
+    repo_root: Path,
+    run_summary: dict[str, Any],
+    queue: dict[str, Any],
+    queue_path: Path,
+    state_path: Path,
+    observation: dict[str, Any],
+    diagnostics_path: Path,
+) -> dict[str, Any]:
+    """Classify source-step failures that a rewind would merely replay."""
+
+    source_steps = _source_step_map(queue)
+    diagnostics: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    for failure in observation.get("failed_steps") or []:
+        if not isinstance(failure, dict):
+            continue
+        experiment_id = str(failure.get("experiment_id") or "")
+        step_id = str(failure.get("step_id") or "")
+        source_step = source_steps.get((experiment_id, step_id), {})
+        tokens = _command_tokens(source_step.get("command"))
+        is_inverse_cell_materializer = any(
+            token.endswith("tools/run_inverse_scorer_cell_candidate_chain.py")
+            or token.endswith("run_inverse_scorer_cell_candidate_chain.py")
+            for token in tokens
+        )
+        template_ref = _option_value(tokens, "--candidate-archive-template")
+        if not is_inverse_cell_materializer and template_ref is None:
+            continue
+        template_blockers = _strict_template_blockers(template_ref, repo_root=repo_root)
+        template_path = _resolve(template_ref, repo_root=repo_root) if template_ref else None
+        non_rewindable = bool(template_blockers)
+        if non_rewindable:
+            blockers.extend(template_blockers)
+        diagnostics.append(
+            apply_false_authority_contract(
+                {
+                    "schema": SOURCE_FAILURE_DIAGNOSTIC_SCHEMA,
+                    "experiment_id": experiment_id,
+                    "step_id": step_id,
+                    "source_command_kind": "inverse_scorer_cell_candidate_chain"
+                    if is_inverse_cell_materializer
+                    else "candidate_archive_template_command",
+                    "candidate_archive_template": template_ref or "",
+                    "candidate_archive_template_path": _repo_rel(template_path, repo_root=repo_root)
+                    if template_path is not None
+                    else "",
+                    "candidate_archive_template_valid_strict_single_member_zip": (
+                        not template_blockers
+                    ),
+                    "blockers": template_blockers,
+                    "source_unit_ids": list(failure.get("source_unit_ids") or []),
+                    "source_selection_ids": list(failure.get("source_selection_ids") or []),
+                    "work_ids": list(failure.get("work_ids") or []),
+                    "rewind_likely_repeats_failure": non_rewindable,
+                    "recovery_queue_execution_recommended": not non_rewindable,
+                    "requires_context_repair": non_rewindable,
+                    "allowed_use": "local_source_failure_diagnosis_only",
+                    "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+                },
+                preserve_dispatch_ready=False,
+                reason="byte_shaving_source_failure_diagnostic_no_score_authority",
+            )
+        )
+
+    blockers = sorted({str(blocker) for blocker in blockers})
+    non_rewindable_count = sum(
+        1 for item in diagnostics if item.get("rewind_likely_repeats_failure") is True
+    )
+    context_path = _run_summary_option_value(run_summary, "--materializer-contexts") or ""
+    queue_rebuild_command = _run_summary_option_value(run_summary, "--plan")
+    payload = apply_false_authority_contract(
+        {
+            "schema": SOURCE_FAILURE_DIAGNOSTICS_SCHEMA,
+            "run_summary_path": str(run_summary.get("_run_summary_path") or ""),
+            "queue_id": str(queue.get("queue_id") or ""),
+            "queue_path": _repo_rel(queue_path, repo_root=repo_root),
+            "state_path": _repo_rel(state_path, repo_root=repo_root),
+            "diagnostics_path": _repo_rel(diagnostics_path, repo_root=repo_root),
+            "diagnostic_count": len(diagnostics),
+            "non_rewindable_source_failure_count": non_rewindable_count,
+            "recovery_queue_execution_recommended": non_rewindable_count == 0,
+            "recovery_queue_execution_blockers": [
+                f"source_failure_non_rewindable:{blocker}" for blocker in blockers
+            ],
+            "blockers": blockers,
+            "requires_context_repair": non_rewindable_count > 0,
+            "materializer_contexts_path": context_path,
+            "source_campaign_plan_path": queue_rebuild_command or "",
+            "recommended_next_action": (
+                "repair_materializer_contexts_and_rebuild_source_queue"
+                if non_rewindable_count
+                else "queue_rewind_allowed"
+            ),
+            "diagnostics": diagnostics,
+            "allowed_use": "local_source_failure_diagnosis_only",
+            "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        },
+        preserve_dispatch_ready=False,
+        reason="byte_shaving_source_failure_diagnostics_no_score_authority",
+    )
+    return payload
+
+
 def _write_artifact(
     path: Path,
     payload: dict[str, Any],
@@ -80,7 +260,13 @@ def _write_artifact(
     }
     if not write:
         return record
-    result = write_json_artifact(path, payload, allow_overwrite=overwrite)
+    expected_existing_sha256 = sha256_file(path) if overwrite and path.exists() else None
+    result = write_json_artifact(
+        path,
+        payload,
+        allow_overwrite=overwrite,
+        expected_existing_sha256=expected_existing_sha256,
+    )
     record.update(
         {
             "written": True,
@@ -121,6 +307,7 @@ def build_recovery_materialization(
     feedback_policy_path = run_dir / "queue_feedback_replan_policy.json"
     recovery_queue_path = run_dir / "queue_observation_recovery_queue.json"
     recovery_state_path = run_dir / "queue_observation_recovery_queue.sqlite"
+    source_failure_diagnostics_path = run_dir / "queue_source_failure_diagnostics.json"
     materialization_summary_path = run_dir / "queue_observation_recovery_materialization.json"
 
     observation = observe_experiment_queue(
@@ -179,6 +366,33 @@ def build_recovery_materialization(
         lane_id=effective_lane_id,
         source_policy_path=_repo_rel(feedback_policy_path, repo_root=repo_root),
     )
+    run_summary_with_path = dict(run_summary)
+    run_summary_with_path["_run_summary_path"] = _repo_rel(
+        run_summary_path,
+        repo_root=repo_root,
+    )
+    source_failure_diagnostics = build_source_failure_diagnostics(
+        repo_root=repo_root,
+        run_summary=run_summary_with_path,
+        queue=queue,
+        queue_path=queue_path,
+        state_path=state_path,
+        observation=observation,
+        diagnostics_path=source_failure_diagnostics_path,
+    )
+    source_recovery_recommended = (
+        source_failure_diagnostics.get("recovery_queue_execution_recommended")
+        is not False
+    )
+    if not source_recovery_recommended:
+        recovery_queue = None
+        recovery_queue_blockers = [
+            *recovery_queue_blockers,
+            *list(
+                source_failure_diagnostics.get("recovery_queue_execution_blockers")
+                or []
+            ),
+        ]
 
     artifact_records: list[dict[str, Any]] = []
     artifact_records.append(
@@ -214,6 +428,14 @@ def build_recovery_materialization(
                 overwrite=overwrite,
             )
         )
+    artifact_records.append(
+        _write_artifact(
+            source_failure_diagnostics_path,
+            source_failure_diagnostics,
+            write=write,
+            overwrite=overwrite,
+        )
+    )
 
     payload = apply_false_authority_contract(
         {
@@ -265,6 +487,35 @@ def build_recovery_materialization(
             ),
             "queue_observation_recovery_queue_emitted": recovery_queue is not None,
             "queue_observation_recovery_queue_blockers": recovery_queue_blockers,
+            "queue_source_failure_diagnostics_path": _repo_rel(
+                source_failure_diagnostics_path,
+                repo_root=repo_root,
+            ),
+            "source_failure_diagnostic_count": source_failure_diagnostics.get(
+                "diagnostic_count"
+            ),
+            "source_failure_non_rewindable_count": source_failure_diagnostics.get(
+                "non_rewindable_source_failure_count"
+            ),
+            "source_failure_recovery_queue_execution_recommended": (
+                source_failure_diagnostics.get(
+                    "recovery_queue_execution_recommended"
+                )
+                is not False
+            ),
+            "source_failure_recovery_queue_execution_blockers": list(
+                source_failure_diagnostics.get("recovery_queue_execution_blockers")
+                or []
+            ),
+            "source_failure_blockers": list(
+                source_failure_diagnostics.get("blockers") or []
+            ),
+            "source_failure_requires_context_repair": (
+                source_failure_diagnostics.get("requires_context_repair") is True
+            ),
+            "source_failure_recommended_next_action": str(
+                source_failure_diagnostics.get("recommended_next_action") or ""
+            ),
             "artifact_records": artifact_records,
             "allowed_use": "local_queue_health_recovery_materialization_only",
             "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
