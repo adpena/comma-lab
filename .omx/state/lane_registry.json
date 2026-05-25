@@ -55771,6 +55771,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_probe_9b_100_pair_disambiguator_20260525",
+      "name": "Probe 9b N=100 UNIWARD per-instance x multi-scale wavelet disambiguator",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/probe_9b_100_pair_uniward_per_instance_multi_scale_wavelet_combined_disambiguator.py + .omx/research/tier_1_distortion_axis_probes_20260521/probe_9b_100_pair_20260525T164153Z.json (REPLICATES_WITHIN_BAND; UNBLOCK_1_OF_3_DISPATCH_BLOCKING; satisfies Probe 9 symposium Contrarian binding revision #1)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/probe_9b_100_pair_disambiguator_landed_20260525.md (13-section landing memo with empirical receipts + verdict + operator-routable cascade + 6-hook wire-in)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -55780,5 +55821,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T16:28:44Z"
+  "updated_at": "2026-05-25T16:47:17Z"
 }

@@ -430,3 +430,49 @@ Per Catalog #167 the operator-authorize wrapper routes through `tools/run_modal_
 ## 15. Lane id
 
 `lane_probe_9_tier_2_dispatch_prep_uniward_per_instance_multi_scale_wavelet_segnet_20260525` L1 (impl_complete + memory_entry + Catalog #313 ledger row).
+
+---
+
+## 16. Probe 9b 100-pair disambiguator verdict (APPENDED 2026-05-25T16:43Z per Catalog #110 / #113 HISTORICAL_PROVENANCE APPEND-ONLY)
+
+**APPEND-ONLY DISCIPLINE**: this section is added by sister subagent `probe_9b_100_pair_disambiguator_20260525` per CLAUDE.md "APPEND-ONLY HISTORICAL_PROVENANCE" (Catalog #110 / #113) discipline. Sections 1-15 above + all prior frontmatter, council verdicts, binding revisions, and assumption-adversary classifications are PRESERVED UNCHANGED.
+
+### Probe 9b verdict summary
+
+| Field | Value |
+|---|---|
+| **Verdict** | REPLICATES_WITHIN_BAND (marginal-replication branch; z within 2σ + strong CI) |
+| **Operator signal** | UNBLOCK_1_OF_3_DISPATCH_BLOCKING |
+| **Catalog #313 verdict** | PARTIAL (canonical advisory verdict for [macOS-CPU advisory] probes) |
+| **N=100 mean** | 0.3915 |
+| **N=100 95% CI** | [0.3805, 0.4030] (bootstrap 5000-iter; half-width 0.0112) |
+| **z-score (N=100 vs N=25)** | −1.505σ (within 2.0σ DIVERGENCE_Z_THRESHOLD) |
+| **Absolute Δ vs N=25 mean** | −0.0287 |
+| **Relative Δ vs N=25 mean** | −6.83% (outside strict ±5% band; within 2σ; marginal-replication branch) |
+| **N=100 valid segments** | 537 (24.4× N=25's 22 segments) |
+| **N=100 min textured_avg_weight** | 0.0932 (SHARPER than N=25's 0.2597 by Δ −0.1666; paradigm signal STRENGTHENS) |
+| **N=100 below-threshold count** | 430 / 537 = 80.1% (vs N=25's 19/22 = 86.4%) |
+| **N=100 per-class diversity** | {0:163, 1:172, 2:102, 3:0, 4:100} (cross-class preserved; class 3 absent in both samples) |
+
+### Binding revisions status (post-disambiguator)
+
+| Revision | Source | Status (post-Probe 9b) |
+|---|---|---|
+| #1 Contrarian: 100-pair disambiguator | symposium L196-200 | **✓ SATISFIED** (this footer + Probe 9b landing memo) |
+| #2 Assumption-Adversary: Tier-C density post-training | symposium L201-209 | blocks_promotion (not dispatch); auto-emitted by trainer's `_full_main` when implemented |
+| #3 Mallat: per-level wavelet-basis selection table | symposium L210-217 | PENDING — operator-routable next sister subagent at $0 macOS-CPU |
+| #4 Daubechies: Catalog #312 positioning | symposium L218-226 | blocks_full_main_implementation; design memo positioning |
+| #5 Quantizr: gradient-routing canonical equation form | symposium L227-236 | blocks_full_main_implementation; substrate trainer score_aware_loss |
+| #6 Selfcomp: loss-vs-grammar design path | symposium L237-245 | blocks_full_main_implementation; substrate design path |
+
+**Dispatch authorization signal**: 1 of 3 dispatch-blocking revisions CLEARED. Dispatch remains GATED on (a) Mallat per-level wavelet-basis selection table (#3) AND (b) sister subagent `_full_main` build per revisions 4-5-6 (which unlocks paired CPU+CUDA empirical anchor surface) OR (c) explicit operator-frontier-override per Catalog #300.
+
+### Cross-reference to landing memo
+
+- **Probe 9b landing memo (canonical)**: `.omx/research/probe_9b_100_pair_disambiguator_landed_20260525.md` (full 13-section landing with §2 empirical receipts table + §3 verdict rationale + §7 operator-routable cascade + §9 6-hook wire-in)
+- **Probe 9b tool**: `tools/probe_9b_100_pair_uniward_per_instance_multi_scale_wavelet_combined_disambiguator.py`
+- **Probe 9b verdict JSON**: `.omx/research/tier_1_distortion_axis_probes_20260521/probe_9b_100_pair_20260525T164153Z.json`
+- **Catalog #313 probe outcome row**: `.omx/state/probe_outcomes.jsonl` (event=adjudicated; expires 2026-06-24T16:43:16Z)
+- **Lane**: `lane_probe_9b_100_pair_disambiguator_20260525` L1 (impl_complete + memory_entry + Catalog #313 + canonical Provenance per Catalog #287+#323+#341)
+- **Catalog #344 sister equation evidence count**: `uniward_per_instance_multi_scale_wavelet_combined_v1` STRENGTHENS (2 anchors; remains FORMALIZATION_PENDING until paired CPU+CUDA)
+- **Honest deferrals**: NO paid GPU fired; canonical N=600 full-contest-video disambiguator (Probe 9c) deferred per Carmack MVP-first (not blocking — Contrarian revision #1 satisfied at N=100)

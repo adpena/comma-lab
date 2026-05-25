@@ -1,0 +1,1073 @@
+{
+  "actual_signature": {
+    "bootstrap_ci_mean": {
+      "ci_halfwidth": 0.011219837474749444,
+      "ci_lower": 0.38051205494196555,
+      "ci_upper": 0.40295172989146444,
+      "iterations": 5000,
+      "mean": 0.39151591753493475,
+      "stdev_bootstrap_means": 0.0056884654443327375
+    },
+    "bootstrap_ci_p5_disambiguator": {
+      "iterations": 5000,
+      "p5_ci_lower": 0.14470849335193633,
+      "p5_ci_upper": 0.1746976673603058,
+      "p5_mean": 0.15848740808010103
+    },
+    "ccc_baseline_textured_avg_weight": 0.8062214255332947,
+    "ddd_baseline_textured_avg_weight": 0.626,
+    "distribution_histogram": {
+      "bin_counts": [
+        1,
+        58,
+        84,
+        76,
+        211,
+        86,
+        19,
+        2,
+        0,
+        0
+      ],
+      "bin_edges": [
+        0.0,
+        0.1,
+        0.2,
+        0.30000000000000004,
+        0.4,
+        0.5,
+        0.6000000000000001,
+        0.7000000000000001,
+        0.8,
+        0.9,
+        1.0
+      ]
+    },
+    "min_segment_pixels_threshold": 200,
+    "min_textured_pixels_threshold": 50,
+    "n_frames_decoded": 101,
+    "pair_count": 100,
+    "per_class_segment_count": {
+      "0": 163,
+      "1": 172,
+      "2": 102,
+      "3": 0,
+      "4": 100
+    },
+    "per_segment_metrics_sample_bounded_to_100": [
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.10780970752239227,
+        "instance_id": 1,
+        "instance_pixel_count": 44697,
+        "instance_textured_avg_weight_combined": 0.3447633683681488,
+        "instance_textured_count": 11174,
+        "pair_index": 0
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.15633371472358704,
+        "instance_id": 1,
+        "instance_pixel_count": 2204,
+        "instance_textured_avg_weight_combined": 0.24965007603168488,
+        "instance_textured_count": 551,
+        "pair_index": 0
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.21172559261322021,
+        "instance_id": 2,
+        "instance_pixel_count": 594,
+        "instance_textured_avg_weight_combined": 0.19761380553245544,
+        "instance_textured_count": 149,
+        "pair_index": 0
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.13120223581790924,
+        "instance_id": 1,
+        "instance_pixel_count": 108445,
+        "instance_textured_avg_weight_combined": 0.31506022810935974,
+        "instance_textured_count": 27111,
+        "pair_index": 0
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.13139623403549194,
+        "instance_id": 1,
+        "instance_pixel_count": 40648,
+        "instance_textured_avg_weight_combined": 0.3543238341808319,
+        "instance_textured_count": 10162,
+        "pair_index": 0
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.10922977328300476,
+        "instance_id": 1,
+        "instance_pixel_count": 36948,
+        "instance_textured_avg_weight_combined": 0.34563690423965454,
+        "instance_textured_count": 9237,
+        "pair_index": 1
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.14170344173908234,
+        "instance_id": 2,
+        "instance_pixel_count": 11742,
+        "instance_textured_avg_weight_combined": 0.2627102732658386,
+        "instance_textured_count": 2936,
+        "pair_index": 1
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.17297795414924622,
+        "instance_id": 1,
+        "instance_pixel_count": 2560,
+        "instance_textured_avg_weight_combined": 0.24631758034229279,
+        "instance_textured_count": 640,
+        "pair_index": 1
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.17261415719985962,
+        "instance_id": 2,
+        "instance_pixel_count": 1255,
+        "instance_textured_avg_weight_combined": 0.265076607465744,
+        "instance_textured_count": 314,
+        "pair_index": 1
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.13027606904506683,
+        "instance_id": 1,
+        "instance_pixel_count": 104613,
+        "instance_textured_avg_weight_combined": 0.32351309061050415,
+        "instance_textured_count": 26153,
+        "pair_index": 1
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.13275647163391113,
+        "instance_id": 1,
+        "instance_pixel_count": 39490,
+        "instance_textured_avg_weight_combined": 0.34897342324256897,
+        "instance_textured_count": 9873,
+        "pair_index": 1
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.10575437545776367,
+        "instance_id": 1,
+        "instance_pixel_count": 35141,
+        "instance_textured_avg_weight_combined": 0.34820011258125305,
+        "instance_textured_count": 8785,
+        "pair_index": 2
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.12449445575475693,
+        "instance_id": 2,
+        "instance_pixel_count": 11808,
+        "instance_textured_avg_weight_combined": 0.28920111060142517,
+        "instance_textured_count": 2952,
+        "pair_index": 2
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.1825629621744156,
+        "instance_id": 1,
+        "instance_pixel_count": 2119,
+        "instance_textured_avg_weight_combined": 0.22257795929908752,
+        "instance_textured_count": 530,
+        "pair_index": 2
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.15152986347675323,
+        "instance_id": 4,
+        "instance_pixel_count": 658,
+        "instance_textured_avg_weight_combined": 0.30905628204345703,
+        "instance_textured_count": 165,
+        "pair_index": 2
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.1226503774523735,
+        "instance_id": 1,
+        "instance_pixel_count": 106623,
+        "instance_textured_avg_weight_combined": 0.33325326442718506,
+        "instance_textured_count": 26656,
+        "pair_index": 2
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.11540158092975616,
+        "instance_id": 1,
+        "instance_pixel_count": 40113,
+        "instance_textured_avg_weight_combined": 0.38733455538749695,
+        "instance_textured_count": 10028,
+        "pair_index": 2
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.09446215629577637,
+        "instance_id": 1,
+        "instance_pixel_count": 41375,
+        "instance_textured_avg_weight_combined": 0.401950865983963,
+        "instance_textured_count": 10344,
+        "pair_index": 3
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.09682418406009674,
+        "instance_id": 2,
+        "instance_pixel_count": 11283,
+        "instance_textured_avg_weight_combined": 0.3765240013599396,
+        "instance_textured_count": 2821,
+        "pair_index": 3
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.1559053361415863,
+        "instance_id": 1,
+        "instance_pixel_count": 2127,
+        "instance_textured_avg_weight_combined": 0.26985347270965576,
+        "instance_textured_count": 532,
+        "pair_index": 3
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.10651201754808426,
+        "instance_id": 1,
+        "instance_pixel_count": 107343,
+        "instance_textured_avg_weight_combined": 0.3753136098384857,
+        "instance_textured_count": 26836,
+        "pair_index": 3
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.09158281236886978,
+        "instance_id": 1,
+        "instance_pixel_count": 34322,
+        "instance_textured_avg_weight_combined": 0.4681987166404724,
+        "instance_textured_count": 8581,
+        "pair_index": 3
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.08796583116054535,
+        "instance_id": 1,
+        "instance_pixel_count": 47981,
+        "instance_textured_avg_weight_combined": 0.4272913932800293,
+        "instance_textured_count": 11995,
+        "pair_index": 4
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.12013386189937592,
+        "instance_id": 1,
+        "instance_pixel_count": 1402,
+        "instance_textured_avg_weight_combined": 0.34004759788513184,
+        "instance_textured_count": 351,
+        "pair_index": 4
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.09346573799848557,
+        "instance_id": 1,
+        "instance_pixel_count": 109909,
+        "instance_textured_avg_weight_combined": 0.4285271465778351,
+        "instance_textured_count": 27477,
+        "pair_index": 4
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.06680036336183548,
+        "instance_id": 1,
+        "instance_pixel_count": 37250,
+        "instance_textured_avg_weight_combined": 0.5925685167312622,
+        "instance_textured_count": 9313,
+        "pair_index": 4
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.07590017467737198,
+        "instance_id": 1,
+        "instance_pixel_count": 27677,
+        "instance_textured_avg_weight_combined": 0.4889254868030548,
+        "instance_textured_count": 6919,
+        "pair_index": 5
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.07442272454500198,
+        "instance_id": 2,
+        "instance_pixel_count": 8984,
+        "instance_textured_avg_weight_combined": 0.4778158664703369,
+        "instance_textured_count": 2246,
+        "pair_index": 5
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.12107404321432114,
+        "instance_id": 1,
+        "instance_pixel_count": 1430,
+        "instance_textured_avg_weight_combined": 0.31501489877700806,
+        "instance_textured_count": 358,
+        "pair_index": 5
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.08648481965065002,
+        "instance_id": 1,
+        "instance_pixel_count": 112948,
+        "instance_textured_avg_weight_combined": 0.44942936301231384,
+        "instance_textured_count": 28237,
+        "pair_index": 5
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.06695946305990219,
+        "instance_id": 1,
+        "instance_pixel_count": 45375,
+        "instance_textured_avg_weight_combined": 0.5986387729644775,
+        "instance_textured_count": 11344,
+        "pair_index": 5
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.07688973098993301,
+        "instance_id": 1,
+        "instance_pixel_count": 29241,
+        "instance_textured_avg_weight_combined": 0.4927140474319458,
+        "instance_textured_count": 7310,
+        "pair_index": 6
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.06829049438238144,
+        "instance_id": 5,
+        "instance_pixel_count": 6944,
+        "instance_textured_avg_weight_combined": 0.4986357092857361,
+        "instance_textured_count": 1736,
+        "pair_index": 6
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.10971738398075104,
+        "instance_id": 1,
+        "instance_pixel_count": 1191,
+        "instance_textured_avg_weight_combined": 0.36719822883605957,
+        "instance_textured_count": 298,
+        "pair_index": 6
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.08396641910076141,
+        "instance_id": 1,
+        "instance_pixel_count": 116610,
+        "instance_textured_avg_weight_combined": 0.45741918683052063,
+        "instance_textured_count": 29153,
+        "pair_index": 6
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.06856392323970795,
+        "instance_id": 1,
+        "instance_pixel_count": 42464,
+        "instance_textured_avg_weight_combined": 0.5885927677154541,
+        "instance_textured_count": 10616,
+        "pair_index": 6
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.07659120857715607,
+        "instance_id": 1,
+        "instance_pixel_count": 24256,
+        "instance_textured_avg_weight_combined": 0.4909503757953644,
+        "instance_textured_count": 6064,
+        "pair_index": 7
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.08070552349090576,
+        "instance_id": 3,
+        "instance_pixel_count": 7619,
+        "instance_textured_avg_weight_combined": 0.4581666588783264,
+        "instance_textured_count": 1905,
+        "pair_index": 7
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.12334814667701721,
+        "instance_id": 1,
+        "instance_pixel_count": 1349,
+        "instance_textured_avg_weight_combined": 0.28467121720314026,
+        "instance_textured_count": 337,
+        "pair_index": 7
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.37751224637031555,
+        "instance_id": 5,
+        "instance_pixel_count": 201,
+        "instance_textured_avg_weight_combined": 0.11627877503633499,
+        "instance_textured_count": 50,
+        "pair_index": 7
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.07956486940383911,
+        "instance_id": 1,
+        "instance_pixel_count": 116630,
+        "instance_textured_avg_weight_combined": 0.4757454991340637,
+        "instance_textured_count": 29158,
+        "pair_index": 7
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.06478274613618851,
+        "instance_id": 1,
+        "instance_pixel_count": 46547,
+        "instance_textured_avg_weight_combined": 0.6125139594078064,
+        "instance_textured_count": 11637,
+        "pair_index": 7
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.08535297960042953,
+        "instance_id": 1,
+        "instance_pixel_count": 44938,
+        "instance_textured_avg_weight_combined": 0.4379371702671051,
+        "instance_textured_count": 11235,
+        "pair_index": 8
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.16926182806491852,
+        "instance_id": 1,
+        "instance_pixel_count": 2067,
+        "instance_textured_avg_weight_combined": 0.21229304373264313,
+        "instance_textured_count": 517,
+        "pair_index": 8
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.36360660195350647,
+        "instance_id": 2,
+        "instance_pixel_count": 487,
+        "instance_textured_avg_weight_combined": 0.11866530776023865,
+        "instance_textured_count": 122,
+        "pair_index": 8
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.0781397894024849,
+        "instance_id": 1,
+        "instance_pixel_count": 107085,
+        "instance_textured_avg_weight_combined": 0.48134252429008484,
+        "instance_textured_count": 26771,
+        "pair_index": 8
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.06528061628341675,
+        "instance_id": 1,
+        "instance_pixel_count": 41958,
+        "instance_textured_avg_weight_combined": 0.6060987710952759,
+        "instance_textured_count": 10490,
+        "pair_index": 8
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.08810678124427795,
+        "instance_id": 1,
+        "instance_pixel_count": 44925,
+        "instance_textured_avg_weight_combined": 0.4229622483253479,
+        "instance_textured_count": 11231,
+        "pair_index": 9
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.1928492784500122,
+        "instance_id": 1,
+        "instance_pixel_count": 2345,
+        "instance_textured_avg_weight_combined": 0.1867828369140625,
+        "instance_textured_count": 586,
+        "pair_index": 9
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.21280866861343384,
+        "instance_id": 2,
+        "instance_pixel_count": 1259,
+        "instance_textured_avg_weight_combined": 0.17080987989902496,
+        "instance_textured_count": 315,
+        "pair_index": 9
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.07867807149887085,
+        "instance_id": 1,
+        "instance_pixel_count": 106952,
+        "instance_textured_avg_weight_combined": 0.47494131326675415,
+        "instance_textured_count": 26738,
+        "pair_index": 9
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.06371264159679413,
+        "instance_id": 1,
+        "instance_pixel_count": 41126,
+        "instance_textured_avg_weight_combined": 0.6285521984100342,
+        "instance_textured_count": 10282,
+        "pair_index": 9
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.08672376722097397,
+        "instance_id": 1,
+        "instance_pixel_count": 45918,
+        "instance_textured_avg_weight_combined": 0.42788612842559814,
+        "instance_textured_count": 11480,
+        "pair_index": 10
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.18115173280239105,
+        "instance_id": 1,
+        "instance_pixel_count": 2265,
+        "instance_textured_avg_weight_combined": 0.21596179902553558,
+        "instance_textured_count": 566,
+        "pair_index": 10
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.16778862476348877,
+        "instance_id": 4,
+        "instance_pixel_count": 889,
+        "instance_textured_avg_weight_combined": 0.22397229075431824,
+        "instance_textured_count": 222,
+        "pair_index": 10
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.0761985331773758,
+        "instance_id": 1,
+        "instance_pixel_count": 107623,
+        "instance_textured_avg_weight_combined": 0.48785609006881714,
+        "instance_textured_count": 26906,
+        "pair_index": 10
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.05566352978348732,
+        "instance_id": 1,
+        "instance_pixel_count": 39818,
+        "instance_textured_avg_weight_combined": 0.7116744518280029,
+        "instance_textured_count": 9955,
+        "pair_index": 10
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.09124697744846344,
+        "instance_id": 1,
+        "instance_pixel_count": 53941,
+        "instance_textured_avg_weight_combined": 0.40160030126571655,
+        "instance_textured_count": 13485,
+        "pair_index": 11
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.18646764755249023,
+        "instance_id": 1,
+        "instance_pixel_count": 2497,
+        "instance_textured_avg_weight_combined": 0.20401088893413544,
+        "instance_textured_count": 624,
+        "pair_index": 11
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.11512216180562973,
+        "instance_id": 5,
+        "instance_pixel_count": 712,
+        "instance_textured_avg_weight_combined": 0.36205682158470154,
+        "instance_textured_count": 178,
+        "pair_index": 11
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.0700453370809555,
+        "instance_id": 1,
+        "instance_pixel_count": 100883,
+        "instance_textured_avg_weight_combined": 0.5313124060630798,
+        "instance_textured_count": 25221,
+        "pair_index": 11
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.05950484424829483,
+        "instance_id": 1,
+        "instance_pixel_count": 38425,
+        "instance_textured_avg_weight_combined": 0.6539907455444336,
+        "instance_textured_count": 9606,
+        "pair_index": 11
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.07452600449323654,
+        "instance_id": 1,
+        "instance_pixel_count": 56384,
+        "instance_textured_avg_weight_combined": 0.5193532109260559,
+        "instance_textured_count": 14096,
+        "pair_index": 12
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.12646368145942688,
+        "instance_id": 1,
+        "instance_pixel_count": 1848,
+        "instance_textured_avg_weight_combined": 0.3320947587490082,
+        "instance_textured_count": 462,
+        "pair_index": 12
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.07642452418804169,
+        "instance_id": 1,
+        "instance_pixel_count": 109736,
+        "instance_textured_avg_weight_combined": 0.49270182847976685,
+        "instance_textured_count": 27434,
+        "pair_index": 12
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.05759714916348457,
+        "instance_id": 1,
+        "instance_pixel_count": 28563,
+        "instance_textured_avg_weight_combined": 0.6756934523582458,
+        "instance_textured_count": 7141,
+        "pair_index": 12
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.07443511486053467,
+        "instance_id": 1,
+        "instance_pixel_count": 38466,
+        "instance_textured_avg_weight_combined": 0.5100839734077454,
+        "instance_textured_count": 9617,
+        "pair_index": 13
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.0836104303598404,
+        "instance_id": 2,
+        "instance_pixel_count": 11670,
+        "instance_textured_avg_weight_combined": 0.4571645259857178,
+        "instance_textured_count": 2918,
+        "pair_index": 13
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.13124127686023712,
+        "instance_id": 1,
+        "instance_pixel_count": 1904,
+        "instance_textured_avg_weight_combined": 0.30966660380363464,
+        "instance_textured_count": 476,
+        "pair_index": 13
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.3663034439086914,
+        "instance_id": 2,
+        "instance_pixel_count": 217,
+        "instance_textured_avg_weight_combined": 0.1014307513833046,
+        "instance_textured_count": 54,
+        "pair_index": 13
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.07529089599847794,
+        "instance_id": 1,
+        "instance_pixel_count": 107033,
+        "instance_textured_avg_weight_combined": 0.48881781101226807,
+        "instance_textured_count": 26758,
+        "pair_index": 13
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.0580826997756958,
+        "instance_id": 1,
+        "instance_pixel_count": 37164,
+        "instance_textured_avg_weight_combined": 0.6604602932929993,
+        "instance_textured_count": 9291,
+        "pair_index": 13
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.072408527135849,
+        "instance_id": 1,
+        "instance_pixel_count": 29457,
+        "instance_textured_avg_weight_combined": 0.4876241385936737,
+        "instance_textured_count": 7364,
+        "pair_index": 14
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.0817316323518753,
+        "instance_id": 2,
+        "instance_pixel_count": 11122,
+        "instance_textured_avg_weight_combined": 0.45741817355155945,
+        "instance_textured_count": 2781,
+        "pair_index": 14
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.13675187528133392,
+        "instance_id": 1,
+        "instance_pixel_count": 1525,
+        "instance_textured_avg_weight_combined": 0.24960127472877502,
+        "instance_textured_count": 381,
+        "pair_index": 14
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.08763232082128525,
+        "instance_id": 1,
+        "instance_pixel_count": 111734,
+        "instance_textured_avg_weight_combined": 0.4207074046134949,
+        "instance_textured_count": 27934,
+        "pair_index": 14
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.0812450498342514,
+        "instance_id": 1,
+        "instance_pixel_count": 42531,
+        "instance_textured_avg_weight_combined": 0.4999721646308899,
+        "instance_textured_count": 10633,
+        "pair_index": 14
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.06849509477615356,
+        "instance_id": 1,
+        "instance_pixel_count": 36362,
+        "instance_textured_avg_weight_combined": 0.5560331344604492,
+        "instance_textured_count": 9091,
+        "pair_index": 15
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.07685459405183792,
+        "instance_id": 2,
+        "instance_pixel_count": 11747,
+        "instance_textured_avg_weight_combined": 0.48108887672424316,
+        "instance_textured_count": 2937,
+        "pair_index": 15
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.14902609586715698,
+        "instance_id": 1,
+        "instance_pixel_count": 1774,
+        "instance_textured_avg_weight_combined": 0.24133619666099548,
+        "instance_textured_count": 444,
+        "pair_index": 15
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.07367724180221558,
+        "instance_id": 1,
+        "instance_pixel_count": 113488,
+        "instance_textured_avg_weight_combined": 0.509808361530304,
+        "instance_textured_count": 28372,
+        "pair_index": 15
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.05365971848368645,
+        "instance_id": 1,
+        "instance_pixel_count": 33129,
+        "instance_textured_avg_weight_combined": 0.7105700373649597,
+        "instance_textured_count": 8282,
+        "pair_index": 15
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.07308720052242279,
+        "instance_id": 1,
+        "instance_pixel_count": 39372,
+        "instance_textured_avg_weight_combined": 0.4988849461078644,
+        "instance_textured_count": 9843,
+        "pair_index": 16
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.15740570425987244,
+        "instance_id": 1,
+        "instance_pixel_count": 2082,
+        "instance_textured_avg_weight_combined": 0.21196836233139038,
+        "instance_textured_count": 521,
+        "pair_index": 16
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.36883580684661865,
+        "instance_id": 3,
+        "instance_pixel_count": 244,
+        "instance_textured_avg_weight_combined": 0.1223590150475502,
+        "instance_textured_count": 61,
+        "pair_index": 16
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.07201198488473892,
+        "instance_id": 1,
+        "instance_pixel_count": 111214,
+        "instance_textured_avg_weight_combined": 0.5156773328781128,
+        "instance_textured_count": 27804,
+        "pair_index": 16
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.05647833272814751,
+        "instance_id": 1,
+        "instance_pixel_count": 43657,
+        "instance_textured_avg_weight_combined": 0.6788349747657776,
+        "instance_textured_count": 10914,
+        "pair_index": 16
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.07600811868906021,
+        "instance_id": 1,
+        "instance_pixel_count": 45264,
+        "instance_textured_avg_weight_combined": 0.4848061501979828,
+        "instance_textured_count": 11316,
+        "pair_index": 17
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.18122881650924683,
+        "instance_id": 1,
+        "instance_pixel_count": 2056,
+        "instance_textured_avg_weight_combined": 0.1905311793088913,
+        "instance_textured_count": 514,
+        "pair_index": 17
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.2985648214817047,
+        "instance_id": 2,
+        "instance_pixel_count": 631,
+        "instance_textured_avg_weight_combined": 0.1381751447916031,
+        "instance_textured_count": 158,
+        "pair_index": 17
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.07115253806114197,
+        "instance_id": 1,
+        "instance_pixel_count": 107815,
+        "instance_textured_avg_weight_combined": 0.5143090486526489,
+        "instance_textured_count": 26954,
+        "pair_index": 17
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.05678555741906166,
+        "instance_id": 1,
+        "instance_pixel_count": 40838,
+        "instance_textured_avg_weight_combined": 0.6838365793228149,
+        "instance_textured_count": 10210,
+        "pair_index": 17
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.0855008140206337,
+        "instance_id": 1,
+        "instance_pixel_count": 58192,
+        "instance_textured_avg_weight_combined": 0.42959293723106384,
+        "instance_textured_count": 14548,
+        "pair_index": 18
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.18705955147743225,
+        "instance_id": 1,
+        "instance_pixel_count": 2569,
+        "instance_textured_avg_weight_combined": 0.20186954736709595,
+        "instance_textured_count": 642,
+        "pair_index": 18
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.15250903367996216,
+        "instance_id": 2,
+        "instance_pixel_count": 2098,
+        "instance_textured_avg_weight_combined": 0.23055978119373322,
+        "instance_textured_count": 525,
+        "pair_index": 18
+      },
+      {
+        "class_index": 2,
+        "instance_avg_detail_multi_scale": 0.06372333317995071,
+        "instance_id": 1,
+        "instance_pixel_count": 99244,
+        "instance_textured_avg_weight_combined": 0.583860456943512,
+        "instance_textured_count": 24811,
+        "pair_index": 18
+      },
+      {
+        "class_index": 4,
+        "instance_avg_detail_multi_scale": 0.056790757924318314,
+        "instance_id": 1,
+        "instance_pixel_count": 34504,
+        "instance_textured_avg_weight_combined": 0.6707652807235718,
+        "instance_textured_count": 8626,
+        "pair_index": 18
+      },
+      {
+        "class_index": 0,
+        "instance_avg_detail_multi_scale": 0.07918111979961395,
+        "instance_id": 1,
+        "instance_pixel_count": 58654,
+        "instance_textured_avg_weight_combined": 0.47112616896629333,
+        "instance_textured_count": 14664,
+        "pair_index": 19
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.15327288210391998,
+        "instance_id": 1,
+        "instance_pixel_count": 2729,
+        "instance_textured_avg_weight_combined": 0.253446102142334,
+        "instance_textured_count": 682,
+        "pair_index": 19
+      },
+      {
+        "class_index": 1,
+        "instance_avg_detail_multi_scale": 0.11715473979711533,
+        "instance_id": 3,
+        "instance_pixel_count": 1062,
+        "instance_textured_avg_weight_combined": 0.3088318109512329,
+        "instance_textured_count": 266,
+        "pair_index": 19
+      }
+    ],
+    "probe_5_per_class_min": 0.5673,
+    "probe_8_per_instance_min": 0.5233,
+    "segment_textured_avg_weight_max": 0.7116744518280029,
+    "segment_textured_avg_weight_mean": 0.39151591753493475,
+    "segment_textured_avg_weight_median": 0.4198218882083893,
+    "segment_textured_avg_weight_min": 0.09315050393342972,
+    "segment_textured_avg_weight_stdev": 0.13180527138677492,
+    "segment_textured_below_threshold_count": 430,
+    "segment_textured_below_threshold_fraction": 0.8007448789571695,
+    "segnet_eval_resolution_HxW": [
+      384,
+      512
+    ],
+    "valid_segment_count": 537,
+    "wavelet_levels": 3,
+    "wavelet_name": "db8"
+  },
+  "axis_tag": "[macOS-CPU advisory]",
+  "canonical_equation_reference": "sister candidate uniward_per_instance_multi_scale_wavelet_combined_v1 (Catalog #344 FORMALIZATION_PENDING; RATIFY-N evidence count update via this anchor)",
+  "canonical_provenance": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "bootstrap_iterations": 5000,
+    "device": "cpu",
+    "evidence_grade": "macOS-CPU-advisory",
+    "fridrich_canonical_reference": "Holub-Fridrich-Denemark 2014 'Universal Distortion Function for Steganography in an Arbitrary Domain' (UNIWARD) multi-level wavelet extension; CLAUDE.md 'Fridrich inverse steganalysis' section.",
+    "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+    "kind": "macos_cpu_advisory",
+    "min_segment_pixels_threshold": 200,
+    "min_textured_pixels_threshold": 50,
+    "predecessor_probe": "tier_1_distortion_uniward_per_instance_multi_scale_wavelet_combined_smoke (N=25 segments / 4 pairs / commit 685fe6726)",
+    "promotable": false,
+    "ready_for_exact_eval_dispatch": false,
+    "rng_seed": 42,
+    "score_claim_valid": false,
+    "segnet_eval_resolution_HxW": [
+      384,
+      512
+    ],
+    "segnet_missing_keys": 0,
+    "segnet_unexpected_keys": 0,
+    "sigma_fridrich": 0.015625,
+    "sister_canonical_equation_candidate": "uniward_per_instance_multi_scale_wavelet_combined_v1 (Catalog #344 FORMALIZATION_PENDING; RATIFY-N evidence count update)",
+    "source_video_n_frames_decoded": 101,
+    "source_video_path": "/Users/adpena/Projects/pact/upstream/videos/0.mkv",
+    "source_video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
+    "wavelet_basis": "db8",
+    "wavelet_levels": 3
+  },
+  "catalog_references": [
+    "#1",
+    "#192",
+    "#287",
+    "#290",
+    "#307",
+    "#308",
+    "#313",
+    "#323",
+    "#341",
+    "#344"
+  ],
+  "device": "cpu",
+  "elapsed_seconds": 19.97419309616089,
+  "evidence_grade": "macOS-CPU-advisory",
+  "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+  "lane_id": "lane_probe_9b_100_pair_disambiguator_20260525",
+  "n_pairs": 100,
+  "next_action": "UNBLOCK_1_OF_3_DISPATCH_BLOCKING: Probe 9 N=25 anchor (min=0.2597; mean=0.4202) REPLICATES at N=100 (mean=0.3915; 95% CI [0.3805, 0.4030]; z-score -1.505\u03c3). The Contrarian binding revision #1 is SATISFIED. 2 of 3 dispatch-blocking revisions remain (Mallat per-level wavelet-basis selection table; the paired CPU+CUDA empirical anchor + sister subagent _full_main build). Probe 9 Tier-2 paid dispatch ~$2-7 still pending those 2 revisions OR operator-frontier-override per Catalog #300. Per Carmack MVP-first cascade: queue sister subagent for Mallat per-level wavelet-basis empirical anchor table (db4 / db8 / db16 / bior4.4) at $0 macOS-CPU advisory.",
+  "operator_signal": "UNBLOCK_1_OF_3_DISPATCH_BLOCKING",
+  "predecessor_probe_anchor": {
+    "predecessor_commit": "685fe6726",
+    "predecessor_mean_textured_avg_weight": 0.4202,
+    "predecessor_min_textured_avg_weight": 0.2597,
+    "predecessor_pair_count": 4,
+    "predecessor_probe_id": "tier_1_distortion_uniward_per_instance_multi_scale_wavelet_combined_smoke",
+    "predecessor_valid_segments": 22,
+    "predecessor_verdict": "POSITIVE_SIGNAL_BREAKS_THRESHOLD"
+  },
+  "predicted_signature": {
+    "DIVERGES_SMALL_N_ARTIFACT": "|z-score(N=100 mean vs N=25 mean)| > 2.0\u03c3 (per Catalog #307 IMPLEMENTATION-LEVEL falsification; paradigm intact)",
+    "INSUFFICIENT_SIGNAL": "bootstrap CI half-width > 0.050 (variance dominates; queue N=600 sample or alternative reducer)",
+    "REPLICATES_WITHIN_BAND": "N=100 mean inside N=25 mean \u00b15% band AND bootstrap CI contains N=25 mean AND CI half-width \u2264 0.050"
+  },
+  "probe_id": "probe_9b_100_pair_uniward_per_instance_multi_scale_wavelet_combined_disambiguator_20260525",
+  "probe_name": "Probe 9b N-pair UNIWARD per-instance \u00d7 multi-scale wavelet COMBINED disambiguator (extends Probe 9 N=25 anchor to N=100 pairs)",
+  "produced_at_utc": "2026-05-25T16:42:13+00:00",
+  "produced_host": "Primary",
+  "produced_pid": 36679,
+  "promotable": false,
+  "ready_for_exact_eval_dispatch": false,
+  "replicates_n25_anchor": {
+    "absolute_delta_mean_n100_minus_n25": -0.028684082465065264,
+    "ci_halfwidth_acceptable": true,
+    "divergence_z_threshold": 2.0,
+    "divergence_zscore_n100_vs_n25": -1.505352564013735,
+    "diverges_zscore": false,
+    "insufficient_ci_halfwidth_threshold": 0.05,
+    "n100_mean": 0.39151591753493475,
+    "n100_valid_segments": 537,
+    "n25_anchor_below_threshold_count": 19,
+    "n25_anchor_mean": 0.4202,
+    "n25_anchor_median": 0.4315,
+    "n25_anchor_min": 0.2597,
+    "n25_anchor_stdev": 0.0853,
+    "n25_anchor_valid_segments": 22,
+    "relative_delta_pct": -6.826292828430572,
+    "replicates_within_band": false,
+    "replication_band_fraction": 0.05,
+    "replication_band_lower": 0.39919,
+    "replication_band_upper": 0.44121000000000005
+  },
+  "schema_version": "probe_9b_100_pair_uniward_per_instance_multi_scale_wavelet_combined_disambiguator_v1",
+  "score_claim": false,
+  "source_video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
+  "verdict": "REPLICATES_WITHIN_BAND"
+}
