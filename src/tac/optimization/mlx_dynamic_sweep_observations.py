@@ -450,6 +450,10 @@ def normalize_observation_row(row: Mapping[str, Any]) -> dict[str, Any]:
         "score_delta_vs_baseline",
         "archive_byte_delta_vs_baseline",
         "component_delta_baseline_policy",
+        "archive_identity_semantics",
+        "feedback_semantics",
+        "non_authoritative_repair_budget_score",
+        "non_authoritative_repair_budget_bytes_equivalent",
     )
     for key in passthrough_keys:
         if key in row and row.get(key) is not None:

@@ -199,6 +199,9 @@ def test_briefing_json_composite_has_all_three_keys():
     assert out["dispatch_readiness"][
         "phase_6h_distortion_axis_learned_sweep_bridge"
     ]["score_claim"] is False
+    assert "feedback_observation_count" in out["dispatch_readiness"][
+        "phase_6h_distortion_axis_learned_sweep_bridge"
+    ]
     dqs1_greedy = out["dqs1_drop_many_greedy"]
     assert dqs1_greedy["schema"] == "pact.dqs1_drop_many_greedy_summary.v1"
     assert dqs1_greedy["tool_exists"] is True
@@ -3613,6 +3616,38 @@ def test_distortion_axis_learned_sweep_bridge_summary_surfaces_budget(
             },
         },
     )
+    _write_json(
+        root / "distortion_axis_probe_learned_sweep_feedback_summary.json",
+        {
+            "schema": "distortion_axis_probe_learned_sweep_feedback.v1",
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+            "candidate_id": (
+                "distortion_axis:uniward_per_instance_multi_scale_wavelet_combined_v1"
+            ),
+            "sweep_config_id": "macos_cpu_advisory",
+            "optimization_pass_id": "smoke",
+            "observed_axis": "macos_cpu_advisory",
+            "observed_score_or_delta": -0.010,
+            "observation_jsonl": "observations.jsonl",
+            "observation_jsonl_sha256": "a" * 64,
+            "replan": {
+                "schema": "mlx_dynamic_learned_sweep_plan.v1",
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "suppressed_observed_row_count": 1,
+                "local_ready_row_count": 1,
+            },
+        },
+    )
     monkeypatch.setattr(mod, "DISTORTION_AXIS_LEARNED_SWEEP_SCAN_ROOTS", (root,))
 
     summary = mod._distortion_axis_learned_sweep_summary()
@@ -3620,14 +3655,19 @@ def test_distortion_axis_learned_sweep_bridge_summary_surfaces_budget(
     assert summary["status"] == "ADVISORY_PLAN"
     assert summary["payload_count"] == 1
     assert summary["plan_count"] == 1
+    assert summary["feedback_count"] == 1
     assert summary["adapted_candidate_count"] == 1
     assert summary["suppressed_candidate_count"] == 1
     assert summary["local_ready_row_count"] == 2
+    assert summary["feedback_observation_count"] == 1
+    assert summary["feedback_replan_suppressed_count"] == 1
     assert summary["best_repair_budget_bytes_equivalent"] == 15018.2
     assert summary["score_claim"] is False
     assert summary["ready_for_exact_eval_dispatch"] is False
     text = mod._format_distortion_axis_learned_sweep_summary()
     assert "best non-authoritative repair budget: 15018.2" in text
+    assert "feedback_observations=1" in text
+    assert "replan_suppressed=1" in text
     assert "authority: learned-sweep planning only" in text
 
 

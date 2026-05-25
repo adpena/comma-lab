@@ -95,6 +95,9 @@ DISTORTION_AXIS_LEARNED_SWEEP_PAYLOAD_GLOB = (
 DISTORTION_AXIS_LEARNED_SWEEP_PLAN_GLOB = (
     "distortion_axis_probe_learned_sweep_plan*.json"
 )
+DISTORTION_AXIS_LEARNED_SWEEP_FEEDBACK_GLOB = (
+    "distortion_axis_probe_learned_sweep_feedback_summary*.json"
+)
 DQS1_DROP_MANY_GREEDY_VERDICT_GLOB = (
     "dqs1_drop_many_build_1c_greedy_heuristic_alternative_reducer_*/verdict.json"
 )
@@ -2548,15 +2551,27 @@ def _distortion_axis_learned_sweep_summary() -> dict[str, object]:
             DISTORTION_AXIS_LEARNED_SWEEP_PLAN_GLOB
         )
     ]
+    feedback_rows = [
+        _distortion_axis_learned_sweep_feedback_row(path)
+        for path in _distortion_axis_learned_sweep_paths(
+            DISTORTION_AXIS_LEARNED_SWEEP_FEEDBACK_GLOB
+        )
+    ]
     rows = payload_rows + plan_rows
+    feedback_blocked = [
+        row
+        for row in feedback_rows
+        if str(row.get("status") or "").startswith(("BLOCKED", "ERROR"))
+    ]
     blocked = [
         row
-        for row in rows
+        for row in rows + feedback_rows
         if str(row.get("status") or "").startswith(("BLOCKED", "ERROR"))
     ]
     advisory = [row for row in rows if row.get("status") == "ADVISORY_PLAN"]
     latest_payload = payload_rows[0] if payload_rows else {}
     latest_plan = plan_rows[0] if plan_rows else {}
+    latest_feedback = feedback_rows[0] if feedback_rows else {}
     if blocked:
         status = "BLOCKED"
         reason = "one or more distortion learned-sweep artifacts leak authority or fail loading"
@@ -2577,7 +2592,9 @@ def _distortion_axis_learned_sweep_summary() -> dict[str, object]:
         "reason": reason,
         "payload_count": len(payload_rows),
         "plan_count": len(plan_rows),
+        "feedback_count": len(feedback_rows),
         "blocked_count": len(blocked),
+        "feedback_blocked_count": len(feedback_blocked),
         "adapted_candidate_count": sum(
             _safe_int(row.get("adapted_candidate_count")) for row in payload_rows
         ),
@@ -2587,15 +2604,78 @@ def _distortion_axis_learned_sweep_summary() -> dict[str, object]:
         "local_ready_row_count": sum(
             _safe_int(row.get("local_ready_row_count")) for row in plan_rows
         ),
+        "feedback_observation_count": sum(
+            _safe_int(row.get("observation_count")) for row in feedback_rows
+        ),
+        "feedback_replan_suppressed_count": sum(
+            _safe_int(row.get("replan_suppressed_observed_row_count"))
+            for row in feedback_rows
+        ),
         "best_repair_budget_bytes_equivalent": _safe_float(
             latest_payload.get("best_repair_budget_bytes_equivalent")
         ),
         "latest_payload": latest_payload,
         "latest_plan": latest_plan,
+        "latest_feedback": latest_feedback,
         "ready_for_exact_eval_dispatch": False,
         "score_claim": False,
         "promotable": False,
         **_false_authority_fields(),
+    }
+
+
+def _distortion_axis_learned_sweep_feedback_row(path: Path) -> dict[str, object]:
+    payload = _load_json_file(path)
+    base = {
+        "kind": "distortion_axis_learned_sweep_feedback",
+        "path": _repo_rel(path),
+        "sha256": _sha256_file(path) if path.is_file() else "",
+        "mtime_ns": path.stat().st_mtime_ns if path.is_file() else 0,
+        **_false_authority_fields(),
+    }
+    if "_error" in payload:
+        return {**base, "status": "ERROR", "blockers": [str(payload["_error"])]}
+    bad_authority = _authority_truthy(payload)
+    if bad_authority:
+        return {
+            **base,
+            "schema": str(payload.get("schema") or ""),
+            "status": "BLOCKED_AUTHORITY_LEAK",
+            "blockers": [f"truthy_authority:{key}" for key in bad_authority],
+        }
+    schema = str(payload.get("schema") or "")
+    if schema != "distortion_axis_probe_learned_sweep_feedback.v1":
+        return {
+            **base,
+            "schema": schema,
+            "status": "BLOCKED_SCHEMA",
+            "blockers": [
+                "expected_schema:distortion_axis_probe_learned_sweep_feedback.v1"
+            ],
+        }
+    replan = payload.get("replan")
+    replan_dict = replan if isinstance(replan, dict) else {}
+    return {
+        **base,
+        "schema": schema,
+        "status": "ADVISORY_FEEDBACK",
+        "candidate_id": str(payload.get("candidate_id") or ""),
+        "sweep_config_id": str(payload.get("sweep_config_id") or ""),
+        "optimization_pass_id": str(payload.get("optimization_pass_id") or ""),
+        "observed_axis": str(payload.get("observed_axis") or ""),
+        "observation_jsonl": str(payload.get("observation_jsonl") or ""),
+        "observation_jsonl_sha256": str(payload.get("observation_jsonl_sha256") or ""),
+        "observation_count": 1 if payload.get("observation_jsonl") else 0,
+        "observed_score_or_delta": _safe_float(
+            payload.get("observed_score_or_delta")
+        ),
+        "replan_suppressed_observed_row_count": _safe_int(
+            replan_dict.get("suppressed_observed_row_count")
+        ),
+        "replan_local_ready_row_count": _safe_int(
+            replan_dict.get("local_ready_row_count")
+        ),
+        "blockers": [],
     }
 
 
@@ -2604,10 +2684,13 @@ def _format_distortion_axis_learned_sweep_summary() -> str:
     lines = [
         f"status: {payload['status']} — {payload['reason']}",
         f"artifacts: payloads={payload['payload_count']} "
-        f"plans={payload['plan_count']} blocked={payload['blocked_count']} "
+        f"plans={payload['plan_count']} feedback={payload['feedback_count']} "
+        f"blocked={payload['blocked_count']} "
         f"candidates={payload['adapted_candidate_count']} "
         f"suppressed={payload['suppressed_candidate_count']} "
-        f"local_ready_rows={payload['local_ready_row_count']}",
+        f"local_ready_rows={payload['local_ready_row_count']} "
+        f"feedback_observations={payload['feedback_observation_count']} "
+        f"replan_suppressed={payload['feedback_replan_suppressed_count']}",
     ]
     budget = _safe_float(payload.get("best_repair_budget_bytes_equivalent"))
     if budget > 0.0:
@@ -2625,6 +2708,14 @@ def _format_distortion_axis_learned_sweep_summary() -> str:
     latest_plan = payload.get("latest_plan")
     if isinstance(latest_plan, dict) and latest_plan:
         lines.append(f"latest plan: {latest_plan.get('path')}")
+    latest_feedback = payload.get("latest_feedback")
+    if isinstance(latest_feedback, dict) and latest_feedback:
+        lines.append(
+            "latest feedback: "
+            f"{latest_feedback.get('path')} "
+            f"observed_axis={latest_feedback.get('observed_axis')} "
+            f"suppressed={latest_feedback.get('replan_suppressed_observed_row_count')}"
+        )
     lines.append(
         "authority: learned-sweep planning only; exact CPU/CUDA auth and byte-closed archive still required."
     )
@@ -6364,6 +6455,7 @@ def _dispatch_readiness() -> dict[str, object]:
             "tool_exists": distortion_learned_sweep["tool_exists"],
             "payload_count": distortion_learned_sweep["payload_count"],
             "plan_count": distortion_learned_sweep["plan_count"],
+            "feedback_count": distortion_learned_sweep["feedback_count"],
             "adapted_candidate_count": distortion_learned_sweep[
                 "adapted_candidate_count"
             ],
@@ -6372,6 +6464,12 @@ def _dispatch_readiness() -> dict[str, object]:
             ],
             "local_ready_row_count": distortion_learned_sweep[
                 "local_ready_row_count"
+            ],
+            "feedback_observation_count": distortion_learned_sweep[
+                "feedback_observation_count"
+            ],
+            "feedback_replan_suppressed_count": distortion_learned_sweep[
+                "feedback_replan_suppressed_count"
             ],
             "ready_for_exact_eval_dispatch": False,
             "score_claim": False,
