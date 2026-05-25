@@ -3691,6 +3691,7 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
             "renderer_payload_dfl1_fixture": {
                 "archive_path": str(archive),
                 "source_runtime_dir": str(runtime),
+                "candidate_runtime_dir": str(runtime),
                 "full_frame_file_list": str(file_list),
                 "expected_full_frame_file_list_sha256": "c" * 64,
                 "expected_full_frame_entry_count": 2,
@@ -3933,6 +3934,7 @@ def test_materializer_execution_queue_rejects_dfl1_parity_output_outside_workloa
             "renderer_payload_dfl1_fixture": {
                 "archive_path": str(archive),
                 "source_runtime_dir": str(runtime),
+                "candidate_runtime_dir": str(runtime),
                 "full_frame_file_list": str(file_list),
                 "expected_full_frame_file_list_sha256": "b" * 64,
                 "expected_full_frame_entry_count": 2,
