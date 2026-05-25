@@ -11,6 +11,8 @@ import pytest
 from tac.archive_byte_profile import CONTEST_ORIGINAL_BYTES
 from tac.optimization.byte_shaving_campaign import (
     COUPLED_OPERATION_SET_SCHEMA,
+    INVERSE_ACTION_COMPILER_TARGET_REQUIRED_CONTEXT_FIELDS,
+    INVERSE_ACTION_EXECUTABLE_COMPILER_TARGETS,
     INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
     INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
     INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
@@ -798,6 +800,14 @@ def test_inverse_action_compiler_hint_lowers_registered_targets_and_aliases() ->
             "family_agnostic_packet_member_merge",
         ),
         (
+            "compiled_renderer_payload_dfl1",
+            "renderer_payload_dfl1_v1",
+            {"payload_member_name": "p"},
+            "renderer_payload_dfl1_v1",
+            "renderer_payload_dfl1_adapter",
+            "source_runtime_native_renderer_payload_dfl1",
+        ),
+        (
             "compiled_tensor_quantize",
             "tensor_quantize_v1",
             {"tensor_name": "decoder.blocks.0.weight"},
@@ -893,10 +903,28 @@ def test_inverse_action_compiler_hint_lowers_registered_targets_and_aliases() ->
         "archive_byte_range",
         "runtime_consumption_proof",
     ]
-    assert all(
-        operation_by_source_unit(unit_id)["materializer_executable"] is False
-        for unit_id, *_ in target_specs
-    )
+    assert "packet_member_merge_source_runtime_dir" in operation_by_source_unit(
+        "compiled_packet_merge"
+    )["required_context_fields"]
+    for unit_id, _input_target_kind, _extra, expected_target_kind, *_ in target_specs:
+        operation = operation_by_source_unit(unit_id)
+        expected_executable = (
+            expected_target_kind in INVERSE_ACTION_EXECUTABLE_COMPILER_TARGETS
+        )
+        assert operation["materializer_executable"] is expected_executable
+        if expected_executable:
+            assert operation["materializer_execution_status"] == (
+                "registered_executable_after_materializer_contexts"
+            )
+            assert operation["required_context_fields"] == list(
+                INVERSE_ACTION_COMPILER_TARGET_REQUIRED_CONTEXT_FIELDS[
+                    expected_target_kind
+                ]
+            )
+        else:
+            assert operation["materializer_execution_status"] == (
+                "registered_contract_not_executable"
+            )
     assert bridge["compiled_operation_set_count"] == 1
     assert bridge["high_level_operation_compiler_required_count"] == 0
     assert bridge["queue_consumable_packet_ir_operation_set_count"] == 1

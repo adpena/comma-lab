@@ -128,6 +128,12 @@ INVERSE_ACTION_COMPILER_TARGET_DEFAULTS: dict[str, dict[str, Any]] = {
         "materializer": "packet_member_merge_adapter",
         "receiver_contract_kind": "family_agnostic_packet_member_merge",
     },
+    "renderer_payload_dfl1_v1": {
+        "unit_kind": "packet_member",
+        "operation_family": "native_renderer_payload",
+        "materializer": "renderer_payload_dfl1_adapter",
+        "receiver_contract_kind": "source_runtime_native_renderer_payload_dfl1",
+    },
     "tensor_quantize_v1": {
         "unit_kind": "tensor",
         "operation_family": "quantize_tensor",
@@ -158,6 +164,7 @@ INVERSE_ACTION_EXECUTABLE_COMPILER_TARGETS: frozenset[str] = frozenset(
         "archive_section_entropy_recode_v1",
         "packet_member_merge_v1",
         "packet_member_recompress_v1",
+        "renderer_payload_dfl1_v1",
         "tensor_factorize_v1",
     }
 )
@@ -212,6 +219,11 @@ INVERSE_ACTION_COMPILER_TARGET_REQUIRED_CONTEXT_FIELDS: dict[str, tuple[str, ...
         "archive_path",
         "merge_contract",
         "packet_member_merge_source_runtime_dir",
+        "output_archive",
+        "output_manifest",
+    ),
+    "renderer_payload_dfl1_v1": (
+        "archive_path",
         "output_archive",
         "output_manifest",
     ),
@@ -345,6 +357,7 @@ DEFAULT_OPERATION_FAMILIES: dict[str, tuple[str, ...]] = {
         "member_recompress",
         "member_reorder",
         "member_merge",
+        "native_renderer_payload",
     ),
     "scorer_response_row": (
         "materialize_scorer_response_candidate",
@@ -393,6 +406,7 @@ DEFAULT_OPERATION_ORDER_PRIORS: dict[str, int] = {
     "zip_header_elide": 50,
     "member_reorder": 50,
     "member_merge": 50,
+    "native_renderer_payload": 50,
 }
 
 PACKET_IR_BYTE_CLOSED_UNIT_KINDS = frozenset(
@@ -411,6 +425,7 @@ PACKET_IR_OPERATION_PHASE_BY_FAMILY: dict[str, str] = {
     "factorize_tensor": "representation",
     "literal_elide": "pack",
     "member_merge": "pack",
+    "native_renderer_payload": "pack",
     "member_recompress": "arithmetic",
     "member_reorder": "pack",
     "null_remove_or_seed": "pack",

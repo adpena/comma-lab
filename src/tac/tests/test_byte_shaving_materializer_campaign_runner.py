@@ -658,6 +658,59 @@ def test_materializer_campaign_runner_can_generate_family_artifact_map(
     assert "--materializer-contexts-out" in command
 
 
+def test_materializer_campaign_runner_generates_renderer_payload_artifact_map(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    run_dir.mkdir()
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--packet-member-target-kind",
+            runner.RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+            "--packet-member-archive-path",
+            str(tmp_path / "packet_source.zip"),
+            "--packet-member-names",
+            "renderer.bin",
+            "--packet-member-names",
+            "masks.mkv",
+            "--packet-member-names",
+            "optimized_poses.pt",
+            "--packet-member-payload-member-name",
+            "p",
+            "--packet-member-output-archive",
+            str(tmp_path / "renderer_payload_candidate.zip"),
+            "--packet-member-output-manifest",
+            str(tmp_path / "renderer_payload_candidate.json"),
+            "--run-dir",
+            str(run_dir),
+        ]
+    )
+
+    generated = runner._write_generated_materializer_artifact_map(
+        args,
+        run_dir=run_dir,
+        generated_action_functional_path=None,
+    )
+
+    assert generated == run_dir / "materializer_artifact_map.json"
+    payload = json.loads(generated.read_text(encoding="utf-8"))
+    assert set(payload["artifacts"]) == {runner.RENDERER_PAYLOAD_DFL1_TARGET_KIND}
+    renderer = payload["artifacts"][runner.RENDERER_PAYLOAD_DFL1_TARGET_KIND]
+    assert renderer["archive_path"] == str(tmp_path / "packet_source.zip")
+    assert renderer["member_names"] == [
+        "renderer.bin",
+        "masks.mkv",
+        "optimized_poses.pt",
+    ]
+    assert renderer["payload_member_name"] == "p"
+    assert renderer["output_archive"] == str(tmp_path / "renderer_payload_candidate.zip")
+    assert renderer["json_out"] == str(tmp_path / "renderer_payload_candidate.json")
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+
+
 def test_materializer_campaign_runner_rejects_auto_artifact_map_with_contexts(
     tmp_path: Path,
 ) -> None:

@@ -15,6 +15,7 @@ def test_cooperative_receiver_packet_grammars_are_unique_four_byte_ascii() -> No
     assert len(magics) == len(set(magics))
     registered = {magic.decode("ascii") for magic in magics}
     assert {
+        "DFL1",
         "TT5L",
         "SBO1",
         "S2SB",
@@ -42,6 +43,13 @@ def test_xray_and_compiler_views_share_the_same_registry() -> None:
     }
     assert all(row["score_claim"] is False for row in compiler_rows)
     assert all(row["ready_for_exact_eval_dispatch"] is False for row in compiler_rows)
+
+    rows_by_magic = {str(row["magic_ascii"]): row for row in compiler_rows}
+    dfl1 = rows_by_magic["DFL1"]
+    assert dfl1["xray_label"] == "renderer_payload_dfl1_native_v1"
+    assert dfl1["substrate_class"] == "renderer_payload_dfl1_native_packet"
+    assert dfl1["campaign_id"] == "codex_renderer_payload_dfl1_native_20260525"
+    assert "parser smoke only" in str(dfl1["notes"])
 
 
 def test_frame0_selector_is_visible_as_stackable_postdecode_compiler_atom() -> None:

@@ -29,6 +29,7 @@ from .byte_shaving_materializer_registry import (
     PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+    RENDERER_PAYLOAD_DFL1_TARGET_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
 )
 from .experiment_queue import ExperimentQueueError
@@ -406,6 +407,12 @@ def _packet_member_context_row(
     )
     if merged_member_name is not None:
         context["merged_member_name"] = merged_member_name
+    payload_member_name = _first_text(
+        hints,
+        ("payload_member_name", "renderer_payload_member_name"),
+    )
+    if payload_member_name is not None:
+        context["payload_member_name"] = payload_member_name
     if output_archive is not None:
         context["output_archive"] = output_archive
     if json_out is not None:
@@ -745,6 +752,10 @@ def build_final_byte_operation_contexts(
                     row.get("operation_family") == "zip_header_elide"
                     and row.get("target_kind")
                     == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND
+                )
+                or (
+                    row.get("operation_family") == "native_renderer_payload"
+                    and row.get("target_kind") == RENDERER_PAYLOAD_DFL1_TARGET_KIND
                 )
             )
         ):

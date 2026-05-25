@@ -76,6 +76,8 @@ PACKET_MEMBER_REORDER_MATERIALIZER = "packet_member_reorder_adapter"
 PACKET_MEMBER_REORDER_TARGET_KIND = "packet_member_reorder_v1"
 PACKET_MEMBER_MERGE_MATERIALIZER = "packet_member_merge_adapter"
 PACKET_MEMBER_MERGE_TARGET_KIND = "packet_member_merge_v1"
+RENDERER_PAYLOAD_DFL1_MATERIALIZER = "renderer_payload_dfl1_adapter"
+RENDERER_PAYLOAD_DFL1_TARGET_KIND = "renderer_payload_dfl1_v1"
 
 
 @dataclass(frozen=True)
@@ -466,8 +468,6 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         materialization_resource_kind="local_cpu",
         required_context_fields=(
             "archive_path",
-            "merge_contract",
-            "packet_member_merge_source_runtime_dir",
             "output_archive",
             "output_manifest",
         ),
@@ -509,11 +509,36 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         materialization_resource_kind="local_cpu",
         required_context_fields=(
             "archive_path",
+            "merge_contract",
+            "packet_member_merge_source_runtime_dir",
             "output_archive",
             "output_manifest",
         ),
         implementation_module="tac.optimization.family_agnostic_materializers",
         materialize_function="materialize_packet_member_merge_candidate",
+    ),
+    MaterializerAdapter(
+        materializer_id=RENDERER_PAYLOAD_DFL1_MATERIALIZER,
+        unit_kind="packet_member",
+        operation_family="native_renderer_payload",
+        target_kind=RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+        executable=True,
+        description=(
+            "Source-runtime-native renderer payload DFL1 materializer. It packs "
+            "renderer.bin, masks.mkv, and optimized_poses.pt into member p using "
+            "source ZIP raw-deflate streams consumed by unpack_renderer_payload.py."
+        ),
+        receiver_contract_id=f"{RENDERER_PAYLOAD_DFL1_TARGET_KIND}.receiver.v1",
+        receiver_contract_kind="source_runtime_native_renderer_payload_dfl1",
+        cooperative_receiver_required=True,
+        materialization_resource_kind="local_cpu",
+        required_context_fields=(
+            "archive_path",
+            "output_archive",
+            "output_manifest",
+        ),
+        implementation_module="tac.optimization.family_agnostic_materializers",
+        materialize_function="materialize_renderer_payload_dfl1_candidate",
     ),
 )
 

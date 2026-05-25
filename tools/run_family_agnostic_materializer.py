@@ -18,15 +18,20 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.optimization.family_agnostic_materializers import (  # noqa: E402
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    PACKET_MEMBER_MERGE_MATERIALIZER_ID,
+    PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND,
+    PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND,
     PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+    RENDERER_PAYLOAD_DFL1_TARGET_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
     FamilyAgnosticMaterializerError,
     materialize_archive_section_entropy_recode_candidate,
     materialize_packet_member_merge_candidate,
     materialize_packet_member_recompress_candidate,
     materialize_packet_member_zip_header_elide_candidate,
+    materialize_renderer_payload_dfl1_candidate,
     materialize_tensor_factorize_candidate,
     verify_runtime_consumption_proof,
 )
@@ -54,6 +59,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             PACKET_MEMBER_MERGE_TARGET_KIND,
             PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
             PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+            RENDERER_PAYLOAD_DFL1_TARGET_KIND,
             TENSOR_FACTORIZE_TARGET_KIND,
         ),
     )
@@ -71,6 +77,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--all-members", action="store_true")
     parser.add_argument("--merge-contract", type=Path)
     parser.add_argument("--merged-member-name")
+    parser.add_argument("--payload-member-name", default="p")
     parser.add_argument("--packet-member-merge-source-runtime-dir", type=Path)
     parser.add_argument("--packet-member-merge-runtime-dir-out", type=Path)
     parser.add_argument("--packet-member-merge-runtime-manifest-out", type=Path)
@@ -159,6 +166,7 @@ def _run_materializer(
         PACKET_MEMBER_MERGE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+        RENDERER_PAYLOAD_DFL1_TARGET_KIND,
         TENSOR_FACTORIZE_TARGET_KIND,
     }
     if (
@@ -169,7 +177,8 @@ def _run_materializer(
             "--runtime-consumption-proof-out is currently supported only for "
             "archive_section_entropy_recode_v1, packet_member_merge_v1, "
             "packet_member_recompress_v1, "
-            "packet_member_zip_header_elide_v1, and tensor_factorize_v1"
+            "packet_member_zip_header_elide_v1, renderer_payload_dfl1_v1, "
+            "and tensor_factorize_v1"
         )
     common = {
         "archive_path": args.archive_path,
@@ -300,6 +309,10 @@ def _run_materializer(
             runtime_consumption_proof=runtime_proof,
             required_candidate_archive_sha256=manifest["candidate_archive"]["sha256"],
             required_candidate_member_sha256=manifest["candidate_member"]["sha256"],
+            required_proof_kind=PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND,
+            required_receiver_contract_kind=PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND,
+            required_target_kind=PACKET_MEMBER_MERGE_TARGET_KIND,
+            required_materializer_id=PACKET_MEMBER_MERGE_MATERIALIZER_ID,
             repo_root=REPO_ROOT,
         )
         manifest["packet_member_merge_receiver_runtime"] = runtime_manifest
@@ -335,6 +348,24 @@ def _run_materializer(
             )
         manifest["readiness_blockers"] = list(dict.fromkeys(manifest["readiness_blockers"]))
         return manifest
+    if args.target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND:
+        if args.packet_member_manifest is not None:
+            input_paths.append(args.packet_member_manifest)
+        runtime_proof_out = args.runtime_consumption_proof_out
+        if args.runtime_consumption_proof is None and runtime_proof_out is None:
+            runtime_proof_out = args.output_manifest.with_name(
+                f"{args.output_manifest.stem}.runtime_consumption_proof.json"
+            )
+        return materialize_renderer_payload_dfl1_candidate(
+            **common,
+            packet_member_manifest=args.packet_member_manifest,
+            member_names=tuple(args.member_names),
+            payload_member_name=args.payload_member_name,
+            runtime_consumption_proof_out=runtime_proof_out,
+            expected_existing_runtime_consumption_proof_sha256=(
+                args.expected_existing_runtime_consumption_proof_sha256
+            ),
+        )
     if args.target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
         if args.packet_member_manifest is not None:
             input_paths.append(args.packet_member_manifest)

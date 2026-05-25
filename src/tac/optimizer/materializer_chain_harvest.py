@@ -9,6 +9,7 @@ shape consumed by ``tools/build_optimizer_candidate_queue.py``.
 from __future__ import annotations
 
 import hashlib
+import json
 import time
 import zipfile
 from collections.abc import Iterable, Mapping
@@ -17,7 +18,10 @@ from typing import Any
 
 from tac.optimization.family_agnostic_materializers import (
     ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+    PACKET_MEMBER_MERGE_SCHEMA,
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
+    PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
+    RENDERER_PAYLOAD_DFL1_SCHEMA,
     TENSOR_FACTORIZE_SCHEMA,
 )
 from tac.optimization.proxy_candidate_contract import (
@@ -39,7 +43,10 @@ SUPPORTED_CHAIN_SCHEMAS = frozenset(
 SUPPORTED_FAMILY_AGNOSTIC_MATERIALIZER_SCHEMAS = frozenset(
     {
         ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+        PACKET_MEMBER_MERGE_SCHEMA,
         PACKET_MEMBER_RECOMPRESS_SCHEMA,
+        PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
+        RENDERER_PAYLOAD_DFL1_SCHEMA,
         TENSOR_FACTORIZE_SCHEMA,
     }
 )
@@ -113,6 +120,9 @@ def adapt_materializer_chain_manifest_to_candidate(
         "candidate_family": _candidate_family(schema),
         "optimizer_tool": TOOL_NAME,
         "schema": schema,
+        "target_kind": chain.get("target_kind"),
+        "materializer_id": chain.get("materializer_id"),
+        "receiver_contract_kind": chain.get("receiver_contract_kind"),
         "source_manifest_path": _repo_rel(source_path, repo_root),
         "source_paths": [_repo_rel(source_path, repo_root)],
         "candidate_archive_path": candidate_archive["path"],
@@ -265,6 +275,9 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
         "candidate_family": _candidate_family(schema),
         "optimizer_tool": TOOL_NAME,
         "schema": schema,
+        "target_kind": manifest.get("target_kind"),
+        "materializer_id": manifest.get("materializer_id"),
+        "receiver_contract_kind": manifest.get("receiver_contract_kind"),
         "source_manifest_path": _repo_rel(source_path, repo_root),
         "source_paths": [_repo_rel(source_path, repo_root)],
         "candidate_archive_path": candidate_archive["path"],
@@ -296,6 +309,10 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
         "runtime_consumption_proof_required": True,
         "runtime_consumption_proof_status": "present" if proof_present else "missing",
         "runtime_consumption_proof_path": proof_path,
+        **_renderer_payload_dfl1_harvest_fields(
+            manifest,
+            runtime_proof=_load_optional_runtime_proof(proof_path, repo_root=repo_root),
+        ),
         "local_advisory_axes": _local_advisory_axes(manifest),
         "local_advisory_axes_semantics": (
             "non_authoritative_planning_signal_only_not_score_claim"
@@ -328,6 +345,72 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
     out["receiver_contract_satisfied"] = receiver_satisfied
     out["candidate_runtime_adapter_blocker_cleared"] = receiver_satisfied
     return out
+
+
+def _renderer_payload_dfl1_harvest_fields(
+    manifest: Mapping[str, Any],
+    *,
+    runtime_proof: Mapping[str, Any],
+) -> dict[str, Any]:
+    if manifest.get("schema") != RENDERER_PAYLOAD_DFL1_SCHEMA:
+        return {}
+    fields: dict[str, Any] = {
+        "renderer_payload_dfl1_anatomy_semantics": (
+            "non_authoritative_planning_signal_only"
+        ),
+        "selected_member_names": _string_list(manifest.get("selected_member_names")),
+    }
+    raw_payload_member_name = manifest.get("payload_member_name")
+    if isinstance(raw_payload_member_name, str) and raw_payload_member_name.strip():
+        fields["payload_member_name"] = raw_payload_member_name.strip()
+    selected_payload = manifest.get("selected_payload")
+    if isinstance(selected_payload, Mapping):
+        fields["selected_payload"] = dict(selected_payload)
+    payload_table = runtime_proof.get("payload_table")
+    if isinstance(payload_table, Mapping):
+        fields["payload_table"] = dict(payload_table)
+    if runtime_proof.get("source_runtime_unpacker_parse_satisfied") is True:
+        fields["source_runtime_unpacker_parse_satisfied"] = True
+    reconstructed = runtime_proof.get("reconstructed_member_sha256s")
+    if isinstance(reconstructed, Mapping):
+        fields["reconstructed_member_sha256s"] = {
+            str(name): str(sha)
+            for name, sha in reconstructed.items()
+            if str(name) and str(sha)
+        }
+    runtime_probe = runtime_proof.get("runtime_consumption_probe")
+    native_probe = (
+        runtime_probe.get("native_unpacker_probe")
+        if isinstance(runtime_probe, Mapping)
+        else None
+    )
+    if isinstance(native_probe, Mapping):
+        native_member_sha256s = native_probe.get("member_sha256s")
+        if isinstance(native_member_sha256s, Mapping):
+            fields["native_unpacker_member_sha256s"] = {
+                str(name): str(sha)
+                for name, sha in native_member_sha256s.items()
+                if str(name) and str(sha)
+            }
+    return fields
+
+
+def _load_optional_runtime_proof(
+    proof_path: str | None,
+    *,
+    repo_root: Path,
+) -> Mapping[str, Any]:
+    if proof_path is None:
+        return {}
+    path = Path(proof_path)
+    resolved = path if path.is_absolute() else repo_root / path
+    if not resolved.is_file() or resolved.is_symlink():
+        return {}
+    try:
+        payload = json.loads(resolved.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, Mapping) else {}
 
 
 def _zip_member_record_from_manifest(
@@ -406,8 +489,14 @@ def _candidate_family(schema: str) -> str:
         return "inverse_scorer_cell"
     if schema == ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA:
         return "archive_section_entropy_recode"
+    if schema == PACKET_MEMBER_MERGE_SCHEMA:
+        return "packet_member_merge"
     if schema == PACKET_MEMBER_RECOMPRESS_SCHEMA:
         return "packet_member_recompress"
+    if schema == PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA:
+        return "packet_member_zip_header_elide"
+    if schema == RENDERER_PAYLOAD_DFL1_SCHEMA:
+        return "renderer_payload_dfl1"
     if schema == TENSOR_FACTORIZE_SCHEMA:
         return "tensor_factorize"
     return "materializer_chain"

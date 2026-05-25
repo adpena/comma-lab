@@ -46,9 +46,11 @@ from tac.optimization.byte_range_entropy_recode_chain import (
 )
 from tac.optimization.family_agnostic_materializers import (
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
+    RENDERER_PAYLOAD_DFL1_SCHEMA,
     TENSOR_FACTORIZE_SCHEMA,
     materialize_archive_section_entropy_recode_candidate,
     materialize_packet_member_recompress_candidate,
+    materialize_renderer_payload_dfl1_candidate,
     materialize_tensor_factorize_candidate,
 )
 from tac.optimization.proxy_candidate_contract import truthy_authority_field_violations
@@ -577,6 +579,124 @@ def test_harvest_family_agnostic_packet_recompress_payload_identity_proof(
     )
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_harvest_family_agnostic_renderer_payload_dfl1_native_proof(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    archive = repo / "source.zip"
+    output = repo / "candidate.zip"
+    proof = repo / "runtime_consumption_proof.json"
+    manifest_path = repo / "renderer_dfl1_candidate.json"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("renderer.bin", b"renderer" * 4096)
+        zf.writestr("masks.mkv", b"mask" * 4096)
+        zf.writestr("optimized_poses.pt", b"pose" * 2048)
+    manifest = materialize_renderer_payload_dfl1_candidate(
+        archive_path=archive,
+        output_archive=output,
+        runtime_consumption_proof_out=proof,
+        repo_root=REPO_ROOT,
+    )
+    manifest["candidate_id"] = "family_agnostic_renderer_payload_dfl1_with_proof"
+    _write_json(manifest_path, manifest)
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[manifest_path],
+    )
+
+    row = result["source_queue"]["top_k"][0]
+    proof_payload = json.loads(proof.read_text(encoding="utf-8"))
+    assert result["report"]["accepted_manifest_count"] == 1
+    assert row["candidate_id"] == "family_agnostic_renderer_payload_dfl1_with_proof"
+    assert row["schema"] == RENDERER_PAYLOAD_DFL1_SCHEMA
+    assert row["candidate_family"] == "renderer_payload_dfl1"
+    assert row["target_kind"] == "renderer_payload_dfl1_v1"
+    assert row["materializer_id"] == "renderer_payload_dfl1_adapter"
+    assert row["receiver_contract_kind"] == "source_runtime_native_renderer_payload_dfl1"
+    assert row["candidate_member_name"] == "p"
+    assert row["runtime_consumption_proof_status"] == "present"
+    assert row["runtime_consumption_proof_path"] == str(proof)
+    assert row["runtime_adapter_ready"] is False
+    assert row["receiver_contract_satisfied"] is False
+    assert row["candidate_runtime_adapter_blocker_cleared"] is False
+    assert row["renderer_payload_dfl1_anatomy_semantics"] == (
+        "non_authoritative_planning_signal_only"
+    )
+    assert row["source_runtime_unpacker_parse_satisfied"] is True
+    assert row["selected_member_names"] == [
+        "renderer.bin",
+        "masks.mkv",
+        "optimized_poses.pt",
+    ]
+    assert row["payload_member_name"] == "p"
+    assert row["selected_payload"] == manifest["selected_payload"]
+    assert row["payload_table"] == proof_payload["payload_table"]
+    assert row["reconstructed_member_sha256s"] == proof_payload[
+        "reconstructed_member_sha256s"
+    ]
+    assert row["native_unpacker_member_sha256s"] == proof_payload[
+        "runtime_consumption_probe"
+    ]["native_unpacker_probe"]["member_sha256s"]
+    assert "runtime_consumption_proof_missing" not in row["dispatch_blockers"]
+    assert "family_agnostic_receiver_contract_not_satisfied" in (
+        row["dispatch_blockers"]
+    )
+    assert "renderer_payload_dfl1_full_frame_inflate_parity_missing" in (
+        row["dispatch_blockers"]
+    )
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_exact_readiness_bridge_blocks_dfl1_without_full_frame_parity(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    archive = repo / "source.zip"
+    output = repo / "candidate.zip"
+    proof = repo / "runtime_consumption_proof.json"
+    manifest_path = repo / "renderer_dfl1_candidate.json"
+    source_queue_out = repo / "source_queue.json"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("renderer.bin", b"renderer" * 4096)
+        zf.writestr("masks.mkv", b"mask" * 4096)
+        zf.writestr("optimized_poses.pt", b"pose" * 2048)
+    manifest = materialize_renderer_payload_dfl1_candidate(
+        archive_path=archive,
+        output_archive=output,
+        runtime_consumption_proof_out=proof,
+        repo_root=REPO_ROOT,
+    )
+    manifest["candidate_id"] = "family_agnostic_renderer_payload_dfl1_with_proof"
+    _write_json(manifest_path, manifest)
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[manifest_path],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+
+    assert bridge["ready_candidate_count"] == 0
+    row = bridge["rows"][0]
+    assert row["exact_ready_queue_written"] is False
+    assert row["exact_ready_queue_path"] is None
+    assert (
+        "unknown_uncleared_source_dispatch_blocker:"
+        "renderer_payload_dfl1_full_frame_inflate_parity_missing"
+    ) in row["blockers"]
+    assert bridge["score_claim"] is False
+    assert bridge["ready_for_exact_eval_dispatch"] is False
 
 
 def test_harvest_family_agnostic_packet_recompress_accepts_empty_member(

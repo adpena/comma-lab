@@ -5,10 +5,15 @@ import hashlib
 import importlib.util
 import struct
 import zipfile
+import zlib
 from pathlib import Path
 
 import pytest
 
+from tac.optimization.family_agnostic_materializers import (
+    materialize_renderer_payload_dfl1_candidate,
+)
+from tac.repo_io import sha256_bytes
 
 REPO = Path(__file__).resolve().parents[3]
 BUILDER_PATH = REPO / "experiments" / "build_renderer_packed_payload_archive.py"
@@ -271,8 +276,115 @@ def test_short_p_payload_member_round_trips_and_validates(tmp_path: Path) -> Non
         assert (archive_dir / name).read_bytes() == data
 
 
+def test_native_renderer_payload_dfl1_round_trips_and_validates(tmp_path: Path) -> None:
+    from tac.submission_archive import detect_pose_manifest, validate_archive
+
+    unpacker = _load_module(UNPACK_PATH, "_renderer_payload_unpack_native_dfl1_test")
+    source = tmp_path / "source.zip"
+    payloads = {
+        "renderer.bin": b"renderer" * 4096,
+        "masks.mkv": b"mask" * 4096,
+        "optimized_poses.pt": b"pose" * 2048,
+    }
+    with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for name, payload in payloads.items():
+            zf.writestr(name, payload)
+    packed = tmp_path / "packed.zip"
+
+    result = materialize_renderer_payload_dfl1_candidate(
+        archive_path=source,
+        output_archive=packed,
+        runtime_consumption_proof_out=tmp_path / "proof.json",
+        repo_root=REPO,
+    )
+
+    assert result["candidate_archive"]["bytes"] < result["source_archive"]["bytes"]
+    assert validate_archive(packed, detect_pose_manifest(packed), strict=True).valid
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    with zipfile.ZipFile(packed) as zf:
+        zf.extractall(archive_dir)
+    summary = unpacker.unpack_renderer_payload(archive_dir)
+    assert summary["schema"] == "renderer_payload_fixed3_deflate_sequence_v1"
+    assert summary["payload_format"] == "native_dfl1_fixed3"
+    assert {m["name"]: m["sha256"] for m in summary["members"]} == {
+        name: sha256_bytes(payload) for name, payload in payloads.items()
+    }
+    for name, payload in payloads.items():
+        assert (archive_dir / name).read_bytes() == payload
+
+
+def test_native_renderer_payload_dfl1_requires_complete_logical_members(
+    tmp_path: Path,
+) -> None:
+    from tac.submission_archive import detect_pose_manifest, validate_archive
+
+    compressor = zlib.compressobj(level=9, wbits=-zlib.MAX_WBITS)
+    renderer_stream = compressor.compress(b"renderer" * 4096) + compressor.flush()
+    archive = tmp_path / "bad_dfl1.zip"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("p", b"DFL1" + renderer_stream)
+
+    result = validate_archive(archive, detect_pose_manifest(archive), strict=True)
+
+    assert not result.valid
+    assert any("renderer payload preflight failed" in error for error in result.errors)
+
+
+def test_native_renderer_payload_dfl1_rejects_empty_required_member(
+    tmp_path: Path,
+) -> None:
+    from tac.submission_archive import detect_pose_manifest, validate_archive
+
+    streams = []
+    for payload in (b"renderer" * 4096, b"", b"pose" * 2048):
+        compressor = zlib.compressobj(level=9, wbits=-zlib.MAX_WBITS)
+        streams.append(compressor.compress(payload) + compressor.flush())
+    archive = tmp_path / "empty_mask_dfl1.zip"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("p", b"DFL1" + b"".join(streams))
+
+    result = validate_archive(archive, detect_pose_manifest(archive), strict=True)
+
+    assert not result.valid
+    assert any("logical mask member is empty" in error for error in result.errors)
+
+
+def test_build_submission_archive_accepts_renderer_payload_p_source(tmp_path: Path) -> None:
+    from tac.submission_archive import (
+        RENDERER_PACKED_PAYLOAD_SHORT_BROTLI_MANIFEST,
+        build_submission_archive,
+    )
+
+    source = tmp_path / "source.zip"
+    with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("renderer.bin", b"renderer" * 4096)
+        zf.writestr("masks.mkv", b"mask" * 4096)
+        zf.writestr("optimized_poses.pt", b"pose" * 2048)
+    packed = tmp_path / "packed.zip"
+    materialize_renderer_payload_dfl1_candidate(
+        archive_path=source,
+        output_archive=packed,
+        runtime_consumption_proof_out=tmp_path / "proof.json",
+        repo_root=REPO,
+    )
+    payload_path = tmp_path / "p"
+    with zipfile.ZipFile(packed) as zf:
+        payload_path.write_bytes(zf.read("p"))
+
+    result = build_submission_archive(
+        tmp_path / "rebuilt.zip",
+        renderer_payload_p=payload_path,
+        manifest=RENDERER_PACKED_PAYLOAD_SHORT_BROTLI_MANIFEST,
+    )
+
+    assert result.valid
+    assert result.files_found == {"p": payload_path.stat().st_size}
+
+
 def test_submission_archive_detects_per_member_brotli_renderer_manifest(tmp_path: Path) -> None:
     import brotli
+
     from tac.submission_archive import detect_pose_manifest, validate_archive
 
     archive = tmp_path / "archive.zip"

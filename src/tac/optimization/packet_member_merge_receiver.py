@@ -27,6 +27,8 @@ from tac.optimization.family_agnostic_materializers import (
     FALSE_AUTHORITY,
     PACKET_MEMBER_MERGE_MATERIALIZER_ID,
     PACKET_MEMBER_MERGE_PAYLOAD_MAGIC,
+    PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND,
+    PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND,
     PACKET_MEMBER_MERGE_TARGET_KIND,
     parse_packet_member_merge_payload,
 )
@@ -44,7 +46,7 @@ from tac.repo_io import (
 )
 
 RUNTIME_MANIFEST_SCHEMA = "packet_member_merge_receiver_runtime.v1"
-RUNTIME_PROOF_KIND = "packet_member_merge_runtime_adapter_consumption_proof.v1"
+RUNTIME_PROOF_KIND = PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND
 RUNTIME_COMPILER_ID = "packet_member_merge_receiver_compiler.v1"
 RUNTIME_PY = "packet_member_merge_receiver_runtime.py"
 WRAPPER_SH = "inflate.sh"
@@ -330,7 +332,7 @@ def build_packet_member_merge_runtime_consumption_proof(
         "proof_scope": "packet_member_merge_shadow_archive_runtime_adapter_consumes_transformed_archive",
         "target_kind": PACKET_MEMBER_MERGE_TARGET_KIND,
         "materializer_id": PACKET_MEMBER_MERGE_MATERIALIZER_ID,
-        "receiver_contract_kind": "family_agnostic_packet_member_merge",
+        "receiver_contract_kind": PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND,
         "receiver_contract_id": f"{PACKET_MEMBER_MERGE_TARGET_KIND}.receiver.v1",
         "runtime_adapter_manifest": dict(runtime_manifest),
         "runtime_adapter_manifest_path": (

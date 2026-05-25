@@ -9,6 +9,7 @@ readiness without an explicit runtime-consumption proof.
 
 from __future__ import annotations
 
+import importlib.util
 import io
 import json
 import math
@@ -30,21 +31,30 @@ from tac.repo_io import read_json, sha256_bytes, sha256_file, write_bytes_artifa
 ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA = "archive_section_entropy_recode_candidate.v1"
 PACKET_MEMBER_RECOMPRESS_SCHEMA = "packet_member_recompress_candidate.v1"
 PACKET_MEMBER_MERGE_SCHEMA = "packet_member_merge_candidate.v1"
+RENDERER_PAYLOAD_DFL1_SCHEMA = "renderer_payload_dfl1_candidate.v1"
 PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA = "packet_member_zip_header_elide_candidate.v1"
 TENSOR_FACTORIZE_SCHEMA = "tensor_factorize_candidate.v1"
 ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND = "archive_section_entropy_recode_v1"
 PACKET_MEMBER_RECOMPRESS_TARGET_KIND = "packet_member_recompress_v1"
 PACKET_MEMBER_MERGE_TARGET_KIND = "packet_member_merge_v1"
+RENDERER_PAYLOAD_DFL1_TARGET_KIND = "renderer_payload_dfl1_v1"
 PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND = "packet_member_zip_header_elide_v1"
 TENSOR_FACTORIZE_TARGET_KIND = "tensor_factorize_v1"
 ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID = "archive_section_entropy_recode_adapter"
 PACKET_MEMBER_RECOMPRESS_MATERIALIZER_ID = "packet_member_recompress_adapter"
 PACKET_MEMBER_MERGE_MATERIALIZER_ID = "packet_member_merge_adapter"
+RENDERER_PAYLOAD_DFL1_MATERIALIZER_ID = "renderer_payload_dfl1_adapter"
 PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID = "packet_member_zip_header_elide_adapter"
 TENSOR_FACTORIZE_MATERIALIZER_ID = "tensor_factorize_adapter"
+PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND = (
+    "packet_member_merge_runtime_adapter_consumption_proof.v1"
+)
+PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND = "family_agnostic_packet_member_merge"
 PACKET_MEMBER_MERGE_PAYLOAD_MAGIC = b"TAC_PACKET_MEMBER_MERGE_V1\0"
 PACKET_MEMBER_MERGE_BINARY_PAYLOAD_MAGIC = b"TAC_PACKET_MEMBER_MERGE_BIN1\0"
 PACKET_MEMBER_MERGE_DEFLATE_SEQUENCE_PAYLOAD_MAGIC = b"TAC_PACKET_MEMBER_MERGE_DFL1\0"
+RENDERER_PAYLOAD_DFL1_MAGIC = b"DFL1"
+RENDERER_PAYLOAD_DFL1_MEMBER_NAMES = ("renderer.bin", "masks.mkv", "optimized_poses.pt")
 FALSE_AUTHORITY = {
     "score_claim": False,
     "score_claim_valid": False,
@@ -461,6 +471,7 @@ def materialize_packet_member_merge_candidate(
     ]
     proof_write_result = None
     runtime_proof_ref: str | Path | Mapping[str, Any] | None = runtime_consumption_proof
+    local_reconstruction_proof_satisfied: bool | None = None
     if proof_out is not None:
         runtime_proof_payload = _packet_member_merge_runtime_consumption_proof(
             source_archive=source_record,
@@ -478,6 +489,11 @@ def materialize_packet_member_merge_candidate(
             compresslevel=best["zip_compresslevel"],
             contract=contract,
         )
+        runtime_probe = runtime_proof_payload.get("runtime_consumption_probe")
+        if isinstance(runtime_probe, Mapping):
+            local_reconstruction_proof_satisfied = (
+                runtime_probe.get("internal_reconstruction_passed") is True
+            )
         proof_write_result = write_json_artifact(
             proof_out,
             runtime_proof_payload,
@@ -490,11 +506,16 @@ def materialize_packet_member_merge_candidate(
         runtime_consumption_proof=runtime_proof_ref,
         required_candidate_archive_sha256=candidate_record["sha256"],
         required_candidate_member_sha256=candidate_merged_member["sha256"],
+        required_proof_kind=PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND,
+        required_receiver_contract_kind=PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND,
+        required_target_kind=PACKET_MEMBER_MERGE_TARGET_KIND,
+        required_materializer_id=PACKET_MEMBER_MERGE_MATERIALIZER_ID,
         repo_root=repo,
     )
-    blockers.append(
-        "packet_member_merge_exact_readiness_refused_until_byte_closed_runtime_adapter_lands"
-    )
+    if receiver_verification.get("runtime_adapter_ready") is not True:
+        blockers.append(
+            "packet_member_merge_exact_readiness_refused_until_byte_closed_runtime_adapter_lands"
+        )
     readiness_blockers = _readiness_blockers(
         blockers,
         receiver_verification,
@@ -515,7 +536,7 @@ def materialize_packet_member_merge_candidate(
             ),
         ),
         "receiver_contract_id": f"{PACKET_MEMBER_MERGE_TARGET_KIND}.receiver.v1",
-        "receiver_contract_kind": "family_agnostic_packet_member_merge",
+        "receiver_contract_kind": PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND,
         "byte_closed_candidate_emitted": True,
         "source_archive": source_record,
         "source_members": source_member_records,
@@ -547,6 +568,205 @@ def materialize_packet_member_merge_candidate(
                 for key, value in trial.items()
                 if key not in {"payload", "merge_payload", "merge_table"}
             }
+            for trial in candidate_trials
+        ],
+        "receiver_verification": receiver_verification,
+        "runtime_consumption_proof_path": (
+            proof_out.as_posix() if proof_out is not None else receiver_verification.get("proof_path")
+        ),
+        "runtime_consumption_proof_write": (
+            proof_write_result.__dict__ if proof_write_result is not None else None
+        ),
+        "reconstruction_proof_satisfied": (
+            local_reconstruction_proof_satisfied
+            if local_reconstruction_proof_satisfied is not None
+            else receiver_verification["receiver_contract_satisfied"] is True
+        ),
+        "receiver_contract_satisfied": (
+            receiver_verification["receiver_contract_satisfied"] is True
+            and receiver_verification.get("runtime_adapter_ready") is True
+        ),
+        "runtime_adapter_ready": receiver_verification.get("runtime_adapter_ready") is True,
+        "readiness_blockers": readiness_blockers,
+        "artifact_write": write_result.__dict__,
+        **FALSE_AUTHORITY,
+    }
+
+
+def materialize_renderer_payload_dfl1_candidate(
+    *,
+    archive_path: str | Path,
+    output_archive: str | Path,
+    packet_member_manifest: str | Path | Mapping[str, Any] | None = None,
+    member_names: Sequence[str] = RENDERER_PAYLOAD_DFL1_MEMBER_NAMES,
+    payload_member_name: str = "p",
+    runtime_consumption_proof: str | Path | Mapping[str, Any] | None = None,
+    runtime_consumption_proof_out: str | Path | None = None,
+    repo_root: str | Path | None = None,
+    allow_size_regression: bool = False,
+    allow_overwrite: bool = False,
+    expected_existing_output_sha256: str | None = None,
+    expected_existing_runtime_consumption_proof_sha256: str | None = None,
+    min_free_bytes: int = 0,
+) -> dict[str, Any]:
+    """Pack renderer/mask/pose members into source-runtime-native DFL1 payload."""
+
+    repo = _repo(repo_root)
+    if runtime_consumption_proof is not None and runtime_consumption_proof_out is not None:
+        raise FamilyAgnosticMaterializerError(
+            "runtime_consumption_proof and runtime_consumption_proof_out are mutually exclusive"
+        )
+    archive = _resolve_path(archive_path, repo=repo)
+    output = _resolve_path(output_archive, repo=repo)
+    proof_out = (
+        _resolve_path(runtime_consumption_proof_out, repo=repo)
+        if runtime_consumption_proof_out is not None
+        else None
+    )
+    manifest = _load_mapping(packet_member_manifest, repo=repo)
+    target_members = _renderer_payload_dfl1_member_names(
+        archive,
+        explicit_many=member_names,
+        manifest=manifest,
+    )
+    output_member = _renderer_payload_dfl1_payload_member_name(
+        archive,
+        payload_member_name,
+    )
+    selected_entries = [_merge_member_entry(archive, name) for name in target_members]
+    unsupported = [
+        str(entry["name"])
+        for entry in selected_entries
+        if int(entry["zip_compress_type"]) != zipfile.ZIP_DEFLATED
+    ]
+    if unsupported:
+        raise FamilyAgnosticMaterializerError(
+            "renderer_payload_dfl1_v1 requires source ZIP_DEFLATED members: "
+            + ", ".join(unsupported)
+        )
+    source_record = _archive_record(archive)
+    source_member_records = [
+        _member_record(archive, str(entry["name"]), payload=bytes(entry["payload"]))
+        for entry in selected_entries
+    ]
+    payload = _renderer_payload_dfl1_payload(selected_entries)
+    candidate_trials: list[dict[str, Any]] = []
+    for compression, compresslevel in (
+        (zipfile.ZIP_STORED, None),
+        (zipfile.ZIP_DEFLATED, 9),
+    ):
+        archive_payload = _zip_archive_bytes_single_member(
+            member_name=output_member,
+            payload=payload,
+            compression=compression,
+            compresslevel=compresslevel,
+        )
+        candidate_trials.append(
+            {
+                "payload_member_name": output_member,
+                "payload_codec": "native_fixed_order_raw_deflate_sequence_v1",
+                "payload_bytes": len(payload),
+                "zip_compression_method": _compression_method_name(compression),
+                "zip_compresslevel": compresslevel,
+                "archive_bytes": len(archive_payload),
+                "archive_sha256": sha256_bytes(archive_payload),
+                "payload": archive_payload,
+            }
+        )
+    best = min(
+        candidate_trials,
+        key=lambda item: (
+            int(item["archive_bytes"]),
+            str(item["zip_compression_method"]),
+        ),
+    )
+    archive_payload = bytes(best["payload"])
+    saved_bytes = int(source_record["bytes"]) - len(archive_payload)
+    blockers: list[str] = []
+    if saved_bytes <= 0 and not allow_size_regression:
+        blockers.append("candidate_not_rate_positive")
+    blockers.append("renderer_payload_dfl1_full_frame_inflate_parity_missing")
+    write_result = write_bytes_artifact(
+        output,
+        archive_payload,
+        allow_overwrite=allow_overwrite,
+        expected_existing_sha256=expected_existing_output_sha256,
+        min_free_bytes=min_free_bytes,
+    )
+    candidate_record = _archive_record(output)
+    candidate_member_record = _member_record(output, output_member)
+    proof_write_result = None
+    runtime_proof_ref: str | Path | Mapping[str, Any] | None = runtime_consumption_proof
+    if proof_out is not None:
+        runtime_proof_payload = _renderer_payload_dfl1_runtime_consumption_proof(
+            repo_root=repo,
+            source_archive=source_record,
+            candidate_archive=candidate_record,
+            source_members=source_member_records,
+            candidate_member=candidate_member_record,
+            payload_member_name=output_member,
+            payload=payload,
+            selected_member_names=target_members,
+        )
+        proof_write_result = write_json_artifact(
+            proof_out,
+            runtime_proof_payload,
+            allow_overwrite=allow_overwrite,
+            expected_existing_sha256=expected_existing_runtime_consumption_proof_sha256,
+            min_free_bytes=min_free_bytes,
+        )
+        runtime_proof_ref = proof_out
+    receiver_verification = verify_runtime_consumption_proof(
+        runtime_consumption_proof=runtime_proof_ref,
+        required_candidate_archive_sha256=candidate_record["sha256"],
+        required_candidate_member_sha256=candidate_member_record["sha256"],
+        required_proof_kind="renderer_payload_dfl1_native_unpacker_reconstruction_smoke.v1",
+        required_receiver_contract_kind="source_runtime_native_renderer_payload_dfl1",
+        required_target_kind=RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+        required_materializer_id=RENDERER_PAYLOAD_DFL1_MATERIALIZER_ID,
+        repo_root=repo,
+    )
+    readiness_blockers = _readiness_blockers(
+        blockers,
+        receiver_verification,
+        receiver_blocker="renderer_payload_dfl1_receiver_contract_not_satisfied",
+    )
+    return {
+        "schema": RENDERER_PAYLOAD_DFL1_SCHEMA,
+        "materializer_id": RENDERER_PAYLOAD_DFL1_MATERIALIZER_ID,
+        "target_kind": RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+        "portability_contract": _materializer_portability_contract(
+            materializer_id=RENDERER_PAYLOAD_DFL1_MATERIALIZER_ID,
+            target_kind=RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+            required_python_modules=("zipfile", "zlib"),
+            deterministic_surface="source_runtime_native_renderer_payload_fixed_deflate_sequence",
+            notes=(
+                "Uses the robust renderer payload unpacker directly; no generated "
+                "receiver wrapper is needed, but full-frame parity and auth eval "
+                "remain separate gates."
+            ),
+        ),
+        "receiver_contract_id": f"{RENDERER_PAYLOAD_DFL1_TARGET_KIND}.receiver.v1",
+        "receiver_contract_kind": "source_runtime_native_renderer_payload_dfl1",
+        "byte_closed_candidate_emitted": True,
+        "source_archive": source_record,
+        "source_members": source_member_records,
+        "candidate_archive": candidate_record,
+        "candidate_member": candidate_member_record,
+        "selected_member_names": target_members,
+        "payload_member_name": output_member,
+        "selected_payload": {
+            "source_archive_bytes": source_record["bytes"],
+            "candidate_archive_bytes": candidate_record["bytes"],
+            "saved_bytes": saved_bytes,
+            "payload_member_name": output_member,
+            "payload_codec": "native_fixed_order_raw_deflate_sequence_v1",
+            "payload_bytes": len(payload),
+            "zip_compression_method": best["zip_compression_method"],
+            "zip_compresslevel": best["zip_compresslevel"],
+        },
+        "candidate_trials": [
+            {key: value for key, value in trial.items() if key != "payload"}
             for trial in candidate_trials
         ],
         "receiver_verification": receiver_verification,
@@ -683,7 +903,7 @@ def _packet_member_merge_runtime_consumption_proof(
                 "cooperative receiver adapter to reconstruct original member names."
             ),
         ),
-        "receiver_contract_kind": "family_agnostic_packet_member_merge",
+        "receiver_contract_kind": PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND,
         "receiver_contract_id": f"{PACKET_MEMBER_MERGE_TARGET_KIND}.receiver.v1",
         "source_archive": dict(source_archive),
         "source_members": [dict(row) for row in source_members],
@@ -716,7 +936,7 @@ def _packet_member_merge_runtime_consumption_proof(
         },
         "runtime_consumption_probe": {
             "schema": "packet_member_merge_reconstruction_probe.v1",
-            "passed": internal_reconstruction_passed,
+            "passed": False,
             "internal_reconstruction_passed": internal_reconstruction_passed,
             "selected_member_proofs": selected_member_proofs,
             "non_selected_member_proofs": non_selected_member_proofs,
@@ -730,10 +950,10 @@ def _packet_member_merge_runtime_consumption_proof(
             "cooperative_receiver_declared": receiver_declared,
             "runtime_adapter_ready": False,
         },
-        "receiver_contract_satisfied": internal_reconstruction_passed,
+        "receiver_contract_satisfied": False,
         "runtime_adapter_ready": False,
-        "runtime_consumption_proof_passed": internal_reconstruction_passed,
-        "passed": internal_reconstruction_passed,
+        "runtime_consumption_proof_passed": False,
+        "passed": False,
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
@@ -1697,6 +1917,10 @@ def verify_runtime_consumption_proof(
     required_candidate_archive_sha256: str | None = None,
     required_candidate_member_sha256: str | None = None,
     required_candidate_member_sha256s: Mapping[str, str] | None = None,
+    required_proof_kind: str | None = None,
+    required_receiver_contract_kind: str | None = None,
+    required_target_kind: str | None = None,
+    required_materializer_id: str | None = None,
     repo_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Validate the generic receiver/runtime proof used by these materializers."""
@@ -1726,6 +1950,20 @@ def verify_runtime_consumption_proof(
         blockers.append(str(exc))
     if not _proof_passed(proof):
         blockers.append("runtime_consumption_proof_not_passed")
+    if required_proof_kind is not None and proof.get("proof_kind") != required_proof_kind:
+        blockers.append("runtime_consumption_proof_kind_mismatch")
+    if (
+        required_receiver_contract_kind is not None
+        and proof.get("receiver_contract_kind") != required_receiver_contract_kind
+    ):
+        blockers.append("runtime_consumption_proof_receiver_contract_kind_mismatch")
+    if required_target_kind is not None and proof.get("target_kind") != required_target_kind:
+        blockers.append("runtime_consumption_proof_target_kind_mismatch")
+    if (
+        required_materializer_id is not None
+        and proof.get("materializer_id") != required_materializer_id
+    ):
+        blockers.append("runtime_consumption_proof_materializer_id_mismatch")
     runtime_adapter_manifest = proof.get("runtime_adapter_manifest")
     runtime_adapter_ready = proof.get("runtime_adapter_ready") is True or (
         isinstance(runtime_adapter_manifest, Mapping)
@@ -1764,6 +2002,10 @@ def verify_runtime_consumption_proof(
         "proof_present": True,
         "proof_path": proof_path,
         "proof_schema": proof.get("schema"),
+        "proof_kind": proof.get("proof_kind"),
+        "receiver_contract_kind": proof.get("receiver_contract_kind"),
+        "target_kind": proof.get("target_kind"),
+        "materializer_id": proof.get("materializer_id"),
         "candidate_archive_sha256": archive_sha,
         "candidate_member_sha256": member_sha,
         "candidate_member_sha256s": member_sha_map,
@@ -2041,6 +2283,26 @@ def _zip_archive_bytes_with_replacement(
     return output.getvalue()
 
 
+def _zip_archive_bytes_single_member(
+    *,
+    member_name: str,
+    payload: bytes,
+    compression: int,
+    compresslevel: int | None,
+) -> bytes:
+    output = io.BytesIO()
+    info = zipfile.ZipInfo(member_name, (1980, 1, 1, 0, 0, 0))
+    info.compress_type = compression
+    info.create_system = 3
+    info.external_attr = 0o644 << 16
+    kwargs = {}
+    if compression == zipfile.ZIP_DEFLATED and compresslevel is not None:
+        kwargs["compresslevel"] = compresslevel
+    with zipfile.ZipFile(output, "w") as zf:
+        zf.writestr(info, payload, **kwargs)
+    return output.getvalue()
+
+
 def _merged_member_name(
     archive: Path,
     *,
@@ -2160,6 +2422,266 @@ def _merge_member_entry(archive: Path, member_name: str) -> dict[str, Any]:
         "zip_compressed_payload": compressed_payload,
         "zip_compressed_payload_sha256": sha256_bytes(compressed_payload),
         "zip_compressed_bytes": len(compressed_payload),
+    }
+
+
+def _renderer_payload_dfl1_member_names(
+    archive: Path,
+    *,
+    explicit_many: Sequence[str],
+    manifest: Mapping[str, Any],
+) -> list[str]:
+    manifest_names = _manifest_member_names(manifest)
+    selected = manifest_names or _string_items(explicit_many)
+    if not selected:
+        selected = list(RENDERER_PAYLOAD_DFL1_MEMBER_NAMES)
+    selected = _require_unique_existing_member_names(archive, selected)
+    if tuple(selected) != RENDERER_PAYLOAD_DFL1_MEMBER_NAMES:
+        raise FamilyAgnosticMaterializerError(
+            "renderer_payload_dfl1_v1 requires fixed-order members: "
+            + ", ".join(RENDERER_PAYLOAD_DFL1_MEMBER_NAMES)
+        )
+    return selected
+
+
+def _renderer_payload_dfl1_payload_member_name(
+    archive: Path,
+    payload_member_name: str,
+) -> str:
+    name = str(payload_member_name or "").strip() or "p"
+    if "/" in name or name.startswith(".") or name in {"", ".."}:
+        raise FamilyAgnosticMaterializerError(
+            f"unsafe renderer_payload_dfl1 payload member name: {payload_member_name!r}"
+        )
+    if name in set(_zip_member_names(archive)):
+        raise FamilyAgnosticMaterializerError(
+            "renderer_payload_dfl1 payload member must not collide with source member: "
+            f"{name}"
+        )
+    return name
+
+
+def _renderer_payload_dfl1_payload(
+    selected_entries: Sequence[Mapping[str, Any]],
+) -> bytes:
+    if len(selected_entries) != len(RENDERER_PAYLOAD_DFL1_MEMBER_NAMES):
+        raise FamilyAgnosticMaterializerError(
+            "renderer_payload_dfl1_v1 requires exactly three selected entries"
+        )
+    if any(int(entry["zip_compress_type"]) != zipfile.ZIP_DEFLATED for entry in selected_entries):
+        raise FamilyAgnosticMaterializerError(
+            "renderer_payload_dfl1_v1 can only carry ZIP raw-deflate member streams"
+        )
+    return RENDERER_PAYLOAD_DFL1_MAGIC + b"".join(
+        bytes(entry["zip_compressed_payload"]) for entry in selected_entries
+    )
+
+
+def parse_renderer_payload_dfl1_payload(
+    payload: bytes,
+    *,
+    member_names: Sequence[str] = RENDERER_PAYLOAD_DFL1_MEMBER_NAMES,
+) -> dict[str, Any]:
+    """Parse a source-runtime-native renderer DFL1 payload."""
+
+    if not payload.startswith(RENDERER_PAYLOAD_DFL1_MAGIC):
+        raise FamilyAgnosticMaterializerError("renderer payload DFL1 has bad magic")
+    names = list(member_names)
+    if len(names) != len(RENDERER_PAYLOAD_DFL1_MEMBER_NAMES):
+        raise FamilyAgnosticMaterializerError(
+            "renderer payload DFL1 parser requires exactly three member names"
+        )
+    remaining = payload[len(RENDERER_PAYLOAD_DFL1_MAGIC):]
+    out: dict[str, bytes] = {}
+    members = []
+    offset = 0
+    for name in names:
+        decoded, consumed = _decompress_next_zip_deflate_stream(remaining, member_name=name)
+        encoded = remaining[:consumed]
+        out[name] = decoded
+        members.append(
+            {
+                "name": name,
+                "offset": offset,
+                "length": len(encoded),
+                "compressed_sha256": sha256_bytes(encoded),
+                "sha256": sha256_bytes(decoded),
+                "uncompressed_length": len(decoded),
+                "zip_compress_type": zipfile.ZIP_DEFLATED,
+            }
+        )
+        offset += consumed
+        remaining = remaining[consumed:]
+    if remaining:
+        raise FamilyAgnosticMaterializerError(
+            "renderer payload DFL1 has trailing bytes"
+        )
+    table = {
+        "schema": "renderer_payload_dfl1_table.v1",
+        "payload_codec": "native_fixed_order_raw_deflate_sequence_v1",
+        "table_format": "fixed_order_no_charged_table_v1",
+        "member_count": len(members),
+        "members": members,
+        "binary_table_bytes": len(RENDERER_PAYLOAD_DFL1_MAGIC),
+        "binary_table_sha256": sha256_bytes(RENDERER_PAYLOAD_DFL1_MAGIC),
+        "concatenated_payload_bytes": len(payload) - len(RENDERER_PAYLOAD_DFL1_MAGIC),
+        "concatenated_payload_sha256": sha256_bytes(
+            payload[len(RENDERER_PAYLOAD_DFL1_MAGIC):]
+        ),
+        "merged_payload_sha256": sha256_bytes(payload),
+    }
+    return {"table": table, "members": out}
+
+
+def _renderer_payload_dfl1_runtime_consumption_proof(
+    *,
+    repo_root: Path,
+    source_archive: Mapping[str, Any],
+    candidate_archive: Mapping[str, Any],
+    source_members: Sequence[Mapping[str, Any]],
+    candidate_member: Mapping[str, Any],
+    payload_member_name: str,
+    payload: bytes,
+    selected_member_names: Sequence[str],
+) -> dict[str, Any]:
+    reconstruction = parse_renderer_payload_dfl1_payload(
+        payload,
+        member_names=selected_member_names,
+    )
+    native_probe = _renderer_payload_dfl1_native_unpacker_probe(
+        repo_root=repo_root,
+        payload=payload,
+        selected_member_names=selected_member_names,
+    )
+    expected = {str(row["name"]): str(row["sha256"]) for row in source_members}
+    actual = {
+        name: sha256_bytes(member_payload)
+        for name, member_payload in reconstruction["members"].items()
+    }
+    member_proofs = [
+        {
+            "member_name": name,
+            "source_member_sha256": expected.get(name),
+            "candidate_reconstructed_sha256": actual.get(name),
+            "passed": expected.get(name) == actual.get(name),
+        }
+        for name in selected_member_names
+    ]
+    native_hashes = native_probe.get("member_sha256s")
+    if not isinstance(native_hashes, Mapping):
+        native_hashes = {}
+    native_member_proofs = [
+        {
+            "member_name": name,
+            "source_member_sha256": expected.get(name),
+            "native_unpacker_sha256": native_hashes.get(name),
+            "passed": expected.get(name) == native_hashes.get(name),
+        }
+        for name in selected_member_names
+    ]
+    reconstruction_passed = (
+        all(row["passed"] is True for row in member_proofs)
+        and all(row["passed"] is True for row in native_member_proofs)
+        and native_probe["passed"] is True
+    )
+    return {
+        "schema": "family_agnostic_runtime_consumption_proof_v1",
+        "proof_kind": "renderer_payload_dfl1_native_unpacker_reconstruction_smoke.v1",
+        "target_kind": RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+        "materializer_id": RENDERER_PAYLOAD_DFL1_MATERIALIZER_ID,
+        "receiver_contract_kind": "source_runtime_native_renderer_payload_dfl1",
+        "runtime_adapter_ready": False,
+        "source_runtime_native_unpacker": True,
+        "source_runtime_unpacker_parse_satisfied": reconstruction_passed,
+        "runtime_adapter_manifest": native_probe["runtime_adapter_manifest"],
+        "source_archive": dict(source_archive),
+        "candidate_archive": dict(candidate_archive),
+        "candidate_archive_sha256": candidate_archive.get("sha256"),
+        "candidate_member": dict(candidate_member),
+        "candidate_member_sha256": candidate_member.get("sha256"),
+        "candidate_member_sha256s": {payload_member_name: candidate_member.get("sha256")},
+        "payload_member_name": payload_member_name,
+        "selected_member_names": list(selected_member_names),
+        "payload_table": reconstruction["table"],
+        "reconstructed_member_sha256s": actual,
+        "runtime_consumption_probe": {
+            "schema": "renderer_payload_dfl1_reconstruction_probe.v1",
+            "passed": False,
+            "parser_reconstruction_passed": reconstruction_passed,
+            "member_proofs": member_proofs,
+            "native_member_proofs": native_member_proofs,
+            "native_unpacker_probe": native_probe,
+        },
+        "receiver_contract_satisfied": False,
+        "runtime_consumption_proof_passed": False,
+        "passed": False,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _renderer_payload_dfl1_native_unpacker_probe(
+    *,
+    repo_root: Path,
+    payload: bytes,
+    selected_member_names: Sequence[str],
+) -> dict[str, Any]:
+    unpacker_path = repo_root / "submissions" / "robust_current" / "unpack_renderer_payload.py"
+    manifest: dict[str, Any] = {
+        "schema": "source_runtime_native_unpacker_manifest.v1",
+        "runtime_adapter_ready": False,
+        "path": unpacker_path.as_posix(),
+        "sha256": None,
+    }
+    blockers: list[str] = []
+    if not unpacker_path.is_file():
+        blockers.append("native_unpacker_missing")
+    else:
+        manifest["sha256"] = sha256_file(unpacker_path)
+    if blockers:
+        return {
+            "schema": "renderer_payload_dfl1_native_unpacker_probe.v1",
+            "passed": False,
+            "runtime_adapter_manifest": manifest,
+            "blockers": blockers,
+            "member_sha256s": {},
+        }
+    spec = importlib.util.spec_from_file_location(
+        "_tac_renderer_payload_dfl1_native_unpacker_probe",
+        unpacker_path,
+    )
+    if spec is None or spec.loader is None:
+        blockers.append("native_unpacker_import_spec_failed")
+        return {
+            "schema": "renderer_payload_dfl1_native_unpacker_probe.v1",
+            "passed": False,
+            "runtime_adapter_manifest": manifest,
+            "blockers": blockers,
+            "member_sha256s": {},
+        }
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+        _header, native_members = module._parse_payload(payload)
+    except Exception as exc:  # pragma: no cover - defensive import/probe diagnostics
+        blockers.append(f"native_unpacker_parse_failed:{exc}")
+        native_members = {}
+    member_sha256s = {
+        str(name): sha256_bytes(bytes(data))
+        for name, data in native_members.items()
+    }
+    missing = [name for name in selected_member_names if name not in member_sha256s]
+    if missing:
+        blockers.append("native_unpacker_missing_members:" + ",".join(missing))
+    extra = [name for name in member_sha256s if name not in set(selected_member_names)]
+    if extra:
+        blockers.append("native_unpacker_extra_members:" + ",".join(extra))
+    manifest["runtime_adapter_ready"] = not blockers
+    return {
+        "schema": "renderer_payload_dfl1_native_unpacker_probe.v1",
+        "passed": not blockers,
+        "runtime_adapter_manifest": manifest,
+        "blockers": blockers,
+        "member_sha256s": member_sha256s,
     }
 
 

@@ -437,6 +437,9 @@ def _write_family_agnostic_runtime_proof(
     payload: dict[str, object] = {
         "schema": "family_agnostic_runtime_consumption_proof_v1",
         "proof_kind": "fixture_family_agnostic_receiver_proof",
+        "target_kind": "packet_member_recompress_v1",
+        "materializer_id": "packet_member_recompress_adapter",
+        "receiver_contract_kind": "family_agnostic_packet_member_recompress",
         "receiver_contract_satisfied": proven,
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
@@ -466,6 +469,9 @@ def _add_required_runtime_proof_fields(
     row["runtime_consumption_proof_path"] = (
         submission / "runtime_consumption_proof.json"
     ).relative_to(repo).as_posix()
+    row["target_kind"] = "packet_member_recompress_v1"
+    row["materializer_id"] = "packet_member_recompress_adapter"
+    row["receiver_contract_kind"] = "family_agnostic_packet_member_recompress"
     queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
@@ -1169,6 +1175,72 @@ def test_family_agnostic_packet_member_proof_rejects_member_sha_mismatch(
     assert result["promoted_queue"] is None
     assert "runtime_consumption_proof_candidate_member_sha_mismatch" in (
         result["report"]["blockers"]
+    )
+
+
+def test_family_agnostic_runtime_proof_rejects_wrong_target_metadata(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _write_family_agnostic_runtime_proof(
+        submission,
+        archive_sha,
+        extra_fields={
+            "target_kind": "packet_member_recompress_v1",
+            "materializer_id": "packet_member_recompress_adapter",
+            "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+        },
+    )
+    _add_required_runtime_proof_fields(queue, submission, tmp_path, status="present")
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    payload["top_k"][0]["target_kind"] = "renderer_payload_dfl1_v1"
+    payload["top_k"][0]["materializer_id"] = "renderer_payload_dfl1_adapter"
+    payload["top_k"][0]["receiver_contract_kind"] = (
+        "source_runtime_native_renderer_payload_dfl1"
+    )
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    blockers = result["report"]["blockers"]
+    assert "runtime_consumption_proof_target_kind_mismatch" in blockers
+    assert "runtime_consumption_proof_materializer_id_mismatch" in blockers
+    assert "runtime_consumption_proof_receiver_contract_kind_mismatch" in blockers
+
+
+def test_family_agnostic_runtime_proof_requires_candidate_row_metadata(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _write_family_agnostic_runtime_proof(submission, archive_sha)
+    _add_required_runtime_proof_fields(queue, submission, tmp_path, status="present")
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    for field in ("target_kind", "materializer_id", "receiver_contract_kind"):
+        payload["top_k"][0].pop(field, None)
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    blockers = result["report"]["blockers"]
+    assert "candidate_row_target_kind_missing_for_family_agnostic_runtime_proof" in blockers
+    assert "candidate_row_materializer_id_missing_for_family_agnostic_runtime_proof" in blockers
+    assert (
+        "candidate_row_receiver_contract_kind_missing_for_family_agnostic_runtime_proof"
+        in blockers
     )
 
 

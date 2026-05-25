@@ -102,6 +102,7 @@ class TestMagicDetection:
         assert _detect_magic(b"PQ12other") == "pr65_pq12_pose"
 
     def test_detect_cooperative_receiver_packet_magics(self):
+        assert _detect_magic(b"DFL1\x01") == "renderer_payload_dfl1_native_v1"
         assert _detect_magic(b"TT5L\x01") == "time_traveler_l5_v1"
         assert _detect_magic(b"SBO1\x01") == "sabor_boundary_only_renderer_v1"
         assert _detect_magic(b"S2SB" + b"S2S1") == "s2sbs_byte_stuffing_archive_v1"

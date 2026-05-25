@@ -18,15 +18,17 @@ import hashlib
 import json
 import struct
 import sys
+import zlib
 from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
-
 MAGIC = b"RPK1"
 COMPACT_MAGIC = b"RP2\x01"
+NATIVE_DFL1_MAGIC = b"DFL1"
 SCHEMA = "renderer_payload_v1"
 COMPACT_SCHEMA = "renderer_payload_fixed3_v1"
+NATIVE_DFL1_SCHEMA = "renderer_payload_fixed3_deflate_sequence_v1"
 PR64_LEN_TABLE_SCHEMA = "renderer_payload_pr64_len_table_v1"
 HEADER_STRUCT = "<I"
 COMPACT_HEADER_STRUCT = "<B3xIII"
@@ -34,6 +36,7 @@ PR64_LEN_TABLE_STRUCT = "<III"
 PAYLOAD_BIN = "renderer_payload.bin"
 PAYLOAD_BR = "renderer_payload.bin.br"
 PAYLOAD_SHORT_BR = "p"
+NATIVE_DFL1_MEMBER_NAMES = ("renderer.bin", "masks.mkv", "optimized_poses.pt")
 PUBLIC_PR81_REORDERED_QZS3_MAGIC = b"Q81R"
 POSE_FP16_COL_DELTA_CODEC = "pose_fp16_col_delta_v1"
 POSE_QPOSE14_COL_DELTA_CODEC = "pose_qpose14_col_delta_v1"
@@ -181,6 +184,9 @@ def _read_payload_bytes(archive_dir: Path) -> bytes:
 
 
 def _decompress_brotli_payload(path: Path, label: str) -> bytes:
+    data = path.read_bytes()
+    if label == PAYLOAD_SHORT_BR and data.startswith(NATIVE_DFL1_MAGIC):
+        return data
     try:
         import brotli
     except ImportError as exc:
@@ -189,7 +195,6 @@ def _decompress_brotli_payload(path: Path, label: str) -> bytes:
             "inflate.sh should provide brotli before calling "
             "unpack_renderer_payload.py."
         ) from exc
-    data = path.read_bytes()
     try:
         return brotli.decompress(data)
     except brotli.error:
@@ -203,6 +208,8 @@ def _decompress_brotli_payload(path: Path, label: str) -> bytes:
 
 
 def _parse_payload(payload: bytes) -> tuple[dict[str, Any], dict[str, bytes]]:
+    if payload[:4] == NATIVE_DFL1_MAGIC:
+        return _parse_native_dfl1_payload(payload)
     if payload[:4] == COMPACT_MAGIC:
         return _parse_compact_payload(payload)
     if payload[:4] == NERV_MAGIC:
@@ -316,6 +323,57 @@ def _parse_payload(payload: bytes) -> tuple[dict[str, Any], dict[str, bytes]]:
         raise ValueError(
             f"renderer payload has {len(payload) - offset} trailing bytes after members"
         )
+    return header, members
+
+
+def parse_payload(payload: bytes) -> tuple[dict[str, Any], dict[str, bytes]]:
+    """Public alias for tests and archive validators."""
+    return _parse_payload(payload)
+
+
+def _parse_native_dfl1_payload(payload: bytes) -> tuple[dict[str, Any], dict[str, bytes]]:
+    if not payload.startswith(NATIVE_DFL1_MAGIC):
+        raise ValueError("native renderer payload DFL1 stream has bad magic")
+    remaining = payload[len(NATIVE_DFL1_MAGIC) :]
+    members: dict[str, bytes] = {}
+    member_meta: list[dict[str, Any]] = []
+    offset = 0
+    for name in NATIVE_DFL1_MEMBER_NAMES:
+        decompressor = zlib.decompressobj(-zlib.MAX_WBITS)
+        try:
+            decoded = decompressor.decompress(remaining)
+            decoded += decompressor.flush()
+        except zlib.error as exc:
+            raise ValueError(f"native renderer payload DFL1 stream failed: {name}") from exc
+        if not decompressor.eof:
+            raise ValueError(f"native renderer payload DFL1 stream did not terminate: {name}")
+        consumed = len(remaining) - len(decompressor.unused_data)
+        if consumed <= 0:
+            raise ValueError(f"native renderer payload DFL1 stream consumed no bytes: {name}")
+        encoded = remaining[:consumed]
+        members[name] = decoded
+        member_meta.append(
+            {
+                "name": name,
+                "bytes": len(encoded),
+                "sha256": hashlib.sha256(encoded).hexdigest(),
+                "codec": "zip_raw_deflate_stream",
+                "decoded_bytes": len(decoded),
+                "decoded_sha256": hashlib.sha256(decoded).hexdigest(),
+                "offset": offset,
+            }
+        )
+        offset += consumed
+        remaining = remaining[consumed:]
+    if remaining:
+        raise ValueError(
+            f"native renderer payload DFL1 has {len(remaining)} trailing bytes"
+        )
+    header = {
+        "schema": NATIVE_DFL1_SCHEMA,
+        "payload_format": "native_dfl1_fixed3",
+        "members": member_meta,
+    }
     return header, members
 
 
@@ -634,10 +692,7 @@ def _decode_seg_tile_actions(data: bytes) -> bytes:
             else:
                 out.append(int(tile))
             out.append(int(action))
-        if use_raw5:
-            raw = b"TA5" + bytes(out)
-        else:
-            raw = bytes(out)
+        raw = b"TA5" + bytes(out) if use_raw5 else bytes(out)
     if len(raw) % 4 == 0:
         record_size = 4
     elif len(raw) % 5 == 0:
@@ -688,7 +743,7 @@ def _decode_adaptive_arithmetic_actions(
         if value < 0 or value >= total:
             raise ValueError("S2 arithmetic code fell outside active interval")
         cumulative = 0
-        for symbol, count in enumerate(counts):
+        for symbol, count in enumerate(counts):  # noqa: B007 - symbol is consumed after lookup.
             if value < cumulative + count:
                 break
             cumulative += count
@@ -1122,7 +1177,6 @@ def _try_parse_public_pr75_qzs3_qp1_segactions_payload(
                 else None
             )
             if packed_actions:
-                header_size = struct.calcsize(SEG_TILE_ACTION_DICT_HEADER_STRUCT)
                 _magic, _version, dictionary_count = struct.unpack_from(
                     SEG_TILE_ACTION_DICT_HEADER_STRUCT, candidate_action_dict, 0
                 )

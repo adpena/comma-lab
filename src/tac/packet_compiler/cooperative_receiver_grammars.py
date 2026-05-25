@@ -27,6 +27,20 @@ class CooperativeReceiverPacketGrammar:
 
 COOPERATIVE_RECEIVER_PACKET_GRAMMARS: tuple[CooperativeReceiverPacketGrammar, ...] = (
     CooperativeReceiverPacketGrammar(
+        magic=b"DFL1",
+        xray_label="renderer_payload_dfl1_native_v1",
+        substrate_class="renderer_payload_dfl1_native_packet",
+        archive_version="renderer_payload_dfl1_fixed3_v1",
+        campaign_id="codex_renderer_payload_dfl1_native_20260525",
+        source_module="submissions.robust_current.unpack_renderer_payload",
+        compiler_stage="renderer_mask_pose_native_deflate_pack",
+        notes=(
+            "Source-runtime-native renderer payload carrying renderer.bin, "
+            "masks.mkv, and optimized_poses.pt as fixed-order raw ZIP deflate "
+            "streams; parser smoke only until full-frame parity and exact eval"
+        ),
+    ),
+    CooperativeReceiverPacketGrammar(
         magic=b"TT5L",
         xray_label="time_traveler_l5_v1",
         substrate_class="time_traveler_l5_packet",

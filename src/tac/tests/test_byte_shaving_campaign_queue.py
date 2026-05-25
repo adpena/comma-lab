@@ -64,6 +64,8 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     PACKET_MEMBER_REORDER_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+    RENDERER_PAYLOAD_DFL1_MATERIALIZER,
+    RENDERER_PAYLOAD_DFL1_TARGET_KIND,
     TENSOR_FACTORIZE_MATERIALIZER,
     TENSOR_FACTORIZE_TARGET_KIND,
     TENSOR_PRUNE_MATERIALIZER,
@@ -100,6 +102,7 @@ from tac.optimization.family_agnostic_materializers import (
     PACKET_MEMBER_MERGE_SCHEMA,
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
+    RENDERER_PAYLOAD_DFL1_SCHEMA,
     TENSOR_FACTORIZE_SCHEMA,
 )
 from tac.optimization.inverse_scorer_cell_chain import (
@@ -564,6 +567,7 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
         PACKET_MEMBER_REORDER_TARGET_KIND,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+        RENDERER_PAYLOAD_DFL1_TARGET_KIND,
         TENSOR_FACTORIZE_TARGET_KIND,
         TENSOR_PRUNE_TARGET_KIND,
         TENSOR_QUANTIZE_TARGET_KIND,
@@ -941,6 +945,20 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
             PACKET_MEMBER_MERGE_MATERIALIZER,
             "local_cpu",
         ),
+        (
+            {
+                "unit_id": "robust_renderer_payload",
+                "operation_id": "pack_native_renderer_payload",
+                "operation_family": "native_renderer_payload",
+                "target_kind": RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+            },
+            {
+                "unit_id": "robust_renderer_payload",
+                "unit_kind": "packet_member",
+            },
+            RENDERER_PAYLOAD_DFL1_MATERIALIZER,
+            "local_cpu",
+        ),
     ]
 
     for operation, unit, materializer_id, resource_kind in executable_cases:
@@ -953,6 +971,24 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
         assert resolved.adapter is not None
         assert resolved.adapter.implementation_module == "tac.optimization.family_agnostic_materializers"
         assert resolved.adapter.materialize_function
+    packet_merge = resolve_materializer(
+        operation={
+            "unit_id": "bolton_side_member",
+            "operation_id": "merge_bolton_side_member",
+            "operation_family": "member_merge",
+            "target_kind": PACKET_MEMBER_MERGE_TARGET_KIND,
+        },
+        unit={
+            "unit_id": "bolton_side_member",
+            "unit_kind": "packet_member",
+        },
+    )
+    assert packet_merge.adapter is not None
+    assert "merge_contract" in packet_merge.adapter.required_context_fields
+    assert (
+        "packet_member_merge_source_runtime_dir"
+        in packet_merge.adapter.required_context_fields
+    )
 
     fail_closed_cases = [
         (
@@ -2115,6 +2151,155 @@ def test_materializer_work_queue_wraps_packet_member_merge(
     assert str(runtime_dir) in row["telemetry"]["artifact_paths"]
     assert str(runtime_manifest) in row["telemetry"]["artifact_paths"]
     assert "packet_member_merge_requires_cooperative_receiver_runtime_adapter" in (
+        row["dispatch_blockers"]
+    )
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_work_queue_wraps_renderer_payload_dfl1(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    packet_manifest = tmp_path / "packet_members.json"
+    output = tmp_path / "renderer_payload_candidate.zip"
+    out_manifest = tmp_path / "renderer_payload_candidate.json"
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "backlog_key": "renderer_payload_dfl1_fixture",
+                "unit_kind": "packet_member",
+                "operation_family": "native_renderer_payload",
+                "target_kind": RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+                "materializer_id": RENDERER_PAYLOAD_DFL1_MATERIALIZER,
+            },
+        ],
+    }
+
+    queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts={
+            "renderer_payload_dfl1_fixture": {
+                "archive_path": str(archive),
+                "packet_member_manifest": str(packet_manifest),
+                "member_names": ["renderer.bin", "masks.mkv", "optimized_poses.pt"],
+                "payload_member_name": "p",
+                "output_archive": str(output),
+                "output_manifest": str(out_manifest),
+                "allow_size_regression": True,
+            },
+        },
+        source_plan_path="plan.json",
+    )
+
+    runtime_proof = out_manifest.with_name(
+        f"{out_manifest.stem}.runtime_consumption_proof.json"
+    )
+    row = queue["rows"][0]
+    assert queue["executable_row_count"] == 1
+    assert row["tool"] == "tools/run_family_agnostic_materializer.py"
+    assert [
+        "--target-kind",
+        RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+    ] in [row["command"][index : index + 2] for index in range(len(row["command"]) - 1)]
+    assert ["--packet-member-manifest", str(packet_manifest)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--member-names", "renderer.bin"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--member-names", "masks.mkv"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--member-names", "optimized_poses.pt"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--payload-member-name", "p"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--runtime-consumption-proof-out", str(runtime_proof)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    _assert_typed_postconditions(
+        row["postconditions"],
+        path=out_manifest,
+        schema=RENDERER_PAYLOAD_DFL1_SCHEMA,
+    )
+    assert row["telemetry"]["input_artifact_paths"] == [
+        str(archive),
+        str(packet_manifest),
+    ]
+    assert str(runtime_proof) in row["telemetry"]["artifact_paths"]
+    assert "renderer_payload_dfl1_requires_source_runtime_unpack_proof" in (
+        row["dispatch_blockers"]
+    )
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_work_queue_wraps_native_renderer_payload_dfl1(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "renderer_payload_candidate.zip"
+    out_manifest = tmp_path / "renderer_payload_candidate.json"
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "backlog_key": "renderer_payload_dfl1_fixture",
+                "unit_kind": "packet_member",
+                "operation_family": "native_renderer_payload",
+                "target_kind": RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+                "materializer_id": RENDERER_PAYLOAD_DFL1_MATERIALIZER,
+            },
+        ],
+    }
+
+    queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts={
+            "renderer_payload_dfl1_fixture": {
+                "archive_path": str(archive),
+                "member_names": ["renderer.bin", "masks.mkv", "optimized_poses.pt"],
+                "payload_member_name": "p",
+                "output_archive": str(output),
+                "output_manifest": str(out_manifest),
+            },
+        },
+        source_plan_path="plan.json",
+    )
+
+    runtime_proof = out_manifest.with_name(
+        f"{out_manifest.stem}.runtime_consumption_proof.json"
+    )
+    row = queue["rows"][0]
+    assert queue["executable_row_count"] == 1
+    assert row["tool"] == "tools/run_family_agnostic_materializer.py"
+    assert [
+        "--target-kind",
+        RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+    ] in [row["command"][index : index + 2] for index in range(len(row["command"]) - 1)]
+    assert ["--member-names", "renderer.bin"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--payload-member-name", "p"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--runtime-consumption-proof-out", str(runtime_proof)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    _assert_typed_postconditions(
+        row["postconditions"],
+        path=out_manifest,
+        schema=RENDERER_PAYLOAD_DFL1_SCHEMA,
+    )
+    assert row["telemetry"]["input_artifact_paths"] == [str(archive)]
+    assert str(runtime_proof) in row["telemetry"]["artifact_paths"]
+    assert "renderer_payload_dfl1_requires_source_runtime_unpack_proof" in (
         row["dispatch_blockers"]
     )
     assert row["score_claim"] is False

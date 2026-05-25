@@ -1353,6 +1353,19 @@ def validate_runtime_consumption_proof(
     elif proof_schema in FAMILY_AGNOSTIC_RUNTIME_CONSUMPTION_PROOF_SCHEMAS:
         if not _family_agnostic_runtime_proof_passed(proof_raw):
             blockers.append("runtime_consumption_proof_not_proven")
+        for field in ("target_kind", "materializer_id", "receiver_contract_kind"):
+            expected = row.get(field)
+            if not isinstance(expected, str) or not expected.strip():
+                blockers.append(
+                    f"candidate_row_{field}_missing_for_family_agnostic_runtime_proof"
+                )
+                continue
+            observed = proof_raw.get(field)
+            facts[f"runtime_consumption_proof_{field}"] = observed
+            if not isinstance(observed, str) or not observed.strip():
+                blockers.append(f"runtime_consumption_proof_{field}_missing")
+            elif observed.strip() != expected.strip():
+                blockers.append(f"runtime_consumption_proof_{field}_mismatch")
         proof_archive_sha = _family_agnostic_runtime_proof_archive_sha(proof_raw)
         facts["runtime_consumption_proof_archive_sha256"] = proof_archive_sha
         if archive_sha256 is not None:

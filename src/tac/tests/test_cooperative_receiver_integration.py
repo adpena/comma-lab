@@ -110,6 +110,7 @@ def test_integration_manifest_wires_xray_magic_codec_and_compiler_hooks() -> Non
 
     xray_rows = manifest["xray_hook"]["cooperative_receiver_packet_grammars"]
     assert {
+        "DFL1",
         "TT5L",
         "SBO1",
         "S2SB",

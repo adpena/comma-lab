@@ -12,15 +12,21 @@ import numpy as np
 
 from tac.optimization.family_agnostic_materializers import (
     ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+    PACKET_MEMBER_MERGE_MATERIALIZER_ID,
+    PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND,
+    PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND,
     PACKET_MEMBER_MERGE_SCHEMA,
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
+    RENDERER_PAYLOAD_DFL1_SCHEMA,
     TENSOR_FACTORIZE_SCHEMA,
     materialize_archive_section_entropy_recode_candidate,
     materialize_packet_member_merge_candidate,
     materialize_packet_member_recompress_candidate,
     materialize_packet_member_zip_header_elide_candidate,
+    materialize_renderer_payload_dfl1_candidate,
     materialize_tensor_factorize_candidate,
+    parse_renderer_payload_dfl1_payload,
     verify_runtime_consumption_proof,
 )
 from tac.optimization.packet_member_merge_receiver import (
@@ -295,9 +301,12 @@ def test_packet_member_merge_materializer_emits_reconstruction_proof(
     )
     assert proof_payload["candidate_archive"]["sha256"] == result["candidate_archive"]["sha256"]
     assert proof_payload["candidate_member"]["sha256"] == result["candidate_member"]["sha256"]
-    assert proof_payload["runtime_consumption_probe"]["passed"] is True
+    assert proof_payload["runtime_consumption_probe"]["passed"] is False
     assert proof_payload["runtime_consumption_probe"]["internal_reconstruction_passed"] is True
+    assert proof_payload["receiver_contract_satisfied"] is False
     assert proof_payload["runtime_adapter_ready"] is False
+    assert proof_payload["runtime_consumption_proof_passed"] is False
+    assert proof_payload["passed"] is False
     assert proof_payload["reconstructed_member_sha256s"] == {
         "side_a.bin": sha256_bytes(payloads["side_a.bin"]),
         "side_b.bin": sha256_bytes(payloads["side_b.bin"]),
@@ -378,6 +387,19 @@ def test_packet_member_merge_receiver_runtime_proves_consumed_transform(
         output_dir=output_dir,
         file_list="0.mkv",
     )
+    consumed_result = materialize_packet_member_merge_candidate(
+        archive_path=archive,
+        output_archive=tmp_path / "candidate_consumed.zip",
+        member_names=("side_a.bin", "side_b.bin"),
+        merge_contract={
+            "cooperative_receiver_id": "fixture_packet_member_merge_receiver",
+            "receiver_adapter_kind": "shadow_archive_packet_member_merge_receiver",
+        },
+        merged_member_name="merged.packet",
+        runtime_consumption_proof=proof,
+        allow_size_regression=True,
+        repo_root=tmp_path,
+    )
 
     assert runtime_manifest["runtime_adapter_ready"] is True
     assert runtime_manifest["score_claim"] is False
@@ -389,8 +411,102 @@ def test_packet_member_merge_receiver_runtime_proves_consumed_transform(
     assert (output_dir / "0.mkv").read_bytes() == (
         payloads["side_a.bin"] + payloads["side_b.bin"] + payloads["keep.bin"]
     )
+    assert consumed_result["receiver_contract_satisfied"] is True
+    assert consumed_result["runtime_adapter_ready"] is True
+    assert (
+        "packet_member_merge_exact_readiness_refused_until_byte_closed_runtime_adapter_lands"
+        not in consumed_result["readiness_blockers"]
+    )
     assert proof["score_claim"] is False
     assert proof["ready_for_exact_eval_dispatch"] is False
+
+
+def test_packet_member_merge_rejects_mismatched_runtime_proof_metadata(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    runtime_dir = tmp_path / "runtime"
+    runtime_manifest_out = tmp_path / "runtime_adapter.json"
+    payloads = {
+        "side_a.bin": b"A" * 128,
+        "side_b.bin": b"B" * 128,
+    }
+    _write_zip(archive, payloads, compression=zipfile.ZIP_DEFLATED)
+    source_runtime = tmp_path / "source_runtime"
+    source_runtime.mkdir()
+    (source_runtime / "inflate.py").write_text(
+        "\n".join(
+            [
+                "import sys, zipfile",
+                "from pathlib import Path",
+                "archive_dir, output_dir, file_list = sys.argv[1:4]",
+                "out = Path(output_dir)",
+                "out.mkdir(parents=True, exist_ok=True)",
+                "with zipfile.ZipFile(Path(archive_dir) / 'archive.zip', 'r') as zf:",
+                "    payload = zf.read('side_a.bin') + zf.read('side_b.bin')",
+                "(out / file_list).write_bytes(payload)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    result = materialize_packet_member_merge_candidate(
+        archive_path=archive,
+        output_archive=output,
+        member_names=("side_a.bin", "side_b.bin"),
+        merge_contract={
+            "cooperative_receiver_id": "fixture_packet_member_merge_receiver",
+            "receiver_adapter_kind": "shadow_archive_packet_member_merge_receiver",
+        },
+        merged_member_name="merged.packet",
+        allow_size_regression=True,
+        repo_root=tmp_path,
+    )
+    runtime_manifest = build_packet_member_merge_receiver_runtime(
+        source_runtime_dir=source_runtime,
+        candidate_manifest=result,
+        runtime_dir_out=runtime_dir,
+        runtime_manifest_out=runtime_manifest_out,
+        repo_root=tmp_path,
+    )
+    proof = build_packet_member_merge_runtime_consumption_proof(
+        runtime_adapter_manifest=runtime_manifest,
+        candidate_manifest=result,
+        repo_root=tmp_path,
+    )
+    assert proof["proof_kind"] == PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND
+    assert proof["target_kind"] == "packet_member_merge_v1"
+    assert proof["materializer_id"] == PACKET_MEMBER_MERGE_MATERIALIZER_ID
+    assert proof["receiver_contract_kind"] == PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND
+
+    proof["proof_kind"] = "renderer_payload_dfl1_source_runtime_native_consumption_proof.v1"
+    proof["target_kind"] = "renderer_payload_dfl1_v1"
+    proof["materializer_id"] = "renderer_payload_dfl1_adapter"
+    proof["receiver_contract_kind"] = "source_runtime_native_renderer_payload_dfl1"
+    rejected = materialize_packet_member_merge_candidate(
+        archive_path=archive,
+        output_archive=tmp_path / "candidate_rejected.zip",
+        member_names=("side_a.bin", "side_b.bin"),
+        merge_contract={
+            "cooperative_receiver_id": "fixture_packet_member_merge_receiver",
+            "receiver_adapter_kind": "shadow_archive_packet_member_merge_receiver",
+        },
+        merged_member_name="merged.packet",
+        runtime_consumption_proof=proof,
+        allow_size_regression=True,
+        repo_root=tmp_path,
+    )
+
+    blockers = rejected["receiver_verification"]["blockers"]
+    assert rejected["receiver_contract_satisfied"] is False
+    assert rejected["runtime_adapter_ready"] is True
+    assert "runtime_consumption_proof_kind_mismatch" in blockers
+    assert "runtime_consumption_proof_target_kind_mismatch" in blockers
+    assert "runtime_consumption_proof_materializer_id_mismatch" in blockers
+    assert "runtime_consumption_proof_receiver_contract_kind_mismatch" in blockers
+    assert "packet_member_merge_receiver_contract_not_satisfied" in (
+        rejected["readiness_blockers"]
+    )
 
 
 def test_packet_member_merge_receiver_runtime_materializes_member_tree(
@@ -456,6 +572,136 @@ def test_packet_member_merge_receiver_runtime_materializes_member_tree(
     assert smoke["passed"] is True
     assert (output_dir / "tree.raw").read_bytes() == (
         payloads["renderer.bin"] + payloads["masks.mkv"] + payloads["optimized_poses.pt"]
+    )
+
+
+def test_renderer_payload_dfl1_materializer_uses_native_payload_member(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    proof = tmp_path / "runtime_consumption_proof.json"
+    payloads = {
+        "renderer.bin": b"renderer" * 4096,
+        "masks.mkv": b"mask" * 4096,
+        "optimized_poses.pt": b"pose" * 2048,
+    }
+    _write_zip(archive, payloads, compression=zipfile.ZIP_DEFLATED)
+
+    result = materialize_renderer_payload_dfl1_candidate(
+        archive_path=archive,
+        output_archive=output,
+        runtime_consumption_proof_out=proof,
+        repo_root=REPO_ROOT,
+    )
+
+    assert result["schema"] == RENDERER_PAYLOAD_DFL1_SCHEMA
+    assert result["byte_closed_candidate_emitted"] is True
+    assert result["payload_member_name"] == "p"
+    assert result["selected_member_names"] == [
+        "renderer.bin",
+        "masks.mkv",
+        "optimized_poses.pt",
+    ]
+    assert result["selected_payload"]["saved_bytes"] > 0
+    assert result["receiver_contract_satisfied"] is False
+    assert result["runtime_adapter_ready"] is False
+    assert result["score_claim"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
+    assert "renderer_payload_dfl1_full_frame_inflate_parity_missing" in (
+        result["readiness_blockers"]
+    )
+    assert "runtime_consumption_proof_not_passed" in result["readiness_blockers"]
+    assert "renderer_payload_dfl1_receiver_contract_not_satisfied" in (
+        result["readiness_blockers"]
+    )
+    with zipfile.ZipFile(output, "r") as zf:
+        assert zf.namelist() == ["p"]
+        parsed = parse_renderer_payload_dfl1_payload(zf.read("p"))
+    assert parsed["table"]["payload_codec"] == "native_fixed_order_raw_deflate_sequence_v1"
+    assert parsed["members"] == payloads
+    archive_dir = tmp_path / "candidate_archive_dir"
+    archive_dir.mkdir()
+    with zipfile.ZipFile(output, "r") as zf:
+        zf.extractall(archive_dir)
+    summary = tmp_path / "unpack_summary.json"
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "submissions/robust_current/unpack_renderer_payload.py"),
+            str(archive_dir),
+            "--summary-json",
+            str(summary),
+        ],
+        check=True,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+    for name, payload in payloads.items():
+        assert (archive_dir / name).read_bytes() == payload
+    proof_payload = json.loads(proof.read_text(encoding="utf-8"))
+    assert proof_payload["proof_kind"] == (
+        "renderer_payload_dfl1_native_unpacker_reconstruction_smoke.v1"
+    )
+    assert proof_payload["runtime_adapter_ready"] is False
+    assert proof_payload["source_runtime_unpacker_parse_satisfied"] is True
+    assert proof_payload["receiver_contract_satisfied"] is False
+    assert proof_payload["runtime_consumption_proof_passed"] is False
+    assert proof_payload["runtime_consumption_probe"]["passed"] is False
+    assert proof_payload["runtime_consumption_probe"]["parser_reconstruction_passed"] is True
+    assert all(
+        row["passed"] is True
+        for row in proof_payload["runtime_consumption_probe"]["native_member_proofs"]
+    )
+    assert proof_payload["score_claim"] is False
+    assert proof_payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_runtime_consumption_proof_verifier_binds_target_materializer_and_receiver(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    payloads = {
+        "renderer.bin": b"renderer" * 4096,
+        "masks.mkv": b"mask" * 4096,
+        "optimized_poses.pt": b"pose" * 2048,
+    }
+    _write_zip(archive, payloads, compression=zipfile.ZIP_DEFLATED)
+    result = materialize_renderer_payload_dfl1_candidate(
+        archive_path=archive,
+        output_archive=output,
+        runtime_consumption_proof_out=tmp_path / "runtime_consumption_proof.json",
+        repo_root=REPO_ROOT,
+    )
+    proof_payload = json.loads(
+        Path(result["runtime_consumption_proof_path"]).read_text(encoding="utf-8")
+    )
+    proof_payload["target_kind"] = "packet_member_recompress_v1"
+    proof_payload["materializer_id"] = "packet_member_recompress_adapter"
+    proof_payload["receiver_contract_kind"] = "family_agnostic_packet_member_recompress"
+
+    verification = verify_runtime_consumption_proof(
+        runtime_consumption_proof=proof_payload,
+        required_candidate_archive_sha256=result["candidate_archive"]["sha256"],
+        required_candidate_member_sha256=result["candidate_member"]["sha256"],
+        required_proof_kind=(
+            "renderer_payload_dfl1_native_unpacker_reconstruction_smoke.v1"
+        ),
+        required_receiver_contract_kind="source_runtime_native_renderer_payload_dfl1",
+        required_target_kind="renderer_payload_dfl1_v1",
+        required_materializer_id="renderer_payload_dfl1_adapter",
+        repo_root=REPO_ROOT,
+    )
+
+    assert verification["receiver_contract_satisfied"] is False
+    assert "runtime_consumption_proof_target_kind_mismatch" in verification["blockers"]
+    assert "runtime_consumption_proof_materializer_id_mismatch" in (
+        verification["blockers"]
+    )
+    assert "runtime_consumption_proof_receiver_contract_kind_mismatch" in (
+        verification["blockers"]
     )
 
 
@@ -1080,6 +1326,76 @@ def test_packet_member_merge_materializer_cli_auto_writes_runtime_proof(
     assert payload["tool_run_manifest"]["tool"] == "tools/run_family_agnostic_materializer.py"
     assert payload["score_claim"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_renderer_payload_dfl1_materializer_cli_auto_writes_runtime_proof(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    manifest = tmp_path / "candidate.json"
+    proof = tmp_path / "candidate.runtime_consumption_proof.json"
+    payloads = {
+        "renderer.bin": b"renderer" * 4096,
+        "masks.mkv": b"mask" * 4096,
+        "optimized_poses.pt": b"pose" * 2048,
+    }
+    _write_zip(archive, payloads, compression=zipfile.ZIP_DEFLATED)
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_family_agnostic_materializer.py"),
+            "--target-kind",
+            "renderer_payload_dfl1_v1",
+            "--archive-path",
+            str(archive),
+            "--output-archive",
+            str(output),
+            "--output-manifest",
+            str(manifest),
+        ],
+        check=True,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    stdout_payload = json.loads(completed.stdout)
+    assert payload["schema"] == RENDERER_PAYLOAD_DFL1_SCHEMA
+    assert stdout_payload["schema"] == RENDERER_PAYLOAD_DFL1_SCHEMA
+    assert proof.is_file()
+    assert payload["payload_member_name"] == "p"
+    assert payload["receiver_contract_kind"] == "source_runtime_native_renderer_payload_dfl1"
+    assert payload["receiver_contract_satisfied"] is False
+    assert payload["runtime_adapter_ready"] is False
+    assert payload["receiver_verification"]["proof_present"] is True
+    assert payload["receiver_verification"]["target_kind"] == "renderer_payload_dfl1_v1"
+    assert payload["receiver_verification"]["receiver_contract_satisfied"] is False
+    assert payload["runtime_consumption_proof_path"] == str(proof)
+    assert payload["tool_run_manifest"]["tool"] == "tools/run_family_agnostic_materializer.py"
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+
+    archive_dir = tmp_path / "candidate_archive"
+    archive_dir.mkdir()
+    with zipfile.ZipFile(output, "r") as zf:
+        assert zf.namelist() == ["p"]
+        zf.extractall(archive_dir)
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "submissions/robust_current/unpack_renderer_payload.py"),
+            str(archive_dir),
+        ],
+        check=True,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+    for name, expected in payloads.items():
+        assert (archive_dir / name).read_bytes() == expected
 
 
 def test_packet_member_zip_header_elide_materializer_cli_auto_writes_runtime_proof(

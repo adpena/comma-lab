@@ -37,6 +37,7 @@ from tac.optimization.family_agnostic_materializers import (
     PACKET_MEMBER_MERGE_SCHEMA,
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
+    RENDERER_PAYLOAD_DFL1_SCHEMA,
     TENSOR_FACTORIZE_SCHEMA,
 )
 from tac.optimization.inverse_scorer_cell_chain import (
@@ -65,6 +66,7 @@ from .byte_shaving_materializer_registry import (
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     REGISTRY_SCHEMA,
+    RENDERER_PAYLOAD_DFL1_TARGET_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
     known_materializer_target_kinds,
     registry_manifest,
@@ -116,6 +118,7 @@ HARVESTABLE_MATERIALIZER_MANIFEST_SCHEMAS = frozenset(
         PACKET_MEMBER_MERGE_SCHEMA,
         PACKET_MEMBER_RECOMPRESS_SCHEMA,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
+        RENDERER_PAYLOAD_DFL1_SCHEMA,
         TENSOR_FACTORIZE_SCHEMA,
     }
 )
@@ -136,6 +139,8 @@ OPERATION_PARAM_HINT_KEYS = (
     "packet_member",
     "packet_member_manifest",
     "member_name",
+    "member_names",
+    "payload_member_name",
     "tensor_name",
     "tensor_path",
     "tensor_manifest",
@@ -1547,6 +1552,10 @@ def _family_agnostic_materializer_command(
             )
         else:
             input_paths.append(source_runtime)
+    elif target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND:
+        packet_member_manifest = _path_context_value(context, "packet_member_manifest")
+        if packet_member_manifest is not None:
+            input_paths.append(packet_member_manifest)
     elif target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
         packet_member_manifest = _path_context_value(context, "packet_member_manifest")
         if packet_member_manifest is not None:
@@ -1595,6 +1604,7 @@ def _family_agnostic_materializer_command(
         PACKET_MEMBER_MERGE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+        RENDERER_PAYLOAD_DFL1_TARGET_KIND,
         TENSOR_FACTORIZE_TARGET_KIND,
     }:
         runtime_proof_out = _path_context_value(context, "runtime_consumption_proof_out")
@@ -1750,6 +1760,21 @@ def _family_agnostic_materializer_command(
         )
         if merged_member_name is not None:
             command.extend(["--merged-member-name", merged_member_name])
+    elif target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND:
+        packet_member_manifest = _path_context_value(context, "packet_member_manifest")
+        if packet_member_manifest is not None:
+            command.extend(["--packet-member-manifest", packet_member_manifest])
+        member_names = _string_list_context_value(context, "member_names")
+        member_names.extend(_string_list_context_value(context, "archive_member_names"))
+        member_names.extend(_string_list_context_value(context, "packet_member_names"))
+        for selected_member_name in ordered_unique(member_names):
+            command.extend(["--member-names", selected_member_name])
+        payload_member_name = _context_string_any(
+            context,
+            ("payload_member_name", "renderer_payload_member_name"),
+        )
+        if payload_member_name is not None:
+            command.extend(["--payload-member-name", payload_member_name])
     elif target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
         packet_member_manifest = _path_context_value(context, "packet_member_manifest")
         if packet_member_manifest is not None:
@@ -1857,6 +1882,14 @@ def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
                 "packet_member_merge_requires_archive_preflight",
                 "packet_member_merge_requires_cooperative_receiver_runtime_adapter",
                 "packet_member_merge_requires_runtime_consumption_proof",
+            ]
+        )
+    if target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND:
+        blockers.extend(
+            [
+                "renderer_payload_dfl1_requires_archive_preflight",
+                "renderer_payload_dfl1_requires_source_runtime_unpack_proof",
+                "renderer_payload_dfl1_requires_same_runtime_full_frame_parity",
             ]
         )
     if target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
@@ -1971,6 +2004,7 @@ def _materializer_candidate_postconditions(
         PACKET_MEMBER_MERGE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+        RENDERER_PAYLOAD_DFL1_TARGET_KIND,
         TENSOR_FACTORIZE_TARGET_KIND,
     }:
         required_equals["receiver_verification.schema"] = "family_agnostic_runtime_consumption_proof_verification.v1"
@@ -1980,6 +2014,11 @@ def _materializer_candidate_postconditions(
     if target_kind == TENSOR_FACTORIZE_TARGET_KIND:
         required_equals["receiver_contract_kind"] = "family_agnostic_tensor_factorize"
         required_positive_int.append("factorization.factor_payload_bytes")
+    if target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND:
+        required_equals["receiver_contract_kind"] = (
+            "source_runtime_native_renderer_payload_dfl1"
+        )
+        required_positive_int.append("selected_payload.payload_bytes")
     if target_kind == PACKET_MEMBER_MERGE_TARGET_KIND:
         required_nonempty.extend(
             [
@@ -2223,6 +2262,28 @@ def build_materializer_work_queue(
                     manifest_path=manifest_out,
                     schema=PACKET_MEMBER_MERGE_SCHEMA,
                     target_kind=PACKET_MEMBER_MERGE_TARGET_KIND,
+                )
+        elif (
+            unit_kind == "packet_member"
+            and operation_family == "native_renderer_payload"
+            and target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND
+        ):
+            command, command_blockers, telemetry = _family_agnostic_materializer_command(
+                context,
+                target_kind=RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+            )
+            blockers.extend(command_blockers)
+            manifest_out = _path_context_value(context, "output_manifest")
+            if manifest_out is None:
+                manifest_out = _path_context_value(context, "manifest_out")
+            output_archive = _path_context_value(context, "output_archive")
+            if manifest_out is None and output_archive is not None:
+                manifest_out = Path(output_archive).with_suffix(".json").as_posix()
+            if command and manifest_out is not None:
+                postconditions = _materializer_candidate_postconditions(
+                    manifest_path=manifest_out,
+                    schema=RENDERER_PAYLOAD_DFL1_SCHEMA,
+                    target_kind=RENDERER_PAYLOAD_DFL1_TARGET_KIND,
                 )
         elif (
             unit_kind == "packet_member"

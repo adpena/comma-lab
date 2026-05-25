@@ -33,7 +33,10 @@ ensure_repo_imports(REPO_ROOT)
 from comma_lab.scheduler.byte_shaving_materializer_registry import (  # noqa: E402
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
     INVERSE_SCORER_CELL_TARGET_KIND,
+    PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+    PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+    RENDERER_PAYLOAD_DFL1_TARGET_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
 )
 from comma_lab.scheduler.experiment_queue import (  # noqa: E402
@@ -1731,8 +1734,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--archive-section-allow-size-regression", action="store_true")
     parser.add_argument("--archive-section-allow-overwrite", action="store_true")
     parser.add_argument("--packet-member-archive-path", type=Path, default=None)
+    parser.add_argument(
+        "--packet-member-target-kind",
+        choices=(
+            PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+            PACKET_MEMBER_MERGE_TARGET_KIND,
+            PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+            RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+        ),
+        default=PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+    )
     parser.add_argument("--packet-member-manifest", type=Path, default=None)
     parser.add_argument("--packet-member-name", default=None)
+    parser.add_argument("--packet-member-names", action="append", default=[])
+    parser.add_argument("--packet-member-payload-member-name", default=None)
     parser.add_argument("--packet-member-output-archive", type=Path, default=None)
     parser.add_argument("--packet-member-output-manifest", type=Path, default=None)
     parser.add_argument("--packet-member-zip-compression-method", action="append", default=[])
@@ -2394,8 +2409,11 @@ def _packet_member_auto_artifact_map_requested(args: argparse.Namespace) -> bool
     return any(
         (
             args.packet_member_archive_path is not None,
+            args.packet_member_target_kind != PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
             args.packet_member_manifest is not None,
             bool(str(args.packet_member_name or "").strip()),
+            bool(args.packet_member_names),
+            bool(str(args.packet_member_payload_member_name or "").strip()),
             args.packet_member_output_archive is not None,
             args.packet_member_output_manifest is not None,
             bool(args.packet_member_zip_compression_method),
@@ -2621,6 +2639,14 @@ def _build_packet_member_artifact_context(args: argparse.Namespace) -> dict[str,
     member_name = str(args.packet_member_name or "").strip()
     if member_name:
         context["member_name"] = member_name
+    _add_string_list_context_value(
+        context,
+        "member_names",
+        args.packet_member_names,
+    )
+    payload_member_name = str(args.packet_member_payload_member_name or "").strip()
+    if payload_member_name:
+        context["payload_member_name"] = payload_member_name
     _add_path_context_value(context, "output_archive", args.packet_member_output_archive)
     _add_path_context_value(context, "json_out", args.packet_member_output_manifest)
     _add_path_context_value(
@@ -2718,7 +2744,7 @@ def _build_generated_materializer_artifact_map_payload(
     if _archive_section_auto_artifact_map_requested(args):
         artifacts[ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND] = _build_archive_section_artifact_context(args)
     if _packet_member_auto_artifact_map_requested(args):
-        artifacts[PACKET_MEMBER_RECOMPRESS_TARGET_KIND] = _build_packet_member_artifact_context(args)
+        artifacts[args.packet_member_target_kind] = _build_packet_member_artifact_context(args)
     if _tensor_factorize_auto_artifact_map_requested(args):
         artifacts[TENSOR_FACTORIZE_TARGET_KIND] = _build_tensor_factorize_artifact_context(args)
     return {

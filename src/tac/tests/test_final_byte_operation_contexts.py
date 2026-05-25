@@ -28,6 +28,8 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+    RENDERER_PAYLOAD_DFL1_MATERIALIZER,
+    RENDERER_PAYLOAD_DFL1_TARGET_KIND,
     TENSOR_FACTORIZE_MATERIALIZER,
     TENSOR_FACTORIZE_TARGET_KIND,
 )
@@ -213,6 +215,40 @@ def _packet_member_merge_backlog() -> dict[str, object]:
                 "materializer_id": PACKET_MEMBER_MERGE_MATERIALIZER,
                 "source_unit_ids": ["payload_members"],
                 "operation_params": {"member_names": ["a.bin", "b.bin"]},
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _renderer_payload_dfl1_backlog() -> dict[str, object]:
+    return {
+        "schema": "byte_shaving_materializer_backlog.v1",
+        "rows": [
+            {
+                "schema": "byte_shaving_materializer_backlog_row.v1",
+                "backlog_key": "renderer_payload_dfl1_fixture",
+                "backlog_rank": 1,
+                "unit_kind": "packet_member",
+                "operation_family": "native_renderer_payload",
+                "target_kind": RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+                "materializer_id": RENDERER_PAYLOAD_DFL1_MATERIALIZER,
+                "source_unit_ids": ["renderer_payload_members"],
+                "operation_params": {
+                    "member_names": [
+                        "renderer.bin",
+                        "masks.mkv",
+                        "optimized_poses.pt",
+                    ],
+                    "payload_member_name": "p",
+                },
                 "score_claim": False,
                 "promotion_eligible": False,
                 "rank_or_kill_eligible": False,
@@ -568,6 +604,70 @@ def test_final_byte_context_compiler_covers_packet_member_merge(
     ]
     assert "--runtime-consumption-proof-out" in row["command"]
     assert "--allow-size-regression" in row["command"]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_final_byte_context_compiler_covers_renderer_payload_dfl1(
+    tmp_path: Path,
+) -> None:
+    artifact_map = {
+        "schema": "final_byte_artifact_map.fixture.v1",
+        "artifacts": {
+            RENDERER_PAYLOAD_DFL1_TARGET_KIND: {
+                "archive_path": str(tmp_path / "packet_source.zip"),
+                "packet_member_manifest": str(tmp_path / "members.json"),
+                "member_names": [
+                    "renderer.bin",
+                    "masks.mkv",
+                    "optimized_poses.pt",
+                ],
+                "payload_member_name": "p",
+                "allow_size_regression": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    payload = build_final_byte_operation_contexts(
+        _renderer_payload_dfl1_backlog(),
+        artifact_map=artifact_map,
+        repo_root=tmp_path,
+        default_output_root=tmp_path / "out",
+    )
+
+    assert payload["row_count"] == 1
+    assert payload["blocked_context_count"] == 0
+    context = payload["rows"][0]["context"]
+    assert context["member_names"] == [
+        "renderer.bin",
+        "masks.mkv",
+        "optimized_poses.pt",
+    ]
+    assert context["payload_member_name"] == "p"
+    resolved = materializer_contexts_from_payload(payload)
+    work_queue = build_materializer_work_queue(
+        _renderer_payload_dfl1_backlog(),
+        repo_root=tmp_path,
+        contexts=resolved,
+        source_plan_path="plan.json",
+    )
+    row = work_queue["rows"][0]
+    assert work_queue["executable_row_count"] == 1
+    assert [
+        "--target-kind",
+        RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+    ] in [row["command"][index : index + 2] for index in range(len(row["command"]) - 1)]
+    assert ["--payload-member-name", "p"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert "--runtime-consumption-proof-out" in row["command"]
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
 

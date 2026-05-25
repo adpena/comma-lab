@@ -829,6 +829,43 @@ def _validate_archive_seg_tile_actions(zf: zipfile.ZipFile) -> list[str]:
         except Exception as exc:
             errors.append(f"{packed_name}: renderer payload preflight failed: {exc}")
         else:
+            required_groups = {
+                "renderer": {"renderer.bin"},
+                "mask": {
+                    "masks.mkv",
+                    "grayscale.mkv",
+                    "masks.alpha4.mkv",
+                    "masks.amrc",
+                    "masks.nrv",
+                    "masks.cmg2",
+                    "masks.cmg3",
+                    "masks.cdo1",
+                    "masks.cdo1.xz",
+                    "masks.cdo1.zlib",
+                    "masks.cdo1.br",
+                    "masks.qma9",
+                },
+                "pose": {
+                    "optimized_poses.pt",
+                    "optimized_poses.bin",
+                    "optimized_poses.qp1",
+                    "optimized_embedding.pt",
+                    "poses.pt",
+                    "zoom_scalars.bin",
+                    "foveation_params.bin",
+                },
+            }
+            member_names = set(members)
+            for group, candidates in required_groups.items():
+                group_members = member_names & candidates
+                if not group_members:
+                    errors.append(
+                        f"{packed_name}: renderer payload missing logical {group} member"
+                    )
+                elif not any(members.get(name) for name in group_members):
+                    errors.append(
+                        f"{packed_name}: renderer payload logical {group} member is empty"
+                    )
             actions = members.get(_SEG_TILE_ACTIONS_BIN)
             dict_raw = members.get(_SEG_TILE_ACTION_DICT_BIN)
             if actions is not None:
@@ -1750,6 +1787,9 @@ def build_submission_archive(
     segmap_weights_tar_xz: Path | str | None = None,
     segmap_payload_bin: Path | str | None = None,
     class_targets_fp16: Path | str | None = None,
+    renderer_payload_bin: Path | str | None = None,
+    renderer_payload_bin_br: Path | str | None = None,
+    renderer_payload_p: Path | str | None = None,
     optimized_poses_pt: Path | str | None = None,
     optimized_poses_bin: Path | str | None = None,
     optimized_embedding_pt: Path | str | None = None,
@@ -1780,6 +1820,9 @@ def build_submission_archive(
         segmap_weights_tar_xz: Path to SegMap model payload
         segmap_payload_bin: Path to SHv1 arithmetic SegMap payload
         class_targets_fp16: Optional 5-class fp16 target payload
+        renderer_payload_bin: Optional source-runtime-native renderer payload
+        renderer_payload_bin_br: Optional Brotli-packed renderer payload
+        renderer_payload_p: Optional short-name packed renderer payload
         optimized_poses_pt: Path to optimized_poses.pt
         optimized_poses_bin: Path to optimized_poses.bin (raw fp16, smaller)
         optimized_embedding_pt: Path to optimized_embedding.pt (optional)
@@ -1822,6 +1865,9 @@ def build_submission_archive(
         "segmap_weights.tar.xz": Path(segmap_weights_tar_xz) if segmap_weights_tar_xz else None,
         "payload.bin": Path(segmap_payload_bin) if segmap_payload_bin else None,
         "class_targets.fp16": Path(class_targets_fp16) if class_targets_fp16 else None,
+        "renderer_payload.bin": Path(renderer_payload_bin) if renderer_payload_bin else None,
+        "renderer_payload.bin.br": Path(renderer_payload_bin_br) if renderer_payload_bin_br else None,
+        "p": Path(renderer_payload_p) if renderer_payload_p else None,
         "optimized_poses.pt": Path(optimized_poses_pt) if optimized_poses_pt else None,
         "optimized_poses.bin": Path(optimized_poses_bin) if optimized_poses_bin else None,
         "optimized_embedding.pt": Path(optimized_embedding_pt) if optimized_embedding_pt else None,
