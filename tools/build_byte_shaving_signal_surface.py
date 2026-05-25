@@ -35,6 +35,8 @@ def _render_markdown(surface: dict[str, Any]) -> str:
         f"- auth_eval_refs: `{len(surface.get('auth_eval_refs') or [])}`",
         f"- mlx_calibration_refs: `{len(surface.get('mlx_calibration_refs') or [])}`",
         f"- scorer_response_refs: `{len(surface.get('scorer_response_refs') or [])}`",
+        f"- pairset_acquisition_refs: `{len(surface.get('pairset_acquisition_refs') or [])}`",
+        f"- pair_frame_geometry_outcome_refs: `{len(surface.get('pair_frame_geometry_outcome_refs') or [])}`",
         f"- inverse_scorer_surface_refs: `{len(surface.get('inverse_scorer_surface_refs') or [])}`",
         f"- engineered_correction_refs: `{len(surface.get('engineered_correction_refs') or [])}`",
         f"- inverse_action_functional_refs: `{len(surface.get('inverse_action_functional_refs') or [])}`",
@@ -65,6 +67,24 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--lane-id", default="byte_shaving_signal_surface")
     parser.add_argument("--frontier-axis", default="[planning-only]")
     parser.add_argument("--candidate-queue", action="append", default=[])
+    parser.add_argument(
+        "--pairset-acquisition",
+        action="append",
+        default=[],
+        help=(
+            "decoder_q_pairset_acquisition.v1 JSON; active rate-savings repair "
+            "budget rows become planning-only byte-shaving units."
+        ),
+    )
+    parser.add_argument(
+        "--dqs1-observation-jsonl",
+        action="append",
+        default=[],
+        help=(
+            "mlx_dynamic_sweep_observation.v1 JSONL from DQS1 local-first "
+            "harvests; byte-saving rows become empirical planning anchors."
+        ),
+    )
     parser.add_argument("--engineered-correction-targeting", action="append", default=[])
     parser.add_argument("--engineered-correction-max-targets", type=int, default=None)
     parser.add_argument(
@@ -126,6 +146,8 @@ def main(argv: list[str] | None = None) -> int:
             lane_id=args.lane_id,
             frontier_axis=args.frontier_axis,
             candidate_queue_paths=args.candidate_queue,
+            pairset_acquisition_paths=args.pairset_acquisition,
+            dqs1_observation_paths=args.dqs1_observation_jsonl,
             engineered_correction_targeting_paths=args.engineered_correction_targeting,
             engineered_correction_max_targets=args.engineered_correction_max_targets,
             engineered_correction_default_predicted_quality_score_delta=(
@@ -174,7 +196,7 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f"wrote {args.output} "
         f"(units={len(surface['units'])}, "
-        f"refs={len(surface['source_signal_refs']) + len(surface['auth_eval_refs']) + len(surface['mlx_calibration_refs']) + len(surface['scorer_response_refs']) + len(surface['inverse_scorer_surface_refs']) + len(surface['inverse_action_functional_refs'])})"
+        f"refs={len(surface['source_signal_refs']) + len(surface['auth_eval_refs']) + len(surface['mlx_calibration_refs']) + len(surface['scorer_response_refs']) + len(surface['pairset_acquisition_refs']) + len(surface['pair_frame_geometry_outcome_refs']) + len(surface['inverse_scorer_surface_refs']) + len(surface['inverse_action_functional_refs'])})"
     )
     print(
         "score_claim=false promotion_eligible=false "

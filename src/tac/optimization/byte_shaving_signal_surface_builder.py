@@ -31,6 +31,10 @@ from tac.optimization.byte_shaving_campaign import (
     build_signal_surface_from_master_gradient_anchor,
     validate_signal_surface,
 )
+from tac.optimization.mlx_dynamic_sweep_observations import (
+    MLXDynamicSweepObservationError,
+    load_observation_rows,
+)
 from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
@@ -45,6 +49,16 @@ from tac.optimization.scorer_response_dataset import (
     scorer_response_planning_value_for_target,
     summarize_rows,
 )
+
+DQS1_PAIRSET_ACQUISITION_SCHEMA = "decoder_q_pairset_acquisition.v1"
+DQS1_PAIRSET_DROP_PAIR_TARGET_KIND = "dqs1_pairset_drop_pair"
+DQS1_PAIRSET_DROP_PAIR_MATERIALIZER = "dqs1_pairset_drop_pair_adapter"
+DQS1_PAIRSET_RECEIVER_CONTRACT_KIND = "archive_charged_pairset_runtime_selector"
+DQS1_OBSERVATION_ROW_SCHEMA = "mlx_dynamic_sweep_observation.v1"
+DQS1_OBSERVATION_SOURCE_SCHEMA = "dqs1_local_first_harvest.v1"
+DQS1_OBSERVATION_SWEEP_CONFIG_ID = "dqs1_local_first_macos_cpu_advisory"
+DQS1_PAIR_FRAME_OUTCOME_REF_KIND = "dqs1_pair_frame_geometry_outcome_anchor"
+DQS1_PAIR_FRAME_OUTCOME_ANCHOR_SCHEMA = "dqs1_pair_frame_geometry_outcome_anchor.v1"
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -536,6 +550,531 @@ def _scorer_response_units(
     return units
 
 
+def _safe_id_token(value: Any, *, fallback: str) -> str:
+    raw = str(value or fallback).strip() or fallback
+    token = "".join(char.lower() if char.isalnum() else "_" for char in raw)
+    token = "_".join(part for part in token.split("_") if part)
+    return token or fallback
+
+
+def _pairset_acquisition_surface(
+    path: Path,
+    repo_root: Path,
+    *,
+    index: int,
+) -> tuple[list[dict[str, Any]], dict[str, Any], list[dict[str, Any]]]:
+    payload = _load_json_object(path)
+    if payload.get("schema") != DQS1_PAIRSET_ACQUISITION_SCHEMA:
+        raise ByteShavingCampaignError(
+            f"{path}: expected schema {DQS1_PAIRSET_ACQUISITION_SCHEMA}"
+        )
+    try:
+        require_no_truthy_authority_fields(
+            payload,
+            context="byte_shaving_pairset_acquisition",
+        )
+    except ValueError as exc:
+        raise ByteShavingCampaignError(str(exc)) from exc
+    candidates = payload.get("candidates")
+    if not isinstance(candidates, list):
+        raise ByteShavingCampaignError(f"{path}: candidates[] missing")
+
+    units: list[dict[str, Any]] = []
+    dropped_pair_counts: list[int] = []
+    selector_kind_counts: dict[str, int] = {}
+    repair_budget_rows = 0
+    for row_index, item in enumerate(candidates):
+        if not isinstance(item, Mapping):
+            raise ByteShavingCampaignError(
+                f"{path}: candidates[{row_index}] must be object"
+            )
+        try:
+            require_no_truthy_authority_fields(
+                item,
+                context=f"byte_shaving_pairset_acquisition.candidates[{row_index}]",
+            )
+        except ValueError as exc:
+            raise ByteShavingCampaignError(str(exc)) from exc
+        repair = item.get("distortion_repair_budget_from_rate_savings")
+        if not isinstance(repair, Mapping) or repair.get("active") is not True:
+            continue
+        try:
+            require_no_truthy_authority_fields(
+                repair,
+                context=(
+                    "byte_shaving_pairset_acquisition."
+                    f"candidates[{row_index}].distortion_repair_budget"
+                ),
+            )
+        except ValueError as exc:
+            raise ByteShavingCampaignError(str(exc)) from exc
+        saved_bytes = repair.get("saved_bytes_vs_source_selector")
+        if not isinstance(saved_bytes, int) or isinstance(saved_bytes, bool) or saved_bytes <= 0:
+            continue
+        operation = item.get("acquisition_operation")
+        if not isinstance(operation, Mapping):
+            operation = {}
+        try:
+            require_no_truthy_authority_fields(
+                operation,
+                context=(
+                    "byte_shaving_pairset_acquisition."
+                    f"candidates[{row_index}].acquisition_operation"
+                ),
+            )
+        except ValueError as exc:
+            raise ByteShavingCampaignError(str(exc)) from exc
+        raw_dropped_pairs = _as_list(operation.get("dropped_pair_indices"))
+        if not raw_dropped_pairs and operation.get("dropped_pair_index") is not None:
+            raw_dropped_pairs = [operation.get("dropped_pair_index")]
+        dropped_pairs = _strict_int_list(
+            raw_dropped_pairs,
+            context=f"{path}: candidates[{row_index}].acquisition_operation.dropped_pairs",
+        )
+        operation_kind = str(operation.get("op") or "").strip()
+        if operation_kind not in {
+            "drop_one",
+            "drop_two",
+            "drop_many",
+            "pair_frame_geometry_low_impact_drop_many",
+        }:
+            continue
+        if not dropped_pairs:
+            continue
+        selected_pairs = _strict_int_list(
+            _as_list(item.get("selected_pair_indices")),
+            context=f"{path}: candidates[{row_index}].selected_pair_indices",
+        )
+        acquisition_id = str(item.get("acquisition_id") or item.get("candidate_id") or "")
+        if not acquisition_id:
+            raise ByteShavingCampaignError(
+                f"{path}: candidates[{row_index}] missing acquisition_id"
+            )
+        selector_kind = str(item.get("selector_kind") or operation.get("op") or "pairset")
+        selector_kind_counts[selector_kind] = selector_kind_counts.get(selector_kind, 0) + 1
+        dropped_pair_counts.append(len(dropped_pairs))
+        repair_budget_rows += 1
+        unit_token = _safe_id_token(acquisition_id, fallback=f"pairset_{index}_{row_index}")
+        operation_family = "drop_pair"
+        unit = {
+            "unit_id": f"dqs1_pairset_{unit_token}",
+            "unit_kind": "pair",
+            "candidate_saved_bytes": saved_bytes,
+            "predicted_quality_score_delta": 0.0,
+            "confidence": 0.45 if selector_kind.startswith("pair_frame_geometry") else 0.35,
+            "operation_families": [operation_family],
+            "operations": [
+                {
+                    "operation_id": f"materialize_{unit_token}",
+                    "operation_family": operation_family,
+                    "materializer": DQS1_PAIRSET_DROP_PAIR_MATERIALIZER,
+                    "target_kind": DQS1_PAIRSET_DROP_PAIR_TARGET_KIND,
+                    "candidate_saved_bytes": saved_bytes,
+                    "predicted_quality_score_delta": 0.0,
+                    "params": {
+                        "source_schema": DQS1_PAIRSET_ACQUISITION_SCHEMA,
+                        "source_path": _repo_rel(path, repo_root),
+                        "acquisition_id": acquisition_id,
+                        "selector_kind": selector_kind,
+                        "selected_pair_indices": selected_pairs,
+                        "dropped_pair_indices": dropped_pairs,
+                        "operation_kind": operation_kind,
+                        "candidate_payload_bytes": repair.get("candidate_payload_bytes"),
+                        "source_selector_payload_bytes": repair.get(
+                            "source_selector_payload_bytes"
+                        ),
+                        "score_budget": repair.get("score_budget"),
+                        "segnet_distortion_budget_at_fixed_pose": repair.get(
+                            "segnet_distortion_budget_at_fixed_pose"
+                        ),
+                        "posenet_score_term_budget_at_fixed_seg": repair.get(
+                            "posenet_score_term_budget_at_fixed_seg"
+                        ),
+                        "acquisition_operation": dict(operation),
+                    },
+                    "receiver_contract_kind": DQS1_PAIRSET_RECEIVER_CONTRACT_KIND,
+                    "materializer_contract_kind": DQS1_PAIRSET_DROP_PAIR_TARGET_KIND,
+                    "materializer_executable": True,
+                    "materializer_execution_status": (
+                        "queue_executable_local_dqs1_pairset_materializer"
+                    ),
+                    "blockers": [
+                        "dqs1_pairset_acquisition_signal_is_planning_only",
+                        "requires_local_dqs1_materialization_and_locality_controls",
+                        "requires_receiver_runtime_consumption_proof",
+                        "requires_exact_auth_eval_before_score_claim",
+                    ],
+                }
+            ],
+            "source_candidate_id": acquisition_id,
+            "source_paths": [_repo_rel(path, repo_root)],
+            "source_index": row_index,
+            "score_axis": payload.get("score_axis") or "[planning-only]",
+            "evidence_grade": "local_dqs1_pairset_acquisition_planning_signal",
+            "evidence_semantics": (
+                "dqs1_pairset_rate_saving_repair_budget_planning_unit"
+            ),
+            "selected_pair_indices": selected_pairs,
+            "dropped_pair_indices": dropped_pairs,
+            "selector_kind": selector_kind,
+            "distortion_repair_budget_from_rate_savings": dict(repair),
+            "xray_signal": item.get("source_pair_frame_geometry_request"),
+            "master_gradient_signal": {
+                "status": operation.get(
+                    "master_gradient_status",
+                    "pair_frame_or_rank_proxy_until_pair_gradient_binding_lands",
+                ),
+                "source_operation": operation.get("op"),
+            },
+            "inverse_scorer_signal": {
+                "status": operation.get(
+                    "inverse_scorer_status",
+                    "receiver_runtime_consumer_required_before_inverse_scorer_authority",
+                ),
+                "source_operation": operation.get("op"),
+            },
+            "blockers": [
+                "dqs1_pairset_acquisition_unit_is_planning_only",
+                "requires_local_dqs1_materialization_and_locality_controls",
+                "requires_receiver_runtime_consumption_proof",
+                "requires_exact_auth_eval_before_score_claim",
+            ],
+            **FALSE_AUTHORITY,
+        }
+        units.append(unit)
+
+    summary = payload.get("summary") if isinstance(payload.get("summary"), Mapping) else {}
+    ref = {
+        **_json_payload_ref(
+            path,
+            repo_root,
+            kind="decoder_q_pairset_acquisition",
+            payload=payload,
+        ),
+        "candidate_count": summary.get("candidate_count"),
+        "drop_many_candidate_count": summary.get("drop_many_candidate_count"),
+        "pair_frame_geometry_candidate_count": summary.get(
+            "pair_frame_geometry_candidate_count"
+        ),
+        "repair_budget_row_count": repair_budget_rows,
+        "surface_unit_count": len(units),
+        "selector_kind_counts": dict(sorted(selector_kind_counts.items())),
+        "dropped_pair_count_values": sorted(set(dropped_pair_counts)),
+        "allowed_use": "byte_shaving_planning_surface_and_local_dqs1_queue_ranking",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    return units, payload, [ref]
+
+
+def _finite_float_or_none(value: Any) -> float | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    return out if out == out and out not in (float("inf"), float("-inf")) else None
+
+
+def _finite_int_or_none(value: Any) -> int | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _strict_int_list(values: Sequence[Any], *, context: str) -> list[int]:
+    out: list[int] = []
+    for index, item in enumerate(values):
+        if isinstance(item, bool):
+            raise ByteShavingCampaignError(f"{context}[{index}]: bool is not an integer id")
+        parsed = _finite_int_or_none(item)
+        if parsed is None:
+            raise ByteShavingCampaignError(
+                f"{context}[{index}]: expected integer id, got {item!r}"
+            )
+        out.append(parsed)
+    return out
+
+
+def _dqs1_observation_is_harvest(row: Mapping[str, Any]) -> bool:
+    return (
+        row.get("schema") == DQS1_OBSERVATION_ROW_SCHEMA
+        and (
+            row.get("source_schema") == DQS1_OBSERVATION_SOURCE_SCHEMA
+            or row.get("sweep_config_id") == DQS1_OBSERVATION_SWEEP_CONFIG_ID
+        )
+    )
+
+
+def _operation_dropped_pairs(operation: Mapping[str, Any], *, context: str) -> list[int]:
+    raw = _as_list(operation.get("dropped_pair_indices"))
+    if not raw and operation.get("dropped_pair_index") is not None:
+        raw = [operation.get("dropped_pair_index")]
+    return _strict_int_list(raw, context=context)
+
+
+def _dqs1_outcome_surface(
+    path: Path,
+    repo_root: Path,
+    *,
+    index: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    try:
+        rows = load_observation_rows(path)
+    except MLXDynamicSweepObservationError as exc:
+        raise ByteShavingCampaignError(str(exc)) from exc
+
+    units: list[dict[str, Any]] = []
+    dqs1_row_count = 0
+    ignored_non_dqs1_count = 0
+    missing_runtime_evidence_count = 0
+    byte_saving_row_count = 0
+    improved_row_count = 0
+    regressed_row_count = 0
+    k_gt_one_row_count = 0
+    operation_kind_counts: dict[str, int] = {}
+    emitted_saved_bytes_sum = 0
+
+    for row_index, row in enumerate(rows):
+        if not _dqs1_observation_is_harvest(row):
+            ignored_non_dqs1_count += 1
+            continue
+        dqs1_row_count += 1
+        try:
+            require_no_truthy_authority_fields(
+                row,
+                context=f"byte_shaving_dqs1_observation.rows[{row_index}]",
+            )
+        except ValueError as exc:
+            raise ByteShavingCampaignError(str(exc)) from exc
+        required_evidence = (
+            "archive_sha256",
+            "runtime_sha256",
+            "raw_output_or_cache_sha256",
+            "source_artifact_path",
+            "source_artifact_sha256",
+            "planner_artifact_path",
+            "planner_artifact_sha256",
+            "baseline_artifact_path",
+            "baseline_artifact_sha256",
+        )
+        if any(not row.get(field) for field in required_evidence):
+            missing_runtime_evidence_count += 1
+            continue
+        operation = row.get("acquisition_operation")
+        if not isinstance(operation, Mapping):
+            missing_runtime_evidence_count += 1
+            continue
+        try:
+            require_no_truthy_authority_fields(
+                operation,
+                context=f"byte_shaving_dqs1_observation.rows[{row_index}].operation",
+            )
+        except ValueError as exc:
+            raise ByteShavingCampaignError(str(exc)) from exc
+        operation_kind = str(operation.get("op") or row.get("family") or "").strip()
+        operation_kind_counts[operation_kind] = operation_kind_counts.get(operation_kind, 0) + 1
+        dropped_pairs = _operation_dropped_pairs(
+            operation,
+            context=f"{path}: rows[{row_index}].acquisition_operation.dropped_pairs",
+        )
+        selected_pairs = _strict_int_list(
+            _as_list(row.get("selected_pair_indices")),
+            context=f"{path}: rows[{row_index}].selected_pair_indices",
+        )
+        if len(dropped_pairs) > 1:
+            k_gt_one_row_count += 1
+        archive_delta = _finite_int_or_none(row.get("archive_byte_delta_vs_baseline"))
+        score_delta = _finite_float_or_none(row.get("score_delta_vs_baseline"))
+        if archive_delta is None or score_delta is None:
+            missing_runtime_evidence_count += 1
+            continue
+        if score_delta < 0.0:
+            improved_row_count += 1
+        elif score_delta > 0.0:
+            regressed_row_count += 1
+        if archive_delta >= 0:
+            continue
+        saved_bytes = abs(archive_delta)
+        if saved_bytes <= 0 or not dropped_pairs:
+            continue
+        byte_saving_row_count += 1
+        emitted_saved_bytes_sum += saved_bytes
+        rate_delta = -RATE_SCORE_PER_BYTE * float(saved_bytes)
+        quality_delta = score_delta - rate_delta
+        token = _safe_id_token(
+            row.get("candidate_id"),
+            fallback=f"dqs1_outcome_{index}_{row_index}",
+        )
+        component_deltas = (
+            dict(row.get("component_deltas"))
+            if isinstance(row.get("component_deltas"), Mapping)
+            else {}
+        )
+        outcome_signal = {
+            "schema": DQS1_PAIR_FRAME_OUTCOME_ANCHOR_SCHEMA,
+            "source_observation_path": _repo_rel(path, repo_root),
+            "source_observation_row_index": row_index,
+            "candidate_id": row.get("candidate_id"),
+            "operation_kind": operation_kind,
+            "selected_pair_indices": selected_pairs,
+            "dropped_pair_indices": dropped_pairs,
+            "observed_axis": row.get("observed_axis"),
+            "evidence_tag": row.get("evidence_tag"),
+            "score_delta_vs_baseline": score_delta,
+            "archive_byte_delta_vs_baseline": archive_delta,
+            "component_deltas": component_deltas,
+            "archive_sha256": row.get("archive_sha256"),
+            "runtime_sha256": row.get("runtime_sha256"),
+            "raw_output_or_cache_sha256": row.get("raw_output_or_cache_sha256"),
+            "source_artifact_path": row.get("source_artifact_path"),
+            "planner_artifact_path": row.get("planner_artifact_path"),
+            "baseline_artifact_path": row.get("baseline_artifact_path"),
+            "allowed_use": (
+                "planning_anchor_for_byte_shaving_campaign_inverse_scorer_"
+                "master_gradient_and_bit_allocator_only"
+            ),
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+            **FALSE_AUTHORITY,
+        }
+        units.append(
+            {
+                "unit_id": f"dqs1_pair_frame_outcome_{token}",
+                "unit_kind": "pair",
+                "candidate_saved_bytes": saved_bytes,
+                "predicted_quality_score_delta": quality_delta,
+                "confidence": 0.62 if score_delta <= 0.0 else 0.38,
+                "operation_families": ["drop_pair"],
+                "operations": [
+                    {
+                        "operation_id": f"replan_from_{token}",
+                        "operation_family": "drop_pair",
+                        "materializer": DQS1_PAIRSET_DROP_PAIR_MATERIALIZER,
+                        "target_kind": DQS1_PAIRSET_DROP_PAIR_TARGET_KIND,
+                        "candidate_saved_bytes": saved_bytes,
+                        "predicted_quality_score_delta": quality_delta,
+                        "params": {
+                            "source_schema": DQS1_OBSERVATION_ROW_SCHEMA,
+                            "source_path": _repo_rel(path, repo_root),
+                            "candidate_id": row.get("candidate_id"),
+                            "operation_kind": operation_kind,
+                            "selected_pair_indices": selected_pairs,
+                            "dropped_pair_indices": dropped_pairs,
+                            "observed_score_delta_vs_baseline": score_delta,
+                            "observed_archive_byte_delta_vs_baseline": archive_delta,
+                            "component_deltas": component_deltas,
+                            "source_operation": dict(operation),
+                            "outcome_signal": outcome_signal,
+                        },
+                        "receiver_contract_kind": DQS1_PAIRSET_RECEIVER_CONTRACT_KIND,
+                        "materializer_contract_kind": DQS1_PAIRSET_DROP_PAIR_TARGET_KIND,
+                        "materializer_executable": True,
+                        "materializer_execution_status": (
+                            "queue_executable_local_dqs1_pairset_materializer"
+                        ),
+                        "blockers": [
+                            "dqs1_outcome_anchor_is_local_advisory_only",
+                            "requires_receiver_runtime_consumption_proof",
+                            "requires_exact_auth_eval_before_score_claim",
+                        ],
+                    }
+                ],
+                "source_candidate_id": row.get("candidate_id"),
+                "source_paths": [_repo_rel(path, repo_root)],
+                "source_index": row_index,
+                "score_axis": row.get("observed_axis"),
+                "evidence_grade": row.get("evidence_grade"),
+                "evidence_semantics": (
+                    "dqs1_pair_frame_geometry_empirical_rate_distortion_anchor"
+                ),
+                "selected_pair_indices": selected_pairs,
+                "dropped_pair_indices": dropped_pairs,
+                "dqs1_outcome_signal": outcome_signal,
+                "master_gradient_signal": {
+                    "status": "empirical_pairset_outcome_anchor_ready",
+                    "consumer": "tac.master_gradient_pair_frame_binding",
+                    "archive_sha256": row.get("archive_sha256"),
+                    "component_deltas": component_deltas,
+                    "score_delta_vs_baseline": score_delta,
+                    "selected_pair_indices": selected_pairs,
+                    "dropped_pair_indices": dropped_pairs,
+                    **FALSE_AUTHORITY,
+                },
+                "inverse_scorer_signal": {
+                    "status": "empirical_pairset_outcome_anchor_ready",
+                    "consumer": "tac.optimization.scorer_inverse_decision_surface",
+                    "operation_kind": operation_kind,
+                    "score_delta_vs_baseline": score_delta,
+                    **FALSE_AUTHORITY,
+                },
+                "bit_allocator_signal": {
+                    "status": "empirical_pairset_rate_distortion_budget_anchor_ready",
+                    "consumer": "tac.optimization.bit_allocator",
+                    "saved_bytes": saved_bytes,
+                    "quality_delta_score": quality_delta,
+                    "component_deltas": component_deltas,
+                    **FALSE_AUTHORITY,
+                },
+                "blockers": [
+                    "dqs1_pair_frame_outcome_anchor_is_planning_only",
+                    "macos_cpu_advisory_is_not_contest_authority",
+                    "requires_receiver_runtime_consumption_proof",
+                    "requires_exact_auth_eval_before_score_claim",
+                ],
+                **FALSE_AUTHORITY,
+            }
+        )
+
+    ref = {
+        **_json_payload_ref(
+            path,
+            repo_root,
+            kind=DQS1_PAIR_FRAME_OUTCOME_REF_KIND,
+            payload={"schema": DQS1_OBSERVATION_ROW_SCHEMA},
+        ),
+        "schema": DQS1_PAIR_FRAME_OUTCOME_ANCHOR_SCHEMA,
+        "source_row_schema": DQS1_OBSERVATION_ROW_SCHEMA,
+        "row_count": len(rows),
+        "dqs1_row_count": dqs1_row_count,
+        "ignored_non_dqs1_count": ignored_non_dqs1_count,
+        "missing_runtime_evidence_count": missing_runtime_evidence_count,
+        "byte_saving_row_count": byte_saving_row_count,
+        "emitted_unit_count": len(units),
+        "emitted_saved_bytes_sum": emitted_saved_bytes_sum,
+        "improved_row_count": improved_row_count,
+        "regressed_row_count": regressed_row_count,
+        "k_gt_one_row_count": k_gt_one_row_count,
+        "operation_kind_counts": dict(sorted(operation_kind_counts.items())),
+        "planner_consumers": [
+            "byte_shaving_campaign_plan",
+            "inverse_steganalysis_action_functional",
+            "master_gradient_pair_frame_binding",
+            "inverse_scorer_decision_surface",
+            "bit_allocator_pair_budget",
+        ],
+        "allowed_use": (
+            "planning_anchor_for_solver_ranking_and_repair_budget_modeling_only"
+        ),
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    return units, [ref]
+
+
 def _inverse_scorer_surface(
     path: Path,
     repo_root: Path,
@@ -730,6 +1269,8 @@ def build_byte_shaving_signal_surface(
     repo_root: str | Path = ".",
     campaign_id: str = "byte_shaving_signal_surface",
     candidate_queue_paths: Sequence[str | Path] = (),
+    pairset_acquisition_paths: Sequence[str | Path] = (),
+    dqs1_observation_paths: Sequence[str | Path] = (),
     engineered_correction_targeting_paths: Sequence[str | Path] = (),
     engineered_correction_max_targets: int | None = None,
     engineered_correction_default_predicted_quality_score_delta: float = 0.0,
@@ -770,6 +1311,8 @@ def build_byte_shaving_signal_surface(
     auth_eval_refs: list[dict[str, Any]] = []
     mlx_calibration_refs: list[dict[str, Any]] = []
     scorer_response_refs: list[dict[str, Any]] = []
+    pairset_acquisition_refs: list[dict[str, Any]] = []
+    pair_frame_geometry_outcome_refs: list[dict[str, Any]] = []
     inverse_scorer_surface_refs: list[dict[str, Any]] = []
     engineered_correction_refs: list[dict[str, Any]] = []
     inverse_action_functional_refs: list[dict[str, Any]] = []
@@ -794,6 +1337,46 @@ def build_byte_shaving_signal_surface(
         _extend_refs(auth_eval_refs, refs["auth_eval_refs"])
         _extend_refs(mlx_calibration_refs, refs["mlx_calibration_refs"])
         _extend_refs(scorer_response_refs, refs["scorer_response_refs"])
+
+    for index, raw_path in enumerate(pairset_acquisition_paths):
+        path = _resolve_path(raw_path, repo)
+        if not path.is_file():
+            raise ByteShavingCampaignError(f"pairset acquisition JSON not found: {path}")
+        pairset_units, _pairset_payload, refs = _pairset_acquisition_surface(
+            path,
+            repo,
+            index=index,
+        )
+        for unit in pairset_units:
+            units.append(
+                _dedupe_unit_id(
+                    unit,
+                    prefix=f"pairset_acquisition_{index}",
+                    seen=seen_unit_ids,
+                )
+            )
+        _extend_refs(pairset_acquisition_refs, refs)
+        _extend_refs(source_signal_refs, refs)
+
+    for index, raw_path in enumerate(dqs1_observation_paths):
+        path = _resolve_path(raw_path, repo)
+        if not path.is_file():
+            raise ByteShavingCampaignError(f"DQS1 observation JSONL not found: {path}")
+        outcome_units, refs = _dqs1_outcome_surface(
+            path,
+            repo,
+            index=index,
+        )
+        for unit in outcome_units:
+            units.append(
+                _dedupe_unit_id(
+                    unit,
+                    prefix=f"dqs1_outcome_{index}",
+                    seen=seen_unit_ids,
+                )
+            )
+        _extend_refs(pair_frame_geometry_outcome_refs, refs)
+        _extend_refs(source_signal_refs, refs)
 
     for index, raw_path in enumerate(engineered_correction_targeting_paths):
         path = _resolve_path(raw_path, repo)
@@ -944,6 +1527,8 @@ def build_byte_shaving_signal_surface(
         "auth_eval_refs": auth_eval_refs,
         "mlx_calibration_refs": mlx_calibration_refs,
         "scorer_response_refs": scorer_response_refs,
+        "pairset_acquisition_refs": pairset_acquisition_refs,
+        "pair_frame_geometry_outcome_refs": pair_frame_geometry_outcome_refs,
         "inverse_scorer_surface_refs": inverse_scorer_surface_refs,
         "engineered_correction_refs": engineered_correction_refs,
         "inverse_action_functional_refs": inverse_action_functional_refs,

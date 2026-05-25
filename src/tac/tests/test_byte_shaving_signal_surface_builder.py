@@ -278,6 +278,143 @@ def _inverse_action_payload() -> dict[str, object]:
     }
 
 
+def _pairset_acquisition(
+    path: Path,
+    *,
+    truthy_authority: bool = False,
+    malformed_pair_id: bool = False,
+) -> None:
+    false_authority = {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "promotable": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+    repair_budget = {
+        "schema": "decoder_q_pairset_rate_saved_distortion_repair_budget.v1",
+        "active": True,
+        "saved_bytes_vs_source_selector": 6,
+        "score_budget": 3.995153718733028e-6,
+        "segnet_distortion_budget_at_fixed_pose": 3.995153718733028e-8,
+        "posenet_score_term_budget_at_fixed_seg": 3.995153718733028e-6,
+        "candidate_payload_bytes": 37,
+        "source_selector_payload_bytes": 43,
+        "allowed_use": "planning_only_rate_savings_budget_for_segnet_posenet_repair",
+        "forbidden_use": "score_claim_or_distortion_authority",
+        **false_authority,
+    }
+    if truthy_authority:
+        repair_budget["score_claim"] = True
+    dropped_pair_indices: list[object] = [371, 376, 479]
+    if malformed_pair_id:
+        dropped_pair_indices[1] = "pair-not-an-int"
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "decoder_q_pairset_acquisition.v1",
+                **false_authority,
+                "summary": {
+                    "candidate_count": 1,
+                    "drop_many_candidate_count": 1,
+                    "pair_frame_geometry_candidate_count": 1,
+                },
+                "candidates": [
+                    {
+                        "schema": "decoder_q_pairset_acquisition_candidate.v1",
+                        **false_authority,
+                        "acquisition_id": "pairset_geometry_lowimpact_k006_habc123",
+                        "selector_kind": "pair_frame_geometry_low_impact_drop_many",
+                        "selected_pair_indices": [1, 2, 3],
+                        "selected_pair_count": 3,
+                        "payload_bytes": 37,
+                        "distortion_repair_budget_from_rate_savings": repair_budget,
+                        "acquisition_operation": {
+                            "op": "pair_frame_geometry_low_impact_drop_many",
+                            "dropped_pair_indices": dropped_pair_indices,
+                            "dropped_pair_ranks": [21, 10, 3],
+                            "geometry_coverage": 1.0,
+                            "queue_executable": True,
+                            "queue_family": "dqs1_pairset_local_first",
+                            "master_gradient_status": (
+                                "rank_order_proxy_until_pair_gradient_binding_lands"
+                            ),
+                            "inverse_scorer_status": (
+                                "planner_consumer_requested_not_score_authority"
+                            ),
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _dqs1_observations(
+    path: Path,
+    *,
+    truthy_authority: bool = False,
+    malformed_pair_id: bool = False,
+) -> None:
+    false_authority = {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "promotable": False,
+    }
+    dropped_pair_indices: list[object] = [371, 376, 479]
+    if malformed_pair_id:
+        dropped_pair_indices[2] = {"pair": 479}
+    row = {
+        "schema": "mlx_dynamic_sweep_observation.v1",
+        **false_authority,
+        "candidate_id": "pairset_geometry_lowimpact_k006_habc123",
+        "source_schema": "dqs1_local_first_harvest.v1",
+        "sweep_config_id": "dqs1_local_first_macos_cpu_advisory",
+        "optimization_pass_id": "local_cpu_advisory_harvest",
+        "family": "decoder_q_pairset_drop_many",
+        "observed_axis": "macos_cpu_advisory",
+        "evidence_tag": "[macOS-CPU advisory only]",
+        "evidence_grade": "macOS-CPU advisory",
+        "observed_score_or_delta": 0.1912,
+        "archive_sha256": "a" * 64,
+        "runtime_sha256": "b" * 64,
+        "raw_output_or_cache_sha256": "c" * 64,
+        "component_deltas": {
+            "segnet_delta": 0.000003,
+            "posenet_delta": -0.000002,
+            "rate_delta": -RATE_SCORE_PER_BYTE * 6,
+        },
+        "source_artifact_path": ".omx/research/local_advisory.json",
+        "source_artifact_sha256": "d" * 64,
+        "planner_artifact_path": ".omx/research/dqs1_local_first_harvest.json",
+        "planner_artifact_sha256": "e" * 64,
+        "baseline_artifact_path": ".omx/research/top32_baseline_advisory.json",
+        "baseline_artifact_sha256": "f" * 64,
+        "score_delta_vs_baseline": 0.000001 - (RATE_SCORE_PER_BYTE * 6),
+        "archive_byte_delta_vs_baseline": -6,
+        "selected_pair_indices": [1, 2, 3],
+        "selected_pair_count": 3,
+        "selector_kind": "pair_frame_geometry_low_impact_drop_many",
+        "acquisition_operation": {
+            "op": "pair_frame_geometry_low_impact_drop_many",
+            "dropped_pair_indices": dropped_pair_indices,
+            "geometry_coverage": 1.0,
+            "queue_executable": True,
+            "queue_family": "dqs1_pairset_local_first",
+        },
+    }
+    if truthy_authority:
+        row["promotion_eligible"] = True
+    path.write_text(json.dumps(row, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def test_builder_merges_queue_and_sanitized_refs_into_plannable_surface(
     tmp_path: Path,
 ) -> None:
@@ -315,6 +452,135 @@ def test_builder_merges_queue_and_sanitized_refs_into_plannable_surface(
     assert any(unit["unit_kind"] == "correction_target" for unit in surface["units"])
     assert plan["ranked_units"][0]["unit_id"] == "drop_pair_0371"
     assert plan["score_claim"] is False
+
+
+def test_builder_promotes_pairset_acquisition_repair_budget_rows_to_units(
+    tmp_path: Path,
+) -> None:
+    pairset = tmp_path / "pairset_acquisition.json"
+    _pairset_acquisition(pairset)
+
+    surface = build_byte_shaving_signal_surface(
+        repo_root=tmp_path,
+        campaign_id="pairset_surface",
+        pairset_acquisition_paths=[pairset],
+    )
+    plan = build_byte_shaving_campaign_plan(surface, repo_root=tmp_path)
+
+    ref = surface["pairset_acquisition_refs"][0]
+    unit = surface["units"][0]
+    ranked = plan["ranked_units"][0]
+    assert ref["kind"] == "decoder_q_pairset_acquisition"
+    assert ref["surface_unit_count"] == 1
+    assert ref["repair_budget_row_count"] == 1
+    assert ref["score_claim"] is False
+    assert unit["unit_kind"] == "pair"
+    assert unit["candidate_saved_bytes"] == 6
+    assert unit["operations"][0]["materializer"] == "dqs1_pairset_drop_pair_adapter"
+    assert unit["operations"][0]["target_kind"] == "dqs1_pairset_drop_pair"
+    assert unit["operations"][0]["params"]["dropped_pair_indices"] == [371, 376, 479]
+    assert unit["distortion_repair_budget_from_rate_savings"]["score_claim"] is False
+    assert ranked["recommended_operation_materializer"] == "dqs1_pairset_drop_pair_adapter"
+    assert ranked["recommended_operation_target_kind"] == "dqs1_pairset_drop_pair"
+    assert ranked["recommended_operation_params"]["score_budget"] == pytest.approx(
+        3.995153718733028e-6
+    )
+    assert "requires_receiver_runtime_consumption_proof" in ranked["blockers"]
+    assert plan["score_claim"] is False
+
+
+def test_builder_rejects_pairset_acquisition_truthy_nested_authority(
+    tmp_path: Path,
+) -> None:
+    pairset = tmp_path / "pairset_acquisition.json"
+    _pairset_acquisition(pairset, truthy_authority=True)
+
+    with pytest.raises(ByteShavingCampaignError, match="score_claim"):
+        build_byte_shaving_signal_surface(
+            repo_root=tmp_path,
+            campaign_id="pairset_surface",
+            pairset_acquisition_paths=[pairset],
+        )
+
+
+def test_builder_rejects_pairset_acquisition_malformed_pair_id(
+    tmp_path: Path,
+) -> None:
+    pairset = tmp_path / "pairset_acquisition.json"
+    _pairset_acquisition(pairset, malformed_pair_id=True)
+
+    with pytest.raises(ByteShavingCampaignError, match="expected integer id"):
+        build_byte_shaving_signal_surface(
+            repo_root=tmp_path,
+            campaign_id="pairset_surface",
+            pairset_acquisition_paths=[pairset],
+        )
+
+
+def test_builder_promotes_dqs1_outcomes_to_solver_anchor_units(
+    tmp_path: Path,
+) -> None:
+    observations = tmp_path / "dqs1_observations.jsonl"
+    _dqs1_observations(observations)
+
+    surface = build_byte_shaving_signal_surface(
+        repo_root=tmp_path,
+        campaign_id="dqs1_outcome_surface",
+        dqs1_observation_paths=[observations],
+    )
+    plan = build_byte_shaving_campaign_plan(surface, repo_root=tmp_path)
+
+    ref = surface["pair_frame_geometry_outcome_refs"][0]
+    unit = surface["units"][0]
+    ranked = plan["ranked_units"][0]
+    assert ref["kind"] == "dqs1_pair_frame_geometry_outcome_anchor"
+    assert ref["dqs1_row_count"] == 1
+    assert ref["k_gt_one_row_count"] == 1
+    assert ref["emitted_unit_count"] == 1
+    assert "inverse_steganalysis_action_functional" in ref["planner_consumers"]
+    assert "bit_allocator_pair_budget" in ref["planner_consumers"]
+    assert unit["candidate_saved_bytes"] == 6
+    assert unit["dropped_pair_indices"] == [371, 376, 479]
+    assert unit["dqs1_outcome_signal"]["score_claim"] is False
+    assert unit["master_gradient_signal"]["status"] == (
+        "empirical_pairset_outcome_anchor_ready"
+    )
+    assert ranked["recommended_operation_materializer"] == (
+        "dqs1_pairset_drop_pair_adapter"
+    )
+    assert ranked["inverse_scorer_signal"]["consumer"] == (
+        "tac.optimization.scorer_inverse_decision_surface"
+    )
+    assert ranked["bit_allocator_signal"]["consumer"] == "tac.optimization.bit_allocator"
+    assert ranked["dqs1_outcome_signal"]["candidate_id"] == (
+        "pairset_geometry_lowimpact_k006_habc123"
+    )
+    assert "macos_cpu_advisory_is_not_contest_authority" in ranked["blockers"]
+    assert plan["score_claim"] is False
+
+
+def test_builder_rejects_dqs1_outcome_truthy_authority(tmp_path: Path) -> None:
+    observations = tmp_path / "dqs1_observations.jsonl"
+    _dqs1_observations(observations, truthy_authority=True)
+
+    with pytest.raises(ByteShavingCampaignError, match="promotion_eligible"):
+        build_byte_shaving_signal_surface(
+            repo_root=tmp_path,
+            campaign_id="dqs1_outcome_surface",
+            dqs1_observation_paths=[observations],
+        )
+
+
+def test_builder_rejects_dqs1_outcome_malformed_pair_id(tmp_path: Path) -> None:
+    observations = tmp_path / "dqs1_observations.jsonl"
+    _dqs1_observations(observations, malformed_pair_id=True)
+
+    with pytest.raises(ByteShavingCampaignError, match="expected integer id"):
+        build_byte_shaving_signal_surface(
+            repo_root=tmp_path,
+            campaign_id="dqs1_outcome_surface",
+            dqs1_observation_paths=[observations],
+        )
 
 
 def test_builder_merges_inverse_action_functional_into_mixed_signal_surface(
@@ -562,11 +828,15 @@ def test_builder_rejects_truthy_proxy_sources(tmp_path: Path) -> None:
 
 def test_cli_writes_surface_and_markdown(tmp_path: Path) -> None:
     queue = tmp_path / "queue.json"
+    pairset = tmp_path / "pairset_acquisition.json"
+    dqs1_observations = tmp_path / "dqs1_observations.jsonl"
     engineered = tmp_path / "engineered.json"
     inverse_action = tmp_path / "inverse_action.json"
     output = tmp_path / "surface.json"
     md_out = tmp_path / "surface.md"
     _candidate_queue(queue)
+    _pairset_acquisition(pairset)
+    _dqs1_observations(dqs1_observations)
     _engineered_correction_targeting(engineered)
     inverse_action.write_text(json.dumps(_inverse_action_payload()), encoding="utf-8")
 
@@ -576,6 +846,10 @@ def test_cli_writes_surface_and_markdown(tmp_path: Path) -> None:
             str(TOOL),
             "--candidate-queue",
             str(queue),
+            "--pairset-acquisition",
+            str(pairset),
+            "--dqs1-observation-jsonl",
+            str(dqs1_observations),
             "--engineered-correction-targeting",
             str(engineered),
             "--engineered-correction-max-targets",
@@ -599,10 +873,14 @@ def test_cli_writes_surface_and_markdown(tmp_path: Path) -> None:
     assert "score_claim=false" in result.stdout
     surface = json.loads(output.read_text(encoding="utf-8"))
     assert surface["units"][0]["unit_id"] == "drop_pair_0371"
+    assert surface["pairset_acquisition_refs"][0]["surface_unit_count"] == 1
+    assert surface["pair_frame_geometry_outcome_refs"][0]["emitted_unit_count"] == 1
     assert surface["engineered_correction_refs"][0]["surface_unit_count"] == 1
     assert surface["inverse_action_functional_refs"][0]["surface_unit_count"] == 1
     assert len(surface["inverse_action_materialization_portfolios"]) == 1
     md = md_out.read_text(encoding="utf-8")
+    assert "pairset_acquisition_refs" in md
+    assert "pair_frame_geometry_outcome_refs" in md
     assert "inverse_action_materialization_portfolios" in md
     assert "Authority Boundary" in md
 
