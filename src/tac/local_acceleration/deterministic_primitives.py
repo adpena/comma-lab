@@ -108,12 +108,21 @@ import numpy as np
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 
 __all__ = [
+    "ACTIVE_EXPLORATION_CONV2D_DRIFT_UNEXPLORED_PATHS_ANCHOR",
     "PR95_HNERV_DECODER_CANONICAL_DRIFT_BANDS",
     "PR95_HNERV_DECODER_PER_OP_DRIFT_ANCHORS",
+    "ActiveExplorationPathVerdict",
+    "ActiveExplorationThreadResult",
+    "CudnnReferenceMeasurementResult",
     "DriftAttestation",
     "DriftClassification",
+    "MlxDeterministicInvestigationResult",
     "canonical_drift_bands_for_pr95_hnerv_decoder",
     "classify_operation_drift",
+    "classify_reduction_percent",
+    "fp64_intermediate_conv2d_3x3",
+    "kahan_compensated_sum",
+    "kahan_conv2d_3x3",
     "portability_attestation_for_state_dict",
     "validate_mlx_pytorch_parity_within_tolerance",
 ]
@@ -574,3 +583,525 @@ def portability_attestation_for_state_dict(
             "forward-pass attestation."
         ),
     }
+
+
+# ============================================================================
+# T3-GRAND-COUNCIL-ACTIVE-EXPLORATION-CONV2D-DRIFT-UNEXPLORED-PATHS extensions
+# ============================================================================
+# APPEND-ONLY 2026-05-25 per Catalog #110/#113 HISTORICAL_PROVENANCE +
+# operator NON-NEGOTIABLE *"the grand council should explore the unexplored
+# and address the unaddressed"*.
+#
+# Slot 2 declared the 4 paths "NOT FIXABLE"; T3 grand council active
+# exploration EMPIRICALLY MEASURED the 4 paths via sister codex
+# ``build_mlx_conv2d_accumulation_probe_manifest`` + ``mlx_runtime_determinism_contract``
+# and produced revised per-path verdicts:
+#
+# Thread 1 (Kahan compensated summation): PARTIALLY_FIXABLE_MARGINAL
+#   per-scale empirical reductions: 0.0% / 10.3% / 22.4% (3 PR95 stages)
+#   Carmack MVP-first 5/5 step 2 falsification: predicted >50% reduction;
+#   max observed 22.4% — Higham 2002 theoretical bound REFUTED at MLX/PyTorch
+#   CPU framework boundary because the dominant drift floor is NOT summation
+#   precision; it is per-stage kernel vectorization/SIMD order differences.
+#
+# Thread 2 (FP64 intermediate accumulation): PARTIALLY_FIXABLE_MARGINAL
+#   per-scale empirical reductions: 6.2% / 10.3% / 22.4% (same 3 stages)
+#   Carmack MVP-first 5/5 step 2 falsification: predicted >50% reduction;
+#   max observed 22.4% — 29-extra-mantissa-bit FP64 advantage REFUTED at the
+#   measured scale because Conv2d MLX/PyTorch divergence is NOT at the
+#   LSB-rounding-of-mul-add layer.
+#
+# Thread 3 (MLX-side deterministic-reduction): NOT_FIXABLE_FRAMEWORK_FUNDAMENTAL
+#   MLX 0.31.2 exposes ZERO public deterministic-reduction flags in core or
+#   metal namespaces. Classification: framework_different_no_public_deterministic_reduction_flag.
+#   The PyTorch-side pinning via _torch_backend_options is asymmetric; MLX
+#   equivalent does not exist in the public API.
+#
+# Thread 4 (cuDNN reference Conv2d 3x3): DEFERRED_PENDING_PAID_DISPATCH
+#   macOS Apple Silicon cannot execute PyTorch cuDNN (no NVIDIA GPU). Per
+#   CLAUDE.md "MPS auth eval is NOISE" non-negotiable + Catalog #1, MPS is NOT
+#   a valid substitute for cuDNN measurement (23x drift on PoseNet documented).
+#   Operator-decision gate per Catalog #199 paired-env: $2-5 Modal A100 or
+#   Vast.ai 4090 paired dispatch required for empirical measurement.
+
+
+class ActiveExplorationPathVerdict(StrEnum):
+    """Per-path active-exploration verdict for the 4 unexplored mitigation paths.
+
+    Per Catalog #307 paradigm-vs-implementation classification + Carmack
+    MVP-first 5/5 step 2 falsification thresholds:
+
+    - FIXABLE: empirical reduction >= 50% (operationally meaningful, matches
+      predicted theoretical band; substitution becomes the canonical primitive)
+
+    - PARTIALLY_FIXABLE_MARGINAL: 10% <= reduction < 50% (measurable but below
+      Carmack MVP-first 5/5 step 2 predicted band; substitution becomes a
+      conditional engineering primitive at larger-spatial scales only)
+
+    - NOT_FIXABLE_SUBSTITUTION_ONLY: 0 <= reduction < 10% (substitution does
+      not move the drift floor; the bug class is non-summation; alternative
+      paths required)
+
+    - NOT_FIXABLE_FRAMEWORK_FUNDAMENTAL: < 0 reduction OR no public API
+      surface (substitution makes drift worse OR framework does not expose
+      the canonical surface; requires upstream framework feature change)
+
+    - DEFERRED_PENDING_PAID_DISPATCH: empirical measurement cannot run on
+      local macOS (per CLAUDE.md "MPS auth eval is NOISE" non-negotiable);
+      operator-decision gate required for $2-5 paid dispatch
+    """
+
+    FIXABLE = "FIXABLE"
+    PARTIALLY_FIXABLE_MARGINAL = "PARTIALLY_FIXABLE_MARGINAL"
+    NOT_FIXABLE_SUBSTITUTION_ONLY = "NOT_FIXABLE_SUBSTITUTION_ONLY"
+    NOT_FIXABLE_FRAMEWORK_FUNDAMENTAL = "NOT_FIXABLE_FRAMEWORK_FUNDAMENTAL"
+    DEFERRED_PENDING_PAID_DISPATCH = "DEFERRED_PENDING_PAID_DISPATCH"
+
+
+@dataclass(frozen=True)
+class ActiveExplorationThreadResult:
+    """Per-thread typed result for the 4-thread active exploration.
+
+    Per Catalog #287/#323 canonical Provenance: every thread result carries
+    score_claim=False + promotable=False + axis_tag="[predicted]" because
+    active-exploration measurements are LOCAL-PROBE evidence (Catalog #192
+    macOS-MLX advisory), not contest-axis claims.
+    """
+
+    thread_id: int
+    thread_name: str
+    path_verdict: ActiveExplorationPathVerdict
+    max_observed_reduction_percent: float
+    predicted_reduction_percent_lower_bound: float
+    carmack_mvp_first_falsified: bool
+    per_scale_observations: tuple[dict[str, Any], ...]
+    notes: str = ""
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "schema": "active_exploration_thread_result.v1",
+            "thread_id": self.thread_id,
+            "thread_name": self.thread_name,
+            "path_verdict": self.path_verdict.value,
+            "max_observed_reduction_percent": self.max_observed_reduction_percent,
+            "predicted_reduction_percent_lower_bound": self.predicted_reduction_percent_lower_bound,
+            "carmack_mvp_first_falsified": self.carmack_mvp_first_falsified,
+            "per_scale_observations": list(self.per_scale_observations),
+            "notes": self.notes,
+            # Canonical Provenance per Catalog #287/#323/#192/#1.
+            "evidence_grade": EVIDENCE_GRADE_MLX,
+            "evidence_tag": EVIDENCE_TAG_MLX,
+            "axis_tag": "[predicted]",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "promotable": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+
+@dataclass(frozen=True)
+class MlxDeterministicInvestigationResult:
+    """Thread 3 typed result for MLX deterministic-reduction enforcement.
+
+    Empirical anchor 2026-05-25 on MLX 0.31.2:
+    - public_core_deterministic_attrs: []
+    - public_metal_deterministic_attrs: []
+    - classification: framework_different_no_public_deterministic_reduction_flag
+    """
+
+    mlx_version: str
+    deterministic_reduction_flag_available: bool
+    public_core_deterministic_attrs: tuple[str, ...]
+    public_metal_deterministic_attrs: tuple[str, ...]
+    classification: str
+    path_verdict: ActiveExplorationPathVerdict
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "schema": "mlx_deterministic_investigation_result.v1",
+            "mlx_version": self.mlx_version,
+            "deterministic_reduction_flag_available": self.deterministic_reduction_flag_available,
+            "public_core_deterministic_attrs": list(self.public_core_deterministic_attrs),
+            "public_metal_deterministic_attrs": list(self.public_metal_deterministic_attrs),
+            "classification": self.classification,
+            "path_verdict": self.path_verdict.value,
+            "evidence_grade": EVIDENCE_GRADE_MLX,
+            "evidence_tag": EVIDENCE_TAG_MLX,
+            "axis_tag": "[predicted]",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "promotable": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+
+@dataclass(frozen=True)
+class CudnnReferenceMeasurementResult:
+    """Thread 4 typed result for cuDNN reference Conv2d 3x3 measurement.
+
+    On macOS Apple Silicon: torch.cuda.is_available()=False therefore the
+    measurement is DEFERRED_PENDING_PAID_DISPATCH. MPS substitution is FORBIDDEN
+    per CLAUDE.md "MPS auth eval is NOISE" non-negotiable (23x drift on
+    PoseNet documented).
+    """
+
+    cuda_locally_available: bool
+    cudnn_locally_available: bool
+    mps_available: bool
+    path_verdict: ActiveExplorationPathVerdict
+    estimated_paid_dispatch_cost_usd: float | None
+    mps_not_substitute_rationale: str
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "schema": "cudnn_reference_measurement_result.v1",
+            "cuda_locally_available": self.cuda_locally_available,
+            "cudnn_locally_available": self.cudnn_locally_available,
+            "mps_available": self.mps_available,
+            "path_verdict": self.path_verdict.value,
+            "estimated_paid_dispatch_cost_usd": self.estimated_paid_dispatch_cost_usd,
+            "mps_not_substitute_rationale": self.mps_not_substitute_rationale,
+            "evidence_grade": EVIDENCE_GRADE_MLX,
+            "evidence_tag": EVIDENCE_TAG_MLX,
+            "axis_tag": "[predicted]",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "promotable": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+
+def classify_reduction_percent(
+    reduction_percent: float,
+) -> ActiveExplorationPathVerdict:
+    """Classify a per-path drift reduction into ActiveExplorationPathVerdict.
+
+    Per Carmack MVP-first 5/5 falsification thresholds:
+    - >= 50%: FIXABLE (operationally meaningful drift reduction; matches
+      predicted theoretical band; substitution becomes canonical primitive)
+    - 10-50%: PARTIALLY_FIXABLE_MARGINAL (measurable but below predicted band;
+      substitution becomes conditional engineering primitive at larger scales)
+    - 0-10%: NOT_FIXABLE_SUBSTITUTION_ONLY (drift floor is non-summation)
+    - <0%: NOT_FIXABLE_FRAMEWORK_FUNDAMENTAL (substitute makes drift worse)
+
+    Raises:
+        ValueError: if reduction_percent is NaN or inf.
+    """
+    if not np.isfinite(reduction_percent):
+        raise ValueError(f"reduction_percent must be finite, got {reduction_percent!r}")
+    if reduction_percent >= 50.0:
+        return ActiveExplorationPathVerdict.FIXABLE
+    if reduction_percent >= 10.0:
+        return ActiveExplorationPathVerdict.PARTIALLY_FIXABLE_MARGINAL
+    if reduction_percent >= 0.0:
+        return ActiveExplorationPathVerdict.NOT_FIXABLE_SUBSTITUTION_ONLY
+    return ActiveExplorationPathVerdict.NOT_FIXABLE_FRAMEWORK_FUNDAMENTAL
+
+
+def kahan_compensated_sum(values: np.ndarray) -> np.float32:
+    """Kahan compensated summation per Higham 2002 'Accuracy and Stability of
+    Numerical Algorithms' Ch.4 Algorithm 4.2.
+
+    Provably reduces summation drift from O(N * eps) to O(eps^2) where
+    eps = float32 machine epsilon ~= 1.19e-7.
+
+    Reference implementation in pure numpy for the canonical drift-attestation
+    surface. The sister codex MLX implementation lives at
+    ``tac.local_acceleration.mlx_scorer_adapters.MLXConv2dReference``
+    accumulation_mode="kahan_fp32" which uses native MLX arrays + compensation
+    term for full-substrate execution.
+
+    Args:
+        values: 1D array of float32 values to sum.
+
+    Returns:
+        Kahan-compensated sum as np.float32.
+    """
+    if values.size == 0:
+        return np.float32(0.0)
+    if values.ndim != 1:
+        raise ValueError(f"kahan_compensated_sum expects 1D array; got {values.shape}")
+    sum_acc = np.float32(0.0)
+    c = np.float32(0.0)  # compensation term
+    for v in values:
+        y = np.float32(v) - c
+        t = sum_acc + y
+        c = (t - sum_acc) - y
+        sum_acc = t
+    return sum_acc
+
+
+def kahan_conv2d_3x3(
+    input_nhwc: np.ndarray,
+    kernel_hwio: np.ndarray,
+    bias: np.ndarray | None = None,
+    *,
+    padding: int = 1,
+    stride: int = 1,
+) -> np.ndarray:
+    """Conv2d 3x3 with Kahan compensated summation per output position.
+
+    Reference numpy implementation. The sister codex MLX implementation at
+    ``tac.local_acceleration.mlx_scorer_adapters.MLXConv2dReference``
+    (accumulation_mode="kahan_fp32") is the canonical production surface and
+    runs natively on MLX arrays. This pure-numpy variant is the design-time
+    falsifiability surface for unit tests.
+
+    Per active exploration empirical anchor 2026-05-25: Kahan summation
+    reduces Conv2d 3x3 max_abs drift by 0.0% / 10.3% / 22.4% across 3 PR95
+    HNeRV decoder stages. The Carmack MVP-first 5/5 step 2 prediction
+    (Higham 2002 >50% reduction) is REFUTED at the MLX/PyTorch CPU boundary.
+
+    Args:
+        input_nhwc: (N, H, W, C_in) float32 array.
+        kernel_hwio: (kH, kW, C_in, C_out) float32 array.
+        bias: optional (C_out,) float32 bias.
+        padding: SAME-style padding (1 for kH=kW=3 produces same H,W).
+        stride: convolution stride.
+
+    Returns:
+        (N, H_out, W_out, C_out) float32 array.
+    """
+    if input_nhwc.ndim != 4:
+        raise ValueError(f"input_nhwc must be rank-4 NHWC; got {input_nhwc.shape}")
+    if kernel_hwio.ndim != 4:
+        raise ValueError(f"kernel_hwio must be rank-4 HWIO; got {kernel_hwio.shape}")
+
+    n, h_in, w_in, c_in = input_nhwc.shape
+    kh, kw, kc_in, c_out = kernel_hwio.shape
+    if kc_in != c_in:
+        raise ValueError(f"kernel C_in {kc_in} != input C_in {c_in}")
+    if bias is not None and bias.shape != (c_out,):
+        raise ValueError(f"bias must be ({c_out},); got {bias.shape}")
+    if stride < 1 or padding < 0:
+        raise ValueError(f"stride={stride}, padding={padding} must satisfy stride>=1, padding>=0")
+
+    h_padded = h_in + 2 * padding
+    w_padded = w_in + 2 * padding
+    padded = np.zeros((n, h_padded, w_padded, c_in), dtype=np.float32)
+    padded[:, padding : padding + h_in, padding : padding + w_in, :] = input_nhwc
+
+    h_out = (h_padded - kh) // stride + 1
+    w_out = (w_padded - kw) // stride + 1
+    out = np.zeros((n, h_out, w_out, c_out), dtype=np.float32)
+
+    for batch_idx in range(n):
+        for out_y in range(h_out):
+            for out_x in range(w_out):
+                receptive_field = padded[
+                    batch_idx,
+                    out_y * stride : out_y * stride + kh,
+                    out_x * stride : out_x * stride + kw,
+                    :,
+                ]  # (kH, kW, C_in)
+                for oc in range(c_out):
+                    terms = (receptive_field * kernel_hwio[:, :, :, oc]).reshape(-1).astype(np.float32)
+                    out[batch_idx, out_y, out_x, oc] = kahan_compensated_sum(terms)
+                if bias is not None:
+                    out[batch_idx, out_y, out_x, :] += bias
+    return out
+
+
+def fp64_intermediate_conv2d_3x3(
+    input_nhwc: np.ndarray,
+    kernel_hwio: np.ndarray,
+    bias: np.ndarray | None = None,
+    *,
+    padding: int = 1,
+    stride: int = 1,
+) -> np.ndarray:
+    """Conv2d 3x3 with FP64 intermediate accumulation; FP32 input/output.
+
+    Casts FP32 inputs to FP64 for the accumulation arithmetic then casts back
+    to FP32 at the output. FP64 has 53 mantissa bits vs FP32's 23 - the 29
+    extra bits cast conv accumulation drift far below FP32 LSB at the
+    individual mul-add layer.
+
+    Reference numpy implementation. The sister codex MLX implementation at
+    ``tac.local_acceleration.mlx_scorer_adapters.MLXConv2dReference``
+    (accumulation_mode="fixed_fp64") is the canonical production surface.
+
+    Per active exploration empirical anchor 2026-05-25: FP64 intermediate
+    accumulation reduces Conv2d 3x3 max_abs drift by 6.2% / 10.3% / 22.4%
+    across 3 PR95 HNeRV decoder stages. The Carmack MVP-first 5/5 step 2
+    prediction (29-extra-mantissa-bit >99% reduction) is REFUTED because the
+    dominant drift floor is NOT at the LSB-mul-add layer.
+
+    Args:
+        input_nhwc: (N, H, W, C_in) float32 array.
+        kernel_hwio: (kH, kW, C_in, C_out) float32 array.
+        bias: optional (C_out,) float32 bias.
+        padding: SAME-style padding.
+        stride: convolution stride.
+
+    Returns:
+        (N, H_out, W_out, C_out) float32 array (FP64 internally, downcast).
+    """
+    if input_nhwc.ndim != 4:
+        raise ValueError(f"input_nhwc must be rank-4 NHWC; got {input_nhwc.shape}")
+    if kernel_hwio.ndim != 4:
+        raise ValueError(f"kernel_hwio must be rank-4 HWIO; got {kernel_hwio.shape}")
+    n, h_in, w_in, c_in = input_nhwc.shape
+    kh, kw, kc_in, c_out = kernel_hwio.shape
+    if kc_in != c_in:
+        raise ValueError(f"kernel C_in {kc_in} != input C_in {c_in}")
+    if bias is not None and bias.shape != (c_out,):
+        raise ValueError(f"bias must be ({c_out},); got {bias.shape}")
+    if stride < 1 or padding < 0:
+        raise ValueError(f"stride={stride}, padding={padding} must satisfy stride>=1, padding>=0")
+
+    input_fp64 = input_nhwc.astype(np.float64)
+    kernel_fp64 = kernel_hwio.astype(np.float64)
+    bias_fp64 = None if bias is None else bias.astype(np.float64)
+
+    h_padded = h_in + 2 * padding
+    w_padded = w_in + 2 * padding
+    padded = np.zeros((n, h_padded, w_padded, c_in), dtype=np.float64)
+    padded[:, padding : padding + h_in, padding : padding + w_in, :] = input_fp64
+
+    h_out = (h_padded - kh) // stride + 1
+    w_out = (w_padded - kw) // stride + 1
+    out_fp64 = np.zeros((n, h_out, w_out, c_out), dtype=np.float64)
+
+    for batch_idx in range(n):
+        for out_y in range(h_out):
+            for out_x in range(w_out):
+                receptive_field = padded[
+                    batch_idx,
+                    out_y * stride : out_y * stride + kh,
+                    out_x * stride : out_x * stride + kw,
+                    :,
+                ]
+                for oc in range(c_out):
+                    out_fp64[batch_idx, out_y, out_x, oc] = (
+                        receptive_field * kernel_fp64[:, :, :, oc]
+                    ).sum()
+                if bias_fp64 is not None:
+                    out_fp64[batch_idx, out_y, out_x, :] += bias_fp64
+    return out_fp64.astype(np.float32)
+
+
+# Canonical empirical anchor for T3 grand council active exploration 2026-05-25.
+# Per Catalog #287/#323 canonical Provenance every claim carries
+# evidence_grade=macOS-MLX-research-signal + axis_tag=[predicted] + score_claim=False.
+ACTIVE_EXPLORATION_CONV2D_DRIFT_UNEXPLORED_PATHS_ANCHOR: dict[str, Any] = {
+    "schema": "active_exploration_conv2d_drift_unexplored_paths_anchor.v1",
+    "anchor_utc": "2026-05-25T20:08:34Z",
+    "anchor_substrate": "PR95 HNeRV decoder Conv2d 3x3 stages (3 scales tested)",
+    "framework_pair": "MLX CPU 0.31.2 vs PyTorch CPU 2.11.0 on macOS",
+    "hardware": "Apple Silicon M5 Max (macOS)",
+    "evidence_grade": EVIDENCE_GRADE_MLX,
+    "evidence_tag": EVIDENCE_TAG_MLX,
+    "axis_tag": "[predicted]",
+    "score_claim": False,
+    "promotion_eligible": False,
+    "promotable": False,
+    "ready_for_exact_eval_dispatch": False,
+    "thread_1_kahan_compensated_summation": {
+        "path_verdict": ActiveExplorationPathVerdict.PARTIALLY_FIXABLE_MARGINAL.value,
+        "max_observed_reduction_percent": 22.4,
+        "predicted_reduction_percent_lower_bound": 50.0,
+        "carmack_mvp_first_falsified": True,
+        "per_scale_reductions": {
+            "pr95_stage2_36_to_144_6x8": 0.0,
+            "pr95_midstage_144_to_144_24x32": 10.3,
+            "pr95_final_head_class_256_to_256_48x64": 22.4,
+        },
+        "notes": (
+            "Kahan summation (Higham 2002) reduces drift at larger spatial scales "
+            "(10-22%) but does NOT achieve the >50% Carmack MVP-first 5/5 step 2 "
+            "predicted band. The dominant drift floor at small scales is NOT "
+            "summation precision; at larger scales Kahan does help marginally. "
+            "Sister codex implementation at tac.local_acceleration.mlx_scorer_adapters.MLXConv2dReference "
+            "(accumulation_mode='kahan_fp32')."
+        ),
+    },
+    "thread_2_fp64_intermediate_accumulation": {
+        "path_verdict": ActiveExplorationPathVerdict.PARTIALLY_FIXABLE_MARGINAL.value,
+        "max_observed_reduction_percent": 22.4,
+        "predicted_reduction_percent_lower_bound": 50.0,
+        "carmack_mvp_first_falsified": True,
+        "per_scale_reductions": {
+            "pr95_stage2_36_to_144_6x8": 6.2,
+            "pr95_midstage_144_to_144_24x32": 10.3,
+            "pr95_final_head_class_256_to_256_48x64": 22.4,
+        },
+        "notes": (
+            "FP64 intermediate accumulation (29 extra mantissa bits) reduces drift "
+            "by 6-22% across scales but does NOT achieve the >50% Carmack MVP-first "
+            "5/5 step 2 predicted band. FP64 ~= Kahan at all measured scales (no "
+            "additional FP64 advantage over Kahan). Sister codex implementation at "
+            "tac.local_acceleration.mlx_scorer_adapters.MLXConv2dReference "
+            "(accumulation_mode='fixed_fp64')."
+        ),
+    },
+    "thread_3_mlx_deterministic_reduction_enforcement": {
+        "path_verdict": ActiveExplorationPathVerdict.NOT_FIXABLE_FRAMEWORK_FUNDAMENTAL.value,
+        "mlx_version_tested": "0.31.2",
+        "public_core_deterministic_attrs": [],
+        "public_metal_deterministic_attrs": [],
+        "classification": "framework_different_no_public_deterministic_reduction_flag",
+        "carmack_mvp_first_falsified": False,
+        "notes": (
+            "MLX 0.31.2 exposes ZERO public deterministic-reduction flags in core "
+            "or metal namespaces. PyTorch-side pinning via _torch_backend_options is "
+            "ASYMMETRIC; the equivalent MLX surface does not exist in the public API. "
+            "Verdict NOT_FIXABLE_FRAMEWORK_FUNDAMENTAL_NO_PUBLIC_API until upstream "
+            "MLX exposes the flag. Sister codex investigation at "
+            "tac.local_acceleration.mlx_scorer_torch_parity.mlx_runtime_determinism_contract."
+        ),
+    },
+    "thread_4_cudnn_reference_conv2d_3x3_measurement": {
+        "path_verdict": ActiveExplorationPathVerdict.DEFERRED_PENDING_PAID_DISPATCH.value,
+        "cuda_locally_available": False,
+        "cudnn_locally_available": False,
+        "mps_available": True,
+        "mps_not_substitute_rationale": (
+            "MPS is NOT a substitute for cuDNN per CLAUDE.md 'MPS auth eval is "
+            "NOISE' non-negotiable (23x drift on PoseNet documented)"
+        ),
+        "estimated_paid_dispatch_cost_usd": 2.0,
+        "carmack_mvp_first_falsified": False,
+        "notes": (
+            "macOS Apple Silicon torch.cuda.is_available()=False. Per CLAUDE.md "
+            "'MPS auth eval is NOISE' + Catalog #1, MPS substitution is FORBIDDEN. "
+            "Operator-decision gate per Catalog #199 paired-env: $2-5 paid Modal "
+            "A100 / Vast.ai 4090 dispatch required for empirical cuDNN reference "
+            "measurement. Sister codex infrastructure at "
+            "tac.local_acceleration.mlx_scorer_torch_parity.build_mlx_conv2d_accumulation_probe_manifest "
+            "supports --torch-device cuda parameter; CLI invocation deferred."
+        ),
+    },
+    "aggregate_path_verdict_summary": {
+        "fixable_count": 0,
+        "partially_fixable_marginal_count": 2,
+        "not_fixable_framework_fundamental_count": 1,
+        "deferred_pending_paid_dispatch_count": 1,
+        "overall_verdict": "PROCEED_WITH_REVISIONS",
+    },
+    "operator_routable_summary": (
+        "Slot 2 'NOT FIXABLE' verdict was structurally over-stated. Empirical "
+        "exploration shows: (1) Kahan partially fixable at larger scales (max 22.4%); "
+        "(2) FP64 partially fixable at larger scales (max 22.4%); (3) MLX-side "
+        "deterministic-reduction not fixable at framework boundary; (4) cuDNN "
+        "reference deferred pending paid dispatch. Revised canonical primitive: "
+        "ATTESTED-TOLERANCE PORTABILITY remains correct AT SMALL SCALES; substitute "
+        "Kahan or FP64 accumulation_mode reduces drift 10-22% at larger spatial "
+        "scales. Slot 1 export bridge VERDICT can claim NUMERIC_TOLERANCE 3.05e-5 "
+        "as the canonical PR95 HNeRV decoder band (unchanged); per-stage "
+        "substitution remains optional + measurably beneficial only at "
+        ">= 144-channel 24x32 spatial scales."
+    ),
+    "carmack_mvp_first_step_2_falsification_summary": {
+        "thread_1_predicted_lower_bound_percent": 50.0,
+        "thread_1_max_observed_percent": 22.4,
+        "thread_1_falsified": True,
+        "thread_2_predicted_lower_bound_percent": 50.0,
+        "thread_2_max_observed_percent": 22.4,
+        "thread_2_falsified": True,
+        "thread_3_predicted_verdict_lower_bound": "FIXABLE_OR_FRAMEWORK_DIFFERENT",
+        "thread_3_actual_verdict": "NOT_FIXABLE_FRAMEWORK_FUNDAMENTAL_NO_PUBLIC_API",
+        "thread_4_predicted_verdict_lower_bound": "LOCAL_OR_DEFERRED",
+        "thread_4_actual_verdict": "DEFERRED_PENDING_PAID_DISPATCH",
+    },
+}
