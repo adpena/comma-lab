@@ -38,6 +38,45 @@ def _base_briefing_payload() -> dict[str, object]:
         "dispatch_readiness": {
             "schema": "pact.operator_dispatch_readiness.v1",
             "phase_1_exact_eval_packets": {"status": "PENDING"},
+            "phase_6d_frontier_feedback_cycle": {
+                "status": "PENDING",
+                "reason": "no frontier feedback cycle or queue refresh artifact found",
+                "cycle_report_count": 0,
+                "refresh_report_count": 0,
+                "ready_local_execution_count": 0,
+                "post_harvest_queue_count": 0,
+                "next_command": (
+                    ".venv/bin/python "
+                    "tools/run_frontier_rate_attack_feedback_cycle.py "
+                    "--frontier-artifact-root .omx/research --candidate-limit 4"
+                ),
+            },
+        },
+        "frontier_feedback_cycle": {
+            "schema": "pact.frontier_feedback_cycle_summary.v1",
+            "cycle_tool": "tools/run_frontier_rate_attack_feedback_cycle.py",
+            "cycle_tool_exists": True,
+            "status": "PENDING",
+            "reason": "no frontier feedback cycle or queue refresh artifact found",
+            "cycle_report_count": 0,
+            "refresh_report_count": 0,
+            "ready_local_execution_count": 0,
+            "post_harvest_queue_count": 0,
+            "latest_cycle": {},
+            "latest_refresh": {},
+            "error_count": 0,
+            "next_command": (
+                ".venv/bin/python "
+                "tools/run_frontier_rate_attack_feedback_cycle.py "
+                "--frontier-artifact-root .omx/research --candidate-limit 4"
+            ),
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
         },
         "exact_eval_packets": [],
         "non_dispatchable_readiness_artifacts": [

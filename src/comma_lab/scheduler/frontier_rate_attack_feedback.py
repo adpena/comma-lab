@@ -15,6 +15,11 @@ from tac.optimization.dqs1_materializer_feedback_bridge import (
     FALSE_AUTHORITY,
     build_dqs1_materializer_feedback_bridge,
 )
+from tac.optimization.local_cpu_contest_drift import (
+    EUREKA_SIGNAL_SCHEMA,
+    LocalCPUContestDriftError,
+    require_eureka_false_authority,
+)
 from tac.optimization.materializer_feedback import (
     FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA,
     FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA,
@@ -38,6 +43,8 @@ MATERIALIZER_FEEDBACK_DISCOVERY_SCHEMA = (
 DISCOVERED_MATERIALIZER_FEEDBACK_SCHEMA = (
     "frontier_rate_attack_discovered_materializer_feedback.v1"
 )
+LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA = "frontier_rate_attack_local_cpu_eureka_discovery.v1"
+LOCAL_CPU_EUREKA_PLANNER_HINT_SCHEMA = "frontier_rate_attack_local_cpu_eureka_planner_hint.v1"
 
 
 class FrontierRateAttackFeedbackError(ExperimentQueueError):
@@ -93,6 +100,18 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
             )
         rows.append(row)
     return rows
+
+
+def _finite_float_or_none(value: object) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if parsed != parsed or parsed in (float("inf"), float("-inf")):
+        return None
+    return parsed
 
 
 def _is_materializer_feedback_payload(payload: Mapping[str, Any]) -> bool:
@@ -314,6 +333,250 @@ def discover_materializer_feedback_payloads(
     return tuple(payloads), tuple(source_paths), discovery
 
 
+def _eureka_signal_paths(root: Path, *, max_files: int) -> list[Path]:
+    if root.is_file():
+        return [root] if root.name.startswith("local_cpu_contest_drift_eureka_") else []
+    if not root.exists():
+        raise FrontierRateAttackFeedbackError(f"eureka root does not exist: {root}")
+    candidates: list[Path] = []
+    scanned_files = 0
+    for path in sorted(root.rglob("local_cpu_contest_drift_eureka_*.json")):
+        if not path.is_file():
+            continue
+        scanned_files += 1
+        if scanned_files > max_files:
+            raise FrontierRateAttackFeedbackError(
+                f"{root}: eureka discovery exceeded max_files={max_files}"
+            )
+        candidates.append(path)
+    return candidates
+
+
+def _eureka_candidate_family(candidate_id: str) -> str:
+    if candidate_id.startswith("pairset_drop_one_"):
+        return "decoder_q_pairset_drop_one"
+    if candidate_id.startswith("pairset_drop_two_"):
+        return "decoder_q_pairset_drop_two"
+    if candidate_id.startswith("pairset_component_combo_"):
+        return "decoder_q_learned_multi_drop"
+    if candidate_id.startswith("pairset_"):
+        return "decoder_q_pairset"
+    return "unknown"
+
+
+def _eureka_gap_row(payload: Mapping[str, Any], *, path: Path, repo_root: Path) -> dict[str, Any]:
+    try:
+        require_eureka_false_authority(
+            payload,
+            context=f"{path} local CPU eureka signal",
+        )
+    except LocalCPUContestDriftError as exc:
+        raise FrontierRateAttackFeedbackError(str(exc)) from exc
+    require_no_truthy_authority_fields(
+        payload,
+        context=f"{path} local CPU eureka signal",
+    )
+    candidate_id = str(payload.get("candidate_id") or "")
+    auth_frontier = _finite_float_or_none(payload.get("auth_frontier_score"))
+    projected = _finite_float_or_none(payload.get("projected_contest_score"))
+    conservative = _finite_float_or_none(
+        payload.get("conservative_projected_contest_score")
+    )
+    eureka_margin = _finite_float_or_none(payload.get("eureka_margin"))
+    projected_gap = None
+    conservative_gap = None
+    if auth_frontier is not None and projected is not None:
+        projected_gap = projected - auth_frontier
+    if auth_frontier is not None and conservative is not None:
+        conservative_gap = conservative - auth_frontier
+    return {
+        "schema": EUREKA_SIGNAL_SCHEMA,
+        "path": _repo_rel(path, repo_root),
+        "candidate_id": candidate_id,
+        "candidate_family": _eureka_candidate_family(candidate_id),
+        "candidate_archive_sha256": str(payload.get("candidate_archive_sha256") or ""),
+        "local_score": _finite_float_or_none(payload.get("local_score")),
+        "projected_contest_score": projected,
+        "conservative_projected_contest_score": conservative,
+        "auth_frontier_score": auth_frontier,
+        "projected_gap_vs_auth_frontier": projected_gap,
+        "conservative_gap_vs_auth_frontier": conservative_gap,
+        "eureka_margin": eureka_margin,
+        "eureka_trigger": payload.get("eureka_trigger") is True,
+        "recommended_action": str(payload.get("recommended_action") or ""),
+        "trust_region": str(payload.get("trust_region") or ""),
+        "candidate_trust_region_matches_calibration": (
+            payload.get("candidate_trust_region_matches_calibration") is True
+        ),
+        "source_artifact": str(payload.get("source_artifact") or ""),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _eureka_sort_key(row: Mapping[str, Any]) -> tuple[float, float, str]:
+    conservative_gap = row.get("conservative_gap_vs_auth_frontier")
+    projected_gap = row.get("projected_gap_vs_auth_frontier")
+    return (
+        float(conservative_gap) if conservative_gap is not None else float("inf"),
+        float(projected_gap) if projected_gap is not None else float("inf"),
+        str(row.get("candidate_id") or ""),
+    )
+
+
+def _eureka_planner_hints(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    near_rows = [
+        row
+        for row in rows
+        if row.get("recommended_action") == "observe_only"
+        and row.get("eureka_trigger") is False
+        and (
+            (
+                row.get("conservative_gap_vs_auth_frontier") is not None
+                and float(row["conservative_gap_vs_auth_frontier"]) <= 1.0e-5
+            )
+            or (
+                row.get("projected_gap_vs_auth_frontier") is not None
+                and float(row["projected_gap_vs_auth_frontier"]) <= 5.0e-6
+            )
+        )
+    ]
+    drop_two_near = [
+        row
+        for row in near_rows
+        if row.get("candidate_family") == "decoder_q_pairset_drop_two"
+    ]
+    hints: list[dict[str, Any]] = []
+    if drop_two_near:
+        source_ids = [
+            str(row.get("candidate_id"))
+            for row in sorted(drop_two_near, key=_eureka_sort_key)[:8]
+        ]
+        hints.append(
+            {
+                "schema": LOCAL_CPU_EUREKA_PLANNER_HINT_SCHEMA,
+                "hint_id": "dqs1_expand_beyond_drop_two_near_boundary",
+                "trigger": "near_frontier_observe_only_drop_two_cluster",
+                "source_candidate_ids": source_ids,
+                "recommended_candidate_families": [
+                    "learned_multi_drop",
+                    "drop_many_beam_pairwise_interaction_waterfill",
+                    "within_selected_set_mask_feather_probe",
+                    "master_gradient_constrained_low_sensitivity_drop",
+                    "inverse_scorer_null_direction_masked_variant",
+                ],
+                "rationale": (
+                    "drop-two local CPU drift rows are close enough to the frontier "
+                    "to guide acquisition, but too conservative to treat as the "
+                    "optimization endpoint"
+                ),
+                "planner_consumers": [
+                    "pairset_component_marginal_model",
+                    "master_gradient",
+                    "inverse_scorer_action_surface",
+                    "frontier_rate_attack_feedback_cycle",
+                ],
+                "forbidden_use": "score_claim_or_exact_eval_dispatch_authority",
+                **FALSE_AUTHORITY,
+            }
+        )
+    return hints
+
+
+def discover_local_cpu_eureka_planning_signals(
+    *,
+    repo_root: str | Path,
+    frontier_artifact_roots: Sequence[str | Path] = (),
+    max_files_per_root: int = 256,
+) -> dict[str, Any]:
+    """Discover local advisory eureka rows and compile acquisition hints.
+
+    These rows are not observations for score/rank.  They are acquisition
+    priors for the next local queue cycle, especially when near-boundary
+    drop-two rows imply the search should expand beyond drop-two.
+    """
+
+    repo = Path(repo_root)
+    paths: list[Path] = []
+    seen_paths: set[str] = set()
+    for value in frontier_artifact_roots:
+        root = _resolve_path(value, repo_root=repo)
+        for path in _eureka_signal_paths(root, max_files=max_files_per_root):
+            key = path.resolve(strict=False).as_posix()
+            if key in seen_paths:
+                continue
+            seen_paths.add(key)
+            paths.append(path)
+
+    rows: list[dict[str, Any]] = []
+    ignored: list[dict[str, Any]] = []
+    seen_signal_keys: set[tuple[str, str, str]] = set()
+    duplicate_count = 0
+    for path in paths:
+        payload = _load_json(path)
+        if payload.get("schema") != EUREKA_SIGNAL_SCHEMA:
+            ignored.append(
+                {
+                    "path": _repo_rel(path, repo),
+                    "reason": "not_local_cpu_contest_drift_eureka_signal",
+                    **FALSE_AUTHORITY,
+                }
+            )
+            continue
+        row = _eureka_gap_row(payload, path=path, repo_root=repo)
+        key = (
+            str(row.get("candidate_id") or ""),
+            str(row.get("candidate_archive_sha256") or ""),
+            str(row.get("source_artifact") or ""),
+        )
+        if key in seen_signal_keys:
+            duplicate_count += 1
+            continue
+        seen_signal_keys.add(key)
+        rows.append(row)
+
+    rows = sorted(rows, key=_eureka_sort_key)
+    family_counts: dict[str, int] = {}
+    for row in rows:
+        family = str(row.get("candidate_family") or "unknown")
+        family_counts[family] = family_counts.get(family, 0) + 1
+    hints = _eureka_planner_hints(rows)
+    best = rows[0] if rows else None
+    return {
+        "schema": LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA,
+        "active": bool(rows),
+        "frontier_artifact_roots": [
+            _repo_rel(_resolve_path(root, repo_root=repo), repo)
+            for root in frontier_artifact_roots
+        ],
+        "signal_count": len(rows),
+        "duplicate_signal_count": duplicate_count,
+        "ignored_signal_candidates": ignored,
+        "candidate_family_counts": dict(sorted(family_counts.items())),
+        "near_frontier_observe_only_count": len(
+            [
+                row
+                for row in rows
+                if row.get("recommended_action") == "observe_only"
+                and row.get("eureka_trigger") is False
+                and row.get("projected_gap_vs_auth_frontier") is not None
+                and float(row["projected_gap_vs_auth_frontier"]) <= 5.0e-6
+            ]
+        ),
+        "best_projected_gap_vs_auth_frontier": (
+            None if best is None else best.get("projected_gap_vs_auth_frontier")
+        ),
+        "best_conservative_gap_vs_auth_frontier": (
+            None if best is None else best.get("conservative_gap_vs_auth_frontier")
+        ),
+        "planner_hint_count": len(hints),
+        "planner_hints": hints,
+        "signal_rows": rows[:32],
+        "allowed_use": "local_advisory_acquisition_prior_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def load_dqs1_observations(
     *,
     repo_root: str | Path,
@@ -408,6 +671,10 @@ def build_frontier_rate_attack_feedback_refresh(
         frontier_artifact_roots=frontier_artifact_roots,
         materializer_feedback_paths=materializer_feedback_paths,
     )
+    eureka_planning = discover_local_cpu_eureka_planning_signals(
+        repo_root=repo,
+        frontier_artifact_roots=frontier_artifact_roots,
+    )
     dqs1_observations, dqs1_source_paths = load_dqs1_observations(
         repo_root=repo,
         observation_paths=dqs1_observation_paths,
@@ -433,6 +700,13 @@ def build_frontier_rate_attack_feedback_refresh(
             include_mlx_retention_plan=include_mlx_retention_plan,
         )
         queue_payload = normalize_queue_definition(result.queue)
+        if eureka_planning.get("active") is True:
+            for experiment in queue_payload.get("experiments", []):
+                if not isinstance(experiment, dict):
+                    continue
+                metadata = experiment.setdefault("metadata", {})
+                if isinstance(metadata, dict):
+                    metadata["frontier_feedback_eureka_planning"] = eureka_planning
         bridge = result.materializer_feedback_bridge
         selected_candidate_ids = [selection.candidate_id for selection in result.selections]
     else:
@@ -451,6 +725,7 @@ def build_frontier_rate_attack_feedback_refresh(
         "schema": FEEDBACK_REFRESH_SCHEMA,
         "generated_at_utc": _utc_now(),
         "discovery": discovery,
+        "local_cpu_eureka_planning": eureka_planning,
         "materializer_feedback_source_paths": list(source_paths),
         "materializer_feedback_payload_count": len(payloads),
         "dqs1_observation_source_paths": list(dqs1_source_paths),
@@ -476,9 +751,12 @@ __all__ = [
     "DISCOVERED_MATERIALIZER_FEEDBACK_SCHEMA",
     "FEEDBACK_REFRESH_SCHEMA",
     "FRONTIER_RATE_ATTACK_FEEDBACK_REFRESH_SCHEMA",
+    "LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA",
+    "LOCAL_CPU_EUREKA_PLANNER_HINT_SCHEMA",
     "MATERIALIZER_FEEDBACK_DISCOVERY_SCHEMA",
     "FrontierRateAttackFeedbackError",
     "build_frontier_rate_attack_feedback_refresh",
+    "discover_local_cpu_eureka_planning_signals",
     "discover_materializer_feedback_payloads",
     "load_dqs1_observations",
 ]

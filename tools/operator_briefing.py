@@ -64,7 +64,14 @@ BYTE_SHAVING_ACQUISITION_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
     REPO_ROOT / ".omx" / "research",
 )
+FRONTIER_FEEDBACK_SCAN_ROOTS = (
+    REPO_ROOT / ".omx" / "research",
+    REPO_ROOT / "experiments" / "results",
+)
 BYTE_SHAVING_MATERIALIZER_CAMPAIGN_RUN_NAME = "materializer_campaign_run.json"
+FRONTIER_FEEDBACK_CYCLE_REPORT_NAME = "frontier_rate_attack_feedback_cycle.json"
+FRONTIER_FEEDBACK_REFRESH_REPORT_NAME = "feedback_refresh_report.json"
+FRONTIER_FEEDBACK_CYCLE_TOOL = "tools/run_frontier_rate_attack_feedback_cycle.py"
 MATERIALIZER_EXACT_EVAL_CONSUMER_TOOL = "tools/build_materializer_exact_eval_consumer.py"
 EXACT_READY_SCORE_AXIS_REPAIR_TOOL = "tools/repair_exact_ready_score_axis.py"
 EXACT_READY_SUPPRESSION_MANIFEST = (
@@ -803,6 +810,7 @@ def _false_authority_fields() -> dict[str, bool]:
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "dispatch_attempted": False,
+        "gpu_launched": False,
     }
 
 
@@ -1448,6 +1456,322 @@ def _byte_shaving_acquisition_run_paths(
         key=lambda item: item.stat().st_mtime if item.exists() else 0.0,
         reverse=True,
     )
+
+
+def _frontier_feedback_artifact_paths(
+    filename: str,
+    *,
+    scan_roots: tuple[Path, ...] | None = None,
+    max_depth: int = 5,
+) -> list[Path]:
+    if scan_roots is None:
+        scan_roots = FRONTIER_FEEDBACK_SCAN_ROOTS
+    patterns = tuple(f"{'*/' * depth}{filename}" for depth in range(max_depth))
+    seen: set[Path] = set()
+    paths: list[Path] = []
+    for root in scan_roots:
+        if not root.exists():
+            continue
+        for pattern in patterns:
+            for path in root.glob(pattern):
+                resolved = path.resolve(strict=False)
+                if resolved in seen or not path.is_file():
+                    continue
+                seen.add(resolved)
+                paths.append(path)
+    return sorted(
+        paths,
+        key=lambda item: item.stat().st_mtime if item.exists() else 0.0,
+        reverse=True,
+    )
+
+
+def _authority_truthy(payload: dict[str, object]) -> list[str]:
+    bad: list[str] = []
+    for key in (
+        "score_claim",
+        "score_claim_valid",
+        "promotion_eligible",
+        "rank_or_kill_eligible",
+        "ready_for_exact_eval_dispatch",
+        "dispatch_attempted",
+        "gpu_launched",
+    ):
+        if payload.get(key) is True:
+            bad.append(key)
+    return bad
+
+
+def _frontier_feedback_refresh_row(path: Path) -> dict[str, object]:
+    payload = _load_json_file(path)
+    rel = _repo_rel(path)
+    if payload.get("_error"):
+        return {
+            "kind": "frontier_feedback_refresh",
+            "path": rel,
+            "status": "ERROR",
+            "error": payload["_error"],
+            **_false_authority_fields(),
+        }
+    bad_authority = _authority_truthy(payload)
+    eureka_payload = (
+        payload.get("local_cpu_eureka_planning")
+        if isinstance(payload.get("local_cpu_eureka_planning"), dict)
+        else {}
+    )
+    bad_authority.extend(
+        f"local_cpu_eureka_planning.{key}" for key in _authority_truthy(eureka_payload)
+    )
+    if bad_authority:
+        return {
+            "kind": "frontier_feedback_refresh",
+            "path": rel,
+            "status": "BLOCKED_AUTHORITY_LEAK",
+            "blockers": [f"truthy_authority:{key}" for key in bad_authority],
+            **_false_authority_fields(),
+        }
+    artifacts = payload.get("artifacts") if isinstance(payload.get("artifacts"), dict) else {}
+    commands = (
+        payload.get("operator_commands")
+        if isinstance(payload.get("operator_commands"), dict)
+        else {}
+    )
+    cycle_command_parts = commands.get("run_frontier_feedback_cycle")
+    eureka = eureka_payload
+    queue_path = str(artifacts.get("dqs1_followup_queue") or "")
+    return {
+        "kind": "frontier_feedback_refresh",
+        "path": rel,
+        "schema": str(payload.get("schema") or ""),
+        "status": "READY_QUEUE" if queue_path else "BRIDGE_ONLY",
+        "queue_path": queue_path,
+        "queue_id": str(payload.get("queue_id") or ""),
+        "selected_candidate_ids": _first_list(payload, "selected_candidate_ids"),
+        "selected_candidate_count": len(_first_list(payload, "selected_candidate_ids")),
+        "materializer_feedback_payload_count": _safe_int(
+            payload.get("materializer_feedback_payload_count")
+        ),
+        "dqs1_observation_count": _safe_int(payload.get("dqs1_observation_count")),
+        "eureka_signal_count": _safe_int(eureka.get("signal_count")),
+        "eureka_planner_hint_count": _safe_int(eureka.get("planner_hint_count")),
+        "eureka_planner_hint_ids": [
+            str(row.get("hint_id"))
+            for row in eureka.get("planner_hints", [])
+            if isinstance(row, dict) and str(row.get("hint_id") or "").strip()
+        ],
+        "cycle_command": (
+            " ".join(str(part) for part in cycle_command_parts)
+            if isinstance(cycle_command_parts, list)
+            else ""
+        ),
+        **_false_authority_fields(),
+    }
+
+
+def _frontier_feedback_cycle_row(path: Path) -> dict[str, object]:
+    payload = _load_json_file(path)
+    rel = _repo_rel(path)
+    if payload.get("_error"):
+        return {
+            "kind": "frontier_feedback_cycle",
+            "path": rel,
+            "status": "ERROR",
+            "error": payload["_error"],
+            **_false_authority_fields(),
+        }
+    bad_authority = _authority_truthy(payload)
+    if bad_authority:
+        return {
+            "kind": "frontier_feedback_cycle",
+            "path": rel,
+            "status": "BLOCKED_AUTHORITY_LEAK",
+            "blockers": [f"truthy_authority:{key}" for key in bad_authority],
+            **_false_authority_fields(),
+        }
+    initial = (
+        payload.get("initial_refresh")
+        if isinstance(payload.get("initial_refresh"), dict)
+        else {}
+    )
+    harvest = (
+        payload.get("harvest_signal")
+        if isinstance(payload.get("harvest_signal"), dict)
+        else {}
+    )
+    post = (
+        payload.get("post_harvest_refresh")
+        if isinstance(payload.get("post_harvest_refresh"), dict)
+        else None
+    )
+    artifacts = (
+        initial.get("artifacts") if isinstance(initial.get("artifacts"), dict) else {}
+    )
+    validate = (
+        initial.get("queue_validate")
+        if isinstance(initial.get("queue_validate"), dict)
+        else {}
+    )
+    selected = (
+        initial.get("selected_candidate_ids")
+        if isinstance(initial.get("selected_candidate_ids"), list)
+        else []
+    )
+    harvest_count = _safe_int(harvest.get("harvest_path_count"))
+    post_artifacts = (
+        post.get("artifacts")
+        if isinstance(post, dict) and isinstance(post.get("artifacts"), dict)
+        else {}
+    )
+    if harvest_count and isinstance(post, dict) and post_artifacts.get("dqs1_followup_queue"):
+        status = "POST_HARVEST_QUEUE_READY"
+    elif artifacts.get("dqs1_followup_queue") and validate.get("valid") is True:
+        status = "READY_LOCAL_EXECUTION"
+    elif artifacts.get("dqs1_followup_queue"):
+        status = "READY_QUEUE_UNVALIDATED"
+    else:
+        status = "PENDING"
+    return {
+        "kind": "frontier_feedback_cycle",
+        "path": rel,
+        "schema": str(payload.get("schema") or ""),
+        "status": status,
+        "initial_queue_path": str(artifacts.get("dqs1_followup_queue") or ""),
+        "initial_queue_valid": validate.get("valid") is True,
+        "initial_selected_candidate_ids": selected,
+        "initial_selected_candidate_count": len(selected),
+        "harvest_path_count": harvest_count,
+        "observation_jsonl": str(
+            (
+                harvest.get("observation_bundle")
+                if isinstance(harvest.get("observation_bundle"), dict)
+                else {}
+            ).get("observation_jsonl")
+            or ""
+        ),
+        "post_harvest_queue_path": str(post_artifacts.get("dqs1_followup_queue") or ""),
+        **_false_authority_fields(),
+    }
+
+
+def _frontier_feedback_cycle_execute_command(latest: dict[str, object] | None) -> str:
+    if not latest:
+        return (
+            f".venv/bin/python {FRONTIER_FEEDBACK_CYCLE_TOOL} "
+            "--frontier-artifact-root .omx/research --candidate-limit 4"
+        )
+    initial_report = latest.get("initial_queue_path")
+    if initial_report:
+        return (
+            f".venv/bin/python {FRONTIER_FEEDBACK_CYCLE_TOOL} "
+            "--frontier-artifact-root .omx/research "
+            "--candidate-limit 4 --execute-followup "
+            "--max-candidates 4 --max-steps-per-candidate 8"
+        )
+    return f".venv/bin/python {FRONTIER_FEEDBACK_CYCLE_TOOL} --help"
+
+
+def _frontier_feedback_cycle_summary() -> dict[str, object]:
+    cycle_rows = [
+        _frontier_feedback_cycle_row(path)
+        for path in _frontier_feedback_artifact_paths(
+            FRONTIER_FEEDBACK_CYCLE_REPORT_NAME
+        )
+    ]
+    refresh_rows = [
+        _frontier_feedback_refresh_row(path)
+        for path in _frontier_feedback_artifact_paths(
+            FRONTIER_FEEDBACK_REFRESH_REPORT_NAME
+        )
+    ]
+    error_rows = [
+        row
+        for row in [*cycle_rows, *refresh_rows]
+        if str(row.get("status") or "").startswith(("ERROR", "BLOCKED"))
+    ]
+    latest_cycle = cycle_rows[0] if cycle_rows else None
+    latest_refresh = refresh_rows[0] if refresh_rows else None
+    if error_rows:
+        status = "BLOCKED"
+        reason = f"{len(error_rows)} frontier feedback artifact(s) failed safe loading"
+    elif latest_cycle and latest_cycle.get("status") == "POST_HARVEST_QUEUE_READY":
+        status = "POST_HARVEST_QUEUE_READY"
+        reason = "latest cycle harvested local observations and emitted the next queue"
+    elif latest_cycle and latest_cycle.get("status") == "READY_LOCAL_EXECUTION":
+        status = "READY_LOCAL_EXECUTION"
+        reason = "latest cycle emitted a validated DQS1 batch queue; run bounded local autopilot"
+    elif latest_refresh and latest_refresh.get("queue_path"):
+        status = "READY_CYCLE"
+        reason = "feedback refresh emitted a DQS1 queue; run the cycle wrapper"
+    else:
+        status = "PENDING"
+        reason = "no frontier feedback cycle or queue refresh artifact found"
+    return {
+        "schema": "pact.frontier_feedback_cycle_summary.v1",
+        "scan_roots": [_repo_rel(root) for root in FRONTIER_FEEDBACK_SCAN_ROOTS],
+        "cycle_tool": FRONTIER_FEEDBACK_CYCLE_TOOL,
+        "cycle_tool_exists": (REPO_ROOT / FRONTIER_FEEDBACK_CYCLE_TOOL).is_file(),
+        "status": status,
+        "reason": reason,
+        "cycle_report_count": len(cycle_rows),
+        "refresh_report_count": len(refresh_rows),
+        "ready_local_execution_count": sum(
+            1 for row in cycle_rows if row.get("status") == "READY_LOCAL_EXECUTION"
+        ),
+        "post_harvest_queue_count": sum(
+            1 for row in cycle_rows if row.get("status") == "POST_HARVEST_QUEUE_READY"
+        ),
+        "latest_cycle": latest_cycle or {},
+        "latest_refresh": latest_refresh or {},
+        "error_count": len(error_rows),
+        "next_command": _frontier_feedback_cycle_execute_command(latest_cycle),
+        **_false_authority_fields(),
+    }
+
+
+def _format_frontier_feedback_cycle_summary() -> str:
+    payload = _frontier_feedback_cycle_summary()
+    lines = [
+        f"status: {payload['status']} — {payload['reason']}",
+        f"cycle tool: {payload['cycle_tool']} present={payload['cycle_tool_exists']}",
+        (
+            "artifacts: "
+            f"cycles={payload['cycle_report_count']} "
+            f"refreshes={payload['refresh_report_count']} "
+            f"ready_local={payload['ready_local_execution_count']} "
+            f"post_harvest={payload['post_harvest_queue_count']}"
+        ),
+    ]
+    latest_cycle = payload.get("latest_cycle")
+    if isinstance(latest_cycle, dict) and latest_cycle:
+        lines.extend(
+            [
+                "latest cycle:",
+                f"  path: {latest_cycle.get('path')}",
+                f"  queue: {latest_cycle.get('initial_queue_path')}",
+                f"  initial_selected: {latest_cycle.get('initial_selected_candidate_count')}",
+                f"  harvest_paths: {latest_cycle.get('harvest_path_count')}",
+                f"  post_queue: {latest_cycle.get('post_harvest_queue_path') or '-'}",
+            ]
+        )
+    latest_refresh = payload.get("latest_refresh")
+    if isinstance(latest_refresh, dict) and latest_refresh:
+        lines.extend(
+            [
+                "latest refresh:",
+                f"  path: {latest_refresh.get('path')}",
+                f"  queue: {latest_refresh.get('queue_path') or '-'}",
+                f"  selected: {latest_refresh.get('selected_candidate_count')}",
+                f"  dqs1_observations: {latest_refresh.get('dqs1_observation_count')}",
+                f"  eureka_signals: {latest_refresh.get('eureka_signal_count', 0)}",
+                f"  eureka_hints: {latest_refresh.get('eureka_planner_hint_count', 0)}",
+            ]
+        )
+    lines.append("next command:")
+    lines.append(f"  {payload['next_command']}")
+    lines.append(
+        "authority: planning/local only; exact CPU/CUDA auth still required before score, rank, promotion, or dispatch."
+    )
+    return "\n".join(lines)
 
 
 def _repo_path_from_ref(value: object) -> Path | None:
@@ -4829,6 +5153,7 @@ def _dispatch_readiness() -> dict[str, object]:
         n_comp = 0
     phase7 = _constrained_coord_search_readiness()
     byte_shaving_acquisition = _byte_shaving_acquisition_summary()
+    frontier_feedback_cycle = _frontier_feedback_cycle_summary()
     return {
         "schema": "pact.operator_dispatch_readiness.v1",
         "phase_1_exact_eval_packets": phase1,
@@ -4935,6 +5260,21 @@ def _dispatch_readiness() -> dict[str, object]:
             "ready_for_exact_eval_dispatch": False,
             "score_claim": False,
         },
+        "phase_6d_frontier_feedback_cycle": {
+            "status": frontier_feedback_cycle["status"],
+            "reason": frontier_feedback_cycle["reason"],
+            "cycle_report_count": frontier_feedback_cycle["cycle_report_count"],
+            "refresh_report_count": frontier_feedback_cycle["refresh_report_count"],
+            "ready_local_execution_count": frontier_feedback_cycle[
+                "ready_local_execution_count"
+            ],
+            "post_harvest_queue_count": frontier_feedback_cycle[
+                "post_harvest_queue_count"
+            ],
+            "next_command": frontier_feedback_cycle["next_command"],
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+        },
         "recommendation": (
             "prefer M5 Max parallel coarse-rank ($0) before paid GHA promotion; "
             "reference Phase 6 xray toolkit for diagnosis"
@@ -4980,6 +5320,11 @@ def _format_dispatch_readiness() -> str:
     lines.append(
         "  Phase 6c (high-level byte shaving queue):   "
         f"{phase6c['status']} — {phase6c['reason']}"
+    )
+    phase6d = readiness["phase_6d_frontier_feedback_cycle"]
+    lines.append(
+        "  Phase 6d (frontier feedback cycle):         "
+        f"{phase6d['status']} — {phase6d['reason']}"
     )
     phase7 = readiness["phase_7_constrained_coord_search"]
     lines.append(
@@ -5055,6 +5400,7 @@ def main(argv: list[str] | None = None) -> int:
                 _cooperative_receiver_solver_integration()
             ),
             "byte_shaving_acquisition": _byte_shaving_acquisition_summary(),
+            "frontier_feedback_cycle": _frontier_feedback_cycle_summary(),
             "l5_v2_frontier_readiness": _l5_v2_frontier_readiness(
                 dispatch_claim_summary=dispatch_claim_summary
             ),
@@ -5195,6 +5541,10 @@ def main(argv: list[str] | None = None) -> int:
     parts.append(_section(
         "Phase 6c — High-level byte-shaving acquisition queue",
         _format_byte_shaving_acquisition_summary(),
+    ))
+    parts.append(_section(
+        "Phase 6d — Frontier feedback cycle autopolicy",
+        _format_frontier_feedback_cycle_summary(),
     ))
     parts.append(_section(
         "Phase 7 — Constrained-coord-search status (sister subagent a8522fca)",

@@ -671,6 +671,7 @@ _EXPECTED_XRAY_TOOLS = frozenset(
         "tools/xray_hardpair_hitlist.py",
         "tools/xray_substrate_classifier.py",
         "tools/xray_per_frame_difficulty_profile.py",
+        "tools/master_gradient_xray.py",
     }
 )
 
@@ -716,6 +717,19 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
             status = phase1.get("status")
             if status not in {"READY", "BLOCKED", "PENDING"}:
                 failures.append("dispatch_readiness:phase_1_exact_eval_packets_bad_status")
+        phase6d = dispatch_readiness.get("phase_6d_frontier_feedback_cycle")
+        if not isinstance(phase6d, dict):
+            failures.append("dispatch_readiness:phase_6d_frontier_feedback_cycle_missing")
+        else:
+            status = phase6d.get("status")
+            if status not in {
+                "PENDING",
+                "READY_CYCLE",
+                "READY_LOCAL_EXECUTION",
+                "POST_HARVEST_QUEUE_READY",
+                "BLOCKED",
+            }:
+                failures.append("dispatch_readiness:phase_6d_frontier_feedback_cycle_bad_status")
     exact_packets = payload.get("exact_eval_packets")
     if not isinstance(exact_packets, list):
         failures.append("exact_eval_packets_missing_or_not_list")
@@ -805,15 +819,67 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
                         "non_dispatchable_readiness_artifacts:"
                         "inverse_scorer_cell_candidate_chain:missing_parity_blocker"
                     )
-                if (
-                    artifact.get("receiver_contract_satisfied") is True
-                    and parity_satisfied
-                    and "exact_auth_eval_required_before_score_claim" not in artifact_blockers
+            if (
+                artifact.get("receiver_contract_satisfied") is True
+                and parity_satisfied
+                and "exact_auth_eval_required_before_score_claim" not in artifact_blockers
+            ):
+                failures.append(
+                    "non_dispatchable_readiness_artifacts:"
+                    "inverse_scorer_cell_candidate_chain:missing_exact_auth_blocker"
+                )
+    frontier_feedback_cycle = payload.get("frontier_feedback_cycle")
+    if not isinstance(frontier_feedback_cycle, dict):
+        failures.append("frontier_feedback_cycle_missing_or_not_object")
+    else:
+        if frontier_feedback_cycle.get("schema") != "pact.frontier_feedback_cycle_summary.v1":
+            failures.append("frontier_feedback_cycle:bad_schema")
+        if frontier_feedback_cycle.get("cycle_tool_exists") is not True:
+            failures.append("frontier_feedback_cycle:cycle_tool_missing")
+        for flag in (
+            "score_claim",
+            "score_claim_valid",
+            "promotion_eligible",
+            "rank_or_kill_eligible",
+            "ready_for_exact_eval_dispatch",
+            "dispatch_attempted",
+            "gpu_launched",
+        ):
+            if frontier_feedback_cycle.get(flag) is not False:
+                failures.append(f"frontier_feedback_cycle:{flag}_not_false")
+        try:
+            error_count = int(frontier_feedback_cycle.get("error_count") or 0)
+        except (TypeError, ValueError):
+            failures.append("frontier_feedback_cycle:error_count_not_integer")
+            error_count = 0
+        if error_count:
+            failures.append(f"frontier_feedback_cycle:error_count:{error_count}")
+        status = frontier_feedback_cycle.get("status")
+        if status not in {
+            "PENDING",
+            "READY_CYCLE",
+            "READY_LOCAL_EXECUTION",
+            "POST_HARVEST_QUEUE_READY",
+            "BLOCKED",
+        }:
+            failures.append("frontier_feedback_cycle:bad_status")
+        if status in {
+            "READY_CYCLE",
+            "READY_LOCAL_EXECUTION",
+            "POST_HARVEST_QUEUE_READY",
+        } and "run_frontier_rate_attack_feedback_cycle.py" not in str(
+            frontier_feedback_cycle.get("next_command") or ""
+        ):
+            failures.append("frontier_feedback_cycle:next_command_missing_cycle_tool")
+        if isinstance(dispatch_readiness, dict):
+            phase6d = dispatch_readiness.get("phase_6d_frontier_feedback_cycle")
+            if isinstance(phase6d, dict):
+                if phase6d.get("status") != status:
+                    failures.append("frontier_feedback_cycle:phase_6d_status_mismatch")
+                if str(phase6d.get("next_command") or "") != str(
+                    frontier_feedback_cycle.get("next_command") or ""
                 ):
-                    failures.append(
-                        "non_dispatchable_readiness_artifacts:"
-                        "inverse_scorer_cell_candidate_chain:missing_exact_auth_blocker"
-                    )
+                    failures.append("frontier_feedback_cycle:phase_6d_next_command_mismatch")
     l5 = payload.get("l5_v2_frontier_readiness")
     if not isinstance(l5, dict):
         failures.append("l5_v2_frontier_readiness_missing_or_not_object")

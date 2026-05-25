@@ -3170,6 +3170,139 @@ def test_pr91_readiness_row_surfaces_audit_errors(monkeypatch):
     assert row["audit_errors"] == ["live readiness audit failed"]
 
 
+def test_operator_briefing_surfaces_frontier_feedback_cycle_autopolicy(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    cycle_dir = tmp_path / "cycle"
+    refresh_dir = cycle_dir / "initial_refresh"
+    queue_path = refresh_dir / "dqs1_followup_queue.json"
+    _write_json(
+        refresh_dir / "feedback_refresh_report.json",
+        {
+            "schema": "frontier_rate_attack_feedback_refresh.v1",
+            "queue_id": "frontier_feedback_unit",
+            "results_root": "experiments/results/dqs1",
+            "artifacts": {
+                "dqs1_followup_queue": str(queue_path),
+            },
+            "selected_candidate_ids": ["pairset_drop_two_a", "pairset_drop_two_b"],
+            "materializer_feedback_payload_count": 2,
+            "dqs1_observation_count": 0,
+            "local_cpu_eureka_planning": {
+                "schema": "frontier_rate_attack_local_cpu_eureka_discovery.v1",
+                "signal_count": 2,
+                "planner_hint_count": 1,
+                "planner_hints": [
+                    {"hint_id": "dqs1_expand_beyond_drop_two_near_boundary"}
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "operator_commands": {
+                "run_frontier_feedback_cycle": [
+                    ".venv/bin/python",
+                    "tools/run_frontier_rate_attack_feedback_cycle.py",
+                    "--candidate-limit",
+                    "2",
+                ],
+            },
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+        },
+    )
+    _write_json(
+        cycle_dir / "frontier_rate_attack_feedback_cycle.json",
+        {
+            "schema": "frontier_rate_attack_feedback_cycle.v1",
+            "initial_refresh": {
+                "artifacts": {
+                    "dqs1_followup_queue": str(queue_path),
+                    "feedback_refresh_report": str(
+                        refresh_dir / "feedback_refresh_report.json"
+                    ),
+                },
+                "selected_candidate_ids": [
+                    "pairset_drop_two_a",
+                    "pairset_drop_two_b",
+                ],
+                "queue_validate": {"valid": True},
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "harvest_signal": {
+                "harvest_path_count": 0,
+                "harvest_paths": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+        },
+    )
+    monkeypatch.setattr(mod, "FRONTIER_FEEDBACK_SCAN_ROOTS", (tmp_path,))
+
+    summary = mod._frontier_feedback_cycle_summary()
+
+    assert summary["status"] == "READY_LOCAL_EXECUTION"
+    assert summary["cycle_tool_exists"] is True
+    assert summary["ready_for_exact_eval_dispatch"] is False
+    assert summary["score_claim"] is False
+    assert summary["cycle_report_count"] == 1
+    assert summary["refresh_report_count"] == 1
+    assert "--execute-followup" in summary["next_command"]
+    assert summary["latest_cycle"]["initial_selected_candidate_count"] == 2
+    assert summary["latest_refresh"]["eureka_signal_count"] == 2
+    assert summary["latest_refresh"]["eureka_planner_hint_ids"] == [
+        "dqs1_expand_beyond_drop_two_near_boundary"
+    ]
+    text = mod._format_frontier_feedback_cycle_summary()
+    assert "authority: planning/local only" in text
+    assert "eureka_hints: 1" in text
+
+
+def test_operator_briefing_blocks_frontier_feedback_cycle_authority_leak(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    _write_json(
+        tmp_path / "frontier_rate_attack_feedback_cycle.json",
+        {
+            "schema": "frontier_rate_attack_feedback_cycle.v1",
+            "score_claim": True,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+        },
+    )
+    monkeypatch.setattr(mod, "FRONTIER_FEEDBACK_SCAN_ROOTS", (tmp_path,))
+
+    summary = mod._frontier_feedback_cycle_summary()
+
+    assert summary["status"] == "BLOCKED"
+    assert summary["error_count"] == 1
+    assert summary["ready_for_exact_eval_dispatch"] is False
+    assert summary["score_claim"] is False
+
+
 def test_operator_briefing_surfaces_inverse_scorer_chain_readiness(
     tmp_path: Path,
     monkeypatch,

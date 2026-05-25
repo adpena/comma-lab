@@ -10,8 +10,10 @@ import pytest
 
 from comma_lab.scheduler.frontier_rate_attack_feedback import (
     FEEDBACK_REFRESH_SCHEMA,
+    LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA,
     FrontierRateAttackFeedbackError,
     build_frontier_rate_attack_feedback_refresh,
+    discover_local_cpu_eureka_planning_signals,
 )
 from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (
     AUTOPILOT_RESULT_SCHEMA,
@@ -175,6 +177,53 @@ def _materializer_observation(
     }
 
 
+def _eureka_signal(
+    *,
+    candidate_id: str = "pairset_drop_two_r013_009_p0327_0459",
+    projected_contest_score: float = 0.1920291170981836,
+    conservative_projected_contest_score: float = 0.1920321170981836,
+    local_score: float = 0.19203961709818362,
+    archive_sha256: str = "d" * 64,
+) -> dict[str, object]:
+    return {
+        "schema": "local_cpu_contest_drift_eureka_signal.v1",
+        **_false_authority(),
+        "auth_frontier_score": 0.19202828295713675,
+        "authority": "false_authority_exact_eval_spend_trigger_only",
+        "bias_local_minus_contest": 0.000010500000000010501,
+        "calibration_anchor_count": 4,
+        "calibration_confidence": "stable_core",
+        "candidate_archive_sha256": archive_sha256,
+        "candidate_id": candidate_id,
+        "candidate_trust_region": "dqs1_fec6_like_same_archive_segnet_rounding",
+        "candidate_trust_region_blockers": [],
+        "candidate_trust_region_matches_calibration": True,
+        "conservative_projected_contest_score": conservative_projected_contest_score,
+        "dispatch_blockers": [
+            "optimizer_candidate_queue_is_planning_only",
+            "requires_exact_eval_readiness_gate",
+            "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+            "requires_non_proxy_score_evidence_before_promotion",
+            "eureka_signal_is_not_score_authority",
+            "exact_contest_cpu_eval_required_before_frontier_claim",
+        ],
+        "eureka_margin": 0.19202828295713675 - conservative_projected_contest_score,
+        "eureka_trigger": False,
+        "guard_band": 0.000003,
+        "local_axis": "macOS-CPU advisory",
+        "local_score": local_score,
+        "projected_contest_score": projected_contest_score,
+        "recommended_action": "observe_only",
+        "source_artifact": (
+            "experiments/results/pareto_gap_uleb/materialized/"
+            f"{candidate_id}/local_cpu_advisory.json"
+        ),
+        "target_axis": "contest-CPU",
+        "target_modes": ["contest_exact_eval_planning"],
+        "trust_region": "dqs1_fec6_like_same_archive_segnet_rounding",
+    }
+
+
 def _write_materializer_feedback(root: Path) -> Path:
     sweep = _write_json(
         root / "receiver_smoke" / "sweep.json",
@@ -316,6 +365,77 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     )
     assert report["queue_summary"]["experiment_count"] == 2
     assert report["queue_summary"]["score_claim"] is False
+
+
+def test_frontier_feedback_compiler_turns_eureka_near_misses_into_beyond_drop_two_hints(
+    tmp_path: Path,
+) -> None:
+    action_summary = _write_action_summary(tmp_path)
+    artifact_root = tmp_path / "frontier_artifacts"
+    eureka_path = _write_json(
+        artifact_root
+        / "local_cpu_contest_drift_eureka_pairset_drop_two_r013_009_p0327_0459_20260525T131428Z.json",
+        _eureka_signal(),
+    )
+
+    discovery = discover_local_cpu_eureka_planning_signals(
+        repo_root=tmp_path,
+        frontier_artifact_roots=(artifact_root,),
+    )
+
+    assert discovery["schema"] == LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA
+    assert discovery["active"] is True
+    assert discovery["signal_count"] == 1
+    assert discovery["candidate_family_counts"] == {"decoder_q_pairset_drop_two": 1}
+    assert discovery["planner_hint_count"] == 1
+    hint = discovery["planner_hints"][0]
+    assert hint["hint_id"] == "dqs1_expand_beyond_drop_two_near_boundary"
+    assert "learned_multi_drop" in hint["recommended_candidate_families"]
+    assert "drop_many_beam_pairwise_interaction_waterfill" in hint[
+        "recommended_candidate_families"
+    ]
+    assert "inverse_scorer_action_surface" in hint["planner_consumers"]
+    _assert_false_authority(hint)
+
+    report = build_frontier_rate_attack_feedback_refresh(
+        repo_root=tmp_path,
+        frontier_artifact_roots=(artifact_root,),
+        action_summary_path=action_summary,
+        results_root=str(tmp_path / "results"),
+        queue_id="frontier_feedback_unit",
+        candidate_limit=1,
+    )
+
+    eureka = report["local_cpu_eureka_planning"]
+    assert eureka["signal_rows"][0]["path"] == eureka_path.relative_to(tmp_path).as_posix()
+    assert eureka["planner_hints"][0]["hint_id"] == (
+        "dqs1_expand_beyond_drop_two_near_boundary"
+    )
+    experiment = report["queue"]["experiments"][0]
+    assert experiment["metadata"]["frontier_feedback_eureka_planning"][
+        "planner_hint_count"
+    ] == 1
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_frontier_feedback_eureka_discovery_rejects_authority_leak(
+    tmp_path: Path,
+) -> None:
+    artifact_root = tmp_path / "frontier_artifacts"
+    payload = _eureka_signal()
+    payload["score_claim"] = True
+    _write_json(
+        artifact_root
+        / "local_cpu_contest_drift_eureka_pairset_drop_two_r013_009_p0327_0459_20260525T131428Z.json",
+        payload,
+    )
+
+    with pytest.raises(FrontierRateAttackFeedbackError, match="score_claim"):
+        discover_local_cpu_eureka_planning_signals(
+            repo_root=tmp_path,
+            frontier_artifact_roots=(artifact_root,),
+        )
 
 
 def test_frontier_feedback_compiler_fails_closed_on_truthy_authority(
