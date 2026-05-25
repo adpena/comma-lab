@@ -56063,11 +56063,11 @@
       "id": "lane_pr95_mlx_loop_closure_cascade_plan_and_frontier_assessment_20260525",
       "name": "PR 95 MLX loop closure cascade plan + frontier assessment",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pr95_mlx_loop_closure_cascade_plan_and_frontier_assessment_landed_20260525.md"
         },
         "real_archive_empirical": {
           "status": false,
@@ -56090,8 +56090,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pr95_mlx_loop_closure_cascade_plan_and_frontier_assessment_landed_20260525.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -56140,6 +56140,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_pr95_mlx_stage_hparams_source_faithful_audit_and_reconciliation_20260525",
+      "name": "PR95 MLX stage hparams source-faithful audit and reconciliation",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/pr95_mlx_stage_hparams_source_faithful_audit_and_reconciliation_landed_20260525.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/pr95_mlx_stage_hparams_source_faithful_audit_and_reconciliation_landed_20260525.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -56149,5 +56190,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T17:32:11Z"
+  "updated_at": "2026-05-25T17:37:19Z"
 }
