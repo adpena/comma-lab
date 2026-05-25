@@ -424,6 +424,65 @@ def test_materializer_campaign_runner_builds_stateful_experiment_queue_command(
     ]
 
 
+def test_materializer_campaign_runner_default_state_gets_execution_rationale(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--run-dir",
+            str(run_dir),
+            "--queue-id",
+            "runner_owned_state_fixture",
+        ]
+    )
+
+    rationale = runner._queue_state_rationale_for_worker(args, run_dir=run_dir)
+
+    assert rationale is not None
+    assert "runner-owned isolated materializer campaign state" in rationale
+    assert "queue_id=runner_owned_state_fixture" in rationale
+    assert str(run_dir) in rationale
+
+
+def test_materializer_campaign_runner_custom_state_requires_explicit_rationale(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--run-dir",
+            str(run_dir),
+            "--queue-state",
+            str(tmp_path / "custom.sqlite"),
+        ]
+    )
+
+    assert runner._queue_state_rationale_for_worker(args, run_dir=run_dir) is None
+
+    args_with_rationale = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--run-dir",
+            str(run_dir),
+            "--queue-state",
+            str(tmp_path / "custom.sqlite"),
+            "--queue-state-rationale",
+            "custom state isolated for test",
+        ]
+    )
+
+    assert (
+        runner._queue_state_rationale_for_worker(args_with_rationale, run_dir=run_dir)
+        == "custom state isolated for test"
+    )
+
+
 def test_materializer_campaign_runner_performance_fallback_is_fail_closed() -> None:
     payload = runner._queue_performance_summary_payload(
         runner.CommandResult(

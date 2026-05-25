@@ -1,0 +1,206 @@
+{
+  "blocked_row_count": 0,
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion"
+  ],
+  "exact_cuda_auth_eval": false,
+  "executable_row_count": 1,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "2026-05-25T09:01:32Z",
+  "gpu_launched": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "row_count": 1,
+  "rows": [
+    {
+      "backlog_key": "materializer_work_queue_required:archive_section_entropy_recode_v1:archive_section:section_entropy_recode:archive_section_entropy_recode_adapter",
+      "backlog_rank": 1,
+      "candidate_saved_bytes_sum": 128,
+      "charged_bits_changed": false,
+      "command": [
+        ".venv/bin/python",
+        "tools/run_family_agnostic_materializer.py",
+        "--target-kind",
+        "archive_section_entropy_recode_v1",
+        "--archive-path",
+        "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+        "--output-archive",
+        "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+        "--output-manifest",
+        "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+        "--runtime-consumption-proof-out",
+        "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.runtime_consumption_proof.json",
+        "--section-manifest",
+        "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+        "--section-name",
+        "decoder_packed_brotli"
+      ],
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "materializer_work_queue_local_proof_chain_only",
+        "archive_section_entropy_recode_requires_archive_preflight",
+        "archive_section_entropy_recode_requires_same_runtime_inflate_parity",
+        "exact_auth_eval_required_before_score_claim"
+      ],
+      "exact_cuda_auth_eval": false,
+      "executable": true,
+      "expected_score_gain_sum": 0.00028522994599963796,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "materialization_blockers": [],
+      "materializer_id": "archive_section_entropy_recode_adapter",
+      "operation_family": "section_entropy_recode",
+      "packet_ir_blocker_counts": {
+        "non_dqs1_target_requires_materializer_work_queue:archive_section_entropy_recode_v1": 1,
+        "packetir_operation_set_requires_materializer_contexts": 1,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:compiled_from_inverse_action_operation_set_compiler": 1,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:inverse_action_rehydrated_operation_is_planning_only": 1,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:inverse_action_source_operations_rehydrated_from_provenance": 1,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:inverse_action_unit_is_planning_only": 1,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:requires_byte_closed_archive_before_dispatch": 1,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:requires_exact_auth_eval_before_score_claim": 1,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:requires_materializer_contexts": 1,
+        "selected_operation_blocker:inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000:requires_runtime_consumption_proof_before_exact_eval": 1
+      },
+      "packet_ir_lowered_row_count": 1,
+      "postconditions": [
+        {
+          "equals": "archive_section_entropy_recode_candidate.v1",
+          "key": "schema",
+          "path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+          "type": "json_equals"
+        },
+        {
+          "false_or_missing": [
+            "ready_for_exact_eval_dispatch",
+            "dispatch_attempted",
+            "gpu_launched"
+          ],
+          "forbidden_statuses": [
+            "failed"
+          ],
+          "path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+          "required_artifact_records": [
+            "candidate_archive"
+          ],
+          "required_equals": {
+            "receiver_verification.schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+            "schema": "archive_section_entropy_recode_candidate.v1"
+          },
+          "required_false": [
+            "score_claim",
+            "promotion_eligible",
+            "rank_or_kill_eligible"
+          ],
+          "required_nonempty": [
+            "runtime_consumption_proof_path"
+          ],
+          "required_nonempty_unless_true": [],
+          "required_positive_int": [
+            "candidate_archive.bytes",
+            "candidate_member.bytes"
+          ],
+          "required_sha256": [
+            "candidate_archive.sha256",
+            "candidate_member.sha256"
+          ],
+          "required_true": [
+            "byte_closed_candidate_emitted",
+            "receiver_contract_satisfied",
+            "receiver_verification.receiver_contract_satisfied"
+          ],
+          "type": "json_completion_contract"
+        }
+      ],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_contract_id": "archive_section_entropy_recode_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+      "renderer_payload_dfl1_parity_context": null,
+      "repo_root": ".",
+      "resource_kind": "local_cpu",
+      "schema": "byte_shaving_materializer_work_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "source_backlog_key": null,
+      "source_packet_ir_operation_set_ids": [
+        "packetir_opset_combo_0001"
+      ],
+      "source_packet_ir_source_operation_set_ids": [
+        "opset_combo_0001"
+      ],
+      "source_plan_path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/byte_shaving_campaign_plan.inline_compiler.json",
+      "source_selection_ids": [
+        "opset_combo_0001",
+        "top_0001",
+        "packetir_opset_combo_0001"
+      ],
+      "source_unit_ids": [
+        "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+      ],
+      "target_kind": "archive_section_entropy_recode_v1",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "telemetry": {
+        "artifact_paths": [
+          "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+          "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+          "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.runtime_consumption_proof.json"
+        ],
+        "family_agnostic_materializer_contract": {
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "family_agnostic_materializer_command_contract.v1",
+          "score_claim": false,
+          "target_kind": "archive_section_entropy_recode_v1"
+        },
+        "include_postcondition_paths": true,
+        "input_artifact_paths": [
+          "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+          "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json"
+        ],
+        "pullback_artifact_paths": [
+          "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+          "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+          "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.runtime_consumption_proof.json"
+        ]
+      },
+      "tool": "tools/run_family_agnostic_materializer.py",
+      "unit_kind": "archive_section",
+      "work_id": "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter",
+      "work_rank": 1
+    }
+  ],
+  "schema": "byte_shaving_materializer_work_queue.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_backlog_schema": "byte_shaving_materializer_backlog.v1",
+  "source_plan_path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/byte_shaving_campaign_plan.inline_compiler.json",
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "tool": "comma_lab.scheduler.byte_shaving_campaign_queue"
+}

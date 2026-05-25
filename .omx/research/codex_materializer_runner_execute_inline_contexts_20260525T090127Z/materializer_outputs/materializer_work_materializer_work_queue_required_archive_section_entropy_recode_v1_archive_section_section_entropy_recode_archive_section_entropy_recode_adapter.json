@@ -1,0 +1,173 @@
+{
+  "artifact_write": {
+    "allow_overwrite": false,
+    "bytes_written": 143,
+    "free_bytes_before": 672652271616,
+    "path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+    "sha256": "0f7ff29b8b9c0de2d374353c60705794b825ddb8da66433f7428549326da223b"
+  },
+  "byte_closed_candidate_emitted": true,
+  "candidate_archive": {
+    "bytes": 143,
+    "path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+    "sha256": "0f7ff29b8b9c0de2d374353c60705794b825ddb8da66433f7428549326da223b"
+  },
+  "candidate_member": {
+    "bytes": 35,
+    "name": "0.raw",
+    "sha256": "060e7fcd746873a2e44bff69fd5c385632be199fd543743c766b7d112d1e038b",
+    "zip_compressed_bytes": 35,
+    "zip_compressed_payload_sha256": "060e7fcd746873a2e44bff69fd5c385632be199fd543743c766b7d112d1e038b",
+    "zip_compressed_sha256": "060e7fcd746873a2e44bff69fd5c385632be199fd543743c766b7d112d1e038b",
+    "zip_compression_method": "stored"
+  },
+  "dispatch_attempted": false,
+  "gpu_launched": false,
+  "materializer_id": "archive_section_entropy_recode_adapter",
+  "portability_contract": {
+    "deterministic_surface": "python_zipfile_brotli_section_recode",
+    "implementation_language": "python",
+    "materializer_id": "archive_section_entropy_recode_adapter",
+    "notes": null,
+    "portability_class": "portable_python_reference",
+    "promotion_authority": false,
+    "rank_or_kill_authority": false,
+    "required_python_modules": [
+      "brotli",
+      "zipfile"
+    ],
+    "requires_cuda": false,
+    "requires_gpu": false,
+    "requires_metal": false,
+    "requires_mlx": false,
+    "requires_mps": false,
+    "schema": "family_agnostic_materializer_portability_contract.v1",
+    "score_authority": false,
+    "target_kind": "archive_section_entropy_recode_v1",
+    "unsupported_features": []
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "readiness_blockers": [
+    "section_length_changed_requires_runtime_consumption_proof",
+    "runtime_consumption_proof_not_passed",
+    "archive_section_entropy_recode_receiver_contract_not_satisfied"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "archive_section_entropy_recode_v1.receiver.v1",
+  "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+  "receiver_contract_satisfied": false,
+  "receiver_verification": {
+    "blockers": [
+      "runtime_consumption_proof_not_passed"
+    ],
+    "candidate_archive_sha256": "0f7ff29b8b9c0de2d374353c60705794b825ddb8da66433f7428549326da223b",
+    "candidate_member_sha256": "060e7fcd746873a2e44bff69fd5c385632be199fd543743c766b7d112d1e038b",
+    "candidate_member_sha256s": {},
+    "materializer_id": "archive_section_entropy_recode_adapter",
+    "proof_kind": "archive_section_entropy_recode_raw_payload_identity_receiver_proof.v1",
+    "proof_path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.runtime_consumption_proof.json",
+    "proof_present": true,
+    "proof_schema": "family_agnostic_runtime_consumption_proof_v1",
+    "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+    "receiver_contract_satisfied": false,
+    "runtime_adapter_ready": false,
+    "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+    "target_kind": "archive_section_entropy_recode_v1"
+  },
+  "runtime_consumption_proof_path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.runtime_consumption_proof.json",
+  "runtime_consumption_proof_write": {
+    "allow_overwrite": false,
+    "bytes_written": 3706,
+    "free_bytes_before": 672652267520,
+    "path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.runtime_consumption_proof.json",
+    "sha256": "afc502e6a0592daa1f6198a99e02f2ffbb3705c22570ae70769fc9fc19693884"
+  },
+  "schema": "archive_section_entropy_recode_candidate.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "section_manifest_schema": "proof_section_manifest.v1",
+  "section_recode": {
+    "candidate_archive_bytes": 143,
+    "changed_length_section_names": [
+      "decoder_packed_brotli"
+    ],
+    "changed_section_count": 1,
+    "saved_bytes": 66,
+    "selected_section_names": [
+      "decoder_packed_brotli"
+    ],
+    "source_archive_bytes": 209
+  },
+  "sections": [
+    {
+      "candidate_length": 35,
+      "candidate_quality": 10,
+      "candidate_sha256": "060e7fcd746873a2e44bff69fd5c385632be199fd543743c766b7d112d1e038b",
+      "changed": true,
+      "index": 0,
+      "length": 101,
+      "name": "decoder_packed_brotli",
+      "offset": 0,
+      "optimization_role": null,
+      "raw_payload_sha256": "54f3b3e5fcaa5edb502ff59fac8b875b84d79988a4150c03f67422a1eeef8f2a",
+      "saved_bytes": 66,
+      "selected": true,
+      "sha256": "b9a445f95fd1af11b4b382e6c0e4d76e8d23f00c6a7ba1967ce643e5e4fab0a2"
+    }
+  ],
+  "selected_member_name": "0.raw",
+  "source_archive": {
+    "bytes": 209,
+    "path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+    "sha256": "4cbcd612f619241ef0163f3162c5ca6a79979b34b44148dca94c8ae42998e130"
+  },
+  "source_member": {
+    "bytes": 101,
+    "name": "0.raw",
+    "sha256": "b9a445f95fd1af11b4b382e6c0e4d76e8d23f00c6a7ba1967ce643e5e4fab0a2",
+    "zip_compressed_bytes": 101,
+    "zip_compressed_payload_sha256": "b9a445f95fd1af11b4b382e6c0e4d76e8d23f00c6a7ba1967ce643e5e4fab0a2",
+    "zip_compressed_sha256": "b9a445f95fd1af11b4b382e6c0e4d76e8d23f00c6a7ba1967ce643e5e4fab0a2",
+    "zip_compression_method": "stored"
+  },
+  "target_kind": "archive_section_entropy_recode_v1",
+  "tool_run_manifest": {
+    "argv": [
+      "--target-kind",
+      "archive_section_entropy_recode_v1",
+      "--archive-path",
+      "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+      "--output-archive",
+      "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+      "--output-manifest",
+      "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+      "--runtime-consumption-proof-out",
+      "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.runtime_consumption_proof.json",
+      "--section-manifest",
+      "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+      "--section-name",
+      "decoder_packed_brotli"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "5c5343b01172f1944008a3e59b6b3a87639f44d2c6a7368c3bc212d41ebf261d",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 209,
+        "path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+        "sha256": "4cbcd612f619241ef0163f3162c5ca6a79979b34b44148dca94c8ae42998e130"
+      },
+      {
+        "bytes": 295,
+        "path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json",
+        "sha256": "c70a6e8c257f1e06d0281789635d0eb7393b224e87a7bba301aa6b7756aa8bad"
+      }
+    ],
+    "output_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/run_family_agnostic_materializer.py"
+  }
+}

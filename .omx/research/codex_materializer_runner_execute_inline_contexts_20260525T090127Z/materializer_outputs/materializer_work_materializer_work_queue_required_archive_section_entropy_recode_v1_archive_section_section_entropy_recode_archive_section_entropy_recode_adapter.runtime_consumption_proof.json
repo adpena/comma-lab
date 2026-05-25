@@ -1,0 +1,75 @@
+{
+  "all_selected_section_lengths_preserved": false,
+  "all_selected_sections_raw_payload_identical": true,
+  "candidate_archive": {
+    "bytes": 143,
+    "path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+    "sha256": "0f7ff29b8b9c0de2d374353c60705794b825ddb8da66433f7428549326da223b"
+  },
+  "candidate_archive_sha256": "0f7ff29b8b9c0de2d374353c60705794b825ddb8da66433f7428549326da223b",
+  "candidate_member": {
+    "bytes": 35,
+    "name": "0.raw",
+    "sha256": "060e7fcd746873a2e44bff69fd5c385632be199fd543743c766b7d112d1e038b",
+    "zip_compressed_bytes": 35,
+    "zip_compressed_payload_sha256": "060e7fcd746873a2e44bff69fd5c385632be199fd543743c766b7d112d1e038b",
+    "zip_compressed_sha256": "060e7fcd746873a2e44bff69fd5c385632be199fd543743c766b7d112d1e038b",
+    "zip_compression_method": "stored"
+  },
+  "candidate_member_sha256": "060e7fcd746873a2e44bff69fd5c385632be199fd543743c766b7d112d1e038b",
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "gpu_launched": false,
+  "materializer_id": "archive_section_entropy_recode_adapter",
+  "member_sha256": "060e7fcd746873a2e44bff69fd5c385632be199fd543743c766b7d112d1e038b",
+  "passed": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_kind": "archive_section_entropy_recode_raw_payload_identity_receiver_proof.v1",
+  "proof_scope": "brotli_section_raw_payload_identity_after_entropy_recode",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "archive_section_entropy_recode_v1.receiver.v1",
+  "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+  "receiver_contract_satisfied": false,
+  "runtime_consumption_proof_passed": false,
+  "schema": "family_agnostic_runtime_consumption_proof_v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "section_count": 1,
+  "section_proofs": [
+    {
+      "candidate_length": 35,
+      "candidate_offset": 0,
+      "candidate_raw_payload_sha256": "54f3b3e5fcaa5edb502ff59fac8b875b84d79988a4150c03f67422a1eeef8f2a",
+      "candidate_section_sha256": "060e7fcd746873a2e44bff69fd5c385632be199fd543743c766b7d112d1e038b",
+      "index": 0,
+      "name": "decoder_packed_brotli",
+      "passed": false,
+      "raw_payload_identical": true,
+      "section_length_preserved": false,
+      "source_length": 101,
+      "source_offset": 0,
+      "source_raw_payload_sha256": "54f3b3e5fcaa5edb502ff59fac8b875b84d79988a4150c03f67422a1eeef8f2a",
+      "source_section_sha256": "b9a445f95fd1af11b4b382e6c0e4d76e8d23f00c6a7ba1967ce643e5e4fab0a2"
+    }
+  ],
+  "selected_member_name": "0.raw",
+  "source_archive": {
+    "bytes": 209,
+    "path": "/Users/adpena/Projects/pact/.omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+    "sha256": "4cbcd612f619241ef0163f3162c5ca6a79979b34b44148dca94c8ae42998e130"
+  },
+  "source_member": {
+    "bytes": 101,
+    "name": "0.raw",
+    "sha256": "b9a445f95fd1af11b4b382e6c0e4d76e8d23f00c6a7ba1967ce643e5e4fab0a2",
+    "zip_compressed_bytes": 101,
+    "zip_compressed_payload_sha256": "b9a445f95fd1af11b4b382e6c0e4d76e8d23f00c6a7ba1967ce643e5e4fab0a2",
+    "zip_compressed_sha256": "b9a445f95fd1af11b4b382e6c0e4d76e8d23f00c6a7ba1967ce643e5e4fab0a2",
+    "zip_compression_method": "stored"
+  },
+  "source_member_sha256": "b9a445f95fd1af11b4b382e6c0e4d76e8d23f00c6a7ba1967ce643e5e4fab0a2",
+  "target_kind": "archive_section_entropy_recode_v1"
+}

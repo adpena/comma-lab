@@ -2672,15 +2672,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help=(
             "SQLite state path for the generated materializer execution queue; "
-            "defaults to the scheduler's canonical queue-id state path"
+            "defaults to the run-dir artifact state path"
         ),
     )
     parser.add_argument(
         "--queue-state-rationale",
         default=None,
         help=(
-            "Specific rationale passed to experiment_queue run-worker when "
-            "--queue-state points at a noncanonical execution-state path"
+            "Specific rationale passed to experiment_queue run-worker when a "
+            "custom --queue-state points at a noncanonical execution-state path"
         ),
     )
     parser.add_argument(
@@ -3263,6 +3263,23 @@ def _experiment_queue_command(
         _display_path(state_path),
         *subcommand,
     ]
+
+
+def _queue_state_rationale_for_worker(
+    args: argparse.Namespace,
+    *,
+    run_dir: Path,
+) -> str | None:
+    if args.queue_state_rationale:
+        return str(args.queue_state_rationale)
+    if args.queue_state is not None:
+        return None
+    return (
+        "runner-owned isolated materializer campaign state under run-dir; "
+        f"queue_id={args.queue_id}; "
+        f"run_dir={_display_path(run_dir)}; "
+        "execution is bound to the generated queue and state paths emitted by this run"
+    )
 
 
 def _runtime_policy_command(
@@ -4442,11 +4459,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     if args.max_experiments is not None:
         worker_command.extend(["--max-experiments", str(args.max_experiments)])
-    if args.queue_state_rationale:
+    queue_state_rationale = _queue_state_rationale_for_worker(
+        args,
+        run_dir=run_dir,
+    )
+    if queue_state_rationale:
         worker_command.extend(
             [
                 "--noncanonical-state-rationale",
-                str(args.queue_state_rationale),
+                queue_state_rationale,
             ]
         )
     if args.execute:

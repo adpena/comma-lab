@@ -1,0 +1,32 @@
+{
+  "assertions": {
+    "authority_fields_false": true,
+    "byte_closed_candidate_emitted": true,
+    "materializer_contexts_generated": true,
+    "materializer_work_queue_has_executable_row": true,
+    "missing_runtime_proof_hint_did_not_write_to_source_run": true,
+    "runner_noncanonical_state_rationale_supplied": true,
+    "worker_launched_materializer": true,
+    "worker_returncode_zero": true
+  },
+  "candidate_archive_bytes": 143,
+  "candidate_archive_sha256": "0f7ff29b8b9c0de2d374353c60705794b825ddb8da66433f7428549326da223b",
+  "generated_at_utc": "2026-05-25T09:02:00Z",
+  "materializer_manifest_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+  "materializer_returncode": 0,
+  "queue_step_succeeded": false,
+  "receiver_contract_satisfied": false,
+  "receiver_contract_status": "blocked_by_length_changing_archive_section_entropy_recode_without_runtime_adapter",
+  "receiver_readiness_blockers": [
+    "section_length_changed_requires_runtime_consumption_proof",
+    "runtime_consumption_proof_not_passed",
+    "archive_section_entropy_recode_receiver_contract_not_satisfied"
+  ],
+  "run_dir": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z",
+  "runtime_consumption_proof_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.runtime_consumption_proof.json",
+  "schema": "codex_materializer_runner_execute_inline_context_proof.v1",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false
+}

@@ -126,6 +126,22 @@ def _first_text(context: Mapping[str, Any], keys: Sequence[str]) -> str | None:
     return None
 
 
+def _proof_path_text(value: Any) -> str | None:
+    text = _text(value)
+    if text is None:
+        return None
+    if text.lower() in {"missing", "pending", "required", "none", "null"}:
+        return None
+    return text
+
+
+def _path_exists(text: str, *, repo_root: Path) -> bool:
+    path = Path(text)
+    if not path.is_absolute():
+        path = repo_root / path
+    return path.exists()
+
+
 def _first_text_with_key(
     context: Mapping[str, Any],
     keys: Sequence[str],
@@ -250,11 +266,24 @@ def _output_paths(
 def _copy_common_materializer_controls(
     context: dict[str, Any],
     hints: Mapping[str, Any],
+    *,
+    repo_root: Path,
 ) -> None:
     """Carry controls consumed by the family materializer command builder."""
 
+    runtime_proof = _proof_path_text(hints.get("runtime_consumption_proof"))
+    runtime_proof_out = _proof_path_text(
+        hints.get("runtime_consumption_proof_out")
+        or hints.get("runtime_consumption_proof_output")
+    )
+    if runtime_proof is not None and _path_exists(runtime_proof, repo_root=repo_root):
+        context["runtime_consumption_proof"] = runtime_proof
+    elif runtime_proof_out is not None:
+        context["runtime_consumption_proof_out"] = runtime_proof_out
+    elif runtime_proof is not None:
+        context["runtime_consumption_proof_missing_hint_ignored"] = runtime_proof
+
     for key, value in (
-        ("runtime_consumption_proof", _first_text(hints, ("runtime_consumption_proof",))),
         ("expected_output_sha256", _first_text(hints, ("expected_output_sha256",))),
         ("expected_manifest_sha256", _first_text(hints, ("expected_manifest_sha256",))),
         (
@@ -341,7 +370,7 @@ def _archive_section_context_row(
         values = _string_list(hints.get(key))
         if values:
             context[key] = values
-    _copy_common_materializer_controls(context, hints)
+    _copy_common_materializer_controls(context, hints, repo_root=repo_root)
     return _context_row_payload(row, context=context, blockers=blockers)
 
 
@@ -589,7 +618,7 @@ def _packet_member_context_row(
         values = _string_list(hints.get(key))
         if values:
             context[key] = values
-    _copy_common_materializer_controls(context, hints)
+    _copy_common_materializer_controls(context, hints, repo_root=repo_root)
     return _context_row_payload(row, context=context, blockers=blockers)
 
 
@@ -642,7 +671,7 @@ def _tensor_factorize_context_row(
         context["output_archive"] = output_archive
     if json_out is not None:
         context["output_manifest"] = json_out
-    _copy_common_materializer_controls(context, hints)
+    _copy_common_materializer_controls(context, hints, repo_root=repo_root)
     return _context_row_payload(row, context=context, blockers=blockers)
 
 

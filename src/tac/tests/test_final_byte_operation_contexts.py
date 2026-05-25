@@ -407,7 +407,11 @@ def test_final_byte_context_compiler_emits_consumable_materializer_contexts(
     assert context["archive_path"] == context["source_archive"]
     assert context["section_manifest"].endswith("sections.json")
     assert context["target_sections"] == ["decoder_packed_brotli"]
-    assert context["runtime_consumption_proof"].endswith("runtime_proof.json")
+    assert "runtime_consumption_proof" not in context
+    assert "runtime_consumption_proof_out" not in context
+    assert context["runtime_consumption_proof_missing_hint_ignored"].endswith(
+        "runtime_proof.json"
+    )
     assert context["min_free_bytes"] == 512
     assert context["allow_size_regression"] is True
     assert context["score_claim"] is False
@@ -426,6 +430,41 @@ def test_final_byte_context_compiler_emits_consumable_materializer_contexts(
     )
     assert work_queue["executable_row_count"] == 1
     assert work_queue["rows"][0]["tool"] == "tools/run_family_agnostic_materializer.py"
+    command = work_queue["rows"][0]["command"]
+    assert "--runtime-consumption-proof" not in command
+    assert "--runtime-consumption-proof-out" in command
+    proof_out_index = command.index("--runtime-consumption-proof-out")
+    assert command[proof_out_index + 1].startswith(str(tmp_path / "out"))
+
+
+def test_final_byte_context_compiler_uses_existing_runtime_proof_as_input(
+    tmp_path: Path,
+) -> None:
+    runtime_proof = tmp_path / "runtime_proof.json"
+    runtime_proof.write_text('{"schema":"fixture_runtime_proof.v1"}', encoding="utf-8")
+
+    payload = build_final_byte_operation_contexts(
+        _backlog(),
+        artifact_map=_artifact_map(tmp_path),
+        repo_root=tmp_path,
+        default_output_root=tmp_path / "out",
+    )
+
+    context = payload["rows"][0]["context"]
+    assert context["runtime_consumption_proof"] == str(runtime_proof)
+    assert "runtime_consumption_proof_out" not in context
+    resolved = materializer_contexts_from_payload(payload)
+    work_queue = build_materializer_work_queue(
+        _backlog(),
+        repo_root=tmp_path,
+        contexts=resolved,
+        source_plan_path="plan.json",
+    )
+    command = work_queue["rows"][0]["command"]
+    assert ["--runtime-consumption-proof", str(runtime_proof)] in [
+        command[index : index + 2] for index in range(len(command) - 1)
+    ]
+    assert "--runtime-consumption-proof-out" not in command
 
 
 @pytest.mark.parametrize(
@@ -502,7 +541,7 @@ def test_final_byte_context_compiler_covers_packet_member_and_tensor_families(
         rows_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["command"][index : index + 2]
         for index in range(len(rows_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["command"]) - 1)
     ]
-    assert "--runtime-consumption-proof" in rows_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["command"]
+    assert "--runtime-consumption-proof-out" in rows_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["command"]
     assert "--min-free-bytes" in rows_by_target[PACKET_MEMBER_RECOMPRESS_TARGET_KIND]["command"]
     assert [
         "--factorization-contract",

@@ -1,0 +1,93 @@
+{
+  "allowed_use": "next_inverse_action_replan_input_only",
+  "blockers": [
+    "response_update_not_applied",
+    "placeholder_not_scorer_response_dataset",
+    "requires_next_action_functional_replan",
+    "requires_exact_auth_eval_before_score_claim",
+    "queue_observation_recovery_required"
+  ],
+  "charged_bits_changed": false,
+  "consumer_contract": {
+    "next_real_artifact_flag": "--scorer-response",
+    "next_real_artifact_schema": "scorer_response_dataset.v1",
+    "placeholder_must_not_be_used_as_scorer_response": true
+  },
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "exact_readiness_handoff_count": 1,
+  "exact_readiness_handoff_paths": [
+    {
+      "dispatch_plan_exists": false,
+      "dispatch_plan_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/exact_eval_handoff/dispatch_plan.json",
+      "dispatch_queue_exists": false,
+      "dispatch_queue_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/exact_eval_handoff/dispatch_queue.json",
+      "exact_readiness_bridge_report_exists": false,
+      "exact_readiness_bridge_report_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/exact_eval_handoff/exact_readiness_bridge_report.json",
+      "handoff_dir": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/exact_eval_handoff",
+      "harvest_report_exists": false,
+      "harvest_report_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/exact_eval_handoff/harvest_report.json",
+      "readiness_dir_exists": false,
+      "readiness_dir_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/exact_eval_handoff/exact_readiness",
+      "source_queue_exists": false,
+      "source_queue_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/exact_eval_handoff/source_queue.json"
+    }
+  ],
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_promotion_or_paid_dispatch_authority",
+  "gpu_launched": false,
+  "next_action_functional_command_hint": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "tools/build_inverse_steganalysis_action_functional.py",
+    "--output",
+    ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/inverse_steganalysis_action_functional.feedback.json",
+    "--md-out",
+    ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/inverse_steganalysis_action_functional.feedback.md",
+    "--repo-root",
+    "/Users/adpena/Projects/pact",
+    "--resource-kind",
+    "local_mlx",
+    "--byte-shaving-campaign-plan",
+    ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/byte_shaving_campaign_plan.inline_compiler.json",
+    "--queue-performance-summary",
+    ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/queue_performance_summary.json",
+    "--queue-performance-axis",
+    "[local-queue-performance advisory]",
+    "--queue-performance-runtime-identity",
+    ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/queue_performance_runtime_identity.json",
+    "--queue-performance-cache-identity",
+    ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/queue_performance_cache_identity.json",
+    "--queue-observation",
+    ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/queue_observation.json"
+  ],
+  "next_run_hint": [
+    "--queue-performance-summary",
+    ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/queue_performance_summary.json"
+  ],
+  "not_scorer_response_dataset": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_feedback_replan_followup_queue_blockers": [
+    "queue_observation_recovery_required"
+  ],
+  "queue_feedback_replan_followup_queue_emitted": false,
+  "queue_feedback_replan_followup_queue_path": null,
+  "queue_feedback_replan_request_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/queue_feedback_replan_request.json",
+  "queue_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_execution_queue.json",
+  "queue_performance_summary_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/queue_performance_summary.json",
+  "queue_state_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_execution_queue.sqlite",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "replan_required": true,
+  "response_update_applied": false,
+  "run_dir": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z",
+  "runtime_policy_applied_queue_path": null,
+  "runtime_policy_path": null,
+  "schema": "byte_shaving_campaign_response_update_placeholder.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_run_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_campaign_run.json"
+}

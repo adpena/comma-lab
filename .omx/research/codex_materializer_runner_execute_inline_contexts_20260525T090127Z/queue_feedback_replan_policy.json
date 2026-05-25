@@ -1,0 +1,875 @@
+{
+  "allowed_use": "local_materializer_feedback_replan_policy_only",
+  "auto_execute_eligible": false,
+  "blockers": [],
+  "candidate_generation_command_template": null,
+  "candidate_generation_queue_blockers": [],
+  "candidate_widening_handoff": {
+    "allowed_use": "local_candidate_generation_queue_only",
+    "blockers": [],
+    "command_template": null,
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_dispatch_authority",
+    "gpu_launched": false,
+    "inverse_scorer_max_units": null,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "widened_md_path": null,
+    "widened_output_path": null
+  },
+  "contest_cuda_auth_eval": false,
+  "decision": "recover_queue_health",
+  "dispatch_attempted": false,
+  "exact_auth_calibration_policy": {
+    "allowed_use": "feedback_replan_trust_region_calibration_only",
+    "blockers": [],
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_dispatch_authority",
+    "gpu_launched": false,
+    "packet_count": 0,
+    "packet_paths": [],
+    "pair": null,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "source": "run_derived_discovery",
+    "usable_for_feedback_trust_region": false
+  },
+  "exact_auth_calibration_usable": false,
+  "exact_cuda_auth_eval": false,
+  "exact_readiness_handoff_count": 1,
+  "feedback_action_functional_path": null,
+  "feedback_action_functional_summary": {
+    "blockers": [],
+    "dry_no_selected_cells": false,
+    "loaded": false,
+    "path": null
+  },
+  "feedback_followup_executed": false,
+  "feedback_followup_execution_success": false,
+  "feedback_followup_policy_enabled": false,
+  "feedback_followup_queue_emitted": false,
+  "feedback_followup_queue_path": null,
+  "feedback_followup_queue_validation": null,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "gpu_launched": false,
+  "iteration_index": 0,
+  "max_iterations": 3,
+  "next_iteration_command_template": null,
+  "next_iteration_index": 1,
+  "operator_queue_state_mutation_required": true,
+  "plan_path": ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/byte_shaving_campaign_plan.inline_compiler.json",
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "runner_inline_contexts_execute_proof_090127",
+  "queue_observation_maintenance_recommended": false,
+  "queue_observation_recovery_plan": {
+    "action_count": 2,
+    "actions": [
+      {
+        "action": "rewind_failed_step",
+        "backlog_keys": [
+          "materializer_work_queue_required:archive_section_entropy_recode_v1:archive_section:section_entropy_recode:archive_section_entropy_recode_adapter"
+        ],
+        "blocker_sources": [
+          "experiment_queue_observation_failed_steps:1",
+          "experiment_queue_observation_artifact_postcondition_failures:1"
+        ],
+        "candidate_ids": [],
+        "command": [
+          "/Users/adpena/Projects/pact/.venv/bin/python",
+          "tools/experiment_queue.py",
+          "--queue",
+          ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_execution_queue.json",
+          "--state",
+          ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_execution_queue.sqlite",
+          "rewind",
+          "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter",
+          "materialize_local_proof_chain",
+          "--reason",
+          "materializer campaign queue observation recovery"
+        ],
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "expected_artifact_paths": [
+          ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+          ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+          ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.runtime_consumption_proof.json",
+          ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+          ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json"
+        ],
+        "experiment_id": "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter",
+        "gpu_launched": false,
+        "local_only": true,
+        "materializer_id": "archive_section_entropy_recode_adapter",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "failed queue step",
+        "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+        "required": true,
+        "requires_explicit_execution": true,
+        "resource_kind": "local_cpu",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_selection_ids": [
+          "opset_combo_0001",
+          "top_0001",
+          "packetir_opset_combo_0001"
+        ],
+        "source_unit_ids": [
+          "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+        ],
+        "status": "failed",
+        "step_id": "materialize_local_proof_chain",
+        "target_kind": "archive_section_entropy_recode_v1",
+        "work_ids": [
+          "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter"
+        ]
+      },
+      {
+        "action": "inspect_artifact_postcondition_failures",
+        "blocker_sources": [
+          "experiment_queue_observation_failed_steps:1",
+          "experiment_queue_observation_artifact_postcondition_failures:1"
+        ],
+        "command": null,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "gpu_launched": false,
+        "local_only": true,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "artifact postcondition failure lacks a succeeded-step identity",
+        "required": true,
+        "requires_explicit_execution": true,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      }
+    ],
+    "allowed_use": "local_queue_recovery_planning_only",
+    "commands": [
+      [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_execution_queue.json",
+        "--state",
+        ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_execution_queue.sqlite",
+        "rewind",
+        "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter",
+        "materialize_local_proof_chain",
+        "--reason",
+        "materializer campaign queue observation recovery"
+      ]
+    ],
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+    "gpu_launched": false,
+    "grouped_blocker_count": 4,
+    "grouped_blockers": [
+      {
+        "action_names": [
+          "inspect_artifact_postcondition_failures"
+        ],
+        "actions": [
+          "inspect_artifact_postcondition_failures"
+        ],
+        "affected_experiment_ids": [],
+        "affected_step_ids": [],
+        "allowed_use": "queue_recovery_grouping_and_planning_only",
+        "backlog_keys": [],
+        "blocker_family": "experiment_queue_observation_artifact_postcondition_failures",
+        "blockers": [
+          "experiment_queue_observation_artifact_postcondition_failures:1"
+        ],
+        "candidate_ids": [],
+        "contest_cuda_auth_eval": false,
+        "count": 1,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "expected_artifact_paths": [],
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "gpu_launched": false,
+        "group_id": "experiment_queue_observation_artifact_postcondition_failures:action:inspect_artifact_postcondition_failures",
+        "maintenance_action_count": 0,
+        "materializer_ids": [],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_contract_kinds": [],
+        "recommended_planning_effect": "operator_inspection_required_before_followup",
+        "repeated": false,
+        "required_action_count": 1,
+        "resource_kinds": [],
+        "schema": "queue_observation_recovery_blocker_group.v1",
+        "scope_kind": "action",
+        "scope_value": "inspect_artifact_postcondition_failures",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_selection_ids": [],
+        "source_unit_ids": [],
+        "statuses": [],
+        "target_kinds": [],
+        "work_ids": []
+      },
+      {
+        "action_names": [
+          "rewind_failed_step"
+        ],
+        "actions": [
+          "rewind_failed_step"
+        ],
+        "affected_experiment_ids": [
+          "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter"
+        ],
+        "affected_step_ids": [
+          "materialize_local_proof_chain"
+        ],
+        "allowed_use": "queue_recovery_grouping_and_planning_only",
+        "backlog_keys": [
+          "materializer_work_queue_required:archive_section_entropy_recode_v1:archive_section:section_entropy_recode:archive_section_entropy_recode_adapter"
+        ],
+        "blocker_family": "experiment_queue_observation_artifact_postcondition_failures",
+        "blockers": [
+          "experiment_queue_observation_artifact_postcondition_failures:1"
+        ],
+        "candidate_ids": [],
+        "contest_cuda_auth_eval": false,
+        "count": 1,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "expected_artifact_paths": [
+          ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+          ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+          ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.runtime_consumption_proof.json",
+          ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+          ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json"
+        ],
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "gpu_launched": false,
+        "group_id": "experiment_queue_observation_artifact_postcondition_failures:materializer_receiver:archive_section_entropy_recode_adapter:family_agnostic_archive_section_entropy_recode",
+        "maintenance_action_count": 0,
+        "materializer_ids": [
+          "archive_section_entropy_recode_adapter"
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_contract_kinds": [
+          "family_agnostic_archive_section_entropy_recode"
+        ],
+        "recommended_planning_effect": "block_followup_until_recovery_queue_runs",
+        "repeated": false,
+        "required_action_count": 1,
+        "resource_kinds": [
+          "local_cpu"
+        ],
+        "schema": "queue_observation_recovery_blocker_group.v1",
+        "scope_kind": "materializer_receiver",
+        "scope_value": "archive_section_entropy_recode_adapter:family_agnostic_archive_section_entropy_recode",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_selection_ids": [
+          "opset_combo_0001",
+          "top_0001",
+          "packetir_opset_combo_0001"
+        ],
+        "source_unit_ids": [
+          "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+        ],
+        "statuses": [
+          "failed"
+        ],
+        "target_kinds": [
+          "archive_section_entropy_recode_v1"
+        ],
+        "work_ids": [
+          "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter"
+        ]
+      },
+      {
+        "action_names": [
+          "inspect_artifact_postcondition_failures"
+        ],
+        "actions": [
+          "inspect_artifact_postcondition_failures"
+        ],
+        "affected_experiment_ids": [],
+        "affected_step_ids": [],
+        "allowed_use": "queue_recovery_grouping_and_planning_only",
+        "backlog_keys": [],
+        "blocker_family": "experiment_queue_observation_failed_steps",
+        "blockers": [
+          "experiment_queue_observation_failed_steps:1"
+        ],
+        "candidate_ids": [],
+        "contest_cuda_auth_eval": false,
+        "count": 1,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "expected_artifact_paths": [],
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "gpu_launched": false,
+        "group_id": "experiment_queue_observation_failed_steps:action:inspect_artifact_postcondition_failures",
+        "maintenance_action_count": 0,
+        "materializer_ids": [],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_contract_kinds": [],
+        "recommended_planning_effect": "operator_inspection_required_before_followup",
+        "repeated": false,
+        "required_action_count": 1,
+        "resource_kinds": [],
+        "schema": "queue_observation_recovery_blocker_group.v1",
+        "scope_kind": "action",
+        "scope_value": "inspect_artifact_postcondition_failures",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_selection_ids": [],
+        "source_unit_ids": [],
+        "statuses": [],
+        "target_kinds": [],
+        "work_ids": []
+      },
+      {
+        "action_names": [
+          "rewind_failed_step"
+        ],
+        "actions": [
+          "rewind_failed_step"
+        ],
+        "affected_experiment_ids": [
+          "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter"
+        ],
+        "affected_step_ids": [
+          "materialize_local_proof_chain"
+        ],
+        "allowed_use": "queue_recovery_grouping_and_planning_only",
+        "backlog_keys": [
+          "materializer_work_queue_required:archive_section_entropy_recode_v1:archive_section:section_entropy_recode:archive_section_entropy_recode_adapter"
+        ],
+        "blocker_family": "experiment_queue_observation_failed_steps",
+        "blockers": [
+          "experiment_queue_observation_failed_steps:1"
+        ],
+        "candidate_ids": [],
+        "contest_cuda_auth_eval": false,
+        "count": 1,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "expected_artifact_paths": [
+          ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+          ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+          ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.runtime_consumption_proof.json",
+          ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+          ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json"
+        ],
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "gpu_launched": false,
+        "group_id": "experiment_queue_observation_failed_steps:materializer_receiver:archive_section_entropy_recode_adapter:family_agnostic_archive_section_entropy_recode",
+        "maintenance_action_count": 0,
+        "materializer_ids": [
+          "archive_section_entropy_recode_adapter"
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_contract_kinds": [
+          "family_agnostic_archive_section_entropy_recode"
+        ],
+        "recommended_planning_effect": "block_followup_until_recovery_queue_runs",
+        "repeated": false,
+        "required_action_count": 1,
+        "resource_kinds": [
+          "local_cpu"
+        ],
+        "schema": "queue_observation_recovery_blocker_group.v1",
+        "scope_kind": "materializer_receiver",
+        "scope_value": "archive_section_entropy_recode_adapter:family_agnostic_archive_section_entropy_recode",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_selection_ids": [
+          "opset_combo_0001",
+          "top_0001",
+          "packetir_opset_combo_0001"
+        ],
+        "source_unit_ids": [
+          "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+        ],
+        "statuses": [
+          "failed"
+        ],
+        "target_kinds": [
+          "archive_section_entropy_recode_v1"
+        ],
+        "work_ids": [
+          "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter"
+        ]
+      }
+    ],
+    "maintenance_action_count": 0,
+    "maintenance_recommended": false,
+    "observation_blocker_count": 2,
+    "observation_blockers": [
+      "experiment_queue_observation_failed_steps:1",
+      "experiment_queue_observation_artifact_postcondition_failures:1"
+    ],
+    "observation_healthy": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "queue_health_groups": [
+      {
+        "action_names": [
+          "inspect_artifact_postcondition_failures"
+        ],
+        "actions": [
+          "inspect_artifact_postcondition_failures"
+        ],
+        "affected_experiment_ids": [],
+        "affected_step_ids": [],
+        "allowed_use": "queue_recovery_grouping_and_planning_only",
+        "backlog_keys": [],
+        "blocker_family": "experiment_queue_observation_artifact_postcondition_failures",
+        "blockers": [
+          "experiment_queue_observation_artifact_postcondition_failures:1"
+        ],
+        "candidate_ids": [],
+        "contest_cuda_auth_eval": false,
+        "count": 1,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "expected_artifact_paths": [],
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "gpu_launched": false,
+        "group_id": "experiment_queue_observation_artifact_postcondition_failures:action:inspect_artifact_postcondition_failures",
+        "maintenance_action_count": 0,
+        "materializer_ids": [],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_contract_kinds": [],
+        "recommended_planning_effect": "operator_inspection_required_before_followup",
+        "repeated": false,
+        "required_action_count": 1,
+        "resource_kinds": [],
+        "schema": "queue_observation_recovery_blocker_group.v1",
+        "scope_kind": "action",
+        "scope_value": "inspect_artifact_postcondition_failures",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_selection_ids": [],
+        "source_unit_ids": [],
+        "statuses": [],
+        "target_kinds": [],
+        "work_ids": []
+      },
+      {
+        "action_names": [
+          "rewind_failed_step"
+        ],
+        "actions": [
+          "rewind_failed_step"
+        ],
+        "affected_experiment_ids": [
+          "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter"
+        ],
+        "affected_step_ids": [
+          "materialize_local_proof_chain"
+        ],
+        "allowed_use": "queue_recovery_grouping_and_planning_only",
+        "backlog_keys": [
+          "materializer_work_queue_required:archive_section_entropy_recode_v1:archive_section:section_entropy_recode:archive_section_entropy_recode_adapter"
+        ],
+        "blocker_family": "experiment_queue_observation_artifact_postcondition_failures",
+        "blockers": [
+          "experiment_queue_observation_artifact_postcondition_failures:1"
+        ],
+        "candidate_ids": [],
+        "contest_cuda_auth_eval": false,
+        "count": 1,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "expected_artifact_paths": [
+          ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+          ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+          ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.runtime_consumption_proof.json",
+          ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+          ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json"
+        ],
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "gpu_launched": false,
+        "group_id": "experiment_queue_observation_artifact_postcondition_failures:materializer_receiver:archive_section_entropy_recode_adapter:family_agnostic_archive_section_entropy_recode",
+        "maintenance_action_count": 0,
+        "materializer_ids": [
+          "archive_section_entropy_recode_adapter"
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_contract_kinds": [
+          "family_agnostic_archive_section_entropy_recode"
+        ],
+        "recommended_planning_effect": "block_followup_until_recovery_queue_runs",
+        "repeated": false,
+        "required_action_count": 1,
+        "resource_kinds": [
+          "local_cpu"
+        ],
+        "schema": "queue_observation_recovery_blocker_group.v1",
+        "scope_kind": "materializer_receiver",
+        "scope_value": "archive_section_entropy_recode_adapter:family_agnostic_archive_section_entropy_recode",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_selection_ids": [
+          "opset_combo_0001",
+          "top_0001",
+          "packetir_opset_combo_0001"
+        ],
+        "source_unit_ids": [
+          "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+        ],
+        "statuses": [
+          "failed"
+        ],
+        "target_kinds": [
+          "archive_section_entropy_recode_v1"
+        ],
+        "work_ids": [
+          "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter"
+        ]
+      },
+      {
+        "action_names": [
+          "inspect_artifact_postcondition_failures"
+        ],
+        "actions": [
+          "inspect_artifact_postcondition_failures"
+        ],
+        "affected_experiment_ids": [],
+        "affected_step_ids": [],
+        "allowed_use": "queue_recovery_grouping_and_planning_only",
+        "backlog_keys": [],
+        "blocker_family": "experiment_queue_observation_failed_steps",
+        "blockers": [
+          "experiment_queue_observation_failed_steps:1"
+        ],
+        "candidate_ids": [],
+        "contest_cuda_auth_eval": false,
+        "count": 1,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "expected_artifact_paths": [],
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "gpu_launched": false,
+        "group_id": "experiment_queue_observation_failed_steps:action:inspect_artifact_postcondition_failures",
+        "maintenance_action_count": 0,
+        "materializer_ids": [],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_contract_kinds": [],
+        "recommended_planning_effect": "operator_inspection_required_before_followup",
+        "repeated": false,
+        "required_action_count": 1,
+        "resource_kinds": [],
+        "schema": "queue_observation_recovery_blocker_group.v1",
+        "scope_kind": "action",
+        "scope_value": "inspect_artifact_postcondition_failures",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_selection_ids": [],
+        "source_unit_ids": [],
+        "statuses": [],
+        "target_kinds": [],
+        "work_ids": []
+      },
+      {
+        "action_names": [
+          "rewind_failed_step"
+        ],
+        "actions": [
+          "rewind_failed_step"
+        ],
+        "affected_experiment_ids": [
+          "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter"
+        ],
+        "affected_step_ids": [
+          "materialize_local_proof_chain"
+        ],
+        "allowed_use": "queue_recovery_grouping_and_planning_only",
+        "backlog_keys": [
+          "materializer_work_queue_required:archive_section_entropy_recode_v1:archive_section:section_entropy_recode:archive_section_entropy_recode_adapter"
+        ],
+        "blocker_family": "experiment_queue_observation_failed_steps",
+        "blockers": [
+          "experiment_queue_observation_failed_steps:1"
+        ],
+        "candidate_ids": [],
+        "contest_cuda_auth_eval": false,
+        "count": 1,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "expected_artifact_paths": [
+          ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+          ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+          ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.runtime_consumption_proof.json",
+          ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+          ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json"
+        ],
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "gpu_launched": false,
+        "group_id": "experiment_queue_observation_failed_steps:materializer_receiver:archive_section_entropy_recode_adapter:family_agnostic_archive_section_entropy_recode",
+        "maintenance_action_count": 0,
+        "materializer_ids": [
+          "archive_section_entropy_recode_adapter"
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_contract_kinds": [
+          "family_agnostic_archive_section_entropy_recode"
+        ],
+        "recommended_planning_effect": "block_followup_until_recovery_queue_runs",
+        "repeated": false,
+        "required_action_count": 1,
+        "resource_kinds": [
+          "local_cpu"
+        ],
+        "schema": "queue_observation_recovery_blocker_group.v1",
+        "scope_kind": "materializer_receiver",
+        "scope_value": "archive_section_entropy_recode_adapter:family_agnostic_archive_section_entropy_recode",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_selection_ids": [
+          "opset_combo_0001",
+          "top_0001",
+          "packetir_opset_combo_0001"
+        ],
+        "source_unit_ids": [
+          "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+        ],
+        "statuses": [
+          "failed"
+        ],
+        "target_kinds": [
+          "archive_section_entropy_recode_v1"
+        ],
+        "work_ids": [
+          "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter"
+        ]
+      }
+    ],
+    "queue_id": "runner_inline_contexts_execute_proof_090127",
+    "queue_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_execution_queue.json",
+    "queue_state_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_execution_queue.sqlite",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recovery_required": true,
+    "repeated_group_count": 0,
+    "required_action_count": 2,
+    "schema": "queue_observation_recovery_plan.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "source_observation_generated_at_utc": "2026-05-25T09:01:33Z",
+    "source_queue_sha256": "e590c912de942cabbf9325cd26016cf6f53fa336a211d2ca25d40111635ad9ca",
+    "source_schema": "experiment_queue_observation.v1",
+    "source_state_watermark": {
+      "control_mode": "running",
+      "control_updated_at_utc": "2026-05-25T09:01:32Z",
+      "event_count": 7,
+      "max_event_id": 7,
+      "max_step_updated_at_utc": "2026-05-25T09:01:33Z",
+      "queue_id": "runner_inline_contexts_execute_proof_090127",
+      "schema": "experiment_queue_state_watermark.v1",
+      "state_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_execution_queue.sqlite",
+      "step_state_count": 3
+    }
+  },
+  "queue_observation_recovery_required": true,
+  "queue_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_execution_queue.json",
+  "queue_performance_summary_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/queue_performance_summary.json",
+  "queue_state_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_execution_queue.sqlite",
+  "rank_or_kill_eligible": false,
+  "ready_for_candidate_generation_widening": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_feedback_followup_execution": false,
+  "ready_for_feedback_replan": true,
+  "ready_for_local_materialization": false,
+  "ready_for_queue_health_recovery": true,
+  "recommended_actions": [
+    {
+      "action": "inspect_exact_readiness_handoffs",
+      "handoff_count": 1,
+      "paths": [
+        {
+          "dispatch_plan_exists": false,
+          "dispatch_plan_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/exact_eval_handoff/dispatch_plan.json",
+          "dispatch_queue_exists": false,
+          "dispatch_queue_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/exact_eval_handoff/dispatch_queue.json",
+          "exact_readiness_bridge_report_exists": false,
+          "exact_readiness_bridge_report_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/exact_eval_handoff/exact_readiness_bridge_report.json",
+          "handoff_dir": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/exact_eval_handoff",
+          "harvest_report_exists": false,
+          "harvest_report_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/exact_eval_handoff/harvest_report.json",
+          "readiness_dir_exists": false,
+          "readiness_dir_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/exact_eval_handoff/exact_readiness",
+          "source_queue_exists": false,
+          "source_queue_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/exact_eval_handoff/source_queue.json"
+        }
+      ],
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "action": "recover_queue_health",
+      "actions": [
+        {
+          "action": "rewind_failed_step",
+          "backlog_keys": [
+            "materializer_work_queue_required:archive_section_entropy_recode_v1:archive_section:section_entropy_recode:archive_section_entropy_recode_adapter"
+          ],
+          "blocker_sources": [
+            "experiment_queue_observation_failed_steps:1",
+            "experiment_queue_observation_artifact_postcondition_failures:1"
+          ],
+          "candidate_ids": [],
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_execution_queue.json",
+            "--state",
+            ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_execution_queue.sqlite",
+            "rewind",
+            "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter",
+            "materialize_local_proof_chain",
+            "--reason",
+            "materializer campaign queue observation recovery"
+          ],
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "expected_artifact_paths": [
+            ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.json",
+            ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.zip",
+            ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_outputs/materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter.runtime_consumption_proof.json",
+            ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/source.zip",
+            ".omx/research/codex_materializer_runner_inline_contexts_20260525T084604Z/sections.json"
+          ],
+          "experiment_id": "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter",
+          "gpu_launched": false,
+          "local_only": true,
+          "materializer_id": "archive_section_entropy_recode_adapter",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "reason": "failed queue step",
+          "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+          "required": true,
+          "requires_explicit_execution": true,
+          "resource_kind": "local_cpu",
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "source_selection_ids": [
+            "opset_combo_0001",
+            "top_0001",
+            "packetir_opset_combo_0001"
+          ],
+          "source_unit_ids": [
+            "inverse_action_runner_inline_compiler_cell_runner_inline_decoder_section_0000"
+          ],
+          "status": "failed",
+          "step_id": "materialize_local_proof_chain",
+          "target_kind": "archive_section_entropy_recode_v1",
+          "work_ids": [
+            "materializer_work_materializer_work_queue_required_archive_section_entropy_recode_v1_archive_section_section_entropy_recode_archive_section_entropy_recode_adapter"
+          ]
+        },
+        {
+          "action": "inspect_artifact_postcondition_failures",
+          "blocker_sources": [
+            "experiment_queue_observation_failed_steps:1",
+            "experiment_queue_observation_artifact_postcondition_failures:1"
+          ],
+          "command": null,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "gpu_launched": false,
+          "local_only": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "reason": "artifact postcondition failure lacks a succeeded-step identity",
+          "required": true,
+          "requires_explicit_execution": true,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        }
+      ],
+      "auto_execute_eligible": false,
+      "operator_queue_state_mutation_required": true,
+      "ready_for_exact_eval_dispatch": false,
+      "required_action_count": 2,
+      "score_claim": false
+    }
+  ],
+  "run_dir": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z",
+  "schema": "queue_feedback_replan_policy.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "should_continue_feedback_loop": false,
+  "source_run_path": ".omx/research/codex_materializer_runner_execute_inline_contexts_20260525T090127Z/materializer_campaign_run.json",
+  "source_schema": "byte_shaving_materializer_campaign_run.v1",
+  "stop_reason": null,
+  "warnings": [
+    "exact_readiness_handoffs_available",
+    "exact_auth_calibration_packet_pair_absent"
+  ]
+}
