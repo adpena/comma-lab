@@ -23,6 +23,7 @@ from tac.optimization.proxy_candidate_contract import (
 
 SCHEMA_VERSION = MLX_ACQUISITION_BATCH_SCHEMA
 OPERATION_SET_SCHEMA = MLX_ACQUISITION_BATCH_OPERATION_SET_SCHEMA
+OPERATION_SET_INTERACTION_SCHEMA = "mlx_acquisition_operation_set_interaction.v1"
 MLX_EFFECTIVE_SPEND_TRIAGE_SELECTION_SCHEMA = (
     "mlx_effective_spend_triage_candidate_selection.v1"
 )
@@ -393,6 +394,219 @@ def _compiler_operations_from_selection_row(
     return operations
 
 
+def _operation_unit_id(operation: Mapping[str, Any]) -> str:
+    unit_id = _optional_string(operation.get("unit_id"))
+    if unit_id:
+        return unit_id
+    operation_id = _optional_string(operation.get("operation_id")) or "operation"
+    return f"unit_{_slug(operation_id)}"
+
+
+def _operation_family(operation: Mapping[str, Any]) -> str:
+    return _optional_string(operation.get("operation_family")) or "unknown_operation"
+
+
+def _operation_params_mapping(operation: Mapping[str, Any]) -> dict[str, Any]:
+    return dict(_optional_mapping(operation.get("params"), label="operation.params") or {})
+
+
+def _param_text(operation: Mapping[str, Any], *keys: str) -> str | None:
+    params = _operation_params_mapping(operation)
+    for key in keys:
+        value = operation.get(key)
+        if value is None:
+            value = params.get(key)
+        if value is not None:
+            text = _optional_string(value)
+            if text:
+                return text
+    return None
+
+
+def _dynamic_sparse_gate_param(
+    operation: Mapping[str, Any],
+    key: str,
+) -> str | None:
+    nested = _operation_params_mapping(operation).get("dynamic_sparse_channel_gate")
+    if not isinstance(nested, Mapping):
+        return None
+    return _optional_string(nested.get(key))
+
+
+def _operation_pair_indices(operation: Mapping[str, Any]) -> list[int]:
+    params = _operation_params_mapping(operation)
+    return ordered_unique(
+        str(pair)
+        for pair in [
+            *_int_list(operation.get("pair_indices"), label="operation.pair_indices"),
+            *_int_list(params.get("pair_indices"), label="operation.params.pair_indices"),
+        ]
+    )
+
+
+def _interaction_row(
+    *,
+    interaction_kind: str,
+    key: str,
+    operations: Sequence[Mapping[str, Any]],
+    rationale: str,
+) -> dict[str, Any]:
+    unit_ids = ordered_unique(_operation_unit_id(operation) for operation in operations)
+    operation_ids = ordered_unique(
+        _optional_string(operation.get("operation_id")) or _operation_unit_id(operation)
+        for operation in operations
+    )
+    return {
+        "schema": OPERATION_SET_INTERACTION_SCHEMA,
+        "interaction_id": f"mlx_interaction:{interaction_kind}:{_slug(key)}",
+        "interaction_kind": interaction_kind,
+        "interaction_key": key,
+        "unit_ids": unit_ids,
+        "operation_ids": operation_ids,
+        "operation_families": ordered_unique(_operation_family(operation) for operation in operations),
+        "operation_count": len(unit_ids),
+        "delta_score": 0.0,
+        "quality_cost_delta_score": 0.0,
+        "extra_saved_bytes": 0,
+        "shared_overhead_bytes": 0,
+        "interaction_model": "structural_overlap_unmeasured_zero_delta_prior",
+        "measurement_state": "requires_queue_observation_or_exact_calibration",
+        "rationale": rationale,
+        "dispatch_blockers": [
+            "mlx_acquisition_interaction_is_planning_only",
+            "requires_empirical_interaction_calibration_before_score_claim",
+            "requires_byte_closed_materialization_before_dispatch",
+        ],
+        **PROXY_FALSE_AUTHORITY_FIELDS,
+    }
+
+
+def _append_group_interactions(
+    rows: list[dict[str, Any]],
+    *,
+    operations: Sequence[Mapping[str, Any]],
+    interaction_kind: str,
+    value_label: str,
+    rationale: str,
+) -> None:
+    groups: dict[str, list[Mapping[str, Any]]] = {}
+    for operation in operations:
+        value = _param_text(operation, value_label)
+        if value:
+            groups.setdefault(value, []).append(operation)
+    for key, grouped in sorted(groups.items()):
+        if len(grouped) >= 2:
+            rows.append(
+                _interaction_row(
+                    interaction_kind=interaction_kind,
+                    key=key,
+                    operations=grouped,
+                    rationale=rationale,
+                )
+            )
+
+
+def _active_structural_interactions(
+    *,
+    selected_operations: Sequence[Mapping[str, Any]],
+    compiler_operations: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    """Return deterministic unmeasured interaction priors for grouped search."""
+
+    rows: list[dict[str, Any]] = []
+    operations = [*selected_operations, *compiler_operations]
+    if len(operations) < 2:
+        return rows
+
+    grouped_values: tuple[tuple[str, str, str], ...] = (
+        (
+            "shared_target_kind",
+            "target_kind",
+            "operations target the same materializer family and may share setup or conflict",
+        ),
+        (
+            "shared_operation_family",
+            "operation_family",
+            "operations share a transformation family and need grouped calibration",
+        ),
+        (
+            "shared_packet_member",
+            "member_name",
+            "operations touch the same packet member and may have non-additive byte effects",
+        ),
+        (
+            "shared_tensor",
+            "tensor_name",
+            "operations touch the same tensor and may have non-additive distortion effects",
+        ),
+        (
+            "shared_archive_section",
+            "section_name",
+            "operations touch the same archive section and may share coding overhead",
+        ),
+    )
+    for interaction_kind, value_label, rationale in grouped_values:
+        _append_group_interactions(
+            rows,
+            operations=operations,
+            interaction_kind=interaction_kind,
+            value_label=value_label,
+            rationale=rationale,
+        )
+
+    pair_groups: dict[str, list[Mapping[str, Any]]] = {}
+    for operation in operations:
+        for pair in _operation_pair_indices(operation):
+            pair_groups.setdefault(pair, []).append(operation)
+    for pair, grouped in sorted(pair_groups.items(), key=lambda item: int(item[0])):
+        if len(grouped) >= 2:
+            rows.append(
+                _interaction_row(
+                    interaction_kind="shared_pair_index",
+                    key=pair,
+                    operations=grouped,
+                    rationale="operations share a contest pair index and may interact through batching or pose geometry",
+                )
+            )
+
+    for nested_key, interaction_kind, rationale in (
+        (
+            "source_id",
+            "dynamic_sparse_same_source",
+            "dynamic sparse gate operations share a source axis and may compete for the same latent budget",
+        ),
+        (
+            "channel_id",
+            "dynamic_sparse_same_channel",
+            "dynamic sparse gate operations share a channel axis and may expose source/channel synergy",
+        ),
+    ):
+        groups: dict[str, list[Mapping[str, Any]]] = {}
+        for operation in compiler_operations:
+            value = _dynamic_sparse_gate_param(operation, nested_key)
+            if value:
+                groups.setdefault(value, []).append(operation)
+        for key, grouped in sorted(groups.items()):
+            if len(grouped) >= 2:
+                rows.append(
+                    _interaction_row(
+                        interaction_kind=interaction_kind,
+                        key=key,
+                        operations=grouped,
+                        rationale=rationale,
+                    )
+                )
+
+    return sorted(
+        rows,
+        key=lambda row: (
+            str(row["interaction_kind"]),
+            str(row["interaction_key"]),
+            str(row["interaction_id"]),
+        ),
+    )
+
+
 def _family_tokens(row: Mapping[str, Any]) -> list[str]:
     tokens: list[str] = []
     for key in (
@@ -654,6 +868,10 @@ def _operation_set_from_selection_rows(
     first = rows[0]
     source_candidate_id = _text(first.get("candidate_id"), "selection candidate_id")
     operation_set_id = f"mlx_opset_{set_index:04d}_{_slug(source_candidate_id)}"
+    active_interactions = _active_structural_interactions(
+        selected_operations=selected_operations,
+        compiler_operations=compiler_operations,
+    )
     operation_set_compiler = None
     if compiler_operations:
         operation_set_compiler = {
@@ -699,7 +917,11 @@ def _operation_set_from_selection_rows(
             "selected_operations": selected_operations,
             "chosen_operation_sequence": [dict(item) for item in selected_operations],
             "chosen_operation_sequence_source": "mlx_acquisition_batch_order",
-            "active_interactions": [],
+            "active_interactions": active_interactions,
+            "interaction_delta_score": 0.0,
+            "interaction_extra_saved_bytes": 0,
+            "interaction_shared_overhead_bytes": 0,
+            "interaction_model": "structural_overlap_unmeasured_zero_delta_prior",
             "pair_indices": sorted(set(pair_indices)),
             "candidate_saved_bytes": candidate_saved_bytes,
             "expected_score_gain": expected_score_gain,
@@ -776,6 +998,9 @@ def build_mlx_acquisition_batch_from_selection(
                     }
                 ),
                 "operation_portability": "family_agnostic",
+                "operation_set_interaction_count_sum": sum(
+                    len(item.get("active_interactions") or []) for item in operation_sets
+                ),
             },
         },
         "mlx_acquisition_batch_is_planning_only",
@@ -827,6 +1052,7 @@ def validate_mlx_acquisition_batch(batch: Mapping[str, Any]) -> dict[str, Any]:
 
 
 __all__ = [
+    "OPERATION_SET_INTERACTION_SCHEMA",
     "OPERATION_SET_SCHEMA",
     "REPRESENTATION_CONTRACT_SCHEMA",
     "SCHEMA_VERSION",

@@ -621,6 +621,68 @@ def test_mlx_acquisition_batch_compiler_hint_survives_to_action_cell() -> None:
     assert action["score_claim"] is False
 
 
+def test_mlx_grouped_structural_interactions_survive_to_action_cell() -> None:
+    selection = _mlx_selection()
+    first = selection["selected_rows"][0]
+    first["operation_set_compiler"] = {
+        "schema": "inverse_action_operation_set_compiler_hint.v1",
+        "selected_operations": [
+            {
+                "unit_id": "gate_src_a_ch0",
+                "operation_family": "dynamic_sparse_channel_gate",
+                "target_kind": "tensor_factorize_v1",
+                "tensor_name": "decoder.gate",
+                "params": {
+                    "dynamic_sparse_channel_gate": {
+                        "source_id": "src_a",
+                        "channel_id": "ch0",
+                    }
+                },
+            }
+        ],
+    }
+    second = {
+        **first,
+        "row_id": "second",
+        "candidate_id": "mlx_scorer_response:window:second",
+        "pair_indices": [11, 12],
+        "source_pair_window": [11, 12],
+        "operation_set_compiler": {
+            "schema": "inverse_action_operation_set_compiler_hint.v1",
+            "selected_operations": [
+                {
+                    "unit_id": "gate_src_b_ch0",
+                    "operation_family": "dynamic_sparse_channel_gate",
+                    "target_kind": "tensor_factorize_v1",
+                    "tensor_name": "decoder.gate",
+                    "params": {
+                        "dynamic_sparse_channel_gate": {
+                            "source_id": "src_b",
+                            "channel_id": "ch0",
+                        }
+                    },
+                }
+            ],
+        },
+    }
+    selection["selected_rows"].append(second)
+
+    batch = build_mlx_acquisition_batch_from_selection(selection, set_size=2)
+    atoms = action_atoms_from_mlx_acquisition_batch(batch)
+    action = build_discrete_scorer_action_functional(atoms)
+    cell = action["cells"][0]
+    provenance = cell["source_provenance"]
+    interaction_kinds = {
+        row["interaction_kind"] for row in provenance["active_interactions"]
+    }
+
+    assert "dynamic_sparse_same_channel" in interaction_kinds
+    assert "shared_pair_index" in interaction_kinds
+    assert atoms[0]["second_order_interaction_effect"] == 0.0
+    assert cell["second_order_interaction_effect"] == 0.0
+    assert provenance["score_claim"] is False
+
+
 def test_mlx_acquisition_batch_rejects_truthy_nested_compiler_authority() -> None:
     selection = _mlx_selection()
     selection["selected_rows"][0]["operation_set_compiler"] = {
