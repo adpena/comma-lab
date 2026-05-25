@@ -19,6 +19,9 @@ functional without gaining score, promotion, rank/kill, or dispatch authority.
 - Preserved empirical anchor metadata through campaign ranking and inverse
   action provenance via `dqs1_outcome_signal`, `inverse_scorer_signal`, and
   `bit_allocator_signal`.
+- Hardened pair-index parsing so malformed selected/dropped pair IDs fail
+  closed as `ByteShavingCampaignError` instead of raising raw conversion errors
+  or silently emitting partial pair lists.
 - Kept all rows fail-closed: macOS-CPU advisory outcomes remain planning
   anchors only and cannot claim score or authorize dispatch.
 
@@ -37,6 +40,8 @@ Output directory:
   - 1,216 ranked units.
   - 32 operation sets.
   - 32 PacketIR operation sets.
+  - 0 queue-consumable materialization-bridge operation sets yet; the bridge is
+    correctly blocked on the missing receiver/materializer execution contract.
   - Top operation set: 32 units, 251 predicted saved bytes,
     0.000167130597233665 expected score gain.
 - `inverse_action_materialization_bridge.pairset_acquisition_outcomes.json`
@@ -49,8 +54,12 @@ Output directory:
 ## Verification
 
 - `ruff` clean on touched Python surfaces.
-- `pytest src/tac/tests/test_byte_shaving_signal_surface_builder.py src/tac/tests/test_byte_shaving_campaign.py src/tac/tests/test_inverse_steganalysis_action_functional_cli.py src/tac/tests/test_frontier_rate_attack_feedback.py src/tac/tests/test_dqs1_local_first_queue_builder.py -q`
-  - 115 passed.
+- `pytest src/tac/tests/test_byte_shaving_signal_surface_builder.py -q`
+  - 17 passed.
+- `pytest src/tac/tests/test_byte_shaving_campaign.py src/tac/tests/test_inverse_steganalysis_acquisition.py -q`
+  - 83 passed.
+- `pytest src/tac/tests/test_byte_shaving_campaign_queue.py -q`
+  - 81 passed.
 - `tools/lane_maturity.py validate`
   - 1358 lanes validated cleanly.
 
