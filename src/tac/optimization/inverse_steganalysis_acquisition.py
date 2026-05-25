@@ -8,6 +8,8 @@ can rank next probes by expected score gain per second, GB, and resource kind.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 import re
 from collections.abc import Iterable, Mapping, Sequence
@@ -3224,8 +3226,13 @@ def _is_materializer_archive_delta_observation(row: Mapping[str, Any]) -> bool:
 def _materializer_archive_delta_blocks_water_bucket(row: Mapping[str, Any]) -> bool:
     return (
         _is_materializer_archive_delta_observation(row)
-        and row.get("rate_positive") is not True
-        and row.get("quality_spend_allowed") is not True
+        and (
+            row.get("receiver_contract_satisfied") is not True
+            or (
+                row.get("rate_positive") is not True
+                and row.get("quality_spend_allowed") is not True
+            )
+        )
     )
 
 
@@ -3249,7 +3256,11 @@ def _materializer_archive_delta_feedback_for_observations(
         for row in rows
         if row.get("saved_bytes") is not None
     ]
-    blockers = ["rate_negative_materializer_success"] if blocking_rows else []
+    blockers: list[str] = []
+    if any(row.get("rate_positive") is not True for row in blocking_rows):
+        blockers.append("rate_negative_materializer_success")
+    if any(row.get("receiver_contract_satisfied") is not True for row in blocking_rows):
+        blockers.append("receiver_negative_materializer_success")
     observed_ids = [_optional_text(row.get("observation_id")) for row in rows]
     blocking_ids = [
         _optional_text(row.get("observation_id")) for row in blocking_rows
@@ -3712,7 +3723,7 @@ def _water_bucket_selection_row(row: Mapping[str, Any]) -> dict[str, Any]:
     cost = int(measure["water_fill_cost_bytes"])
     lambda_rate = float(row["lambda_rate"])
     expected_gain = float(row["expected_score_gain"])
-    return {
+    out: dict[str, Any] = {
         "atom_id": row["atom_id"],
         "candidate_id": row["candidate_id"],
         "candidate_generation_only": True,
@@ -3727,6 +3738,67 @@ def _water_bucket_selection_row(row: Mapping[str, Any]) -> dict[str, Any]:
         "euler_lagrange_residual": row["euler_lagrange_residual"],
         "portfolio_objective_gain": expected_gain - lambda_rate * float(cost),
     }
+    compiler = row.get("operation_set_compiler")
+    if isinstance(compiler, Mapping) and compiler:
+        out["operation_set_compiler"] = dict(compiler)
+        for key, value in _water_bucket_compiler_summary(compiler).items():
+            out.setdefault(key, value)
+    for source_key, target_key in (
+        ("operation_set_target_kind", "operation_set_target_kind"),
+        ("operation_set_operation_family", "operation_set_operation_family"),
+        ("operation_set_params", "operation_set_params"),
+    ):
+        value = row.get(source_key)
+        if value is not None:
+            out[target_key] = dict(value) if isinstance(value, Mapping) else value
+    if out.get("operation_set_target_kind") and "target_kind" not in out:
+        out["target_kind"] = out["operation_set_target_kind"]
+    if out.get("operation_set_operation_family") and "operation_family" not in out:
+        out["operation_family"] = out["operation_set_operation_family"]
+    return out
+
+
+def _water_bucket_compiler_summary(compiler: Mapping[str, Any]) -> dict[str, Any]:
+    selected_operations = _sequence_of_mappings(compiler.get("selected_operations"))
+
+    def first_text(*values: Any) -> str | None:
+        for value in values:
+            text = _optional_text(value)
+            if text is not None:
+                return text
+        return None
+
+    def first_operation_text(*keys: str) -> str | None:
+        for operation in selected_operations:
+            text = first_text(*(operation.get(key) for key in keys))
+            if text is not None:
+                return text
+        return None
+
+    summary: dict[str, Any] = {
+        "operation_set_id": first_text(compiler.get("operation_set_id")),
+        "operation_set_target_kind": first_text(
+            compiler.get("target_kind"),
+            compiler.get("operation_set_target_kind"),
+            first_operation_text("target_kind", "operation_set_target_kind"),
+        ),
+        "operation_set_operation_family": first_text(
+            compiler.get("operation_family"),
+            compiler.get("operation_set_operation_family"),
+            first_operation_text("operation_family", "recommended_operation_family"),
+        ),
+        "materializer_id": first_text(
+            compiler.get("materializer_id"),
+            compiler.get("materializer"),
+            first_operation_text("materializer_id", "materializer"),
+        ),
+        "receiver_contract_kind": first_text(
+            compiler.get("receiver_contract_kind"),
+            first_operation_text("receiver_contract_kind"),
+        ),
+        "selected_operation_count": len(selected_operations),
+    }
+    return {key: value for key, value in summary.items() if value is not None}
 
 
 def _water_bucket_portfolio_search(
@@ -3999,6 +4071,8 @@ def _queue_health_observations_for_step(
     )
     artifact_paths = _queue_step_expected_artifact_paths(step)
     artifact_bytes = _queue_step_artifact_bytes(step)
+    readiness_blockers = _queue_step_materializer_readiness_blockers(step)
+    receiver_contract_satisfied = _queue_step_receiver_contract_satisfied(step)
     resource_kind = _resource(step.get("resource_kind") or "local_cpu")
     identity = performance_identity.get(experiment_id, {})
     work_ids = list(identity.get("work_ids") or [])
@@ -4042,6 +4116,8 @@ def _queue_health_observations_for_step(
                     "queue_observation_health": healthy,
                     "queue_observation_status": status,
                     "queue_observation_blockers": blockers,
+                    "receiver_contract_satisfied": receiver_contract_satisfied,
+                    "readiness_blockers": readiness_blockers,
                     "candidate_ids": list(candidate_ids),
                     "work_ids": work_ids,
                     "backlog_keys": backlog_keys,
@@ -4060,7 +4136,301 @@ def _queue_health_observations_for_step(
                 }
             )
         )
+    out.extend(
+        _queue_materializer_delta_observations_for_step(
+            step,
+            queue_id=queue_id,
+            experiment_id=experiment_id,
+            step_id=step_id,
+            candidate_ids=candidate_ids,
+            axis=axis,
+            source_path=source_path,
+            runtime_identity=runtime_identity,
+            cache_identity=cache_identity,
+            resource_kind=resource_kind,
+            work_ids=work_ids,
+            backlog_keys=backlog_keys,
+            source_unit_ids=source_unit_ids,
+            source_selection_ids=source_selection_ids,
+        )
+    )
     return out
+
+
+def _queue_materializer_delta_observations_for_step(
+    step: Mapping[str, Any],
+    *,
+    queue_id: str,
+    experiment_id: str,
+    step_id: str,
+    candidate_ids: Sequence[str],
+    axis: str,
+    source_path: str | None,
+    runtime_identity: Mapping[str, Any],
+    cache_identity: Mapping[str, Any],
+    resource_kind: str,
+    work_ids: Sequence[str],
+    backlog_keys: Sequence[str],
+    source_unit_ids: Sequence[str],
+    source_selection_ids: Sequence[str],
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for artifact_index, artifact in enumerate(_sequence_of_mappings(step.get("expected_artifacts"))):
+        delta_status = _optional_text(artifact.get("serialized_archive_delta_status"))
+        saved_bytes = _optional_int(
+            artifact.get("serialized_archive_delta_realized_saved_bytes"),
+            "serialized_archive_delta_realized_saved_bytes",
+        )
+        has_receiver_signal = "receiver_contract_satisfied" in artifact
+        receiver = artifact.get("receiver_verification")
+        if isinstance(receiver, Mapping) and "receiver_contract_satisfied" in receiver:
+            has_receiver_signal = True
+        if delta_status is None and saved_bytes is None and not has_receiver_signal:
+            continue
+        target_kind = _optional_text(_first(artifact.get("target_kind"), step.get("target_kind")))
+        materializer_id = _optional_text(
+            _first(
+                artifact.get("materializer_id"),
+                step.get("materializer_id"),
+                step.get("materializer"),
+            )
+        )
+        receiver_contract_kind = _optional_text(
+            _first(
+                artifact.get("receiver_contract_kind"),
+                step.get("receiver_contract_kind"),
+            )
+        )
+        if target_kind is None and materializer_id is None and receiver_contract_kind is None:
+            continue
+        if saved_bytes is None:
+            saved_bytes = 0
+        savings_realized = artifact.get("serialized_archive_delta_savings_realized") is True
+        rate_positive = (
+            saved_bytes > 0
+            and delta_status == "realized_saving"
+            and savings_realized
+        )
+        receiver_contract_satisfied = _artifact_receiver_contract_satisfied(artifact)
+        readiness_blockers = ordered_unique(
+            [
+                *_list_strings(artifact.get("readiness_blockers")),
+                *(
+                    [
+                        f"receiver_verification:{item}"
+                        for item in _list_strings(receiver.get("blockers"))
+                    ]
+                    if isinstance(receiver, Mapping)
+                    else []
+                ),
+                *(
+                    ["receiver_contract_not_satisfied"]
+                    if has_receiver_signal and not receiver_contract_satisfied
+                    else []
+                ),
+            ]
+        )
+        artifact_bytes = _optional_int(artifact.get("bytes"), "artifact.bytes", minimum=0) or 0
+        candidate_archive = artifact.get("candidate_archive")
+        candidate_archive_bytes = _optional_int(
+            _first(
+                artifact.get("serialized_archive_delta_candidate_archive_bytes"),
+                candidate_archive.get("bytes") if isinstance(candidate_archive, Mapping) else None,
+            ),
+            "candidate_archive_bytes",
+            minimum=0,
+        )
+        candidate_archive_sha256 = _sha256_or_none(
+            candidate_archive.get("sha256") if isinstance(candidate_archive, Mapping) else None,
+            "candidate_archive_sha256",
+        )
+        artifact_path = _optional_text(artifact.get("path"))
+        base_observation_id = (
+            f"queue_materializer_delta_{_slug(queue_id)}_{_slug(experiment_id)}_"
+            f"{_slug(step_id)}_{artifact_index:04d}"
+        )
+        artifact_candidate_ids = tuple(
+            dict.fromkeys(
+                [
+                    *_list_strings(artifact.get("candidate_ids")),
+                    *(
+                        [_optional_text(artifact.get("candidate_id"))]
+                        if _optional_text(artifact.get("candidate_id")) is not None
+                        else []
+                    ),
+                    *candidate_ids,
+                ]
+            )
+        )
+        for candidate_id in artifact_candidate_ids:
+            if not candidate_id:
+                continue
+            observation_id = base_observation_id
+            if len(artifact_candidate_ids) > 1:
+                observation_id = f"{base_observation_id}_{_slug(candidate_id)}"
+            out.append(
+                normalize_inverse_steganalysis_observation(
+                    {
+                        "observation_id": observation_id,
+                        "observation_kind": MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND,
+                        "candidate_id": candidate_id,
+                        "axis": axis,
+                        "source_path": source_path,
+                        "queue_id": queue_id,
+                        "experiment_id": experiment_id,
+                        "step_id": step_id,
+                        "target_kind": target_kind,
+                        "materializer_id": materializer_id,
+                        "receiver_contract_kind": receiver_contract_kind,
+                        "saved_bytes": saved_bytes,
+                        "observed_rate_gain": (
+                            CONTEST_RATE_SCORE_PER_BYTE * float(saved_bytes)
+                            if rate_positive
+                            else 0.0
+                        ),
+                        "observed_score_gain": (
+                            CONTEST_RATE_SCORE_PER_BYTE * float(saved_bytes)
+                            if rate_positive
+                            else 0.0
+                        ),
+                        "rate_positive": rate_positive,
+                        "savings_realized": savings_realized,
+                        "receiver_contract_satisfied": receiver_contract_satisfied,
+                        "materializer_rate_outcome": delta_status,
+                        "signal_semantics": (
+                            "realized_archive_saving"
+                            if rate_positive
+                            else "receiver_or_rate_blocked_materializer_feedback"
+                        ),
+                        "archive_delta_status": delta_status,
+                        "source_archive_bytes": _optional_int(
+                            artifact.get("serialized_archive_delta_source_archive_bytes"),
+                            "source_archive_bytes",
+                            minimum=0,
+                        ),
+                        "candidate_archive_bytes": candidate_archive_bytes,
+                        "candidate_archive_sha256": candidate_archive_sha256,
+                        "artifact_bytes": artifact_bytes,
+                        "resource_kind": resource_kind,
+                        "candidate_ids": list(artifact_candidate_ids),
+                        "work_ids": list(work_ids),
+                        "backlog_keys": list(backlog_keys),
+                        "source_unit_ids": list(source_unit_ids),
+                        "source_selection_ids": list(source_selection_ids),
+                        "expected_artifact_paths": [artifact_path] if artifact_path else [],
+                        "readiness_blockers": readiness_blockers,
+                        "runtime_identity": runtime_identity,
+                        "cache_identity": cache_identity,
+                        "allowed_use": "materializer_queue_feedback_only",
+                        "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
+                    }
+                )
+            )
+    return _merge_queue_materializer_delta_observations(out)
+
+
+_QUEUE_MATERIALIZER_DELTA_MERGE_SEQUENCE_KEYS = (
+    "candidate_ids",
+    "work_ids",
+    "backlog_keys",
+    "source_unit_ids",
+    "source_selection_ids",
+    "expected_artifact_paths",
+    "readiness_blockers",
+)
+
+
+def _queue_materializer_delta_merge_key(row: Mapping[str, Any]) -> str:
+    artifact_path = _optional_text(_first(*_list_strings(row.get("expected_artifact_paths"))))
+    candidate_sha = _optional_text(row.get("candidate_archive_sha256"))
+    candidate_id = _optional_text(row.get("candidate_id"))
+    target_kind = _optional_text(row.get("target_kind"))
+    materializer_id = _optional_text(row.get("materializer_id"))
+    receiver_contract_kind = _optional_text(row.get("receiver_contract_kind"))
+    identity = candidate_sha or artifact_path or _optional_text(row.get("observation_id"))
+    if identity is None:
+        identity = _sha256_json_value(dict(row))
+    return "|".join(
+        str(item or "")
+        for item in (
+            candidate_id,
+            target_kind,
+            materializer_id,
+            receiver_contract_kind,
+            identity,
+        )
+    )
+
+
+def _sha256_json_value(value: Mapping[str, Any]) -> str:
+    payload = json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+        default=str,
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _merge_queue_materializer_delta_observations(
+    rows: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    merged: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        row_dict = dict(row)
+        key = _queue_materializer_delta_merge_key(row_dict)
+        existing = merged.get(key)
+        if existing is None:
+            merged[key] = row_dict
+            continue
+        for field in _QUEUE_MATERIALIZER_DELTA_MERGE_SEQUENCE_KEYS:
+            values = ordered_unique(
+                [
+                    *_list_strings(existing.get(field)),
+                    *_list_strings(row_dict.get(field)),
+                ]
+            )
+            if values:
+                existing[field] = values
+        if row_dict.get("receiver_contract_satisfied") is False:
+            existing["receiver_contract_satisfied"] = False
+        if row_dict.get("rate_positive") is True:
+            existing["rate_positive"] = True
+        if row_dict.get("savings_realized") is True:
+            existing["savings_realized"] = True
+        for field in (
+            "saved_bytes",
+            "observed_rate_gain",
+            "observed_score_gain",
+            "source_archive_bytes",
+            "candidate_archive_bytes",
+            "artifact_bytes",
+        ):
+            current = _optional_int(existing.get(field), field, minimum=0)
+            incoming = _optional_int(row_dict.get(field), field, minimum=0)
+            if incoming is not None and (current is None or incoming > current):
+                existing[field] = incoming
+        for field, value in row_dict.items():
+            if field in _QUEUE_MATERIALIZER_DELTA_MERGE_SEQUENCE_KEYS:
+                continue
+            if existing.get(field) in (None, "", [], {}) and value not in (
+                None,
+                "",
+                [],
+                {},
+            ):
+                existing[field] = value
+    return list(merged.values())
+
+
+def _artifact_receiver_contract_satisfied(artifact: Mapping[str, Any]) -> bool:
+    if "receiver_contract_satisfied" in artifact:
+        return artifact.get("receiver_contract_satisfied") is True
+    receiver = artifact.get("receiver_verification")
+    if isinstance(receiver, Mapping) and "receiver_contract_satisfied" in receiver:
+        return receiver.get("receiver_contract_satisfied") is True
+    return False
 
 
 def _queue_global_health_observations(
@@ -4180,7 +4550,50 @@ def _queue_step_health_blockers(
         if artifact.get("exists") is False:
             path = _optional_text(artifact.get("path")) or "unknown"
             blockers.append(f"queue_observation_artifact_missing:{path}")
+        if artifact.get("receiver_contract_satisfied") is False:
+            path = _optional_text(artifact.get("path")) or "unknown"
+            blockers.append(f"queue_observation_receiver_contract_unsatisfied:{path}")
+        for readiness_blocker in _list_strings(artifact.get("readiness_blockers")):
+            blockers.append(
+                "queue_observation_materializer_readiness_blocker:"
+                f"{readiness_blocker}"
+            )
+        receiver = artifact.get("receiver_verification")
+        if isinstance(receiver, Mapping):
+            for receiver_blocker in _list_strings(receiver.get("blockers")):
+                blockers.append(
+                    "queue_observation_receiver_verification_blocker:"
+                    f"{receiver_blocker}"
+                )
     return ordered_unique(blockers)
+
+
+def _queue_step_materializer_readiness_blockers(step: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    for artifact in _sequence_of_mappings(step.get("expected_artifacts")):
+        blockers.extend(_list_strings(artifact.get("readiness_blockers")))
+        receiver = artifact.get("receiver_verification")
+        if isinstance(receiver, Mapping):
+            blockers.extend(
+                f"receiver_verification:{item}"
+                for item in _list_strings(receiver.get("blockers"))
+            )
+    return ordered_unique(blockers)
+
+
+def _queue_step_receiver_contract_satisfied(step: Mapping[str, Any]) -> bool:
+    saw_receiver_artifact = False
+    for artifact in _sequence_of_mappings(step.get("expected_artifacts")):
+        if "receiver_contract_satisfied" in artifact:
+            saw_receiver_artifact = True
+            if artifact.get("receiver_contract_satisfied") is not True:
+                return False
+        receiver = artifact.get("receiver_verification")
+        if isinstance(receiver, Mapping) and "receiver_contract_satisfied" in receiver:
+            saw_receiver_artifact = True
+            if receiver.get("receiver_contract_satisfied") is not True:
+                return False
+    return bool(saw_receiver_artifact)
 
 
 def _queue_step_expected_artifact_paths(step: Mapping[str, Any]) -> list[str]:

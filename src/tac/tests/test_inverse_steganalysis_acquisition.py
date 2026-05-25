@@ -428,6 +428,10 @@ def test_action_functional_preserves_operation_set_compiler_hint() -> None:
                 "operation_set_id": "compiled_hint",
                 "target_kind": "archive_section_entropy_recode_v1",
                 "archive_section": "decoder_blob",
+                "materializer": "archive_section_entropy_recode_adapter",
+                "receiver_contract_kind": (
+                    "family_agnostic_archive_section_entropy_recode"
+                ),
             }
         )
     )
@@ -439,7 +443,16 @@ def test_action_functional_preserves_operation_set_compiler_hint() -> None:
         "archive_section_entropy_recode_v1"
     )
     assert action["water_bucket"]["selected_count"] == 1
-    assert "operation_set_compiler" not in action["water_bucket"]["selected_cells"][0]
+    selected = action["water_bucket"]["selected_cells"][0]
+    assert selected["operation_set_compiler"]["operation_set_id"] == "compiled_hint"
+    assert selected["operation_set_target_kind"] == (
+        "archive_section_entropy_recode_v1"
+    )
+    assert selected["target_kind"] == "archive_section_entropy_recode_v1"
+    assert selected["materializer_id"] == "archive_section_entropy_recode_adapter"
+    assert selected["receiver_contract_kind"] == (
+        "family_agnostic_archive_section_entropy_recode"
+    )
     assert cell["score_claim"] is False
     assert action["score_claim"] is False
 
@@ -1571,6 +1584,16 @@ def test_queue_observation_health_blocker_suppresses_water_bucket_cell() -> None
                         "exists": True,
                         "bytes": 4096,
                         "postcondition_passed": False,
+                        "receiver_contract_satisfied": False,
+                        "readiness_blockers": [
+                            "runtime_consumption_proof_not_passed",
+                        ],
+                        "receiver_verification": {
+                            "receiver_contract_satisfied": False,
+                            "blockers": [
+                                "archive_section_entropy_recode_receiver_contract_not_satisfied"
+                            ],
+                        },
                     }
                 ],
             }
@@ -1607,6 +1630,19 @@ def test_queue_observation_health_blocker_suppresses_water_bucket_cell() -> None
         "queue_observation_step_status:blocked",
         "experiment_queue_observation_blocked_steps:1",
         "queue_observation_artifact_postcondition_failed:candidate.json",
+        "queue_observation_receiver_contract_unsatisfied:candidate.json",
+        "queue_observation_materializer_readiness_blocker:"
+        "runtime_consumption_proof_not_passed",
+        "queue_observation_receiver_verification_blocker:"
+        "archive_section_entropy_recode_receiver_contract_not_satisfied",
+    ]
+    assert observations[1]["receiver_contract_satisfied"] is False
+    assert observations[1]["readiness_blockers"] == [
+        "runtime_consumption_proof_not_passed",
+        (
+            "receiver_verification:"
+            "archive_section_entropy_recode_receiver_contract_not_satisfied"
+        ),
     ]
     assert cell["best_observation_kind"] == "queue_observation_health_blocker"
     assert cell["priority"]["expected_score_gain"] == 0.0
@@ -1791,6 +1827,166 @@ def test_queue_observation_health_blocker_matches_precise_source_unit() -> None:
     assert cells["atom_direct"]["priority"]["expected_score_gain"] == 0.0
     assert cells["atom_other"]["best_observation_kind"] == "queue_performance_step"
     assert cells["atom_other"]["priority"]["expected_score_gain"] > 0.0
+
+
+def test_queue_observation_receiver_negative_materializer_artifact_blocks_water_bucket() -> None:
+    runtime_identity = {
+        "runtime_tree_sha256": "d" * 64,
+        "scorer_version": "local_scheduler.v1",
+    }
+    cache_identity = {"cache_sha256": "e" * 64}
+    source_unit_id = "inverse_action_atom_direct_decoder_blob_0000"
+    observation_payload = {
+        "schema": "experiment_queue_observation.v1",
+        "queue_id": "materializer_queue",
+        "healthy": False,
+        "blockers": [
+            "experiment_queue_observation_failed_steps:1",
+            "experiment_queue_observation_artifact_postcondition_failures:1",
+        ],
+        "performance": {
+            "schema": "experiment_queue_performance_summary.v1",
+            "queue_id": "materializer_queue",
+            "event_count": 1,
+            "candidate_id_by_experiment": {
+                "packetir_opset": ["candidate_parent"]
+            },
+            "source_unit_ids_by_experiment": {
+                "packetir_opset": [source_unit_id]
+            },
+            "source_selection_ids_by_experiment": {
+                "packetir_opset": ["compiled_direct_selection"]
+            },
+            "by_resource_kind": {},
+            "by_step": {
+                "packetir_opset.materialize": {
+                    "run_count": 1,
+                    "success_count": 0,
+                    "failure_count": 1,
+                    "resource_kind_counts": {"local_cpu": 1},
+                    "elapsed_seconds_mean": 1.25,
+                    "artifact_record_bytes_mean": 4096.0,
+                    "source_unit_ids": [source_unit_id],
+                    "source_selection_ids": ["compiled_direct_selection"],
+                }
+            },
+        },
+        "failed_steps": [
+            {
+                "experiment_id": "packetir_opset",
+                "step_id": "materialize",
+                "status": "failed",
+                "resource_kind": "local_cpu",
+                "target_kind": "archive_section_entropy_recode_v1",
+                "materializer_id": "archive_section_entropy_recode_adapter",
+                "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+                "expected_artifacts": [
+                    {
+                        "path": "candidate_manifest.json",
+                        "exists": True,
+                        "bytes": 4096,
+                        "postcondition_passed": False,
+                        "candidate_id": "candidate_parent",
+                        "target_kind": "archive_section_entropy_recode_v1",
+                        "materializer_id": "archive_section_entropy_recode_adapter",
+                        "receiver_contract_kind": (
+                            "family_agnostic_archive_section_entropy_recode"
+                        ),
+                        "receiver_contract_satisfied": False,
+                        "readiness_blockers": [
+                            "section_length_changed_requires_runtime_consumption_proof"
+                        ],
+                        "serialized_archive_delta_status": "realized_saving",
+                        "serialized_archive_delta_realized_saved_bytes": 64,
+                        "serialized_archive_delta_savings_realized": True,
+                        "serialized_archive_delta_source_archive_bytes": 1024,
+                        "serialized_archive_delta_candidate_archive_bytes": 960,
+                        "candidate_archive": {
+                            "bytes": 960,
+                            "sha256": "f" * 64,
+                        },
+                    },
+                    {
+                        "path": "candidate_manifest.json",
+                        "exists": True,
+                        "bytes": 4096,
+                        "postcondition_passed": True,
+                        "candidate_id": "candidate_parent",
+                        "target_kind": "archive_section_entropy_recode_v1",
+                        "materializer_id": "archive_section_entropy_recode_adapter",
+                        "receiver_contract_kind": (
+                            "family_agnostic_archive_section_entropy_recode"
+                        ),
+                        "receiver_contract_satisfied": False,
+                        "receiver_verification": {
+                            "receiver_contract_satisfied": False,
+                            "blockers": ["runtime_consumption_proof_not_passed"],
+                        },
+                        "candidate_archive": {
+                            "bytes": 960,
+                            "sha256": "f" * 64,
+                        },
+                    }
+                ],
+            }
+        ],
+        **_planning_false_authority(),
+    }
+    atom = _atom(
+        "candidate_parent",
+        atom_id="atom_direct",
+        uncertainty=0.0,
+        fragility_penalty=0.0,
+        first_order_marginal_effect=0.01,
+        second_order_interaction_effect=0.0,
+        predicted_score_gain=0.01,
+        operation_set_compiler={
+            "schema": "inverse_action_operation_set_compiler_hint.v1",
+            "operation_set_id": "compiled_direct_selection",
+            "selected_operations": [
+                {
+                    "unit_id": "decoder_blob",
+                    "target_kind": "archive_section_entropy_recode_v1",
+                    "materializer": "archive_section_entropy_recode_adapter",
+                    "receiver_contract_kind": (
+                        "family_agnostic_archive_section_entropy_recode"
+                    ),
+                }
+            ],
+        },
+    )
+
+    observations = observations_from_queue_observation(
+        observation_payload,
+        runtime_identity=runtime_identity,
+        cache_identity=cache_identity,
+        source_path="queue_observation.json",
+    )
+    action = build_discrete_scorer_action_functional([atom], observations=observations)
+    cell = action["cells"][0]
+    materializer_observations = [
+        row
+        for row in observations
+        if row["observation_kind"] == MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND
+    ]
+    assert len(materializer_observations) == 1
+    materializer_observation = materializer_observations[0]
+
+    assert materializer_observation["receiver_contract_satisfied"] is False
+    assert materializer_observation["rate_positive"] is True
+    assert materializer_observation["source_unit_ids"] == [source_unit_id]
+    assert "receiver_contract_not_satisfied" in materializer_observation["readiness_blockers"]
+    assert (
+        "receiver_verification:runtime_consumption_proof_not_passed"
+        in materializer_observation["readiness_blockers"]
+    )
+    assert cell["materializer_archive_delta_blocked"] is True
+    assert cell["water_bucket_selectable"] is False
+    assert "receiver_negative_materializer_success" in (
+        cell["materializer_archive_delta_feedback"]["blockers"]
+    )
+    assert action["integral_totals"]["materializer_archive_delta_blocked_cell_count"] == 1
+    assert action["score_claim"] is False
 
 
 def test_queue_health_feedback_groups_repeated_blockers_by_source_selection() -> None:

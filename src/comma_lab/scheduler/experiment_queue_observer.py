@@ -128,6 +128,11 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
             record["json_schema"] = payload.get("schema") or payload.get("schema_version")
             for key in (
                 "candidate_id",
+                "target_kind",
+                "materializer_id",
+                "receiver_contract_kind",
+                "receiver_contract_satisfied",
+                "runtime_consumption_proof_path",
                 "canonical_score",
                 "score_axis",
                 "archive_sha256",
@@ -137,6 +142,38 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
             ):
                 if key in payload:
                     record[key] = payload[key]
+            if isinstance(payload.get("readiness_blockers"), list):
+                record["readiness_blockers"] = [
+                    str(item)
+                    for item in payload["readiness_blockers"]
+                    if str(item)
+                ]
+            receiver = payload.get("receiver_verification")
+            if isinstance(receiver, Mapping):
+                record["receiver_verification"] = {
+                    key: receiver.get(key)
+                    for key in (
+                        "schema",
+                        "receiver_contract_kind",
+                        "receiver_contract_satisfied",
+                        "runtime_adapter_ready",
+                        "proof_present",
+                        "proof_schema",
+                    )
+                    if key in receiver
+                }
+                receiver_blockers = receiver.get("blockers")
+                if isinstance(receiver_blockers, list):
+                    record["receiver_verification"]["blockers"] = [
+                        str(item) for item in receiver_blockers if str(item)
+                    ]
+            candidate_archive = payload.get("candidate_archive")
+            if isinstance(candidate_archive, Mapping):
+                record["candidate_archive"] = {
+                    key: candidate_archive.get(key)
+                    for key in ("path", "bytes", "sha256", "member_sha256")
+                    if key in candidate_archive
+                }
             delta = payload.get("serialized_archive_delta")
             if isinstance(delta, Mapping):
                 record["serialized_archive_delta_status"] = delta.get("status")

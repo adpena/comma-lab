@@ -503,6 +503,192 @@ def test_materializer_campaign_runner_performance_fallback_is_fail_closed() -> N
     assert payload["ready_for_exact_eval_dispatch"] is False
 
 
+def test_materializer_campaign_runner_emits_receiver_negative_observation_sweep(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    output_dir = run_dir / "materializer_outputs"
+    output_dir.mkdir(parents=True)
+    manifest_path = output_dir / "receiver_negative.json"
+    runtime_proof_path = output_dir / "receiver_negative.runtime_consumption_proof.json"
+    runtime_identity_path = run_dir / "queue_performance_runtime_identity.json"
+    cache_identity_path = run_dir / "queue_performance_cache_identity.json"
+    plan_path = tmp_path / "plan.json"
+    queue_path = run_dir / "materializer_execution_queue.json"
+    state_path = run_dir / "materializer_execution_queue.sqlite"
+    performance_path = run_dir / "queue_performance_summary.json"
+    plan_path.write_text("{}", encoding="utf-8")
+    queue_path.write_text("{}", encoding="utf-8")
+    state_path.write_text("", encoding="utf-8")
+    runtime_identity = {
+        "runtime_contract_sha256": "a" * 64,
+        "scorer_version": "materializer_runner_fixture.v1",
+    }
+    cache_identity = {"cache_sha256": "b" * 64}
+    runtime_identity_path.write_text(json.dumps(runtime_identity), encoding="utf-8")
+    cache_identity_path.write_text(json.dumps(cache_identity), encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema": "archive_section_entropy_recode_candidate.v1",
+                "byte_closed_candidate_emitted": True,
+                "target_kind": runner.ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+                "materializer_id": "archive_section_entropy_recode_adapter",
+                "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+                "receiver_contract_satisfied": False,
+                "source_archive": {
+                    "path": str(tmp_path / "source.zip"),
+                    "bytes": 209,
+                    "sha256": "c" * 64,
+                },
+                "candidate_archive": {
+                    "path": str(tmp_path / "candidate.zip"),
+                    "bytes": 143,
+                    "sha256": "d" * 64,
+                },
+                "section_recode": {
+                    "source_archive_bytes": 209,
+                    "candidate_archive_bytes": 143,
+                    "saved_bytes": 66,
+                },
+                "readiness_blockers": [
+                    "runtime_consumption_proof_not_passed",
+                    "archive_section_entropy_recode_receiver_contract_not_satisfied",
+                ],
+                "receiver_verification": {
+                    "receiver_contract_satisfied": False,
+                    "blockers": ["runtime_consumption_proof_not_passed"],
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    runtime_proof_path.write_text(
+        json.dumps(
+            {
+                "schema": "family_agnostic_runtime_consumption_proof_v1",
+                "byte_closed_candidate_emitted": True,
+                "target_kind": runner.ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+                "materializer_id": "archive_section_entropy_recode_adapter",
+                "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+                "receiver_contract_satisfied": False,
+                "source_archive": {
+                    "path": str(tmp_path / "source.zip"),
+                    "bytes": 209,
+                    "sha256": "c" * 64,
+                },
+                "candidate_archive": {
+                    "path": str(tmp_path / "candidate.zip"),
+                    "bytes": 143,
+                    "sha256": "d" * 64,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    queue_observation = {
+        "schema": "experiment_queue_observation.v1",
+        "queue_id": "receiver_negative_queue",
+        "healthy": False,
+        "failed_steps": [
+            {
+                "experiment_id": "materializer_work_receiver_negative",
+                "step_id": "materialize_local_proof_chain",
+                "status": "failed",
+                "target_kind": runner.ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+                "materializer_id": "archive_section_entropy_recode_adapter",
+                "receiver_contract_kind": (
+                    "family_agnostic_archive_section_entropy_recode"
+                ),
+                "source_unit_ids": ["inverse_action_receiver_negative_unit"],
+                "source_selection_ids": ["top_0001"],
+                "expected_artifact_paths": [str(manifest_path)],
+                "expected_artifacts": [{"path": str(manifest_path), "exists": True}],
+            }
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    observation_path = runner._write_materializer_receiver_feedback_sweep(
+        run_dir=run_dir,
+        queue_observation=queue_observation,
+        runtime_identity=runtime_identity,
+        cache_identity=cache_identity,
+    )
+
+    assert observation_path == run_dir / "materializer_receiver_feedback_observations.json"
+    sweep = json.loads(observation_path.read_text(encoding="utf-8"))
+    row = sweep["observations"][0]
+    assert sweep["schema"] == runner.FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA
+    assert sweep["receiver_negative_count"] == 1
+    assert sweep["observation_count"] == 1
+    assert row["schema"] == runner.FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA
+    assert row["candidate_id"] == "inverse_action_receiver_negative_unit"
+    assert row["rate_positive"] is False
+    assert row["receiver_contract_satisfied"] is False
+    assert row["observed_score_gain"] == 0.0
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["rank_or_kill_eligible"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["readiness_blockers"] == [
+        "runtime_consumption_proof_not_passed",
+        "archive_section_entropy_recode_receiver_contract_not_satisfied",
+    ]
+
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(plan_path),
+            "--materializer-contexts",
+            str(tmp_path / "contexts.json"),
+            "--run-dir",
+            str(run_dir),
+        ]
+    )
+    performance = {
+        "schema": runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA,
+        "event_count": 1,
+        "queue_id": "receiver_negative_queue",
+        "by_step": {},
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    request = runner._queue_feedback_replan_request_payload(
+        args,
+        summary_path=run_dir / "materializer_campaign_run.json",
+        plan_path=plan_path,
+        queue_performance_summary_path=performance_path,
+        queue_performance_summary=performance,
+        runtime_identity_path=runtime_identity_path,
+        cache_identity_path=cache_identity_path,
+        generated_runtime_identity=True,
+        generated_cache_identity=True,
+        run_dir=run_dir,
+        execution_queue=queue_path,
+        state_path=state_path,
+    )
+
+    assert str(observation_path) in request["feedback_observation_paths"]
+    observation_index = request["command_template"].index("--observation")
+    assert request["command_template"][observation_index + 1] == str(observation_path)
+    assert request["ready_for_action_functional_feedback"] is True
+    assert request["score_claim"] is False
+
+
 def test_materializer_campaign_runner_builds_runtime_policy_command(
     tmp_path: Path,
 ) -> None:

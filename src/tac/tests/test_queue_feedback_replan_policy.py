@@ -323,6 +323,72 @@ def test_queue_observation_recovery_plan_groups_repeated_materializer_blockers()
     assert all(group["ready_for_exact_eval_dispatch"] is False for group in repeated)
 
 
+def test_queue_observation_recovery_plan_records_receiver_negative_artifact_feedback() -> None:
+    plan = build_queue_observation_recovery_plan(
+        {
+            "schema": "experiment_queue_observation.v1",
+            "queue_id": "campaign_queue",
+            "healthy": False,
+            "blockers": [
+                "experiment_queue_observation_failed_steps:1",
+                "experiment_queue_observation_artifact_postcondition_failures:1",
+            ],
+            "failed_steps": [
+                {
+                    "experiment_id": "exp0",
+                    "step_id": "materialize",
+                    "status": "failed",
+                    "target_kind": "archive_section_entropy_recode_v1",
+                    "materializer_id": "archive_section_entropy_recode_adapter",
+                    "receiver_contract_kind": (
+                        "family_agnostic_archive_section_entropy_recode"
+                    ),
+                    "expected_artifacts": [
+                        {
+                            "path": "candidate_manifest.json",
+                            "exists": True,
+                            "postcondition_passed": False,
+                            "receiver_verification": {
+                                "schema": (
+                                    "family_agnostic_runtime_consumption_proof_"
+                                    "verification.v1"
+                                ),
+                                "receiver_contract_satisfied": False,
+                            },
+                        }
+                    ],
+                }
+            ],
+        },
+        queue_path="queue.json",
+        state_path="queue.sqlite",
+    )
+
+    actions = {item["action"]: item for item in plan["actions"]}
+    feedback = actions["record_materializer_receiver_feedback"]
+
+    assert "rewind_failed_step" not in actions
+    assert feedback["required"] is False
+    assert feedback["command"] is None
+    assert feedback["score_claim"] is False
+    assert feedback["ready_for_exact_eval_dispatch"] is False
+    assert feedback["expected_artifact_paths"] == ["candidate_manifest.json"]
+    assert (
+        "materializer_receiver_verification_unsatisfied:candidate_manifest.json"
+        in feedback["blocker_sources"]
+    )
+    receiver_groups = [
+        group
+        for group in plan["grouped_blockers"]
+        if group["scope_kind"] == "materializer_receiver"
+    ]
+    assert receiver_groups
+    assert receiver_groups[0]["recommended_planning_effect"] == (
+        "advisory_maintenance_only"
+    )
+    assert receiver_groups[0]["ready_for_exact_eval_dispatch"] is False
+
+
 def test_feedback_replan_policy_executes_safe_followup_queue() -> None:
     policy = build_queue_feedback_replan_policy(
         _run_summary(),

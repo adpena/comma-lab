@@ -103,6 +103,9 @@ MAX_AUTO_DISCOVERED_FEEDBACK_OBSERVATIONS = 128
 MAX_AUTO_DISCOVERED_FEEDBACK_OBSERVATION_BYTES = 8 * 1024 * 1024
 MAX_AUTO_DISCOVERED_MATERIALIZER_CHAIN_MANIFESTS = 128
 MAX_AUTO_DISCOVERED_MATERIALIZER_CHAIN_MANIFEST_BYTES = 8 * 1024 * 1024
+MAX_AUTO_DISCOVERED_RECEIVER_FEEDBACK_MANIFESTS = 128
+MAX_AUTO_DISCOVERED_RECEIVER_FEEDBACK_MANIFEST_BYTES = 8 * 1024 * 1024
+RECEIVER_NEGATIVE_MATERIALIZER_AXIS = "[local-materializer-receiver advisory]"
 QUEUE_FEEDBACK_REPLAN_REQUIRED_FALSE_FIELDS = tuple(
     dict.fromkeys(
         (
@@ -447,6 +450,387 @@ def _load_json_object_if_present(path: Path) -> dict[str, Any] | None:
     except (OSError, json.JSONDecodeError):
         return None
     return payload if isinstance(payload, dict) else None
+
+
+def _slug(value: Any, *, default: str = "item") -> str:
+    text = str(value or "").strip().lower()
+    chars = [char if char.isalnum() else "_" for char in text]
+    slug = "_".join(part for part in "".join(chars).split("_") if part)
+    return slug or default
+
+
+def _optional_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _blocker_counts(values: Sequence[Any]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in values:
+        key = str(value).strip()
+        if key:
+            counts[key] = counts.get(key, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _step_lookup_by_artifact_path(
+    observation: Mapping[str, Any],
+) -> dict[str, Mapping[str, Any]]:
+    lookup: dict[str, Mapping[str, Any]] = {}
+    for section in (
+        "failed_steps",
+        "blocked_steps",
+        "succeeded_artifact_failure_steps",
+        "running_steps",
+        "queued_steps",
+    ):
+        for step in _as_sequence(observation.get(section)):
+            if not isinstance(step, Mapping):
+                continue
+            paths: list[str] = []
+            for artifact in _as_sequence(step.get("expected_artifacts")):
+                if isinstance(artifact, Mapping):
+                    path = str(artifact.get("path") or "").strip()
+                    if path:
+                        paths.append(path)
+            paths.extend(
+                str(path).strip()
+                for path in _as_sequence(step.get("expected_artifact_paths"))
+                if str(path).strip()
+            )
+            for path in paths:
+                resolved = _resolve(path).resolve(strict=False)
+                for key in {path, _display_path(resolved), resolved.as_posix()}:
+                    lookup[key] = step
+    return lookup
+
+
+def _first_nonempty_sequence_value(*values: Any) -> str | None:
+    for value in values:
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+        for item in _as_sequence(value):
+            text = str(item).strip()
+            if text:
+                return text
+    return None
+
+
+def _materializer_receiver_feedback_row(
+    *,
+    manifest_path: Path,
+    manifest: Mapping[str, Any],
+    step: Mapping[str, Any] | None,
+    runtime_identity: Mapping[str, Any],
+    cache_identity: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    if truthy_authority_field_violations(manifest):
+        return None
+    if manifest.get("receiver_contract_satisfied") is not False:
+        return None
+    candidate_archive = (
+        manifest.get("candidate_archive")
+        if isinstance(manifest.get("candidate_archive"), Mapping)
+        else {}
+    )
+    if not candidate_archive:
+        return None
+    byte_closed = (
+        manifest.get("byte_closed_candidate_emitted") is True
+        or bool(str(candidate_archive.get("path") or "").strip())
+    )
+    if not byte_closed:
+        return None
+    source_archive = (
+        manifest.get("source_archive")
+        if isinstance(manifest.get("source_archive"), Mapping)
+        else {}
+    )
+    section_recode = (
+        manifest.get("section_recode")
+        if isinstance(manifest.get("section_recode"), Mapping)
+        else {}
+    )
+    source_bytes = _optional_int(
+        source_archive.get("bytes") or section_recode.get("source_archive_bytes")
+    )
+    candidate_bytes = _optional_int(
+        candidate_archive.get("bytes")
+        or section_recode.get("candidate_archive_bytes")
+    )
+    saved_bytes = _optional_int(section_recode.get("saved_bytes"))
+    if saved_bytes is None and source_bytes is not None and candidate_bytes is not None:
+        saved_bytes = source_bytes - candidate_bytes
+    saved_bytes = int(saved_bytes or 0)
+    readiness_blockers = [
+        str(item)
+        for item in _as_sequence(manifest.get("readiness_blockers"))
+        if str(item)
+    ]
+    receiver_verification = (
+        manifest.get("receiver_verification")
+        if isinstance(manifest.get("receiver_verification"), Mapping)
+        else {}
+    )
+    receiver_blockers = [
+        str(item)
+        for item in _as_sequence(receiver_verification.get("blockers"))
+        if str(item)
+    ]
+    candidate_sha = str(candidate_archive.get("sha256") or "").strip()
+    source_sha = str(source_archive.get("sha256") or "").strip()
+    candidate_id = _first_nonempty_sequence_value(
+        manifest.get("candidate_id"),
+        None if step is None else step.get("candidate_ids"),
+        None if step is None else step.get("source_unit_ids"),
+        f"receiver_negative_{candidate_sha[:12]}" if candidate_sha else None,
+    )
+    if candidate_id is None:
+        candidate_id = f"receiver_negative_{_sha256_json(dict(manifest))[:12]}"
+    expected_artifact_paths = (
+        []
+        if step is None
+        else [
+            str(path).strip()
+            for path in _as_sequence(step.get("expected_artifact_paths"))
+            if str(path).strip()
+        ]
+    )
+    cache = dict(cache_identity)
+    cache.setdefault(
+        "cache_sha256",
+        candidate_sha or source_sha or _sha256_json(dict(manifest)),
+    )
+    return _false_authority_payload(
+        {
+            "schema": FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA,
+            "observation_kind": "family_agnostic_materializer_empirical_observation",
+            "observation_id": (
+                "materializer_receiver_negative_"
+                f"{_slug(candidate_id)}_"
+                f"{candidate_sha[:12] if candidate_sha else _sha256_json(dict(manifest))[:12]}"
+            ),
+            "candidate_id": candidate_id,
+            "axis": RECEIVER_NEGATIVE_MATERIALIZER_AXIS,
+            "resource_kind": "local_cpu",
+            "runtime_identity": dict(runtime_identity),
+            "cache_identity": cache,
+            "source_path": _display_path(manifest_path),
+            "queue_id": None if step is None else step.get("queue_id"),
+            "experiment_id": None if step is None else step.get("experiment_id"),
+            "step_id": None if step is None else step.get("step_id"),
+            "target_kind": manifest.get("target_kind"),
+            "materializer_id": manifest.get("materializer_id"),
+            "portability_contract": manifest.get("portability_contract"),
+            "receiver_contract_kind": manifest.get("receiver_contract_kind"),
+            "source_archive_path": source_archive.get("path"),
+            "source_archive_sha256": source_sha or None,
+            "source_archive_bytes": source_bytes,
+            "candidate_archive_path": candidate_archive.get("path"),
+            "candidate_archive_sha256": candidate_sha or None,
+            "candidate_archive_bytes": candidate_bytes,
+            "artifact_bytes": candidate_bytes or source_bytes or 0,
+            "saved_bytes": saved_bytes,
+            "observed_rate_gain": 0.0,
+            "observed_score_gain": 0.0,
+            "rate_positive": False,
+            "receiver_contract_satisfied": False,
+            "receiver_verification_blockers": receiver_blockers,
+            "readiness_blockers": list(
+                dict.fromkeys([*readiness_blockers, *receiver_blockers])
+            ),
+            "runtime_consumption_proof_path": manifest.get(
+                "runtime_consumption_proof_path"
+            ),
+            "manifest_path": _display_path(manifest_path),
+            "selected_member_name": manifest.get("selected_member_name"),
+            "selected_member_names": manifest.get("selected_member_names") or [],
+            "source_unit_ids": (
+                [] if step is None else _as_sequence(step.get("source_unit_ids"))
+            ),
+            "source_selection_ids": (
+                [] if step is None else _as_sequence(step.get("source_selection_ids"))
+            ),
+            "work_ids": [] if step is None else _as_sequence(step.get("work_ids")),
+            "backlog_keys": [] if step is None else _as_sequence(step.get("backlog_keys")),
+            "expected_artifact_paths": expected_artifact_paths,
+            "signal_semantics": "byte_closed_receiver_negative_materializer_feedback",
+            "recommended_planner_action": (
+                "demote_or_repair_matching_receiver_contract_before_refilling_bucket"
+            ),
+            "observation_feedback_is_not_score_authority": True,
+        }
+    )
+
+
+_RECEIVER_FEEDBACK_MERGE_SEQUENCE_KEYS = (
+    "readiness_blockers",
+    "receiver_verification_blockers",
+    "selected_member_names",
+    "source_unit_ids",
+    "source_selection_ids",
+    "work_ids",
+    "backlog_keys",
+    "expected_artifact_paths",
+)
+
+
+def _empty_for_receiver_feedback_merge(value: Any) -> bool:
+    return value is None or value == "" or value == [] or value == {}
+
+
+def _merged_sequence_strings(*values: Any) -> list[str]:
+    merged: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        for item in _as_sequence(value):
+            text = str(item).strip()
+            if not text or text in seen:
+                continue
+            seen.add(text)
+            merged.append(text)
+    return merged
+
+
+def _materializer_receiver_feedback_merge_key(row: Mapping[str, Any]) -> str:
+    candidate_sha = str(row.get("candidate_archive_sha256") or "").strip()
+    target_kind = str(row.get("target_kind") or "").strip()
+    materializer_id = str(row.get("materializer_id") or "").strip()
+    receiver_kind = str(row.get("receiver_contract_kind") or "").strip()
+    if candidate_sha and (target_kind or materializer_id or receiver_kind):
+        return "|".join(
+            (
+                "candidate_archive",
+                target_kind,
+                materializer_id,
+                receiver_kind,
+                candidate_sha,
+            )
+        )
+    observation_id = str(row.get("observation_id") or "").strip()
+    if observation_id:
+        return f"observation_id|{observation_id}"
+    return f"row_sha256|{_sha256_json(dict(row))}"
+
+
+def _merge_materializer_receiver_feedback_rows(
+    rows: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    merged: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        row_dict = dict(row)
+        key = _materializer_receiver_feedback_merge_key(row_dict)
+        existing = merged.get(key)
+        if existing is None:
+            merged[key] = row_dict
+            continue
+        for field in _RECEIVER_FEEDBACK_MERGE_SEQUENCE_KEYS:
+            values = _merged_sequence_strings(existing.get(field), row_dict.get(field))
+            if values:
+                existing[field] = values
+        for field, value in row_dict.items():
+            if field in _RECEIVER_FEEDBACK_MERGE_SEQUENCE_KEYS:
+                continue
+            if _empty_for_receiver_feedback_merge(existing.get(field)) and not (
+                _empty_for_receiver_feedback_merge(value)
+            ):
+                existing[field] = value
+    return list(merged.values())
+
+
+def _write_materializer_receiver_feedback_sweep(
+    *,
+    run_dir: Path,
+    queue_observation: Mapping[str, Any],
+    runtime_identity: Mapping[str, Any],
+    cache_identity: Mapping[str, Any],
+) -> Path | None:
+    root = (run_dir / "materializer_outputs").resolve(strict=False)
+    if not root.exists():
+        return None
+    step_lookup = _step_lookup_by_artifact_path(queue_observation)
+    rows: list[dict[str, Any]] = []
+    for manifest_path in sorted(root.rglob("*.json")):
+        if len(rows) >= MAX_AUTO_DISCOVERED_RECEIVER_FEEDBACK_MANIFESTS:
+            break
+        if not _path_under_root(manifest_path, root):
+            continue
+        try:
+            if manifest_path.stat().st_size > MAX_AUTO_DISCOVERED_RECEIVER_FEEDBACK_MANIFEST_BYTES:
+                continue
+        except OSError:
+            continue
+        manifest = _load_json_object_if_present(manifest_path)
+        if manifest is None:
+            continue
+        step = None
+        for key in {
+            _display_path(manifest_path),
+            manifest_path.resolve(strict=False).as_posix(),
+        }:
+            step = step_lookup.get(key)
+            if step is not None:
+                break
+        row = _materializer_receiver_feedback_row(
+            manifest_path=manifest_path,
+            manifest=manifest,
+            step=step,
+            runtime_identity=runtime_identity,
+            cache_identity=cache_identity,
+        )
+        if row is not None:
+            rows.append(row)
+    rows = _merge_materializer_receiver_feedback_rows(rows)
+    if not rows:
+        return None
+    blockers = []
+    if len(rows) >= MAX_AUTO_DISCOVERED_RECEIVER_FEEDBACK_MANIFESTS:
+        blockers.append("materializer_receiver_feedback_manifest_limit_reached")
+    output = run_dir / "materializer_receiver_feedback_observations.json"
+    _write_json(
+        output,
+        _false_authority_payload(
+            {
+                "schema": FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA,
+                "observation_kind": "family_agnostic_materializer_receiver_feedback_sweep",
+                "generated_at_utc": _utc_stamp(),
+                "run_dir": _display_path(run_dir),
+                "archive_count": len(rows),
+                "observation_count": len(rows),
+                "rate_positive_count": 0,
+                "rate_nonpositive_count": len(rows),
+                "receiver_negative_count": len(rows),
+                "planner_feedback": {
+                    "schema": "family_agnostic_materializer_planner_feedback.v1",
+                    "observation_kind": "materializer_receiver_feedback",
+                    "receiver_negative_count": len(rows),
+                    "blocker_counts": _blocker_counts(
+                        [
+                            blocker
+                            for row in rows
+                            for blocker in _as_sequence(row.get("readiness_blockers"))
+                        ]
+                    ),
+                    "recommended_acquisition_rule": (
+                        "demote_or_repair_matching_receiver_contract_before_refilling_bucket"
+                    ),
+                    "score_claim": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "blockers": blockers,
+                "observations": rows,
+                "allowed_use": "local_materializer_receiver_feedback_for_replanning_only",
+                "forbidden_use": (
+                    "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+                ),
+            }
+        ),
+    )
+    return output
 
 
 def _review_packet_axis(packet: Mapping[str, Any]) -> str | None:
@@ -4625,6 +5009,16 @@ def main(argv: list[str] | None = None) -> int:
                 queue=queue,
             ),
         )
+    runtime_identity_payload = _load_json_object_if_present(runtime_identity_path) or {}
+    cache_identity_payload = _load_json_object_if_present(cache_identity_path) or {}
+    materializer_receiver_feedback_observation_path = (
+        _write_materializer_receiver_feedback_sweep(
+            run_dir=run_dir,
+            queue_observation=queue_observation,
+            runtime_identity=runtime_identity_payload,
+            cache_identity=cache_identity_payload,
+        )
+    )
     queue_feedback_replan_request = _queue_feedback_replan_request_payload(
         args,
         summary_path=summary_path,
@@ -4853,6 +5247,11 @@ def main(argv: list[str] | None = None) -> int:
         "queue_feedback_replan_staircase_artifacts": queue_feedback_replan_staircase_artifacts,
         "queue_performance_runtime_identity_path": _display_path(runtime_identity_path),
         "queue_performance_cache_identity_path": _display_path(cache_identity_path),
+        "materializer_receiver_feedback_observation_path": (
+            None
+            if materializer_receiver_feedback_observation_path is None
+            else _display_path(materializer_receiver_feedback_observation_path)
+        ),
         "response_update_placeholder_path": _display_path(response_update_placeholder_path),
         "response_update_applied": False,
         "replan_required": True,

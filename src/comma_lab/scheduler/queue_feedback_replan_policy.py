@@ -289,6 +289,45 @@ def _artifact_paths_from_step(step: Mapping[str, Any]) -> list[str]:
     return list(dict.fromkeys(paths))
 
 
+def _materializer_receiver_feedback_blockers(step: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    for artifact in _as_list(step.get("expected_artifacts")):
+        if not isinstance(artifact, Mapping):
+            continue
+        if artifact.get("receiver_contract_satisfied") is False:
+            path = _nonempty_str(artifact.get("path")) or "unknown"
+            blockers.append(f"materializer_receiver_contract_unsatisfied:{path}")
+        blockers.extend(
+            f"materializer_readiness_blocker:{item}"
+            for item in _string_list(artifact.get("readiness_blockers"))
+        )
+        receiver = artifact.get("receiver_verification")
+        if isinstance(receiver, Mapping):
+            if receiver.get("receiver_contract_satisfied") is False:
+                path = _nonempty_str(artifact.get("path")) or "unknown"
+                blockers.append(f"materializer_receiver_verification_unsatisfied:{path}")
+            blockers.extend(
+                f"materializer_receiver_verification_blocker:{item}"
+                for item in _string_list(receiver.get("blockers"))
+            )
+    return list(dict.fromkeys(blockers))
+
+
+def _is_materializer_receiver_feedback_step(step: Mapping[str, Any]) -> bool:
+    if _materializer_receiver_feedback_blockers(step):
+        return True
+    return any(
+        isinstance(artifact, Mapping)
+        and _nonempty_str(artifact.get("json_schema"))
+        in {
+            "archive_section_entropy_recode_candidate.v1",
+            "byte_range_entropy_recode_verified_candidate.v1",
+        }
+        and _string_list(artifact.get("readiness_blockers"))
+        for artifact in _as_list(step.get("expected_artifacts"))
+    )
+
+
 def _recovery_action(
     *,
     action: str,
@@ -618,6 +657,25 @@ def build_queue_observation_recovery_plan(
             experiment_id, step_id = _step_identity(step)
             if experiment_id is None or step_id is None:
                 continue
+            receiver_feedback_blockers = _materializer_receiver_feedback_blockers(step)
+            if _is_materializer_receiver_feedback_step(step):
+                _append_unique_action(
+                    actions,
+                    _recovery_action(
+                        action="record_materializer_receiver_feedback",
+                        reason=(
+                            "materializer produced a byte-closed receiver-negative "
+                            "artifact; feed as planner signal instead of rewinding"
+                        ),
+                        required=False,
+                        step=step,
+                        blocker_sources=[
+                            *step_blockers,
+                            *receiver_feedback_blockers,
+                        ],
+                    ),
+                )
+                continue
             _append_unique_action(
                 actions,
                 _recovery_action(
@@ -644,7 +702,11 @@ def build_queue_observation_recovery_plan(
         blockers,
         "experiment_queue_observation_artifact_postcondition_failures",
     ) and not any(
-        item.get("action") == "rewind_succeeded_step_with_artifact_failure"
+        item.get("action")
+        in {
+            "rewind_succeeded_step_with_artifact_failure",
+            "record_materializer_receiver_feedback",
+        }
         for item in actions
     ):
         _append_unique_action(

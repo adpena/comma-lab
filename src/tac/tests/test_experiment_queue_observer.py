@@ -384,6 +384,32 @@ def test_observer_preserves_materializer_metadata_for_recovery_grouping(
     tmp_path: Path,
 ) -> None:
     artifact = tmp_path / "candidate.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "archive_section_entropy_recode_candidate.v1",
+                "target_kind": "archive_section_entropy_recode_v1",
+                "materializer_id": "entropy_adapter",
+                "receiver_contract_kind": "archive_section_receiver_v1",
+                "receiver_contract_satisfied": False,
+                "readiness_blockers": [
+                    "runtime_consumption_proof_not_passed",
+                    "archive_section_entropy_recode_receiver_contract_not_satisfied",
+                ],
+                "receiver_verification": {
+                    "schema": "receiver_verification.v1",
+                    "receiver_contract_satisfied": False,
+                    "blockers": ["runtime_consumption_proof_not_passed"],
+                },
+                "candidate_archive": {
+                    "path": str(tmp_path / "candidate.zip"),
+                    "bytes": 143,
+                    "sha256": "a" * 64,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
     state = tmp_path / "queue.sqlite"
     queue_path = tmp_path / "queue.json"
     queue = _queue(artifact)
@@ -441,6 +467,17 @@ def test_observer_preserves_materializer_metadata_for_recovery_grouping(
     assert failed["source_unit_ids"] == ["unit-a"]
     assert failed["source_selection_ids"] == ["selection-a"]
     assert failed["expected_artifact_paths"] == ["candidate.json"]
+    artifact_record = failed["expected_artifacts"][0]
+    assert artifact_record["json_schema"] == "archive_section_entropy_recode_candidate.v1"
+    assert artifact_record["receiver_contract_satisfied"] is False
+    assert artifact_record["readiness_blockers"] == [
+        "runtime_consumption_proof_not_passed",
+        "archive_section_entropy_recode_receiver_contract_not_satisfied",
+    ]
+    assert artifact_record["receiver_verification"]["blockers"] == [
+        "runtime_consumption_proof_not_passed"
+    ]
+    assert artifact_record["candidate_archive"]["bytes"] == 143
 
     recovery_plan = build_queue_observation_recovery_plan(
         observation,
@@ -449,6 +486,11 @@ def test_observer_preserves_materializer_metadata_for_recovery_grouping(
     )
     groups = recovery_plan["grouped_blockers"]
 
+    assert recovery_plan["recovery_required"] is False
+    assert recovery_plan["maintenance_recommended"] is True
+    assert recovery_plan["actions"][0]["action"] == (
+        "record_materializer_receiver_feedback"
+    )
     assert recovery_plan["source_queue_sha256"] == observation["queue_sha256"]
     assert recovery_plan["source_state_watermark"] == observation["state_watermark"]
     assert groups[0]["scope_kind"] == "materializer_receiver"

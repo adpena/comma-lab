@@ -256,6 +256,7 @@ src/tac.egg-info/
 .omx/research/materializer_exact_eval_consumer_queue_*.json
 .omx/research/materializer_exact_eval_consumer_experiment_queue_*.json
 .omx/research/byte_shaving_materializer_campaign_*/
+.omx/research/codex_receiver_negative_queue_feedback_*/
 .omx/research/mlx_acquisition_batches/
 #
 # PR110 evidence packs are useful local custody bundles, but the hosted archive
