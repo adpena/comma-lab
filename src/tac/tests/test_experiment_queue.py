@@ -416,6 +416,7 @@ def test_scheduler_runtime_policy_derives_advisory_limits_and_timeouts(
     assert policy["score_claim"] is False
     assert policy["promotion_eligible"] is False
     assert policy["ready_for_exact_eval_dispatch"] is False
+    assert policy["dispatch_packet_ready"] is False
     assert policy["recommended_max_concurrency"]["local_cpu"] == 12
     assert policy["recommended_max_concurrency"]["local_io_heavy"] == 3
     assert policy["recommended_max_concurrency"]["local_mlx"] == 1
@@ -424,6 +425,7 @@ def test_scheduler_runtime_policy_derives_advisory_limits_and_timeouts(
     assert policy["recommended_timeout_seconds_by_resource"]["local_io_heavy"] == 50
     assert policy["recommended_timeout_seconds_by_resource"]["local_mlx"] == 62
     assert policy["resource_policies"]["local_mlx"]["observed_timeout_count"] == 1
+    assert policy["resource_policies"]["local_mlx"]["dispatch_packet_ready"] is False
 
     updated = apply_scheduler_runtime_policy(queue, policy)
     assert updated["controls"]["max_concurrency"]["local_cpu"] == 12
@@ -2256,6 +2258,7 @@ def test_experiment_queue_false_authority_postcondition_blocks_leaks(tmp_path: P
         "promotable",
         "exact_cuda_auth_eval",
         "charged_bits_changed",
+        "dispatch_packet_ready",
         "dispatch_ready",
         "exact_eval_ready",
     ],

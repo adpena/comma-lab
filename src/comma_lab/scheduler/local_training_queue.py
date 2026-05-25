@@ -31,10 +31,14 @@ FALSE_AUTHORITY: dict[str, bool] = {
     "promotable": False,
     "rank_or_kill_eligible": False,
     "ready_for_exact_eval_dispatch": False,
+    "dispatch_packet_ready": False,
     "reproduction_claim": False,
     "pr95_1to1_reproduction_claim": False,
     "reproduction_equivalence": False,
 }
+LOCAL_TRAINING_RESOURCE_KINDS = frozenset(
+    {"local", "local_cpu", "local_mlx", "local_cuda", "local_mps"}
+)
 
 
 def _utc_now() -> str:
@@ -60,7 +64,11 @@ def _resolve_output_path(value: Any, *, repo_root: Path) -> Path:
 
 
 def _false_authority_postcondition(path: str) -> dict[str, Any]:
-    return {"type": "json_false_authority", "path": path}
+    return {
+        "type": "json_false_authority",
+        "path": path,
+        "false_or_missing": sorted(FALSE_AUTHORITY),
+    }
 
 
 def _json_equals_postcondition(path: str, key: str, value: Any) -> dict[str, Any]:
@@ -286,6 +294,12 @@ def _validate_plan(
     for key, expected in FALSE_AUTHORITY.items():
         if key in execution and execution.get(key) is not expected:
             raise ExperimentQueueError(f"{label}.recommended_execution.{key} must be false")
+    resource_kind = _resource_kind(execution)
+    if resource_kind not in LOCAL_TRAINING_RESOURCE_KINDS:
+        raise ExperimentQueueError(
+            f"{label}.recommended_execution.resource_kind must be a local training "
+            f"resource, got {resource_kind!r}"
+        )
     command = _command_args(execution)
     _validate_command_writes_declared_outputs(
         command,
@@ -432,31 +446,32 @@ def build_local_training_execution_queue(
                     artifact_paths.append(extra_rel)
             postconditions.append(condition)
         resource_kind = _resource_kind(execution)
-        input_artifact_paths = [
-            str(value)
-            for value in (plan.get("source_dir"), plan.get("source_tree_sha256"))
-            if str(value or "").strip()
-        ]
+        source_dir = str(plan.get("source_dir") or "").strip()
+        input_artifact_paths = [source_dir] if source_dir else []
+        source_tree_sha256 = str(plan.get("source_tree_sha256") or "").strip()
+        metadata: dict[str, Any] = {
+            "schema": LOCAL_TRAINING_QUEUE_SCHEMA,
+            "tool": TOOL_NAME,
+            "generated_at_utc": generated_at,
+            "source_plan_schema": plan.get("schema"),
+            "candidate_id": plan.get("candidate_id"),
+            "representation_family": plan.get("representation_family"),
+            "substrate_family": plan.get("substrate_family"),
+            "training_backend": execution.get("training_backend"),
+            "device": execution.get("device"),
+            "candidate_generation_only": True,
+            "requires_exact_eval_before_promotion": True,
+            **optimizer_identity,
+            **FALSE_AUTHORITY,
+        }
+        if source_tree_sha256:
+            metadata["source_tree_sha256"] = source_tree_sha256
         experiments.append(
             {
                 "id": experiment_id,
                 "lane_id": str(plan.get("lane_id") or lane_id),
                 "priority": 10 + index,
-                "metadata": {
-                    "schema": LOCAL_TRAINING_QUEUE_SCHEMA,
-                    "tool": TOOL_NAME,
-                    "generated_at_utc": generated_at,
-                    "source_plan_schema": plan.get("schema"),
-                    "candidate_id": plan.get("candidate_id"),
-                    "representation_family": plan.get("representation_family"),
-                    "substrate_family": plan.get("substrate_family"),
-                    "training_backend": execution.get("training_backend"),
-                    "device": execution.get("device"),
-                    "candidate_generation_only": True,
-                    "requires_exact_eval_before_promotion": True,
-                    **optimizer_identity,
-                    **FALSE_AUTHORITY,
-                },
+                "metadata": metadata,
                 "steps": [
                     {
                         "id": "run_local_training",

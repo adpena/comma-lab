@@ -702,7 +702,9 @@ class TrainingTelemetry:
     rows: list[StageTelemetryRow] = dataclasses.field(default_factory=list)
     lane_id: str = ""
     source_video_sha256: str = ""
-    source_video_frame_count: int = 0
+    source_video_frame_count: int | None = None
+    source_video_frame_count_scope: str = "not_decoded"
+    max_frames: int | None = None
     canonical_citation: str = ""
     run_started_utc: str = ""
     run_completed_utc: str = ""
@@ -731,6 +733,8 @@ class TrainingTelemetry:
             "lane_id": self.lane_id,
             "source_video_sha256": self.source_video_sha256,
             "source_video_frame_count": self.source_video_frame_count,
+            "source_video_frame_count_scope": self.source_video_frame_count_scope,
+            "max_frames": self.max_frames,
             "training_fidelity_class": PR95_MLX_LONG_TRAINING_FIDELITY_CLASS,
             "training_fidelity_status": PR95_MLX_LONG_TRAINING_FIDELITY_STATUS,
             "reproduction_equivalence_class": PR95_MLX_LONG_TRAINING_REPRODUCTION_CLASS,
@@ -824,10 +828,21 @@ def compute_video_sha256(video_path: Path) -> str:
     return hasher.hexdigest()
 
 
+def _source_video_frame_count_scope(
+    config: LongTrainingConfig,
+    source_video_frame_count: int | None,
+) -> str:
+    if source_video_frame_count is None:
+        return "not_decoded"
+    if config.max_frames is not None:
+        return "max_frames_cap"
+    return "full_video_decode"
+
+
 def register_canonical_provenance(
     config: LongTrainingConfig,
     source_video_sha256: str,
-    source_video_frame_count: int,
+    source_video_frame_count: int | None,
 ) -> dict[str, Any]:
     """Build a canonical Provenance row for the long-training run.
 
@@ -854,6 +869,11 @@ def register_canonical_provenance(
         "source_video_path": str(config.source_video_path),
         "source_video_sha256": source_video_sha256,
         "source_video_frame_count": source_video_frame_count,
+        "source_video_frame_count_scope": _source_video_frame_count_scope(
+            config,
+            source_video_frame_count,
+        ),
+        "max_frames": config.max_frames,
         "latent_dim": config.latent_dim,
         "base_channels": config.base_channels,
         "eval_size": list(config.eval_size),
@@ -905,11 +925,14 @@ def build_long_training_plan_report(
     dispatch authority from a local substrate.
     """
 
-    frame_count = 0 if source_video_frame_count is None else int(source_video_frame_count)
     provenance = register_canonical_provenance(
         config,
         source_video_sha256 or "",
-        frame_count,
+        source_video_frame_count,
+    )
+    frame_count_scope = _source_video_frame_count_scope(
+        config,
+        source_video_frame_count,
     )
     telemetry_paths = [telemetry_path.as_posix()] if telemetry_path is not None else []
     checkpoint_rows = [artifact.as_dict() for artifact in checkpoint_artifacts]
@@ -956,6 +979,10 @@ def build_long_training_plan_report(
                 {
                     "type": "json_false_authority",
                     "path": output_report,
+                    "required_false": sorted(
+                        PR95_MLX_LONG_TRAINING_FALSE_AUTHORITY
+                    ),
+                    "false_or_missing": [],
                 },
             ],
             **PR95_MLX_LONG_TRAINING_FALSE_AUTHORITY,
@@ -973,6 +1000,8 @@ def build_long_training_plan_report(
         "source_video_exists": config.source_video_path.exists(),
         "source_video_sha256": source_video_sha256,
         "source_video_frame_count": source_video_frame_count,
+        "source_video_frame_count_scope": frame_count_scope,
+        "max_frames": config.max_frames,
         "checkpoint_root": config.checkpoint_root.as_posix(),
         "telemetry_path": None if telemetry_path is None else telemetry_path.as_posix(),
         "artifact_paths": telemetry_paths,
@@ -1106,6 +1135,13 @@ class MLXLongTrainingPipeline:
         self._telemetry.source_video_frame_count = (
             self._source_video_frame_count
         )
+        self._telemetry.source_video_frame_count_scope = (
+            _source_video_frame_count_scope(
+                self.config,
+                self._source_video_frame_count,
+            )
+        )
+        self._telemetry.max_frames = self.config.max_frames
         self._telemetry.run_started_utc = _utc_now_iso()
 
     def loss_fn(
@@ -1424,9 +1460,12 @@ def _mlx_peak_memory_bytes() -> int:
     if mx is None:
         return 0
     try:
-        return int(mx.metal.get_peak_memory())  # type: ignore[attr-defined]
+        return int(mx.get_peak_memory())  # type: ignore[attr-defined]
     except (AttributeError, RuntimeError):
-        return 0
+        try:
+            return int(mx.metal.get_peak_memory())  # type: ignore[attr-defined]
+        except (AttributeError, RuntimeError):
+            return 0
 
 
 def _mlx_to_numpy(arr: Any) -> Any:

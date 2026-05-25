@@ -592,6 +592,7 @@ def test_observer_surfaces_pr95_mlx_package_report_readiness(
                 "promotion_eligible": False,
                 "rank_or_kill_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
+                "dispatch_packet_ready": False,
                 "promotable": False,
             }
         ),
@@ -639,6 +640,7 @@ def test_observer_surfaces_pr95_mlx_package_report_readiness(
     assert artifact_record["runtime_file_count"] == 4
     assert artifact_record["score_claim"] is False
     assert artifact_record["ready_for_exact_eval_dispatch"] is False
+    assert artifact_record["dispatch_packet_ready"] is False
     assert artifact_record["exact_readiness_refusal"]["ready"] is False
     assert artifact_record["readiness_blockers"] == [
         "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
@@ -658,6 +660,8 @@ def test_observer_surfaces_pr95_mlx_long_training_plan(
                 "lane_id": "lane_pr95_mlx_long_training_test",
                 "source_video_sha256": "a" * 64,
                 "source_video_frame_count": 1200,
+                "source_video_frame_count_scope": "full_video_decode",
+                "max_frames": None,
                 "checkpoint_root": "experiments/results/pr95_mlx_long_training",
                 "telemetry_path": ".omx/state/pr95_mlx_long_training.jsonl",
                 "candidate_registry_count": 6,
@@ -723,6 +727,8 @@ def test_observer_surfaces_pr95_mlx_long_training_plan(
     assert artifact_record["pr95_mlx_long_training_plan"] is True
     assert artifact_record["mode"] == "plan_only"
     assert artifact_record["lane_id"] == "lane_pr95_mlx_long_training_test"
+    assert artifact_record["source_video_frame_count_scope"] == "full_video_decode"
+    assert artifact_record["max_frames"] is None
     assert (
         artifact_record["training_fidelity_class"]
         == "rgb_frame_mse_local_mlx_research_mvp"

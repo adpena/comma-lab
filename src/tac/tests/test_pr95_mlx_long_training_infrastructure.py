@@ -54,6 +54,8 @@ def test_long_training_provenance_is_mlx_false_authority() -> None:
     assert provenance["evidence_tag"] == EVIDENCE_TAG_MLX
     assert provenance["axis_tag"] == EVIDENCE_TAG_MLX
     assert provenance["score_axis"] == EVIDENCE_TAG_MLX
+    assert provenance["source_video_frame_count_scope"] == "full_video_decode"
+    assert provenance["max_frames"] is None
     assert provenance["training_fidelity_class"] == PR95_MLX_LONG_TRAINING_FIDELITY_CLASS
     assert provenance["training_fidelity_status"] == PR95_MLX_LONG_TRAINING_FIDELITY_STATUS
     assert (
@@ -75,6 +77,7 @@ def test_long_training_plan_report_is_queue_observable() -> None:
         smoke_mode=True,
         smoke_epochs_per_stage=2,
         checkpoint_every_epochs=1,
+        max_frames=16,
     )
 
     report = build_long_training_plan_report(
@@ -90,6 +93,8 @@ def test_long_training_plan_report_is_queue_observable() -> None:
     assert report["mode"] == "plan_only"
     assert report["training_fidelity_class"] == PR95_MLX_LONG_TRAINING_FIDELITY_CLASS
     assert report["training_fidelity_status"] == PR95_MLX_LONG_TRAINING_FIDELITY_STATUS
+    assert report["source_video_frame_count_scope"] == "max_frames_cap"
+    assert report["max_frames"] == 16
     assert report["reproduction_equivalence"] is False
     assert report["reproduction_claim"] is False
     assert (
@@ -112,9 +117,36 @@ def test_long_training_plan_report_is_queue_observable() -> None:
     assert {
         "type": "json_false_authority",
         "path": ".omx/research/pr95_mlx_long_training_test_plan.json",
+        "required_false": sorted(PR95_MLX_LONG_TRAINING_FALSE_AUTHORITY),
+        "false_or_missing": [],
     } in postconditions
     for key, value in PR95_MLX_LONG_TRAINING_FALSE_AUTHORITY.items():
         assert report[key] is value
+
+
+def test_long_training_plan_report_marks_unknown_frame_count() -> None:
+    config = LongTrainingConfig(
+        source_video_path=Path("upstream/videos/0.mkv"),
+        smoke_mode=True,
+        smoke_epochs_per_stage=1,
+        checkpoint_every_epochs=1,
+    )
+
+    report = build_long_training_plan_report(
+        config,
+        output_report_path=Path(".omx/research/pr95_mlx_long_training_plan.json"),
+        source_video_sha256="b" * 64,
+        source_video_frame_count=None,
+        command=["tools/run_pr95_mlx_long_training.py"],
+    )
+
+    assert report["source_video_frame_count"] is None
+    assert report["source_video_frame_count_scope"] == "not_decoded"
+    assert report["canonical_provenance"]["source_video_frame_count"] is None
+    assert (
+        report["canonical_provenance"]["source_video_frame_count_scope"]
+        == "not_decoded"
+    )
 
 
 def test_long_training_plan_report_compiles_to_experiment_queue(
@@ -182,6 +214,8 @@ def test_long_training_telemetry_header_persists_false_authority(
         lane_id="lane_pr95_mlx_long_training_test",
         source_video_sha256="c" * 64,
         source_video_frame_count=2,
+        source_video_frame_count_scope="max_frames_cap",
+        max_frames=2,
         canonical_citation=".omx/research/pr95_8stage_curriculum_forensic_20260513.md",
         run_started_utc="2026-05-25T18:00:00Z",
     )
@@ -205,6 +239,8 @@ def test_long_training_telemetry_header_persists_false_authority(
 
     header = json.loads(path.read_text(encoding="utf-8").splitlines()[0])
     assert header["schema_version"] == PR95_MLX_LONG_TRAINING_TELEMETRY_SCHEMA
+    assert header["source_video_frame_count_scope"] == "max_frames_cap"
+    assert header["max_frames"] == 2
     assert header["evidence_grade"] == EVIDENCE_GRADE_MLX
     assert header["evidence_tag"] == EVIDENCE_TAG_MLX
     assert header["training_fidelity_class"] == PR95_MLX_LONG_TRAINING_FIDELITY_CLASS

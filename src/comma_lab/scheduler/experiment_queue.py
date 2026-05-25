@@ -48,6 +48,7 @@ DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS = (
     "exact_cuda_auth_eval",
     "contest_cuda_auth_eval",
     "dispatch_attempted",
+    "dispatch_packet_ready",
     "gpu_launched",
     "score_affecting_payload_changed",
     "charged_bits_changed",
@@ -57,7 +58,6 @@ SCHEDULER_RUNTIME_POLICY_FORBIDDEN_AUTHORITY_FIELDS = tuple(
         (
             *DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
             *DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
-            "dispatch_packet_ready",
         )
     )
 )
@@ -3952,6 +3952,7 @@ def derive_scheduler_runtime_policy(
             "promotion_eligible": False,
             "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
+            "dispatch_packet_ready": False,
         }
 
     return {
@@ -3987,6 +3988,7 @@ def derive_scheduler_runtime_policy(
         "promotable": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "dispatch_packet_ready": False,
         "dispatch_attempted": False,
         "gpu_launched": False,
     }

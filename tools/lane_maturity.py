@@ -96,6 +96,9 @@ GATES = [
 # Gates that — if EITHER is unsatisfied — disqualify a lane from Level 2 even
 # if 4+ gates are otherwise true. See module docstring "level-2-vs-1 tie-break".
 LEVEL_2_REQUIRED_GATES = {"impl_complete", "real_archive_empirical"}
+AUTHORITY_REFUSAL_GATES = frozenset(
+    {"real_archive_empirical", "contest_cuda", "contest_cpu"}
+)
 
 # Heuristic: an "evidence" string LOOKS LIKE a file path if it contains a
 # slash AND starts with one of these prefixes.
@@ -324,6 +327,23 @@ def _evidence_exact_readiness_refusal(
     return refusal if isinstance(refusal, dict) else None
 
 
+def _exact_readiness_refusal_error(
+    lane_id: str,
+    gate: str,
+    evidence: str,
+    *,
+    repo_root: Path,
+) -> str | None:
+    refusal = _evidence_exact_readiness_refusal(evidence, repo_root=repo_root)
+    if refusal is not None and refusal.get("ready") is False:
+        return (
+            f"{lane_id}: gate '{gate}' evidence has "
+            "exact_readiness_refusal.ready=false; unmark "
+            f"{gate} or use a non-authority packaging ledger instead"
+        )
+    return None
+
+
 # ── Validation ───────────────────────────────────────────────────────────
 
 
@@ -376,24 +396,18 @@ def validate_registry(
                 f"level {computed} (gate count: "
                 f"{sum(1 for g in GATES if gates.get(g, {}).get('status') is True)}/{len(GATES)})"
             )
-        real_archive_gate = gates.get("real_archive_empirical", {})
-        if (
-            isinstance(stored, int)
-            and stored >= 2
-            and isinstance(real_archive_gate, dict)
-            and real_archive_gate.get("status") is True
-        ):
-            refusal = _evidence_exact_readiness_refusal(
-                str(real_archive_gate.get("evidence") or ""),
+        for gname in AUTHORITY_REFUSAL_GATES:
+            gate_payload = gates.get(gname, {})
+            if not isinstance(gate_payload, dict) or gate_payload.get("status") is not True:
+                continue
+            refusal_error = _exact_readiness_refusal_error(
+                str(lid),
+                gname,
+                str(gate_payload.get("evidence") or ""),
                 repo_root=root,
             )
-            if refusal is not None and refusal.get("ready") is False:
-                errors.append(
-                    f"{lid}: L2+ real_archive_empirical evidence has "
-                    "exact_readiness_refusal.ready=false; unmark "
-                    "real_archive_empirical or use a non-authority packaging "
-                    "ledger instead"
-                )
+            if refusal_error is not None:
+                errors.append(refusal_error)
 
         # Evidence path heuristic — if it LOOKS like a path, it MUST exist
         for gname, g in gates.items():
@@ -452,15 +466,23 @@ def mark_gate(
     if lane is None:
         raise ValueError(f"unknown lane id: {lane_id!r}")
 
+    root = repo_root or REPO_ROOT
     path = extract_filepath(evidence)
-    if path is not None:
-        root = repo_root or REPO_ROOT
-        if not (root / path).exists():
-            raise ValueError(
-                f"evidence path does not exist on disk: {path} "
-                f"(if this is descriptive text not a path, rephrase to "
-                f"avoid leading '{path.split('/')[0]}/')"
-            )
+    if path is not None and not (root / path).exists():
+        raise ValueError(
+            f"evidence path does not exist on disk: {path} "
+            f"(if this is descriptive text not a path, rephrase to "
+            f"avoid leading '{path.split('/')[0]}/')"
+        )
+    if gate in AUTHORITY_REFUSAL_GATES:
+        refusal_error = _exact_readiness_refusal_error(
+            lane_id,
+            gate,
+            evidence,
+            repo_root=root,
+        )
+        if refusal_error is not None:
+            raise ValueError(refusal_error)
 
     lane.setdefault("gates", {})[gate] = {"status": True, "evidence": evidence}
     lane["level"] = compute_level(lane["gates"])

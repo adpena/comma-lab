@@ -155,6 +155,7 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
             record["json_schema"] = payload.get("schema") or payload.get("schema_version")
             for key in (
                 *MATERIALIZER_FALSE_AUTHORITY,
+                "dispatch_packet_ready",
                 "candidate_id",
                 "target_kind",
                 "materializer_id",
@@ -207,6 +208,8 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
                     "lane_id",
                     "source_video_sha256",
                     "source_video_frame_count",
+                    "source_video_frame_count_scope",
+                    "max_frames",
                     "checkpoint_root",
                     "telemetry_path",
                     "candidate_registry_count",
@@ -217,6 +220,7 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
                     "reproduction_equivalence",
                     "reproduction_claim",
                     "pr95_1to1_reproduction_claim",
+                    "dispatch_packet_ready",
                     "reproduction_equivalence_class",
                 ):
                     if key in payload:

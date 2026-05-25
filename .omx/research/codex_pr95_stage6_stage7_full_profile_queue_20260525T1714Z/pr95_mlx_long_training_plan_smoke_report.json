@@ -1,6 +1,6 @@
 {
   "artifact_paths": [
-    ".omx/state/pr95_mlx_long_training_smoke_telemetry.jsonl"
+    ".omx/state/pr95_mlx_long_training_plan_smoke_telemetry.jsonl"
   ],
   "authority_status": "PR95 MLX long-training is a local RGB-frame reconstruction MVP. It can select follow-up candidates, but SegNet/PoseNet or calibrated scorer loss plus exact CPU/CUDA auth eval remain required for score, promotion, dispatch readiness, rank, or kill authority.",
   "axis_tag": "[macOS-MLX research-signal]",
@@ -60,7 +60,7 @@
     "axis_tag": "[macOS-MLX research-signal]",
     "base_channels": 36,
     "canonical_citation": ".omx/research/pr95_8stage_curriculum_forensic_20260513.md",
-    "captured_at_utc": "2026-05-25T18:39:21Z",
+    "captured_at_utc": "2026-05-25T19:03:10Z",
     "checkpoint_every_epochs": 1,
     "dispatch_attempted": false,
     "dispatch_packet_ready": false,
@@ -88,6 +88,7 @@
     "kind": "macos_mlx_research_signal",
     "lane_id": "lane_pr95_mlx_long_training_infrastructure_and_substrate_class_shift_candidate_validation_pipeline_20260525",
     "latent_dim": 28,
+    "max_frames": null,
     "numeric_tolerance_anchor": "sister_slot_1_landing_memo_pr95_mlx_pytorch_export_parity_bridge_landed_20260525.md",
     "numeric_tolerance_atol": 0.005,
     "numeric_tolerance_rtol": 0.01,
@@ -107,7 +108,8 @@
     "score_claim_valid": false,
     "smoke_epochs_per_stage": 1,
     "smoke_mode": true,
-    "source_video_frame_count": 0,
+    "source_video_frame_count": null,
+    "source_video_frame_count_scope": "not_decoded",
     "source_video_path": "upstream/videos/0.mkv",
     "source_video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
     "stage_curriculum_summary": [
@@ -174,7 +176,7 @@
   "checkpoint_artifact_count": 0,
   "checkpoint_artifacts": [],
   "checkpoint_every_epochs": 1,
-  "checkpoint_root": "experiments/results/pr95_mlx_long_training_checkpoints",
+  "checkpoint_root": "experiments/results/pr95_mlx_long_training_plan_smoke",
   "command": [
     ".venv/bin/python",
     "tools/run_pr95_mlx_long_training.py",
@@ -183,7 +185,7 @@
     "--source-video-path",
     "upstream/videos/0.mkv",
     "--telemetry-path",
-    ".omx/state/pr95_mlx_long_training_smoke_telemetry.jsonl",
+    ".omx/state/pr95_mlx_long_training_plan_smoke_telemetry.jsonl",
     "--smoke-mode",
     "--smoke-epochs-per-stage",
     "1",
@@ -212,17 +214,18 @@
     "ready": false,
     "schema": "exact_readiness_refusal.v1"
   },
-  "generated_utc": "2026-05-25T18:39:21Z",
+  "generated_utc": "2026-05-25T19:03:10Z",
   "gpu_launched": false,
   "lane_id": "lane_pr95_mlx_long_training_infrastructure_and_substrate_class_shift_candidate_validation_pipeline_20260525",
   "latent_dim": 28,
+  "max_frames": null,
   "mode": "plan_only",
   "operator_run_label": "",
   "pr95_1to1_reproduction_claim": false,
   "promotable": false,
   "promotion_eligible": false,
   "pullback_artifact_paths": [
-    ".omx/state/pr95_mlx_long_training_smoke_telemetry.jsonl"
+    ".omx/state/pr95_mlx_long_training_plan_smoke_telemetry.jsonl"
   ],
   "random_seed": 0,
   "rank_or_kill_eligible": false,
@@ -266,7 +269,23 @@
         "type": "json_equals"
       },
       {
+        "false_or_missing": [],
         "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/pr95_mlx_long_training_plan_smoke_report.json",
+        "required_false": [
+          "dispatch_attempted",
+          "dispatch_packet_ready",
+          "gpu_launched",
+          "pr95_1to1_reproduction_claim",
+          "promotable",
+          "promotion_eligible",
+          "rank_or_kill_eligible",
+          "ready_for_exact_eval_dispatch",
+          "reproduction_claim",
+          "reproduction_equivalence",
+          "score_claim",
+          "score_claim_eligible",
+          "score_claim_valid"
+        ],
         "type": "json_false_authority"
       }
     ],
@@ -283,7 +302,7 @@
       "--source-video-path",
       "upstream/videos/0.mkv",
       "--telemetry-path",
-      ".omx/state/pr95_mlx_long_training_smoke_telemetry.jsonl",
+      ".omx/state/pr95_mlx_long_training_plan_smoke_telemetry.jsonl",
       "--smoke-mode",
       "--smoke-epochs-per-stage",
       "1",
@@ -299,7 +318,7 @@
     "score_claim": false,
     "score_claim_eligible": false,
     "score_claim_valid": false,
-    "telemetry_path": ".omx/state/pr95_mlx_long_training_smoke_telemetry.jsonl",
+    "telemetry_path": ".omx/state/pr95_mlx_long_training_plan_smoke_telemetry.jsonl",
     "tool": "tools/run_pr95_mlx_long_training.py"
   },
   "reproduction_claim": false,
@@ -315,10 +334,11 @@
   "smoke_mode": true,
   "source_video_exists": true,
   "source_video_frame_count": null,
+  "source_video_frame_count_scope": "not_decoded",
   "source_video_path": "upstream/videos/0.mkv",
   "source_video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
   "stage_count": 8,
-  "telemetry_path": ".omx/state/pr95_mlx_long_training_smoke_telemetry.jsonl",
+  "telemetry_path": ".omx/state/pr95_mlx_long_training_plan_smoke_telemetry.jsonl",
   "total_epochs": 8,
   "training_fidelity_class": "rgb_frame_mse_local_mlx_research_mvp",
   "training_fidelity_status": "local_rgb_frame_mse_mvp_not_segnet_posenet_scorer_faithful"

@@ -65,6 +65,23 @@ def _all_true_gates(repo: Path) -> dict:
     return {g: {"status": True, "evidence": "src/tac/fake_module.py"} for g in lm.GATES}
 
 
+def _write_exact_readiness_refusal(repo: Path) -> Path:
+    evidence = repo / ".omx" / "research" / "package_report.json"
+    evidence.parent.mkdir(parents=True, exist_ok=True)
+    evidence.write_text(
+        json.dumps(
+            {
+                "schema_version": "example_package_report.v1",
+                "exact_readiness_refusal": {
+                    "ready": False,
+                    "blockers": ["requires_exact_auth_eval"],
+                },
+            }
+        )
+    )
+    return evidence
+
+
 # ── Test 1: registry load + schema validation ────────────────────────────
 
 
@@ -212,19 +229,7 @@ def test_validate_rejects_l2_exact_readiness_refusal_evidence(
     monkeypatch,
 ):
     repo = _make_repo(tmp_path, [])
-    evidence = repo / ".omx" / "research" / "package_report.json"
-    evidence.parent.mkdir(parents=True, exist_ok=True)
-    evidence.write_text(
-        json.dumps(
-            {
-                "schema_version": "example_package_report.v1",
-                "exact_readiness_refusal": {
-                    "ready": False,
-                    "blockers": ["requires_exact_auth_eval"],
-                },
-            }
-        )
-    )
+    _write_exact_readiness_refusal(repo)
     gates = _empty_gates()
     gates["impl_complete"] = {"status": True, "evidence": "src/tac/fake.py"}
     gates["real_archive_empirical"] = {
@@ -250,6 +255,75 @@ def test_validate_rejects_l2_exact_readiness_refusal_evidence(
     errors = lm.validate_registry(lm.load_registry(), repo_root=repo)
 
     assert any("exact_readiness_refusal.ready=false" in e for e in errors), errors
+
+
+@pytest.mark.parametrize("gate", ["contest_cuda", "contest_cpu"])
+def test_validate_rejects_contest_gate_exact_readiness_refusal_evidence(
+    tmp_path,
+    monkeypatch,
+    gate: str,
+):
+    repo = _make_repo(tmp_path, [])
+    _write_exact_readiness_refusal(repo)
+    gates = _empty_gates()
+    gates[gate] = {
+        "status": True,
+        "evidence": ".omx/research/package_report.json",
+    }
+    data = json.loads((repo / lm.REGISTRY_REL).read_text())
+    data["lanes"].append(
+        {
+            "id": f"lane_refusal_{gate}",
+            "name": "Contest Refusal",
+            "phase": 2,
+            "level": 1,
+            "gates": gates,
+            "notes": "",
+        }
+    )
+    (repo / lm.REGISTRY_REL).write_text(json.dumps(data))
+    monkeypatch.setattr(lm, "REPO_ROOT", repo)
+
+    errors = lm.validate_registry(lm.load_registry(), repo_root=repo)
+
+    assert any(f"gate '{gate}'" in e for e in errors), errors
+    assert any("exact_readiness_refusal.ready=false" in e for e in errors), errors
+
+
+@pytest.mark.parametrize(
+    "gate",
+    ["real_archive_empirical", "contest_cuda", "contest_cpu"],
+)
+def test_mark_gate_rejects_exact_readiness_refusal_evidence(
+    tmp_path,
+    monkeypatch,
+    gate: str,
+):
+    repo = _make_repo(
+        tmp_path,
+        [
+            {
+                "id": "lane_mark_refusal",
+                "name": "Mark Refusal",
+                "phase": 1,
+                "level": 0,
+                "gates": _empty_gates(),
+                "notes": "",
+            }
+        ],
+    )
+    _write_exact_readiness_refusal(repo)
+    monkeypatch.setattr(lm, "REPO_ROOT", repo)
+    data = lm.load_registry()
+
+    with pytest.raises(ValueError, match=r"exact_readiness_refusal\.ready=false"):
+        lm.mark_gate(
+            data,
+            "lane_mark_refusal",
+            gate,
+            ".omx/research/package_report.json",
+            repo_root=repo,
+        )
 
 
 def test_validate_descriptive_text_evidence_no_path_check(tmp_path, monkeypatch):

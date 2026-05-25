@@ -1,0 +1,156 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1,
+      "local_cuda": 1,
+      "local_mlx": 1,
+      "local_mps": 1
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "local_training_0000_0",
+      "lane_id": "lane_pr95_mlx_long_training_infrastructure_and_substrate_class_shift_candidate_validation_pipeline_20260525",
+      "metadata": {
+        "candidate_generation_only": true,
+        "candidate_id": null,
+        "device": null,
+        "dispatch_packet_ready": false,
+        "generated_at_utc": "2026-05-25T18:55:59Z",
+        "pr95_1to1_reproduction_claim": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "representation_family": null,
+        "reproduction_claim": false,
+        "reproduction_equivalence": false,
+        "requires_exact_eval_before_promotion": true,
+        "schema": "local_training_execution_queue_plan.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_plan_schema": "pr95_mlx_long_training_plan.v1",
+        "substrate_family": null,
+        "tool": "comma_lab.scheduler.local_training_queue",
+        "training_backend": null
+      },
+      "priority": 10,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_pr95_mlx_long_training.py",
+            "--output-report",
+            ".omx/research/codex_pr95_mlx_long_training_execute_smoke_20260525T1855Z/pr95_mlx_long_training_execute_smoke_report.json",
+            "--source-video-path",
+            "upstream/videos/0.mkv",
+            "--checkpoint-root",
+            ".omx/research/codex_pr95_mlx_long_training_execute_smoke_20260525T1855Z/checkpoints",
+            "--telemetry-path",
+            ".omx/research/codex_pr95_mlx_long_training_execute_smoke_20260525T1855Z/pr95_mlx_long_training_execute_smoke_telemetry.jsonl",
+            "--smoke-mode",
+            "--execute-smoke",
+            "--smoke-epochs-per-stage",
+            "1",
+            "--checkpoint-every-epochs",
+            "1",
+            "--max-frames",
+            "2",
+            "--hash-source-video"
+          ],
+          "id": "run_local_training",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/codex_pr95_mlx_long_training_execute_smoke_20260525T1855Z/pr95_mlx_long_training_execute_smoke_report.json",
+              "type": "path_exists"
+            },
+            {
+              "false_or_missing": [
+                "dispatch_packet_ready",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "path": ".omx/research/codex_pr95_mlx_long_training_execute_smoke_20260525T1855Z/pr95_mlx_long_training_execute_smoke_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "pr95_mlx_long_training_plan.v1",
+              "key": "schema",
+              "path": ".omx/research/codex_pr95_mlx_long_training_execute_smoke_20260525T1855Z/pr95_mlx_long_training_execute_smoke_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": ".omx/research/codex_pr95_mlx_long_training_execute_smoke_20260525T1855Z/pr95_mlx_long_training_execute_smoke_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "rgb_frame_mse_local_mlx_research_mvp",
+              "key": "training_fidelity_class",
+              "path": ".omx/research/codex_pr95_mlx_long_training_execute_smoke_20260525T1855Z/pr95_mlx_long_training_execute_smoke_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "reproduction_equivalence",
+              "path": ".omx/research/codex_pr95_mlx_long_training_execute_smoke_20260525T1855Z/pr95_mlx_long_training_execute_smoke_report.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": ".omx/research/codex_pr95_mlx_long_training_execute_smoke_20260525T1855Z/pr95_mlx_long_training_execute_smoke_report.json",
+              "required_false": [
+                "dispatch_attempted",
+                "dispatch_packet_ready",
+                "gpu_launched",
+                "pr95_1to1_reproduction_claim",
+                "promotable",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "reproduction_claim",
+                "reproduction_equivalence",
+                "score_claim",
+                "score_claim_eligible",
+                "score_claim_valid"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/codex_pr95_mlx_long_training_execute_smoke_20260525T1855Z/pr95_mlx_long_training_execute_smoke_report.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 512,
+            "recursive": true
+          },
+          "timeout_seconds": 600
+        }
+      ],
+      "tags": []
+    }
+  ],
+  "queue_id": "pr95_mlx_long_training_execute_smoke_queue_20260525T1855Z",
+  "schema": "experiment_queue.v1"
+}

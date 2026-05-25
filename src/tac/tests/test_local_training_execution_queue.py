@@ -95,6 +95,13 @@ def test_local_training_queue_compiles_mlx_plan(tmp_path: Path) -> None:
         and condition["path"] == "manifest.json"
         for condition in step["postconditions"]
     )
+    false_authority = next(
+        condition
+        for condition in step["postconditions"]
+        if condition["type"] == "json_false_authority"
+        and condition["path"] == "manifest.json"
+    )
+    assert "dispatch_packet_ready" in false_authority["false_or_missing"]
     assert any(
         condition["type"] == "json_equals"
         and condition["path"] == "representation_manifest.json"
@@ -151,6 +158,50 @@ def test_local_training_queue_honors_explicit_scheduler_resource_kind(
     )
 
     assert queue["experiments"][0]["steps"][0]["resources"]["kind"] == "local_cpu"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("resource_kind", "modal_gpu"),
+        ("scheduler_resource_kind", "cuda_auth"),
+    ],
+)
+def test_local_training_queue_rejects_nonlocal_resource_kind(
+    tmp_path: Path,
+    field: str,
+    value: str,
+) -> None:
+    plan = _plan(tmp_path, backend="local_numpy", device="auto")
+    plan["recommended_execution"][field] = value
+
+    with pytest.raises(ExperimentQueueError, match="local training resource"):
+        build_local_training_execution_queue(
+            [plan],
+            queue_id="local_training_fixture",
+            repo_root=tmp_path,
+        )
+
+
+def test_local_training_queue_keeps_source_sha_out_of_artifact_paths(
+    tmp_path: Path,
+) -> None:
+    source_sha = "a" * 64
+    source_dir = tmp_path / "source_tree"
+    plan = _plan(tmp_path, backend="local_numpy", device="auto")
+    plan["source_dir"] = str(source_dir)
+    plan["source_tree_sha256"] = source_sha
+
+    queue = build_local_training_execution_queue(
+        [plan],
+        queue_id="local_training_fixture",
+        repo_root=tmp_path,
+    )
+
+    experiment = queue["experiments"][0]
+    step = experiment["steps"][0]
+    assert experiment["metadata"]["source_tree_sha256"] == source_sha
+    assert step["telemetry"]["input_artifact_paths"] == [str(source_dir)]
 
 
 def test_local_training_queue_rejects_truthy_authority(tmp_path: Path) -> None:

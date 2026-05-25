@@ -274,6 +274,14 @@ src/tac.egg-info/
 .omx/research/codex_pr95_stage*_full_profile_queue_*/matrix/**/pr95_packaged_submission/
 .omx/research/codex_pr95_stage*_full_profile_queue_*/matrix/**/runtime_consumption_work/
 #
+# PR95 MLX local long-training smokes can place compact reports/telemetry and
+# checkpoint export manifests under .omx/research, but checkpoint payloads are
+# rebuildable binary bulk. Keep payloads out of git while preserving signal.
+.omx/research/codex_pr95_mlx_long_training_execute_smoke_*/checkpoints/*.pt
+.omx/research/codex_pr95_mlx_long_training_execute_smoke_*/checkpoints/*.mlx.safetensors
+.omx/research/codex_pr95_mlx_long_training_execute_smoke_*/checkpoints/*.npz
+.omx/research/codex_pr95_mlx_long_training_execute_smoke_*/checkpoints/*.latents.npy
+#
 # Subagent commit serializer artifacts (lock + JSONL log are local-only forensics)
 .omx/state/.commit-lock
 .omx/state/commit-serializer.log
