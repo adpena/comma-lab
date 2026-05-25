@@ -1,9 +1,13 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import subprocess
 import sys
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -18,10 +22,71 @@ from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIEL
 from tac.optimization.scorer_inverse_decision_surface import (
     build_inverse_scorer_decision_surface,
 )
+from tools import build_inverse_steganalysis_action_functional as action_cli
+from tools import build_mlx_acquisition_batch as batch_cli
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = REPO_ROOT / "tools" / "build_inverse_steganalysis_action_functional.py"
 BATCH_TOOL = REPO_ROOT / "tools" / "build_mlx_acquisition_batch.py"
+
+
+@dataclass(frozen=True)
+class _CliResult:
+    args: list[str]
+    returncode: int
+    stdout: str
+    stderr: str
+
+
+def _run_cli(main: Callable[[list[str] | None], int], argv: list[str]) -> _CliResult:
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+        try:
+            raw_returncode = main(argv)
+        except SystemExit as exc:
+            code = exc.code
+            if code is None:
+                returncode = 0
+            elif isinstance(code, int):
+                returncode = code
+            else:
+                returncode = 1
+                print(str(code), file=sys.stderr)
+        else:
+            returncode = int(raw_returncode or 0)
+    return _CliResult(
+        args=list(argv),
+        returncode=returncode,
+        stdout=stdout.getvalue(),
+        stderr=stderr.getvalue(),
+    )
+
+
+def _run_repo_tool(
+    args: list[str],
+    *,
+    check: bool,
+    text: bool,
+    capture_output: bool,
+) -> _CliResult:
+    if not text or not capture_output:
+        raise AssertionError("test CLI helper only supports captured text output")
+    if len(args) < 2 or args[0] != sys.executable:
+        raise AssertionError(f"unexpected command shape: {args!r}")
+    tool = Path(args[1])
+    argv = [str(item) for item in args[2:]]
+    if tool == TOOL:
+        result = _run_cli(action_cli.main, argv)
+    elif tool == BATCH_TOOL:
+        result = _run_cli(batch_cli.main, argv)
+    else:
+        raise AssertionError(f"unsupported repo tool: {tool}")
+    if check and result.returncode != 0:
+        raise AssertionError(
+            f"CLI failed with {result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+    return result
 
 
 def _false_authority() -> dict[str, bool]:
@@ -618,7 +683,7 @@ def test_cli_reads_queue_observation_health_feedback(tmp_path: Path) -> None:
     )
     cache_identity.write_text(json.dumps({"cache_sha256": "e" * 64}), encoding="utf-8")
 
-    subprocess.run(
+    _run_repo_tool(
         [
             sys.executable,
             str(TOOL),
@@ -692,7 +757,7 @@ def test_cli_requires_identity_for_queue_observation(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    result = subprocess.run(
+    result = _run_repo_tool(
         [
             sys.executable,
             str(TOOL),
@@ -784,7 +849,7 @@ def test_cli_rejects_truthy_authority_in_queue_observation(tmp_path: Path) -> No
     )
     cache_identity.write_text(json.dumps({"cache_sha256": "e" * 64}), encoding="utf-8")
 
-    result = subprocess.run(
+    result = _run_repo_tool(
         [
             sys.executable,
             str(TOOL),
@@ -845,7 +910,7 @@ def test_cli_reads_materializer_observation_jsonl(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    subprocess.run(
+    _run_repo_tool(
         [
             sys.executable,
             str(TOOL),
@@ -957,7 +1022,7 @@ def test_cli_ingests_materializer_chain_realized_cost_feedback(tmp_path: Path) -
         encoding="utf-8",
     )
 
-    subprocess.run(
+    _run_repo_tool(
         [
             sys.executable,
             str(TOOL),
@@ -996,7 +1061,7 @@ def test_cli_accepts_mlx_effective_spend_triage_selection(tmp_path: Path) -> Non
     output = tmp_path / "action.json"
     _mlx_selection(selection)
 
-    result = subprocess.run(
+    result = _run_repo_tool(
         [
             sys.executable,
             str(TOOL),
@@ -1034,7 +1099,7 @@ def test_cli_accepts_grouped_mlx_acquisition_batch(tmp_path: Path) -> None:
     output = tmp_path / "action.json"
     _mlx_selection(selection)
 
-    build_result = subprocess.run(
+    build_result = _run_repo_tool(
         [
             sys.executable,
             str(BATCH_TOOL),
@@ -1055,7 +1120,7 @@ def test_cli_accepts_grouped_mlx_acquisition_batch(tmp_path: Path) -> None:
     assert build_summary["operation_set_count"] == 1
     assert build_summary["score_claim"] is False
 
-    result = subprocess.run(
+    result = _run_repo_tool(
         [
             sys.executable,
             str(TOOL),
@@ -1105,7 +1170,7 @@ def test_grouped_mlx_batch_preserves_family_agnostic_representation_contracts(
     output = tmp_path / "action.json"
     _mlx_family_mix_selection(selection)
 
-    subprocess.run(
+    _run_repo_tool(
         [
             sys.executable,
             str(BATCH_TOOL),
@@ -1149,7 +1214,7 @@ def test_grouped_mlx_batch_preserves_family_agnostic_representation_contracts(
         for operation in operation_set["selected_operations"]
     )
 
-    subprocess.run(
+    _run_repo_tool(
         [
             sys.executable,
             str(TOOL),
@@ -1188,7 +1253,7 @@ def test_cli_accepts_byte_shaving_signal_surface_for_family_mix(
     output = tmp_path / "action.json"
     _byte_shaving_signal_surface(surface)
 
-    result = subprocess.run(
+    result = _run_repo_tool(
         [
             sys.executable,
             str(TOOL),
@@ -1234,7 +1299,7 @@ def test_cli_rejects_action_functional_above_max_cells(tmp_path: Path) -> None:
     output = tmp_path / "action.json"
     _byte_shaving_signal_surface(surface)
 
-    result = subprocess.run(
+    result = _run_repo_tool(
         [
             sys.executable,
             str(TOOL),
@@ -1267,7 +1332,7 @@ def test_cli_rejects_malformed_mlx_effective_spend_triage_selection(
     payload["selected_rows"][0]["archive_sha256"] = "not-sha"
     selection.write_text(json.dumps(payload), encoding="utf-8")
 
-    result = subprocess.run(
+    result = _run_repo_tool(
         [
             sys.executable,
             str(TOOL),
@@ -1318,7 +1383,7 @@ def test_cli_accepts_paired_exact_auth_calibration_packets(tmp_path: Path) -> No
         encoding="utf-8",
     )
 
-    subprocess.run(
+    _run_repo_tool(
         [
             sys.executable,
             str(TOOL),
@@ -1374,7 +1439,7 @@ def test_cli_requires_identity_for_queue_performance_summary(tmp_path: Path) -> 
         encoding="utf-8",
     )
 
-    result = subprocess.run(
+    result = _run_repo_tool(
         [
             sys.executable,
             str(TOOL),
@@ -1442,7 +1507,7 @@ def test_cli_requires_candidate_identity_for_queue_performance_summary(
         encoding="utf-8",
     )
 
-    result = subprocess.run(
+    result = _run_repo_tool(
         [
             sys.executable,
             str(TOOL),
