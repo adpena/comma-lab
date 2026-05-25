@@ -1,0 +1,153 @@
+{
+  "actual_signature": {
+    "ccc_static_baseline_anchor": 0.0006739782984368503,
+    "center_pair_indices": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "classes_with_measurable_drift": 2,
+    "kl_mean_static_reproduced_for_delta": 0.0006800799164921045,
+    "kl_mean_temporal": 0.007606648374348879,
+    "kl_static_per_pair_reproduced": [
+      0.0007040189229883254,
+      0.0006774018984287977,
+      0.0006791652995161712,
+      0.0006597335450351238
+    ],
+    "kl_temporal_per_pair": [
+      0.011234424076974392,
+      0.005993110593408346,
+      0.007857308723032475,
+      0.005341750103980303
+    ],
+    "n_frames_decoded": 16,
+    "per_class_drift_summary": [
+      {
+        "abs_mean_drift": 0.0003952905535697937,
+        "class_index": 0,
+        "drift_per_pair": [
+          -0.024380385875701904,
+          0.004107356071472168,
+          0.01248440146446228,
+          0.00936979055404663
+        ],
+        "mean_drift_window_minus_static": 0.0003952905535697937
+      },
+      {
+        "abs_mean_drift": 0.0025028837844729424,
+        "class_index": 1,
+        "drift_per_pair": [
+          -0.006291832774877548,
+          -0.008256912231445312,
+          0.0030135177075862885,
+          0.0015236921608448029
+        ],
+        "mean_drift_window_minus_static": -0.0025028837844729424
+      },
+      {
+        "abs_mean_drift": 0.0009743422269821167,
+        "class_index": 2,
+        "drift_per_pair": [
+          0.01435050368309021,
+          -0.002422422170639038,
+          0.005304694175720215,
+          -0.01333540678024292
+        ],
+        "mean_drift_window_minus_static": 0.0009743422269821167
+      },
+      {
+        "abs_mean_drift": 0.0007165577262639999,
+        "class_index": 3,
+        "drift_per_pair": [
+          -0.0010243207216262817,
+          -0.0002429187297821045,
+          -0.0010963603854179382,
+          -0.0005026310682296753
+        ],
+        "mean_drift_window_minus_static": -0.0007165577262639999
+      },
+      {
+        "abs_mean_drift": 0.0018498189747333527,
+        "class_index": 4,
+        "drift_per_pair": [
+          0.01734602451324463,
+          0.006814971566200256,
+          -0.019706249237060547,
+          0.0029445290565490723
+        ],
+        "mean_drift_window_minus_static": 0.0018498189747333527
+      }
+    ],
+    "segnet_missing_keys": 0,
+    "segnet_unexpected_keys": 0,
+    "soft_entropy_delta_temporal_minus_static": -0.007646322250366211,
+    "soft_entropy_static_mean": 1.0351268649101257,
+    "soft_entropy_temporal_mean": 1.0274805426597595,
+    "window_radius_W": 2,
+    "window_size_total_frames": 5
+  },
+  "axis_tag": "[macOS-CPU advisory]",
+  "canonical_equation_reference": "candidate hinton_kl_temperature2_temporal_context_v1 (Catalog #344 FORMALIZATION_PENDING; RATIFY-N pending per RATE-ATTACK-MATRIX cell #4 op-routable)",
+  "canonical_provenance": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "evidence_grade": "macOS-CPU-advisory",
+    "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+    "hinton_canonical_reference": "Hinton/Vinyals/Dean 2015 'Distilling the Knowledge in a Neural Network' (KL T=2.0 dark-knowledge); CLAUDE.md 'Grand Council Geoffrey Hinton' + 'Quantizr intelligence' (Quantizr 0.33 [contest-CUDA] uses kl_on_logits T=2.0).",
+    "kind": "macos_cpu_advisory",
+    "predecessor_probes": [
+      "tier_1_distortion_hinton_kl_t2_segnet_smoke (CCC)"
+    ],
+    "promotable": false,
+    "rate_attack_matrix_reference": "RATE-ATTACK-METHODS-DIMENSIONS-MATRIX commit 7a78c5661 Top-5 cell #4: (M44 Hinton KL T=2.0 x D17 per-time-window temporal-context)",
+    "score_claim_valid": false,
+    "source": "tier_1_distortion_axis_probe_6_hinton_kl_t2_temporal_context_segnet",
+    "temporal_context_reference": "Atick-Redlich 1990 cooperative-receiver temporal coherence; CLAUDE.md 'Grand Council Atick' + 'predictive coding'."
+  },
+  "catalog_references": [
+    "#344",
+    "#523",
+    "#287",
+    "#323",
+    "#192",
+    "#1",
+    "#313",
+    "#307",
+    "#308"
+  ],
+  "delta_vs_ccc_baseline": {
+    "absolute_delta_temporal_minus_static_baseline": 0.0069326700759120286,
+    "ccc_static_kl_mean_baseline": 0.0006739782984368503,
+    "improvement_direction": "temporal_higher_dark_knowledge_signal",
+    "ratio_temporal_over_baseline": 11.286191843255022,
+    "temporal_kl_mean": 0.007606648374348879,
+    "temporal_passed_baseline_ge_threshold": true
+  },
+  "device": "cpu",
+  "elapsed_seconds": 4.3821120262146,
+  "evidence_grade": "macOS-CPU-advisory",
+  "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+  "lane_id": "lane_combined_tier_1_ccc_ext_probes_uniward_per_class_plus_hinton_kl_temporal_context_20260525",
+  "next_action_on_NULL": "DEFER per Catalog #307 IMPLEMENTATION-level falsification; queue motion-compensated temporal context per Catalog #308 reactivation criteria.",
+  "next_action_on_PARTIAL": "Continue sister-probe iteration at $0: try longer window W=3-5 OR motion-aware weighting per Catalog #308.",
+  "next_action_on_POSITIVE_TEMPORAL_CONTEXT": "Operator-routable: Tier-2 paid dispatch on temporal-context Hinton-distilled scorer surrogate via HF Jobs T4 (RECHARGE pending) or Vast.ai 4090 ($0.25/hr); estimated cost ~$2-5; predicted \u0394S -0.005 to -0.020 [predicted] per RATE-ATTACK-MATRIX cell #4 + CCC probe 1 + Quantizr 0.33 [contest-CUDA] anchor.",
+  "predicted_signature": {
+    "kl_temporal_ge_baseline": "kl_mean_temporal >= CCC static baseline 0.000674",
+    "multi_class_drift": ">= 2 classes with abs(mean_drift) > 1e-3",
+    "temporal_strictly_positive": "kl_mean_temporal > 1e-5"
+  },
+  "probe_id": "tier_1_distortion_hinton_kl_t2_temporal_context_segnet_smoke",
+  "probe_name": "Hinton KL T=2.0 x temporal-context SegNet (M44 x D17 RATE-ATTACK-MATRIX cell #4)",
+  "promotable": false,
+  "recommendation": "POSITIVE_SIGNAL_TEMPORAL_CONTEXT: temporal-context KL_mean=0.007607 >= CCC static baseline (0.000674) with 2/5 classes exhibiting measurable per-pair drift. Per RATE-ATTACK-MATRIX cell #4: Tier-2 paid dispatch on per-time-window Hinton-distilled scorer surrogate via HF Jobs T4 or Vast.ai 4090 JUSTIFIED. Predicted \u0394S -0.005 to -0.020 [predicted] per CCC probe 1 + Quantizr 0.33 anchor. Estimated cost ~$2-5.",
+  "score_claim": false,
+  "signature_checks": {
+    "multi_class_drift_present": true,
+    "temporal_ge_baseline_present": true,
+    "temporal_soft_entropy_ge_static_present": false,
+    "temporal_strictly_positive_present": true
+  },
+  "sister_canonical_equation_candidate_for_RATIFY_N": "hinton_kl_temperature2_temporal_context_v1",
+  "verdict": "POSITIVE_SIGNAL_TEMPORAL_CONTEXT"
+}
