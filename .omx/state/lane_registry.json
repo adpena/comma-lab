@@ -54017,7 +54017,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "queue_observation_recovery_autopilot_and_grouped_blockers"
+          "evidence": "queue_observation_recovery_autopilot_grouping_source_custody"
         },
         "real_archive_empirical": {
           "status": false,
@@ -54033,7 +54033,7 @@
         },
         "strict_preflight": {
           "status": true,
-          "evidence": "pytest_queue_recovery_autopilot_grouping_109_passed"
+          "evidence": "pytest_queue_recovery_source_custody_119_plus_inverse_41_passed"
         },
         "three_clean_review": {
           "status": false,
@@ -54099,5 +54099,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T03:48:48Z"
+  "updated_at": "2026-05-25T04:02:49Z"
 }

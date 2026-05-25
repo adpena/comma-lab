@@ -58,7 +58,9 @@ queue-health feedback, and the next water-bucket planning pass.
 
 - `.venv/bin/python -m pytest src/tac/tests/test_experiment_queue_observer.py src/tac/tests/test_queue_feedback_replan_policy.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_operator_briefing.py -q`
   - Result: 119 passed.
-- `.venv/bin/python -m ruff check src/comma_lab/scheduler/experiment_queue_observer.py src/comma_lab/scheduler/queue_feedback_replan_policy.py tools/operator_briefing.py src/tac/tests/test_experiment_queue_observer.py src/tac/tests/test_queue_feedback_replan_policy.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_operator_briefing.py`
+- `.venv/bin/python -m pytest src/tac/tests/test_inverse_steganalysis_acquisition.py -q`
+  - Result: 41 passed.
+- `.venv/bin/python -m ruff check src/comma_lab/scheduler/__init__.py src/comma_lab/scheduler/experiment_queue_observer.py src/comma_lab/scheduler/queue_feedback_replan_policy.py tools/run_byte_shaving_materializer_campaign.py tools/operator_briefing.py src/tac/tests/test_experiment_queue_observer.py src/tac/tests/test_queue_feedback_replan_policy.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_operator_briefing.py`
   - Result: all checks passed.
 - `git diff --check`
   - Result: clean.
