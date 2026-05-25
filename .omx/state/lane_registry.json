@@ -55817,11 +55817,11 @@
       "id": "lane_probe_9c_per_level_wavelet_basis_disambiguator_20260525",
       "name": "Probe 9c per-level wavelet basis selection disambiguator",
       "phase": 1.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tools/probe_9c_per_level_wavelet_basis_selection_disambiguator.py + verdict JSON .omx/research/tier_1_distortion_axis_probes_20260521/probe_9c_per_level_wavelet_basis_20260525T165714Z.json"
         },
         "real_archive_empirical": {
           "status": false,
@@ -55844,8 +55844,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/probe_9c_per_level_wavelet_basis_disambiguator_landed_20260525.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -55903,5 +55903,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T16:54:41Z"
+  "updated_at": "2026-05-25T17:02:36Z"
 }

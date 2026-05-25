@@ -476,3 +476,50 @@ Per Catalog #167 the operator-authorize wrapper routes through `tools/run_modal_
 - **Lane**: `lane_probe_9b_100_pair_disambiguator_20260525` L1 (impl_complete + memory_entry + Catalog #313 + canonical Provenance per Catalog #287+#323+#341)
 - **Catalog #344 sister equation evidence count**: `uniward_per_instance_multi_scale_wavelet_combined_v1` STRENGTHENS (2 anchors; remains FORMALIZATION_PENDING until paired CPU+CUDA)
 - **Honest deferrals**: NO paid GPU fired; canonical N=600 full-contest-video disambiguator (Probe 9c) deferred per Carmack MVP-first (not blocking — Contrarian revision #1 satisfied at N=100)
+
+---
+
+## 17. Probe 9c per-level wavelet-basis selection disambiguator verdict (APPENDED 2026-05-25 per Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY)
+
+Per Mallat binding revision #3 of 6 (symposium L210-217 / `revision_3_mallat`; BLOCKS DISPATCH): the canonical per-level wavelet-basis selection table requirement is operationalized via `tools/probe_9c_per_level_wavelet_basis_selection_disambiguator.py` at N=100 / 3-level / seed=42 across the canonical 4-basis family `db4 / db8 / db16 / bior4.4`.
+
+### Verdict: **SISTER_BASIS_DOMINATES_db4**
+
+Per Catalog #307 IMPLEMENTATION-LEVEL falsification: paradigm INTACT (per-instance + multi-scale wavelet UNIWARD-weighted SegNet loss); db8-specific implementation FALSIFIED at per-level basis surface. Per CLAUDE.md "Forbidden premature KILL": substrate paradigm preserved; substrate recipe canonical update required from db8 → db4.
+
+### Empirical receipts (N=100 / 3-level / seed=42 / source `upstream/videos/0.mkv`)
+
+| Basis | Mean | 95% CI | Min | Below-threshold | Z vs db8 | Rel Δ % |
+|---|---:|---|---:|---:|---:|---:|
+| **db4** | **0.3599** | [0.3457, 0.3740] | **0.0532** | 449/537 (83.6%) | **−3.442σ** | **−8.06%** |
+| db8 (baseline) | 0.3915 | [0.3803, 0.4027] | 0.0932 | 430/537 (80.1%) | +0.000σ | +0.00% |
+| db16 | 0.4380 | [0.4289, 0.4470] | 0.1520 | 388/537 (72.3%) | +6.254σ | +11.86% |
+| bior4.4 | 0.3659 | [0.3518, 0.3806] | 0.0415 | 436/537 (81.2%) | −2.743σ | −6.55% |
+
+- **db4 wins**: lowest mean (0.3599) AND lowest min (0.0532; 42.9% sharper than db8 0.0932) AND highest below-threshold fraction (83.6%); z=−3.442σ is 1.72x the 2σ threshold; CIs disjoint at 95% (CI_db4 upper 0.3740 < CI_db8 lower 0.3803).
+- **bior4.4 secondary candidate**: also crosses 2σ threshold favorably (z=−2.743σ; mean 0.3659); db4↔bior4.4 CI overlap 78.3% (similar discriminated group); db4 selected as dominant via lowest-mean tiebreaker.
+- **db16 INFERIOR**: z=+6.254σ in the UNFAVORABLE direction (smoother basis attenuates inversion); empirically rejects "larger support = better" hypothesis.
+- **db8 baseline replicates byte-precision**: mean/min/stdev/n_segments exact match to Probe 9b N=100 anchor (deterministic seed=42 verification).
+
+### Mallat binding revision #3 dispatch authorization status
+
+| Revision | Source | Status (post-Probe 9c) |
+|---|---|---|
+| #1 Contrarian: 100-pair disambiguator | symposium L196-200 | **✓ SATISFIED** (Probe 9b landing) |
+| #2 Assumption-Adversary: Tier-C density post-training | symposium L201-209 | blocks_promotion (not dispatch); auto-emitted by trainer's `_full_main` when implemented |
+| **#3 Mallat: per-level wavelet-basis selection table** | symposium L210-217 | **✓ SATISFIED with canonical-fix** (Probe 9c landing; substrate basis db8 → db4) |
+| #4 Daubechies: Catalog #312 positioning | symposium L218-226 | blocks_full_main_implementation; design memo positioning |
+| #5 Quantizr: gradient-routing canonical equation form | symposium L227-236 | blocks_full_main_implementation; substrate trainer score_aware_loss |
+| #6 Selfcomp: loss-vs-grammar design path | symposium L237-245 | blocks_full_main_implementation; substrate design path |
+
+**Dispatch authorization signal: UNBLOCK_2_OF_3_DISPATCH_BLOCKING**. 2 of 3 dispatch-blocking revisions CLEARED. Dispatch remains GATED on (a) sister subagent `_full_main` build per revisions 4-5-6 (which unlocks paired CPU+CUDA empirical anchor surface) OR (b) explicit operator-frontier-override per Catalog #300. The Probe 9 substrate's canonical wavelet basis is hereby empirically established as **db4** (not db8); operator-routable substrate recipe + trainer + driver canonical-update required before paired CPU+CUDA dispatch.
+
+### Cross-reference to landing memo + canonical evidence
+
+- **Probe 9c landing memo (canonical)**: `.omx/research/probe_9c_per_level_wavelet_basis_disambiguator_landed_20260525.md` (full 13-section landing with §2 4-basis comparison table + §3 verdict rationale + §7 operator-routable cascade + §9 6-hook wire-in)
+- **Probe 9c tool**: `tools/probe_9c_per_level_wavelet_basis_selection_disambiguator.py`
+- **Probe 9c verdict JSON**: `.omx/research/tier_1_distortion_axis_probes_20260521/probe_9c_per_level_wavelet_basis_20260525T165714Z.json`
+- **Catalog #313 probe outcome row**: `.omx/state/probe_outcomes.jsonl` (event=adjudicated; verdict=PARTIAL; expires 2026-06-24)
+- **Lane**: `lane_probe_9c_per_level_wavelet_basis_disambiguator_20260525` L1 (impl_complete + memory_entry + Catalog #313 + canonical Provenance per Catalog #287+#323+#341)
+- **Catalog #344 canonical equations registry**: existing sister candidate `uniward_per_instance_multi_scale_wavelet_combined_v1` evidence count update for db8 in_domain_context (3 anchors); NEW sister candidate `uniward_per_instance_multi_scale_wavelet_basis_optimal_db4_v1` QUEUED for operator-decision protocol per Catalog #344 + #359 sister-discipline; EXCLUDED_CONTEXT addendum recommended for db8-specific context.
+- **Honest deferrals**: NO paid GPU fired; canonical N=600 full-contest-video db4 re-anchor (Probe 9d, ~1-2 hr macOS-CPU, $0) deferred per Carmack MVP-first (not blocking — Mallat revision #3 satisfied at N=100 because z=1.72x threshold + CIs disjoint at 95% is structurally clean).

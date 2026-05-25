@@ -1,0 +1,401 @@
+{
+  "axis_tag": "[macOS-CPU advisory]",
+  "baseline_basis": "db8",
+  "baseline_db8_n100_anchor": {
+    "bootstrap_ci_halfwidth": 0.011219837474749444,
+    "bootstrap_ci_mean_lower": 0.38051205494196555,
+    "bootstrap_ci_mean_upper": 0.40295172989146444,
+    "evidence_path": ".omx/research/tier_1_distortion_axis_probes_20260521/probe_9b_100_pair_20260525T164153Z.json",
+    "segment_textured_avg_weight_max": 0.7116744518280029,
+    "segment_textured_avg_weight_mean": 0.39151591753493475,
+    "segment_textured_avg_weight_median": 0.4198218882083893,
+    "segment_textured_avg_weight_min": 0.09315050393342972,
+    "segment_textured_avg_weight_stdev": 0.13180527138677492,
+    "segment_textured_below_threshold_count": 430,
+    "segment_textured_below_threshold_fraction": 0.8007448789571695,
+    "valid_segment_count": 537,
+    "wavelet_levels": 3,
+    "wavelet_name": "db8"
+  },
+  "canonical_equation_reference": "sister candidate uniward_per_instance_multi_scale_wavelet_combined_v1 (Catalog #344 FORMALIZATION_PENDING; RATIFY-N evidence count update via this anchor if db8_CONFIRMED_OPTIMAL; new sister candidate queued if SISTER_BASIS_DOMINATES)",
+  "canonical_provenance": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "bootstrap_iterations": 5000,
+    "device": "cpu",
+    "evidence_grade": "macOS-CPU-advisory",
+    "fridrich_canonical_reference": "Holub-Fridrich-Denemark 2014 'Universal Distortion Function for Steganography in an Arbitrary Domain' (UNIWARD) multi-level wavelet extension; CLAUDE.md 'Fridrich inverse steganalysis' section.",
+    "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+    "kind": "macos_cpu_advisory",
+    "mallat_canonical_reference": "Mallat 1989 'A theory for multiresolution signal decomposition: the wavelet representation' + Daubechies 1988 'Orthonormal bases of compactly supported wavelets'.",
+    "min_segment_pixels_threshold": 200,
+    "min_textured_pixels_threshold": 50,
+    "predecessor_probe": "tools/probe_9b_100_pair_uniward_per_instance_multi_scale_wavelet_combined_disambiguator.py (N=100 db8 baseline; commit 686b07f31; verdict REPLICATES_WITHIN_BAND)",
+    "promotable": false,
+    "ready_for_exact_eval_dispatch": false,
+    "rng_seed": 42,
+    "score_claim_valid": false,
+    "segnet_eval_resolution_HxW": [
+      384,
+      512
+    ],
+    "segnet_missing_keys": 0,
+    "segnet_unexpected_keys": 0,
+    "sigma_fridrich": 0.015625,
+    "sister_canonical_equation_candidate": "uniward_per_instance_multi_scale_wavelet_combined_v1 (Catalog #344 FORMALIZATION_PENDING; RATIFY-N evidence count update if db8_CONFIRMED_OPTIMAL)",
+    "source_video_n_frames_decoded": 101,
+    "source_video_path": "/Users/adpena/Projects/pact/upstream/videos/0.mkv",
+    "source_video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
+    "wavelet_basis_family": [
+      "db4",
+      "db8",
+      "db16",
+      "bior4.4"
+    ],
+    "wavelet_levels": 3
+  },
+  "catalog_references": [
+    "#1",
+    "#192",
+    "#287",
+    "#290",
+    "#307",
+    "#308",
+    "#313",
+    "#323",
+    "#341",
+    "#344"
+  ],
+  "cross_basis_classification": {
+    "all_overlaps_exceed_insufficient_threshold": false,
+    "ci_overlap_matrix": {
+      "bior4.4": {
+        "bior4.4": 1.0,
+        "db16": 0.0,
+        "db4": 0.7831339873985799,
+        "db8": 0.01201506222569203
+      },
+      "db16": {
+        "bior4.4": 0.0,
+        "db16": 1.0,
+        "db4": 0.0,
+        "db8": 0.0
+      },
+      "db4": {
+        "bior4.4": 0.7831339873985799,
+        "db16": 0.0,
+        "db4": 1.0,
+        "db8": 0.0
+      },
+      "db8": {
+        "bior4.4": 0.01201506222569203,
+        "db16": 0.0,
+        "db4": 0.0,
+        "db8": 1.0
+      }
+    },
+    "dominant_basis": "db4",
+    "non_self_ci_overlaps": [
+      0.0,
+      0.0,
+      0.7831339873985799,
+      0.0,
+      0.01201506222569203,
+      0.0
+    ],
+    "operator_signal": "SISTER_BASIS_DOMINATES_db4",
+    "per_basis_absolute_delta_vs_db8_baseline": {
+      "bior4.4": -0.02565253149281005,
+      "db16": 0.046436230452589045,
+      "db4": -0.03157551472163733,
+      "db8": 0.0
+    },
+    "per_basis_relative_delta_pct_vs_db8_baseline": {
+      "bior4.4": -6.552104357422731,
+      "db16": 11.860623891095196,
+      "db4": -8.064937671102443,
+      "db8": 0.0
+    },
+    "per_basis_z_score_vs_db8_baseline": {
+      "bior4.4": -2.7432542966887077,
+      "db16": 6.253801079607123,
+      "db4": -3.4420753154971475,
+      "db8": 0.0
+    },
+    "rationale": "Sister basis db4 (mean 0.3599) is significantly LOWER than baseline db8 (mean 0.3915); z-score -3.442\u03c3 (|z| > 2.0\u03c3). Per Catalog #307 IMPLEMENTATION-LEVEL falsification: paradigm INTACT; Probe 9 substrate recipe canonical update required to use db4. Per CLAUDE.md 'Forbidden premature KILL': substrate paradigm preserved.",
+    "sister_dominates_candidates_sorted_by_mean_ascending": [
+      {
+        "basis": "db4",
+        "mean": 0.3599404028132974,
+        "z_score_vs_db8": -3.4420753154971475
+      },
+      {
+        "basis": "bior4.4",
+        "mean": 0.3658633860421247,
+        "z_score_vs_db8": -2.7432542966887077
+      }
+    ],
+    "verdict": "SISTER_BASIS_DOMINATES_db4"
+  },
+  "device": "cpu",
+  "dominant_basis": "db4",
+  "elapsed_seconds": 25.20196795463562,
+  "evidence_grade": "macOS-CPU-advisory",
+  "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+  "lane_id": "lane_probe_9c_per_level_wavelet_basis_disambiguator_20260525",
+  "n_pairs": 100,
+  "next_action": "DEFER_PER_CATALOG_307_IMPLEMENTATION_LEVEL_FALSIFICATION: sister basis db4 empirically dominates db8 baseline. Per Catalog #307: paradigm INTACT (per-instance + multi-scale wavelet UNIWARD-weighted SegNet loss); db8-specific implementation FALSIFIED at per-level basis surface. Per CLAUDE.md 'Forbidden premature KILL': substrate recipe canonical update required to use db4 as new baseline; queue NEW sister canonical equation candidate `uniward_per_instance_multi_scale_wavelet_basis_optimal_db4_v1`. Probe 9b sister rerun at db4 recommended for substrate-recipe canonical-fix evidence; sister subagent `_full_main` build should use db4.",
+  "operator_signal": "SISTER_BASIS_DOMINATES_db4",
+  "per_basis_results": {
+    "bior4.4": {
+      "bootstrap_ci_mean": {
+        "ci_halfwidth": 0.014367640772799756,
+        "ci_lower": 0.35183045597178114,
+        "ci_upper": 0.38056573751738065,
+        "iterations": 5000,
+        "mean": 0.3658633860421247,
+        "stdev_bootstrap_means": 0.007363296415399999
+      },
+      "distribution_histogram": {
+        "bin_counts": [
+          48,
+          110,
+          11,
+          28,
+          239,
+          87,
+          14,
+          0,
+          0,
+          0
+        ],
+        "bin_edges": [
+          0.0,
+          0.1,
+          0.2,
+          0.30000000000000004,
+          0.4,
+          0.5,
+          0.6000000000000001,
+          0.7000000000000001,
+          0.8,
+          0.9,
+          1.0
+        ]
+      },
+      "elapsed_seconds": 1.495560884475708,
+      "per_class_segment_count": {
+        "0": 163,
+        "1": 172,
+        "2": 102,
+        "3": 0,
+        "4": 100
+      },
+      "segment_textured_avg_weight_max": 0.6487914323806763,
+      "segment_textured_avg_weight_mean": 0.3658633860421247,
+      "segment_textured_avg_weight_median": 0.4438011050224304,
+      "segment_textured_avg_weight_min": 0.04145590215921402,
+      "segment_textured_avg_weight_stdev": 0.17200178893535495,
+      "segment_textured_below_threshold_count": 436,
+      "segment_textured_below_threshold_fraction": 0.8119180633147114,
+      "valid_segment_count": 537,
+      "wavelet_basis": "bior4.4",
+      "wavelet_levels": 3
+    },
+    "db16": {
+      "bootstrap_ci_mean": {
+        "ci_halfwidth": 0.00905655628621746,
+        "ci_lower": 0.42886286928722533,
+        "ci_upper": 0.44697598185966025,
+        "iterations": 5000,
+        "mean": 0.4379521479875238,
+        "stdev_bootstrap_means": 0.004705702910482964
+      },
+      "distribution_histogram": {
+        "bin_counts": [
+          0,
+          5,
+          53,
+          142,
+          188,
+          112,
+          25,
+          12,
+          0,
+          0
+        ],
+        "bin_edges": [
+          0.0,
+          0.1,
+          0.2,
+          0.30000000000000004,
+          0.4,
+          0.5,
+          0.6000000000000001,
+          0.7000000000000001,
+          0.8,
+          0.9,
+          1.0
+        ]
+      },
+      "elapsed_seconds": 2.163864850997925,
+      "per_class_segment_count": {
+        "0": 163,
+        "1": 172,
+        "2": 102,
+        "3": 0,
+        "4": 100
+      },
+      "segment_textured_avg_weight_max": 0.7377614378929138,
+      "segment_textured_avg_weight_mean": 0.4379521479875238,
+      "segment_textured_avg_weight_median": 0.435139536857605,
+      "segment_textured_avg_weight_min": 0.15203921496868134,
+      "segment_textured_avg_weight_stdev": 0.11061083614861657,
+      "segment_textured_below_threshold_count": 388,
+      "segment_textured_below_threshold_fraction": 0.7225325884543762,
+      "valid_segment_count": 537,
+      "wavelet_basis": "db16",
+      "wavelet_levels": 3
+    },
+    "db4": {
+      "bootstrap_ci_mean": {
+        "ci_halfwidth": 0.014181243642137908,
+        "ci_lower": 0.34567959644698176,
+        "ci_upper": 0.3740420837312576,
+        "iterations": 5000,
+        "mean": 0.3599404028132974,
+        "stdev_bootstrap_means": 0.007186280571397645
+      },
+      "distribution_histogram": {
+        "bin_counts": [
+          41,
+          122,
+          7,
+          33,
+          246,
+          75,
+          13,
+          0,
+          0,
+          0
+        ],
+        "bin_edges": [
+          0.0,
+          0.1,
+          0.2,
+          0.30000000000000004,
+          0.4,
+          0.5,
+          0.6000000000000001,
+          0.7000000000000001,
+          0.8,
+          0.9,
+          1.0
+        ]
+      },
+      "elapsed_seconds": 1.4159319400787354,
+      "per_class_segment_count": {
+        "0": 163,
+        "1": 172,
+        "2": 102,
+        "3": 0,
+        "4": 100
+      },
+      "segment_textured_avg_weight_max": 0.6709508895874023,
+      "segment_textured_avg_weight_mean": 0.3599404028132974,
+      "segment_textured_avg_weight_median": 0.43050307035446167,
+      "segment_textured_avg_weight_min": 0.053184594959020615,
+      "segment_textured_avg_weight_stdev": 0.16678293316488832,
+      "segment_textured_below_threshold_count": 449,
+      "segment_textured_below_threshold_fraction": 0.8361266294227188,
+      "valid_segment_count": 537,
+      "wavelet_basis": "db4",
+      "wavelet_levels": 3
+    },
+    "db8": {
+      "bootstrap_ci_mean": {
+        "ci_halfwidth": 0.011213795155689155,
+        "ci_lower": 0.3802962686242171,
+        "ci_upper": 0.4027238589355954,
+        "iterations": 5000,
+        "mean": 0.39151591753493475,
+        "stdev_bootstrap_means": 0.005715824650187993
+      },
+      "distribution_histogram": {
+        "bin_counts": [
+          1,
+          58,
+          84,
+          76,
+          211,
+          86,
+          19,
+          2,
+          0,
+          0
+        ],
+        "bin_edges": [
+          0.0,
+          0.1,
+          0.2,
+          0.30000000000000004,
+          0.4,
+          0.5,
+          0.6000000000000001,
+          0.7000000000000001,
+          0.8,
+          0.9,
+          1.0
+        ]
+      },
+      "elapsed_seconds": 1.406346082687378,
+      "per_class_segment_count": {
+        "0": 163,
+        "1": 172,
+        "2": 102,
+        "3": 0,
+        "4": 100
+      },
+      "segment_textured_avg_weight_max": 0.7116744518280029,
+      "segment_textured_avg_weight_mean": 0.39151591753493475,
+      "segment_textured_avg_weight_median": 0.4198218882083893,
+      "segment_textured_avg_weight_min": 0.09315050393342972,
+      "segment_textured_avg_weight_stdev": 0.13180527138677492,
+      "segment_textured_below_threshold_count": 430,
+      "segment_textured_below_threshold_fraction": 0.8007448789571695,
+      "valid_segment_count": 537,
+      "wavelet_basis": "db8",
+      "wavelet_levels": 3
+    }
+  },
+  "predecessor_probe_anchor": {
+    "predecessor_basis": "db8",
+    "predecessor_commit": "686b07f31",
+    "predecessor_evidence_path": ".omx/research/tier_1_distortion_axis_probes_20260521/probe_9b_100_pair_20260525T164153Z.json",
+    "predecessor_mean": 0.39151591753493475,
+    "predecessor_probe_id": "probe_9b_100_pair_uniward_per_instance_multi_scale_wavelet_combined_disambiguator_20260525",
+    "predecessor_valid_segments": 537,
+    "predecessor_verdict": "REPLICATES_WITHIN_BAND"
+  },
+  "predicted_signature": {
+    "INSUFFICIENT_DISCRIMINATION": "all basis-pair CIs overlap by > 50% (variance dominates; queue alternative reducer per Catalog #308)",
+    "SISTER_BASIS_DOMINATES_<basis>": "|z-score(sister vs db8 baseline)| > 2.0\u03c3 AND sister mean is LOWER than baseline (per Catalog #307 IMPLEMENTATION-LEVEL falsification; paradigm intact)",
+    "db8_CONFIRMED_OPTIMAL": "NULL hypothesis preserved: no sister basis crosses 2sigma threshold in the favorable direction (lower mean = sharper UNIWARD inversion)"
+  },
+  "probe_id": "probe_9c_per_level_wavelet_basis_selection_disambiguator_20260525",
+  "probe_name": "Probe 9c per-level wavelet-basis selection disambiguator (extends Probe 9b N=100 db8 baseline to wavelet basis family db4 / db8 / db16 / bior4.4 per Mallat binding revision #3)",
+  "produced_at_utc": "2026-05-25T16:57:40+00:00",
+  "produced_host": "Primary",
+  "produced_pid": 61237,
+  "promotable": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": "probe_9c_per_level_wavelet_basis_selection_disambiguator_v1",
+  "score_claim": false,
+  "source_video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
+  "verdict": "SISTER_BASIS_DOMINATES_db4",
+  "wavelet_basis_family": [
+    "db4",
+    "db8",
+    "db16",
+    "bior4.4"
+  ]
+}
