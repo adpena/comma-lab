@@ -92,6 +92,9 @@ RESPONSE_UPDATE_PLACEHOLDER_SCHEMA = "byte_shaving_campaign_response_update_plac
 QUEUE_PERFORMANCE_SUMMARY_SCHEMA = "experiment_queue_performance_summary.v1"
 UNAVAILABLE_QUEUE_PERFORMANCE_SUMMARY_SCHEMA = "experiment_queue_performance_summary_unavailable.v1"
 QUEUE_FEEDBACK_REPLAN_REQUEST_SCHEMA = "byte_shaving_materializer_campaign_feedback_replan_request.v1"
+DYNAMIC_SPARSE_FEEDBACK_COMPILER_HINT_STATUS_SCHEMA = (
+    "byte_shaving_materializer_campaign_dynamic_sparse_feedback_compiler_hint_status.v1"
+)
 RESULT_REVIEW_PACKET_SCHEMA = "tac_result_review_packet_v1"
 QUEUE_FEEDBACK_REPLAN_EXPERIMENT_METADATA_SCHEMA = (
     "byte_shaving_materializer_campaign_feedback_replan_experiment_metadata.v1"
@@ -120,6 +123,7 @@ MAX_AUTO_DISCOVERED_RECEIVER_FEEDBACK_MANIFEST_BYTES = 8 * 1024 * 1024
 DEFAULT_LOCAL_QUEUE_POLL_INTERVAL_SECONDS = 0.005
 IN_PROCESS_TOOL_MODULE_BY_RELATIVE_SCRIPT = {
     "tools/build_byte_shaving_campaign_queue.py": "tools.build_byte_shaving_campaign_queue",
+    "tools/build_dynamic_sparse_gate_compiler_hint.py": "tools.build_dynamic_sparse_gate_compiler_hint",
     "tools/build_inverse_steganalysis_action_functional.py": "tools.build_inverse_steganalysis_action_functional",
     "tools/build_mlx_acquisition_batch.py": "tools.build_mlx_acquisition_batch",
     "tools/experiment_queue.py": "tools.experiment_queue",
@@ -1456,6 +1460,244 @@ def _feedback_action_functional_command_hint(
     return command
 
 
+def _artifact_receiver_contract_satisfied(artifact: Mapping[str, Any]) -> bool:
+    if "receiver_contract_satisfied" in artifact:
+        return artifact.get("receiver_contract_satisfied") is True
+    receiver = artifact.get("receiver_verification")
+    if isinstance(receiver, Mapping) and "receiver_contract_satisfied" in receiver:
+        return receiver.get("receiver_contract_satisfied") is True
+    return False
+
+
+def _artifact_has_receiver_signal(artifact: Mapping[str, Any]) -> bool:
+    if "receiver_contract_satisfied" in artifact:
+        return True
+    receiver = artifact.get("receiver_verification")
+    return isinstance(receiver, Mapping) and "receiver_contract_satisfied" in receiver
+
+
+def _artifact_serialized_saved_bytes(artifact: Mapping[str, Any]) -> int:
+    for key in (
+        "serialized_archive_delta_realized_saved_bytes",
+        "section_recode_saved_bytes",
+        "selected_compression_saved_bytes",
+        "selected_merge_saved_bytes",
+        "selected_payload_saved_bytes",
+        "selected_elision_saved_bytes",
+        "factorization_saved_bytes",
+    ):
+        parsed = _optional_int(artifact.get(key))
+        if parsed is not None:
+            return parsed
+    return 0
+
+
+def _queue_observation_receiver_feedback_counts(
+    queue_observation: Mapping[str, Any],
+) -> dict[str, int]:
+    counts = {
+        "materializer_artifact_count": 0,
+        "receiver_positive_rate_saving_count": 0,
+        "receiver_negative_count": 0,
+        "rate_saving_without_receiver_proof_count": 0,
+    }
+    for step in _as_sequence(queue_observation.get("succeeded_artifact_steps")):
+        if not isinstance(step, Mapping):
+            continue
+        for artifact in _as_sequence(step.get("expected_artifacts")):
+            if not isinstance(artifact, Mapping):
+                continue
+            if not (
+                artifact.get("target_kind")
+                or artifact.get("materializer_id")
+                or artifact.get("materializer_delta_source")
+                or artifact.get("serialized_archive_delta_status")
+            ):
+                continue
+            counts["materializer_artifact_count"] += 1
+            saved_bytes = _artifact_serialized_saved_bytes(artifact)
+            delta_status = str(
+                artifact.get("serialized_archive_delta_status") or ""
+            ).strip()
+            savings_realized = (
+                artifact.get("serialized_archive_delta_savings_realized") is True
+                or saved_bytes > 0
+            )
+            rate_saving = (
+                saved_bytes > 0
+                and delta_status in {"", "realized_saving"}
+                and savings_realized
+            )
+            receiver_seen = _artifact_has_receiver_signal(artifact)
+            receiver_ok = _artifact_receiver_contract_satisfied(artifact)
+            if receiver_seen and not receiver_ok:
+                counts["receiver_negative_count"] += 1
+            elif receiver_ok and rate_saving:
+                counts["receiver_positive_rate_saving_count"] += 1
+            elif rate_saving:
+                counts["rate_saving_without_receiver_proof_count"] += 1
+    return counts
+
+
+def _dynamic_sparse_feedback_compiler_hint_command(
+    args: argparse.Namespace,
+    *,
+    queue: Mapping[str, Any],
+    run_dir: Path,
+    queue_observation_path: Path,
+    runtime_identity_path: Path,
+    cache_identity_path: Path,
+    hint_path: Path,
+) -> list[str]:
+    operation_set_id = (
+        args.dynamic_sparse_feedback_operation_set_id
+        or f"{_slug(queue.get('queue_id'), default='materializer_campaign')}_receiver_feedback"
+    )
+    command = [
+        sys.executable,
+        "tools/build_dynamic_sparse_gate_compiler_hint.py",
+        "--queue-observation",
+        _display_path(queue_observation_path),
+        "--queue-performance-runtime-identity",
+        _display_path(runtime_identity_path),
+        "--queue-performance-cache-identity",
+        _display_path(cache_identity_path),
+        "--queue-performance-axis",
+        str(args.queue_performance_axis),
+        "--operation-set-id",
+        operation_set_id,
+        "--out",
+        _display_path(hint_path),
+        "--channel-ids",
+        "receiver_proof",
+        "--coefficient-mode",
+        "queue_observation_receiver_feedback",
+        "--topology-id",
+        "queue_observation_receiver_gated_dynamic_sparse_feedback",
+        "--max-operations",
+        str(args.dynamic_sparse_feedback_max_operations),
+        "--min-abs-gate",
+        str(args.dynamic_sparse_feedback_min_abs_gate),
+        "--overwrite-output",
+    ]
+    if args.lane_id:
+        command.extend(["--lane-id", str(args.lane_id)])
+    if args.candidate_id:
+        command.extend(["--candidate-id", str(args.candidate_id)])
+    return command
+
+
+def _write_dynamic_sparse_feedback_compiler_hint(
+    args: argparse.Namespace,
+    *,
+    queue: Mapping[str, Any],
+    run_dir: Path,
+    queue_observation_path: Path,
+    queue_observation: Mapping[str, Any],
+    runtime_identity_path: Path,
+    cache_identity_path: Path,
+) -> tuple[Path | None, Path, dict[str, Any], CommandResult]:
+    hint_path = run_dir / "dynamic_sparse_feedback_compiler_hint.json"
+    status_path = run_dir / "dynamic_sparse_feedback_compiler_hint_status.json"
+    counts = _queue_observation_receiver_feedback_counts(queue_observation)
+    command = _dynamic_sparse_feedback_compiler_hint_command(
+        args,
+        queue=queue,
+        run_dir=run_dir,
+        queue_observation_path=queue_observation_path,
+        runtime_identity_path=runtime_identity_path,
+        cache_identity_path=cache_identity_path,
+        hint_path=hint_path,
+    )
+    preflight_blockers: list[str] = []
+    if args.disable_dynamic_sparse_feedback_compiler_hint:
+        preflight_blockers.append("dynamic_sparse_feedback_compiler_hint_disabled")
+    if counts["receiver_positive_rate_saving_count"] < 1:
+        preflight_blockers.append(
+            "dynamic_sparse_receiver_positive_materializer_signal_missing"
+        )
+    if preflight_blockers:
+        result = CommandResult(
+            command=command,
+            returncode=0,
+            stdout="",
+            stderr=";".join(preflight_blockers),
+            elapsed_seconds=0.0,
+        )
+        status = _false_authority_payload(
+            {
+                "schema": DYNAMIC_SPARSE_FEEDBACK_COMPILER_HINT_STATUS_SCHEMA,
+                "source_queue_observation_path": _display_path(queue_observation_path),
+                "queue_performance_runtime_identity_path": _display_path(
+                    runtime_identity_path
+                ),
+                "queue_performance_cache_identity_path": _display_path(
+                    cache_identity_path
+                ),
+                "hint_path": _display_path(hint_path),
+                "hint_emitted": False,
+                "selected_operation_count": 0,
+                "receiver_gate_channel_ids": ["receiver_proof"],
+                "receiver_feedback_counts": counts,
+                "blockers": list(dict.fromkeys(preflight_blockers)),
+                "command": result.to_dict(),
+                "command_skipped": True,
+                "allowed_use": (
+                    "receiver_positive_queue_materializer_feedback_compiler_hint_only"
+                ),
+                "forbidden_use": "score_claim_or_promotion_or_paid_dispatch_authority",
+            }
+        )
+        _write_json(status_path, status)
+        return (None, status_path, status, result)
+
+    result = _run(command, check=False)
+    hint_payload = _load_json_object_if_present(hint_path)
+    selected_operation_count = (
+        len(_as_sequence(hint_payload.get("selected_operations")))
+        if isinstance(hint_payload, Mapping)
+        else 0
+    )
+    hint_emitted = (
+        result.returncode == 0
+        and hint_path.exists()
+        and isinstance(hint_payload, Mapping)
+        and selected_operation_count > 0
+    )
+    blockers: list[str] = []
+    if result.returncode != 0:
+        blockers.append("dynamic_sparse_feedback_compiler_hint_command_failed")
+    if not hint_path.exists():
+        blockers.append("dynamic_sparse_feedback_compiler_hint_missing")
+    if hint_path.exists() and not isinstance(hint_payload, Mapping):
+        blockers.append("dynamic_sparse_feedback_compiler_hint_not_json_object")
+    if result.returncode == 0 and selected_operation_count < 1:
+        blockers.append("dynamic_sparse_feedback_compiler_hint_no_selected_operations")
+    status = _false_authority_payload(
+        {
+            "schema": DYNAMIC_SPARSE_FEEDBACK_COMPILER_HINT_STATUS_SCHEMA,
+            "source_queue_observation_path": _display_path(queue_observation_path),
+            "queue_performance_runtime_identity_path": _display_path(
+                runtime_identity_path
+            ),
+            "queue_performance_cache_identity_path": _display_path(cache_identity_path),
+            "hint_path": _display_path(hint_path),
+            "hint_emitted": hint_emitted,
+            "selected_operation_count": selected_operation_count,
+            "receiver_gate_channel_ids": ["receiver_proof"],
+            "receiver_feedback_counts": counts,
+            "blockers": list(dict.fromkeys(blockers)),
+            "command": result.to_dict(),
+            "allowed_use": (
+                "receiver_positive_queue_materializer_feedback_compiler_hint_only"
+            ),
+            "forbidden_use": "score_claim_or_promotion_or_paid_dispatch_authority",
+        }
+    )
+    _write_json(status_path, status)
+    return (hint_path if hint_emitted else None, status_path, status, result)
+
+
 def _queue_feedback_replan_request_payload(
     args: argparse.Namespace,
     *,
@@ -1473,6 +1715,9 @@ def _queue_feedback_replan_request_payload(
     queue_observation_path: Path | None = None,
     queue_observation_recovery_plan_path: Path | None = None,
     queue_observation_recovery_plan: Mapping[str, Any] | None = None,
+    dynamic_sparse_feedback_compiler_hint_path: Path | None = None,
+    dynamic_sparse_feedback_compiler_hint_status_path: Path | None = None,
+    dynamic_sparse_feedback_compiler_hint_status: Mapping[str, Any] | None = None,
     action_functional_output_stem: str = (
         "inverse_steganalysis_action_functional.feedback"
     ),
@@ -1488,6 +1733,11 @@ def _queue_feedback_replan_request_payload(
     )
     queue_observation_paths = (
         [queue_observation_path] if queue_observation_path is not None else []
+    )
+    dynamic_sparse_status = (
+        dict(dynamic_sparse_feedback_compiler_hint_status)
+        if isinstance(dynamic_sparse_feedback_compiler_hint_status, Mapping)
+        else {}
     )
     blockers = _queue_performance_replan_blockers(
         args,
@@ -1553,6 +1803,31 @@ def _queue_feedback_replan_request_payload(
                 isinstance(queue_observation_recovery_plan, Mapping)
                 and queue_observation_recovery_plan.get("maintenance_recommended")
                 is True
+            ),
+            "dynamic_sparse_feedback_compiler_hint_path": (
+                None
+                if dynamic_sparse_feedback_compiler_hint_path is None
+                else _display_path(dynamic_sparse_feedback_compiler_hint_path)
+            ),
+            "dynamic_sparse_feedback_compiler_hint_status_path": (
+                None
+                if dynamic_sparse_feedback_compiler_hint_status_path is None
+                else _display_path(dynamic_sparse_feedback_compiler_hint_status_path)
+            ),
+            "dynamic_sparse_feedback_compiler_hint_emitted": (
+                dynamic_sparse_status.get("hint_emitted") is True
+            ),
+            "dynamic_sparse_feedback_compiler_hint_selected_operation_count": (
+                dynamic_sparse_status.get("selected_operation_count")
+            ),
+            "dynamic_sparse_feedback_compiler_hint_blockers": _as_sequence(
+                dynamic_sparse_status.get("blockers")
+            ),
+            "dynamic_sparse_feedback_receiver_feedback_counts": (
+                dynamic_sparse_status.get("receiver_feedback_counts") or {}
+            ),
+            "dynamic_sparse_feedback_receiver_gate_channel_ids": _as_sequence(
+                dynamic_sparse_status.get("receiver_gate_channel_ids")
             ),
             "exact_auth_calibration_packet_paths": exact_auth_calibration_inputs[
                 "packet_paths"
@@ -1669,6 +1944,10 @@ def _queue_feedback_replan_followup_queue_payload(
         queue_feedback_replan_request.get("queue_performance_cache_identity_path"),
         queue_feedback_replan_request.get("queue_observation_path"),
         queue_feedback_replan_request.get("queue_observation_recovery_plan_path"),
+        queue_feedback_replan_request.get("dynamic_sparse_feedback_compiler_hint_path"),
+        queue_feedback_replan_request.get(
+            "dynamic_sparse_feedback_compiler_hint_status_path"
+        ),
         execution_queue,
         state_path,
     ]
@@ -1714,6 +1993,27 @@ def _queue_feedback_replan_followup_queue_payload(
             ),
             "queue_performance_cache_identity_generated": queue_feedback_replan_request.get(
                 "queue_performance_cache_identity_generated"
+            ),
+            "dynamic_sparse_feedback_compiler_hint_path": (
+                queue_feedback_replan_request.get(
+                    "dynamic_sparse_feedback_compiler_hint_path"
+                )
+            ),
+            "dynamic_sparse_feedback_compiler_hint_status_path": (
+                queue_feedback_replan_request.get(
+                    "dynamic_sparse_feedback_compiler_hint_status_path"
+                )
+            ),
+            "dynamic_sparse_feedback_compiler_hint_emitted": (
+                queue_feedback_replan_request.get(
+                    "dynamic_sparse_feedback_compiler_hint_emitted"
+                )
+                is True
+            ),
+            "dynamic_sparse_feedback_compiler_hint_blockers": _as_sequence(
+                queue_feedback_replan_request.get(
+                    "dynamic_sparse_feedback_compiler_hint_blockers"
+                )
             ),
             "ready_for_action_functional_feedback": True,
             "allowed_use": "paused_local_feedback_replan_only",
@@ -2892,8 +3192,16 @@ def _response_update_placeholder_payload(
     runtime_policy_output_path: Path | None,
     runtime_policy_applied_queue_path: Path | None,
     exact_readiness_handoffs: Sequence[Mapping[str, Any]],
+    dynamic_sparse_feedback_compiler_hint_path: Path | None = None,
+    dynamic_sparse_feedback_compiler_hint_status_path: Path | None = None,
+    dynamic_sparse_feedback_compiler_hint_status: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     performance_arg = _display_path(queue_performance_summary_path)
+    dynamic_sparse_status = (
+        dict(dynamic_sparse_feedback_compiler_hint_status)
+        if isinstance(dynamic_sparse_feedback_compiler_hint_status, Mapping)
+        else {}
+    )
     return _false_authority_payload(
         {
             "schema": RESPONSE_UPDATE_PLACEHOLDER_SCHEMA,
@@ -2926,6 +3234,25 @@ def _response_update_placeholder_payload(
             ],
             "exact_readiness_handoff_count": len(exact_readiness_handoffs),
             "exact_readiness_handoff_paths": [dict(item) for item in exact_readiness_handoffs],
+            "dynamic_sparse_feedback_compiler_hint_path": (
+                None
+                if dynamic_sparse_feedback_compiler_hint_path is None
+                else _display_path(dynamic_sparse_feedback_compiler_hint_path)
+            ),
+            "dynamic_sparse_feedback_compiler_hint_status_path": (
+                None
+                if dynamic_sparse_feedback_compiler_hint_status_path is None
+                else _display_path(dynamic_sparse_feedback_compiler_hint_status_path)
+            ),
+            "dynamic_sparse_feedback_compiler_hint_emitted": (
+                dynamic_sparse_status.get("hint_emitted") is True
+            ),
+            "dynamic_sparse_feedback_compiler_hint_blockers": _as_sequence(
+                dynamic_sparse_status.get("blockers")
+            ),
+            "dynamic_sparse_feedback_receiver_feedback_counts": (
+                dynamic_sparse_status.get("receiver_feedback_counts") or {}
+            ),
             "response_update_applied": False,
             "replan_required": True,
             "next_run_hint": [
@@ -3059,6 +3386,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--queue-performance-axis",
         default="[local-queue-performance advisory]",
     )
+    parser.add_argument(
+        "--disable-dynamic-sparse-feedback-compiler-hint",
+        action="store_true",
+        help=(
+            "write receiver-feedback status but skip dynamic sparse compiler-hint "
+            "generation"
+        ),
+    )
+    parser.add_argument("--dynamic-sparse-feedback-operation-set-id", default=None)
+    parser.add_argument("--dynamic-sparse-feedback-max-operations", type=int, default=32)
+    parser.add_argument("--dynamic-sparse-feedback-min-abs-gate", type=float, default=0.0)
     parser.add_argument("--resource-kind", default="local_mlx")
     parser.add_argument("--elapsed-seconds", type=float, default=None)
     parser.add_argument("--artifact-bytes", type=int, default=None)
@@ -4769,6 +5107,10 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--queue-feedback-replan-policy-iteration must be non-negative")
     if args.queue_feedback_replan_policy_max_iterations < 1:
         raise SystemExit("--queue-feedback-replan-policy-max-iterations must be >= 1")
+    if args.dynamic_sparse_feedback_max_operations < 1:
+        raise SystemExit("--dynamic-sparse-feedback-max-operations must be >= 1")
+    if args.dynamic_sparse_feedback_min_abs_gate < 0:
+        raise SystemExit("--dynamic-sparse-feedback-min-abs-gate must be non-negative")
     if args.staircase_ssh_max_steps < 1:
         raise SystemExit("--staircase-ssh-max-steps must be >= 1")
     if args.staircase_ssh_execute and args.execute:
@@ -5116,6 +5458,9 @@ def main(argv: list[str] | None = None) -> int:
     queue_feedback_replan_followup_policy = _queue_feedback_replan_followup_activation_policy(args)
     queue_feedback_replan_followup_policy_blockers: list[str] = []
     queue_feedback_replan_followup_execution_attempted = False
+    dynamic_sparse_feedback_compiler_hint_path: Path | None = None
+    dynamic_sparse_feedback_compiler_hint_status_path: Path | None = None
+    dynamic_sparse_feedback_compiler_hint_status: dict[str, Any] | None = None
     queue_observation = _json_from_stdout(observe_result)
     if queue_observation is None:
         queue_observation = _false_authority_payload(
@@ -5200,6 +5545,21 @@ def main(argv: list[str] | None = None) -> int:
             cache_identity=cache_identity_payload,
         )
     )
+    (
+        dynamic_sparse_feedback_compiler_hint_path,
+        dynamic_sparse_feedback_compiler_hint_status_path,
+        dynamic_sparse_feedback_compiler_hint_status,
+        dynamic_sparse_feedback_compiler_hint_result,
+    ) = _write_dynamic_sparse_feedback_compiler_hint(
+        args,
+        queue=queue,
+        run_dir=run_dir,
+        queue_observation_path=queue_observation_path,
+        queue_observation=queue_observation,
+        runtime_identity_path=runtime_identity_path,
+        cache_identity_path=cache_identity_path,
+    )
+    commands.append(dynamic_sparse_feedback_compiler_hint_result)
     queue_feedback_replan_request = _queue_feedback_replan_request_payload(
         args,
         summary_path=summary_path,
@@ -5216,6 +5576,13 @@ def main(argv: list[str] | None = None) -> int:
         queue_observation_path=queue_observation_path,
         queue_observation_recovery_plan_path=queue_observation_recovery_plan_path,
         queue_observation_recovery_plan=queue_observation_recovery_plan,
+        dynamic_sparse_feedback_compiler_hint_path=dynamic_sparse_feedback_compiler_hint_path,
+        dynamic_sparse_feedback_compiler_hint_status_path=(
+            dynamic_sparse_feedback_compiler_hint_status_path
+        ),
+        dynamic_sparse_feedback_compiler_hint_status=(
+            dynamic_sparse_feedback_compiler_hint_status
+        ),
     )
     (
         queue_feedback_replan_followup_queue,
@@ -5354,6 +5721,13 @@ def main(argv: list[str] | None = None) -> int:
         runtime_policy_output_path=runtime_policy_output_path,
         runtime_policy_applied_queue_path=runtime_policy_applied_queue_path,
         exact_readiness_handoffs=exact_readiness_handoffs,
+        dynamic_sparse_feedback_compiler_hint_path=dynamic_sparse_feedback_compiler_hint_path,
+        dynamic_sparse_feedback_compiler_hint_status_path=(
+            dynamic_sparse_feedback_compiler_hint_status_path
+        ),
+        dynamic_sparse_feedback_compiler_hint_status=(
+            dynamic_sparse_feedback_compiler_hint_status
+        ),
     )
     _write_json(response_update_placeholder_path, response_update_placeholder)
 
@@ -5432,6 +5806,31 @@ def main(argv: list[str] | None = None) -> int:
             None
             if materializer_receiver_feedback_observation_path is None
             else _display_path(materializer_receiver_feedback_observation_path)
+        ),
+        "dynamic_sparse_feedback_compiler_hint_path": (
+            None
+            if dynamic_sparse_feedback_compiler_hint_path is None
+            else _display_path(dynamic_sparse_feedback_compiler_hint_path)
+        ),
+        "dynamic_sparse_feedback_compiler_hint_status_path": (
+            None
+            if dynamic_sparse_feedback_compiler_hint_status_path is None
+            else _display_path(dynamic_sparse_feedback_compiler_hint_status_path)
+        ),
+        "dynamic_sparse_feedback_compiler_hint_emitted": (
+            bool(
+                dynamic_sparse_feedback_compiler_hint_status
+                and dynamic_sparse_feedback_compiler_hint_status.get("hint_emitted")
+                is True
+            )
+        ),
+        "dynamic_sparse_feedback_compiler_hint_blockers": (
+            []
+            if dynamic_sparse_feedback_compiler_hint_status is None
+            else _as_sequence(dynamic_sparse_feedback_compiler_hint_status.get("blockers"))
+        ),
+        "dynamic_sparse_feedback_compiler_hint_status": (
+            dynamic_sparse_feedback_compiler_hint_status
         ),
         "response_update_placeholder_path": _display_path(response_update_placeholder_path),
         "response_update_applied": False,

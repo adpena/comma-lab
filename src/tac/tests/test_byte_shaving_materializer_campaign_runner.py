@@ -758,6 +758,233 @@ def test_materializer_campaign_runner_emits_receiver_negative_observation_sweep(
     assert request["score_claim"] is False
 
 
+def test_materializer_campaign_runner_emits_receiver_gated_dynamic_sparse_hint(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    run_dir.mkdir()
+    queue_observation_path = run_dir / "queue_observation.json"
+    runtime_identity_path = run_dir / "queue_performance_runtime_identity.json"
+    cache_identity_path = run_dir / "queue_performance_cache_identity.json"
+    runtime_identity_path.write_text(
+        json.dumps({"runtime_contract_sha256": "a" * 64}),
+        encoding="utf-8",
+    )
+    cache_identity_path.write_text(
+        json.dumps({"cache_sha256": "b" * 64}),
+        encoding="utf-8",
+    )
+    queue_observation = {
+        "schema": "experiment_queue_observation.v1",
+        "queue_id": "receiver_gate_queue",
+        "healthy": True,
+        "succeeded_artifact_steps": [
+            {
+                "experiment_id": "positive_exp",
+                "step_id": "materialize",
+                "resource_kind": "local_cpu",
+                "candidate_ids": ["positive_candidate"],
+                "source_unit_ids": ["positive_unit"],
+                "expected_artifacts": [
+                    {
+                        "path": "positive_manifest.json",
+                        "candidate_id": "positive_candidate",
+                        "target_kind": runner.PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                        "materializer_id": "packet_member_recompress_adapter",
+                        "receiver_contract_kind": "packet_member_receiver",
+                        "serialized_archive_delta_status": "realized_saving",
+                        "serialized_archive_delta_realized_saved_bytes": 64,
+                        "serialized_archive_delta_savings_realized": True,
+                        "receiver_contract_satisfied": True,
+                        "score_claim": False,
+                    }
+                ],
+            },
+            {
+                "experiment_id": "receiver_negative_exp",
+                "step_id": "materialize",
+                "resource_kind": "local_cpu",
+                "candidate_ids": ["receiver_negative_candidate"],
+                "source_unit_ids": ["receiver_negative_unit"],
+                "expected_artifacts": [
+                    {
+                        "path": "receiver_negative_manifest.json",
+                        "candidate_id": "receiver_negative_candidate",
+                        "target_kind": runner.PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                        "materializer_id": "packet_member_recompress_adapter",
+                        "receiver_contract_kind": "packet_member_receiver",
+                        "serialized_archive_delta_status": "realized_saving",
+                        "serialized_archive_delta_realized_saved_bytes": 96,
+                        "serialized_archive_delta_savings_realized": True,
+                        "receiver_contract_satisfied": False,
+                        "receiver_verification": {
+                            "receiver_contract_satisfied": False,
+                            "blockers": ["runtime_consumption_proof_not_passed"],
+                        },
+                        "score_claim": False,
+                    }
+                ],
+            },
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+    queue_observation_path.write_text(json.dumps(queue_observation), encoding="utf-8")
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--run-dir",
+            str(run_dir),
+            "--lane-id",
+            "receiver_gate_lane",
+        ]
+    )
+
+    hint_path, status_path, status, result = (
+        runner._write_dynamic_sparse_feedback_compiler_hint(
+            args,
+            queue={"queue_id": "receiver_gate_queue"},
+            run_dir=run_dir,
+            queue_observation_path=queue_observation_path,
+            queue_observation=queue_observation,
+            runtime_identity_path=runtime_identity_path,
+            cache_identity_path=cache_identity_path,
+        )
+    )
+
+    assert result.returncode == 0
+    assert hint_path == run_dir / "dynamic_sparse_feedback_compiler_hint.json"
+    assert status_path == run_dir / "dynamic_sparse_feedback_compiler_hint_status.json"
+    assert status["hint_emitted"] is True
+    assert status["receiver_gate_channel_ids"] == ["receiver_proof"]
+    assert status["receiver_feedback_counts"]["receiver_positive_rate_saving_count"] == 1
+    assert status["receiver_feedback_counts"]["receiver_negative_count"] == 1
+    payload = json.loads(hint_path.read_text(encoding="utf-8"))
+    assert payload["selection_source"] == "dynamic_sparse_observation_feedback"
+    selected = payload["selected_operations"]
+    assert [row["unit_id"] for row in selected] == ["positive_unit"]
+    assert selected[0]["dynamic_gate_channel_id"] == "receiver_proof"
+    assert selected[0]["score_claim"] is False
+
+    plan_path = tmp_path / "plan.json"
+    queue_path = run_dir / "queue.json"
+    state_path = run_dir / "queue.sqlite"
+    performance_path = run_dir / "queue_performance_summary.json"
+    plan_path.write_text("{}", encoding="utf-8")
+    queue_path.write_text("{}", encoding="utf-8")
+    state_path.write_text("", encoding="utf-8")
+    performance = {
+        "schema": runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA,
+        "event_count": 1,
+        "queue_id": "receiver_gate_queue",
+        "by_step": {},
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    request = runner._queue_feedback_replan_request_payload(
+        args,
+        summary_path=run_dir / "materializer_campaign_run.json",
+        plan_path=plan_path,
+        queue_performance_summary_path=performance_path,
+        queue_performance_summary=performance,
+        runtime_identity_path=runtime_identity_path,
+        cache_identity_path=cache_identity_path,
+        generated_runtime_identity=True,
+        generated_cache_identity=True,
+        run_dir=run_dir,
+        execution_queue=queue_path,
+        state_path=state_path,
+        queue_observation_path=queue_observation_path,
+        dynamic_sparse_feedback_compiler_hint_path=hint_path,
+        dynamic_sparse_feedback_compiler_hint_status_path=status_path,
+        dynamic_sparse_feedback_compiler_hint_status=status,
+    )
+
+    assert request["dynamic_sparse_feedback_compiler_hint_emitted"] is True
+    assert request["dynamic_sparse_feedback_compiler_hint_blockers"] == []
+    assert request["dynamic_sparse_feedback_receiver_gate_channel_ids"] == [
+        "receiver_proof"
+    ]
+
+
+def test_materializer_campaign_runner_blocks_dynamic_sparse_hint_without_receiver(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "campaign"
+    run_dir.mkdir()
+    queue_observation_path = run_dir / "queue_observation.json"
+    runtime_identity_path = run_dir / "queue_performance_runtime_identity.json"
+    cache_identity_path = run_dir / "queue_performance_cache_identity.json"
+    runtime_identity_path.write_text(
+        json.dumps({"runtime_contract_sha256": "a" * 64}),
+        encoding="utf-8",
+    )
+    cache_identity_path.write_text(
+        json.dumps({"cache_sha256": "b" * 64}),
+        encoding="utf-8",
+    )
+    queue_observation = {
+        "schema": "experiment_queue_observation.v1",
+        "queue_id": "receiver_negative_queue",
+        "healthy": True,
+        "succeeded_artifact_steps": [
+            {
+                "experiment_id": "receiver_negative_exp",
+                "step_id": "materialize",
+                "candidate_ids": ["receiver_negative_candidate"],
+                "source_unit_ids": ["receiver_negative_unit"],
+                "expected_artifacts": [
+                    {
+                        "path": "receiver_negative_manifest.json",
+                        "candidate_id": "receiver_negative_candidate",
+                        "target_kind": runner.PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                        "materializer_id": "packet_member_recompress_adapter",
+                        "receiver_contract_kind": "packet_member_receiver",
+                        "serialized_archive_delta_status": "realized_saving",
+                        "serialized_archive_delta_realized_saved_bytes": 64,
+                        "serialized_archive_delta_savings_realized": True,
+                        "receiver_contract_satisfied": False,
+                        "score_claim": False,
+                    }
+                ],
+            }
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+    queue_observation_path.write_text(json.dumps(queue_observation), encoding="utf-8")
+    args = runner.parse_args(["--plan", str(tmp_path / "plan.json")])
+
+    hint_path, status_path, status, result = (
+        runner._write_dynamic_sparse_feedback_compiler_hint(
+            args,
+            queue={"queue_id": "receiver_negative_queue"},
+            run_dir=run_dir,
+            queue_observation_path=queue_observation_path,
+            queue_observation=queue_observation,
+            runtime_identity_path=runtime_identity_path,
+            cache_identity_path=cache_identity_path,
+        )
+    )
+
+    assert result.returncode == 0
+    assert hint_path is None
+    assert status_path.is_file()
+    assert status["hint_emitted"] is False
+    assert status["command_skipped"] is True
+    assert status["receiver_feedback_counts"]["receiver_negative_count"] == 1
+    assert "dynamic_sparse_receiver_positive_materializer_signal_missing" in status[
+        "blockers"
+    ]
+    assert "dynamic_sparse_feedback_compiler_hint_command_failed" not in status[
+        "blockers"
+    ]
+    assert status["score_claim"] is False
+
+
 def test_materializer_receiver_feedback_row_uses_family_local_archive_delta(
     tmp_path: Path,
 ) -> None:
