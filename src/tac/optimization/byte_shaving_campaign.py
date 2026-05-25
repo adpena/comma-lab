@@ -2058,12 +2058,20 @@ def build_inverse_action_materialization_bridge(
         dispatch_blockers.append(
             "packet_ir_operation_sets_require_materializer_contexts_and_runtime_proofs"
         )
-        next_gate = "build_byte_shaving_campaign_queue_packet_ir_lowering"
+        next_gate = (
+            "inverse_action_operation_set_compiler"
+            if compiler_required_count
+            else "build_byte_shaving_campaign_queue_packet_ir_lowering"
+        )
     else:
         dispatch_blockers.append(
             "packet_ir_operation_sets_missing_until_source_provenance_or_compiler"
         )
         next_gate = "inverse_action_operation_set_compiler"
+    packet_ir_lowering_ready = (
+        bool(queue_consumable_packet_ir_operation_set_ids)
+        and not compiler_required_count
+    )
 
     bridge = {
         "schema": INVERSE_ACTION_MATERIALIZATION_BRIDGE_SCHEMA,
@@ -2121,10 +2129,10 @@ def build_inverse_action_materialization_bridge(
         "queue_consumption": {
             "next_gate": next_gate,
             "plan_queue_builder": "tools/build_byte_shaving_campaign_queue.py",
-            "packet_ir_lowering_ready": bool(packet_ir_operation_sets),
+            "packet_ir_lowering_ready": packet_ir_lowering_ready,
             "compiler_required": bool(compiler_required_count),
             "requires_plan_path": True,
-            "requires_materializer_contexts": bool(packet_ir_operation_sets),
+            "requires_materializer_contexts": packet_ir_lowering_ready,
         },
         "evidence_boundary": {
             "planning_only": True,

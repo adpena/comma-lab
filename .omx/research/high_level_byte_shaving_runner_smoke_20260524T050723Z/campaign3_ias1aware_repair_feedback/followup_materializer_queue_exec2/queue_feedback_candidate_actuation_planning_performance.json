@@ -1,0 +1,149 @@
+{
+  "backlog_key_by_experiment": {},
+  "by_backlog_key": {},
+  "by_experiment": {
+    "queue_feedback_plan_widened_candidate_actuation": {
+      "artifact_record_bytes_mean": 1055605.5,
+      "artifact_record_bytes_sum": 2111211,
+      "artifact_record_count": 11,
+      "artifact_record_raw_bytes_mean": 1055605.5,
+      "artifact_record_raw_bytes_sum": 2111211,
+      "candidate_ids": [
+        "queue_feedback_plan_widened_candidate_actuation"
+      ],
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.26358816702850163,
+      "elapsed_seconds_mean": 0.26084370850003324,
+      "elapsed_seconds_min": 0.25809924997156486,
+      "elapsed_seconds_sum": 0.5216874170000665,
+      "experiment_ids": [
+        "queue_feedback_plan_widened_candidate_actuation"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 1008.5,
+      "log_bytes_sum": 2017,
+      "resource_kind_counts": {
+        "local_cpu": 2
+      },
+      "run_count": 2,
+      "step_ids": [
+        "compile_widened_inverse_action_materializer_work",
+        "plan_widened_inverse_action_materialization"
+      ],
+      "success_count": 2
+    }
+  },
+  "by_resource_kind": {
+    "local_cpu": {
+      "artifact_record_bytes_mean": 1055605.5,
+      "artifact_record_bytes_sum": 2111211,
+      "artifact_record_count": 11,
+      "artifact_record_raw_bytes_mean": 1055605.5,
+      "artifact_record_raw_bytes_sum": 2111211,
+      "candidate_ids": [
+        "queue_feedback_plan_widened_candidate_actuation"
+      ],
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.26358816702850163,
+      "elapsed_seconds_mean": 0.26084370850003324,
+      "elapsed_seconds_min": 0.25809924997156486,
+      "elapsed_seconds_sum": 0.5216874170000665,
+      "experiment_ids": [
+        "queue_feedback_plan_widened_candidate_actuation"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 1008.5,
+      "log_bytes_sum": 2017,
+      "resource_kind_counts": {
+        "local_cpu": 2
+      },
+      "run_count": 2,
+      "step_ids": [
+        "compile_widened_inverse_action_materializer_work",
+        "plan_widened_inverse_action_materialization"
+      ],
+      "success_count": 2
+    }
+  },
+  "by_source_selection_id": {},
+  "by_source_unit_id": {},
+  "by_step": {
+    "queue_feedback_plan_widened_candidate_actuation.compile_widened_inverse_action_materializer_work": {
+      "artifact_record_bytes_mean": 1713879.0,
+      "artifact_record_bytes_sum": 1713879,
+      "artifact_record_count": 8,
+      "artifact_record_raw_bytes_mean": 1713879.0,
+      "artifact_record_raw_bytes_sum": 1713879,
+      "candidate_ids": [
+        "queue_feedback_plan_widened_candidate_actuation"
+      ],
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.26358816702850163,
+      "elapsed_seconds_mean": 0.26358816702850163,
+      "elapsed_seconds_min": 0.26358816702850163,
+      "elapsed_seconds_sum": 0.26358816702850163,
+      "experiment_ids": [
+        "queue_feedback_plan_widened_candidate_actuation"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 1786.0,
+      "log_bytes_sum": 1786,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "step_ids": [
+        "compile_widened_inverse_action_materializer_work"
+      ],
+      "success_count": 1
+    },
+    "queue_feedback_plan_widened_candidate_actuation.plan_widened_inverse_action_materialization": {
+      "artifact_record_bytes_mean": 397332.0,
+      "artifact_record_bytes_sum": 397332,
+      "artifact_record_count": 3,
+      "artifact_record_raw_bytes_mean": 397332.0,
+      "artifact_record_raw_bytes_sum": 397332,
+      "candidate_ids": [
+        "queue_feedback_plan_widened_candidate_actuation"
+      ],
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.25809924997156486,
+      "elapsed_seconds_mean": 0.25809924997156486,
+      "elapsed_seconds_min": 0.25809924997156486,
+      "elapsed_seconds_sum": 0.25809924997156486,
+      "experiment_ids": [
+        "queue_feedback_plan_widened_candidate_actuation"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 231.0,
+      "log_bytes_sum": 231,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "step_ids": [
+        "plan_widened_inverse_action_materialization"
+      ],
+      "success_count": 1
+    }
+  },
+  "by_work_id": {},
+  "candidate_id_by_experiment": {
+    "queue_feedback_plan_widened_candidate_actuation": [
+      "queue_feedback_plan_widened_candidate_actuation"
+    ]
+  },
+  "event_count": 2,
+  "promotion_eligible": false,
+  "queue_id": "campaign3_ias1aware_feedback_followup_exec2_feedback_candidate_actuation",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "experiment_queue_performance_summary.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "source_selection_ids_by_experiment": {},
+  "source_unit_ids_by_experiment": {},
+  "state": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_feedback_candidate_actuation_planning_queue.sqlite",
+  "telemetry_only": true,
+  "work_id_by_experiment": {}
+}

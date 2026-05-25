@@ -1,0 +1,350 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1
+    },
+    "mode": "paused"
+  },
+  "experiments": [
+    {
+      "id": "queue_feedback_plan_widened_candidate_actuation",
+      "lane_id": "codex_feedback_candidate_actuation_planning_20260525",
+      "metadata": {
+        "action": "plan_widened_inverse_action_materializer_work",
+        "allowed_use": "paused_local_candidate_widening_actuation_planning_only",
+        "campaign_plan_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/byte_shaving_campaign_plan.feedback.widened.json",
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "generated_materializer_work_queue_may_be_blocked",
+          "compiler_required_cells_need_receiver_operation_transform",
+          "materializer_execution_queue_required_before_candidate_archive",
+          "exact_auth_eval_required_before_score_claim"
+        ],
+        "exact_cuda_auth_eval": false,
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        "gpu_launched": false,
+        "inverse_action_materialization_bridge_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_action_materialization_bridge.feedback.widened.json",
+        "materializer_work_queue_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materializer_work_queue.feedback.widened.json",
+        "policy_decision": "widen_inverse_candidate_generation",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "queue_feedback_candidate_actuation_planning_metadata.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_policy_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_feedback_replan_policy.widening_replay.json",
+        "source_policy_sha256": "572a65189eb5402c5e5a5078dea17bacdec0827ecadb9e9e1b126110e7134ba3",
+        "source_queue_id": "campaign3_ias1aware_feedback_followup_exec2",
+        "source_run_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materializer_campaign_run.json",
+        "widened_action_functional_path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.widened.json"
+      },
+      "priority": 84,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/plan_byte_shaving_campaign.py",
+            "--source",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.widened.json",
+            "--from-inverse-action-functional",
+            "--output",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/byte_shaving_campaign_plan.feedback.widened.json",
+            "--md-out",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/byte_shaving_campaign_plan.feedback.widened.md",
+            "--inverse-action-materialization-bridge-out",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_action_materialization_bridge.feedback.widened.json",
+            "--campaign-id",
+            "campaign3_ias1aware_feedback_candidate_actuation",
+            "--max-k",
+            "8"
+          ],
+          "id": "plan_widened_inverse_action_materialization",
+          "kind": "command",
+          "postconditions": [
+            {
+              "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/byte_shaving_campaign_plan.feedback.widened.json",
+              "type": "path_exists"
+            },
+            {
+              "false_or_missing": [
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotable",
+                "ready_for_exact_eval_dispatch",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "dispatch_ready",
+                "exact_eval_ready",
+                "exact_eval_dispatch_ready",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "dispatch_attempted",
+                "gpu_launched",
+                "score_affecting_payload_changed",
+                "charged_bits_changed"
+              ],
+              "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/byte_shaving_campaign_plan.feedback.widened.json",
+              "required_equals": {
+                "schema": "byte_shaving_campaign_plan.v1"
+              },
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "required_nonempty": [
+                "inverse_action_materialization_portfolios"
+              ],
+              "type": "json_completion_contract"
+            },
+            {
+              "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_action_materialization_bridge.feedback.widened.json",
+              "type": "path_exists"
+            },
+            {
+              "false_or_missing": [
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotable",
+                "ready_for_exact_eval_dispatch",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "dispatch_ready",
+                "exact_eval_ready",
+                "exact_eval_dispatch_ready",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "dispatch_attempted",
+                "gpu_launched",
+                "score_affecting_payload_changed",
+                "charged_bits_changed"
+              ],
+              "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_action_materialization_bridge.feedback.widened.json",
+              "required_equals": {
+                "schema": "inverse_steganalysis_water_bucket_materialization_bridge.v1"
+              },
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "required_nonempty": [
+                "queue_consumption",
+                "water_bucket_materialization_portfolios"
+              ],
+              "type": "json_completion_contract"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/byte_shaving_campaign_plan.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/byte_shaving_campaign_plan.feedback.widened.md",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_action_materialization_bridge.feedback.widened.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_feedback_replan_policy.widening_replay.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materializer_campaign_run.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/byte_shaving_campaign_plan.feedback.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.widened.md"
+            ],
+            "max_recursive_entries": 256,
+            "pullback_artifact_paths": [
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/byte_shaving_campaign_plan.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/byte_shaving_campaign_plan.feedback.widened.md",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_action_materialization_bridge.feedback.widened.json"
+            ],
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_byte_shaving_campaign_queue.py",
+            "--plan",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/byte_shaving_campaign_plan.feedback.widened.json",
+            "--materialization-out",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materialization.feedback.widened.json",
+            "--portfolio-out",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/portfolio.feedback.widened.json",
+            "--action-summary-out",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/action_summary.feedback.widened.json",
+            "--materializer-backlog-out",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materializer_backlog.feedback.widened.json",
+            "--materializer-work-queue-out",
+            ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materializer_work_queue.feedback.widened.json",
+            "--repo-root",
+            ".",
+            "--candidate-limit",
+            "16",
+            "--queue-candidate-limit",
+            "16",
+            "--local-cpu-concurrency",
+            "auto"
+          ],
+          "id": "compile_widened_inverse_action_materializer_work",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotable",
+                "ready_for_exact_eval_dispatch",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "dispatch_ready",
+                "exact_eval_ready",
+                "exact_eval_dispatch_ready",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "dispatch_attempted",
+                "gpu_launched",
+                "score_affecting_payload_changed",
+                "charged_bits_changed"
+              ],
+              "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materialization.feedback.widened.json",
+              "required_equals": {
+                "schema": "byte_shaving_campaign_materialization.v1"
+              },
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_completion_contract"
+            },
+            {
+              "false_or_missing": [
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotable",
+                "ready_for_exact_eval_dispatch",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "dispatch_ready",
+                "exact_eval_ready",
+                "exact_eval_dispatch_ready",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "dispatch_attempted",
+                "gpu_launched",
+                "score_affecting_payload_changed",
+                "charged_bits_changed"
+              ],
+              "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materializer_backlog.feedback.widened.json",
+              "required_equals": {
+                "schema": "byte_shaving_materializer_backlog.v1"
+              },
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "required_nonempty": [
+                "rows"
+              ],
+              "required_positive_int": [
+                "backlog_row_count"
+              ],
+              "type": "json_completion_contract"
+            },
+            {
+              "false_or_missing": [
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotable",
+                "ready_for_exact_eval_dispatch",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "dispatch_ready",
+                "exact_eval_ready",
+                "exact_eval_dispatch_ready",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "dispatch_attempted",
+                "gpu_launched",
+                "score_affecting_payload_changed",
+                "charged_bits_changed"
+              ],
+              "path": ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materializer_work_queue.feedback.widened.json",
+              "required_equals": {
+                "schema": "byte_shaving_materializer_work_queue.v1"
+              },
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "required_positive_int": [
+                "row_count"
+              ],
+              "type": "json_completion_contract"
+            }
+          ],
+          "requires": [
+            "plan_widened_inverse_action_materialization"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/byte_shaving_campaign_plan.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/byte_shaving_campaign_plan.feedback.widened.md",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_action_materialization_bridge.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materialization.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/portfolio.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/action_summary.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materializer_backlog.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materializer_work_queue.feedback.widened.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/byte_shaving_campaign_plan.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_action_materialization_bridge.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/queue_feedback_replan_policy.widening_replay.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materializer_campaign_run.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/byte_shaving_campaign_plan.feedback.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_steganalysis_action_functional.feedback.widened.md"
+            ],
+            "max_recursive_entries": 256,
+            "pullback_artifact_paths": [
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/byte_shaving_campaign_plan.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/byte_shaving_campaign_plan.feedback.widened.md",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/inverse_action_materialization_bridge.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materialization.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/portfolio.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/action_summary.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materializer_backlog.feedback.widened.json",
+              ".omx/research/high_level_byte_shaving_runner_smoke_20260524T050723Z/campaign3_ias1aware_repair_feedback/followup_materializer_queue_exec2/materializer_work_queue.feedback.widened.json"
+            ],
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": [
+        "byte-shaving",
+        "inverse-steganalysis",
+        "queue-feedback",
+        "candidate-widening",
+        "actuation-planning",
+        "no-score-authority"
+      ]
+    }
+  ],
+  "queue_id": "campaign3_ias1aware_feedback_followup_exec2_feedback_candidate_actuation",
+  "schema": "experiment_queue.v1"
+}

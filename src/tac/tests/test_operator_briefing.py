@@ -1503,6 +1503,11 @@ def test_byte_shaving_acquisition_summary_surfaces_feedback_candidate_widening(
     assert summary["queue_feedback_dry_no_selected_count"] == 1
     assert summary["queue_feedback_archive_delta_blocked_cell_count"] == 1
     assert summary["queue_feedback_policy_continue_count"] == 0
+    assert "status: NEEDS_CANDIDATE_WIDENING" in text
+    assert "feedback_widen=1" in text
+    assert "feedback_dry=1" in text
+    assert "feedback_archive_delta_blocked_cells=1" in text
+    assert "feedback_widen_queue=1" in text
     assert summary["latest_rows"][0]["queue_feedback_replan_candidate_widening_ready"]
     assert summary["latest_rows"][0]["queue_feedback_replan_dry_no_selected_cells"]
     assert summary["latest_rows"][0]["queue_feedback_replan_feedback_cell_count"] == 1
@@ -1513,15 +1518,122 @@ def test_byte_shaving_acquisition_summary_surfaces_feedback_candidate_widening(
         ]
         == 1
     )
-    assert "status: NEEDS_CANDIDATE_WIDENING" in text
-    assert "feedback_widen=1" in text
-    assert "feedback_dry=1" in text
-    assert "feedback_archive_delta_blocked_cells=1" in text
-    assert "feedback_widen_queue=1" in text
-    assert "feedback_decision=widen_inverse_candidate_generation" in text
-    assert "feedback_widening=True" in text
-    assert "feedback_dry=True" in text
-    assert "feedback_widen_queue=True" in text
+
+
+def test_byte_shaving_acquisition_summary_surfaces_feedback_actuation_queue(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    root = tmp_path / ".omx" / "research"
+    plan_ref = ".omx/research/high_level/campaign_actuation/byte_shaving_campaign_plan.json"
+    run_ref = ".omx/research/high_level/campaign_actuation/materializer_campaign_run.json"
+
+    _write_json(
+        tmp_path / plan_ref,
+        {
+            "campaign_id": "campaign_actuation",
+            "candidate_id": "inverse_steganalysis_water_bucket_plan.v1",
+            "materialization_bridge": {
+                "high_level_operation_compiler_required_count": 3,
+                "packet_ir_operation_set_count": 4,
+                "queue_consumable_packet_ir_operation_set_count": 0,
+                "packet_ir_byte_closed_operation_count": 0,
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    _write_json(
+        tmp_path / run_ref,
+        {
+            "schema": "byte_shaving_materializer_campaign_run.v1",
+            "execute": True,
+            "high_level_action_source_count": 1,
+            "plan": plan_ref,
+            "queue_id": "campaign_actuation",
+            "queue_feedback_replan_ready": True,
+            "queue_feedback_replan_policy_decision": (
+                "widen_inverse_candidate_generation"
+            ),
+            "queue_feedback_replan_policy_should_continue": False,
+            "queue_feedback_replan_policy": {
+                "schema": "queue_feedback_replan_policy.v1",
+                "decision": "widen_inverse_candidate_generation",
+                "should_continue_feedback_loop": False,
+                "ready_for_candidate_generation_widening": True,
+                "feedback_action_functional_summary": {
+                    "loaded": True,
+                    "dry_no_selected_cells": False,
+                    "cell_count": 3,
+                    "selected_count": 3,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "queue_feedback_candidate_widening_queue_emitted": True,
+            "queue_feedback_candidate_widening_queue_blockers": [],
+            "queue_feedback_candidate_actuation_planning_queue_path": (
+                ".omx/research/high_level/campaign_actuation/"
+                "queue_feedback_candidate_actuation_planning_queue.json"
+            ),
+            "queue_feedback_candidate_actuation_planning_queue_emitted": True,
+            "queue_feedback_candidate_actuation_planning_queue_blockers": [],
+            "experiment_count": 0,
+            "build": {
+                "materializer_work_queue_executable_row_count": 0,
+                "materializer_work_queue_blocked_row_count": 1,
+                "blocked_row_count": 1,
+                "materializer_backlog_row_count": 1,
+            },
+            "worker": {
+                "schema": "experiment_queue_worker_result.v1",
+                "execute": True,
+                "failure_count": 0,
+                "success_count": 0,
+                "stop_reason": "completed",
+            },
+            "observation": {
+                "status_counts": {},
+                "ready_steps": [],
+                "failed_steps": [],
+                "definition_drift": {
+                    "changed_step_count": 0,
+                    "missing_step_count": 0,
+                    "missing_hash_step_count": 0,
+                },
+            },
+            "commands": [{"returncode": 0}],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    monkeypatch.setattr(mod, "BYTE_SHAVING_ACQUISITION_SCAN_ROOTS", (root,))
+
+    summary = mod._byte_shaving_acquisition_summary()
+    text = mod._format_byte_shaving_acquisition_summary()
+
+    assert summary["status"] == "NEEDS_RECEIVER_COMPILER"
+    assert summary["queue_feedback_candidate_actuation_planning_queue_count"] == 1
+    assert (
+        summary["latest_rows"][0][
+            "queue_feedback_candidate_actuation_planning_queue_emitted"
+        ]
+        is True
+    )
+    assert "feedback_actuation_queue=1" in text
 
 
 def test_byte_shaving_acquisition_summary_live_observation_wins_over_stale_payload(

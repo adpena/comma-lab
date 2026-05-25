@@ -2034,6 +2034,23 @@ def _byte_shaving_acquisition_row(path: Path) -> dict[str, object]:
             )
             else []
         ),
+        "queue_feedback_candidate_actuation_planning_queue_path": str(
+            payload.get("queue_feedback_candidate_actuation_planning_queue_path") or ""
+        ),
+        "queue_feedback_candidate_actuation_planning_queue_emitted": (
+            payload.get("queue_feedback_candidate_actuation_planning_queue_emitted")
+            is True
+        ),
+        "queue_feedback_candidate_actuation_planning_queue_blocker_count": len(
+            payload.get("queue_feedback_candidate_actuation_planning_queue_blockers")
+            if isinstance(
+                payload.get(
+                    "queue_feedback_candidate_actuation_planning_queue_blockers"
+                ),
+                list,
+            )
+            else []
+        ),
         "queue_observation_path": str(
             payload.get("queue_observation_path")
             or (
@@ -2494,6 +2511,12 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
             f"{latest.get('experiment_count', 0)} experiment(s) queued from "
             f"{latest.get('high_level_action_source_count', 0)} high-level source(s)"
         )
+    elif latest.get("queue_feedback_candidate_actuation_planning_queue_emitted") is True:
+        status = "NEEDS_RECEIVER_COMPILER"
+        reason = (
+            "widened inverse-action cells reached actuation planning; "
+            "receiver/compiler transform is the next blocker"
+        )
     elif latest.get("queue_feedback_replan_candidate_widening_ready") is True:
         status = "NEEDS_CANDIDATE_WIDENING"
         reason = (
@@ -2578,6 +2601,12 @@ def _byte_shaving_acquisition_summary() -> dict[str, object]:
             1
             for row in rows
             if row.get("queue_feedback_candidate_widening_queue_emitted") is True
+        ),
+        "queue_feedback_candidate_actuation_planning_queue_count": sum(
+            1
+            for row in rows
+            if row.get("queue_feedback_candidate_actuation_planning_queue_emitted")
+            is True
         ),
         "queue_observation_recovery_required_count": sum(
             1 for row in rows if row.get("queue_observation_recovery_required") is True
@@ -2807,6 +2836,8 @@ def _format_byte_shaving_acquisition_summary() -> str:
             f"{payload['queue_feedback_archive_delta_blocked_cell_count']} "
             "feedback_widen_queue="
             f"{payload['queue_feedback_candidate_widening_queue_count']} "
+            "feedback_actuation_queue="
+            f"{payload['queue_feedback_candidate_actuation_planning_queue_count']} "
             "queue_recovery_required="
             f"{payload['queue_observation_recovery_required_count']} "
             "queue_recovery_ready="
@@ -2905,6 +2936,8 @@ def _format_byte_shaving_acquisition_summary() -> str:
                 f"{row.get('queue_feedback_replan_archive_delta_blocked_cell_count', 0)} "
                 "feedback_widen_queue="
                 f"{row.get('queue_feedback_candidate_widening_queue_emitted') is True} "
+                "feedback_actuation_queue="
+                f"{row.get('queue_feedback_candidate_actuation_planning_queue_emitted') is True} "
                 "queue_recovery_required="
                 f"{row.get('queue_observation_recovery_required') is True} "
                 "queue_recovery_ready="

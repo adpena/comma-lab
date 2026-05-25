@@ -49,6 +49,7 @@ from comma_lab.scheduler.experiment_queue import (  # noqa: E402
 from comma_lab.scheduler.queue_feedback_replan_policy import (  # noqa: E402
     QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL,
     QUEUE_FEEDBACK_REPLAN_FORBIDDEN_COMMAND_FLAGS,
+    build_queue_feedback_candidate_actuation_planning_queue,
     build_queue_feedback_candidate_widening_queue,
     build_queue_feedback_replan_continuation_queue,
     build_queue_feedback_replan_policy,
@@ -4481,16 +4482,24 @@ def main(argv: list[str] | None = None) -> int:
     queue_feedback_candidate_widening_queue_path = (
         run_dir / "queue_feedback_candidate_widening_queue.json"
     )
+    queue_feedback_candidate_actuation_planning_queue_path = (
+        run_dir / "queue_feedback_candidate_actuation_planning_queue.json"
+    )
     generated_runtime_identity_path = run_dir / "queue_performance_runtime_identity.json"
     generated_cache_identity_path = run_dir / "queue_performance_cache_identity.json"
     response_update_placeholder_path = run_dir / "canonical_response_update_placeholder.json"
     queue_feedback_replan_staircase_artifacts: dict[str, Any] | None = None
     queue_feedback_replan_continuation_staircase_artifacts: dict[str, Any] | None = None
     queue_feedback_candidate_widening_staircase_artifacts: dict[str, Any] | None = None
+    queue_feedback_candidate_actuation_planning_staircase_artifacts: (
+        dict[str, Any] | None
+    ) = None
     queue_feedback_replan_continuation_queue: dict[str, Any] | None = None
     queue_feedback_replan_continuation_queue_blockers: list[str] = []
     queue_feedback_candidate_widening_queue: dict[str, Any] | None = None
     queue_feedback_candidate_widening_queue_blockers: list[str] = []
+    queue_feedback_candidate_actuation_planning_queue: dict[str, Any] | None = None
+    queue_feedback_candidate_actuation_planning_queue_blockers: list[str] = []
     queue_observation_recovery_queue: dict[str, Any] | None = None
     queue_observation_recovery_queue_blockers: list[str] = []
     queue_observation_recovery_staircase_artifacts: dict[str, Any] | None = None
@@ -5037,6 +5046,35 @@ def main(argv: list[str] | None = None) -> int:
             staircase_artifacts["feedback_candidate_widening_child"] = (
                 queue_feedback_candidate_widening_staircase_artifacts
             )
+    (
+        queue_feedback_candidate_actuation_planning_queue,
+        queue_feedback_candidate_actuation_planning_queue_blockers,
+    ) = build_queue_feedback_candidate_actuation_planning_queue(
+        queue_feedback_replan_policy,
+        lane_id=feedback_lane_id,
+        source_policy_path=_display_path(queue_feedback_replan_policy_path),
+    )
+    if queue_feedback_candidate_actuation_planning_queue is not None:
+        _write_json(
+            queue_feedback_candidate_actuation_planning_queue_path,
+            queue_feedback_candidate_actuation_planning_queue,
+        )
+        queue_feedback_candidate_actuation_planning_staircase_artifacts = (
+            _build_queue_feedback_staircase_artifacts(
+                args,
+                run_dir=run_dir,
+                parent_queue=queue,
+                parent_queue_path=execution_queue,
+                parent_state_path=state_path,
+                child_queue=queue_feedback_candidate_actuation_planning_queue,
+                child_queue_path=queue_feedback_candidate_actuation_planning_queue_path,
+                artifact_stem="queue_feedback_candidate_actuation_planning",
+            )
+        )
+        if staircase_artifacts is not None:
+            staircase_artifacts["feedback_candidate_actuation_planning_child"] = (
+                queue_feedback_candidate_actuation_planning_staircase_artifacts
+            )
     payload["queue_feedback_replan_policy_path"] = _display_path(
         queue_feedback_replan_policy_path
     )
@@ -5060,6 +5098,20 @@ def main(argv: list[str] | None = None) -> int:
     )
     payload["queue_feedback_candidate_widening_staircase_artifacts"] = (
         queue_feedback_candidate_widening_staircase_artifacts
+    )
+    payload["queue_feedback_candidate_actuation_planning_queue_path"] = (
+        _display_path(queue_feedback_candidate_actuation_planning_queue_path)
+        if queue_feedback_candidate_actuation_planning_queue is not None
+        else None
+    )
+    payload["queue_feedback_candidate_actuation_planning_queue_emitted"] = (
+        queue_feedback_candidate_actuation_planning_queue is not None
+    )
+    payload["queue_feedback_candidate_actuation_planning_queue_blockers"] = (
+        queue_feedback_candidate_actuation_planning_queue_blockers
+    )
+    payload["queue_feedback_candidate_actuation_planning_staircase_artifacts"] = (
+        queue_feedback_candidate_actuation_planning_staircase_artifacts
     )
     payload["queue_observation_recovery_queue_path"] = (
         _display_path(queue_observation_recovery_queue_path)

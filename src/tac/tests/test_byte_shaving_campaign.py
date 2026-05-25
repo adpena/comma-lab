@@ -766,6 +766,65 @@ def test_inverse_action_compiler_hint_lowers_to_family_packet_ir() -> None:
     assert bridge["ready_for_exact_eval_dispatch"] is False
 
 
+def test_inverse_action_mixed_compiled_and_high_level_routes_to_compiler_first() -> None:
+    payload = _inverse_action_payload()
+    payload["cells"] = [
+        {
+            "atom_id": "compiled_family_opset",
+            "operation_set_compiler": {
+                "schema": "inverse_action_operation_set_compiler_hint.v1",
+                "operation_set_id": "compiled_family_set",
+                "candidate_saved_bytes": 300,
+                "operation_portability": "family_agnostic",
+                "selected_operations": [
+                    {
+                        "unit_id": "compiled_hnerv_section",
+                        "target_kind": "archive_section_entropy_recode_v1",
+                        "archive_section": "decoder_blob",
+                        "candidate_saved_bytes": 300,
+                        "representation_family_class": "hnerv_variant",
+                    },
+                ],
+            },
+        }
+    ]
+    payload["water_bucket"]["selected_count"] = 2
+    payload["water_bucket"]["selected_cells"] = [
+        {
+            "atom_id": "compiled_family_opset",
+            "candidate_id": "compiled_candidate",
+            "scope_axis": "full_video",
+            "component": "segnet",
+            "water_fill_cost_bytes": 8,
+            "expected_score_gain": 0.0003,
+            "euler_lagrange_residual": 0.00029,
+        },
+        {
+            "atom_id": "bare_high_level_cell",
+            "candidate_id": "bare_candidate",
+            "scope_axis": "pairs",
+            "component": "posenet",
+            "water_fill_cost_bytes": 12,
+            "expected_score_gain": 0.0002,
+            "euler_lagrange_residual": 0.00019,
+        },
+    ]
+
+    surface = build_signal_surface_from_inverse_action_functional(payload)
+    plan = build_byte_shaving_campaign_plan(surface, max_k=2)
+    bridge = plan["materialization_bridge"]
+
+    assert bridge["compiled_operation_set_count"] == 1
+    assert bridge["high_level_operation_compiler_required_count"] == 1
+    assert bridge["packet_ir_operation_set_count"] >= 1
+    assert bridge["queue_consumable_packet_ir_operation_set_count"] >= 1
+    assert bridge["queue_consumption"]["next_gate"] == (
+        "inverse_action_operation_set_compiler"
+    )
+    assert bridge["queue_consumption"]["packet_ir_lowering_ready"] is False
+    assert bridge["queue_consumption"]["compiler_required"] is True
+
+
 def test_inverse_action_compiler_hint_lowers_registered_targets_and_aliases() -> None:
     payload = _inverse_action_payload()
     target_specs = [

@@ -32,6 +32,9 @@ QUEUE_FEEDBACK_REPLAN_CONTINUATION_METADATA_SCHEMA = (
 QUEUE_FEEDBACK_CANDIDATE_WIDENING_METADATA_SCHEMA = (
     "queue_feedback_candidate_widening_metadata.v1"
 )
+QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLANNING_METADATA_SCHEMA = (
+    "queue_feedback_candidate_actuation_planning_metadata.v1"
+)
 QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA = (
     "queue_observation_recovery_queue_metadata.v1"
 )
@@ -48,12 +51,25 @@ QUEUE_FEEDBACK_CANDIDATE_WIDENING_EXPERIMENT_ID = (
     "queue_feedback_widen_inverse_candidate_generation"
 )
 QUEUE_FEEDBACK_CANDIDATE_WIDENING_STEP_ID = "widen_inverse_candidate_generation"
+QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLANNING_EXPERIMENT_ID = (
+    "queue_feedback_plan_widened_candidate_actuation"
+)
+QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLAN_STEP_ID = (
+    "plan_widened_inverse_action_materialization"
+)
+QUEUE_FEEDBACK_CANDIDATE_ACTUATION_QUEUE_STEP_ID = (
+    "compile_widened_inverse_action_materializer_work"
+)
 QUEUE_OBSERVATION_RECOVERY_EXPERIMENT_ID = "queue_observation_recovery_actions"
 QUEUE_FEEDBACK_REPLAN_MATERIALIZER_CAMPAIGN_TOOL = (
     "tools/run_byte_shaving_materializer_campaign.py"
 )
 QUEUE_FEEDBACK_REPLAN_ACTION_FUNCTIONAL_TOOL = (
     "tools/build_inverse_steganalysis_action_functional.py"
+)
+QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLAN_TOOL = "tools/plan_byte_shaving_campaign.py"
+QUEUE_FEEDBACK_CANDIDATE_ACTUATION_QUEUE_TOOL = (
+    "tools/build_byte_shaving_campaign_queue.py"
 )
 QUEUE_OBSERVATION_RECOVERY_TOOL = "tools/experiment_queue.py"
 QUEUE_FEEDBACK_REPLAN_FORBIDDEN_COMMAND_FLAGS = frozenset(
@@ -805,6 +821,42 @@ def _widened_json_path(path_text: str | None, *, suffix: str) -> str | None:
     if name.endswith(".json"):
         return path.with_name(f"{name[:-5]}.{suffix}.json").as_posix()
     return path.with_name(f"{name}.{suffix}.json").as_posix()
+
+
+def _inverse_action_suffix(path: Path) -> str:
+    name = path.name
+    if name.endswith(".json"):
+        name = name[:-5]
+    prefix = "inverse_steganalysis_action_functional"
+    if name.startswith(prefix):
+        suffix = name[len(prefix) :]
+        return suffix or ".actuation"
+    return f".{name}.actuation"
+
+
+def _candidate_actuation_paths(widened_action_path: str) -> dict[str, str]:
+    path = Path(widened_action_path)
+    suffix = _inverse_action_suffix(path)
+    return {
+        "campaign_plan": path.with_name(
+            f"byte_shaving_campaign_plan{suffix}.json"
+        ).as_posix(),
+        "campaign_plan_md": path.with_name(
+            f"byte_shaving_campaign_plan{suffix}.md"
+        ).as_posix(),
+        "inverse_action_materialization_bridge": path.with_name(
+            f"inverse_action_materialization_bridge{suffix}.json"
+        ).as_posix(),
+        "materialization": path.with_name(f"materialization{suffix}.json").as_posix(),
+        "portfolio": path.with_name(f"portfolio{suffix}.json").as_posix(),
+        "action_summary": path.with_name(f"action_summary{suffix}.json").as_posix(),
+        "materializer_backlog": path.with_name(
+            f"materializer_backlog{suffix}.json"
+        ).as_posix(),
+        "materializer_work_queue": path.with_name(
+            f"materializer_work_queue{suffix}.json"
+        ).as_posix(),
+    }
 
 
 def _resolve_maybe_repo_path(path_text: str | None) -> Path | None:
@@ -2318,6 +2370,324 @@ def build_queue_feedback_candidate_widening_queue(
     return queue, []
 
 
+def build_queue_feedback_candidate_actuation_planning_queue(
+    policy: Mapping[str, Any],
+    *,
+    lane_id: str,
+    source_policy_path: str | None = None,
+    queue_id: str | None = None,
+    campaign_id: str | None = None,
+    max_k: int = 8,
+    candidate_limit: int = 16,
+) -> tuple[dict[str, Any] | None, list[str]]:
+    """Return a paused queue that turns widened cells into materializer work state.
+
+    This does not execute materializers. It compiles the widened inverse-action
+    surface into a byte-shaving campaign plan, inverse-action materialization
+    bridge, materializer backlog, and materializer work queue. If cells still
+    need a receiver/compiler transform, the work queue records that blocker as
+    durable state rather than presenting a fake executable row.
+    """
+
+    blockers: list[str] = []
+    if max_k < 1:
+        blockers.append("queue_feedback_candidate_actuation_max_k_invalid")
+    if candidate_limit < 1:
+        blockers.append("queue_feedback_candidate_actuation_candidate_limit_invalid")
+    if policy.get("schema") != QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA:
+        blockers.append("queue_feedback_candidate_actuation_policy_schema_invalid")
+    if policy.get("decision") != ACTION_WIDEN_CANDIDATE_GENERATION:
+        blockers.append("queue_feedback_candidate_actuation_policy_not_widening")
+    if truthy_authority_field_violations(
+        policy,
+        fields=FORBIDDEN_TRUE_AUTHORITY_FIELDS,
+    ):
+        blockers.append("queue_feedback_candidate_actuation_policy_authority_violation")
+    handoff = policy.get("candidate_widening_handoff")
+    handoff = handoff if isinstance(handoff, Mapping) else {}
+    blockers.extend(
+        f"queue_feedback_candidate_actuation_handoff:{item}"
+        for item in _string_list(handoff.get("blockers"))
+    )
+    widened_action_path = _nonempty_str(handoff.get("widened_output_path"))
+    if widened_action_path is None:
+        blockers.append("queue_feedback_candidate_actuation_widened_output_missing")
+
+    lane = lane_id.strip()
+    if not lane:
+        blockers.append("queue_feedback_candidate_actuation_lane_id_missing")
+    if blockers:
+        return None, list(dict.fromkeys(blockers))
+
+    assert widened_action_path is not None
+    paths = _candidate_actuation_paths(widened_action_path)
+    effective_campaign_id = (
+        campaign_id
+        or f"{_nonempty_str(policy.get('queue_id')) or 'feedback'}_candidate_widening_actuation"
+    )
+    plan_command = [
+        ".venv/bin/python",
+        QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLAN_TOOL,
+        "--source",
+        widened_action_path,
+        "--from-inverse-action-functional",
+        "--output",
+        paths["campaign_plan"],
+        "--md-out",
+        paths["campaign_plan_md"],
+        "--inverse-action-materialization-bridge-out",
+        paths["inverse_action_materialization_bridge"],
+        "--campaign-id",
+        effective_campaign_id,
+        "--max-k",
+        str(max_k),
+    ]
+    compile_command = [
+        ".venv/bin/python",
+        QUEUE_FEEDBACK_CANDIDATE_ACTUATION_QUEUE_TOOL,
+        "--plan",
+        paths["campaign_plan"],
+        "--materialization-out",
+        paths["materialization"],
+        "--portfolio-out",
+        paths["portfolio"],
+        "--action-summary-out",
+        paths["action_summary"],
+        "--materializer-backlog-out",
+        paths["materializer_backlog"],
+        "--materializer-work-queue-out",
+        paths["materializer_work_queue"],
+        "--repo-root",
+        ".",
+        "--candidate-limit",
+        str(candidate_limit),
+        "--queue-candidate-limit",
+        str(candidate_limit),
+        "--local-cpu-concurrency",
+        "auto",
+    ]
+    source_queue_id = _nonempty_str(policy.get("queue_id")) or "materializer_campaign"
+    effective_queue_id = queue_id or f"{source_queue_id}_feedback_candidate_actuation"
+    input_artifacts = [
+        source_policy_path,
+        policy.get("source_run_path"),
+        policy.get("plan_path"),
+        policy.get("feedback_action_functional_path"),
+        widened_action_path,
+        handoff.get("widened_md_path"),
+    ]
+    output_artifacts = [
+        paths["campaign_plan"],
+        paths["campaign_plan_md"],
+        paths["inverse_action_materialization_bridge"],
+        paths["materialization"],
+        paths["portfolio"],
+        paths["action_summary"],
+        paths["materializer_backlog"],
+        paths["materializer_work_queue"],
+    ]
+    metadata = _false_authority_payload(
+        {
+            "schema": QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLANNING_METADATA_SCHEMA,
+            "source_policy_path": source_policy_path,
+            "source_policy_sha256": _stable_json_sha256(policy),
+            "source_run_path": policy.get("source_run_path"),
+            "source_queue_id": policy.get("queue_id"),
+            "policy_decision": policy.get("decision"),
+            "action": "plan_widened_inverse_action_materializer_work",
+            "widened_action_functional_path": widened_action_path,
+            "campaign_plan_path": paths["campaign_plan"],
+            "inverse_action_materialization_bridge_path": paths[
+                "inverse_action_materialization_bridge"
+            ],
+            "materializer_work_queue_path": paths["materializer_work_queue"],
+            "allowed_use": (
+                "paused_local_candidate_widening_actuation_planning_only"
+            ),
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+            "dispatch_blockers": [
+                "generated_materializer_work_queue_may_be_blocked",
+                "compiler_required_cells_need_receiver_operation_transform",
+                "materializer_execution_queue_required_before_candidate_archive",
+                "exact_auth_eval_required_before_score_claim",
+            ],
+        }
+    )
+    queue = normalize_queue_definition(
+        {
+            "schema": QUEUE_SCHEMA,
+            "queue_id": effective_queue_id,
+            "controls": {
+                "mode": "paused",
+                "local_first": True,
+                "max_concurrency": {"local_cpu": 1},
+            },
+            "experiments": [
+                {
+                    "id": QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLANNING_EXPERIMENT_ID,
+                    "lane_id": lane,
+                    "priority": 84,
+                    "status": "queued",
+                    "tags": [
+                        "byte-shaving",
+                        "inverse-steganalysis",
+                        "queue-feedback",
+                        "candidate-widening",
+                        "actuation-planning",
+                        "no-score-authority",
+                    ],
+                    "metadata": metadata,
+                    "steps": [
+                        {
+                            "id": QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLAN_STEP_ID,
+                            "kind": "command",
+                            "command": plan_command,
+                            "requires": [],
+                            "resources": {"kind": "local_cpu"},
+                            "postconditions": [
+                                {
+                                    "type": "path_exists",
+                                    "path": paths["campaign_plan"],
+                                },
+                                {
+                                    "type": "json_completion_contract",
+                                    "path": paths["campaign_plan"],
+                                    "required_equals": {
+                                        "schema": "byte_shaving_campaign_plan.v1"
+                                    },
+                                    "required_false": [
+                                        *DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
+                                    ],
+                                    "false_or_missing": [
+                                        *DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
+                                    ],
+                                    "required_nonempty": [
+                                        "inverse_action_materialization_portfolios",
+                                    ],
+                                },
+                                {
+                                    "type": "path_exists",
+                                    "path": paths[
+                                        "inverse_action_materialization_bridge"
+                                    ],
+                                },
+                                {
+                                    "type": "json_completion_contract",
+                                    "path": paths[
+                                        "inverse_action_materialization_bridge"
+                                    ],
+                                    "required_equals": {
+                                        "schema": (
+                                            "inverse_steganalysis_water_bucket_"
+                                            "materialization_bridge.v1"
+                                        )
+                                    },
+                                    "required_false": [
+                                        *DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
+                                    ],
+                                    "false_or_missing": [
+                                        *DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
+                                    ],
+                                    "required_nonempty": [
+                                        "queue_consumption",
+                                        "water_bucket_materialization_portfolios",
+                                    ],
+                                },
+                            ],
+                            "timeout_seconds": 0,
+                            "telemetry": {
+                                "artifact_paths": [
+                                    paths["campaign_plan"],
+                                    paths["campaign_plan_md"],
+                                    paths["inverse_action_materialization_bridge"],
+                                ],
+                                "input_artifact_paths": [
+                                    str(item) for item in input_artifacts if item
+                                ],
+                                "pullback_artifact_paths": [
+                                    paths["campaign_plan"],
+                                    paths["campaign_plan_md"],
+                                    paths["inverse_action_materialization_bridge"],
+                                ],
+                                "recursive": False,
+                            },
+                        },
+                        {
+                            "id": QUEUE_FEEDBACK_CANDIDATE_ACTUATION_QUEUE_STEP_ID,
+                            "kind": "command",
+                            "command": compile_command,
+                            "requires": [
+                                QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLAN_STEP_ID
+                            ],
+                            "resources": {"kind": "local_cpu"},
+                            "postconditions": [
+                                {
+                                    "type": "json_completion_contract",
+                                    "path": paths["materialization"],
+                                    "required_equals": {
+                                        "schema": "byte_shaving_campaign_materialization.v1"
+                                    },
+                                    "required_false": [
+                                        *DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
+                                    ],
+                                    "false_or_missing": [
+                                        *DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
+                                    ],
+                                },
+                                {
+                                    "type": "json_completion_contract",
+                                    "path": paths["materializer_backlog"],
+                                    "required_equals": {
+                                        "schema": "byte_shaving_materializer_backlog.v1"
+                                    },
+                                    "required_false": [
+                                        *DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
+                                    ],
+                                    "false_or_missing": [
+                                        *DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
+                                    ],
+                                    "required_nonempty": ["rows"],
+                                    "required_positive_int": ["backlog_row_count"],
+                                },
+                                {
+                                    "type": "json_completion_contract",
+                                    "path": paths["materializer_work_queue"],
+                                    "required_equals": {
+                                        "schema": (
+                                            "byte_shaving_materializer_work_queue.v1"
+                                        )
+                                    },
+                                    "required_false": [
+                                        *DEFAULT_REQUIRED_FALSE_AUTHORITY_FIELDS,
+                                    ],
+                                    "false_or_missing": [
+                                        *DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
+                                    ],
+                                    "required_positive_int": ["row_count"],
+                                },
+                            ],
+                            "timeout_seconds": 0,
+                            "telemetry": {
+                                "artifact_paths": output_artifacts,
+                                "input_artifact_paths": [
+                                    paths["campaign_plan"],
+                                    paths["inverse_action_materialization_bridge"],
+                                    *[str(item) for item in input_artifacts if item],
+                                ],
+                                "pullback_artifact_paths": output_artifacts,
+                                "recursive": False,
+                            },
+                        },
+                    ],
+                }
+            ],
+        }
+    )
+    return queue, []
+
+
 def build_queue_feedback_replan_policy(
     run_summary: Mapping[str, Any],
     *,
@@ -2737,6 +3107,12 @@ __all__ = [
     "ACTION_STOP_MAX_ITERATIONS",
     "ACTION_WIDEN_CANDIDATE_GENERATION",
     "MATERIALIZER_CAMPAIGN_RUN_SCHEMA",
+    "QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLANNING_EXPERIMENT_ID",
+    "QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLANNING_METADATA_SCHEMA",
+    "QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLAN_STEP_ID",
+    "QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLAN_TOOL",
+    "QUEUE_FEEDBACK_CANDIDATE_ACTUATION_QUEUE_STEP_ID",
+    "QUEUE_FEEDBACK_CANDIDATE_ACTUATION_QUEUE_TOOL",
     "QUEUE_FEEDBACK_CANDIDATE_WIDENING_EXPERIMENT_ID",
     "QUEUE_FEEDBACK_CANDIDATE_WIDENING_METADATA_SCHEMA",
     "QUEUE_FEEDBACK_CANDIDATE_WIDENING_STEP_ID",
@@ -2752,6 +3128,7 @@ __all__ = [
     "QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA",
     "QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA",
     "QUEUE_OBSERVATION_RECOVERY_QUEUE_VALIDATION_SCHEMA",
+    "build_queue_feedback_candidate_actuation_planning_queue",
     "build_queue_feedback_candidate_widening_queue",
     "build_queue_feedback_replan_continuation_queue",
     "build_queue_feedback_replan_policy",

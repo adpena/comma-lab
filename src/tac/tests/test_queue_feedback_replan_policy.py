@@ -23,6 +23,9 @@ from comma_lab.scheduler.queue_feedback_replan_policy import (
     ACTION_RUN_NEXT_ITERATION,
     ACTION_STOP_MAX_ITERATIONS,
     ACTION_WIDEN_CANDIDATE_GENERATION,
+    QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLAN_STEP_ID,
+    QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLANNING_EXPERIMENT_ID,
+    QUEUE_FEEDBACK_CANDIDATE_ACTUATION_QUEUE_STEP_ID,
     QUEUE_FEEDBACK_CANDIDATE_WIDENING_EXPERIMENT_ID,
     QUEUE_FEEDBACK_CANDIDATE_WIDENING_METADATA_SCHEMA,
     QUEUE_FEEDBACK_CANDIDATE_WIDENING_STEP_ID,
@@ -37,6 +40,7 @@ from comma_lab.scheduler.queue_feedback_replan_policy import (
     QUEUE_OBSERVATION_RECOVERY_PLAN_SCHEMA,
     QUEUE_OBSERVATION_RECOVERY_QUEUE_METADATA_SCHEMA,
     QUEUE_OBSERVATION_RECOVERY_QUEUE_VALIDATION_SCHEMA,
+    build_queue_feedback_candidate_actuation_planning_queue,
     build_queue_feedback_candidate_widening_queue,
     build_queue_feedback_replan_continuation_queue,
     build_queue_feedback_replan_policy,
@@ -1116,6 +1120,148 @@ def test_feedback_replan_policy_candidate_widening_blocks_no_widenable_source(
     assert queue is None
     assert (
         "queue_feedback_candidate_widening_handoff:"
+        "candidate_widening_no_widenable_source_surface"
+    ) in blockers
+
+
+def test_feedback_candidate_actuation_planning_queue_compiles_widened_cells() -> None:
+    policy = {
+        "schema": QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA,
+        "decision": ACTION_WIDEN_CANDIDATE_GENERATION,
+        "queue_id": "campaign_queue",
+        "source_run_path": ".omx/research/campaign/materializer_campaign_run.json",
+        "plan_path": ".omx/research/campaign/byte_shaving_campaign_plan.feedback.json",
+        "feedback_action_functional_path": (
+            ".omx/research/campaign/inverse_steganalysis_action_functional.feedback.json"
+        ),
+        "candidate_widening_handoff": {
+            "blockers": [],
+            "widened_output_path": (
+                ".omx/research/campaign/"
+                "inverse_steganalysis_action_functional.feedback.widened.json"
+            ),
+            "widened_md_path": (
+                ".omx/research/campaign/"
+                "inverse_steganalysis_action_functional.feedback.widened.md"
+            ),
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    queue, blockers = build_queue_feedback_candidate_actuation_planning_queue(
+        policy,
+        lane_id="feedback_lane",
+        source_policy_path=".omx/research/campaign/queue_feedback_replan_policy.json",
+    )
+
+    assert blockers == []
+    assert queue is not None
+    assert queue["schema"] == "experiment_queue.v1"
+    assert queue["controls"]["mode"] == "paused"
+    assert queue["controls"]["max_concurrency"] == {"local_cpu": 1}
+    experiment = queue["experiments"][0]
+    assert (
+        experiment["id"]
+        == QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLANNING_EXPERIMENT_ID
+    )
+    assert experiment["lane_id"] == "feedback_lane"
+    assert experiment["metadata"]["schema"] == (
+        "queue_feedback_candidate_actuation_planning_metadata.v1"
+    )
+    assert experiment["metadata"]["score_claim"] is False
+    assert experiment["metadata"]["ready_for_exact_eval_dispatch"] is False
+    plan_step, compile_step = experiment["steps"]
+    assert plan_step["id"] == QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLAN_STEP_ID
+    assert compile_step["id"] == QUEUE_FEEDBACK_CANDIDATE_ACTUATION_QUEUE_STEP_ID
+    assert compile_step["requires"] == [
+        QUEUE_FEEDBACK_CANDIDATE_ACTUATION_PLAN_STEP_ID
+    ]
+    assert plan_step["command"][:4] == [
+        ".venv/bin/python",
+        "tools/plan_byte_shaving_campaign.py",
+        "--source",
+        (
+            ".omx/research/campaign/"
+            "inverse_steganalysis_action_functional.feedback.widened.json"
+        ),
+    ]
+    assert "--from-inverse-action-functional" in plan_step["command"]
+    assert "--inverse-action-materialization-bridge-out" in plan_step["command"]
+    assert compile_step["command"][:2] == [
+        ".venv/bin/python",
+        "tools/build_byte_shaving_campaign_queue.py",
+    ]
+    assert "--materializer-work-queue-out" in compile_step["command"]
+    assert "--materializer-execution-queue-out" not in compile_step["command"]
+    assert plan_step["telemetry"]["pullback_artifact_paths"] == [
+        ".omx/research/campaign/byte_shaving_campaign_plan.feedback.widened.json",
+        ".omx/research/campaign/byte_shaving_campaign_plan.feedback.widened.md",
+        (
+            ".omx/research/campaign/"
+            "inverse_action_materialization_bridge.feedback.widened.json"
+        ),
+    ]
+    assert (
+        ".omx/research/campaign/materializer_work_queue.feedback.widened.json"
+        in compile_step["telemetry"]["pullback_artifact_paths"]
+    )
+    assert any(
+        condition.get("path", "").endswith(
+            "inverse_action_materialization_bridge.feedback.widened.json"
+        )
+        for condition in plan_step["postconditions"]
+    )
+    plan_contracts = [
+        condition
+        for condition in plan_step["postconditions"]
+        if condition.get("type") == "json_completion_contract"
+    ]
+    assert any(
+        "inverse_action_materialization_portfolios"
+        in condition.get("required_nonempty", [])
+        for condition in plan_contracts
+    )
+    assert any(
+        condition.get("path", "").endswith("materializer_work_queue.feedback.widened.json")
+        for condition in compile_step["postconditions"]
+    )
+    backlog_contracts = [
+        condition
+        for condition in compile_step["postconditions"]
+        if condition.get("path", "").endswith("materializer_backlog.feedback.widened.json")
+    ]
+    assert any(
+        "backlog_row_count" in condition.get("required_positive_int", [])
+        for condition in backlog_contracts
+    )
+
+
+def test_feedback_candidate_actuation_planning_queue_blocks_handoff_refusal() -> None:
+    policy = {
+        "schema": QUEUE_FEEDBACK_REPLAN_POLICY_SCHEMA,
+        "decision": ACTION_WIDEN_CANDIDATE_GENERATION,
+        "candidate_widening_handoff": {
+            "blockers": ["candidate_widening_no_widenable_source_surface"],
+            "widened_output_path": None,
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    queue, blockers = build_queue_feedback_candidate_actuation_planning_queue(
+        policy,
+        lane_id="feedback_lane",
+    )
+
+    assert queue is None
+    assert "queue_feedback_candidate_actuation_widened_output_missing" in blockers
+    assert (
+        "queue_feedback_candidate_actuation_handoff:"
         "candidate_widening_no_widenable_source_surface"
     ) in blockers
 

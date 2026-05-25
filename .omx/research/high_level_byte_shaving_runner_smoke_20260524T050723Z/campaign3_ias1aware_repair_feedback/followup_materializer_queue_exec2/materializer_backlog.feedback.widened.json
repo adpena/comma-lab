@@ -1,0 +1,328 @@
+{
+  "backlog_row_count": 1,
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "materializer_backlog_is_planning_only",
+    "requires_adapter_implementation_before_queue_dispatch"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "2026-05-25T07:38:45Z",
+  "gpu_launched": false,
+  "packet_ir_lowered_backlog_key_count": 1,
+  "packet_ir_lowered_row_count": 4,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "rows": [
+    {
+      "affected_unit_count": 3,
+      "backlog_key": "materializer_work_queue_required:inverse_steganalysis_high_level_operation_set_v1:scorer_inverse_surface_cell:compile_inverse_steganalysis_operation_set:inverse_steganalysis_operation_set_compiler_required",
+      "backlog_rank": 1,
+      "best_candidate_saved_bytes": 0,
+      "best_expected_delta_score": -9.6e-05,
+      "best_expected_score_gain": 9.6e-05,
+      "blocked_resolution_count": 15,
+      "blocked_row_count": 7,
+      "blocker_counts": {
+        "materializer_not_executable:inverse_steganalysis_operation_set_compiler_required": 15,
+        "planning_only_materializer_not_candidate_archive:inverse_steganalysis_operation_set_compiler_required": 15,
+        "selected_operation_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:inverse_action_cell_lacks_source_operation_provenance": 4,
+        "selected_operation_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:inverse_action_unit_is_planning_only": 4,
+        "selected_operation_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:requires_archive_runtime_materializer_before_candidate": 4,
+        "selected_operation_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:requires_byte_closed_archive_before_dispatch": 4,
+        "selected_operation_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:requires_candidate_family_operation_compiler": 4,
+        "selected_operation_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:requires_exact_auth_eval_before_score_claim": 4,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:inverse_action_cell_lacks_source_operation_provenance": 5,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:inverse_action_unit_is_planning_only": 5,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:requires_archive_runtime_materializer_before_candidate": 5,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:requires_byte_closed_archive_before_dispatch": 5,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:requires_candidate_family_operation_compiler": 5,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:requires_exact_auth_eval_before_score_claim": 5,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:inverse_action_cell_lacks_source_operation_provenance": 6,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:inverse_action_unit_is_planning_only": 6,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:requires_archive_runtime_materializer_before_candidate": 6,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:requires_byte_closed_archive_before_dispatch": 6,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:requires_candidate_family_operation_compiler": 6,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:requires_exact_auth_eval_before_score_claim": 6,
+        "selected_unit_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:inverse_action_cell_lacks_source_operation_provenance": 4,
+        "selected_unit_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:inverse_action_unit_is_planning_only": 4,
+        "selected_unit_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:requires_archive_runtime_materializer_before_candidate": 4,
+        "selected_unit_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:requires_byte_closed_archive_before_dispatch": 4,
+        "selected_unit_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:requires_candidate_family_operation_compiler": 4,
+        "selected_unit_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:requires_exact_auth_eval_before_score_claim": 4,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:inverse_action_cell_lacks_source_operation_provenance": 5,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:inverse_action_unit_is_planning_only": 5,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:requires_archive_runtime_materializer_before_candidate": 5,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:requires_byte_closed_archive_before_dispatch": 5,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:requires_candidate_family_operation_compiler": 5,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:requires_exact_auth_eval_before_score_claim": 5,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:inverse_action_cell_lacks_source_operation_provenance": 6,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:inverse_action_unit_is_planning_only": 6,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:requires_archive_runtime_materializer_before_candidate": 6,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:requires_byte_closed_archive_before_dispatch": 6,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:requires_candidate_family_operation_compiler": 6,
+        "selected_unit_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:requires_exact_auth_eval_before_score_claim": 6
+      },
+      "candidate_saved_bytes_sum": 0,
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "cooperative_receiver_required": true,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "expected_score_gain_sum": 0.0008724,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gap_class": "materializer_work_queue_required",
+      "gpu_launched": false,
+      "implementation_priority_score": 0.0008793999999999999,
+      "materialization_resource_kind": "local_mlx",
+      "materializer_id": "inverse_steganalysis_operation_set_compiler_required",
+      "operation_family": "compile_inverse_steganalysis_operation_set",
+      "operation_params": {
+        "atom_id": [
+          "byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000",
+          "inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        ],
+        "candidate_id": [
+          "high_level_smoke_candidate",
+          "rate_only_null_space",
+          "pair_region_pose_gain"
+        ],
+        "component": [
+          "segnet",
+          "posenet"
+        ],
+        "euler_lagrange_residual": [
+          "2.593414104687783e-05",
+          "1.7091410468778288e-06",
+          "3.3341410468778285e-06"
+        ],
+        "scope_axis": [
+          "full_video",
+          "pairs"
+        ],
+        "water_fill_cost_bytes": [
+          "1",
+          "16",
+          "24"
+        ],
+        "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+      },
+      "packet_ir_blocker_counts": {
+        "materializer_not_executable:inverse_steganalysis_operation_set_compiler_required": 9,
+        "packetir_operation_set_requires_materializer_contexts": 9,
+        "planning_only_materializer_not_candidate_archive:inverse_steganalysis_operation_set_compiler_required": 9,
+        "selected_operation_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:inverse_action_cell_lacks_source_operation_provenance": 3,
+        "selected_operation_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:inverse_action_unit_is_planning_only": 3,
+        "selected_operation_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:packetir_operation_not_byte_closed:scorer_inverse_surface_cell": 3,
+        "selected_operation_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:requires_archive_runtime_materializer_before_candidate": 3,
+        "selected_operation_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:requires_byte_closed_archive_before_dispatch": 3,
+        "selected_operation_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:requires_candidate_family_operation_compiler": 3,
+        "selected_operation_blocker:inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000:requires_exact_auth_eval_before_score_claim": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:inverse_action_cell_lacks_source_operation_provenance": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:inverse_action_unit_is_planning_only": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:packetir_operation_not_byte_closed:scorer_inverse_surface_cell": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:requires_archive_runtime_materializer_before_candidate": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:requires_byte_closed_archive_before_dispatch": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:requires_candidate_family_operation_compiler": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001:requires_exact_auth_eval_before_score_claim": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:inverse_action_cell_lacks_source_operation_provenance": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:inverse_action_unit_is_planning_only": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:packetir_operation_not_byte_closed:scorer_inverse_surface_cell": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:requires_archive_runtime_materializer_before_candidate": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:requires_byte_closed_archive_before_dispatch": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:requires_candidate_family_operation_compiler": 3,
+        "selected_operation_blocker:inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000:requires_exact_auth_eval_before_score_claim": 3
+      },
+      "packet_ir_lowered_row_count": 4,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_contract_id": "inverse_steganalysis_high_level_operation_set.receiver.v1",
+      "receiver_contract_kind": "portfolio_level_inverse_steganalysis_operation_set",
+      "receiver_contract_status": "receiver_contract_registered_for_materializer_work_queue",
+      "schema": "byte_shaving_materializer_backlog_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operation_count": 15,
+      "source_operation_params_by_unit": {
+        "inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000": {
+          "atom_id": "byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000",
+          "candidate_id": "high_level_smoke_candidate",
+          "component": "segnet",
+          "euler_lagrange_residual": 2.593414104687783e-05,
+          "scope_axis": "full_video",
+          "water_fill_cost_bytes": 1,
+          "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+        },
+        "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001": {
+          "atom_id": "inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+          "candidate_id": "rate_only_null_space",
+          "component": "segnet",
+          "euler_lagrange_residual": 1.7091410468778288e-06,
+          "scope_axis": "pairs",
+          "water_fill_cost_bytes": 16,
+          "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+        },
+        "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000": {
+          "atom_id": "inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000",
+          "candidate_id": "pair_region_pose_gain",
+          "component": "posenet",
+          "euler_lagrange_residual": 3.3341410468778285e-06,
+          "scope_axis": "pairs",
+          "water_fill_cost_bytes": 24,
+          "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings"
+        }
+      },
+      "source_packet_ir_operation_set_ids": [
+        "packetir_opset_combo_0002",
+        "packetir_opset_combo_0001",
+        "packetir_opset_combo_0003",
+        "packetir_opset_combo_0004"
+      ],
+      "source_packet_ir_schemas": [
+        "packet_ir_operation_set_v1"
+      ],
+      "source_packet_ir_source_operation_set_ids": [
+        "opset_combo_0002",
+        "opset_combo_0001",
+        "opset_combo_0003",
+        "opset_combo_0004"
+      ],
+      "source_selection_ids": [
+        "opset_combo_0002",
+        "opset_combo_0001",
+        "opset_combo_0003",
+        "opset_combo_0004",
+        "top_0001",
+        "top_0002",
+        "top_0003",
+        "packetir_opset_combo_0002",
+        "packetir_opset_combo_0001",
+        "packetir_opset_combo_0003",
+        "packetir_opset_combo_0004"
+      ],
+      "source_selection_samples": [
+        {
+          "candidate_saved_bytes": 0,
+          "expected_delta_score": -0.0001606,
+          "expected_score_gain": 5.353333333333333e-05,
+          "selection_id": "opset_combo_0002",
+          "selection_kind": "operation_set",
+          "unit_id": "inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000"
+        },
+        {
+          "candidate_saved_bytes": 0,
+          "expected_delta_score": -0.0001606,
+          "expected_score_gain": 5.353333333333333e-05,
+          "selection_id": "opset_combo_0002",
+          "selection_kind": "operation_set",
+          "unit_id": "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001"
+        },
+        {
+          "candidate_saved_bytes": 0,
+          "expected_delta_score": -0.0001606,
+          "expected_score_gain": 5.353333333333333e-05,
+          "selection_id": "opset_combo_0002",
+          "selection_kind": "operation_set",
+          "unit_id": "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        },
+        {
+          "candidate_saved_bytes": 0,
+          "expected_delta_score": -0.000134,
+          "expected_score_gain": 6.7e-05,
+          "selection_id": "opset_combo_0001",
+          "selection_kind": "operation_set",
+          "unit_id": "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001"
+        },
+        {
+          "candidate_saved_bytes": 0,
+          "expected_delta_score": -0.000134,
+          "expected_score_gain": 6.7e-05,
+          "selection_id": "opset_combo_0001",
+          "selection_kind": "operation_set",
+          "unit_id": "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        },
+        {
+          "candidate_saved_bytes": 0,
+          "expected_delta_score": -0.0001226,
+          "expected_score_gain": 6.13e-05,
+          "selection_id": "opset_combo_0003",
+          "selection_kind": "operation_set",
+          "unit_id": "inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000"
+        },
+        {
+          "candidate_saved_bytes": 0,
+          "expected_delta_score": -0.0001226,
+          "expected_score_gain": 6.13e-05,
+          "selection_id": "opset_combo_0003",
+          "selection_kind": "operation_set",
+          "unit_id": "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+        },
+        {
+          "candidate_saved_bytes": 0,
+          "expected_delta_score": -6.46e-05,
+          "expected_score_gain": 3.23e-05,
+          "selection_id": "opset_combo_0004",
+          "selection_kind": "operation_set",
+          "unit_id": "inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000"
+        }
+      ],
+      "source_unit_ids": [
+        "inverse_action_byte_shaving_unit_inverse_action_inverse_surface_high_level_smoke_rate_only_null_s_0000",
+        "inverse_action_inverse_surface_high_level_smoke_rate_only_null_space_seg_pair_0020_0021_0001",
+        "inverse_action_inverse_surface_high_level_smoke_receiver_sufficient_statistic_pose_pair_0012_00_0000"
+      ],
+      "suggested_materializer_count": 1,
+      "suggested_materializers": [
+        {
+          "cooperative_receiver_required": true,
+          "description": "Fail-closed contract for promoting bare inverse-action cells into portfolio-level archive/runtime operation sets. Bare cells are not candidate archives until this compiler maps them to a concrete family materializer with runtime-consumption proof.",
+          "emits_candidate_archive": false,
+          "executable": false,
+          "implementation_module": "",
+          "materialization_resource_kind": "local_mlx",
+          "materialize_function": "",
+          "materializer_id": "inverse_steganalysis_operation_set_compiler_required",
+          "plan_function": "",
+          "planning_only": true,
+          "receiver_contract_id": "inverse_steganalysis_high_level_operation_set.receiver.v1",
+          "receiver_contract_kind": "portfolio_level_inverse_steganalysis_operation_set",
+          "receiver_proof_function": "",
+          "receiver_verify_function": "",
+          "required_context_fields": [
+            "candidate_family",
+            "archive_grammar",
+            "receiver_contract_kind",
+            "operation_set_compiler",
+            "runtime_consumption_proof"
+          ],
+          "target_kind": "inverse_steganalysis_high_level_operation_set_v1"
+        }
+      ],
+      "target_kind": "inverse_steganalysis_high_level_operation_set_v1",
+      "unit_kind": "scorer_inverse_surface_cell"
+    }
+  ],
+  "schema": "byte_shaving_materializer_backlog.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "tool": "comma_lab.scheduler.byte_shaving_campaign_queue"
+}
