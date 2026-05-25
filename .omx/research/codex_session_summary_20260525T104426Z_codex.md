@@ -13,6 +13,8 @@ Agent: Codex
   observation artifacts into the inverse-steganalysis action surface.
 - Hardened false-authority handling and metadata preservation for queue-owned
   materializer feedback.
+- Added duplicate suppression proof for paired `sweep.json` plus
+  `observations.jsonl` materializer run outputs.
 - Fixed `rate_positive` inference for older/direct materializer observation rows
   that carry positive saved bytes and positive rate gain but omit the explicit
   flag.
@@ -20,9 +22,9 @@ Agent: Codex
 ## Verification
 
 - Ruff: pass on modified source and tests.
-- Focused acquisition/observer: `63 passed`.
+- Focused acquisition/observer: `64 passed`.
 - Queue/sweep/runner/action CLI slice: `177 passed`.
-- Combined materializer/acquisition/queue/action slice: `261 passed`.
+- Combined materializer/acquisition/queue/action slice: `262 passed`.
 
 ## Frontier Status
 
@@ -37,4 +39,3 @@ Use the new bridge to run queue-owned grouped materializer sweeps from selected
 inverse-steg cells, then feed the emitted `experiment_queue_observation.v1` back
 into `tools/build_inverse_steganalysis_action_functional.py` without manually
 passing sidecar observation JSONL paths.
-

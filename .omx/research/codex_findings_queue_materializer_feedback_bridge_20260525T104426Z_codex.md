@@ -35,15 +35,19 @@ planner consumption.
   then `observation_id`, then artifact path, preventing duplicate JSON/JSONL
   sweep rows from double-counting when a sweep JSON and its JSONL contain the
   same observation.
+- Added regression coverage for a real run-dir shape where both `sweep.json` and
+  `observations.jsonl` expose the same materializer observation; the acquisition
+  surface now proves the row is consumed once while preserving both artifact
+  paths as provenance.
 
 ## Verification
 
 - `PYTHONPATH=. .venv/bin/pytest src/tac/tests/test_inverse_steganalysis_acquisition.py src/tac/tests/test_experiment_queue_observer.py -q`
-  - Result: `63 passed`
+  - Result: `64 passed`
 - `PYTHONPATH=. .venv/bin/pytest src/tac/tests/test_experiment_queue_observer.py src/tac/tests/test_byte_shaving_campaign_queue.py src/tac/tests/test_family_agnostic_materializer_sweep.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_inverse_steganalysis_action_functional_cli.py -q`
   - Result: `177 passed`
 - `PYTHONPATH=. .venv/bin/pytest src/tac/tests/test_family_agnostic_materializers.py src/tac/tests/test_experiment_queue_observer.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_inverse_steganalysis_acquisition.py src/tac/tests/test_byte_shaving_campaign_queue.py src/tac/tests/test_family_agnostic_materializer_sweep.py src/tac/tests/test_inverse_steganalysis_action_functional_cli.py -q`
-  - Result: `261 passed`
+  - Result: `262 passed`
 - `.venv/bin/python -m ruff check src/tac/optimization/inverse_steganalysis_acquisition.py src/comma_lab/scheduler/experiment_queue_observer.py src/tac/tests/test_inverse_steganalysis_acquisition.py src/tac/tests/test_experiment_queue_observer.py --no-cache`
   - Result: pass
 
@@ -52,8 +56,5 @@ planner consumption.
 - Promote this bridge into the next queue-owned acquisition loop by emitting
   grouped materializer sweep specs directly from selected inverse-steg action
   cells.
-- Add a run-dir fixture containing both `sweep.json` and `observations.jsonl`
-  for duplicate suppression proof against real materializer output.
 - Extend the same artifact ingestion pattern to packetIR/compiler materializer
   rows once the packetIR contracts emit family materializer observation schema.
-
