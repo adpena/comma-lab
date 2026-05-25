@@ -1,0 +1,670 @@
+{
+  "archive_packet": {
+    "archive_zip_path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_public_archive.zip",
+    "archive_zip_sha256": "6414614bd8f1ecbeb4c12b6f92ad670ea5a138941053ca7fa7d543c8e400e5f2",
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "gpu_launched": false,
+    "latent_shape": [
+      1,
+      28
+    ],
+    "member_bytes": 230237,
+    "member_compress_type": 0,
+    "member_name": "0.bin",
+    "member_sha256": "cac54691107b17d71401c4edcffeccad3a0027f0f6be49fbb3905f77a21c349c",
+    "meta": {
+      "base_channels": 36,
+      "eval_size": [
+        384,
+        512
+      ],
+      "latent_dim": 28,
+      "n_pairs": 1
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "pr95_hnerv_public_archive_packet.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_pr": 95,
+    "state_dict_tensor_count": 28,
+    "submission": "hnerv_muon"
+  },
+  "archive_zip_path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_public_archive.zip",
+  "decoder_trace": {
+    "drift_cliff": {
+      "blockers": [],
+      "exceeds_cliff_threshold": true,
+      "index": 28,
+      "max_abs_delta": 3.0517578125e-05,
+      "mean_abs_delta": 3.308213005463282e-06,
+      "mlx_shape": [
+        1,
+        3,
+        384,
+        512
+      ],
+      "name": "rgb_0",
+      "p99_abs_delta": 1.52587890625e-05,
+      "present_in_mlx": true,
+      "present_in_torch": true,
+      "rms_delta": 7.166231294971267e-06,
+      "shape_match": true,
+      "torch_shape": [
+        1,
+        3,
+        384,
+        512
+      ]
+    },
+    "output_delta": {
+      "blockers": [],
+      "exceeds_cliff_threshold": true,
+      "index": 30,
+      "max_abs_delta": 3.0517578125e-05,
+      "mean_abs_delta": 3.217932923386494e-06,
+      "mlx_shape": [
+        1,
+        2,
+        3,
+        384,
+        512
+      ],
+      "name": "output",
+      "p99_abs_delta": 1.52587890625e-05,
+      "present_in_mlx": true,
+      "present_in_torch": true,
+      "rms_delta": 7.067867880829366e-06,
+      "shape_match": true,
+      "torch_shape": [
+        1,
+        2,
+        3,
+        384,
+        512
+      ]
+    },
+    "path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_mlx_decoder_trace.json",
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "sample_indices": [
+      0
+    ],
+    "schema": "pr95_hnerv_public_archive_mlx_decoder_trace.v1",
+    "score_claim": false,
+    "trace_count": 31
+  },
+  "dispatch_attempted": false,
+  "dispatch_packet_ready": false,
+  "exact_readiness_refusal": {
+    "blockers": [
+      "local_mlx_pytorch_export_parity_probe_is_not_contest_auth_eval",
+      "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+      "requires_exact_cpu_cuda_auth_eval_before_score_claim"
+    ],
+    "ready": false,
+    "schema": "exact_readiness_refusal.v1"
+  },
+  "forward_drift_attestation": {
+    "actual_class": "numeric_tolerance_inherent",
+    "attested_max_abs_band": 0.0001,
+    "attested_mean_abs_band": 1e-05,
+    "attested_within_band": true,
+    "canonical_class": "numeric_tolerance_inherent",
+    "canonical_drift_bands": {
+      "anchor_max_abs": 3.0518e-05,
+      "anchor_mean_abs": 4.7964e-06,
+      "anchor_substrate": "PR95 HNeRV decoder (latent_dim=28, base_channels=36, eval_size=384x512)",
+      "anchor_utc": "2026-05-25T17:43:00Z",
+      "atol_recommendation_for_export_bridge_verdict_upgrade": 0.0001,
+      "attested_max_abs": 0.0001,
+      "attested_mean_abs": 1e-05,
+      "canonical_class": "numeric_tolerance_inherent",
+      "framework_pair": "MLX CPU vs PyTorch CPU on macOS",
+      "hardware": "Apple Silicon M5 Max (macOS)",
+      "operator_routable_summary": "Slot 1 export bridge VERDICT can upgrade from NUMERIC_TOLERANCE_RTOL_1e-2 to PORTABLE_WITH_ATTESTED_TOLERANCE_RTOL_1e-4. Drift is BOUNDED and REPRODUCIBLE; engineering substitution of bilinear/sin/sigmoid yields ZERO reduction (those ops are already BYTE_STABLE_BY_DEFAULT at 2.4e-7 / 6e-8 / 1.2e-7). Stage 8 traces localize the visible cliff to the final RGB heads, so PORTABILITY via attested tolerance plus exact-auth escalation is the canonical engineering primitive.",
+      "rtol_recommendation_for_export_bridge_verdict_upgrade": 0.0001,
+      "schema": "pr95_hnerv_decoder_canonical_drift_bands.v1",
+      "verdict_classification": "PORTABLE_WITH_ATTESTED_TOLERANCE"
+    },
+    "measured_max_abs": 3.0517578125e-05,
+    "measured_mean_abs": 3.2179329991777195e-06,
+    "operation_name": "hnerv_decoder_full",
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "pr95_mlx_pytorch_export_forward_drift_attestation.v1",
+    "score_claim": false
+  },
+  "generated_utc": "2026-05-25T17:59:33.644635+00:00",
+  "gpu_launched": false,
+  "mlx_device": "cpu",
+  "output_pytorch_state_dict": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_pytorch_state_dict.pt",
+  "promotable": false,
+  "promotion_eligible": false,
+  "pt_bytes": 924847,
+  "pt_path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_pytorch_state_dict.pt",
+  "pt_sha256": "f20ec8d5dc1f32d11ec1e50bf49786ba680128ac10e1f369825b668148b5ca9b",
+  "pytorch_export_forward_parity": {
+    "archive_packet": {
+      "archive_zip_path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_public_archive.zip",
+      "archive_zip_sha256": "6414614bd8f1ecbeb4c12b6f92ad670ea5a138941053ca7fa7d543c8e400e5f2",
+      "dispatch_attempted": false,
+      "dispatch_packet_ready": false,
+      "gpu_launched": false,
+      "latent_shape": [
+        1,
+        28
+      ],
+      "member_bytes": 230237,
+      "member_compress_type": 0,
+      "member_name": "0.bin",
+      "member_sha256": "cac54691107b17d71401c4edcffeccad3a0027f0f6be49fbb3905f77a21c349c",
+      "meta": {
+        "base_channels": 36,
+        "eval_size": [
+          384,
+          512
+        ],
+        "latent_dim": 28,
+        "n_pairs": 1
+      },
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "pr95_hnerv_public_archive_packet.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_pr": 95,
+      "state_dict_tensor_count": 28,
+      "submission": "hnerv_muon"
+    },
+    "dispatch_attempted": false,
+    "dispatch_packet_ready": false,
+    "evidence_grade": "[macOS-MLX research-signal]",
+    "exact_readiness_refusal": {
+      "blockers": [
+        "local_mlx_pytorch_export_parity_probe_is_not_contest_auth_eval",
+        "full_frame_inflate_parity_against_source_runtime_not_run",
+        "requires_exact_cpu_cuda_auth_eval_before_score_claim"
+      ],
+      "ready": false,
+      "schema": "exact_readiness_refusal.v1"
+    },
+    "forward_parity": {
+      "archive_packet": {
+        "archive_zip_path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_public_archive.zip",
+        "archive_zip_sha256": "6414614bd8f1ecbeb4c12b6f92ad670ea5a138941053ca7fa7d543c8e400e5f2",
+        "dispatch_attempted": false,
+        "dispatch_packet_ready": false,
+        "gpu_launched": false,
+        "latent_shape": [
+          1,
+          28
+        ],
+        "member_bytes": 230237,
+        "member_compress_type": 0,
+        "member_name": "0.bin",
+        "member_sha256": "cac54691107b17d71401c4edcffeccad3a0027f0f6be49fbb3905f77a21c349c",
+        "meta": {
+          "base_channels": 36,
+          "eval_size": [
+            384,
+            512
+          ],
+          "latent_dim": 28,
+          "n_pairs": 1
+        },
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "pr95_hnerv_public_archive_packet.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "source_pr": 95,
+        "state_dict_tensor_count": 28,
+        "submission": "hnerv_muon"
+      },
+      "dispatch_attempted": false,
+      "dispatch_packet_ready": false,
+      "elapsed_seconds": 0.29677412495948374,
+      "evidence_grade": "[macOS-MLX research-signal]",
+      "exact_readiness_refusal": {
+        "blockers": [
+          "local_mlx_forward_parity_probe_is_not_contest_auth_eval",
+          "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+          "requires_exact_cpu_cuda_auth_eval_before_score_claim"
+        ],
+        "ready": false,
+        "schema": "exact_readiness_refusal.v1"
+      },
+      "generated_utc": "2026-05-25T17:59:33.166686+00:00",
+      "gpu_launched": false,
+      "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+      "mlx_device": "cpu",
+      "mlx_output_shape": [
+        1,
+        2,
+        3,
+        384,
+        512
+      ],
+      "parity": {
+        "atol_max": 0.0001,
+        "atol_mean": 1e-05,
+        "max_abs": 3.0517578125e-05,
+        "mean_abs": 3.2179329991777195e-06,
+        "p999_abs": 3.0517578125e-05,
+        "p99_abs": 1.52587890625e-05,
+        "passed": true
+      },
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "sample_count": 1,
+      "sample_indices": [
+        0
+      ],
+      "schema": "pr95_hnerv_public_archive_mlx_forward_parity.v1",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_pr": 95,
+      "submission": "hnerv_muon",
+      "torch_output_shape": [
+        1,
+        2,
+        3,
+        384,
+        512
+      ]
+    },
+    "generated_utc": "2026-05-25T17:59:33.166774+00:00",
+    "gpu_launched": false,
+    "lane_id": "lane_pr95_hnerv_mlx_reproduction",
+    "mlx_device": "cpu",
+    "promotable": false,
+    "promotion_eligible": false,
+    "pt_bytes": 924847,
+    "pt_path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_pytorch_state_dict.pt",
+    "pt_sha256": "f20ec8d5dc1f32d11ec1e50bf49786ba680128ac10e1f369825b668148b5ca9b",
+    "pytorch_export_forward_parity_established": true,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "run_id": "pr95_mlx_archive_export_6414614bd8f1_20260525T175932Z",
+    "sample_count": 1,
+    "sample_indices": [
+      0
+    ],
+    "schema": "pr95_hnerv_mlx_pytorch_export_forward_parity.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_pr": 95,
+    "state_dict_pt_export": {
+      "blockers": [
+        "macos_mlx_research_signal_training_axis_only",
+        "requires_paired_cuda_t4_or_linux_x86_64_eval_for_promotion",
+        "export_step_does_not_change_evidence_grade"
+      ],
+      "dtype_policy": {
+        "default": "preserve_numpy_dtype",
+        "force_float32_names": []
+      },
+      "file_sha256": "f20ec8d5dc1f32d11ec1e50bf49786ba680128ac10e1f369825b668148b5ca9b",
+      "file_size_bytes": 924847,
+      "operator_routable_next_step": "Stage exported .pt + sister archive grammar; fire tools/operator_authorize.py --recipe <recipe> --target modal for [contest-CUDA] T4 eval via experiments/contest_auth_eval.py",
+      "output_pt_path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_pytorch_state_dict.pt",
+      "per_tensor": {
+        "blocks.0.bias": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "7290c005d5e885f581198299f56df46336358f25af923768f6a75320ae31581d",
+          "shape": [
+            144
+          ],
+          "source_dtype": "float32"
+        },
+        "blocks.0.weight": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "0c5a681dfdab9ca438bac903fab3eac753b78fc440e128322cc937f31e045c4e",
+          "shape": [
+            144,
+            36,
+            3,
+            3
+          ],
+          "source_dtype": "float32"
+        },
+        "blocks.1.bias": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "9950bcead2114f4e929db49fd7a7057ec56d8b57ae5756095df22d61c2ef4f23",
+          "shape": [
+            144
+          ],
+          "source_dtype": "float32"
+        },
+        "blocks.1.weight": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "7e810125f87c1785bde0471109a0e20d4f52812bf0c8891032c3aec1af6cc551",
+          "shape": [
+            144,
+            36,
+            3,
+            3
+          ],
+          "source_dtype": "float32"
+        },
+        "blocks.2.bias": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "2702d0ada910ae038a6d3f5b71eae90f229804cebc023ff353c3d22192184350",
+          "shape": [
+            108
+          ],
+          "source_dtype": "float32"
+        },
+        "blocks.2.weight": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "08d29ddbf794ab77b9ea11e43e236e44b3c9e4104886dcd49555c7c9c0046383",
+          "shape": [
+            108,
+            36,
+            3,
+            3
+          ],
+          "source_dtype": "float32"
+        },
+        "blocks.3.bias": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "37f463cb47126f7a44618e98a51865de12fee5c3f90fb0d6fb23b431d0f6f3b9",
+          "shape": [
+            80
+          ],
+          "source_dtype": "float32"
+        },
+        "blocks.3.weight": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "50f731829d8d2d6cfe9ee29f5db6b0631e3d05974a6b324bb3fcc9c00fde92ed",
+          "shape": [
+            80,
+            27,
+            3,
+            3
+          ],
+          "source_dtype": "float32"
+        },
+        "blocks.4.bias": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "85ea6862f07a85ba025cd4e6f12c36479606728abe0b128ab2f02d4c61dc382a",
+          "shape": [
+            72
+          ],
+          "source_dtype": "float32"
+        },
+        "blocks.4.weight": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "e9df5afc69c28777e4e38e3eca322ccf70e430f57414166100b0a256f658d8eb",
+          "shape": [
+            72,
+            20,
+            3,
+            3
+          ],
+          "source_dtype": "float32"
+        },
+        "blocks.5.bias": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "7654a286ce0caaf8aaba8095636f1cd71df1faf6d2f926139a049b3542b3c2f9",
+          "shape": [
+            72
+          ],
+          "source_dtype": "float32"
+        },
+        "blocks.5.weight": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "a181a7650dc95588d8290a125f06e85d6a45b1508c3e6caf916d0366feae14d3",
+          "shape": [
+            72,
+            18,
+            3,
+            3
+          ],
+          "source_dtype": "float32"
+        },
+        "refine.0.bias": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "81e7ba917286b71af464b879d771adf8fb5156890aef0c94d12f3090236c391e",
+          "shape": [
+            9
+          ],
+          "source_dtype": "float32"
+        },
+        "refine.0.weight": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "d5971f77ca88fca86a51b6183ad0012a65a7f22328a89ddd9c00757569b5d367",
+          "shape": [
+            9,
+            18,
+            3,
+            3
+          ],
+          "source_dtype": "float32"
+        },
+        "refine.1.bias": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "eb1c481db3503379dc3bec9a25a6794b49948e53b31c570a89aaf45b284ee88d",
+          "shape": [
+            18
+          ],
+          "source_dtype": "float32"
+        },
+        "refine.1.weight": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "cbcd51b8a6fbc8785f319bdc57b58f89680d17c7bfef2de93d323a2828580127",
+          "shape": [
+            18,
+            9,
+            3,
+            3
+          ],
+          "source_dtype": "float32"
+        },
+        "rgb_0.bias": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "46a5c72c1e380c97863d652b17a20ca5f3a5c3d64f26da2497f0c4c35bfbccc6",
+          "shape": [
+            3
+          ],
+          "source_dtype": "float32"
+        },
+        "rgb_0.weight": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "47e993ee7c1f9a39b8a00b8a368891be03642f74f229c7c205ca06f4d8e2121d",
+          "shape": [
+            3,
+            18,
+            3,
+            3
+          ],
+          "source_dtype": "float32"
+        },
+        "rgb_1.bias": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "02eba02766a3bb7c016224eb46fa50fe3fb90b4237ea51d0c1050eda4b5ddec7",
+          "shape": [
+            3
+          ],
+          "source_dtype": "float32"
+        },
+        "rgb_1.weight": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "f1a41654e730f408316c5426742041c90cc9f49d2c222ecbbbea4a9b98c7d60d",
+          "shape": [
+            3,
+            18,
+            3,
+            3
+          ],
+          "source_dtype": "float32"
+        },
+        "skips.2.bias": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "4edcbaf9004c40bc62a193aa47bb067cf9d4922d74381ffdff5b6b5ccbd383e7",
+          "shape": [
+            27
+          ],
+          "source_dtype": "float32"
+        },
+        "skips.2.weight": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "a49afff2e01ca73f3385f7c584b603b2b26e0bde5bccb27c3af6849120f4675c",
+          "shape": [
+            27,
+            36,
+            1,
+            1
+          ],
+          "source_dtype": "float32"
+        },
+        "skips.3.bias": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "41f5ff916d1ea94ba77bef55f7cdfb4448f8b17ca4dc824e7c612ff20b27bd5d",
+          "shape": [
+            20
+          ],
+          "source_dtype": "float32"
+        },
+        "skips.3.weight": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "b04a81fbd646641f47d29c3ee5d4bf56f79ec91b4648ec6e6cc6657088bfe703",
+          "shape": [
+            20,
+            27,
+            1,
+            1
+          ],
+          "source_dtype": "float32"
+        },
+        "skips.4.bias": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "bce231a8144d5ad37e0692f16379278e0160e0ac091bd72ff006731d9e69b6d3",
+          "shape": [
+            18
+          ],
+          "source_dtype": "float32"
+        },
+        "skips.4.weight": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "ddbd11b1a6d6889d150b96675d0d06c4cfa79b3be93bddc3994c91bc36d2ffd1",
+          "shape": [
+            18,
+            20,
+            1,
+            1
+          ],
+          "source_dtype": "float32"
+        },
+        "stem.bias": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "d73697f3d9dcd03a2a2bd2b53f8d31a049a6eac00532a9a41deb5cb57de00546",
+          "shape": [
+            1728
+          ],
+          "source_dtype": "float32"
+        },
+        "stem.weight": {
+          "export_dtype": "float32",
+          "forced_float32": false,
+          "sha256": "9fab26a06dc9fb016cbd4b09b5d069c288c8ee52ca7b1d0cd260cd57d1a20879",
+          "shape": [
+            1728,
+            28
+          ],
+          "source_dtype": "float32"
+        }
+      },
+      "per_tensor_sha256_prefix": {
+        "blocks.0.bias": "7290c005d5e885f5",
+        "blocks.0.weight": "0c5a681dfdab9ca4",
+        "blocks.1.bias": "9950bcead2114f4e",
+        "blocks.1.weight": "7e810125f87c1785",
+        "blocks.2.bias": "2702d0ada910ae03",
+        "blocks.2.weight": "08d29ddbf794ab77",
+        "blocks.3.bias": "37f463cb47126f7a",
+        "blocks.3.weight": "50f731829d8d2d6c",
+        "blocks.4.bias": "85ea6862f07a85ba",
+        "blocks.4.weight": "e9df5afc69c28777",
+        "blocks.5.bias": "7654a286ce0caaf8",
+        "blocks.5.weight": "a181a7650dc95588",
+        "refine.0.bias": "81e7ba917286b71a",
+        "refine.0.weight": "d5971f77ca88fca8",
+        "refine.1.bias": "eb1c481db3503379",
+        "refine.1.weight": "cbcd51b8a6fbc878",
+        "rgb_0.bias": "46a5c72c1e380c97",
+        "rgb_0.weight": "47e993ee7c1f9a39",
+        "rgb_1.bias": "02eba02766a3bb7c",
+        "rgb_1.weight": "f1a41654e730f408",
+        "skips.2.bias": "4edcbaf9004c40bc",
+        "skips.2.weight": "a49afff2e01ca73f",
+        "skips.3.bias": "41f5ff916d1ea94b",
+        "skips.3.weight": "b04a81fbd646641f",
+        "skips.4.bias": "bce231a8144d5ad3",
+        "skips.4.weight": "ddbd11b1a6d6889d",
+        "stem.bias": "d73697f3d9dcd03a",
+        "stem.weight": "9fab26a06dc9fb01"
+      },
+      "promotable": false,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "pr95_mlx_archive_export_6414614bd8f1_20260525T175932Z",
+      "schema_version": "mlx_to_pytorch_export.v1",
+      "score_claim": false,
+      "substrate_id": "pr95_hnerv_mlx",
+      "tensor_count": 28,
+      "training_evidence_grade": "macOS-MLX-research-signal",
+      "training_evidence_tag": "[macOS-MLX research-signal]"
+    },
+    "submission": "hnerv_muon"
+  },
+  "pytorch_export_forward_parity_established": true,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "run_id": "pr95_mlx_archive_export_6414614bd8f1_20260525T175932Z",
+  "sample_indices": [
+    0
+  ],
+  "schema_version": "pr95_mlx_archive_pytorch_export_bridge.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "source_model_path": "/Users/adpena/Projects/pact/experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+  "tool": "tools/export_pr95_mlx_to_pytorch_state_dict.py"
+}

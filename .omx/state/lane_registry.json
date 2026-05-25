@@ -56186,15 +56186,15 @@
       "id": "lane_pr95_mlx_byte_closed_contest_archive_export_20260525",
       "name": "PR95 MLX byte-closed contest archive export",
       "phase": 2.0,
-      "level": 1,
+      "level": 2,
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "tools/package_pr95_mlx_pytorch_state_dict_to_contest_archive.py + .omx/research/pr95_mlx_byte_closed_contest_archive_export_landed_20260525.md commit 3b126aa0d; byte-closed round-trip residual=0.0 BYTE-IDENTICAL"
+          "evidence": "tools/package_pr95_mlx_pytorch_state_dict_to_contest_archive.py"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_packaged_submission_report.json"
         },
         "contest_cuda": {
           "status": false,
@@ -56205,8 +56205,8 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/tests/test_pr95_mlx_pytorch_export_bridge.py"
         },
         "three_clean_review": {
           "status": false,
@@ -56214,7 +56214,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/pr95_mlx_byte_closed_contest_archive_export_landed_20260525.md (canonical landing memo)"
+          "evidence": ".omx/research/pr95_mlx_byte_closed_contest_archive_export_landed_20260525.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -56227,15 +56227,15 @@
       "id": "lane_pr95_mlx_pytorch_drift_mitigation_engineering_20260525",
       "name": "PR95 MLX/PyTorch drift mitigation engineering",
       "phase": 2.0,
-      "level": 1,
+      "level": 2,
       "gates": {
         "impl_complete": {
           "status": true,
           "evidence": "src/tac/local_acceleration/deterministic_primitives.py + tools/measure_pr95_mlx_pytorch_per_op_drift.py canonical helpers"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pytorch_mlx_decoder_trace.json"
         },
         "contest_cuda": {
           "status": false,
@@ -56272,5 +56272,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T18:00:31Z"
+  "updated_at": "2026-05-25T18:02:01Z"
 }

@@ -75,10 +75,14 @@ PR95_MLX_PACKAGE_SCHEMA = "pr95_mlx_pytorch_state_dict_to_contest_archive.v1"
 
 FALSE_AUTHORITY: dict[str, Any] = {
     "score_claim": False,
+    "score_claim_valid": False,
     "promotion_eligible": False,
     "rank_or_kill_eligible": False,
     "ready_for_exact_eval_dispatch": False,
     "promotable": False,
+    "dispatch_attempted": False,
+    "gpu_launched": False,
+    "dispatch_packet_ready": False,
 }
 
 
@@ -99,7 +103,7 @@ def _load_pytorch_state_dict(pt_path: Path) -> dict[str, Any]:
 
     if not pt_path.is_file():
         raise FileNotFoundError(f"PyTorch state_dict .pt not found: {pt_path}")
-    sd = torch.load(pt_path, weights_only=False, map_location="cpu")
+    sd = torch.load(pt_path, weights_only=True, map_location="cpu")
     if not isinstance(sd, dict):
         raise ValueError(
             f"PyTorch state_dict .pt must be a dict, got {type(sd).__name__}"
@@ -538,7 +542,7 @@ def package_pytorch_state_dict_to_contest_archive(
         "runtime_files_emitted": runtime_files,
         "archive_manifest_path": str(manifest_path),
         "axis_tag": "[macOS-CPU advisory]",
-        "evidence_grade": "predicted",
+        "evidence_grade": "macOS-CPU advisory",
         "canonical_provenance": {
             "source_pr": 95,
             "submission": "hnerv_muon",

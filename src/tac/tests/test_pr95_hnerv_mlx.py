@@ -27,6 +27,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY,
     PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_YUV6_TIMING_ONLY,
     PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY,
+    PUBLIC_ARCHIVE_DECODER_TRACE_SCHEMA,
     HNeRVDecoderMLX,
     HNeRVSyntheticTrainingBundleMLX,
     Pr95HNeRVMlxError,
@@ -42,6 +43,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     pytorch_state_dict_from_mlx,
     run_pr95_mlx_synthetic_timing_smoke,
     stage_smoke_config,
+    trace_pr95_public_archive_decoder_with_pytorch,
     write_pr95_mlx_byte_closed_smoke_archive,
     write_pr95_public_archive_pytorch_export_forward_parity,
     write_pr95_public_archive_zip,
@@ -298,6 +300,57 @@ def test_public_pr95_archive_pytorch_export_forward_parity_probe(
     assert "requires_pytorch_export_forward_parity_on_source_checkpoint" not in blockers
     assert PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER in blockers
     assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in blockers
+    _assert_false_authority(result)
+
+
+def test_public_pr95_archive_decoder_trace_localizes_mlx_drift(
+    tmp_path: Path,
+) -> None:
+    torch = pytest.importorskip("torch")
+    module = _load_public_pr95_model_module()
+
+    torch.manual_seed(95)
+    model = module.HNeRVDecoder(
+        latent_dim=28,
+        base_channels=4,
+        eval_size=(384, 512),
+    ).eval()
+    latents = torch.randn(1, 28)
+    write_pr95_public_archive_zip(
+        model.state_dict(),
+        latents,
+        meta={
+            "n_pairs": 1,
+            "latent_dim": 28,
+            "base_channels": 4,
+            "eval_size": [384, 512],
+        },
+        output_zip_path=tmp_path / "archive.zip",
+    )
+    packet = parse_pr95_public_archive_zip(tmp_path / "archive.zip")
+
+    result = trace_pr95_public_archive_decoder_with_pytorch(
+        packet,
+        module.HNeRVDecoder,
+        sample_indices=[0],
+        mlx_device="cpu",
+        cliff_threshold=0.0,
+    )
+
+    assert result["schema"] == PUBLIC_ARCHIVE_DECODER_TRACE_SCHEMA
+    assert result["sample_indices"] == [0]
+    assert result["mlx_device"] == "cpu"
+    assert result["trace_count"] >= 25
+    assert result["output_delta"]["name"] == "output"
+    assert result["output_delta"]["shape_match"] is True
+    assert result["output_delta"]["max_abs_delta"] <= 1e-4
+    assert result["drift_cliff"]["name"] in {
+        row["name"] for row in result["rows"]
+    }
+    assert result["exact_readiness_refusal"]["ready"] is False
+    assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in result[
+        "exact_readiness_refusal"
+    ]["blockers"]
     _assert_false_authority(result)
 
 

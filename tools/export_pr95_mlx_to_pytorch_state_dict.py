@@ -50,10 +50,11 @@ def export_pr95_public_archive_to_pytorch_state_dict(
     output_pytorch_state_dict: Path,
     source_model: Path = DEFAULT_SOURCE_MODEL,
     report_out: Path | None = None,
+    decoder_trace_out: Path | None = None,
     sample_indices: list[int] | None = None,
     mlx_device: str = "cpu",
-    atol_max: float = 2e-3,
-    atol_mean: float = 1e-4,
+    atol_max: float = 1e-4,
+    atol_mean: float = 1e-5,
     overwrite: bool = True,
 ) -> dict[str, Any]:
     """Parse the PR95 archive packet, write a .pt state_dict, and prove parity.
@@ -63,9 +64,14 @@ def export_pr95_public_archive_to_pytorch_state_dict(
     and forward parity to the canonical PR95 MLX helpers.
     """
 
+    from tac.local_acceleration.deterministic_primitives import (
+        canonical_drift_bands_for_pr95_hnerv_decoder,
+        classify_operation_drift,
+    )
     from tac.local_acceleration.pr95_hnerv_mlx import (
         FALSE_AUTHORITY,
         parse_pr95_public_archive_zip,
+        trace_pr95_public_archive_decoder_with_pytorch,
         write_pr95_public_archive_pytorch_export_forward_parity,
     )
 
@@ -86,6 +92,57 @@ def export_pr95_public_archive_to_pytorch_state_dict(
         atol_mean=atol_mean,
         overwrite=overwrite,
     )
+    decoder_trace = (
+        None
+        if decoder_trace_out is None
+        else trace_pr95_public_archive_decoder_with_pytorch(
+            packet,
+            model_module.HNeRVDecoder,
+            sample_indices=sample_indices,
+            mlx_device=mlx_device,
+        )
+    )
+    decoder_trace_summary = None
+    if decoder_trace is not None:
+        trace_path = Path(decoder_trace_out)
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        trace_path.write_text(json.dumps(decoder_trace, indent=2, sort_keys=True) + "\n")
+        decoder_trace_summary = {
+            "path": trace_path.as_posix(),
+            "schema": decoder_trace.get("schema"),
+            "trace_count": decoder_trace.get("trace_count"),
+            "sample_indices": decoder_trace.get("sample_indices"),
+            "drift_cliff": decoder_trace.get("drift_cliff"),
+            "output_delta": decoder_trace.get("output_delta"),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    parity_metrics = parity["forward_parity"]["parity"]
+    canonical_drift_bands = canonical_drift_bands_for_pr95_hnerv_decoder()
+    measured_max_abs = float(parity_metrics["max_abs"])
+    measured_mean_abs = float(parity_metrics["mean_abs"])
+    drift_attestation = {
+        "schema": "pr95_mlx_pytorch_export_forward_drift_attestation.v1",
+        "operation_name": "hnerv_decoder_full",
+        "measured_max_abs": measured_max_abs,
+        "measured_mean_abs": measured_mean_abs,
+        "actual_class": classify_operation_drift(
+            measured_max_abs,
+            measured_mean_abs,
+        ).value,
+        "canonical_class": canonical_drift_bands["canonical_class"],
+        "attested_max_abs_band": canonical_drift_bands["attested_max_abs"],
+        "attested_mean_abs_band": canonical_drift_bands["attested_mean_abs"],
+        "attested_within_band": (
+            measured_max_abs <= float(canonical_drift_bands["attested_max_abs"])
+            and measured_mean_abs <= float(canonical_drift_bands["attested_mean_abs"])
+        ),
+        "canonical_drift_bands": canonical_drift_bands,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
     report = {
         "schema_version": PR95_MLX_EXPORT_BRIDGE_SCHEMA,
         "generated_utc": datetime.now(UTC).isoformat(),
@@ -99,6 +156,8 @@ def export_pr95_public_archive_to_pytorch_state_dict(
         "pytorch_export_forward_parity_established": bool(
             parity.get("pytorch_export_forward_parity_established") is True
         ),
+        "decoder_trace": decoder_trace_summary,
+        "forward_drift_attestation": drift_attestation,
         "pt_path": parity.get("pt_path"),
         "pt_sha256": parity.get("pt_sha256"),
         "pt_bytes": parity.get("pt_bytes"),
@@ -127,10 +186,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--source-model", type=Path, default=DEFAULT_SOURCE_MODEL)
     parser.add_argument("--output-pytorch-state-dict", type=Path, required=True)
     parser.add_argument("--report-out", type=Path, required=True)
+    parser.add_argument("--decoder-trace-out", type=Path)
     parser.add_argument("--sample-indices")
     parser.add_argument("--mlx-device", choices=("cpu", "gpu"), default="cpu")
-    parser.add_argument("--atol-max", type=float, default=2e-3)
-    parser.add_argument("--atol-mean", type=float, default=1e-4)
+    parser.add_argument("--atol-max", type=float, default=1e-4)
+    parser.add_argument("--atol-mean", type=float, default=1e-5)
     parser.add_argument(
         "--no-overwrite",
         action="store_true",
@@ -151,20 +211,27 @@ def main(argv: list[str] | None = None) -> int:
         output_pytorch_state_dict=args.output_pytorch_state_dict,
         source_model=args.source_model,
         report_out=args.report_out,
+        decoder_trace_out=args.decoder_trace_out,
         sample_indices=_parse_indices(args.sample_indices),
         mlx_device=args.mlx_device,
         atol_max=args.atol_max,
         atol_mean=args.atol_mean,
         overwrite=not args.no_overwrite,
     )
-    passed = report["pytorch_export_forward_parity_established"]
+    drift_attested = bool(
+        report["forward_drift_attestation"].get("attested_within_band") is True
+    )
+    passed = bool(report["pytorch_export_forward_parity_established"] and drift_attested)
     parity = report["pytorch_export_forward_parity"]["forward_parity"]["parity"]
     print(f"[pr95-mlx-pytorch-export] parity_passed={passed}")
     print(f"[pr95-mlx-pytorch-export] pt={report['pt_path']}")
     print(f"[pr95-mlx-pytorch-export] report={args.report_out}")
+    if report.get("decoder_trace"):
+        print(f"[pr95-mlx-pytorch-export] decoder_trace={report['decoder_trace']['path']}")
     print(
         "[pr95-mlx-pytorch-export] "
-        f"max_abs={parity['max_abs']:.6e} mean_abs={parity['mean_abs']:.6e}"
+        f"max_abs={parity['max_abs']:.6e} mean_abs={parity['mean_abs']:.6e} "
+        f"drift_attested={drift_attested}"
     )
     return 1 if args.require_pass and not passed else 0
 

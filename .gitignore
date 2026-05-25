@@ -271,6 +271,7 @@ src/tac.egg-info/
 # proofs reviewable and leave the binary payloads in local custody.
 .omx/research/codex_pr95_stage*_full_profile_queue_*/matrix/**/pr95_public_archive.zip
 .omx/research/codex_pr95_stage*_full_profile_queue_*/matrix/**/pr95_pytorch_state_dict.pt
+.omx/research/codex_pr95_stage*_full_profile_queue_*/matrix/**/pr95_packaged_submission/
 .omx/research/codex_pr95_stage*_full_profile_queue_*/matrix/**/runtime_consumption_work/
 #
 # Subagent commit serializer artifacts (lock + JSONL log are local-only forensics)

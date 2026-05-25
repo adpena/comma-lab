@@ -49,12 +49,13 @@ MLX result to contest-axis score authority.
 ```
 
 The report is consumed by:
-- Slot 1 export bridge VERDICT upgrade
+- `tools/export_pr95_mlx_to_pytorch_state_dict.py` forward-drift attestation
+  and `--require-pass` gating
 - ``tac.canonical_equations`` empirical anchor for equation
   ``mlx_numpy_weights_portability_to_pytorch_with_drift_class_v1``
   (FORMALIZATION_PENDING per Catalog #344)
-- ``tools/cathedral_autopilot_autonomous_loop.py`` substrate-cost-model
-  (operator-routable; not auto-wired)
+- queue/package observers that preserve the downstream exact-readiness refusal
+  before any contest-auth dispatch
 """
 
 from __future__ import annotations

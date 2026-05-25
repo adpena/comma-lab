@@ -30,6 +30,7 @@ from tac.optimization.serialized_archive_economics import SERIALIZED_ARCHIVE_DEL
 OBSERVATION_SCHEMA = "experiment_queue_observation.v1"
 FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA = "family_agnostic_materializer_empirical_observation.v1"
 FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA = "family_agnostic_materializer_empirical_sweep.v1"
+PR95_MLX_PACKAGE_SCHEMA = "pr95_mlx_pytorch_state_dict_to_contest_archive.v1"
 FAMILY_AGNOSTIC_MATERIALIZER_CANDIDATE_SCHEMAS = frozenset(
     {
         "archive_section_entropy_recode_candidate.v1",
@@ -168,6 +169,36 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
             ):
                 if key in payload:
                     record[key] = payload[key]
+            if record.get("json_schema") == PR95_MLX_PACKAGE_SCHEMA:
+                record["pr95_mlx_package_report"] = True
+                for source_key, target_key in (
+                    ("archive_zip_sha256", "archive_sha256"),
+                    ("archive_zip_bytes", "archive_bytes"),
+                    ("archive_member_sha256", "archive_member_sha256"),
+                    ("archive_member_bytes", "archive_member_bytes"),
+                    ("archive_manifest_path", "archive_manifest_path"),
+                    ("input_pt_sha256", "input_pt_sha256"),
+                    ("source_archive_zip_sha256", "source_archive_zip_sha256"),
+                ):
+                    if source_key in payload:
+                        record[target_key] = payload[source_key]
+                runtime_files = payload.get("runtime_files_emitted")
+                if isinstance(runtime_files, Mapping):
+                    record["runtime_file_count"] = len(runtime_files)
+                    record["runtime_files_emitted"] = sorted(str(key) for key in runtime_files)
+                refusal = payload.get("exact_readiness_refusal")
+                if isinstance(refusal, Mapping):
+                    blockers = [
+                        str(item)
+                        for item in refusal.get("blockers", [])
+                        if str(item)
+                    ]
+                    record["exact_readiness_refusal"] = {
+                        "ready": refusal.get("ready"),
+                        "blockers": blockers,
+                    }
+                    if blockers and "readiness_blockers" not in record:
+                        record["readiness_blockers"] = blockers
             if isinstance(payload.get("readiness_blockers"), list):
                 record["readiness_blockers"] = [str(item) for item in payload["readiness_blockers"] if str(item)]
             receiver = payload.get("receiver_verification")

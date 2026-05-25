@@ -557,6 +557,93 @@ def test_observer_derives_generic_materializer_archive_delta(
     assert artifact_record["serialized_archive_delta_candidate_archive_bytes"] == 425
 
 
+def test_observer_surfaces_pr95_mlx_package_report_readiness(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "package_report.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema_version": "pr95_mlx_pytorch_state_dict_to_contest_archive.v1",
+                "archive_zip_sha256": "a" * 64,
+                "archive_zip_bytes": 230_345,
+                "archive_member_sha256": "b" * 64,
+                "archive_member_bytes": 230_237,
+                "archive_manifest_path": "submission_dir/archive_manifest.json",
+                "input_pt_sha256": "c" * 64,
+                "source_archive_zip_sha256": "d" * 64,
+                "runtime_files_emitted": {
+                    "inflate.sh": "e" * 64,
+                    "inflate.py": "f" * 64,
+                    "vendored_src_model.py": "1" * 64,
+                    "vendored_src_codec.py": "2" * 64,
+                },
+                "exact_readiness_refusal": {
+                    "schema": "exact_readiness_refusal.v1",
+                    "ready": False,
+                    "blockers": [
+                        "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+                        "requires_paired_contest_cpu_and_cuda_auth_eval_before_score_claim",
+                    ],
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "promotable": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+    queue["experiments"][0]["steps"][0]["telemetry"] = {
+        "artifact_paths": [artifact.as_posix()],
+    }
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'running',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-25T18:00:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """,
+            (json.dumps({"command": ["python", "-c", "print('hello queue')"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+    )
+    artifact_record = observation["running_steps"][0]["expected_artifacts"][0]
+
+    assert artifact_record["json_schema"] == (
+        "pr95_mlx_pytorch_state_dict_to_contest_archive.v1"
+    )
+    assert artifact_record["pr95_mlx_package_report"] is True
+    assert artifact_record["archive_sha256"] == "a" * 64
+    assert artifact_record["archive_bytes"] == 230_345
+    assert artifact_record["archive_member_sha256"] == "b" * 64
+    assert artifact_record["archive_manifest_path"] == ("submission_dir/archive_manifest.json")
+    assert artifact_record["runtime_file_count"] == 4
+    assert artifact_record["score_claim"] is False
+    assert artifact_record["ready_for_exact_eval_dispatch"] is False
+    assert artifact_record["exact_readiness_refusal"]["ready"] is False
+    assert artifact_record["readiness_blockers"] == [
+        "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+        "requires_paired_contest_cpu_and_cuda_auth_eval_before_score_claim",
+    ]
+
+
 def test_observer_health_marks_blocked_steps(tmp_path: Path) -> None:
     artifact = tmp_path / "artifact.json"
     state = tmp_path / "queue.sqlite"

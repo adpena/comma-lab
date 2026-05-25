@@ -66,6 +66,7 @@ SMOKE_MANIFEST_SCHEMA = "pr95_hnerv_mlx_timing_smoke_manifest_v1"
 SMOKE_ARCHIVE_SCHEMA = "pr95_hnerv_mlx_byte_closed_smoke_archive_v1"
 PUBLIC_ARCHIVE_PACKET_SCHEMA = "pr95_hnerv_public_archive_packet.v1"
 PUBLIC_ARCHIVE_FORWARD_PARITY_SCHEMA = "pr95_hnerv_public_archive_mlx_forward_parity.v1"
+PUBLIC_ARCHIVE_DECODER_TRACE_SCHEMA = "pr95_hnerv_public_archive_mlx_decoder_trace.v1"
 PR95_MLX_PYTORCH_EXPORT_FORWARD_PARITY_SCHEMA = (
     "pr95_hnerv_mlx_pytorch_export_forward_parity.v1"
 )
@@ -1115,6 +1116,285 @@ def compare_pr95_public_archive_forward_with_pytorch(
     }
 
 
+def trace_pr95_public_archive_decoder_with_pytorch(
+    packet: Pr95PublicArchivePacket,
+    torch_decoder_cls: Any,
+    *,
+    sample_indices: Sequence[int] | None = None,
+    mlx_device: str = "cpu",
+    cliff_threshold: float = 1.0e-5,
+) -> dict[str, Any]:
+    """Trace PR95 decoder boundary drift between PyTorch and MLX.
+
+    This is a diagnostic implementation-parity manifest.  It intentionally
+    carries the same false-authority contract as the final-output parity probe:
+    boundary traces localize MLX drift, but never replace full-frame inflate
+    parity or contest CPU/CUDA auth eval.
+    """
+
+    require_mlx()
+    try:
+        import torch
+    except Exception as exc:  # pragma: no cover - dependency guard.
+        raise Pr95HNeRVMlxError("torch is required for PR95 trace probes") from exc
+
+    if float(cliff_threshold) < 0.0:
+        raise Pr95HNeRVMlxError(
+            f"cliff_threshold must be >= 0, got {cliff_threshold}"
+        )
+
+    meta = packet.meta
+    indices = _sample_indices_for_pr95_packet(int(packet.latents.shape[0]), sample_indices)
+    z_np = packet.latents[indices].astype(np.float32, copy=False)
+    torch_state_dict = {
+        name: torch.from_numpy(value.astype(np.float32, copy=True))
+        for name, value in packet.state_dict.items()
+    }
+    torch_model = torch_decoder_cls(
+        latent_dim=int(meta["latent_dim"]),
+        base_channels=int(meta["base_channels"]),
+        eval_size=tuple(int(dim) for dim in meta["eval_size"]),
+    ).eval()
+    torch_model.load_state_dict(torch_state_dict)
+
+    previous_device = mx.default_device()  # type: ignore[union-attr]
+    mx.set_default_device(_mlx_device_from_name(mlx_device))  # type: ignore[union-attr]
+    try:
+        mlx_model = HNeRVDecoderMLX(
+            latent_dim=int(meta["latent_dim"]),
+            base_channels=int(meta["base_channels"]),
+            eval_size=tuple(int(dim) for dim in meta["eval_size"]),
+        )
+        load_pytorch_state_dict_into_mlx(mlx_model, packet.state_dict)
+        started = time.perf_counter()
+        with torch.no_grad():
+            torch_trace = _trace_torch_pr95_decoder(torch_model, z_np)
+        mlx_trace = _trace_mlx_pr95_decoder(mlx_model, z_np)
+        elapsed = time.perf_counter() - started
+    finally:
+        mx.set_default_device(previous_device)  # type: ignore[union-attr]
+
+    rows = _decoder_trace_rows(
+        torch_trace=torch_trace,
+        mlx_trace=mlx_trace,
+        cliff_threshold=float(cliff_threshold),
+    )
+    drift_cliff = next((row for row in rows if row["exceeds_cliff_threshold"]), None)
+    output_row = next((row for row in rows if row["name"] == "output"), None)
+    return {
+        "schema": PUBLIC_ARCHIVE_DECODER_TRACE_SCHEMA,
+        "generated_utc": datetime.now(UTC).isoformat(),
+        "lane_id": LANE_ID,
+        "source_pr": 95,
+        "submission": "hnerv_muon",
+        "evidence_grade": "[macOS-MLX research-signal]",
+        "mlx_device": mlx_device,
+        "sample_indices": indices,
+        "sample_count": len(indices),
+        "elapsed_seconds": elapsed,
+        "cliff_threshold": float(cliff_threshold),
+        "trace_count": len(rows),
+        "drift_cliff": drift_cliff,
+        "output_delta": output_row,
+        "rows": rows,
+        "archive_packet": packet.custody_manifest(),
+        "exact_readiness_refusal": {
+            "schema": "exact_readiness_refusal.v1",
+            "ready": False,
+            "blockers": [
+                "local_mlx_decoder_trace_probe_is_not_contest_auth_eval",
+                "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+                "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+            ],
+        },
+        "authority_status": (
+            "PR95 PyTorch-vs-MLX decoder traces are local diagnostic "
+            "implementation evidence only; full-frame inflate parity and exact "
+            "contest CPU/CUDA auth eval remain required for score claims and "
+            "promotion."
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _trace_torch_pr95_decoder(torch_model: Any, z_np: np.ndarray) -> dict[str, np.ndarray]:
+    import torch
+    import torch.nn.functional as F
+
+    z = torch.from_numpy(np.asarray(z_np, dtype=np.float32, order="C"))
+    batch = int(z.shape[0])
+    trace: dict[str, np.ndarray] = {}
+    x = torch_model.stem(z).view(
+        batch,
+        torch_model.channels[0],
+        torch_model.base_h,
+        torch_model.base_w,
+    )
+    trace["stem.view"] = _torch_tensor_to_numpy(x)
+    x = torch.sin(x)
+    trace["stem.sin"] = _torch_tensor_to_numpy(x)
+    for index, (block, skip) in enumerate(
+        zip(torch_model.blocks, torch_model.skips, strict=True)
+    ):
+        identity = F.interpolate(x, scale_factor=2, mode="bilinear", align_corners=False)
+        trace[f"blocks.{index}.identity_resize"] = _torch_tensor_to_numpy(identity)
+        identity = skip(identity)
+        trace[f"blocks.{index}.identity_skip"] = _torch_tensor_to_numpy(identity)
+        decoded = torch_model.ps(block(x))
+        trace[f"blocks.{index}.pixel_shuffle"] = _torch_tensor_to_numpy(decoded)
+        x = torch.sin(decoded + identity)
+        trace[f"blocks.{index}.output"] = _torch_tensor_to_numpy(x)
+    refined = torch_model.refine(x)
+    trace["refine.residual"] = _torch_tensor_to_numpy(refined)
+    x = x + 0.1 * torch.sin(refined)
+    trace["features"] = _torch_tensor_to_numpy(x)
+    f0 = torch.sigmoid(torch_model.rgb_0(x)) * 255.0
+    f1 = torch.sigmoid(torch_model.rgb_1(x)) * 255.0
+    trace["rgb_0"] = _torch_tensor_to_numpy(f0)
+    trace["rgb_1"] = _torch_tensor_to_numpy(f1)
+    trace["output"] = _torch_tensor_to_numpy(torch.stack([f0, f1], dim=1))
+    return trace
+
+
+def _trace_mlx_pr95_decoder(model: HNeRVDecoderMLX, z_np: np.ndarray) -> dict[str, np.ndarray]:
+    require_mlx()
+    z = mx.array(np.asarray(z_np, dtype=np.float32, order="C"))  # type: ignore[union-attr]
+    batch = int(z.shape[0])
+    trace: dict[str, np.ndarray] = {}
+    x = model.stem(z)
+    x = mx.reshape(  # type: ignore[union-attr]
+        x,
+        (batch, model.channels[0], model.base_h, model.base_w),
+    )
+    trace["stem.view"] = _mlx_nchw_to_numpy(x)
+    x = mx.transpose(x, (0, 2, 3, 1))  # type: ignore[union-attr]
+    x = mx.sin(x)  # type: ignore[union-attr]
+    trace["stem.sin"] = _mlx_nhwc_to_nchw_numpy(x)
+    for index, block in enumerate(model.blocks):
+        identity = bilinear_resize2x_align_corners_false_nhwc(x)
+        trace[f"blocks.{index}.identity_resize"] = _mlx_nhwc_to_nchw_numpy(identity)
+        if block.skip_conv is not None:
+            identity = block.skip_conv(identity)
+        trace[f"blocks.{index}.identity_skip"] = _mlx_nhwc_to_nchw_numpy(identity)
+        decoded = pixel_shuffle_2x_nhwc(block.conv(x))
+        trace[f"blocks.{index}.pixel_shuffle"] = _mlx_nhwc_to_nchw_numpy(decoded)
+        x = mx.sin(decoded + identity)  # type: ignore[union-attr]
+        trace[f"blocks.{index}.output"] = _mlx_nhwc_to_nchw_numpy(x)
+    refined0 = model.refine0(x)
+    refined = model.refine1(refined0)
+    trace["refine.residual"] = _mlx_nhwc_to_nchw_numpy(refined)
+    x = x + 0.1 * mx.sin(refined)  # type: ignore[union-attr]
+    trace["features"] = _mlx_nhwc_to_nchw_numpy(x)
+    f0 = mx.sigmoid(model.rgb_0(x)) * 255.0  # type: ignore[union-attr]
+    f1 = mx.sigmoid(model.rgb_1(x)) * 255.0  # type: ignore[union-attr]
+    trace["rgb_0"] = _mlx_nhwc_to_nchw_numpy(f0)
+    trace["rgb_1"] = _mlx_nhwc_to_nchw_numpy(f1)
+    pair = mx.stack([f0, f1], axis=1)  # type: ignore[union-attr]
+    trace["output"] = _mlx_n2hwc_to_n2chw_numpy(pair)
+    return trace
+
+
+def _torch_tensor_to_numpy(value: Any) -> np.ndarray:
+    return value.detach().cpu().numpy().astype(np.float32, copy=True)
+
+
+def _mlx_nchw_to_numpy(value: Any) -> np.ndarray:
+    mx.eval(value)  # type: ignore[union-attr]
+    return np.asarray(value, dtype=np.float32).copy()
+
+
+def _mlx_nhwc_to_nchw_numpy(value: Any) -> np.ndarray:
+    mx.eval(value)  # type: ignore[union-attr]
+    return np.transpose(np.asarray(value, dtype=np.float32), (0, 3, 1, 2)).copy()
+
+
+def _mlx_n2hwc_to_n2chw_numpy(value: Any) -> np.ndarray:
+    mx.eval(value)  # type: ignore[union-attr]
+    return np.transpose(np.asarray(value, dtype=np.float32), (0, 1, 4, 2, 3)).copy()
+
+
+def _decoder_trace_rows(
+    *,
+    torch_trace: dict[str, np.ndarray],
+    mlx_trace: dict[str, np.ndarray],
+    cliff_threshold: float,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for index, name in enumerate(torch_trace):
+        lhs = torch_trace[name]
+        rhs = mlx_trace.get(name)
+        if rhs is None:
+            rows.append(
+                {
+                    "index": index,
+                    "name": name,
+                    "present_in_torch": True,
+                    "present_in_mlx": False,
+                    "shape_match": False,
+                    "exceeds_cliff_threshold": True,
+                    "blockers": ["missing_mlx_trace"],
+                }
+            )
+            continue
+        summary = _trace_array_delta_summary(lhs, rhs)
+        rows.append(
+            {
+                "index": index,
+                "name": name,
+                **summary,
+                "exceeds_cliff_threshold": (
+                    summary.get("max_abs_delta") is None
+                    or float(summary["max_abs_delta"]) > cliff_threshold
+                ),
+            }
+        )
+    for name in mlx_trace:
+        if name not in torch_trace:
+            rows.append(
+                {
+                    "index": len(rows),
+                    "name": name,
+                    "present_in_torch": False,
+                    "present_in_mlx": True,
+                    "shape_match": False,
+                    "exceeds_cliff_threshold": True,
+                    "blockers": ["missing_torch_trace"],
+                }
+            )
+    return rows
+
+
+def _trace_array_delta_summary(lhs_value: np.ndarray, rhs_value: np.ndarray) -> dict[str, Any]:
+    lhs = np.asarray(lhs_value, dtype=np.float32)
+    rhs = np.asarray(rhs_value, dtype=np.float32)
+    if lhs.shape != rhs.shape:
+        return {
+            "present_in_torch": True,
+            "present_in_mlx": True,
+            "shape_match": False,
+            "torch_shape": [int(dim) for dim in lhs.shape],
+            "mlx_shape": [int(dim) for dim in rhs.shape],
+            "max_abs_delta": None,
+            "mean_abs_delta": None,
+            "rms_delta": None,
+            "p99_abs_delta": None,
+            "blockers": ["shape_mismatch"],
+        }
+    diff = np.abs(lhs - rhs).astype(np.float64, copy=False)
+    return {
+        "present_in_torch": True,
+        "present_in_mlx": True,
+        "shape_match": True,
+        "torch_shape": [int(dim) for dim in lhs.shape],
+        "mlx_shape": [int(dim) for dim in rhs.shape],
+        "max_abs_delta": float(np.max(diff)) if diff.size else 0.0,
+        "mean_abs_delta": float(np.mean(diff)) if diff.size else 0.0,
+        "rms_delta": float(np.sqrt(np.mean(diff * diff))) if diff.size else 0.0,
+        "p99_abs_delta": float(np.quantile(diff, 0.99)) if diff.size else 0.0,
+        "blockers": [],
+    }
+
+
 def write_pr95_public_archive_pytorch_export_forward_parity(
     packet: Pr95PublicArchivePacket,
     torch_decoder_cls: Any,
@@ -2058,6 +2338,7 @@ __all__ = [
     "PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY",
     "PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS",
     "PR95_STAGE_MODULES",
+    "PUBLIC_ARCHIVE_DECODER_TRACE_SCHEMA",
     "PUBLIC_ARCHIVE_FORWARD_PARITY_SCHEMA",
     "PUBLIC_ARCHIVE_PACKET_SCHEMA",
     "SMOKE_ARCHIVE_SCHEMA",
@@ -2085,6 +2366,7 @@ __all__ = [
     "require_mlx",
     "run_pr95_mlx_synthetic_timing_smoke",
     "stage_smoke_config",
+    "trace_pr95_public_archive_decoder_with_pytorch",
     "write_pr95_mlx_byte_closed_smoke_archive",
     "write_pr95_public_archive_pytorch_export_forward_parity",
     "write_pr95_public_archive_zip",

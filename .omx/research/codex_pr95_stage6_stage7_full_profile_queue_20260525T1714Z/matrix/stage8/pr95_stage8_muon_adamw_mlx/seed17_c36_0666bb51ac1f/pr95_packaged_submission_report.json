@@ -1,0 +1,69 @@
+{
+  "archive_manifest_path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_packaged_submission/archive_manifest.json",
+  "archive_member_bytes": 230237,
+  "archive_member_compress_type": 0,
+  "archive_member_name": "0.bin",
+  "archive_member_sha256": "cac54691107b17d71401c4edcffeccad3a0027f0f6be49fbb3905f77a21c349c",
+  "archive_zip_bytes": 230345,
+  "archive_zip_path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_packaged_submission/archive.zip",
+  "archive_zip_sha256": "6414614bd8f1ecbeb4c12b6f92ad670ea5a138941053ca7fa7d543c8e400e5f2",
+  "axis_tag": "[macOS-CPU advisory]",
+  "canonical_provenance": {
+    "canonical_equation_id": "pr95_mlx_pytorch_to_byte_closed_contest_archive_pipeline_v1",
+    "canonical_helper": "tac.local_acceleration.pr95_hnerv_mlx.write_pr95_public_archive_zip",
+    "source_pr": 95,
+    "submission": "hnerv_muon"
+  },
+  "decoder_state_dict_tensor_count": 28,
+  "evidence_grade": "predicted",
+  "exact_readiness_refusal": {
+    "blockers": [
+      "pr95_mlx_byte_closed_archive_is_packaged_but_not_runtime_consumed",
+      "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+      "requires_paired_contest_cpu_and_cuda_auth_eval_before_score_claim"
+    ],
+    "ready": false,
+    "schema": "exact_readiness_refusal.v1"
+  },
+  "generated_utc": "2026-05-25T17:59:46.431487+00:00",
+  "input_pt_bytes": 924847,
+  "input_pt_path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_pytorch_state_dict.pt",
+  "input_pt_sha256": "f20ec8d5dc1f32d11ec1e50bf49786ba680128ac10e1f369825b668148b5ca9b",
+  "latent_shape": [
+    1,
+    28
+  ],
+  "output_submission_dir": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_packaged_submission",
+  "parsed_latent_shape_after_roundtrip": [
+    1,
+    28
+  ],
+  "parsed_meta_after_roundtrip": {
+    "base_channels": 36,
+    "eval_size": [
+      384,
+      512
+    ],
+    "latent_dim": 28,
+    "n_pairs": 1
+  },
+  "parsed_state_dict_tensor_count_after_roundtrip": 28,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "runtime_files_emitted": {
+    "README.md": "c07145ddc90b2409c899edf28c0e77efa8afff4eed23d7f8d81ee3cfb80bd860",
+    "inflate.py": "2433e3f18deeb82b95560ba0846a96ad5ffb61a06ee87300ca787d50799d31f9",
+    "inflate.sh": "2b7a299ccc07e89eae45b27f1b95c7eb3e8466161f04f7d776d615c83059da77",
+    "vendored_src_codec.py": "63d3ffd03c514fa5841fbf75a3eac87cc76ed40f68e0d68db50cd7cda517266f",
+    "vendored_src_model.py": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+  },
+  "schema_version": "pr95_mlx_pytorch_state_dict_to_contest_archive.v1",
+  "score_claim": false,
+  "source_archive_member_sha256": "cac54691107b17d71401c4edcffeccad3a0027f0f6be49fbb3905f77a21c349c",
+  "source_archive_zip_path": ".omx/research/codex_pr95_stage6_stage7_full_profile_queue_20260525T1714Z/matrix/stage8/pr95_stage8_muon_adamw_mlx/seed17_c36_0666bb51ac1f/pr95_public_archive.zip",
+  "source_archive_zip_sha256": "6414614bd8f1ecbeb4c12b6f92ad670ea5a138941053ca7fa7d543c8e400e5f2",
+  "source_submission_root": "/Users/adpena/Projects/pact/experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon",
+  "tool": "tools/package_pr95_mlx_pytorch_state_dict_to_contest_archive.py"
+}

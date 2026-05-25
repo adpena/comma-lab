@@ -17,14 +17,12 @@ Tests cover:
 
 from __future__ import annotations
 
-from dataclasses import FrozenInstanceError
 import json
+from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 import numpy as np
 import pytest
-
-REPO_ROOT = Path(__file__).resolve().parents[3]
 
 from tac.local_acceleration.deterministic_primitives import (
     PR95_HNERV_DECODER_PER_OP_DRIFT_ANCHORS,
@@ -36,6 +34,7 @@ from tac.local_acceleration.deterministic_primitives import (
     validate_mlx_pytorch_parity_within_tolerance,
 )
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 # ---------------------------------------------------------------------------
 # DriftClassification enum
@@ -187,8 +186,8 @@ class TestValidateMlxPytorchParityWithinTolerance:
         assert att.expected_class == DriftClassification.NUMERIC_TOLERANCE_INHERENT
         assert att.attested_within_band is True
 
-    def test_framework_different_explicit_band_is_inf(self) -> None:
-        # FRAMEWORK_DIFFERENT explicit override accepts any drift.
+    def test_framework_different_explicit_refusal_never_attests(self) -> None:
+        # FRAMEWORK_DIFFERENT is a refusal class, not an infinite tolerance band.
         a = np.zeros(10, dtype=np.float32)
         b = np.full(10, 1.0, dtype=np.float32)
         att = validate_mlx_pytorch_parity_within_tolerance(
@@ -197,7 +196,8 @@ class TestValidateMlxPytorchParityWithinTolerance:
             pytorch_output=b,
             expected_class=DriftClassification.FRAMEWORK_DIFFERENT,
         )
-        assert att.attested_within_band is True
+        assert att.expected_class == DriftClassification.FRAMEWORK_DIFFERENT
+        assert att.attested_within_band is False
 
 
 # ---------------------------------------------------------------------------

@@ -108,10 +108,10 @@ import numpy as np
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 
 __all__ = [
-    "DriftAttestation",
-    "DriftClassification",
     "PR95_HNERV_DECODER_CANONICAL_DRIFT_BANDS",
     "PR95_HNERV_DECODER_PER_OP_DRIFT_ANCHORS",
+    "DriftAttestation",
+    "DriftClassification",
     "canonical_drift_bands_for_pr95_hnerv_decoder",
     "classify_operation_drift",
     "portability_attestation_for_state_dict",
@@ -427,13 +427,15 @@ def validate_mlx_pytorch_parity_within_tolerance(
             attested_max_abs_band = _NUMERIC_TOLERANCE_MAX_ABS
             attested_mean_abs_band = _NUMERIC_TOLERANCE_MEAN_ABS
         else:
-            # FRAMEWORK_DIFFERENT has no canonical band - the caller is
-            # explicitly accepting any drift.
-            attested_max_abs_band = float("inf")
-            attested_mean_abs_band = float("inf")
+            # FRAMEWORK_DIFFERENT is a refusal class, not a wider tolerance
+            # band. Accepting it here would let arbitrary parity drift become
+            # an attested success.
+            attested_max_abs_band = 0.0
+            attested_mean_abs_band = 0.0
 
     attested_within_band = (
-        measured_max_abs <= attested_max_abs_band
+        expected_class != DriftClassification.FRAMEWORK_DIFFERENT
+        and measured_max_abs <= attested_max_abs_band
         and measured_mean_abs <= attested_mean_abs_band
     )
 
