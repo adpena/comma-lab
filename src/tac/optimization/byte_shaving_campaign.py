@@ -1540,7 +1540,16 @@ def _combo_ladder(
                     and str(selection.get("target_kind") or "")
                     in INVERSE_ACTION_COMPILER_TARGET_DEFAULTS
                 )
-                if len(candidate_state) >= 2 or singleton_compiled_inverse_action:
+                singleton_materializer_registry_unit = (
+                    len(candidate_state) == 1
+                    and isinstance(selection.get("materializer_registry_signal"), Mapping)
+                    and str(selection.get("target_kind") or "").strip()
+                )
+                if (
+                    len(candidate_state) >= 2
+                    or singleton_compiled_inverse_action
+                    or singleton_materializer_registry_unit
+                ):
                     key = tuple(
                         sorted(
                             (str(item["unit_id"]), str(item["operation_id"]))

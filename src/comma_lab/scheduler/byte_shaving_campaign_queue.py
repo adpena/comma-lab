@@ -3847,8 +3847,6 @@ def _materializer_exact_readiness_followup_steps(
         HARVEST_MATERIALIZER_TOOL,
         "--repo-root",
         repo_root.as_posix(),
-        "--work-queue",
-        _repo_rel(source_work_queue_path, repo_root),
         "--state",
         _repo_rel(source_state_path, repo_root),
         "--queue-id",
@@ -3871,6 +3869,12 @@ def _materializer_exact_readiness_followup_steps(
             ]
         )
     else:
+        harvest_command.extend(
+            [
+                "--work-queue",
+                _repo_rel(source_work_queue_path, repo_root),
+            ]
+        )
         harvest_command.extend(
             [
                 "--chain-manifest",

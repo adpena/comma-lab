@@ -1065,6 +1065,65 @@ def test_cli_seeds_many_materializer_registry_portfolio_into_campaign_queue(
     assert materialization["ready_for_exact_eval_dispatch"] is False
 
 
+def test_single_materializer_registry_unit_gets_queueable_combination(
+    tmp_path: Path,
+) -> None:
+    surface_out = tmp_path / "surface.json"
+    plan_out = tmp_path / "plan.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--include-materializer-registry-portfolio",
+            "--materializer-registry-target-kind",
+            "packet_member_recompress_v1",
+            "--output",
+            str(surface_out),
+            "--repo-root",
+            str(tmp_path),
+            "--campaign-id",
+            "fixture_single_materializer_surface",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        [
+            sys.executable,
+            str(PLAN_TOOL),
+            "--source",
+            str(surface_out),
+            "--output",
+            str(plan_out),
+            "--repo-root",
+            str(tmp_path),
+            "--campaign-id",
+            "fixture_single_materializer_surface",
+            "--max-k",
+            "1",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    plan = json.loads(plan_out.read_text(encoding="utf-8"))
+    assert plan["combination_ladder"][0]["unit_count"] == 1
+    operation = plan["combination_ladder"][0]["selected_operations"][0]
+    assert operation["target_kind"] == "packet_member_recompress_v1"
+    assert operation["materializer"] == "packet_member_recompress_adapter"
+    assert operation["materializer_registry_signal"]["target_kind"] == (
+        "packet_member_recompress_v1"
+    )
+    assert plan["packet_ir_operation_sets"][0]["operations"][0]["target_kind"] == (
+        "packet_member_recompress_v1"
+    )
+    assert plan["score_claim"] is False
+    assert plan["ready_for_exact_eval_dispatch"] is False
+
+
 def test_cli_can_build_surface_from_scorer_response_only(tmp_path: Path) -> None:
     scorer = tmp_path / "scorer.json"
     output = tmp_path / "surface.json"

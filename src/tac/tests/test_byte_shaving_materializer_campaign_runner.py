@@ -4354,6 +4354,93 @@ def test_materializer_campaign_runner_generates_plan_from_high_level_sources(
     assert str(plan_path) in queue_command
 
 
+def test_materializer_campaign_runner_plans_pure_signal_surface_directly(
+    tmp_path: Path,
+) -> None:
+    surface = tmp_path / "byte_shaving_signal_surface.json"
+    surface.write_text(
+        json.dumps(
+            {
+                "schema": SIGNAL_SURFACE_SCHEMA,
+                "campaign_id": "pure_surface_fixture",
+                "candidate_id": "packet_fixture_seed",
+                "lane_id": "lane_pure_surface_fixture",
+                "units": [
+                    {
+                        "unit_id": "packet_payload_member",
+                        "unit_kind": "packet_member",
+                        "candidate_saved_bytes": 1,
+                        "predicted_quality_score_cost": 0.0,
+                        "confidence": 0.8,
+                        "operations": [
+                            {
+                                "operation_id": "recompress_payload_member",
+                                "operation_family": "member_recompress",
+                                "target_kind": runner.PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                            }
+                        ],
+                    }
+                ],
+                **_false_authority(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    args = runner.parse_args(
+        [
+            "--byte-shaving-signal-surface",
+            str(surface),
+            "--run-dir",
+            str(tmp_path / "campaign"),
+            "--campaign-id",
+            "pure_surface_campaign",
+            "--campaign-plan-max-k",
+            "1",
+            "--queue-id",
+            "pure_surface_materializer_queue",
+        ]
+    )
+
+    assert runner._pure_signal_surface_plan_source(args) == surface
+
+    command = runner._build_signal_surface_campaign_plan_command(
+        args,
+        signal_surface_path=surface,
+        run_dir=tmp_path / "campaign",
+    )
+
+    assert command[:2] == [
+        runner.sys.executable,
+        "tools/plan_byte_shaving_campaign.py",
+    ]
+    assert "--from-inverse-action-functional" not in command
+    assert "--source" in command
+    assert str(surface) in command
+    assert "--max-k" in command
+    assert "1" in command
+
+
+def test_materializer_campaign_runner_keeps_mixed_sources_on_action_functional_path(
+    tmp_path: Path,
+) -> None:
+    surface = tmp_path / "byte_shaving_signal_surface.json"
+    scorer = tmp_path / "scorer_response.json"
+    surface.write_text("{}", encoding="utf-8")
+    scorer.write_text("{}", encoding="utf-8")
+    args = runner.parse_args(
+        [
+            "--byte-shaving-signal-surface",
+            str(surface),
+            "--scorer-response",
+            str(scorer),
+            "--run-dir",
+            str(tmp_path / "campaign"),
+        ]
+    )
+
+    assert runner._pure_signal_surface_plan_source(args) is None
+
+
 def test_materializer_campaign_runner_treats_mlx_acquisition_batch_as_action_source(
     tmp_path: Path,
 ) -> None:

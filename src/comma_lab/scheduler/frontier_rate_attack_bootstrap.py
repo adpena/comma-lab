@@ -25,6 +25,9 @@ from tac.analysis.hnerv_packet_sections import (
     validate_packet_section_manifest,
 )
 from tac.optimization.byte_shaving_campaign import FALSE_AUTHORITY
+from tac.optimization.family_agnostic_materializers import (
+    RENDERER_PAYLOAD_DFL1_MEMBER_NAMES,
+)
 from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
     ordered_unique,
@@ -41,14 +44,19 @@ from .byte_shaving_campaign_queue import (
 )
 from .byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+    RENDERER_PAYLOAD_DFL1_TARGET_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
     registry_manifest,
 )
 from .experiment_queue import ExperimentQueueError, normalize_queue_definition
 
 BOOTSTRAP_SCHEMA = "frontier_final_rate_attack_bootstrap.v1"
+DERIVED_PACKET_MEMBER_MERGE_CONTRACT_SCHEMA = (
+    "frontier_rate_attack_derived_packet_member_merge_contract.v1"
+)
 DERIVED_SECTION_MANIFEST_SCHEMA = "frontier_rate_attack_derived_section_manifest.v1"
 DERIVED_SECTION_MANIFEST_BATCH_SCHEMA = "frontier_rate_attack_derived_section_manifest_batch.v1"
 FRONTIER_ARCHIVE_RESOLUTION_SCHEMA = "frontier_archive_resolution.v1"
@@ -57,6 +65,8 @@ DEFAULT_FRONTIER_POINTER = ".omx/state/canonical_frontier_pointer.json"
 DEFAULT_EXECUTABLE_TARGET_KINDS = (
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+    PACKET_MEMBER_MERGE_TARGET_KIND,
+    RENDERER_PAYLOAD_DFL1_TARGET_KIND,
 )
 DEFAULT_OPTIONAL_TARGET_KINDS = (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
@@ -369,6 +379,168 @@ def derive_archive_section_recode_manifests(
     )
 
 
+def _record_zip_member_rows(record: Mapping[str, Any]) -> list[dict[str, Any]]:
+    rows = record.get("zip_members")
+    if not isinstance(rows, list):
+        return []
+    return [dict(row) for row in rows if isinstance(row, Mapping)]
+
+
+def _record_zip_member_names(record: Mapping[str, Any]) -> list[str]:
+    return [
+        str(row["name"])
+        for row in _record_zip_member_rows(record)
+        if isinstance(row.get("name"), str) and str(row.get("name"))
+    ]
+
+
+def _packet_member_merge_record_blockers(
+    record: Mapping[str, Any],
+    *,
+    merged_member_name: str | None,
+) -> list[str]:
+    names = _record_zip_member_names(record)
+    blockers: list[str] = []
+    if len(names) < 2:
+        blockers.append("packet_member_merge_requires_at_least_two_members")
+    output_member = (merged_member_name or "__packet_member_merge_v1.bin").strip()
+    if not output_member:
+        blockers.append("packet_member_merge_merged_member_name_empty")
+    elif output_member in set(names):
+        blockers.append("packet_member_merge_merged_member_name_collides_with_source_member")
+    return blockers
+
+
+def _renderer_payload_dfl1_record_blockers(
+    record: Mapping[str, Any],
+    *,
+    payload_member_name: str,
+) -> list[str]:
+    rows = _record_zip_member_rows(record)
+    by_name = {str(row.get("name")): row for row in rows if isinstance(row.get("name"), str)}
+    names = set(by_name)
+    blockers: list[str] = []
+    missing = [
+        name for name in RENDERER_PAYLOAD_DFL1_MEMBER_NAMES if name not in names
+    ]
+    if missing:
+        blockers.append("renderer_payload_dfl1_missing_members:" + ",".join(missing))
+    unsupported = [
+        name
+        for name in RENDERER_PAYLOAD_DFL1_MEMBER_NAMES
+        if name in by_name
+        and int(by_name[name].get("compress_type", -1)) != zipfile.ZIP_DEFLATED
+    ]
+    if unsupported:
+        blockers.append(
+            "renderer_payload_dfl1_requires_deflated_members:" + ",".join(unsupported)
+        )
+    output_member = str(payload_member_name or "").strip() or "p"
+    if not output_member or "/" in output_member or output_member.startswith("."):
+        blockers.append("renderer_payload_dfl1_payload_member_name_unsafe")
+    elif output_member in names:
+        blockers.append("renderer_payload_dfl1_payload_member_name_collides_with_source_member")
+    return blockers
+
+
+def derive_packet_member_merge_contract(
+    *,
+    archive_records: Sequence[Mapping[str, Any]],
+    output_path: str | Path,
+    repo_root: str | Path,
+    merged_member_name: str | None = None,
+    zip_compression_methods: Sequence[str] = ("stored", "deflated"),
+    zip_compresslevels: Sequence[int] = (1, 6, 9),
+    allow_overwrite: bool = False,
+    min_free_bytes: int = 0,
+) -> dict[str, Any]:
+    """Write a shared all-member merge contract for archive-local sweeps."""
+
+    repo = Path(repo_root)
+    target = _resolve_path(output_path, repo_root=repo)
+    ready_labels: list[str] = []
+    rows: list[dict[str, Any]] = []
+    for index, record in enumerate(archive_records):
+        require_no_truthy_authority_fields(
+            record,
+            context=f"derive_packet_member_merge_contract.archive_records[{index}]",
+        )
+        label = str(record.get("label") or f"archive_{index}")
+        blockers = _packet_member_merge_record_blockers(
+            record,
+            merged_member_name=merged_member_name,
+        )
+        if not blockers:
+            ready_labels.append(label)
+        rows.append(
+            apply_proxy_evidence_boundary(
+                {
+                    "schema": "frontier_rate_attack_packet_member_merge_contract_archive_row.v1",
+                    "archive_label": label,
+                    "archive_sha256": record.get("sha256"),
+                    "zip_member_count": len(_record_zip_member_names(record)),
+                    "selected_member_names": _record_zip_member_names(record),
+                    "ready_for_materializer_target": not blockers,
+                    "blockers": ordered_unique(blockers),
+                    **FALSE_AUTHORITY,
+                },
+                dispatch_blockers=(
+                    ordered_unique(blockers)
+                    if blockers
+                    else ("packet_member_merge_contract_row_is_local_only",)
+                ),
+            )
+        )
+    contract: dict[str, Any] = {
+        "schema": DERIVED_PACKET_MEMBER_MERGE_CONTRACT_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "contract_kind": "packet_member_merge_all_members_local_sweep",
+        "member_selection": "all_members",
+        "all_members": True,
+        "receiver_contract_kind": "family_agnostic_packet_member_merge",
+        "cooperative_receiver_required": True,
+        "zip_compression_methods": list(ordered_unique(zip_compression_methods)),
+        "zip_compresslevels": [int(level) for level in zip_compresslevels],
+        "archive_rows": rows,
+        "ready_archive_labels": ready_labels,
+        "ready_archive_count": len(ready_labels),
+        "blockers": (
+            []
+            if ready_labels
+            else ["packet_member_merge_contract_has_no_ready_archives"]
+        ),
+        **FALSE_AUTHORITY,
+    }
+    if merged_member_name is not None:
+        contract["merged_member_name"] = merged_member_name
+    write = write_json_artifact(
+        target,
+        contract,
+        allow_overwrite=allow_overwrite,
+        min_free_bytes=min_free_bytes,
+    )
+    return apply_proxy_evidence_boundary(
+        {
+            "schema": DERIVED_PACKET_MEMBER_MERGE_CONTRACT_SCHEMA,
+            "generated_at_utc": contract["generated_at_utc"],
+            "merge_contract_path": _repo_rel(target, repo),
+            "merge_contract_sha256": write.sha256,
+            "ready_archive_labels": ready_labels,
+            "ready_archive_count": len(ready_labels),
+            "archive_count": len(archive_records),
+            "rows": rows,
+            "blockers": contract["blockers"],
+            "ready_for_materializer_target": bool(ready_labels),
+            **FALSE_AUTHORITY,
+        },
+        dispatch_blockers=(
+            ("derived_packet_member_merge_contract_is_local_materializer_input_only",)
+            if ready_labels
+            else tuple(contract["blockers"])
+        ),
+    )
+
+
 def archive_record(
     *,
     label: str,
@@ -669,6 +841,10 @@ def _target_context(
     member_name: str | None,
     section_manifest: str | None,
     section_names: Sequence[str],
+    merge_contract: str | None,
+    merged_member_name: str | None,
+    payload_member_name: str,
+    full_frame_inflate_parity_proof: str | None,
     tensor_manifest: str | None,
     factorization_contract: str | None,
     tensor_factorize_rank: int | None,
@@ -702,6 +878,36 @@ def _target_context(
         else:
             context["all_members"] = True
             context["member_selection"] = "all_members"
+    elif target_kind == PACKET_MEMBER_MERGE_TARGET_KIND:
+        merge_blockers: list[str] = []
+        for record in archive_records:
+            merge_blockers.extend(
+                _packet_member_merge_record_blockers(
+                    record,
+                    merged_member_name=merged_member_name,
+                )
+            )
+        blockers.extend(ordered_unique(merge_blockers))
+        context["all_members"] = True
+        context["member_selection"] = "all_members"
+        if merge_contract is not None:
+            context["merge_contract"] = merge_contract
+        if merged_member_name is not None:
+            context["merged_member_name"] = merged_member_name
+    elif target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND:
+        dfl1_blockers: list[str] = []
+        for record in archive_records:
+            dfl1_blockers.extend(
+                _renderer_payload_dfl1_record_blockers(
+                    record,
+                    payload_member_name=payload_member_name,
+                )
+            )
+        blockers.extend(ordered_unique(dfl1_blockers))
+        context["member_names"] = list(RENDERER_PAYLOAD_DFL1_MEMBER_NAMES)
+        context["payload_member_name"] = payload_member_name
+        if full_frame_inflate_parity_proof is not None:
+            context["full_frame_inflate_parity_proof"] = full_frame_inflate_parity_proof
     elif target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND:
         if section_manifest is None:
             blockers.append("archive_section_entropy_recode_requires_section_manifest")
@@ -737,6 +943,10 @@ def build_frontier_rate_attack_payloads(
     section_manifest_by_archive_label: Mapping[str, str] | None = None,
     section_names: Sequence[str] = (),
     section_names_by_archive_label: Mapping[str, Sequence[str]] | None = None,
+    merge_contract: str | None = None,
+    merged_member_name: str | None = None,
+    payload_member_name: str = "p",
+    full_frame_inflate_parity_proof: str | None = None,
     tensor_manifest: str | None = None,
     factorization_contract: str | None = None,
     tensor_factorize_rank: int | None = None,
@@ -848,6 +1058,79 @@ def build_frontier_rate_attack_payloads(
 
     for target_kind in requested_targets:
         adapter = _adapter_by_target_kind(target_kind)
+        if target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND and shared_member is None:
+            for record in checked_records:
+                label = str(record["label"])
+                member_names = _record_zip_member_names(record)
+                if not member_names:
+                    target_omissions.append(
+                        apply_proxy_evidence_boundary(
+                            {
+                                "schema": "frontier_rate_attack_target_omission.v1",
+                                "target_kind": target_kind,
+                                "archive_label": label,
+                                "materializer_id": adapter.get("materializer_id"),
+                                "blockers": ["packet_member_recompress_archive_has_no_members"],
+                                **FALSE_AUTHORITY,
+                            },
+                            dispatch_blockers=("packet_member_recompress_archive_has_no_members",),
+                        )
+                    )
+                    continue
+                for member in member_names:
+                    context, per_member_blockers = _target_context(
+                        target_kind=target_kind,
+                        archive_records=[record],
+                        output_root=(
+                            output_root
+                            / "per_archive"
+                            / _clean_id(label)
+                            / "per_member"
+                            / _clean_id(member, fallback="member")
+                        ),
+                        member_name=member,
+                        section_manifest=section_manifest,
+                        section_names=section_names,
+                        merge_contract=merge_contract,
+                        merged_member_name=merged_member_name,
+                        payload_member_name=payload_member_name,
+                        full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
+                        tensor_manifest=tensor_manifest,
+                        factorization_contract=factorization_contract,
+                        tensor_factorize_rank=tensor_factorize_rank,
+                        zip_compression_methods=zip_compression_methods,
+                        zip_compresslevels=zip_compresslevels,
+                        min_free_bytes=min_free_bytes,
+                        allow_overwrite=allow_overwrite,
+                    )
+                    if per_member_blockers:
+                        target_omissions.append(
+                            apply_proxy_evidence_boundary(
+                                {
+                                    "schema": "frontier_rate_attack_target_omission.v1",
+                                    "target_kind": target_kind,
+                                    "archive_label": label,
+                                    "member_name": member,
+                                    "materializer_id": adapter.get("materializer_id"),
+                                    "blockers": ordered_unique(per_member_blockers),
+                                    **FALSE_AUTHORITY,
+                                },
+                                dispatch_blockers=per_member_blockers,
+                            )
+                        )
+                        continue
+                    assert context is not None
+                    append_target_row(
+                        target_kind=target_kind,
+                        adapter=adapter,
+                        backlog_key=(
+                            f"frontier_rate_attack:{target_kind}:{label}:"
+                            f"{_clean_id(member, fallback='member')}"
+                        ),
+                        context=context,
+                        source_records=[record],
+                    )
+            continue
         if (
             target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND
             and section_manifest is None
@@ -875,6 +1158,10 @@ def build_frontier_rate_attack_payloads(
                         member_name=shared_member,
                         section_manifest=manifest_path,
                         section_names=per_archive_section_names,
+                        merge_contract=merge_contract,
+                        merged_member_name=merged_member_name,
+                        payload_member_name=payload_member_name,
+                        full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
                         tensor_manifest=tensor_manifest,
                         factorization_contract=factorization_contract,
                         tensor_factorize_rank=tensor_factorize_rank,
@@ -883,6 +1170,98 @@ def build_frontier_rate_attack_payloads(
                         min_free_bytes=min_free_bytes,
                         allow_overwrite=allow_overwrite,
                     )
+                if per_archive_blockers:
+                    target_omissions.append(
+                        apply_proxy_evidence_boundary(
+                            {
+                                "schema": "frontier_rate_attack_target_omission.v1",
+                                "target_kind": target_kind,
+                                "archive_label": label,
+                                "materializer_id": adapter.get("materializer_id"),
+                                "blockers": ordered_unique(per_archive_blockers),
+                                **FALSE_AUTHORITY,
+                            },
+                            dispatch_blockers=per_archive_blockers,
+                        )
+                    )
+                    continue
+                assert context is not None
+                append_target_row(
+                    target_kind=target_kind,
+                    adapter=adapter,
+                    backlog_key=f"frontier_rate_attack:{target_kind}:{label}",
+                    context=context,
+                    source_records=[record],
+                )
+            continue
+        if target_kind == PACKET_MEMBER_MERGE_TARGET_KIND:
+            for record in checked_records:
+                label = str(record["label"])
+                context, per_archive_blockers = _target_context(
+                    target_kind=target_kind,
+                    archive_records=[record],
+                    output_root=output_root / "per_archive" / _clean_id(label),
+                    member_name=shared_member,
+                    section_manifest=section_manifest,
+                    section_names=section_names,
+                    merge_contract=merge_contract,
+                    merged_member_name=merged_member_name,
+                    payload_member_name=payload_member_name,
+                    full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
+                    tensor_manifest=tensor_manifest,
+                    factorization_contract=factorization_contract,
+                    tensor_factorize_rank=tensor_factorize_rank,
+                    zip_compression_methods=zip_compression_methods,
+                    zip_compresslevels=zip_compresslevels,
+                    min_free_bytes=min_free_bytes,
+                    allow_overwrite=allow_overwrite,
+                )
+                if per_archive_blockers:
+                    target_omissions.append(
+                        apply_proxy_evidence_boundary(
+                            {
+                                "schema": "frontier_rate_attack_target_omission.v1",
+                                "target_kind": target_kind,
+                                "archive_label": label,
+                                "materializer_id": adapter.get("materializer_id"),
+                                "blockers": ordered_unique(per_archive_blockers),
+                                **FALSE_AUTHORITY,
+                            },
+                            dispatch_blockers=per_archive_blockers,
+                        )
+                    )
+                    continue
+                assert context is not None
+                append_target_row(
+                    target_kind=target_kind,
+                    adapter=adapter,
+                    backlog_key=f"frontier_rate_attack:{target_kind}:{label}",
+                    context=context,
+                    source_records=[record],
+                )
+            continue
+        if target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND:
+            for record in checked_records:
+                label = str(record["label"])
+                context, per_archive_blockers = _target_context(
+                    target_kind=target_kind,
+                    archive_records=[record],
+                    output_root=output_root / "per_archive" / _clean_id(label),
+                    member_name=shared_member,
+                    section_manifest=section_manifest,
+                    section_names=section_names,
+                    merge_contract=merge_contract,
+                    merged_member_name=merged_member_name,
+                    payload_member_name=payload_member_name,
+                    full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
+                    tensor_manifest=tensor_manifest,
+                    factorization_contract=factorization_contract,
+                    tensor_factorize_rank=tensor_factorize_rank,
+                    zip_compression_methods=zip_compression_methods,
+                    zip_compresslevels=zip_compresslevels,
+                    min_free_bytes=min_free_bytes,
+                    allow_overwrite=allow_overwrite,
+                )
                 if per_archive_blockers:
                     target_omissions.append(
                         apply_proxy_evidence_boundary(
@@ -937,6 +1316,10 @@ def build_frontier_rate_attack_payloads(
             member_name=shared_member,
             section_manifest=section_manifest,
             section_names=section_names,
+            merge_contract=merge_contract,
+            merged_member_name=merged_member_name,
+            payload_member_name=payload_member_name,
+            full_frame_inflate_parity_proof=full_frame_inflate_parity_proof,
             tensor_manifest=tensor_manifest,
             factorization_contract=factorization_contract,
             tensor_factorize_rank=tensor_factorize_rank,
@@ -1092,6 +1475,7 @@ __all__ = [
     "DEFAULT_EXECUTABLE_TARGET_KINDS",
     "DEFAULT_FRONTIER_POINTER",
     "DEFAULT_OPTIONAL_TARGET_KINDS",
+    "DERIVED_PACKET_MEMBER_MERGE_CONTRACT_SCHEMA",
     "DERIVED_SECTION_MANIFEST_BATCH_SCHEMA",
     "DERIVED_SECTION_MANIFEST_SCHEMA",
     "FRONTIER_ARCHIVE_RECORD_SCHEMA",
@@ -1101,6 +1485,7 @@ __all__ = [
     "build_frontier_rate_attack_payloads",
     "derive_archive_section_recode_manifest",
     "derive_archive_section_recode_manifests",
+    "derive_packet_member_merge_contract",
     "parse_archive_spec",
     "resolve_current_frontier_archive",
 ]

@@ -4202,6 +4202,64 @@ def _build_campaign_plan_command(
     return command
 
 
+def _pure_signal_surface_plan_source(args: argparse.Namespace) -> Path | None:
+    """Return a direct plan source for pure materializer/signal-surface runs.
+
+    Mixed scorer-response/acquisition/feedback runs intentionally pass through
+    the inverse-action functional. A pure byte-shaving signal surface is already
+    a concrete materializer planning surface, so routing it through the
+    water-bucket selector can erase executable singleton registry units.
+    """
+
+    if len(args.byte_shaving_signal_surface) != 1:
+        return None
+    if any(
+        getattr(args, name)
+        for name in (
+            "scorer_response",
+            "inverse_scorer_surface",
+            "byte_shaving_campaign_plan",
+            "mlx_acquisition_batch",
+            "mlx_effective_spend_triage_selection",
+            "atom",
+            "observation",
+            "materializer_chain_manifest",
+            "exact_auth_calibration_packet",
+            "exact_auth_calibration_packet_root",
+            "queue_performance_summary",
+        )
+    ):
+        return None
+    return _resolve(args.byte_shaving_signal_surface[0])
+
+
+def _build_signal_surface_campaign_plan_command(
+    args: argparse.Namespace,
+    *,
+    signal_surface_path: Path,
+    run_dir: Path,
+) -> list[str]:
+    plan_path = run_dir / "byte_shaving_campaign_plan.json"
+    md_path = run_dir / "byte_shaving_campaign_plan.md"
+    command = [
+        sys.executable,
+        "tools/plan_byte_shaving_campaign.py",
+        "--source",
+        _display_path(signal_surface_path),
+        "--campaign-id",
+        str(args.campaign_id),
+        "--output",
+        _display_path(plan_path),
+        "--md-out",
+        _display_path(md_path),
+        "--repo-root",
+        REPO_ROOT.as_posix(),
+    ]
+    if args.campaign_plan_max_k is not None:
+        command.extend(["--max-k", str(args.campaign_plan_max_k)])
+    return command
+
+
 def _build_queue_command(
     args: argparse.Namespace,
     *,
@@ -5413,30 +5471,42 @@ def main(argv: list[str] | None = None) -> int:
     generated_mlx_acquisition_batch_paths: list[Path] = []
     plan_path = _resolve(args.plan) if args.plan is not None else None
     if plan_path is None:
-        generated_action_functional_path = run_dir / "inverse_steganalysis_action_functional.json"
         generated_campaign_plan_path = run_dir / "byte_shaving_campaign_plan.json"
-        for output_path, command in _build_mlx_acquisition_batch_commands(
-            args,
-            run_dir=run_dir,
-        ):
-            commands.append(_run(command))
-            generated_mlx_acquisition_batch_paths.append(output_path)
-        action_result = _run(
-            _build_action_functional_command(
+        pure_signal_surface_path = _pure_signal_surface_plan_source(args)
+        if pure_signal_surface_path is not None:
+            commands.append(
+                _run(
+                    _build_signal_surface_campaign_plan_command(
+                        args,
+                        signal_surface_path=pure_signal_surface_path,
+                        run_dir=run_dir,
+                    )
+                )
+            )
+        else:
+            generated_action_functional_path = run_dir / "inverse_steganalysis_action_functional.json"
+            for output_path, command in _build_mlx_acquisition_batch_commands(
                 args,
                 run_dir=run_dir,
-                generated_mlx_acquisition_batches=generated_mlx_acquisition_batch_paths,
+            ):
+                commands.append(_run(command))
+                generated_mlx_acquisition_batch_paths.append(output_path)
+            action_result = _run(
+                _build_action_functional_command(
+                    args,
+                    run_dir=run_dir,
+                    generated_mlx_acquisition_batches=generated_mlx_acquisition_batch_paths,
+                )
             )
-        )
-        commands.append(action_result)
-        plan_result = _run(
-            _build_campaign_plan_command(
-                args,
-                action_functional_path=generated_action_functional_path,
-                run_dir=run_dir,
+            commands.append(action_result)
+            plan_result = _run(
+                _build_campaign_plan_command(
+                    args,
+                    action_functional_path=generated_action_functional_path,
+                    run_dir=run_dir,
+                )
             )
-        )
-        commands.append(plan_result)
+            commands.append(plan_result)
         plan_path = generated_campaign_plan_path
 
     generated_materializer_artifact_map_path = _write_generated_materializer_artifact_map(

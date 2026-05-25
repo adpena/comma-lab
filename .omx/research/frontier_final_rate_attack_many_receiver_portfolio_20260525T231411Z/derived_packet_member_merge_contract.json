@@ -1,0 +1,78 @@
+{
+  "archive_count": 1,
+  "blockers": [],
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "derived_packet_member_merge_contract_is_local_materializer_input_only"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "2026-05-25T23:14:12Z",
+  "gpu_launched": false,
+  "merge_contract_path": ".omx/research/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/derived_packet_member_merge_contracts/merge_contract.json",
+  "merge_contract_sha256": "a8123d0fa3a22c34e08b55625e1267336a3351d8ea02c6a9e6d43165aa219e4f",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_archive_count": 1,
+  "ready_archive_labels": [
+    "robust_current_correct"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_materializer_target": true,
+  "rows": [
+    {
+      "archive_label": "robust_current_correct",
+      "archive_sha256": "4dd46fed78ed064bc97c9b3205088e82838c03667394f7936c8ae8d20f9837ab",
+      "blockers": [],
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "packet_member_merge_contract_row_is_local_only"
+      ],
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_materializer_target": true,
+      "schema": "frontier_rate_attack_packet_member_merge_contract_archive_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_member_names": [
+        "renderer.bin",
+        "masks.mkv",
+        "optimized_poses.pt"
+      ],
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "zip_member_count": 3
+    }
+  ],
+  "schema": "frontier_rate_attack_derived_packet_member_merge_contract.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ]
+}

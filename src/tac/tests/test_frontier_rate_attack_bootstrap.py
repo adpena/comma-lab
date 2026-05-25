@@ -15,19 +15,26 @@ from comma_lab.scheduler.byte_shaving_campaign_queue import (
 )
 from comma_lab.scheduler.byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+    RENDERER_PAYLOAD_DFL1_TARGET_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
 )
 from comma_lab.scheduler.frontier_rate_attack_bootstrap import (
     BOOTSTRAP_SCHEMA,
+    DERIVED_PACKET_MEMBER_MERGE_CONTRACT_SCHEMA,
     DERIVED_SECTION_MANIFEST_BATCH_SCHEMA,
     FrontierRateAttackBootstrapError,
     archive_record,
     build_frontier_rate_attack_payloads,
     derive_archive_section_recode_manifests,
+    derive_packet_member_merge_contract,
     parse_archive_spec,
     resolve_current_frontier_archive,
+)
+from tac.optimization.family_agnostic_materializers import (
+    RENDERER_PAYLOAD_DFL1_MEMBER_NAMES,
 )
 from tac.repo_io import sha256_file
 
@@ -46,6 +53,15 @@ def _write_archive(path: Path, *, member_name: str = "renderer.bin") -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr(member_name, b"frontier-bytes")
+    return path
+
+
+def _write_robust_like_archive(path: Path) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("renderer.bin", b"renderer-payload" * 32)
+        archive.writestr("masks.mkv", b"mask-payload" * 24)
+        archive.writestr("optimized_poses.pt", b"pose-payload" * 16)
     return path
 
 
@@ -120,6 +136,158 @@ def test_frontier_bootstrap_builds_queue_with_experiment_metadata(tmp_path: Path
         assert metadata["exact_readiness_followup_requested"] is False
 
 
+def test_frontier_bootstrap_binds_merge_and_dfl1_contexts_per_archive(
+    tmp_path: Path,
+) -> None:
+    archive_path = _write_robust_like_archive(tmp_path / "archive.zip")
+    record = archive_record(
+        label="robust_current",
+        archive_path=archive_path,
+        repo_root=tmp_path,
+        source_kind="unit_test",
+    )
+    contract = derive_packet_member_merge_contract(
+        archive_records=[record],
+        output_path=tmp_path / "merge_contract.json",
+        repo_root=tmp_path,
+        zip_compression_methods=("stored", "deflated"),
+        zip_compresslevels=(1, 9),
+    )
+
+    payloads = build_frontier_rate_attack_payloads(
+        repo_root=tmp_path,
+        queue_id="frontier_final_rate_attack_receivers",
+        archive_records=[record],
+        results_root=tmp_path / "results",
+        target_kinds=(
+            PACKET_MEMBER_MERGE_TARGET_KIND,
+            RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+        ),
+        include_optional_target_blockers=False,
+        merge_contract=contract["merge_contract_path"],
+        include_exact_readiness_followup=True,
+        source_work_queue_path=tmp_path / "materializer_work_queue.json",
+    )
+
+    bootstrap = payloads["bootstrap"]
+    contexts = {
+        row["target_kind"]: row["context"]
+        for row in payloads["contexts"]["rows"]
+    }
+    assert contract["schema"] == DERIVED_PACKET_MEMBER_MERGE_CONTRACT_SCHEMA
+    assert contract["ready_archive_count"] == 1
+    assert bootstrap["executable_target_kinds"] == [
+        PACKET_MEMBER_MERGE_TARGET_KIND,
+        RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+    ]
+    merge_context = contexts[PACKET_MEMBER_MERGE_TARGET_KIND]
+    assert merge_context["sweep_archive_specs"] == [f"robust_current={record['path']}"]
+    assert merge_context["all_members"] is True
+    assert merge_context["member_selection"] == "all_members"
+    assert merge_context["merge_contract"] == contract["merge_contract_path"]
+    dfl1_context = contexts[RENDERER_PAYLOAD_DFL1_TARGET_KIND]
+    assert dfl1_context["member_names"] == list(RENDERER_PAYLOAD_DFL1_MEMBER_NAMES)
+    assert dfl1_context["payload_member_name"] == "p"
+    queue_path = tmp_path / "queue.json"
+    _write_json(queue_path, payloads["queue"])
+    validate = subprocess.run(
+        [
+            sys.executable,
+            "tools/experiment_queue.py",
+            "--queue",
+            str(queue_path),
+            "validate",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert validate.returncode == 0, validate.stderr
+
+
+def test_frontier_bootstrap_expands_recompress_across_multi_member_archives(
+    tmp_path: Path,
+) -> None:
+    archive_path = _write_robust_like_archive(tmp_path / "archive.zip")
+    record = archive_record(
+        label="robust_current",
+        archive_path=archive_path,
+        repo_root=tmp_path,
+        source_kind="unit_test",
+    )
+
+    payloads = build_frontier_rate_attack_payloads(
+        repo_root=tmp_path,
+        queue_id="frontier_final_rate_attack_recompress_all_members",
+        archive_records=[record],
+        results_root=tmp_path / "results",
+        target_kinds=(PACKET_MEMBER_RECOMPRESS_TARGET_KIND,),
+        include_optional_target_blockers=False,
+    )
+
+    assert payloads["bootstrap"]["executable_target_count"] == 3
+    assert payloads["bootstrap"]["executable_target_kinds"] == [
+        PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+    ]
+    contexts = [row["context"] for row in payloads["contexts"]["rows"]]
+    assert [context["member_name"] for context in contexts] == [
+        "renderer.bin",
+        "masks.mkv",
+        "optimized_poses.pt",
+    ]
+    assert all(
+        context["sweep_archive_specs"] == [f"robust_current={record['path']}"]
+        for context in contexts
+    )
+
+
+def test_frontier_bootstrap_omits_receiver_targets_per_archive_without_freezing_portfolio(
+    tmp_path: Path,
+) -> None:
+    archive_path = _write_archive(tmp_path / "archive.zip", member_name="x")
+    record = archive_record(
+        label="single_member",
+        archive_path=archive_path,
+        repo_root=tmp_path,
+        source_kind="unit_test",
+    )
+
+    payloads = build_frontier_rate_attack_payloads(
+        repo_root=tmp_path,
+        queue_id="frontier_final_rate_attack_receiver_omissions",
+        archive_records=[record],
+        results_root=tmp_path / "results",
+        target_kinds=(
+            PACKET_MEMBER_MERGE_TARGET_KIND,
+            RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+            PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+        ),
+        include_optional_target_blockers=False,
+    )
+
+    bootstrap = payloads["bootstrap"]
+    assert bootstrap["executable_target_kinds"] == [
+        PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND
+    ]
+    omissions = {
+        (row["target_kind"], row["archive_label"]): row
+        for row in bootstrap["target_omissions"]
+    }
+    assert (
+        "packet_member_merge_requires_at_least_two_members"
+        in omissions[(PACKET_MEMBER_MERGE_TARGET_KIND, "single_member")]["blockers"]
+    )
+    assert any(
+        blocker.startswith("renderer_payload_dfl1_missing_members:")
+        for blocker in omissions[
+            (RENDERER_PAYLOAD_DFL1_TARGET_KIND, "single_member")
+        ]["blockers"]
+    )
+
+
 def test_frontier_bootstrap_can_append_exact_readiness_followups(
     tmp_path: Path,
 ) -> None:
@@ -165,6 +333,7 @@ def test_frontier_bootstrap_can_append_exact_readiness_followups(
     ]
     assert sweep_arg.startswith(f"{experiment['id']}=")
     assert sweep_arg.endswith("packet_member_recompress_v1/sweep.json")
+    assert "--work-queue" not in harvest_step["command"]
     assert "--exact-readiness-require-ready" in harvest_step["command"]
 
 
@@ -282,6 +451,69 @@ def test_frontier_bootstrap_cli_writes_valid_queue(tmp_path: Path) -> None:
     assert "--sweep-manifest" in harvest_step["command"]
     assert "--chain-manifest" not in harvest_step["command"]
 
+    validate = subprocess.run(
+        [
+            sys.executable,
+            "tools/experiment_queue.py",
+            "--queue",
+            str(queue_path),
+            "validate",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert validate.returncode == 0, validate.stderr
+
+
+def test_frontier_bootstrap_cli_derives_merge_contract_for_receiver_targets(
+    tmp_path: Path,
+) -> None:
+    archive_path = _write_robust_like_archive(tmp_path / "archive.zip")
+    output_dir = tmp_path / "out"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "tools/build_frontier_final_rate_attack_queue.py",
+            "--no-current-frontier",
+            "--archive",
+            f"robust_current={archive_path}",
+            "--output-dir",
+            str(output_dir),
+            "--results-root",
+            str(tmp_path / "results"),
+            "--queue-id",
+            "frontier_final_rate_attack_receiver_cli",
+            "--target-kind",
+            PACKET_MEMBER_MERGE_TARGET_KIND,
+            "--target-kind",
+            RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+            "--no-optional-target-blockers",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert "derived_packet_member_merge_contract" in payload["artifacts"]
+    derived_path = output_dir / "derived_packet_member_merge_contract.json"
+    assert derived_path.exists()
+    derived = json.loads(derived_path.read_text(encoding="utf-8"))
+    assert derived["ready_archive_count"] == 1
+    bootstrap = json.loads(
+        (output_dir / "frontier_rate_attack_bootstrap.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert bootstrap["executable_target_kinds"] == [
+        PACKET_MEMBER_MERGE_TARGET_KIND,
+        RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+    ]
+    queue_path = output_dir / "experiment_queue.json"
     validate = subprocess.run(
         [
             sys.executable,

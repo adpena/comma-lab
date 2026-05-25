@@ -33,6 +33,7 @@ from comma_lab.scheduler.frontier_rate_attack_bootstrap import (  # noqa: E402
     FrontierRateAttackBootstrapError,
     build_frontier_rate_attack_payloads,
     derive_archive_section_recode_manifests,
+    derive_packet_member_merge_contract,
     parse_archive_spec,
     resolve_current_frontier_archive,
 )
@@ -110,6 +111,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Parser name passed to derived HNeRV section-manifest generation.",
     )
     parser.add_argument("--section-name", action="append", default=[])
+    parser.add_argument("--merge-contract", default=None)
+    parser.add_argument(
+        "--derive-merge-contracts",
+        dest="derive_merge_contracts",
+        action="store_true",
+        help=(
+            "Derive an all-members packet_member_merge_v1 contract for every "
+            "archive with at least two ZIP members."
+        ),
+    )
+    parser.add_argument(
+        "--no-derive-merge-contracts",
+        dest="derive_merge_contracts",
+        action="store_false",
+        help="Do not derive a packet_member_merge_v1 contract automatically.",
+    )
+    parser.set_defaults(derive_merge_contracts=True)
+    parser.add_argument("--merged-member-name", default=None)
+    parser.add_argument("--payload-member-name", default="p")
+    parser.add_argument("--full-frame-inflate-parity-proof", default=None)
     parser.add_argument("--tensor-manifest", default=None)
     parser.add_argument("--factorization-contract", default=None)
     parser.add_argument("--tensor-factorize-rank", type=int, default=None)
@@ -167,12 +188,21 @@ def _write_outputs(output_dir: Path, payloads: dict[str, Any]) -> dict[str, str]
     }
     if "derived_section_manifests" in payloads:
         paths["derived_section_manifests"] = output_dir / "derived_section_manifests.json"
+    if "derived_packet_member_merge_contract" in payloads:
+        paths["derived_packet_member_merge_contract"] = (
+            output_dir / "derived_packet_member_merge_contract.json"
+        )
     write_json_artifact(paths["materializer_contexts"], payloads["contexts"])
     write_json_artifact(paths["materializer_backlog"], payloads["backlog"])
     write_json_artifact(paths["materializer_work_queue"], payloads["work_queue"])
     write_json_artifact(paths["experiment_queue"], payloads["queue"])
     if "derived_section_manifests" in payloads:
         write_json_artifact(paths["derived_section_manifests"], payloads["derived_section_manifests"])
+    if "derived_packet_member_merge_contract" in payloads:
+        write_json_artifact(
+            paths["derived_packet_member_merge_contract"],
+            payloads["derived_packet_member_merge_contract"],
+        )
     bootstrap = dict(payloads["bootstrap"])
     bootstrap["artifacts"] = {key: _display_path(path) for key, path in paths.items() if key != "bootstrap"}
     bootstrap["operator_commands"] = {
@@ -231,6 +261,7 @@ def main(argv: list[str] | None = None) -> int:
             archive_records.append(parse_archive_spec(spec, repo_root=REPO_ROOT))
         target_kinds = tuple(args.target_kind or DEFAULT_EXECUTABLE_TARGET_KINDS)
         derived_section_manifests = None
+        derived_merge_contract = None
         section_manifest_by_archive_label: dict[str, str] = {}
         section_names_by_archive_label: dict[str, tuple[str, ...]] = {}
         wants_section_targets = (
@@ -257,6 +288,28 @@ def main(argv: list[str] | None = None) -> int:
                         for name in row.get("selected_section_names") or []
                         if str(name)
                     )
+        merge_contract = args.merge_contract
+        wants_merge_target = "packet_member_merge_v1" in set(target_kinds)
+        if (
+            args.derive_merge_contracts
+            and merge_contract is None
+            and wants_merge_target
+        ):
+            derived_merge_contract = derive_packet_member_merge_contract(
+                archive_records=archive_records,
+                output_path=output_dir
+                / "derived_packet_member_merge_contracts"
+                / "merge_contract.json",
+                repo_root=REPO_ROOT,
+                merged_member_name=args.merged_member_name,
+                zip_compression_methods=tuple(
+                    args.zip_compression_method or ("stored", "deflated")
+                ),
+                zip_compresslevels=tuple(args.zip_compresslevel or (1, 6, 9)),
+                allow_overwrite=args.allow_materializer_overwrite,
+                min_free_bytes=args.min_free_bytes,
+            )
+            merge_contract = str(derived_merge_contract["merge_contract_path"])
         payloads = build_frontier_rate_attack_payloads(
             repo_root=REPO_ROOT,
             queue_id=queue_id,
@@ -269,6 +322,10 @@ def main(argv: list[str] | None = None) -> int:
             section_manifest_by_archive_label=section_manifest_by_archive_label,
             section_names=tuple(args.section_name),
             section_names_by_archive_label=section_names_by_archive_label,
+            merge_contract=merge_contract,
+            merged_member_name=args.merged_member_name,
+            payload_member_name=args.payload_member_name,
+            full_frame_inflate_parity_proof=args.full_frame_inflate_parity_proof,
             tensor_manifest=args.tensor_manifest,
             factorization_contract=args.factorization_contract,
             tensor_factorize_rank=args.tensor_factorize_rank,
@@ -293,6 +350,16 @@ def main(argv: list[str] | None = None) -> int:
                 "manifest_count": derived_section_manifests["manifest_count"],
                 "ready_manifest_count": derived_section_manifests["ready_manifest_count"],
                 "artifact": _display_path(output_dir / "derived_section_manifests.json"),
+            }
+        if derived_merge_contract is not None:
+            payloads["derived_packet_member_merge_contract"] = derived_merge_contract
+            payloads["bootstrap"]["derived_packet_member_merge_contract"] = {
+                "schema": derived_merge_contract["schema"],
+                "ready_archive_count": derived_merge_contract["ready_archive_count"],
+                "archive_count": derived_merge_contract["archive_count"],
+                "artifact": _display_path(
+                    output_dir / "derived_packet_member_merge_contract.json"
+                ),
             }
         artifact_paths = _write_outputs(output_dir, payloads)
         queue_path = Path(artifact_paths["experiment_queue"])
