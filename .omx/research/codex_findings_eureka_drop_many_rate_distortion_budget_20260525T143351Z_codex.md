@@ -31,7 +31,9 @@ scorer-geometry bindings exist.
 
 `tools/operator_briefing.py` now surfaces selected drop-many candidate counts
 and the active eureka drop-many profile so this signal is visible in normal
-operator briefing and preflight flows.
+operator briefing and preflight flows. It also keeps the latest eureka-active
+refresh visible when a newer retention-only smoke refresh exists, so later
+storage hygiene artifacts cannot hide the broader rate/distortion signal.
 
 The shared DQS1 queue builder also now has a coherent retention command helper
 for raw and MLX cache retention steps. This preserves the partner retention
@@ -50,6 +52,8 @@ frontier feedback refresh call path lint-clean and queue-test-covered.
   `.omx/research/codex_eureka_beyond_drop_two_acquisition_20260525T143351Z/frontier_refresh/feedback_refresh_report.json`
 - queue:
   `.omx/research/codex_eureka_beyond_drop_two_acquisition_20260525T143351Z/frontier_refresh/dqs1_followup_queue.json`
+- raw-retention execute smoke:
+  `.omx/research/codex_retention_execute_smoke_20260525T151000Z/feedback_refresh_report.json`
 
 The generated acquisition has 581 candidates, including 34 bounded drop-many
 candidates. The generated follow-up queue has 8 experiments and 48 steps; 3 of
@@ -59,10 +63,16 @@ remain false.
 ## Verification
 
 - `ruff` on touched acquisition, feedback, briefing, and test files: passed
-- `pytest src/tac/tests/test_dqs1_local_first_queue_builder.py src/tac/tests/test_decoder_q_pairset_acquisition.py src/tac/tests/test_frontier_rate_attack_feedback.py src/tac/tests/test_operator_briefing.py src/tac/tests/test_all_lanes_operator_briefing_gate.py -q`: 129 passed
+- `pytest src/tac/tests/test_dqs1_local_first_queue_builder.py src/tac/tests/test_decoder_q_pairset_acquisition.py src/tac/tests/test_frontier_rate_attack_feedback.py src/tac/tests/test_operator_briefing.py src/tac/tests/test_all_lanes_operator_briefing_gate.py -q`: 130 passed
+- `pytest src/tac/tests/test_dqs1_local_first_queue_builder.py src/tac/tests/test_frontier_rate_attack_feedback.py -q`: 49 passed after retention-helper hardening
+- `pytest src/tac/tests/test_operator_briefing.py -q`: 43 passed after latest-eureka refresh surfacing
 - `pytest src/tac/tests/test_all_lanes_operator_briefing_gate.py -q`: 29 passed
 - `tools/experiment_queue.py --queue .omx/research/codex_eureka_beyond_drop_two_acquisition_20260525T143351Z/frontier_refresh/dqs1_followup_queue.json validate`: valid, 8 experiments, 48 steps
-- live operator briefing: `status=READY_LOCAL_EXECUTION`, `selected_drop_many=3`, `eureka_drop_many_counts=[3,4,6,8]`, all score/promotion/rank/dispatch/GPU authority fields false
+- live operator briefing: `status=READY_LOCAL_EXECUTION`; latest refresh is
+  the retention execute smoke, and latest eureka refresh remains the
+  drop-many queue with `selected_drop_many=3` and
+  `eureka_drop_many_counts=[3,4,6,8]`; all score/promotion/rank/dispatch/GPU
+  authority fields false
 - live operator briefing dispatch gate: frontier feedback passes; remaining failure is the unrelated existing L5 blocker `l5_v2_packetir_matrix_artifact_sha_mismatch`
 
 ## Residual Gap
