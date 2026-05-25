@@ -1,0 +1,80 @@
+{
+  "active_exploration_summary": {
+    "overall_verdict": "DEFER",
+    "threads_deferred_or_not_fixable_count": 2,
+    "threads_fixable_count": 0,
+    "threads_partially_fixable_count": 0
+  },
+  "anchor_utc": "2026-05-25T20:16:53+00:00",
+  "axis_tag": "[predicted]",
+  "blockers": [
+    "active_exploration_is_local_mlx_pytorch_macos_research_signal_only",
+    "requires_paired_cuda_t4_or_linux_x86_64_eval_for_promotion",
+    "thread_4_cudnn_reference_deferred_pending_paid_dispatch"
+  ],
+  "carmack_mvp_first_5_of_5": {
+    "step_1_free_local_macos": "TRUE - $0 GPU local MLX+PyTorch CPU",
+    "step_2_falsifiable_challenge_made": true,
+    "step_2_thread_1_kahan_falsified": null,
+    "step_2_thread_1_predicted_kahan_reduction_lower_bound_percent": 50.0,
+    "step_2_thread_2_fp64_falsified": null,
+    "step_2_thread_2_predicted_fp64_reduction_lower_bound_percent": 50.0,
+    "step_3_catalog_344_referenced": "TRUE - 4 candidate equations queued FORMALIZATION_PENDING",
+    "step_4_verdict_same_commit_batch": "TRUE",
+    "step_5_operator_priority_queue_reroute": "TRUE - Slot 1 export bridge VERDICT upgrade routed"
+  },
+  "evidence_grade": "macOS-MLX-research-signal",
+  "hardware_substrate": "macos_apple_silicon_m5_max_mlx_cpu_vs_torch_cpu",
+  "mitigation_paths": [
+    "mlx_deterministic",
+    "cudnn_reference"
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "run_id": "filter_no_conv_20260525T2030Z",
+  "schema_version": "active_exploration_conv2d_drift_unexplored_paths.v1",
+  "score_claim": false,
+  "shape_count": 1,
+  "shape_preset": "smoke",
+  "thread_1_aggregate_verdict": "NOT_MEASURED",
+  "thread_1_kahan_per_scale_measurements": [],
+  "thread_1_max_observed_reduction_percent": null,
+  "thread_2_aggregate_verdict": "NOT_MEASURED",
+  "thread_2_fp64_per_scale_measurements": [],
+  "thread_2_max_observed_reduction_percent": null,
+  "thread_3_mlx_deterministic_investigation": {
+    "axis_tag": "[predicted]",
+    "classification": "framework_different_no_public_deterministic_reduction_flag",
+    "deterministic_reduction_flag_available": false,
+    "evidence_grade": "macOS-MLX-research-signal",
+    "mlx_version": "0.31.2",
+    "promotable": false,
+    "promotion_eligible": false,
+    "public_core_deterministic_attrs": [],
+    "public_metal_deterministic_attrs": [],
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "thread_3_predicted_verdict_lower_bound": "FIXABLE_OR_FRAMEWORK_DIFFERENT",
+    "thread_3_verdict": "NOT_FIXABLE_FRAMEWORK_FUNDAMENTAL_NO_PUBLIC_API"
+  },
+  "thread_4_cudnn_reference_measurement": {
+    "axis_tag": "[predicted]",
+    "cuda_available": false,
+    "cudnn_enabled": true,
+    "cudnn_locally_available": false,
+    "evidence_grade": "macOS-MLX-research-signal",
+    "mps_available": true,
+    "mps_not_substitute_for_cudnn_rationale": "MPS is NOT a substitute for cuDNN per CLAUDE.md 'MPS auth eval is NOISE' non-negotiable (23x drift on PoseNet documented)",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "thread_4_required_paid_dispatch_estimated_cost_usd": 2.0,
+    "thread_4_verdict": "DEFERRED_PENDING_PAID_DISPATCH",
+    "torch_version": "2.11.0"
+  }
+}

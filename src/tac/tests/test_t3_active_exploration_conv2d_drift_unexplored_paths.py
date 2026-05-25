@@ -8,6 +8,11 @@ non-promotable markers.
 
 from __future__ import annotations
 
+import json
+import subprocess
+import sys
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -22,6 +27,8 @@ from tac.local_acceleration.deterministic_primitives import (
     kahan_compensated_sum,
     kahan_conv2d_3x3,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 # ---------------------------------------------------------------------------
 # ActiveExplorationPathVerdict enum
@@ -367,3 +374,81 @@ class TestActiveExplorationAnchor:
         assert summary["thread_2_falsified"] is True
         assert summary["thread_1_max_observed_percent"] == 22.4
         assert summary["thread_2_max_observed_percent"] == 22.4
+
+
+# ---------------------------------------------------------------------------
+# Measurement CLI filtering
+# ---------------------------------------------------------------------------
+
+
+class TestMeasureUnexploredMitigationPathsCli:
+    def test_kahan_fp64_smoke_filter_skips_framework_threads(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        output = tmp_path / "filter_smoke.json"
+        completed = subprocess.run(
+            [
+                sys.executable,
+                str(REPO_ROOT / "tools" / "measure_unexplored_mitigation_paths_drift.py"),
+                "--mitigation-paths",
+                "kahan,fp64",
+                "--shape-preset",
+                "smoke",
+                "--output",
+                str(output),
+                "--run-id",
+                "unit_filter_smoke",
+            ],
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+
+        stdout = json.loads(completed.stdout)
+        manifest = json.loads(output.read_text(encoding="utf-8"))
+        assert stdout["mitigation_paths"] == ["kahan", "fp64"]
+        assert manifest["shape_preset"] == "smoke"
+        assert manifest["thread_3_mlx_deterministic_investigation"]["measurement_status"] == (
+            "skipped_by_mitigation_paths_filter"
+        )
+        assert manifest["thread_4_cudnn_reference_measurement"]["measurement_status"] == (
+            "skipped_by_mitigation_paths_filter"
+        )
+        assert manifest["score_claim"] is False
+
+    def test_framework_smoke_filter_skips_conv_measurements(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        output = tmp_path / "filter_no_conv_smoke.json"
+        subprocess.run(
+            [
+                sys.executable,
+                str(REPO_ROOT / "tools" / "measure_unexplored_mitigation_paths_drift.py"),
+                "--mitigation-paths",
+                "mlx_deterministic,cudnn_reference",
+                "--shape-preset",
+                "smoke",
+                "--output",
+                str(output),
+                "--run-id",
+                "unit_filter_no_conv",
+            ],
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+
+        manifest = json.loads(output.read_text(encoding="utf-8"))
+        assert manifest["thread_1_aggregate_verdict"] == "NOT_MEASURED"
+        assert manifest["thread_2_aggregate_verdict"] == "NOT_MEASURED"
+        assert manifest["thread_1_kahan_per_scale_measurements"] == []
+        assert (
+            manifest["thread_3_mlx_deterministic_investigation"]["thread_3_verdict"]
+            == "NOT_FIXABLE_FRAMEWORK_FUNDAMENTAL_NO_PUBLIC_API"
+        )
+        assert (
+            manifest["thread_4_cudnn_reference_measurement"]["thread_4_verdict"]
+            == "DEFERRED_PENDING_PAID_DISPATCH"
+        )

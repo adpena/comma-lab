@@ -50,6 +50,9 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+from tac.local_acceleration.deterministic_primitives import (  # noqa: E402
+    classify_reduction_percent,
+)
 from tac.local_acceleration.mlx_scorer_torch_parity import (  # noqa: E402
     MLXConv2dAccumulationThresholds,
     build_mlx_conv2d_accumulation_probe_manifest,
@@ -81,6 +84,52 @@ PR95_FINAL_HEAD_SHAPE = {
 }
 
 CANONICAL_SHAPES = [PR95_STAGE2_SHAPE, PR95_STAGE4_SHAPE, PR95_FINAL_HEAD_SHAPE]
+SMOKE_SHAPE = {
+    "name": "smoke_tiny_conv2d_4_to_5_4x4",
+    "batch": 1,
+    "in_channels": 4,
+    "out_channels": 5,
+    "height": 4,
+    "width": 4,
+    "kernel_height": 3,
+    "kernel_width": 3,
+    "stride": 1,
+    "padding": 1,
+    "dilation": 1,
+    "groups": 1,
+}
+SHAPE_PRESETS = {
+    "all-pr95": CANONICAL_SHAPES,
+    "pr95-stage2": [PR95_STAGE2_SHAPE],
+    "smoke": [SMOKE_SHAPE],
+}
+VALID_MITIGATION_PATHS = frozenset(
+    {"cudnn_reference", "fp64", "kahan", "mlx_deterministic"}
+)
+
+
+def _parse_mitigation_paths(raw: str) -> tuple[str, ...]:
+    paths = tuple(part.strip() for part in raw.split(",") if part.strip())
+    if not paths or "all" in paths:
+        return tuple(sorted(VALID_MITIGATION_PATHS))
+    unknown = sorted(set(paths) - VALID_MITIGATION_PATHS)
+    if unknown:
+        raise argparse.ArgumentTypeError(
+            f"unknown mitigation path(s): {', '.join(unknown)}; expected all "
+            f"or comma-list from {', '.join(sorted(VALID_MITIGATION_PATHS))}"
+        )
+    return tuple(dict.fromkeys(paths))
+
+
+def _shape_specs_for_preset(shape_preset: str) -> list[dict[str, Any]]:
+    try:
+        shapes = SHAPE_PRESETS[shape_preset]
+    except KeyError as exc:
+        raise ValueError(
+            f"unknown shape preset {shape_preset!r}; expected one of "
+            f"{sorted(SHAPE_PRESETS)}"
+        ) from exc
+    return [dict(shape) for shape in shapes]
 
 
 def _synthetic_conv2d_case(
@@ -158,6 +207,9 @@ def measure_threads_1_and_2(shape_spec: dict[str, Any]) -> dict[str, Any]:
         "axis_tag": "[predicted]",
         "score_claim": False,
         "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 
@@ -170,13 +222,7 @@ def _classify_reduction(reduction_percent: float) -> str:
     - 0-10%: NOT_FIXABLE_SUBSTITUTION_ONLY (drift floor is non-summation)
     - <0% (negative): NOT_FIXABLE_FRAMEWORK_FUNDAMENTAL (substitute makes it worse)
     """
-    if reduction_percent >= 50.0:
-        return "FIXABLE"
-    if reduction_percent >= 10.0:
-        return "PARTIALLY_FIXABLE_MARGINAL"
-    if reduction_percent >= 0.0:
-        return "NOT_FIXABLE_SUBSTITUTION_ONLY"
-    return "NOT_FIXABLE_FRAMEWORK_FUNDAMENTAL"
+    return classify_reduction_percent(reduction_percent).value
 
 
 def measure_thread_3() -> dict[str, Any]:
@@ -207,6 +253,9 @@ def measure_thread_3() -> dict[str, Any]:
         "axis_tag": "[predicted]",
         "score_claim": False,
         "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 
@@ -251,23 +300,64 @@ def measure_thread_4() -> dict[str, Any]:
         "axis_tag": "[predicted]",
         "score_claim": False,
         "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 
-def build_active_exploration_manifest(*, run_id: str | None = None) -> dict[str, Any]:
+def _skipped_path(path_name: str) -> dict[str, Any]:
+    return {
+        "path_name": path_name,
+        "measurement_status": "skipped_by_mitigation_paths_filter",
+        "evidence_grade": "macOS-MLX-research-signal",
+        "axis_tag": "[predicted]",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def build_active_exploration_manifest(
+    *,
+    run_id: str | None = None,
+    mitigation_paths: tuple[str, ...] | None = None,
+    shape_preset: str = "pr95-stage2",
+) -> dict[str, Any]:
     """Build full manifest covering Threads 1-4."""
     run_id = run_id or datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    selected_paths = mitigation_paths or tuple(sorted(VALID_MITIGATION_PATHS))
+    shape_specs = _shape_specs_for_preset(shape_preset)
     threads_1_2 = []
-    for shape_spec in CANONICAL_SHAPES:
-        threads_1_2.append(measure_threads_1_and_2(shape_spec))
-    thread_3 = measure_thread_3()
-    thread_4 = measure_thread_4()
+    if {"kahan", "fp64"} & set(selected_paths):
+        for shape_spec in shape_specs:
+            threads_1_2.append(measure_threads_1_and_2(shape_spec))
+    thread_3 = (
+        measure_thread_3()
+        if "mlx_deterministic" in selected_paths
+        else _skipped_path("mlx_deterministic")
+    )
+    thread_4 = (
+        measure_thread_4()
+        if "cudnn_reference" in selected_paths
+        else _skipped_path("cudnn_reference")
+    )
 
     # Aggregate verdicts across scales (Thread 1+2).
     kahan_reductions = [r["kahan_fp32_reduction_percent"] for r in threads_1_2]
     fp64_reductions = [r["fixed_fp64_reduction_percent"] for r in threads_1_2]
-    aggregate_kahan_verdict = _classify_reduction(max(kahan_reductions))
-    aggregate_fp64_verdict = _classify_reduction(max(fp64_reductions))
+    aggregate_kahan_verdict = (
+        _classify_reduction(max(kahan_reductions))
+        if "kahan" in selected_paths and kahan_reductions
+        else "NOT_MEASURED"
+    )
+    aggregate_fp64_verdict = (
+        _classify_reduction(max(fp64_reductions))
+        if "fp64" in selected_paths and fp64_reductions
+        else "NOT_MEASURED"
+    )
 
     # Compose overall verdict.
     fixable_count = sum(
@@ -275,8 +365,8 @@ def build_active_exploration_manifest(*, run_id: str | None = None) -> dict[str,
         for v in (
             aggregate_kahan_verdict,
             aggregate_fp64_verdict,
-            thread_3["thread_3_verdict"],
-            thread_4["thread_4_verdict"],
+            thread_3.get("thread_3_verdict", "NOT_MEASURED"),
+            thread_4.get("thread_4_verdict", "NOT_MEASURED"),
         )
         if "FIXABLE" in v and "NOT_FIXABLE" not in v
     )
@@ -291,8 +381,8 @@ def build_active_exploration_manifest(*, run_id: str | None = None) -> dict[str,
     deferred_count = sum(
         1
         for v in (
-            thread_3["thread_3_verdict"],
-            thread_4["thread_4_verdict"],
+            thread_3.get("thread_3_verdict", "NOT_MEASURED"),
+            thread_4.get("thread_4_verdict", "NOT_MEASURED"),
         )
         if "DEFERRED" in v or "NOT_FIXABLE" in v
     )
@@ -301,16 +391,22 @@ def build_active_exploration_manifest(*, run_id: str | None = None) -> dict[str,
         "schema_version": "active_exploration_conv2d_drift_unexplored_paths.v1",
         "run_id": run_id,
         "anchor_utc": datetime.now(UTC).isoformat(timespec="seconds"),
+        "shape_preset": shape_preset,
+        "shape_count": len(shape_specs),
+        "mitigation_paths": list(selected_paths),
         "hardware_substrate": "macos_apple_silicon_m5_max_mlx_cpu_vs_torch_cpu",
         "evidence_grade": "macOS-MLX-research-signal",
         "axis_tag": "[predicted]",
         "score_claim": False,
         "promotion_eligible": False,
         "promotable": False,
+        "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "thread_1_kahan_per_scale_measurements": threads_1_2,
         "thread_1_aggregate_verdict": aggregate_kahan_verdict,
-        "thread_1_max_observed_reduction_percent": max(kahan_reductions),
+        "thread_1_max_observed_reduction_percent": (
+            max(kahan_reductions) if kahan_reductions else None
+        ),
         "thread_2_fp64_per_scale_measurements": [
             {
                 "shape_name": r["shape_name"],
@@ -323,7 +419,9 @@ def build_active_exploration_manifest(*, run_id: str | None = None) -> dict[str,
             for r in threads_1_2
         ],
         "thread_2_aggregate_verdict": aggregate_fp64_verdict,
-        "thread_2_max_observed_reduction_percent": max(fp64_reductions),
+        "thread_2_max_observed_reduction_percent": (
+            max(fp64_reductions) if fp64_reductions else None
+        ),
         "thread_3_mlx_deterministic_investigation": thread_3,
         "thread_4_cudnn_reference_measurement": thread_4,
         "active_exploration_summary": {
@@ -348,8 +446,12 @@ def build_active_exploration_manifest(*, run_id: str | None = None) -> dict[str,
             "step_2_falsifiable_challenge_made": True,
             "step_2_thread_1_predicted_kahan_reduction_lower_bound_percent": 50.0,
             "step_2_thread_2_predicted_fp64_reduction_lower_bound_percent": 50.0,
-            "step_2_thread_1_kahan_falsified": max(kahan_reductions) < 50.0,
-            "step_2_thread_2_fp64_falsified": max(fp64_reductions) < 50.0,
+            "step_2_thread_1_kahan_falsified": (
+                max(kahan_reductions) < 50.0 if kahan_reductions else None
+            ),
+            "step_2_thread_2_fp64_falsified": (
+                max(fp64_reductions) < 50.0 if fp64_reductions else None
+            ),
             "step_3_catalog_344_referenced": "TRUE - 4 candidate equations queued FORMALIZATION_PENDING",
             "step_4_verdict_same_commit_batch": "TRUE",
             "step_5_operator_priority_queue_reroute": "TRUE - Slot 1 export bridge VERDICT upgrade routed",
@@ -366,9 +468,28 @@ def main(argv: list[str] | None = None) -> int:
         help="Output JSON path; defaults to canonical experiments/results/...",
     )
     parser.add_argument("--run-id", default=None)
+    parser.add_argument(
+        "--mitigation-paths",
+        type=_parse_mitigation_paths,
+        default=tuple(sorted(VALID_MITIGATION_PATHS)),
+        help="Comma list: kahan,fp64,mlx_deterministic,cudnn_reference (default: all)",
+    )
+    parser.add_argument(
+        "--shape-preset",
+        choices=sorted(SHAPE_PRESETS),
+        default="pr95-stage2",
+        help=(
+            "Conv2d shape preset for Kahan/FP64 measurements. "
+            "Use all-pr95 only for explicit wider sweeps."
+        ),
+    )
     args = parser.parse_args(argv)
 
-    manifest = build_active_exploration_manifest(run_id=args.run_id)
+    manifest = build_active_exploration_manifest(
+        run_id=args.run_id,
+        mitigation_paths=args.mitigation_paths,
+        shape_preset=args.shape_preset,
+    )
     if args.output is None:
         run_id = manifest["run_id"]
         out_dir = REPO_ROOT / "experiments" / "results" / f"conv2d_drift_unexplored_paths_{run_id}"
@@ -380,10 +501,18 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps({
         "output": str(args.output),
         "schema_version": manifest["schema_version"],
+        "shape_preset": manifest["shape_preset"],
+        "mitigation_paths": manifest["mitigation_paths"],
         "thread_1_aggregate_verdict": manifest["thread_1_aggregate_verdict"],
         "thread_2_aggregate_verdict": manifest["thread_2_aggregate_verdict"],
-        "thread_3_verdict": manifest["thread_3_mlx_deterministic_investigation"]["thread_3_verdict"],
-        "thread_4_verdict": manifest["thread_4_cudnn_reference_measurement"]["thread_4_verdict"],
+        "thread_3_verdict": manifest["thread_3_mlx_deterministic_investigation"].get(
+            "thread_3_verdict",
+            "NOT_MEASURED",
+        ),
+        "thread_4_verdict": manifest["thread_4_cudnn_reference_measurement"].get(
+            "thread_4_verdict",
+            "NOT_MEASURED",
+        ),
         "overall_verdict": manifest["active_exploration_summary"]["overall_verdict"],
     }, sort_keys=True))
     return 0

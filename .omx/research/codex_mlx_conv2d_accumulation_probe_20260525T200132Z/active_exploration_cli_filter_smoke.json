@@ -1,0 +1,129 @@
+{
+  "active_exploration_summary": {
+    "overall_verdict": "DEFER",
+    "threads_deferred_or_not_fixable_count": 0,
+    "threads_fixable_count": 0,
+    "threads_partially_fixable_count": 0
+  },
+  "anchor_utc": "2026-05-25T20:16:54+00:00",
+  "axis_tag": "[predicted]",
+  "blockers": [
+    "active_exploration_is_local_mlx_pytorch_macos_research_signal_only",
+    "requires_paired_cuda_t4_or_linux_x86_64_eval_for_promotion",
+    "thread_4_cudnn_reference_deferred_pending_paid_dispatch"
+  ],
+  "carmack_mvp_first_5_of_5": {
+    "step_1_free_local_macos": "TRUE - $0 GPU local MLX+PyTorch CPU",
+    "step_2_falsifiable_challenge_made": true,
+    "step_2_thread_1_kahan_falsified": true,
+    "step_2_thread_1_predicted_kahan_reduction_lower_bound_percent": 50.0,
+    "step_2_thread_2_fp64_falsified": true,
+    "step_2_thread_2_predicted_fp64_reduction_lower_bound_percent": 50.0,
+    "step_3_catalog_344_referenced": "TRUE - 4 candidate equations queued FORMALIZATION_PENDING",
+    "step_4_verdict_same_commit_batch": "TRUE",
+    "step_5_operator_priority_queue_reroute": "TRUE - Slot 1 export bridge VERDICT upgrade routed"
+  },
+  "evidence_grade": "macOS-MLX-research-signal",
+  "hardware_substrate": "macos_apple_silicon_m5_max_mlx_cpu_vs_torch_cpu",
+  "mitigation_paths": [
+    "kahan",
+    "fp64"
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "run_id": "filter_smoke_20260525T2030Z",
+  "schema_version": "active_exploration_conv2d_drift_unexplored_paths.v1",
+  "score_claim": false,
+  "shape_count": 1,
+  "shape_preset": "smoke",
+  "thread_1_aggregate_verdict": "NOT_FIXABLE_SUBSTITUTION_ONLY",
+  "thread_1_kahan_per_scale_measurements": [
+    {
+      "axis_tag": "[predicted]",
+      "baseline_optimized_max_abs": 5.960464477539063e-08,
+      "evidence_grade": "macOS-MLX-research-signal",
+      "fixed_fp32_max_abs": 5.960464477539063e-08,
+      "fixed_fp32_reduction_percent": 0.0,
+      "fixed_fp64_max_abs": 5.960464477539063e-08,
+      "fixed_fp64_reduction_percent": 0.0,
+      "kahan_fp32_max_abs": 5.960464477539063e-08,
+      "kahan_fp32_reduction_percent": 0.0,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "shape_name": "smoke_tiny_conv2d_4_to_5_4x4",
+      "shape_spec": {
+        "batch": 1,
+        "dilation": 1,
+        "groups": 1,
+        "height": 4,
+        "in_channels": 4,
+        "kernel_height": 3,
+        "kernel_width": 3,
+        "name": "smoke_tiny_conv2d_4_to_5_4x4",
+        "out_channels": 5,
+        "padding": 1,
+        "stride": 1,
+        "width": 4
+      },
+      "thread_1_kahan_predicted_falsification_threshold_percent": 50.0,
+      "thread_1_kahan_predicted_reduction_percent_lower_bound": 50.0,
+      "thread_1_verdict": "NOT_FIXABLE_SUBSTITUTION_ONLY",
+      "thread_2_fp64_predicted_falsification_threshold_percent": 50.0,
+      "thread_2_fp64_predicted_reduction_percent_lower_bound": 50.0,
+      "thread_2_verdict": "NOT_FIXABLE_SUBSTITUTION_ONLY"
+    }
+  ],
+  "thread_1_max_observed_reduction_percent": 0.0,
+  "thread_2_aggregate_verdict": "NOT_FIXABLE_SUBSTITUTION_ONLY",
+  "thread_2_fp64_per_scale_measurements": [
+    {
+      "baseline_optimized_max_abs": 5.960464477539063e-08,
+      "fixed_fp64_max_abs": 5.960464477539063e-08,
+      "fixed_fp64_reduction_percent": 0.0,
+      "shape_name": "smoke_tiny_conv2d_4_to_5_4x4",
+      "shape_spec": {
+        "batch": 1,
+        "dilation": 1,
+        "groups": 1,
+        "height": 4,
+        "in_channels": 4,
+        "kernel_height": 3,
+        "kernel_width": 3,
+        "name": "smoke_tiny_conv2d_4_to_5_4x4",
+        "out_channels": 5,
+        "padding": 1,
+        "stride": 1,
+        "width": 4
+      },
+      "thread_2_verdict": "NOT_FIXABLE_SUBSTITUTION_ONLY"
+    }
+  ],
+  "thread_2_max_observed_reduction_percent": 0.0,
+  "thread_3_mlx_deterministic_investigation": {
+    "axis_tag": "[predicted]",
+    "evidence_grade": "macOS-MLX-research-signal",
+    "measurement_status": "skipped_by_mitigation_paths_filter",
+    "path_name": "mlx_deterministic",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false
+  },
+  "thread_4_cudnn_reference_measurement": {
+    "axis_tag": "[predicted]",
+    "evidence_grade": "macOS-MLX-research-signal",
+    "measurement_status": "skipped_by_mitigation_paths_filter",
+    "path_name": "cudnn_reference",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false
+  }
+}
