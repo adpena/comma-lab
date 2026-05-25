@@ -3266,6 +3266,38 @@ def test_operator_briefing_surfaces_frontier_feedback_cycle_autopolicy(
             "gpu_launched": False,
         },
     )
+    late_refresh_dir = tmp_path / "retention_smoke"
+    _write_json(
+        late_refresh_dir / "feedback_refresh_report.json",
+        {
+            "schema": "frontier_rate_attack_feedback_refresh.v1",
+            "queue_id": "frontier_feedback_retention_smoke",
+            "artifacts": {
+                "dqs1_followup_queue": str(
+                    late_refresh_dir / "dqs1_followup_queue.json"
+                ),
+            },
+            "selected_candidate_ids": ["pairset_drop_two_b"],
+            "materializer_feedback_payload_count": 0,
+            "dqs1_observation_count": 0,
+            "local_cpu_eureka_planning": {
+                "schema": "frontier_rate_attack_local_cpu_eureka_discovery.v1",
+                "signal_count": 0,
+                "planner_hint_count": 0,
+                "planner_hints": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+        },
+    )
     monkeypatch.setattr(mod, "FRONTIER_FEEDBACK_SCAN_ROOTS", (tmp_path,))
 
     summary = mod._frontier_feedback_cycle_summary()
@@ -3275,19 +3307,21 @@ def test_operator_briefing_surfaces_frontier_feedback_cycle_autopolicy(
     assert summary["ready_for_exact_eval_dispatch"] is False
     assert summary["score_claim"] is False
     assert summary["cycle_report_count"] == 1
-    assert summary["refresh_report_count"] == 1
+    assert summary["refresh_report_count"] == 2
     assert "--execute-followup" in summary["next_command"]
     assert summary["latest_cycle"]["initial_selected_candidate_count"] == 2
-    assert summary["latest_refresh"]["eureka_signal_count"] == 2
-    assert summary["latest_refresh"]["eureka_planner_hint_ids"] == [
+    assert summary["latest_refresh"]["eureka_signal_count"] == 0
+    assert summary["latest_eureka_refresh"]["eureka_signal_count"] == 2
+    assert summary["latest_eureka_refresh"]["eureka_planner_hint_ids"] == [
         "dqs1_expand_beyond_drop_two_near_boundary"
     ]
-    assert summary["latest_refresh"]["selected_drop_many_candidate_count"] == 1
-    assert summary["latest_refresh"]["eureka_pairset_profile_active"] is True
-    assert summary["latest_refresh"]["eureka_drop_many_counts"] == [3, 4, 6, 8]
+    assert summary["latest_eureka_refresh"]["selected_drop_many_candidate_count"] == 1
+    assert summary["latest_eureka_refresh"]["eureka_pairset_profile_active"] is True
+    assert summary["latest_eureka_refresh"]["eureka_drop_many_counts"] == [3, 4, 6, 8]
     text = mod._format_frontier_feedback_cycle_summary()
     assert "authority: planning/local only" in text
-    assert "eureka_hints: 1" in text
+    assert "eureka_hints: 0" in text
+    assert "latest eureka refresh:" in text
     assert "selected_drop_many: 1" in text
 
 
