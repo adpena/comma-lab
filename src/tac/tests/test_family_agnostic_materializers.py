@@ -16,10 +16,17 @@ from tac.optimization.family_agnostic_materializers import (
     PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND,
     PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND,
     PACKET_MEMBER_MERGE_SCHEMA,
+    PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
+    RENDERER_PAYLOAD_DFL1_MATERIALIZER_ID,
     RENDERER_PAYLOAD_DFL1_SCHEMA,
+    RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+    TENSOR_FACTORIZE_MATERIALIZER_ID,
+    TENSOR_FACTORIZE_PROOF_KIND,
+    TENSOR_FACTORIZE_RECEIVER_CONTRACT_KIND,
     TENSOR_FACTORIZE_SCHEMA,
+    TENSOR_FACTORIZE_TARGET_KIND,
     materialize_archive_section_entropy_recode_candidate,
     materialize_packet_member_merge_candidate,
     materialize_packet_member_recompress_candidate,
@@ -539,6 +546,84 @@ def test_runtime_consumption_proof_rejects_runtime_adapter_ready_without_sha(
     assert verification["runtime_adapter_ready"] is False
     assert verification["receiver_contract_satisfied"] is False
     assert "runtime_adapter_ready_requires_sha256" in verification["blockers"]
+
+
+def test_runtime_consumption_proof_rejects_generic_pass_flags_for_semantic_rewrites(
+    tmp_path: Path,
+) -> None:
+    cases = [
+        (
+            PACKET_MEMBER_MERGE_TARGET_KIND,
+            PACKET_MEMBER_MERGE_MATERIALIZER_ID,
+            PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND,
+            PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND,
+            "packet_member_merge_runtime_adapter_probe_schema_mismatch",
+        ),
+        (
+            RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+            RENDERER_PAYLOAD_DFL1_MATERIALIZER_ID,
+            "source_runtime_native_renderer_payload_dfl1",
+            "renderer_payload_dfl1_native_unpacker_reconstruction_smoke.v1",
+            "renderer_payload_dfl1_runtime_adapter_probe_schema_mismatch",
+        ),
+        (
+            TENSOR_FACTORIZE_TARGET_KIND,
+            TENSOR_FACTORIZE_MATERIALIZER_ID,
+            TENSOR_FACTORIZE_RECEIVER_CONTRACT_KIND,
+            TENSOR_FACTORIZE_PROOF_KIND,
+            "tensor_factorize_runtime_adapter_probe_schema_mismatch",
+        ),
+    ]
+    for (
+        target_kind,
+        materializer_id,
+        receiver_contract_kind,
+        proof_kind,
+        expected_blocker,
+    ) in cases:
+        proof = {
+            "schema": "family_agnostic_runtime_consumption_proof_v1",
+            "proof_kind": proof_kind,
+            "receiver_contract_kind": receiver_contract_kind,
+            "target_kind": target_kind,
+            "materializer_id": materializer_id,
+            "candidate_archive_sha256": "a" * 64,
+            "candidate_member_sha256": "b" * 64,
+            "receiver_contract_satisfied": True,
+            "runtime_consumption_proof_passed": True,
+            "passed": True,
+            "runtime_adapter_ready": True,
+            "runtime_adapter_manifest": {
+                "runtime_adapter_ready": True,
+                "runtime_adapter_sha256": "c" * 64,
+            },
+            "runtime_consumption_probe": {
+                "schema": "generic_boolean_pass_probe.v1",
+                "passed": True,
+            },
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "promotable": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+        }
+
+        verification = verify_runtime_consumption_proof(
+            runtime_consumption_proof=proof,
+            required_candidate_archive_sha256="a" * 64,
+            required_candidate_member_sha256="b" * 64,
+            required_proof_kind=proof_kind,
+            required_receiver_contract_kind=receiver_contract_kind,
+            required_target_kind=target_kind,
+            required_materializer_id=materializer_id,
+            repo_root=tmp_path,
+        )
+
+        assert verification["receiver_contract_satisfied"] is False
+        assert expected_blocker in verification["blockers"]
 
 
 def test_packet_member_merge_rejects_mismatched_runtime_proof_metadata(
@@ -1457,7 +1542,7 @@ def test_tensor_factorize_materializer_emits_cooperative_receiver_proof(
     assert result["ready_for_exact_eval_dispatch"] is False
 
 
-def test_tensor_factorize_materializer_accepts_runtime_adapter_ready_contract(
+def test_tensor_factorize_materializer_rejects_declaration_only_runtime_adapter(
     tmp_path: Path,
 ) -> None:
     archive = tmp_path / "source.zip"
@@ -1492,9 +1577,15 @@ def test_tensor_factorize_materializer_accepts_runtime_adapter_ready_contract(
     assert proof_payload["runtime_consumption_probe"]["passed"] is True
     assert proof_payload["runtime_adapter_ready"] is True
     assert proof_payload["runtime_adapter_manifest"]["runtime_tree_sha256"] == "c" * 64
-    assert result["receiver_contract_satisfied"] is True
-    assert result["runtime_adapter_ready"] is True
-    assert "tensor_factorize_exact_readiness_refused_until_byte_closed_runtime_adapter_lands" not in (
+    assert result["receiver_contract_satisfied"] is False
+    assert result["runtime_adapter_ready"] is False
+    assert "tensor_factorize_runtime_adapter_probe_schema_mismatch" in (
+        result["readiness_blockers"]
+    )
+    assert "tensor_factorize_shadow_archive_reconstruction_not_proven" in (
+        result["readiness_blockers"]
+    )
+    assert "tensor_factorize_exact_readiness_refused_until_byte_closed_runtime_adapter_lands" in (
         result["readiness_blockers"]
     )
     assert result["score_claim"] is False

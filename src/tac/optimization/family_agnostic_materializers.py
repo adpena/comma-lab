@@ -2153,6 +2153,15 @@ def verify_runtime_consumption_proof(
     if runtime_adapter_ready and runtime_adapter_sha256 is None:
         blockers.append("runtime_adapter_ready_requires_sha256")
         runtime_adapter_ready = False
+    verifier_target_kind = required_target_kind or _clean_str(proof.get("target_kind"))
+    target_specific_blockers = _target_specific_runtime_consumption_blockers(
+        proof,
+        target_kind=verifier_target_kind,
+        runtime_adapter_ready=runtime_adapter_ready,
+    )
+    if target_specific_blockers:
+        runtime_adapter_ready = False
+    blockers.extend(target_specific_blockers)
     archive_sha = _nested_clean_str(proof, ("candidate_archive", "sha256"))
     archive_sha = archive_sha or _clean_str(proof.get("candidate_archive_sha256"))
     if required_candidate_archive_sha256:
@@ -2197,6 +2206,50 @@ def verify_runtime_consumption_proof(
         "runtime_adapter_sha256": runtime_adapter_sha256,
         "blockers": ordered_unique(blockers),
     }
+
+
+def _target_specific_runtime_consumption_blockers(
+    proof: Mapping[str, Any],
+    *,
+    target_kind: str | None,
+    runtime_adapter_ready: bool,
+) -> list[str]:
+    """Reject generic pass flags for semantic receiver/runtime rewrites."""
+
+    if target_kind not in {
+        PACKET_MEMBER_MERGE_TARGET_KIND,
+        RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+        TENSOR_FACTORIZE_TARGET_KIND,
+    }:
+        return []
+    probe = proof.get("runtime_consumption_probe")
+    probe_mapping = probe if isinstance(probe, Mapping) else {}
+    blockers: list[str] = []
+    if runtime_adapter_ready is not True:
+        blockers.append(f"{target_kind}_runtime_adapter_not_ready")
+    if target_kind == PACKET_MEMBER_MERGE_TARGET_KIND:
+        if probe_mapping.get("schema") != "packet_member_merge_runtime_adapter_probe.v1":
+            blockers.append("packet_member_merge_runtime_adapter_probe_schema_mismatch")
+        if probe_mapping.get("shadow_archive_reconstruction_passed") is not True:
+            blockers.append("packet_member_merge_shadow_archive_reconstruction_not_proven")
+        return blockers
+    if target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND:
+        if probe_mapping.get("schema") != "renderer_payload_dfl1_reconstruction_probe.v1":
+            blockers.append("renderer_payload_dfl1_runtime_adapter_probe_schema_mismatch")
+        if probe_mapping.get("parser_reconstruction_passed") is not True:
+            blockers.append("renderer_payload_dfl1_parser_reconstruction_not_proven")
+        if probe_mapping.get("full_frame_inflate_parity_satisfied") is not True:
+            blockers.append("renderer_payload_dfl1_full_frame_inflate_parity_not_satisfied")
+        native_probe = probe_mapping.get("native_unpacker_probe")
+        if not isinstance(native_probe, Mapping) or native_probe.get("passed") is not True:
+            blockers.append("renderer_payload_dfl1_native_unpacker_probe_not_passed")
+        return blockers
+    if target_kind == TENSOR_FACTORIZE_TARGET_KIND:
+        if probe_mapping.get("schema") != "tensor_factorize_runtime_adapter_probe.v1":
+            blockers.append("tensor_factorize_runtime_adapter_probe_schema_mismatch")
+        if probe_mapping.get("shadow_archive_reconstruction_passed") is not True:
+            blockers.append("tensor_factorize_shadow_archive_reconstruction_not_proven")
+    return blockers
 
 
 def _runtime_adapter_manifest_sha256(value: Any) -> str | None:
