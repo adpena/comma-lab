@@ -180,3 +180,29 @@ Empirical anchor: `min_combined_textured_avg_weight = 0.2597` (POSITIVE_SIGNAL_B
 ## Lane id
 
 `lane_probe_9_tier_2_dispatch_prep_uniward_per_instance_multi_scale_wavelet_segnet_20260525` L1 (impl_complete + memory_entry + Catalog #313 ledger row).
+
+---
+
+## APPENDED 2026-05-25T17:13Z — substrate-trio canonical update db8 → db4 (audit trail; recipe now consumes db4)
+
+Per Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY discipline (NEW section appended; existing Tier-2 prep landing body UNTOUCHED).
+
+The Tier-2 dispatch prep scaffold landed by this memo used the canonical db8 default (per Probe 9 BREAKTHROUGH anchor). Subsequent Probe 9c per-level wavelet-basis selection disambiguator (commit `efeaff5c9`) empirically falsified the db8-optimal NULL at z=-3.442σ; substrate-trio canonical-fix landing `.omx/research/probe_9_recipe_canonical_update_db8_to_db4_landed_20260525.md` (lane `lane_probe_9_recipe_canonical_update_db8_to_db4_20260525`) applied the canonical-fix.
+
+### Recipe state update
+
+- **Recipe `UNIWARD_PIMS_WAVELET_NAME`**: was `db8` → now `db4` (per Probe 9c canonical-optimal basis)
+- **Recipe still `research_only: true` + `dispatch_enabled: false`** until remaining 1 of 3 dispatch-blocking revisions clears (paired CPU+CUDA empirical anchor — emergent from sister `_full_main` BUILD + revisions 4-5-6)
+- **Catalog #325 6-step canonical contract status**: per-substrate symposium 2026-05-25 SATISFIED at steps 1+2+3+4+5 (cargo-cult audit + 9-dim checklist + observability + sextet pact + reactivation criteria); step 6 (Catalog #324 post-training Tier-C validation) PENDING_POST_TRAINING (validates only when paired CPU+CUDA empirical anchor lands)
+- **Dispatch-blocking revisions**: 2-of-3 CLEARED + canonical-optimal basis applied; 1 remains
+
+### Sister subagent BUILD `_full_main` unblock signal
+
+Sister subagent BUILD `_full_main` on canonical db4 substrate is **now UNBLOCKED** per the canonical-fix landing. The substrate trainer's full path will inherit the canonical-optimal db4 basis by default rather than the falsified db8 default; sister BUILD inherits the canonical-optimal basis structurally without per-call configuration.
+
+### Cross-reference
+
+- **Canonical-fix landing memo**: `.omx/research/probe_9_recipe_canonical_update_db8_to_db4_landed_20260525.md`
+- **Probe 9c landing memo (upstream)**: `.omx/research/probe_9c_per_level_wavelet_basis_disambiguator_landed_20260525.md`
+- **Catalog #313 probe-outcomes row**: `.omx/state/probe_outcomes.jsonl` (probe_id `probe_9_recipe_canonical_update_db8_to_db4_20260525`; verdict PROCEED; expires 2026-06-24)
+- **NEW canonical-fix test**: `src/tac/tests/test_train_substrate_uniward_pims_canonical_db4_basis.py` (7 tests; all PASS)

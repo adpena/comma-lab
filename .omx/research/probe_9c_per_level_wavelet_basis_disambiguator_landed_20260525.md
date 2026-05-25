@@ -270,3 +270,33 @@ The sister symposium memo `per_substrate_symposium_uniward_per_instance_multi_sc
 ---
 
 **Verdict TL;DR**: SISTER_BASIS_DOMINATES_db4 (z=−3.442σ; mean 0.3599 vs db8 baseline 0.3915; CIs disjoint at 95%; below-threshold fraction 83.6% vs 80.1%; min 0.0532 vs 0.0932 = 42.9% sharper inversion); Per Catalog #307 IMPLEMENTATION-LEVEL falsification: paradigm INTACT, db8 implementation falsified, substrate recipe canonical update from db8 → db4 required. Mallat binding revision #3 of 6 SATISFIED with canonical-fix. 2 of 3 dispatch-blocking revisions CLEARED. Probe 9 Tier-2 dispatch authorization GATED on remaining 1 revision: paired CPU+CUDA empirical anchor + sister subagent `_full_main` build. db16 INFERIOR (+11.86% / z=+6.254σ; smoother basis attenuates inversion); bior4.4 SECONDARY CANDIDATE (z=−2.743σ; lower-mean but db4 wins on lowest-mean tiebreaker).
+
+---
+
+## APPENDED 2026-05-25T17:13Z — P0 operator-routable SATISFIED (substrate-trio canonical update db8 → db4 APPLIED)
+
+Per Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY discipline (NEW section appended below the §13 TL;DR; existing landing body sections 1-13 UNTOUCHED).
+
+The §7 P0 operator-routable was:
+
+> **NEXT (P0)**: substrate recipe canonical update from db8 → db4 in the canonical lane. Files to update (operator-routable): recipe YAML + trainer Python + driver shell.
+
+**Status**: **SATISFIED** via canonical-fix landing `.omx/research/probe_9_recipe_canonical_update_db8_to_db4_landed_20260525.md` (lane `lane_probe_9_recipe_canonical_update_db8_to_db4_20260525`).
+
+### What landed
+
+- **3 source files updated in-place** per Catalog #307 IMPLEMENTATION-LEVEL fix discipline (LIVE_RECIPE/LIVE_CODE per Catalog #113 4-kind taxonomy):
+  - Recipe YAML: `UNIWARD_PIMS_WAVELET_NAME: db4` (+ 8-line comment with cite chain referencing this landing's commit `efeaff5c9`)
+  - Trainer Python: `WAVELET_NAME_DEFAULT = "db4"` (+ TIER_1_OPERATOR_REQUIRED_FLAGS rationale updated + 8 NEW smoke-summary `probe_9c_db4_anchor_*` fields)
+  - Driver shell: `UNIWARD_PIMS_WAVELET_NAME="${UNIWARD_PIMS_WAVELET_NAME:-db4}"` (+ 10-line comment with cite chain referencing this landing's commit `efeaff5c9`)
+
+- **1 NEW test**: `src/tac/tests/test_train_substrate_uniward_pims_canonical_db4_basis.py` (7 tests pinning db4 default + Probe 9c cite chain + Catalog #110/#113 HISTORICAL_PROVENANCE preservation of original Probe 9 N=25 db8 historical anchor; all PASS at 0.21s)
+
+### Catalog #344 RATIFY-N candidate state update
+
+NEW sister candidate `uniward_per_instance_multi_scale_wavelet_basis_optimal_db4_v1` evidence count strengthens 1 → 2 via the canonical-fix landing.
+
+### Cross-reference
+
+- **Canonical-fix landing memo**: `.omx/research/probe_9_recipe_canonical_update_db8_to_db4_landed_20260525.md`
+- **Catalog #313 probe-outcomes row**: `.omx/state/probe_outcomes.jsonl` (probe_id `probe_9_recipe_canonical_update_db8_to_db4_20260525`; verdict PROCEED; expires 2026-06-24)

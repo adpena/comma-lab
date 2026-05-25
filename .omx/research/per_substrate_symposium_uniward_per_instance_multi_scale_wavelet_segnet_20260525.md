@@ -523,3 +523,45 @@ Per Catalog #307 IMPLEMENTATION-LEVEL falsification: paradigm INTACT (per-instan
 - **Lane**: `lane_probe_9c_per_level_wavelet_basis_disambiguator_20260525` L1 (impl_complete + memory_entry + Catalog #313 + canonical Provenance per Catalog #287+#323+#341)
 - **Catalog #344 canonical equations registry**: existing sister candidate `uniward_per_instance_multi_scale_wavelet_combined_v1` evidence count update for db8 in_domain_context (3 anchors); NEW sister candidate `uniward_per_instance_multi_scale_wavelet_basis_optimal_db4_v1` QUEUED for operator-decision protocol per Catalog #344 + #359 sister-discipline; EXCLUDED_CONTEXT addendum recommended for db8-specific context.
 - **Honest deferrals**: NO paid GPU fired; canonical N=600 full-contest-video db4 re-anchor (Probe 9d, ~1-2 hr macOS-CPU, $0) deferred per Carmack MVP-first (not blocking — Mallat revision #3 satisfied at N=100 because z=1.72x threshold + CIs disjoint at 95% is structurally clean).
+
+---
+
+## §18 APPENDED 2026-05-25T17:13Z — substrate-trio canonical update db8 → db4 (revision #3 Mallat satisfaction now SUBSTRATE-ACTIVE per Catalog #307 IMPLEMENTATION-LEVEL fix)
+
+Per Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY discipline (NEW section appended below §17 Probe 9c append; existing symposium body sections 1-17 UNTOUCHED).
+
+The Probe 9c canonical-fix recommendation (§17 P0 operator-routable: substrate recipe + trainer + driver canonical update from db8 → db4) is **APPLIED** via the canonical-fix landing `.omx/research/probe_9_recipe_canonical_update_db8_to_db4_landed_20260525.md` (lane `lane_probe_9_recipe_canonical_update_db8_to_db4_20260525`).
+
+### What changed in the substrate trio (3 source files)
+
+- **`.omx/operator_authorize_recipes/substrate_uniward_per_instance_multi_scale_wavelet_segnet_modal_t4_dispatch.yaml`**: `UNIWARD_PIMS_WAVELET_NAME: db8` → `UNIWARD_PIMS_WAVELET_NAME: db4` (+ 8-line comment with Probe 9c cite chain)
+- **`experiments/train_substrate_uniward_per_instance_multi_scale_wavelet_segnet.py`**: `WAVELET_NAME_DEFAULT = "db8"` → `WAVELET_NAME_DEFAULT = "db4"` + TIER_1_OPERATOR_REQUIRED_FLAGS rationale updated to cite Probe 9c + smoke summary surfaces 8 NEW `probe_9c_db4_anchor_*` fields ALONGSIDE the preserved-verbatim Probe 9 N=25 db8 historical anchor (Catalog #110/#113 APPEND-ONLY discipline within the trainer module source)
+- **`scripts/remote_lane_substrate_uniward_per_instance_multi_scale_wavelet_segnet.sh`**: `UNIWARD_PIMS_WAVELET_NAME="${UNIWARD_PIMS_WAVELET_NAME:-db8}"` → `UNIWARD_PIMS_WAVELET_NAME="${UNIWARD_PIMS_WAVELET_NAME:-db4}"` (+ 10-line comment with Probe 9c cite chain)
+- **NEW**: `src/tac/tests/test_train_substrate_uniward_pims_canonical_db4_basis.py` (7 tests; pins db4 default + cite chain + HISTORICAL_PROVENANCE preservation; all PASS at 0.21s)
+
+### Revision #3 Mallat status update
+
+| Status pre-canonical-fix | Status post-canonical-fix |
+|---|---|
+| SATISFIED at Probe 9c per-level basis disambiguator level (verdict-only; substrate code still consumed db8 by default) | **SATISFIED with substrate-trio canonical update applied** (substrate trainer + driver + recipe now inherit canonical-optimal db4 by default; downstream `_full_main` BUILD inherits the canonical-optimal basis structurally) |
+
+### Probe 9 Tier-2 dispatch state (3 dispatch-blocking revisions)
+
+| Revision | Status |
+|---|---|
+| #1 Contrarian sister-probe 100-pair disambiguator | ✓ SATISFIED (Probe 9b landing 2026-05-25) |
+| #3 Mallat per-level wavelet-basis selection table | ✓ **SATISFIED with substrate-trio canonical update applied** (Probe 9c verdict + this canonical-fix landing) |
+| paired CPU+CUDA empirical anchor | PENDING — sister `_full_main` BUILD + paired dispatch authorization |
+
+**Result**: 2-of-3 dispatch-blocking revisions cleared + canonical-optimal basis applied across substrate trio. Sister subagent BUILD `_full_main` on canonical db4 substrate is **now UNBLOCKED** — the substrate trainer's full path will inherit the canonical-optimal db4 basis by default rather than the falsified db8 default.
+
+### Catalog #344 RATIFY-N candidate state update
+
+- NEW sister candidate `uniward_per_instance_multi_scale_wavelet_basis_optimal_db4_v1` evidence count **strengthens 1 → 2** via this canonical-fix landing (Probe 9c N=100 anchor + Probe 9 substrate-trio canonical-fix landing)
+- Sister candidate `uniward_per_instance_multi_scale_wavelet_combined_v1` EXCLUDED_CONTEXT addendum recommended for db8-specific in-domain context per Catalog #344 + #359 sister-discipline (queued; requires operator-verbatim approval)
+
+### Cross-reference
+
+- **Canonical-fix landing memo**: `.omx/research/probe_9_recipe_canonical_update_db8_to_db4_landed_20260525.md`
+- **Catalog #313 probe-outcomes row**: `.omx/state/probe_outcomes.jsonl` (probe_id `probe_9_recipe_canonical_update_db8_to_db4_20260525`; verdict PROCEED; expires 2026-06-24)
+- **NEW canonical-fix test**: `src/tac/tests/test_train_substrate_uniward_pims_canonical_db4_basis.py` (7 tests; all PASS)

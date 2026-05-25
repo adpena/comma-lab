@@ -88,7 +88,6 @@ import argparse
 import json
 import sys
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -125,7 +124,14 @@ N_PAIRS_FULL = 600
 CONTEST_NORMALIZER = 37_545_489.0
 
 # Probe 9 canonical algorithmic constants
-WAVELET_NAME_DEFAULT = "db8"
+# Canonical fix 2026-05-25: db8 -> db4 per Probe 9c empirical falsification
+# (z=-3.442sigma; mean 0.3599 vs db8 0.3915; CIs disjoint at 95%;
+# below-threshold 83.6% vs 80.1%; min 0.0532 vs 0.0932 = 42.9% sharper
+# inversion). PARADIGM INTACT per Catalog #307 IMPLEMENTATION-LEVEL fix;
+# SUBSTRATE BASIS canonical-optimal per Probe 9c. Commit efeaff5c9.
+# See: .omx/research/probe_9c_per_level_wavelet_basis_disambiguator_landed_20260525.md
+#      .omx/research/probe_9_recipe_canonical_update_db8_to_db4_landed_20260525.md
+WAVELET_NAME_DEFAULT = "db4"
 WAVELET_LEVELS_DEFAULT = 3
 SEGNET_INSTANCE_CONNECTIVITY_DEFAULT = 4  # 4-connectivity for connected-components
 SIGMA_FRIDRICH = 2.0 ** -6  # Holub-Fridrich 2014 epsilon
@@ -219,18 +225,24 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
     "--wavelet-name": {
         "env": "UNIWARD_PIMS_WAVELET_NAME",
         "rationale": (
-            "Holub-Fridrich 2014 canonical db8 wavelet basis; pywt.wavedec2 "
-            "convention. Per the per-substrate symposium Mallat seat binding "
-            "revision: per-level wavelet-basis selection table required "
-            "BEFORE archive grammar finalization."
+            "Holub-Fridrich 2014 canonical multi-scale wavelet basis; "
+            "pywt.wavedec2 convention. Per Probe 9c per-level wavelet-basis "
+            "selection disambiguator (commit efeaff5c9) the canonical-optimal "
+            "basis is db4 (z=-3.442sigma vs db8 baseline; mean 0.3599 vs "
+            "0.3915; CIs disjoint at 95%); Mallat seat binding revision #3 "
+            "of 6 SATISFIED with canonical-fix. Catalog #307 IMPLEMENTATION-"
+            "LEVEL fix; paradigm intact."
         ),
-        "default": "db8",
+        "default": "db4",
     },
     "--wavelet-levels": {
         "env": "UNIWARD_PIMS_WAVELET_LEVELS",
         "rationale": (
-            "Holub-Fridrich 2014 multi-level decomposition depth; Probe 9 "
-            "canonical anchor used levels=3 (3-level db8 detail-subband sum)."
+            "Holub-Fridrich 2014 multi-level decomposition depth; Probe 9c "
+            "canonical anchor at db4 used levels=3 (3-level db4 detail-"
+            "subband sum). Per-decomposition-level disambiguator at 2-vs-3-"
+            "vs-4 levels queued as P3 operator-routable enhancement per "
+            "Catalog #308 alternative-reducer cascade."
         ),
         "default": "3",
     },
@@ -427,9 +439,9 @@ def _smoke_main(args: argparse.Namespace) -> int:
     [macOS-CPU advisory] non-promotable. Produces NO archive bytes; emits
     a smoke-status JSON to --output-dir.
     """
-    import numpy as np  # noqa: E402
-    import torch  # noqa: E402
-    import torch.nn.functional as F  # noqa: E402
+    import numpy as np
+    import torch
+    import torch.nn.functional as F
 
     print(f"[uniward-pims] smoke_main begin device={args.device}", file=sys.stderr)
 
@@ -438,9 +450,10 @@ def _smoke_main(args: argparse.Namespace) -> int:
 
     # Lazy import per the canonical pattern (avoid hard deps during arg parsing).
     try:
-        import pywt  # noqa: F401
-        import scipy.ndimage  # noqa: F401
+        import pywt as _pywt
+        import scipy.ndimage as _scipy_ndi
         from safetensors.torch import load_file
+
         from upstream.modules import SegNet
     except ImportError as exc:
         print(f"[uniward-pims] FATAL: missing dependency: {exc}", file=sys.stderr)
@@ -456,9 +469,6 @@ def _smoke_main(args: argparse.Namespace) -> int:
         f"missing={len(missing)} unexpected={len(unexpected)}",
         file=sys.stderr,
     )
-
-    # Decode 8 frames from contest video (apples-to-apples Probe 9 setup).
-    import av  # noqa: F401
 
     def _decode_first_n_frames(video_path: Path, n: int = 8) -> torch.Tensor:
         import av
@@ -499,7 +509,6 @@ def _smoke_main(args: argparse.Namespace) -> int:
     # Multi-scale wavelet detail magnitudes (Probe 9 canonical algorithm)
     luma_np = luma.cpu().numpy()
     detail_sum = np.zeros((pair_count, H, W), dtype=np.float32)
-    import pywt as _pywt
 
     for i in range(pair_count):
         coeffs_multi = _pywt.wavedec2(
@@ -524,8 +533,6 @@ def _smoke_main(args: argparse.Namespace) -> int:
     uniward_weights_norm = uniward_weights / uniward_weights.mean()
 
     # Per-instance summary verification (verifies algorithm matches Probe 9)
-    import scipy.ndimage as _scipy_ndi
-
     structure = (
         np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.int8)
         if args.segnet_instance_connectivity == 4
@@ -583,6 +590,8 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "max_segment_textured_avg_weight": (
             max(per_segment_textured_weights) if per_segment_textured_weights else None
         ),
+        # Probe 9 historical N=25 db8 anchor (HISTORICAL_PROVENANCE per Catalog
+        # #110/#113 APPEND-ONLY; preserved verbatim from BREAKTHROUGH landing).
         "probe_9_anchor_min": 0.2597,
         "probe_9_anchor_threshold": 0.5,
         "probe_9_breaks_threshold": (
@@ -590,6 +599,18 @@ def _smoke_main(args: argparse.Namespace) -> int:
             if per_segment_textured_weights
             else None
         ),
+        # Probe 9c canonical-optimal db4 N=100 anchor (SISTER_BASIS_DOMINATES_db4
+        # verdict at z=-3.442sigma vs db8 baseline; per Catalog #307
+        # IMPLEMENTATION-LEVEL fix landed commit efeaff5c9; see
+        # .omx/research/probe_9c_per_level_wavelet_basis_disambiguator_landed_20260525.md).
+        "probe_9c_db4_anchor_min": 0.0532,
+        "probe_9c_db4_anchor_mean": 0.3599,
+        "probe_9c_db4_anchor_ci_lower": 0.3457,
+        "probe_9c_db4_anchor_ci_upper": 0.3740,
+        "probe_9c_db4_anchor_below_threshold_fraction": 0.836,
+        "probe_9c_db4_anchor_valid_segment_count": 537,
+        "probe_9c_db4_anchor_z_vs_db8_baseline": -3.442,
+        "probe_9c_canonical_optimal_basis": "db4",
         "elapsed_seconds": elapsed,
         "canonical_provenance": {
             "kind": "macos_cpu_advisory"

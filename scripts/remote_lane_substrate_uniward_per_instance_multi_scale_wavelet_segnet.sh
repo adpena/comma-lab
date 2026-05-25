@@ -93,7 +93,16 @@ UNIWARD_PIMS_EPOCHS="${UNIWARD_PIMS_EPOCHS:-2000}"
 UNIWARD_PIMS_BATCH_SIZE="${UNIWARD_PIMS_BATCH_SIZE:-16}"
 UNIWARD_PIMS_UPSTREAM_DIR="${UNIWARD_PIMS_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 UNIWARD_PIMS_DEVICE="${UNIWARD_PIMS_DEVICE:-cuda}"
-UNIWARD_PIMS_WAVELET_NAME="${UNIWARD_PIMS_WAVELET_NAME:-db8}"
+# Canonical fix 2026-05-25: db8 -> db4 per Probe 9c per-level wavelet-basis
+# selection disambiguator (commit efeaff5c9; SISTER_BASIS_DOMINATES_db4 at
+# z=-3.442sigma vs db8 baseline; mean 0.3599 vs db8 0.3915; CIs disjoint at
+# 95%; below-threshold 83.6% vs 80.1%). Per Catalog #307 IMPLEMENTATION-LEVEL
+# fix; substrate paradigm (per-instance + multi-scale wavelet UNIWARD-
+# weighted SegNet loss) INTACT. Ratifies canonical equation candidate
+# uniward_per_instance_multi_scale_wavelet_basis_optimal_db4_v1. See:
+# .omx/research/probe_9c_per_level_wavelet_basis_disambiguator_landed_20260525.md
+# .omx/research/probe_9_recipe_canonical_update_db8_to_db4_landed_20260525.md
+UNIWARD_PIMS_WAVELET_NAME="${UNIWARD_PIMS_WAVELET_NAME:-db4}"
 UNIWARD_PIMS_WAVELET_LEVELS="${UNIWARD_PIMS_WAVELET_LEVELS:-3}"
 UNIWARD_PIMS_SEGNET_INSTANCE_CONNECTIVITY="${UNIWARD_PIMS_SEGNET_INSTANCE_CONNECTIVITY:-4}"
 # Catalog #326 multi-key trainer mode resolution: driver passes through env

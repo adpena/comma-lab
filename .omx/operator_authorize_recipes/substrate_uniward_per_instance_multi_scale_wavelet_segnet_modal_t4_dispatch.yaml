@@ -181,7 +181,15 @@ env_overrides:
   UNIWARD_PIMS_BATCH_SIZE: "16"
   UNIWARD_PIMS_UPSTREAM_DIR: /workspace/pact/upstream
   UNIWARD_PIMS_DEVICE: cuda
-  UNIWARD_PIMS_WAVELET_NAME: db8
+  # db4 selected per Probe 9c canonical empirical falsification of db8-optimal
+  # NULL: z=-3.442σ; CIs disjoint at 95% (CI_db4 upper 0.3740 < CI_db8 lower
+  # 0.3803); below-threshold 83.6% vs 80.1%; per Catalog #307 IMPLEMENTATION-
+  # LEVEL fix; commit efeaff5c9; ratifies canonical equation candidate
+  # uniward_per_instance_multi_scale_wavelet_basis_optimal_db4_v1. PARADIGM
+  # (per-instance + multi-scale wavelet UNIWARD-weighted SegNet loss) INTACT;
+  # ONLY the basis-selection implementation is updated. See:
+  # .omx/research/probe_9c_per_level_wavelet_basis_disambiguator_landed_20260525.md
+  UNIWARD_PIMS_WAVELET_NAME: db4
   UNIWARD_PIMS_WAVELET_LEVELS: "3"
   UNIWARD_PIMS_SEGNET_INSTANCE_CONNECTIVITY: "4"
   UNIWARD_PIMS_TRAINER_MODE: full
