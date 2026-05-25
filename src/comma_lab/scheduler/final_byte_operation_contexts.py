@@ -464,6 +464,7 @@ def _packet_member_context_row(
             "renderer_payload_dfl1_source_runtime_dir",
             "renderer_payload_dfl1_inflate_runtime_dir",
             "packet_member_merge_source_runtime_dir",
+            "tensor_factorize_source_runtime_dir",
             "source_runtime_dir",
             "inflate_runtime_dir",
         ),
@@ -472,6 +473,8 @@ def _packet_member_context_row(
         context["source_runtime_dir"] = source_runtime
         if is_member_merge:
             context["packet_member_merge_source_runtime_dir"] = source_runtime
+        if row.get("target_kind") == TENSOR_FACTORIZE_TARGET_KIND:
+            context["tensor_factorize_source_runtime_dir"] = source_runtime
         if is_renderer_payload_dfl1:
             context["renderer_payload_dfl1_source_runtime_dir"] = source_runtime
             context["renderer_payload_dfl1_inflate_runtime_dir"] = source_runtime
@@ -637,6 +640,22 @@ def _tensor_factorize_context_row(
         hints,
         ("factorization_contract", "tensor_factorization_contract"),
     )
+    source_runtime = _first_text(
+        hints,
+        (
+            "tensor_factorize_source_runtime_dir",
+            "source_runtime_dir",
+            "inflate_runtime_dir",
+        ),
+    )
+    runtime_dir_out = _first_text(
+        hints,
+        ("tensor_factorize_runtime_dir_out", "runtime_dir_out"),
+    )
+    runtime_manifest_out = _first_text(
+        hints,
+        ("tensor_factorize_runtime_manifest_out", "runtime_manifest_out"),
+    )
     rank = hints.get("rank")
     output_archive, json_out = _output_paths(
         row=row,
@@ -667,6 +686,15 @@ def _tensor_factorize_context_row(
         context["factorization_contract"] = factorization_contract
     if isinstance(rank, int) and not isinstance(rank, bool) and rank > 0:
         context["rank"] = rank
+    if source_runtime is not None:
+        context["source_runtime_dir"] = source_runtime
+        context["tensor_factorize_source_runtime_dir"] = source_runtime
+    if runtime_dir_out is not None:
+        context["runtime_dir_out"] = runtime_dir_out
+        context["tensor_factorize_runtime_dir_out"] = runtime_dir_out
+    if runtime_manifest_out is not None:
+        context["runtime_manifest_out"] = runtime_manifest_out
+        context["tensor_factorize_runtime_manifest_out"] = runtime_manifest_out
     if output_archive is not None:
         context["output_archive"] = output_archive
     if json_out is not None:

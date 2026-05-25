@@ -555,6 +555,59 @@ def test_final_byte_context_compiler_covers_packet_member_and_tensor_families(
     assert work_queue["ready_for_exact_eval_dispatch"] is False
 
 
+def test_final_byte_context_compiler_wires_tensor_factorize_receiver_runtime(
+    tmp_path: Path,
+) -> None:
+    artifact_map = _mixed_artifact_map(tmp_path)
+    artifacts = artifact_map["artifacts"]
+    assert isinstance(artifacts, dict)
+    tensor_hints = artifacts[TENSOR_FACTORIZE_TARGET_KIND]
+    assert isinstance(tensor_hints, dict)
+    tensor_hints["tensor_factorize_source_runtime_dir"] = str(
+        tmp_path / "source_runtime"
+    )
+    tensor_hints["tensor_factorize_runtime_dir_out"] = str(
+        tmp_path / "tensor_runtime"
+    )
+    tensor_hints["tensor_factorize_runtime_manifest_out"] = str(
+        tmp_path / "tensor_runtime.json"
+    )
+
+    payload = build_final_byte_operation_contexts(
+        _mixed_backlog(),
+        artifact_map=artifact_map,
+        repo_root=tmp_path,
+        default_output_root=tmp_path / "out",
+    )
+
+    contexts_by_target = {row["target_kind"]: row["context"] for row in payload["rows"]}
+    context = contexts_by_target[TENSOR_FACTORIZE_TARGET_KIND]
+    assert context["tensor_factorize_source_runtime_dir"].endswith("source_runtime")
+    resolved = materializer_contexts_from_payload(payload)
+    work_queue = build_materializer_work_queue(
+        _mixed_backlog(),
+        repo_root=tmp_path,
+        contexts=resolved,
+        source_plan_path="plan.json",
+    )
+    tensor_row = {
+        row["target_kind"]: row for row in work_queue["rows"]
+    }[TENSOR_FACTORIZE_TARGET_KIND]
+    pairs = [
+        tensor_row["command"][index : index + 2]
+        for index in range(len(tensor_row["command"]) - 1)
+    ]
+    assert [
+        "--tensor-factorize-source-runtime-dir",
+        str(tmp_path / "source_runtime"),
+    ] in pairs
+    assert ["--tensor-factorize-runtime-dir-out", str(tmp_path / "tensor_runtime")] in pairs
+    assert [
+        "--tensor-factorize-runtime-manifest-out",
+        str(tmp_path / "tensor_runtime.json"),
+    ] in pairs
+
+
 def test_final_byte_context_compiler_covers_packet_member_zip_header_elide(
     tmp_path: Path,
 ) -> None:

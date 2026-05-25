@@ -1788,6 +1788,14 @@ def materialize_tensor_factorize_candidate(
     u_r = u[:, :rank].astype(np.float32)
     s_r = s[:rank].astype(np.float32)
     vt_r = vt[:rank, :].astype(np.float32)
+    max_abs_tolerance = _optional_nonnegative_float(
+        contract.get("max_abs_error_tolerance"),
+        field="factorization_contract.max_abs_error_tolerance",
+    )
+    max_relative_tolerance = _optional_nonnegative_float(
+        contract.get("max_relative_error_tolerance"),
+        field="factorization_contract.max_relative_error_tolerance",
+    )
     factor_payload = _npz_bytes(
         {
             "schema": TENSOR_FACTORIZE_SCHEMA,
@@ -1898,6 +1906,8 @@ def materialize_tensor_factorize_candidate(
             "source_archive_bytes": source_record["bytes"],
             "candidate_archive_bytes": candidate_record["bytes"],
             "saved_bytes": saved_bytes,
+            "max_abs_error_tolerance": max_abs_tolerance,
+            "max_relative_error_tolerance": max_relative_tolerance,
         },
         "serialized_archive_delta": _serialized_archive_delta_contract(
             source_archive=source_record,

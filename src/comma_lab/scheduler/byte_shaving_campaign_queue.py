@@ -2428,6 +2428,42 @@ def _family_agnostic_materializer_command(
         rank = _finite_int(context.get("rank"))
         if rank is not None:
             command.extend(["--rank", str(rank)])
+        source_runtime = _path_context_value(
+            context,
+            "tensor_factorize_source_runtime_dir",
+        )
+        if source_runtime is None:
+            source_runtime = _path_context_value(context, "source_runtime_dir")
+        if source_runtime is None:
+            source_runtime = _path_context_value(context, "inflate_runtime_dir")
+        if source_runtime is not None:
+            command.extend(["--tensor-factorize-source-runtime-dir", source_runtime])
+            runtime_dir_out = _path_context_value(
+                context,
+                "tensor_factorize_runtime_dir_out",
+            )
+            if runtime_dir_out is None:
+                runtime_dir_out = _path_context_value(context, "runtime_dir_out")
+            if runtime_dir_out is None:
+                runtime_dir_out = Path(output_manifest).with_name(
+                    f"{Path(output_manifest).stem}.runtime"
+                ).as_posix()
+            command.extend(["--tensor-factorize-runtime-dir-out", runtime_dir_out])
+            runtime_manifest_out = _path_context_value(
+                context,
+                "tensor_factorize_runtime_manifest_out",
+            )
+            if runtime_manifest_out is None:
+                runtime_manifest_out = _path_context_value(context, "runtime_manifest_out")
+            if runtime_manifest_out is None:
+                runtime_manifest_out = Path(output_manifest).with_name(
+                    f"{Path(output_manifest).stem}.runtime_adapter.json"
+                ).as_posix()
+            command.extend(
+                ["--tensor-factorize-runtime-manifest-out", runtime_manifest_out]
+            )
+            if context.get("allow_tensor_factorize_runtime_sidecars") is True:
+                command.append("--allow-tensor-factorize-runtime-sidecars")
 
     artifact_paths = [output_archive, output_manifest]
     if runtime_proof_out is not None:
@@ -2446,6 +2482,36 @@ def _family_agnostic_materializer_command(
         runtime_manifest_out = _path_context_value(
             context,
             "packet_member_merge_runtime_manifest_out",
+        )
+        if runtime_manifest_out is None:
+            runtime_manifest_out = _path_context_value(context, "runtime_manifest_out")
+        if runtime_manifest_out is None:
+            runtime_manifest_out = Path(output_manifest).with_name(
+                f"{Path(output_manifest).stem}.runtime_adapter.json"
+            ).as_posix()
+        artifact_paths.extend([runtime_dir_out, runtime_manifest_out])
+    tensor_source_runtime = _path_context_value(
+        context,
+        "tensor_factorize_source_runtime_dir",
+    )
+    if tensor_source_runtime is None:
+        tensor_source_runtime = _path_context_value(context, "source_runtime_dir")
+    if tensor_source_runtime is None:
+        tensor_source_runtime = _path_context_value(context, "inflate_runtime_dir")
+    if target_kind == TENSOR_FACTORIZE_TARGET_KIND and tensor_source_runtime is not None:
+        runtime_dir_out = _path_context_value(
+            context,
+            "tensor_factorize_runtime_dir_out",
+        )
+        if runtime_dir_out is None:
+            runtime_dir_out = _path_context_value(context, "runtime_dir_out")
+        if runtime_dir_out is None:
+            runtime_dir_out = Path(output_manifest).with_name(
+                f"{Path(output_manifest).stem}.runtime"
+            ).as_posix()
+        runtime_manifest_out = _path_context_value(
+            context,
+            "tensor_factorize_runtime_manifest_out",
         )
         if runtime_manifest_out is None:
             runtime_manifest_out = _path_context_value(context, "runtime_manifest_out")
@@ -2797,6 +2863,10 @@ def _family_agnostic_materializer_queue_adapter(
             manifest_path=manifest_out,
             schema=schema,
             target_kind=target_kind,
+            require_dfl1_full_frame_parity=(
+                target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND
+                and _renderer_payload_dfl1_existing_parity_proof(context) is not None
+            ),
         )
     return command, blockers, telemetry, postconditions
 
@@ -2988,6 +3058,7 @@ def _materializer_candidate_postconditions(
     manifest_path: str,
     schema: str,
     target_kind: str | None = None,
+    require_dfl1_full_frame_parity: bool = False,
 ) -> list[dict[str, Any]]:
     required_equals: dict[str, Any] = {"schema": schema}
     required_sha256 = ["candidate_archive.sha256"]
@@ -3077,11 +3148,18 @@ def _materializer_candidate_postconditions(
                     [
                         "runtime_adapter_ready",
                         "receiver_verification.runtime_adapter_ready",
+                    ]
+                    if target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND
+                    else []
+                ),
+                *(
+                    [
                         "full_frame_inflate_parity_proven",
                         "full_frame_inflate_parity_verification.full_frame_inflate_parity_satisfied",
                         "renderer_payload_dfl1_inflate_parity_satisfied",
                     ]
                     if target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND
+                    and require_dfl1_full_frame_parity
                     else []
                 ),
             ],
@@ -3103,6 +3181,20 @@ def _materializer_candidate_postconditions(
             "forbidden_statuses": ["failed"],
         },
     ]
+
+
+def _renderer_payload_dfl1_existing_parity_proof(
+    context: Mapping[str, Any],
+) -> str | None:
+    proof = _path_context_value(context, "full_frame_inflate_parity_proof")
+    if proof is None:
+        proof = _path_context_value(
+            context,
+            "renderer_payload_dfl1_inflate_parity_proof",
+        )
+    if proof is None:
+        proof = _path_context_value(context, "inflate_parity_proof")
+    return proof
 
 
 def _planning_artifact_postconditions(

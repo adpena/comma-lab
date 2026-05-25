@@ -2682,6 +2682,66 @@ def test_materializer_work_queue_wraps_packet_member_and_tensor_family_adapters(
     assert tensor_row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_materializer_work_queue_wires_tensor_factorize_receiver_runtime(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    tensor_manifest = tmp_path / "tensor_manifest.json"
+    factor_contract = tmp_path / "factor_contract.json"
+    source_runtime = tmp_path / "source_runtime"
+    tensor_output = tmp_path / "tensor_candidate.zip"
+    tensor_out_manifest = tmp_path / "tensor_candidate.json"
+    runtime_dir = tmp_path / "tensor_runtime"
+    runtime_manifest = tmp_path / "tensor_runtime.json"
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "backlog_key": "tensor_factorize_fixture",
+                "unit_kind": "tensor",
+                "operation_family": "factorize_tensor",
+                "target_kind": TENSOR_FACTORIZE_TARGET_KIND,
+                "materializer_id": TENSOR_FACTORIZE_MATERIALIZER,
+            },
+        ],
+    }
+
+    queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts={
+            "tensor_factorize_fixture": {
+                "archive_path": str(archive),
+                "tensor_manifest": str(tensor_manifest),
+                "factorization_contract": str(factor_contract),
+                "source_runtime_dir": str(source_runtime),
+                "tensor_factorize_runtime_dir_out": str(runtime_dir),
+                "tensor_factorize_runtime_manifest_out": str(runtime_manifest),
+                "output_archive": str(tensor_output),
+                "output_manifest": str(tensor_out_manifest),
+            },
+        },
+        source_plan_path="plan.json",
+    )
+
+    row = queue["rows"][0]
+    command_pairs = [
+        row["command"][index : index + 2]
+        for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--tensor-factorize-source-runtime-dir", str(source_runtime)] in command_pairs
+    assert ["--tensor-factorize-runtime-dir-out", str(runtime_dir)] in command_pairs
+    assert [
+        "--tensor-factorize-runtime-manifest-out",
+        str(runtime_manifest),
+    ] in command_pairs
+    assert str(runtime_dir) in row["telemetry"]["artifact_paths"]
+    assert str(runtime_manifest) in row["telemetry"]["artifact_paths"]
+    assert str(runtime_manifest) in row["telemetry"]["pullback_artifact_paths"]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
 def test_materializer_work_queue_emits_grouped_archive_state_requests(
     tmp_path: Path,
 ) -> None:
@@ -4783,6 +4843,23 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
     assert dispatch_step["requires"] == [MATERIALIZER_HARVEST_STEP_ID]
     assert dispatch_step["timeout_seconds"] == 600
     assert materialize_step["id"] == MATERIALIZER_EXECUTION_STEP_ID
+    materialize_contract = next(
+        condition
+        for condition in materialize_step["postconditions"]
+        if condition.get("type") == "json_completion_contract"
+    )
+    materialize_required_true = set(materialize_contract["required_true"])
+    assert "runtime_adapter_ready" in materialize_required_true
+    assert "receiver_verification.runtime_adapter_ready" in materialize_required_true
+    assert "full_frame_inflate_parity_proven" not in materialize_required_true
+    assert (
+        "full_frame_inflate_parity_verification.full_frame_inflate_parity_satisfied"
+        not in materialize_required_true
+    )
+    assert (
+        "renderer_payload_dfl1_inflate_parity_satisfied"
+        not in materialize_required_true
+    )
     assert execution_queue["controls"]["max_concurrency"]["local_io_heavy"] == 1
     metadata = execution_queue["experiments"][0]["metadata"]
     assert metadata["renderer_payload_dfl1_parity_followup_requested"] is True
@@ -6080,6 +6157,7 @@ def test_renderer_payload_dfl1_postconditions_require_runtime_and_full_frame_par
         manifest_path=manifest_path.name,
         schema=RENDERER_PAYLOAD_DFL1_SCHEMA,
         target_kind=RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+        require_dfl1_full_frame_parity=True,
     )
 
     assert not all(

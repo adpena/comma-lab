@@ -35,6 +35,11 @@ from tac.optimization.packet_member_merge_receiver import (
     build_packet_member_merge_runtime_consumption_proof,
     run_packet_member_merge_receiver_smoke,
 )
+from tac.optimization.tensor_factorize_receiver import (
+    build_tensor_factorize_receiver_runtime,
+    build_tensor_factorize_runtime_consumption_proof,
+    run_tensor_factorize_receiver_smoke,
+)
 from tac.repo_io import sha256_bytes
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -1533,6 +1538,109 @@ def test_tensor_factorize_materializer_runtime_adapter_ready_requires_sha(
     assert result["runtime_adapter_ready"] is False
 
 
+def test_tensor_factorize_receiver_runtime_proves_consumed_transform(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    runtime_dir = tmp_path / "runtime"
+    runtime_manifest_out = tmp_path / "runtime_adapter.json"
+    output_dir = tmp_path / "inflated"
+    tensor_path = tmp_path / "tensor.npy"
+    source_tensor = (
+        np.arange(64, dtype=np.float32)[:, None]
+        @ np.linspace(0.25, 2.0, 64, dtype=np.float32)[None, :]
+    )
+    np.save(tensor_path, source_tensor)
+    _write_zip(archive, {"weights.npy": tensor_path.read_bytes()})
+    source_runtime = tmp_path / "source_runtime"
+    source_runtime.mkdir()
+    (source_runtime / "inflate.py").write_text(
+        "\n".join(
+            [
+                "import io, sys, zipfile",
+                "from pathlib import Path",
+                "import numpy as np",
+                "archive_dir, output_dir, file_list = sys.argv[1:4]",
+                "out = Path(output_dir)",
+                "out.mkdir(parents=True, exist_ok=True)",
+                "with zipfile.ZipFile(Path(archive_dir) / 'archive.zip', 'r') as zf:",
+                "    tensor = np.load(io.BytesIO(zf.read('weights.npy')), allow_pickle=False)",
+                "(out / file_list).write_text(f'{float(np.sum(tensor)):.6f}', encoding='utf-8')",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = materialize_tensor_factorize_candidate(
+        archive_path=archive,
+        tensor_manifest={"member_name": "weights.npy"},
+        factorization_contract={
+            "rank": 1,
+            "cooperative_receiver_id": "fixture_tensor_factorize_receiver",
+            "receiver_adapter_kind": "shadow_archive_tensor_factorize_receiver",
+            "max_abs_error_tolerance": 1.0e-3,
+        },
+        output_archive=output,
+        repo_root=tmp_path,
+    )
+    runtime_manifest = build_tensor_factorize_receiver_runtime(
+        source_runtime_dir=source_runtime,
+        candidate_manifest=result,
+        runtime_dir_out=runtime_dir,
+        runtime_manifest_out=runtime_manifest_out,
+        repo_root=tmp_path,
+    )
+    proof = build_tensor_factorize_runtime_consumption_proof(
+        runtime_adapter_manifest=runtime_manifest,
+        candidate_manifest=result,
+        repo_root=tmp_path,
+    )
+    verification = verify_runtime_consumption_proof(
+        runtime_consumption_proof=proof,
+        required_candidate_archive_sha256=result["candidate_archive"]["sha256"],
+        required_candidate_member_sha256=result["candidate_member"]["sha256"],
+        repo_root=tmp_path,
+    )
+    smoke = run_tensor_factorize_receiver_smoke(
+        runtime_dir=runtime_dir,
+        candidate_archive=output,
+        output_dir=output_dir,
+        file_list="0.mkv",
+    )
+    consumed_result = materialize_tensor_factorize_candidate(
+        archive_path=archive,
+        tensor_manifest={"member_name": "weights.npy"},
+        factorization_contract={
+            "rank": 1,
+            "cooperative_receiver_id": "fixture_tensor_factorize_receiver",
+            "receiver_adapter_kind": "shadow_archive_tensor_factorize_receiver",
+            "max_abs_error_tolerance": 1.0e-3,
+        },
+        output_archive=tmp_path / "candidate_consumed.zip",
+        runtime_consumption_proof=proof,
+        repo_root=tmp_path,
+    )
+
+    assert runtime_manifest["runtime_adapter_ready"] is True
+    assert runtime_manifest["runtime_tree_sha256"]
+    assert proof["proof_kind"] == "tensor_factorize_cooperative_receiver_reconstruction_proof.v1"
+    assert proof["receiver_contract_satisfied"] is True
+    assert verification["receiver_contract_satisfied"] is True
+    assert verification["runtime_adapter_ready"] is True
+    assert smoke["passed"] is True
+    assert (output_dir / "0.mkv").read_text(encoding="utf-8") == (
+        f"{float(np.sum(source_tensor)):.6f}"
+    )
+    assert consumed_result["receiver_contract_satisfied"] is True
+    assert consumed_result["runtime_adapter_ready"] is True
+    assert "tensor_factorize_exact_readiness_refused_until_byte_closed_runtime_adapter_lands" not in (
+        consumed_result["readiness_blockers"]
+    )
+    assert proof["score_claim"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
+
+
 def test_tensor_factorize_materializer_rejects_wrong_proof_metadata(
     tmp_path: Path,
 ) -> None:
@@ -2047,5 +2155,108 @@ def test_tensor_factorize_materializer_cli_auto_writes_runtime_proof(
     assert "tensor_factorize_exact_readiness_refused_until_byte_closed_runtime_adapter_lands" in (
         payload["readiness_blockers"]
     )
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_tensor_factorize_materializer_cli_builds_receiver_runtime(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    manifest_path = tmp_path / "candidate.json"
+    proof = tmp_path / "candidate.runtime_consumption_proof.json"
+    runtime_dir = tmp_path / "runtime"
+    runtime_manifest = tmp_path / "runtime_adapter.json"
+    tensor_manifest_path = tmp_path / "tensor_manifest.json"
+    contract_path = tmp_path / "factorization_contract.json"
+    tensor_path = tmp_path / "tensor.npy"
+    source_tensor = (
+        np.arange(64, dtype=np.float32)[:, None]
+        @ np.linspace(0.25, 2.0, 64, dtype=np.float32)[None, :]
+    )
+    np.save(tensor_path, source_tensor)
+    _write_zip(archive, {"weights.npy": tensor_path.read_bytes()})
+    source_runtime = tmp_path / "source_runtime"
+    source_runtime.mkdir()
+    (source_runtime / "inflate.py").write_text(
+        "\n".join(
+            [
+                "import io, sys, zipfile",
+                "from pathlib import Path",
+                "import numpy as np",
+                "archive_dir, output_dir, file_list = sys.argv[1:4]",
+                "out = Path(output_dir)",
+                "out.mkdir(parents=True, exist_ok=True)",
+                "with zipfile.ZipFile(Path(archive_dir) / 'archive.zip', 'r') as zf:",
+                "    tensor = np.load(io.BytesIO(zf.read('weights.npy')), allow_pickle=False)",
+                "(out / file_list).write_text(f'{float(np.sum(tensor)):.6f}', encoding='utf-8')",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    tensor_manifest_path.write_text(
+        json.dumps({"member_name": "weights.npy"}),
+        encoding="utf-8",
+    )
+    contract_path.write_text(
+        json.dumps(
+            {
+                "rank": 1,
+                "cooperative_receiver_id": "fixture_tensor_factorize_receiver",
+                "receiver_adapter_kind": "shadow_archive_tensor_factorize_receiver",
+                "max_abs_error_tolerance": 1.0e-3,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_family_agnostic_materializer.py"),
+            "--target-kind",
+            "tensor_factorize_v1",
+            "--archive-path",
+            str(archive),
+            "--output-archive",
+            str(output),
+            "--output-manifest",
+            str(manifest_path),
+            "--tensor-manifest",
+            str(tensor_manifest_path),
+            "--factorization-contract",
+            str(contract_path),
+            "--tensor-factorize-source-runtime-dir",
+            str(source_runtime),
+            "--tensor-factorize-runtime-dir-out",
+            str(runtime_dir),
+            "--tensor-factorize-runtime-manifest-out",
+            str(runtime_manifest),
+            "--runtime-consumption-proof-out",
+            str(proof),
+        ],
+        check=True,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    stdout_payload = json.loads(completed.stdout)
+    proof_payload = json.loads(proof.read_text(encoding="utf-8"))
+    runtime_payload = json.loads(runtime_manifest.read_text(encoding="utf-8"))
+    assert payload["schema"] == TENSOR_FACTORIZE_SCHEMA
+    assert stdout_payload["schema"] == TENSOR_FACTORIZE_SCHEMA
+    assert payload["receiver_contract_satisfied"] is True
+    assert payload["runtime_adapter_ready"] is True
+    assert payload["receiver_verification"]["runtime_adapter_ready"] is True
+    assert payload["receiver_verification"]["runtime_adapter_sha256"] == (
+        runtime_payload["runtime_tree_sha256"]
+    )
+    assert proof_payload["runtime_consumption_probe"]["passed"] is True
+    assert payload["runtime_consumption_proof_path"] == str(proof)
+    assert runtime_payload["runtime_adapter_ready"] is True
+    assert (runtime_dir / "inflate.sh").is_file()
     assert payload["score_claim"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False

@@ -25,6 +25,9 @@ from tac.optimization.family_agnostic_materializers import (  # noqa: E402
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+    TENSOR_FACTORIZE_MATERIALIZER_ID,
+    TENSOR_FACTORIZE_PROOF_KIND,
+    TENSOR_FACTORIZE_RECEIVER_CONTRACT_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
     FamilyAgnosticMaterializerError,
     materialize_archive_section_entropy_recode_candidate,
@@ -39,6 +42,11 @@ from tac.optimization.packet_member_merge_receiver import (  # noqa: E402
     PacketMemberMergeReceiverError,
     build_packet_member_merge_receiver_runtime,
     build_packet_member_merge_runtime_consumption_proof,
+)
+from tac.optimization.tensor_factorize_receiver import (  # noqa: E402
+    TensorFactorizeReceiverError,
+    build_tensor_factorize_receiver_runtime,
+    build_tensor_factorize_runtime_consumption_proof,
 )
 from tac.repo_io import (  # noqa: E402
     ArtifactWriteError,
@@ -92,6 +100,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--tensor-manifest", type=Path)
     parser.add_argument("--factorization-contract", type=Path)
     parser.add_argument("--rank", type=int)
+    parser.add_argument("--tensor-factorize-source-runtime-dir", type=Path)
+    parser.add_argument("--tensor-factorize-runtime-dir-out", type=Path)
+    parser.add_argument("--tensor-factorize-runtime-manifest-out", type=Path)
+    parser.add_argument(
+        "--allow-tensor-factorize-runtime-sidecars",
+        action="store_true",
+    )
     parser.add_argument("--allow-size-regression", action="store_true")
     parser.add_argument("--allow-overwrite", action="store_true")
     parser.add_argument("--expected-existing-output-sha256")
@@ -126,6 +141,7 @@ def main(argv: list[str] | None = None) -> int:
         ArtifactWriteError,
         FamilyAgnosticMaterializerError,
         PacketMemberMergeReceiverError,
+        TensorFactorizeReceiverError,
     ) as exc:
         print(f"FATAL: family-agnostic materializer failed: {exc}", file=sys.stderr)
         return 2
@@ -408,19 +424,117 @@ def _run_materializer(
         if args.factorization_contract is not None:
             input_paths.append(args.factorization_contract)
         runtime_proof_out = args.runtime_consumption_proof_out
-        if args.runtime_consumption_proof is None and runtime_proof_out is None:
+        if (
+            args.runtime_consumption_proof is None
+            and runtime_proof_out is None
+            and args.tensor_factorize_source_runtime_dir is None
+        ):
             runtime_proof_out = args.output_manifest.with_name(
                 f"{args.output_manifest.stem}.runtime_consumption_proof.json"
             )
-        return materialize_tensor_factorize_candidate(
+        materializer_runtime_proof_out = (
+            None
+            if args.tensor_factorize_source_runtime_dir is not None
+            else runtime_proof_out
+        )
+        manifest = materialize_tensor_factorize_candidate(
             **common,
             tensor_manifest=args.tensor_manifest,
             factorization_contract=contract,
-            runtime_consumption_proof_out=runtime_proof_out,
+            runtime_consumption_proof_out=materializer_runtime_proof_out,
             expected_existing_runtime_consumption_proof_sha256=(
                 args.expected_existing_runtime_consumption_proof_sha256
             ),
         )
+        if args.tensor_factorize_source_runtime_dir is None:
+            return manifest
+        runtime_dir = (
+            args.tensor_factorize_runtime_dir_out
+            if args.tensor_factorize_runtime_dir_out is not None
+            else args.output_manifest.with_name(f"{args.output_manifest.stem}.runtime")
+        )
+        runtime_manifest_out = (
+            args.tensor_factorize_runtime_manifest_out
+            if args.tensor_factorize_runtime_manifest_out is not None
+            else args.output_manifest.with_name(
+                f"{args.output_manifest.stem}.runtime_adapter.json"
+            )
+        )
+        proof_out = (
+            args.runtime_consumption_proof_out
+            if args.runtime_consumption_proof_out is not None
+            else args.output_manifest.with_name(
+                f"{args.output_manifest.stem}.runtime_consumption_proof.json"
+            )
+        )
+        runtime_manifest = build_tensor_factorize_receiver_runtime(
+            source_runtime_dir=args.tensor_factorize_source_runtime_dir,
+            candidate_manifest=manifest,
+            runtime_dir_out=runtime_dir,
+            runtime_manifest_out=runtime_manifest_out,
+            repo_root=REPO_ROOT,
+            allow_runtime_sidecars=args.allow_tensor_factorize_runtime_sidecars,
+            allow_overwrite=args.allow_overwrite,
+            min_free_bytes=args.min_free_bytes,
+        )
+        runtime_proof = build_tensor_factorize_runtime_consumption_proof(
+            runtime_adapter_manifest=runtime_manifest,
+            candidate_manifest=manifest,
+            repo_root=REPO_ROOT,
+        )
+        write_json_artifact(
+            proof_out,
+            runtime_proof,
+            allow_overwrite=args.allow_overwrite,
+            expected_existing_sha256=(
+                args.expected_existing_runtime_consumption_proof_sha256
+            ),
+            min_free_bytes=args.min_free_bytes,
+        )
+        receiver_verification = verify_runtime_consumption_proof(
+            runtime_consumption_proof=runtime_proof,
+            required_candidate_archive_sha256=manifest["candidate_archive"]["sha256"],
+            required_candidate_member_sha256=manifest["candidate_member"]["sha256"],
+            required_proof_kind=TENSOR_FACTORIZE_PROOF_KIND,
+            required_receiver_contract_kind=TENSOR_FACTORIZE_RECEIVER_CONTRACT_KIND,
+            required_target_kind=TENSOR_FACTORIZE_TARGET_KIND,
+            required_materializer_id=TENSOR_FACTORIZE_MATERIALIZER_ID,
+            repo_root=REPO_ROOT,
+        )
+        manifest["tensor_factorize_receiver_runtime"] = runtime_manifest
+        manifest["receiver_verification"] = receiver_verification
+        manifest["runtime_consumption_proof_path"] = proof_out.as_posix()
+        manifest["reconstruction_proof_satisfied"] = (
+            receiver_verification["receiver_contract_satisfied"] is True
+        )
+        manifest["receiver_contract_satisfied"] = (
+            receiver_verification["receiver_contract_satisfied"] is True
+            and receiver_verification.get("runtime_adapter_ready") is True
+        )
+        manifest["runtime_adapter_ready"] = (
+            receiver_verification.get("runtime_adapter_ready") is True
+        )
+        manifest["readiness_blockers"] = [
+            str(blocker)
+            for blocker in (manifest.get("readiness_blockers") or [])
+            if blocker
+            not in {
+                "runtime_consumption_proof_missing",
+                "runtime_consumption_proof_not_passed",
+                "tensor_factorized_payload_requires_cooperative_receiver",
+                "tensor_factorize_receiver_contract_not_satisfied",
+                "tensor_factorize_exact_readiness_refused_until_byte_closed_runtime_adapter_lands",
+            }
+        ]
+        manifest["readiness_blockers"].extend(
+            str(blocker) for blocker in receiver_verification.get("blockers") or []
+        )
+        if manifest["receiver_contract_satisfied"] is not True:
+            manifest["readiness_blockers"].append(
+                "tensor_factorize_receiver_contract_not_satisfied"
+            )
+        manifest["readiness_blockers"] = list(dict.fromkeys(manifest["readiness_blockers"]))
+        return manifest
     raise FamilyAgnosticMaterializerError(f"unsupported target kind: {args.target_kind}")
 
 
