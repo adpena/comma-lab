@@ -34,6 +34,7 @@ from tac.optimization.byte_shaving_campaign import (
 from tac.optimization.decoder_q_constants import FEC6_PAIR_COUNT
 from tac.optimization.family_agnostic_materializers import (
     ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+    PACKET_MEMBER_MERGE_SCHEMA,
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
     TENSOR_FACTORIZE_SCHEMA,
@@ -60,6 +61,7 @@ from .byte_shaving_materializer_registry import (
     INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER,
     INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
     INVERSE_SCORER_CELL_TARGET_KIND,
+    PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     REGISTRY_SCHEMA,
@@ -111,6 +113,7 @@ HARVESTABLE_MATERIALIZER_MANIFEST_SCHEMAS = frozenset(
         CHAIN_SCHEMA,
         INVERSE_SCORER_CELL_CHAIN_SCHEMA,
         ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+        PACKET_MEMBER_MERGE_SCHEMA,
         PACKET_MEMBER_RECOMPRESS_SCHEMA,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
         TENSOR_FACTORIZE_SCHEMA,
@@ -1519,6 +1522,31 @@ def _family_agnostic_materializer_command(
         packet_member_manifest = _path_context_value(context, "packet_member_manifest")
         if packet_member_manifest is not None:
             input_paths.append(packet_member_manifest)
+    elif target_kind == PACKET_MEMBER_MERGE_TARGET_KIND:
+        packet_member_manifest = _path_context_value(context, "packet_member_manifest")
+        if packet_member_manifest is not None:
+            input_paths.append(packet_member_manifest)
+        merge_contract = _path_context_value(context, "merge_contract")
+        if merge_contract is None:
+            merge_contract = _path_context_value(context, "member_merge_contract")
+        if merge_contract is None:
+            blockers.append("materializer_context_missing:merge_contract")
+        else:
+            input_paths.append(merge_contract)
+        source_runtime = _path_context_value(
+            context,
+            "packet_member_merge_source_runtime_dir",
+        )
+        if source_runtime is None:
+            source_runtime = _path_context_value(context, "source_runtime_dir")
+        if source_runtime is None:
+            source_runtime = _path_context_value(context, "inflate_runtime_dir")
+        if source_runtime is None:
+            blockers.append(
+                "materializer_context_missing:packet_member_merge_source_runtime_dir"
+            )
+        else:
+            input_paths.append(source_runtime)
     elif target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
         packet_member_manifest = _path_context_value(context, "packet_member_manifest")
         if packet_member_manifest is not None:
@@ -1564,6 +1592,7 @@ def _family_agnostic_materializer_command(
     runtime_proof_out: str | None = None
     if runtime_proof is None and target_kind in {
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        PACKET_MEMBER_MERGE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
         TENSOR_FACTORIZE_TARGET_KIND,
@@ -1649,6 +1678,78 @@ def _family_agnostic_materializer_command(
         levels.extend(_string_list_context_value(context, "compresslevel"))
         for level in ordered_unique(levels):
             command.extend(["--zip-compresslevel", level])
+    elif target_kind == PACKET_MEMBER_MERGE_TARGET_KIND:
+        packet_member_manifest = _path_context_value(context, "packet_member_manifest")
+        if packet_member_manifest is not None:
+            command.extend(["--packet-member-manifest", packet_member_manifest])
+        merge_contract = _path_context_value(context, "merge_contract")
+        if merge_contract is None:
+            merge_contract = _path_context_value(context, "member_merge_contract")
+        if merge_contract is not None:
+            command.extend(["--merge-contract", merge_contract])
+        source_runtime = _path_context_value(
+            context,
+            "packet_member_merge_source_runtime_dir",
+        )
+        if source_runtime is None:
+            source_runtime = _path_context_value(context, "source_runtime_dir")
+        if source_runtime is None:
+            source_runtime = _path_context_value(context, "inflate_runtime_dir")
+        if source_runtime is not None:
+            command.extend(["--packet-member-merge-source-runtime-dir", source_runtime])
+        runtime_dir_out = _path_context_value(
+            context,
+            "packet_member_merge_runtime_dir_out",
+        )
+        if runtime_dir_out is None:
+            runtime_dir_out = _path_context_value(context, "runtime_dir_out")
+        if runtime_dir_out is None:
+            runtime_dir_out = Path(output_manifest).with_name(
+                f"{Path(output_manifest).stem}.runtime"
+            ).as_posix()
+        command.extend(["--packet-member-merge-runtime-dir-out", runtime_dir_out])
+        runtime_manifest_out = _path_context_value(
+            context,
+            "packet_member_merge_runtime_manifest_out",
+        )
+        if runtime_manifest_out is None:
+            runtime_manifest_out = _path_context_value(context, "runtime_manifest_out")
+        if runtime_manifest_out is None:
+            runtime_manifest_out = Path(output_manifest).with_name(
+                f"{Path(output_manifest).stem}.runtime_adapter.json"
+            ).as_posix()
+        command.extend(
+            ["--packet-member-merge-runtime-manifest-out", runtime_manifest_out]
+        )
+        if context.get("allow_packet_member_merge_runtime_sidecars") is True:
+            command.append("--allow-packet-member-merge-runtime-sidecars")
+        member_selection = _context_string_any(
+            context,
+            ("member_selection", "zip_member_selection", "packet_member_selection"),
+        )
+        if context.get("all_members") is True or member_selection in {
+            "all",
+            "*",
+            "all_members",
+        }:
+            command.append("--all-members")
+        member_name = _context_string_any(
+            context,
+            ("member_name", "archive_member_name", "packet_member_name"),
+        )
+        if member_name is not None:
+            command.extend(["--member-name", member_name])
+        member_names = _string_list_context_value(context, "member_names")
+        member_names.extend(_string_list_context_value(context, "archive_member_names"))
+        member_names.extend(_string_list_context_value(context, "packet_member_names"))
+        for selected_member_name in ordered_unique(member_names):
+            command.extend(["--member-names", selected_member_name])
+        merged_member_name = _context_string_any(
+            context,
+            ("merged_member_name", "candidate_member_name", "output_member_name"),
+        )
+        if merged_member_name is not None:
+            command.extend(["--merged-member-name", merged_member_name])
     elif target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
         packet_member_manifest = _path_context_value(context, "packet_member_manifest")
         if packet_member_manifest is not None:
@@ -1691,6 +1792,28 @@ def _family_agnostic_materializer_command(
     artifact_paths = [output_archive, output_manifest]
     if runtime_proof_out is not None:
         artifact_paths.append(runtime_proof_out)
+    if target_kind == PACKET_MEMBER_MERGE_TARGET_KIND:
+        runtime_dir_out = _path_context_value(
+            context,
+            "packet_member_merge_runtime_dir_out",
+        )
+        if runtime_dir_out is None:
+            runtime_dir_out = _path_context_value(context, "runtime_dir_out")
+        if runtime_dir_out is None:
+            runtime_dir_out = Path(output_manifest).with_name(
+                f"{Path(output_manifest).stem}.runtime"
+            ).as_posix()
+        runtime_manifest_out = _path_context_value(
+            context,
+            "packet_member_merge_runtime_manifest_out",
+        )
+        if runtime_manifest_out is None:
+            runtime_manifest_out = _path_context_value(context, "runtime_manifest_out")
+        if runtime_manifest_out is None:
+            runtime_manifest_out = Path(output_manifest).with_name(
+                f"{Path(output_manifest).stem}.runtime_adapter.json"
+            ).as_posix()
+        artifact_paths.extend([runtime_dir_out, runtime_manifest_out])
 
     return (
         command,
@@ -1726,6 +1849,14 @@ def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
             [
                 "packet_member_recompress_requires_archive_preflight",
                 "packet_member_recompress_requires_runtime_consumption_proof",
+            ]
+        )
+    if target_kind == PACKET_MEMBER_MERGE_TARGET_KIND:
+        blockers.extend(
+            [
+                "packet_member_merge_requires_archive_preflight",
+                "packet_member_merge_requires_cooperative_receiver_runtime_adapter",
+                "packet_member_merge_requires_runtime_consumption_proof",
             ]
         )
     if target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
@@ -1837,6 +1968,7 @@ def _materializer_candidate_postconditions(
     required_nonempty_unless_true: list[dict[str, str]] = []
     if target_kind in {
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        PACKET_MEMBER_MERGE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
         TENSOR_FACTORIZE_TARGET_KIND,
@@ -1848,6 +1980,13 @@ def _materializer_candidate_postconditions(
     if target_kind == TENSOR_FACTORIZE_TARGET_KIND:
         required_equals["receiver_contract_kind"] = "family_agnostic_tensor_factorize"
         required_positive_int.append("factorization.factor_payload_bytes")
+    if target_kind == PACKET_MEMBER_MERGE_TARGET_KIND:
+        required_nonempty.extend(
+            [
+                "packet_member_merge_receiver_runtime.runtime_dir",
+                "packet_member_merge_receiver_runtime.runtime_tree_sha256",
+            ]
+        )
     return [
         {
             "type": "json_equals",
@@ -1869,10 +2008,16 @@ def _materializer_candidate_postconditions(
                     if target_kind
                     in {
                         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+                        PACKET_MEMBER_MERGE_TARGET_KIND,
                         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
                         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
                         TENSOR_FACTORIZE_TARGET_KIND,
                     }
+                    else []
+                ),
+                *(
+                    ["packet_member_merge_receiver_runtime.runtime_adapter_ready"]
+                    if target_kind == PACKET_MEMBER_MERGE_TARGET_KIND
                     else []
                 ),
             ],
@@ -2056,6 +2201,28 @@ def build_materializer_work_queue(
                     manifest_path=manifest_out,
                     schema=PACKET_MEMBER_RECOMPRESS_SCHEMA,
                     target_kind=PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+                )
+        elif (
+            unit_kind == "packet_member"
+            and operation_family == "member_merge"
+            and target_kind == PACKET_MEMBER_MERGE_TARGET_KIND
+        ):
+            command, command_blockers, telemetry = _family_agnostic_materializer_command(
+                context,
+                target_kind=PACKET_MEMBER_MERGE_TARGET_KIND,
+            )
+            blockers.extend(command_blockers)
+            manifest_out = _path_context_value(context, "output_manifest")
+            if manifest_out is None:
+                manifest_out = _path_context_value(context, "manifest_out")
+            output_archive = _path_context_value(context, "output_archive")
+            if manifest_out is None and output_archive is not None:
+                manifest_out = Path(output_archive).with_suffix(".json").as_posix()
+            if command and manifest_out is not None:
+                postconditions = _materializer_candidate_postconditions(
+                    manifest_path=manifest_out,
+                    schema=PACKET_MEMBER_MERGE_SCHEMA,
+                    target_kind=PACKET_MEMBER_MERGE_TARGET_KIND,
                 )
         elif (
             unit_kind == "packet_member"

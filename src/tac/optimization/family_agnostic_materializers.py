@@ -10,9 +10,11 @@ readiness without an explicit runtime-consumption proof.
 from __future__ import annotations
 
 import io
+import json
 import math
 import struct
 import zipfile
+import zlib
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -27,16 +29,22 @@ from tac.repo_io import read_json, sha256_bytes, sha256_file, write_bytes_artifa
 
 ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA = "archive_section_entropy_recode_candidate.v1"
 PACKET_MEMBER_RECOMPRESS_SCHEMA = "packet_member_recompress_candidate.v1"
+PACKET_MEMBER_MERGE_SCHEMA = "packet_member_merge_candidate.v1"
 PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA = "packet_member_zip_header_elide_candidate.v1"
 TENSOR_FACTORIZE_SCHEMA = "tensor_factorize_candidate.v1"
 ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND = "archive_section_entropy_recode_v1"
 PACKET_MEMBER_RECOMPRESS_TARGET_KIND = "packet_member_recompress_v1"
+PACKET_MEMBER_MERGE_TARGET_KIND = "packet_member_merge_v1"
 PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND = "packet_member_zip_header_elide_v1"
 TENSOR_FACTORIZE_TARGET_KIND = "tensor_factorize_v1"
 ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID = "archive_section_entropy_recode_adapter"
 PACKET_MEMBER_RECOMPRESS_MATERIALIZER_ID = "packet_member_recompress_adapter"
+PACKET_MEMBER_MERGE_MATERIALIZER_ID = "packet_member_merge_adapter"
 PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID = "packet_member_zip_header_elide_adapter"
 TENSOR_FACTORIZE_MATERIALIZER_ID = "tensor_factorize_adapter"
+PACKET_MEMBER_MERGE_PAYLOAD_MAGIC = b"TAC_PACKET_MEMBER_MERGE_V1\0"
+PACKET_MEMBER_MERGE_BINARY_PAYLOAD_MAGIC = b"TAC_PACKET_MEMBER_MERGE_BIN1\0"
+PACKET_MEMBER_MERGE_DEFLATE_SEQUENCE_PAYLOAD_MAGIC = b"TAC_PACKET_MEMBER_MERGE_DFL1\0"
 FALSE_AUTHORITY = {
     "score_claim": False,
     "score_claim_valid": False,
@@ -311,6 +319,433 @@ def _packet_member_recompress_runtime_consumption_proof(
         "contest_cuda_auth_eval": False,
         "score_affecting_payload_changed": False,
         "charged_bits_changed": False,
+    }
+
+
+def materialize_packet_member_merge_candidate(
+    *,
+    archive_path: str | Path,
+    output_archive: str | Path,
+    packet_member_manifest: str | Path | Mapping[str, Any] | None = None,
+    member_name: str | None = None,
+    member_names: Sequence[str] = (),
+    all_members: bool = False,
+    merge_contract: str | Path | Mapping[str, Any] | None = None,
+    merged_member_name: str | None = None,
+    runtime_consumption_proof: str | Path | Mapping[str, Any] | None = None,
+    runtime_consumption_proof_out: str | Path | None = None,
+    repo_root: str | Path | None = None,
+    allow_size_regression: bool = False,
+    allow_overwrite: bool = False,
+    expected_existing_output_sha256: str | None = None,
+    expected_existing_runtime_consumption_proof_sha256: str | None = None,
+    min_free_bytes: int = 0,
+) -> dict[str, Any]:
+    """Merge selected ZIP members into a deterministic cooperative-receiver packet."""
+
+    repo = _repo(repo_root)
+    if runtime_consumption_proof is not None and runtime_consumption_proof_out is not None:
+        raise FamilyAgnosticMaterializerError(
+            "runtime_consumption_proof and runtime_consumption_proof_out are mutually exclusive"
+        )
+    archive = _resolve_path(archive_path, repo=repo)
+    output = _resolve_path(output_archive, repo=repo)
+    proof_out = (
+        _resolve_path(runtime_consumption_proof_out, repo=repo)
+        if runtime_consumption_proof_out is not None
+        else None
+    )
+    manifest = _load_mapping(packet_member_manifest, repo=repo)
+    contract = _load_mapping(merge_contract, repo=repo)
+    target_members = _select_member_names(
+        archive,
+        explicit=member_name,
+        explicit_many=member_names,
+        manifest=manifest,
+        contract=contract,
+        all_members=all_members,
+    )
+    if len(target_members) < 2:
+        raise FamilyAgnosticMaterializerError(
+            "packet_member_merge_v1 requires at least two selected members"
+        )
+    target_merged_member_name = _merged_member_name(
+        archive,
+        explicit=merged_member_name,
+        contract=contract,
+        selected_member_names=target_members,
+    )
+    source_record = _archive_record(archive)
+    selected_entries = [
+        _merge_member_entry(archive, target_member)
+        for target_member in target_members
+    ]
+    selected_payloads = [
+        (str(entry["name"]), bytes(entry["payload"]))
+        for entry in selected_entries
+    ]
+    source_member_records = [
+        _member_record(archive, target_member, payload=payload)
+        for target_member, payload in selected_payloads
+    ]
+    source_member_sha256s = {
+        str(row["name"]): str(row["sha256"])
+        for row in source_member_records
+    }
+    non_selected_member_records = [
+        _member_record(archive, target_member)
+        for target_member in _zip_member_names(archive)
+        if target_member not in set(target_members)
+    ]
+    merge_payload_variants = _packet_member_merge_payload_variants(selected_entries)
+    candidate_trials: list[dict[str, Any]] = []
+    for payload_variant in merge_payload_variants:
+        for compression, compresslevel in _merge_contract_compression_trials(contract):
+            archive_payload = _zip_archive_bytes_with_member_merge(
+                archive,
+                selected_member_names=target_members,
+                merged_member_name=target_merged_member_name,
+                merged_payload=bytes(payload_variant["payload"]),
+                compression=compression,
+                compresslevel=compresslevel,
+            )
+            candidate_trials.append(
+                {
+                    "merge_payload_codec": payload_variant["payload_codec"],
+                    "merge_payload_bytes": len(bytes(payload_variant["payload"])),
+                    "merge_table_bytes": int(
+                        payload_variant["table"].get(
+                            "binary_table_bytes",
+                            len(_canonical_json_bytes(payload_variant["table"])),
+                        )
+                    ),
+                    "zip_compression_method": _compression_method_name(compression),
+                    "zip_compresslevel": compresslevel,
+                    "archive_bytes": len(archive_payload),
+                    "archive_sha256": sha256_bytes(archive_payload),
+                    "payload": archive_payload,
+                    "merge_payload": payload_variant["payload"],
+                    "merge_table": payload_variant["table"],
+                }
+            )
+    if not candidate_trials:
+        raise FamilyAgnosticMaterializerError("no packet_member_merge candidates were produced")
+    best = min(
+        candidate_trials,
+        key=lambda item: (
+            int(item["archive_bytes"]),
+            str(item["zip_compression_method"]),
+            -1 if item["zip_compresslevel"] is None else int(item["zip_compresslevel"]),
+        ),
+    )
+    archive_payload = bytes(best["payload"])
+    merge_payload = bytes(best["merge_payload"])
+    merge_table = best["merge_table"]
+    saved_bytes = int(source_record["bytes"]) - len(archive_payload)
+    blockers: list[str] = []
+    if saved_bytes <= 0 and not allow_size_regression:
+        blockers.append("candidate_not_rate_positive")
+    write_result = write_bytes_artifact(
+        output,
+        archive_payload,
+        allow_overwrite=allow_overwrite,
+        expected_existing_sha256=expected_existing_output_sha256,
+        min_free_bytes=min_free_bytes,
+    )
+    candidate_record = _archive_record(output)
+    candidate_merged_member = _member_record(output, target_merged_member_name)
+    candidate_non_selected_records = [
+        _member_record(output, target_member)
+        for target_member in _zip_member_names(output)
+        if target_member != target_merged_member_name
+    ]
+    proof_write_result = None
+    runtime_proof_ref: str | Path | Mapping[str, Any] | None = runtime_consumption_proof
+    if proof_out is not None:
+        runtime_proof_payload = _packet_member_merge_runtime_consumption_proof(
+            source_archive=source_record,
+            candidate_archive=candidate_record,
+            source_members=source_member_records,
+            source_member_sha256s=source_member_sha256s,
+            source_non_selected_members=non_selected_member_records,
+            candidate_merged_member=candidate_merged_member,
+            candidate_non_selected_members=candidate_non_selected_records,
+            merged_member_name=target_merged_member_name,
+            selected_member_names=target_members,
+            merge_payload=merge_payload,
+            merge_table=merge_table,
+            compression_method=str(best["zip_compression_method"]),
+            compresslevel=best["zip_compresslevel"],
+            contract=contract,
+        )
+        proof_write_result = write_json_artifact(
+            proof_out,
+            runtime_proof_payload,
+            allow_overwrite=allow_overwrite,
+            expected_existing_sha256=expected_existing_runtime_consumption_proof_sha256,
+            min_free_bytes=min_free_bytes,
+        )
+        runtime_proof_ref = proof_out
+    receiver_verification = verify_runtime_consumption_proof(
+        runtime_consumption_proof=runtime_proof_ref,
+        required_candidate_archive_sha256=candidate_record["sha256"],
+        required_candidate_member_sha256=candidate_merged_member["sha256"],
+        repo_root=repo,
+    )
+    blockers.append(
+        "packet_member_merge_exact_readiness_refused_until_byte_closed_runtime_adapter_lands"
+    )
+    readiness_blockers = _readiness_blockers(
+        blockers,
+        receiver_verification,
+        receiver_blocker="packet_member_merge_receiver_contract_not_satisfied",
+    )
+    return {
+        "schema": PACKET_MEMBER_MERGE_SCHEMA,
+        "materializer_id": PACKET_MEMBER_MERGE_MATERIALIZER_ID,
+        "target_kind": PACKET_MEMBER_MERGE_TARGET_KIND,
+        "portability_contract": _materializer_portability_contract(
+            materializer_id=PACKET_MEMBER_MERGE_MATERIALIZER_ID,
+            target_kind=PACKET_MEMBER_MERGE_TARGET_KIND,
+            required_python_modules=("json", "struct", "zipfile"),
+            deterministic_surface="python_stdlib_zipfile_deterministic_member_merge_packet",
+            notes=(
+                "Portable reference merge packet; contest runtime must use a "
+                "cooperative receiver adapter to reconstruct original member names."
+            ),
+        ),
+        "receiver_contract_id": f"{PACKET_MEMBER_MERGE_TARGET_KIND}.receiver.v1",
+        "receiver_contract_kind": "family_agnostic_packet_member_merge",
+        "byte_closed_candidate_emitted": True,
+        "source_archive": source_record,
+        "source_members": source_member_records,
+        "source_member_sha256s": source_member_sha256s,
+        "source_non_selected_members": non_selected_member_records,
+        "candidate_archive": candidate_record,
+        "candidate_merged_member": candidate_merged_member,
+        "candidate_member": candidate_merged_member,
+        "candidate_non_selected_members": candidate_non_selected_records,
+        "selected_member_names": target_members,
+        "merged_member_name": target_merged_member_name,
+        "merge_payload_format": "tac_packet_member_merge_payload.v1",
+        "merge_table": merge_table,
+        "selected_merge": {
+            "source_archive_bytes": source_record["bytes"],
+            "candidate_archive_bytes": candidate_record["bytes"],
+            "saved_bytes": saved_bytes,
+            "selected_member_count": len(target_members),
+            "merged_member_name": target_merged_member_name,
+            "merge_payload_codec": best["merge_payload_codec"],
+            "merge_payload_bytes": best["merge_payload_bytes"],
+            "merge_table_bytes": best["merge_table_bytes"],
+            "zip_compression_method": best["zip_compression_method"],
+            "zip_compresslevel": best["zip_compresslevel"],
+        },
+        "candidate_trials": [
+            {
+                key: value
+                for key, value in trial.items()
+                if key not in {"payload", "merge_payload", "merge_table"}
+            }
+            for trial in candidate_trials
+        ],
+        "receiver_verification": receiver_verification,
+        "runtime_consumption_proof_path": (
+            proof_out.as_posix() if proof_out is not None else receiver_verification.get("proof_path")
+        ),
+        "runtime_consumption_proof_write": (
+            proof_write_result.__dict__ if proof_write_result is not None else None
+        ),
+        "reconstruction_proof_satisfied": (
+            receiver_verification["receiver_contract_satisfied"] is True
+        ),
+        "receiver_contract_satisfied": (
+            receiver_verification["receiver_contract_satisfied"] is True
+            and receiver_verification.get("runtime_adapter_ready") is True
+        ),
+        "runtime_adapter_ready": receiver_verification.get("runtime_adapter_ready") is True,
+        "readiness_blockers": readiness_blockers,
+        "artifact_write": write_result.__dict__,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _packet_member_merge_runtime_consumption_proof(
+    *,
+    source_archive: Mapping[str, Any],
+    candidate_archive: Mapping[str, Any],
+    source_members: Sequence[Mapping[str, Any]],
+    source_member_sha256s: Mapping[str, str],
+    source_non_selected_members: Sequence[Mapping[str, Any]],
+    candidate_merged_member: Mapping[str, Any],
+    candidate_non_selected_members: Sequence[Mapping[str, Any]],
+    merged_member_name: str,
+    selected_member_names: Sequence[str],
+    merge_payload: bytes,
+    merge_table: Mapping[str, Any],
+    compression_method: str,
+    compresslevel: int | None,
+    contract: Mapping[str, Any],
+) -> dict[str, Any]:
+    reconstruction = parse_packet_member_merge_payload(merge_payload)
+    reconstructed_member_sha256s = {
+        name: sha256_bytes(payload)
+        for name, payload in reconstruction["members"].items()
+    }
+    selected_member_proofs = []
+    all_selected_reconstructable = True
+    for name in selected_member_names:
+        source_sha = str(source_member_sha256s.get(str(name)) or "")
+        reconstructed_sha = str(reconstructed_member_sha256s.get(str(name)) or "")
+        passed = bool(source_sha) and reconstructed_sha == source_sha
+        all_selected_reconstructable = all_selected_reconstructable and passed
+        selected_member_proofs.append(
+            {
+                "member_name": str(name),
+                "source_member_sha256": source_sha or None,
+                "reconstructed_member_sha256": reconstructed_sha or None,
+                "reconstructed_member_matches_source": passed,
+                "passed": passed,
+            }
+        )
+    source_non_selected = {str(row.get("name")): row for row in source_non_selected_members}
+    candidate_non_selected = {
+        str(row.get("name")): row for row in candidate_non_selected_members
+    }
+    non_selected_member_proofs = []
+    all_non_selected_payloads_identical = True
+    all_non_selected_compressed_payloads_identical = True
+    for name, source_row in sorted(source_non_selected.items()):
+        candidate_row = candidate_non_selected.get(name, {})
+        source_sha = _clean_str(source_row.get("sha256"))
+        candidate_sha = _clean_str(candidate_row.get("sha256"))
+        payload_passed = source_sha is not None and candidate_sha == source_sha
+        source_compressed_sha = _clean_str(
+            source_row.get("zip_compressed_payload_sha256")
+            or source_row.get("zip_compressed_sha256")
+        )
+        candidate_compressed_sha = _clean_str(
+            candidate_row.get("zip_compressed_payload_sha256")
+            or candidate_row.get("zip_compressed_sha256")
+        )
+        compressed_passed = (
+            source_compressed_sha is not None
+            and candidate_compressed_sha == source_compressed_sha
+        )
+        passed = payload_passed and compressed_passed
+        all_non_selected_payloads_identical = (
+            all_non_selected_payloads_identical and payload_passed
+        )
+        all_non_selected_compressed_payloads_identical = (
+            all_non_selected_compressed_payloads_identical and compressed_passed
+        )
+        non_selected_member_proofs.append(
+            {
+                "member_name": name,
+                "source_member_sha256": source_sha,
+                "candidate_member_sha256": candidate_sha,
+                "member_payload_identical_to_source": payload_passed,
+                "source_zip_compressed_payload_sha256": source_compressed_sha,
+                "candidate_zip_compressed_payload_sha256": candidate_compressed_sha,
+                "zip_compressed_payload_identical_to_source": compressed_passed,
+                "passed": passed,
+            }
+        )
+    cooperative_receiver_id = _mapping_string_any(
+        contract,
+        ("cooperative_receiver_id", "receiver_id", "runtime_adapter_id"),
+    )
+    receiver_adapter_kind = _mapping_string_any(
+        contract,
+        ("receiver_adapter_kind", "cooperative_receiver_adapter_kind", "runtime_adapter_kind"),
+    )
+    receiver_declared = cooperative_receiver_id is not None and receiver_adapter_kind is not None
+    internal_reconstruction_passed = (
+        all_selected_reconstructable
+        and all_non_selected_payloads_identical
+        and all_non_selected_compressed_payloads_identical
+        and receiver_declared
+        and reconstruction["table"].get("schema") == "packet_member_merge_table.v1"
+    )
+    return {
+        "schema": "family_agnostic_runtime_consumption_proof_v1",
+        "proof_kind": "packet_member_merge_original_member_reconstruction_receiver_proof.v1",
+        "proof_scope": "merged_zip_member_reconstructs_original_selected_member_payloads",
+        "target_kind": PACKET_MEMBER_MERGE_TARGET_KIND,
+        "materializer_id": PACKET_MEMBER_MERGE_MATERIALIZER_ID,
+        "portability_contract": _materializer_portability_contract(
+            materializer_id=PACKET_MEMBER_MERGE_MATERIALIZER_ID,
+            target_kind=PACKET_MEMBER_MERGE_TARGET_KIND,
+            required_python_modules=("json", "struct", "zipfile"),
+            deterministic_surface="python_stdlib_zipfile_deterministic_member_merge_packet",
+            notes=(
+                "Portable reference merge packet; contest runtime must use a "
+                "cooperative receiver adapter to reconstruct original member names."
+            ),
+        ),
+        "receiver_contract_kind": "family_agnostic_packet_member_merge",
+        "receiver_contract_id": f"{PACKET_MEMBER_MERGE_TARGET_KIND}.receiver.v1",
+        "source_archive": dict(source_archive),
+        "source_members": [dict(row) for row in source_members],
+        "candidate_archive": dict(candidate_archive),
+        "candidate_merged_member": dict(candidate_merged_member),
+        "candidate_member": dict(candidate_merged_member),
+        "candidate_archive_sha256": candidate_archive.get("sha256"),
+        "candidate_member_sha256": candidate_merged_member.get("sha256"),
+        "member_sha256": candidate_merged_member.get("sha256"),
+        "selected_member_names": list(selected_member_names),
+        "merged_member_name": merged_member_name,
+        "merge_payload_format": "tac_packet_member_merge_payload.v1",
+        "merge_table": dict(merge_table),
+        "compression": {
+            "zip_compression_method": compression_method,
+            "zip_compresslevel": compresslevel,
+        },
+        "reconstructed_member_sha256s": reconstructed_member_sha256s,
+        "selected_member_proofs": selected_member_proofs,
+        "non_selected_member_proofs": non_selected_member_proofs,
+        "cooperative_receiver": {
+            "cooperative_receiver_id": cooperative_receiver_id,
+            "receiver_adapter_kind": receiver_adapter_kind,
+            "declared": receiver_declared,
+            "runtime_adapter_ready": False,
+            "reconstruction_formula": (
+                "parse merge table, slice concatenated payload by offset/length, "
+                "write original member names"
+            ),
+        },
+        "runtime_consumption_probe": {
+            "schema": "packet_member_merge_reconstruction_probe.v1",
+            "passed": internal_reconstruction_passed,
+            "internal_reconstruction_passed": internal_reconstruction_passed,
+            "selected_member_proofs": selected_member_proofs,
+            "non_selected_member_proofs": non_selected_member_proofs,
+            "all_selected_members_reconstructable": all_selected_reconstructable,
+            "all_non_selected_member_payloads_identical": (
+                all_non_selected_payloads_identical
+            ),
+            "all_non_selected_member_zip_streams_identical": (
+                all_non_selected_compressed_payloads_identical
+            ),
+            "cooperative_receiver_declared": receiver_declared,
+            "runtime_adapter_ready": False,
+        },
+        "receiver_contract_satisfied": internal_reconstruction_passed,
+        "runtime_adapter_ready": False,
+        "runtime_consumption_proof_passed": internal_reconstruction_passed,
+        "passed": internal_reconstruction_passed,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+        "exact_cuda_auth_eval": False,
+        "contest_cuda_auth_eval": False,
+        "score_affecting_payload_changed": True,
+        "charged_bits_changed": True,
     }
 
 
@@ -1291,6 +1726,11 @@ def verify_runtime_consumption_proof(
         blockers.append(str(exc))
     if not _proof_passed(proof):
         blockers.append("runtime_consumption_proof_not_passed")
+    runtime_adapter_manifest = proof.get("runtime_adapter_manifest")
+    runtime_adapter_ready = proof.get("runtime_adapter_ready") is True or (
+        isinstance(runtime_adapter_manifest, Mapping)
+        and runtime_adapter_manifest.get("runtime_adapter_ready") is True
+    )
     archive_sha = _nested_clean_str(proof, ("candidate_archive", "sha256"))
     archive_sha = archive_sha or _clean_str(proof.get("candidate_archive_sha256"))
     if required_candidate_archive_sha256:
@@ -1327,6 +1767,7 @@ def verify_runtime_consumption_proof(
         "candidate_archive_sha256": archive_sha,
         "candidate_member_sha256": member_sha,
         "candidate_member_sha256s": member_sha_map,
+        "runtime_adapter_ready": runtime_adapter_ready,
         "blockers": ordered_unique(blockers),
     }
 
@@ -1394,6 +1835,10 @@ def _require_mapping(value: str | Path | Mapping[str, Any], *, repo: Path) -> di
 
 def _clean_str(value: Any) -> str | None:
     return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def _canonical_json_bytes(value: Mapping[str, Any]) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
 def _nested_clean_str(mapping: Mapping[str, Any], path: Sequence[str]) -> str | None:
@@ -1593,6 +2038,665 @@ def _zip_archive_bytes_with_replacement(
             if out_info.compress_type == zipfile.ZIP_DEFLATED and compresslevel is not None:
                 kwargs["compresslevel"] = compresslevel
             target.writestr(out_info, payload, **kwargs)
+    return output.getvalue()
+
+
+def _merged_member_name(
+    archive: Path,
+    *,
+    explicit: str | None,
+    contract: Mapping[str, Any],
+    selected_member_names: Sequence[str],
+) -> str:
+    candidate = (
+        _clean_str(explicit)
+        or _mapping_string_any(
+            contract,
+            ("merged_member_name", "candidate_member_name", "output_member_name"),
+        )
+        or "__packet_member_merge_v1.bin"
+    )
+    existing = set(_zip_member_names(archive))
+    if candidate in existing:
+        raise FamilyAgnosticMaterializerError(
+            "merged_member_name must not collide with an existing archive member: "
+            f"{candidate}"
+        )
+    if candidate in set(selected_member_names):
+        raise FamilyAgnosticMaterializerError(
+            "merged_member_name must be distinct from selected member names"
+        )
+    return candidate
+
+
+def _merge_contract_compression(contract: Mapping[str, Any]) -> int:
+    raw = _mapping_string_any(
+        contract,
+        ("zip_compression_method", "compression_method", "merged_member_compression_method"),
+    )
+    if raw is None:
+        return zipfile.ZIP_STORED
+    methods = _normalized_compression_methods((raw,))
+    if len(methods) != 1:
+        raise FamilyAgnosticMaterializerError(
+            f"unsupported packet_member_merge compression method: {raw}"
+        )
+    return methods[0]
+
+
+def _merge_contract_compresslevel(
+    contract: Mapping[str, Any],
+    *,
+    compression: int,
+) -> int | None:
+    if compression == zipfile.ZIP_STORED:
+        return None
+    for key in ("zip_compresslevel", "compresslevel", "merged_member_compresslevel"):
+        value = contract.get(key)
+        if value is None:
+            continue
+        parsed = _positive_int(value, field=f"merge_contract.{key}")
+        return parsed
+    return 9
+
+
+def _merge_contract_compression_trials(contract: Mapping[str, Any]) -> tuple[tuple[int, int | None], ...]:
+    raw_methods = _string_items(
+        contract.get("zip_compression_methods")
+        or contract.get("compression_methods")
+        or contract.get("merged_member_compression_methods")
+    )
+    if not raw_methods:
+        raw_method = _mapping_string_any(
+            contract,
+            (
+                "zip_compression_method",
+                "compression_method",
+                "merged_member_compression_method",
+            ),
+        )
+        raw_methods = [raw_method] if raw_method is not None else ["stored", "deflated"]
+    methods = _normalized_compression_methods(raw_methods)
+    raw_levels = _string_items(
+        contract.get("zip_compresslevels")
+        or contract.get("compresslevels")
+        or contract.get("merged_member_compresslevels")
+    )
+    single_level = _mapping_string_any(
+        contract,
+        ("zip_compresslevel", "compresslevel", "merged_member_compresslevel"),
+    )
+    if single_level is not None and not raw_levels:
+        raw_levels = [single_level]
+    trials: list[tuple[int, int | None]] = []
+    for method in methods:
+        if method == zipfile.ZIP_STORED:
+            trials.append((method, None))
+            continue
+        levels = (
+            _ordered_unique_ints(int(level) for level in raw_levels)
+            if raw_levels
+            else (_merge_contract_compresslevel(contract, compression=method) or 9,)
+        )
+        for level in levels:
+            trials.append((method, int(level)))
+    return tuple(trials)
+
+
+def _merge_member_entry(archive: Path, member_name: str) -> dict[str, Any]:
+    payload = _zip_member_bytes(archive, member_name)
+    with zipfile.ZipFile(archive, "r") as zf:
+        info = zf.getinfo(member_name)
+        compression_method = _compression_method_name(info.compress_type)
+        compress_type = int(info.compress_type)
+        compressed_payload = _zip_member_compressed_payload(archive, member_name)
+    return {
+        "name": member_name,
+        "payload": payload,
+        "payload_sha256": sha256_bytes(payload),
+        "payload_bytes": len(payload),
+        "zip_compress_type": compress_type,
+        "zip_compression_method": compression_method,
+        "zip_compressed_payload": compressed_payload,
+        "zip_compressed_payload_sha256": sha256_bytes(compressed_payload),
+        "zip_compressed_bytes": len(compressed_payload),
+    }
+
+
+def _packet_member_merge_payload_variants(
+    selected_entries: Sequence[Mapping[str, Any]],
+) -> tuple[dict[str, Any], ...]:
+    variants = [
+        _packet_member_merge_payload(
+            selected_entries,
+            payload_codec="raw_member_payload_v1",
+        ),
+        _packet_member_merge_payload(
+            selected_entries,
+            payload_codec="source_zip_compressed_stream_v1",
+        ),
+        _packet_member_merge_binary_payload(
+            selected_entries,
+            payload_codec="source_zip_compressed_stream_binary_table_v1",
+        ),
+    ]
+    deflate_sequence = _packet_member_merge_deflate_sequence_payload(
+        selected_entries,
+        payload_codec="fixed_order_raw_deflate_sequence_v1",
+    )
+    if deflate_sequence is not None:
+        variants.append(deflate_sequence)
+    return tuple(variants)
+
+
+def _packet_member_merge_deflate_sequence_payload(
+    selected_entries: Sequence[Mapping[str, Any]],
+    *,
+    payload_codec: str,
+) -> dict[str, Any] | None:
+    if payload_codec != "fixed_order_raw_deflate_sequence_v1":
+        raise FamilyAgnosticMaterializerError(
+            f"unsupported packet member merge deflate sequence codec: {payload_codec}"
+        )
+    if any(int(entry["zip_compress_type"]) != zipfile.ZIP_DEFLATED for entry in selected_entries):
+        return None
+    table_chunks = [PACKET_MEMBER_MERGE_DEFLATE_SEQUENCE_PAYLOAD_MAGIC]
+    table_chunks.append(_encode_uvarint(len(selected_entries)))
+    payload_chunks = []
+    members = []
+    offset = 0
+    for entry in selected_entries:
+        name = str(entry["name"])
+        name_bytes = name.encode("utf-8")
+        payload = bytes(entry["zip_compressed_payload"])
+        table_chunks.append(_encode_uvarint(len(name_bytes)))
+        table_chunks.append(name_bytes)
+        payload_chunks.append(payload)
+        members.append(
+            {
+                "name": name,
+                "offset": offset,
+                "length": len(payload),
+                "compressed_sha256": sha256_bytes(payload),
+                "sha256": str(entry["payload_sha256"]),
+                "uncompressed_length": int(entry["payload_bytes"]),
+                "zip_compress_type": zipfile.ZIP_DEFLATED,
+            }
+        )
+        offset += len(payload)
+    binary_table = b"".join(table_chunks)
+    concatenated_payload = b"".join(payload_chunks)
+    merged_payload = binary_table + concatenated_payload
+    table = {
+        "schema": "packet_member_merge_table.v1",
+        "payload_codec": payload_codec,
+        "table_format": "uleb_name_raw_deflate_sequence_v1",
+        "member_count": len(members),
+        "members": members,
+        "binary_table_bytes": len(binary_table),
+        "binary_table_sha256": sha256_bytes(binary_table),
+        "concatenated_payload_bytes": len(concatenated_payload),
+        "concatenated_payload_sha256": sha256_bytes(concatenated_payload),
+        "merged_payload_sha256": sha256_bytes(merged_payload),
+    }
+    return {
+        "payload_codec": payload_codec,
+        "payload": merged_payload,
+        "table": table,
+    }
+
+
+def _packet_member_merge_binary_payload(
+    selected_entries: Sequence[Mapping[str, Any]],
+    *,
+    payload_codec: str,
+) -> dict[str, Any]:
+    if payload_codec != "source_zip_compressed_stream_binary_table_v1":
+        raise FamilyAgnosticMaterializerError(
+            f"unsupported packet member merge binary codec: {payload_codec}"
+        )
+    table_chunks = [PACKET_MEMBER_MERGE_BINARY_PAYLOAD_MAGIC]
+    table_chunks.append(_encode_uvarint(len(selected_entries)))
+    payload_chunks = []
+    members = []
+    offset = 0
+    for entry in selected_entries:
+        name = str(entry["name"])
+        name_bytes = name.encode("utf-8")
+        payload = bytes(entry["zip_compressed_payload"])
+        compress_type = int(entry["zip_compress_type"])
+        uncompressed_length = int(entry["payload_bytes"])
+        table_chunks.append(_encode_uvarint(len(name_bytes)))
+        table_chunks.append(name_bytes)
+        table_chunks.append(_encode_uvarint(compress_type))
+        table_chunks.append(_encode_uvarint(len(payload)))
+        table_chunks.append(_encode_uvarint(uncompressed_length))
+        payload_chunks.append(payload)
+        members.append(
+            {
+                "name": name,
+                "offset": offset,
+                "length": len(payload),
+                "compressed_sha256": sha256_bytes(payload),
+                "sha256": str(entry["payload_sha256"]),
+                "uncompressed_length": int(entry["payload_bytes"]),
+                "zip_compress_type": int(entry["zip_compress_type"]),
+            }
+        )
+        offset += len(payload)
+    binary_table = b"".join(table_chunks)
+    concatenated_payload = b"".join(payload_chunks)
+    merged_payload = binary_table + concatenated_payload
+    table: dict[str, Any] = {
+        "schema": "packet_member_merge_table.v1",
+        "payload_codec": payload_codec,
+        "table_format": "uleb_name_compressed_stream_table_v1",
+        "member_count": len(members),
+        "members": members,
+        "binary_table_bytes": len(binary_table),
+        "binary_table_sha256": sha256_bytes(binary_table),
+        "concatenated_payload_bytes": len(concatenated_payload),
+        "concatenated_payload_sha256": sha256_bytes(concatenated_payload),
+        "merged_payload_sha256": sha256_bytes(merged_payload),
+    }
+    return {
+        "payload_codec": payload_codec,
+        "payload": merged_payload,
+        "table": table,
+    }
+
+
+def _packet_member_merge_payload(
+    selected_entries: Sequence[Mapping[str, Any]],
+    *,
+    payload_codec: str,
+) -> dict[str, Any]:
+    offset = 0
+    members = []
+    chunks = []
+    for entry in selected_entries:
+        name = str(entry["name"])
+        if payload_codec == "raw_member_payload_v1":
+            payload = bytes(entry["payload"])
+            member_row = {
+                "name": name,
+                "offset": offset,
+                "length": len(payload),
+                "sha256": sha256_bytes(payload),
+            }
+        elif payload_codec in {
+            "source_zip_compressed_stream_v1",
+            "source_zip_compressed_stream_binary_table_v1",
+        }:
+            payload = bytes(entry["zip_compressed_payload"])
+            member_row = {
+                "name": name,
+                "offset": offset,
+                "length": len(payload),
+                "compressed_sha256": sha256_bytes(payload),
+                "sha256": str(entry["payload_sha256"]),
+                "uncompressed_length": int(entry["payload_bytes"]),
+                "zip_compress_type": int(entry["zip_compress_type"]),
+                "zip_compression_method": str(entry["zip_compression_method"]),
+            }
+        else:
+            raise FamilyAgnosticMaterializerError(
+                f"unsupported packet member merge payload codec: {payload_codec}"
+            )
+        chunks.append(payload)
+        members.append(member_row)
+        offset += len(payload)
+    concatenated_payload = b"".join(chunks)
+    table: dict[str, Any] = {
+        "schema": "packet_member_merge_table.v1",
+        "payload_codec": payload_codec,
+        "member_count": len(members),
+        "members": members,
+        "concatenated_payload_bytes": len(concatenated_payload),
+        "concatenated_payload_sha256": sha256_bytes(concatenated_payload),
+    }
+    table_payload = _canonical_json_bytes(table)
+    payload = (
+        PACKET_MEMBER_MERGE_PAYLOAD_MAGIC
+        + struct.pack("<Q", len(table_payload))
+        + table_payload
+        + concatenated_payload
+    )
+    return {
+        "payload_codec": payload_codec,
+        "payload": payload,
+        "table": table | {"merged_payload_sha256": sha256_bytes(payload)},
+    }
+
+
+def parse_packet_member_merge_payload(payload: bytes) -> dict[str, Any]:
+    """Parse a packet-member merge payload and reconstruct original members."""
+
+    if payload.startswith(PACKET_MEMBER_MERGE_DEFLATE_SEQUENCE_PAYLOAD_MAGIC):
+        return _parse_packet_member_merge_deflate_sequence_payload(payload)
+    if payload.startswith(PACKET_MEMBER_MERGE_BINARY_PAYLOAD_MAGIC):
+        return _parse_packet_member_merge_binary_payload(payload)
+    return _parse_packet_member_merge_json_payload(payload)
+
+
+def _parse_packet_member_merge_json_payload(payload: bytes) -> dict[str, Any]:
+    prefix_len = len(PACKET_MEMBER_MERGE_PAYLOAD_MAGIC)
+    if not payload.startswith(PACKET_MEMBER_MERGE_PAYLOAD_MAGIC):
+        raise FamilyAgnosticMaterializerError("merged member payload has bad magic")
+    if len(payload) < prefix_len + 8:
+        raise FamilyAgnosticMaterializerError("merged member payload is truncated")
+    table_len = struct.unpack_from("<Q", payload, prefix_len)[0]
+    table_start = prefix_len + 8
+    table_end = table_start + int(table_len)
+    if table_end > len(payload):
+        raise FamilyAgnosticMaterializerError("merged member table extends past payload")
+    table = json.loads(payload[table_start:table_end].decode("utf-8"))
+    if not isinstance(table, Mapping):
+        raise FamilyAgnosticMaterializerError("merged member table must be a JSON object")
+    concatenated_payload = payload[table_end:]
+    if sha256_bytes(concatenated_payload) != _clean_str(table.get("concatenated_payload_sha256")):
+        raise FamilyAgnosticMaterializerError("merged member concatenated payload SHA mismatch")
+    out: dict[str, bytes] = {}
+    rows = table.get("members")
+    if not isinstance(rows, Sequence) or isinstance(rows, (bytes, bytearray, str)):
+        raise FamilyAgnosticMaterializerError("merged member table has no members array")
+    payload_codec = _clean_str(table.get("payload_codec")) or "raw_member_payload_v1"
+    for row in rows:
+        if not isinstance(row, Mapping):
+            raise FamilyAgnosticMaterializerError("merged member table row must be an object")
+        name = _clean_str(row.get("name"))
+        if name is None:
+            raise FamilyAgnosticMaterializerError("merged member table row missing name")
+        offset = int(row.get("offset"))
+        length = int(row.get("length"))
+        if offset < 0 or length < 0 or offset + length > len(concatenated_payload):
+            raise FamilyAgnosticMaterializerError(
+                f"merged member table row bounds out of range: {name}"
+            )
+        encoded_member_payload = concatenated_payload[offset:offset + length]
+        if payload_codec == "raw_member_payload_v1":
+            member_payload = encoded_member_payload
+        elif payload_codec in {
+            "source_zip_compressed_stream_v1",
+            "source_zip_compressed_stream_binary_table_v1",
+        }:
+            expected_compressed_sha = _clean_str(row.get("compressed_sha256"))
+            if (
+                expected_compressed_sha is not None
+                and sha256_bytes(encoded_member_payload) != expected_compressed_sha
+            ):
+                raise FamilyAgnosticMaterializerError(
+                    f"merged member compressed stream SHA mismatch: {name}"
+                )
+            member_payload = _decompress_zip_member_payload(
+                encoded_member_payload,
+                compress_type=int(row.get("zip_compress_type")),
+                member_name=name,
+            )
+        else:
+            raise FamilyAgnosticMaterializerError(
+                f"unsupported merged member payload codec: {payload_codec}"
+            )
+        if sha256_bytes(member_payload) != _clean_str(row.get("sha256")):
+            raise FamilyAgnosticMaterializerError(
+                f"merged member reconstructed payload SHA mismatch: {name}"
+            )
+        out[name] = member_payload
+    return {"table": dict(table), "members": out}
+
+
+def _parse_packet_member_merge_binary_payload(payload: bytes) -> dict[str, Any]:
+    cursor = len(PACKET_MEMBER_MERGE_BINARY_PAYLOAD_MAGIC)
+    member_count, cursor = _decode_uvarint(
+        payload,
+        cursor,
+        label="packet_member_merge_member_count",
+    )
+    members = []
+    for _index in range(member_count):
+        name_length, cursor = _decode_uvarint(
+            payload,
+            cursor,
+            label="packet_member_merge_name_length",
+        )
+        name_end = cursor + name_length
+        if name_end > len(payload):
+            raise FamilyAgnosticMaterializerError(
+                "packet member merge binary table name extends past payload"
+            )
+        name = payload[cursor:name_end].decode("utf-8")
+        cursor = name_end
+        compress_type, cursor = _decode_uvarint(
+            payload,
+            cursor,
+            label=f"packet_member_merge_compress_type:{name}",
+        )
+        compressed_length, cursor = _decode_uvarint(
+            payload,
+            cursor,
+            label=f"packet_member_merge_compressed_length:{name}",
+        )
+        uncompressed_length, cursor = _decode_uvarint(
+            payload,
+            cursor,
+            label=f"packet_member_merge_uncompressed_length:{name}",
+        )
+        members.append(
+            {
+                "name": name,
+                "zip_compress_type": int(compress_type),
+                "length": int(compressed_length),
+                "uncompressed_length": int(uncompressed_length),
+            }
+        )
+    binary_table_bytes = cursor
+    concatenated_payload = payload[cursor:]
+    offset = 0
+    out: dict[str, bytes] = {}
+    normalized_members = []
+    for row in members:
+        name = str(row["name"])
+        compressed_length = int(row["length"])
+        if compressed_length < 0 or offset + compressed_length > len(concatenated_payload):
+            raise FamilyAgnosticMaterializerError(
+                f"packet member merge binary row bounds out of range: {name}"
+            )
+        encoded_member_payload = concatenated_payload[offset:offset + compressed_length]
+        member_payload = _decompress_zip_member_payload(
+            encoded_member_payload,
+            compress_type=int(row["zip_compress_type"]),
+            member_name=name,
+        )
+        if len(member_payload) != int(row["uncompressed_length"]):
+            raise FamilyAgnosticMaterializerError(
+                f"packet member merge binary row length mismatch: {name}"
+            )
+        normalized_row = {
+            "name": name,
+            "offset": offset,
+            "length": compressed_length,
+            "compressed_sha256": sha256_bytes(encoded_member_payload),
+            "sha256": sha256_bytes(member_payload),
+            "uncompressed_length": len(member_payload),
+            "zip_compress_type": int(row["zip_compress_type"]),
+        }
+        normalized_members.append(normalized_row)
+        out[name] = member_payload
+        offset += compressed_length
+    if offset != len(concatenated_payload):
+        raise FamilyAgnosticMaterializerError(
+            "packet member merge binary payload has trailing bytes"
+        )
+    binary_table = payload[:binary_table_bytes]
+    table = {
+        "schema": "packet_member_merge_table.v1",
+        "payload_codec": "source_zip_compressed_stream_binary_table_v1",
+        "table_format": "uleb_name_compressed_stream_table_v1",
+        "member_count": len(normalized_members),
+        "members": normalized_members,
+        "binary_table_bytes": len(binary_table),
+        "binary_table_sha256": sha256_bytes(binary_table),
+        "concatenated_payload_bytes": len(concatenated_payload),
+        "concatenated_payload_sha256": sha256_bytes(concatenated_payload),
+        "merged_payload_sha256": sha256_bytes(payload),
+    }
+    return {"table": table, "members": out}
+
+
+def _parse_packet_member_merge_deflate_sequence_payload(payload: bytes) -> dict[str, Any]:
+    cursor = len(PACKET_MEMBER_MERGE_DEFLATE_SEQUENCE_PAYLOAD_MAGIC)
+    member_count, cursor = _decode_uvarint(
+        payload,
+        cursor,
+        label="packet_member_merge_deflate_sequence_member_count",
+    )
+    names = []
+    for _index in range(member_count):
+        name_length, cursor = _decode_uvarint(
+            payload,
+            cursor,
+            label="packet_member_merge_deflate_sequence_name_length",
+        )
+        name_end = cursor + name_length
+        if name_end > len(payload):
+            raise FamilyAgnosticMaterializerError(
+                "packet member merge deflate sequence name extends past payload"
+            )
+        names.append(payload[cursor:name_end].decode("utf-8"))
+        cursor = name_end
+    stream = payload[cursor:]
+    out: dict[str, bytes] = {}
+    members = []
+    offset = 0
+    remaining = stream
+    for index, name in enumerate(names):
+        decoded, consumed = _decompress_next_zip_deflate_stream(remaining, member_name=name)
+        encoded = remaining[:consumed]
+        out[name] = decoded
+        members.append(
+            {
+                "name": name,
+                "offset": offset,
+                "length": len(encoded),
+                "compressed_sha256": sha256_bytes(encoded),
+                "sha256": sha256_bytes(decoded),
+                "uncompressed_length": len(decoded),
+                "zip_compress_type": zipfile.ZIP_DEFLATED,
+            }
+        )
+        offset += consumed
+        remaining = remaining[consumed:]
+        if index == len(names) - 1 and remaining:
+            raise FamilyAgnosticMaterializerError(
+                "packet member merge deflate sequence has trailing bytes"
+            )
+    table = {
+        "schema": "packet_member_merge_table.v1",
+        "payload_codec": "fixed_order_raw_deflate_sequence_v1",
+        "table_format": "uleb_name_raw_deflate_sequence_v1",
+        "member_count": len(members),
+        "members": members,
+        "binary_table_bytes": cursor,
+        "binary_table_sha256": sha256_bytes(payload[:cursor]),
+        "concatenated_payload_bytes": len(stream),
+        "concatenated_payload_sha256": sha256_bytes(stream),
+        "merged_payload_sha256": sha256_bytes(payload),
+    }
+    return {"table": table, "members": out}
+
+
+def _decompress_next_zip_deflate_stream(
+    payload: bytes,
+    *,
+    member_name: str,
+) -> tuple[bytes, int]:
+    decompressor = zlib.decompressobj(-zlib.MAX_WBITS)
+    try:
+        decoded = decompressor.decompress(payload)
+        decoded += decompressor.flush()
+    except zlib.error as exc:
+        raise FamilyAgnosticMaterializerError(
+            f"merged member deflate stream could not be decompressed: {member_name}"
+        ) from exc
+    if not decompressor.eof:
+        raise FamilyAgnosticMaterializerError(
+            f"merged member deflate stream did not terminate: {member_name}"
+        )
+    consumed = len(payload) - len(decompressor.unused_data)
+    if consumed <= 0:
+        raise FamilyAgnosticMaterializerError(
+            f"merged member deflate stream consumed no bytes: {member_name}"
+        )
+    return decoded, consumed
+
+
+def _encode_uvarint(value: int) -> bytes:
+    if value < 0:
+        raise FamilyAgnosticMaterializerError("uvarint cannot encode negative values")
+    out = bytearray()
+    while True:
+        byte = value & 0x7F
+        value >>= 7
+        if value:
+            out.append(byte | 0x80)
+        else:
+            out.append(byte)
+            return bytes(out)
+
+
+def _decode_uvarint(data: bytes, offset: int, *, label: str) -> tuple[int, int]:
+    value = 0
+    shift = 0
+    cursor = offset
+    while cursor < len(data):
+        byte = data[cursor]
+        cursor += 1
+        value |= (byte & 0x7F) << shift
+        if not byte & 0x80:
+            return value, cursor
+        shift += 7
+        if shift > 63:
+            raise FamilyAgnosticMaterializerError(f"{label} uvarint too wide")
+    raise FamilyAgnosticMaterializerError(f"{label} uvarint truncated")
+
+
+def _parse_packet_member_merge_payload(payload: bytes) -> dict[str, Any]:
+    return parse_packet_member_merge_payload(payload)
+
+
+def _zip_archive_bytes_with_member_merge(
+    archive: Path,
+    *,
+    selected_member_names: Sequence[str],
+    merged_member_name: str,
+    merged_payload: bytes,
+    compression: int,
+    compresslevel: int | None,
+) -> bytes:
+    selected = set(_require_unique_existing_member_names(archive, selected_member_names))
+    output = io.BytesIO()
+    wrote_merged_member = False
+    with zipfile.ZipFile(archive, "r") as source, zipfile.ZipFile(output, "w") as target:
+        for info in source.infolist():
+            if info.is_dir():
+                target.mkdir(_copy_zip_info(info))
+                continue
+            if info.filename in selected:
+                if not wrote_merged_member:
+                    out_info = _copy_zip_info(info)
+                    out_info.filename = merged_member_name
+                    out_info.extra = b""
+                    out_info.comment = b""
+                    out_info.compress_type = compression
+                    kwargs = {}
+                    if compression == zipfile.ZIP_DEFLATED and compresslevel is not None:
+                        kwargs["compresslevel"] = compresslevel
+                    target.writestr(out_info, merged_payload, **kwargs)
+                    wrote_merged_member = True
+                continue
+            target.writestr(_copy_zip_info(info), source.read(info.filename))
+    if not wrote_merged_member:
+        raise FamilyAgnosticMaterializerError("packet_member_merge wrote no merged member")
     return output.getvalue()
 
 
@@ -1833,12 +2937,37 @@ def _member_record(archive: Path, member_name: str, *, payload: bytes | None = N
 
 def _zip_member_compressed_payload_sha256(archive: Path, member_name: str) -> str | None:
     try:
-        raw = archive.read_bytes()
-        with zipfile.ZipFile(archive, "r") as zf:
-            info = zf.getinfo(member_name)
-        return sha256_bytes(_raw_zip_member_parts(raw, info)["compressed_payload"])
+        return sha256_bytes(_zip_member_compressed_payload(archive, member_name))
     except (OSError, KeyError, FamilyAgnosticMaterializerError, struct.error):
         return None
+
+
+def _zip_member_compressed_payload(archive: Path, member_name: str) -> bytes:
+    raw = archive.read_bytes()
+    with zipfile.ZipFile(archive, "r") as zf:
+        info = zf.getinfo(member_name)
+    return bytes(_raw_zip_member_parts(raw, info)["compressed_payload"])
+
+
+def _decompress_zip_member_payload(
+    payload: bytes,
+    *,
+    compress_type: int,
+    member_name: str,
+) -> bytes:
+    if compress_type == zipfile.ZIP_STORED:
+        return payload
+    if compress_type == zipfile.ZIP_DEFLATED:
+        try:
+            return zlib.decompress(payload, -zlib.MAX_WBITS)
+        except zlib.error as exc:
+            raise FamilyAgnosticMaterializerError(
+                f"merged member deflate stream could not be decompressed: {member_name}"
+            ) from exc
+    raise FamilyAgnosticMaterializerError(
+        "packet_member_merge_v1 does not support reconstructing ZIP compression "
+        f"method {compress_type}: {member_name}"
+    )
 
 
 def _zip_header_record(archive: Path, member_name: str) -> dict[str, Any]:

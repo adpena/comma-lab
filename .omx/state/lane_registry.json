@@ -53598,6 +53598,88 @@
         }
       },
       "notes": "Duplicate sidecar of codex_packet_header_elide_all_members_feedback_20260524; preserved for no-signal-loss custody, not a separate active execution lane."
+    },
+    {
+      "id": "codex_packet_member_merge_v1_20260524",
+      "name": "Packet member merge v1 portable materializer",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/family_agnostic_materializers.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/packet_member_merge_v1_smoke_20260525T000149Z/candidate.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "pytest: src/tac/tests/test_family_agnostic_materializers.py src/tac/tests/test_byte_shaving_campaign_queue.py src/tac/tests/test_final_byte_operation_contexts.py = 102 passed; byte_shaving_materializer_campaign_runner + inverse_steganalysis tests = 93 passed; ruff touched files passed; py_compile touched files passed"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "codex_packet_member_merge_receiver_compiler_20260524",
+      "name": "Packet member merge receiver compiler",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -53607,5 +53689,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T23:24:17Z"
+  "updated_at": "2026-05-25T00:06:50Z"
 }

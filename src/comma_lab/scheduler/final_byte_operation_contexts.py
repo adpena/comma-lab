@@ -26,6 +26,7 @@ from .byte_shaving_campaign_queue import (
 from .byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
     INVERSE_SCORER_CELL_TARGET_KIND,
+    PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
@@ -370,6 +371,41 @@ def _packet_member_context_row(
     )
     if header_elision_contract is not None:
         context["header_elision_contract"] = header_elision_contract
+    merge_contract = _first_text(
+        hints,
+        (
+            "merge_contract",
+            "member_merge_contract",
+            "packet_member_merge_contract",
+        ),
+    )
+    if merge_contract is not None:
+        context["merge_contract"] = merge_contract
+    is_member_merge = (
+        row.get("operation_family") == "member_merge"
+        and row.get("target_kind") == PACKET_MEMBER_MERGE_TARGET_KIND
+    )
+    source_runtime = _first_text(
+        hints,
+        (
+            "packet_member_merge_source_runtime_dir",
+            "source_runtime_dir",
+            "inflate_runtime_dir",
+        ),
+    )
+    if source_runtime is not None:
+        context["packet_member_merge_source_runtime_dir"] = source_runtime
+        context["source_runtime_dir"] = source_runtime
+    if is_member_merge and merge_contract is None:
+        blockers.append("materializer_context_missing:merge_contract")
+    if is_member_merge and source_runtime is None:
+        blockers.append("materializer_context_missing:packet_member_merge_source_runtime_dir")
+    merged_member_name = _first_text(
+        hints,
+        ("merged_member_name", "candidate_member_name", "output_member_name"),
+    )
+    if merged_member_name is not None:
+        context["merged_member_name"] = merged_member_name
     if output_archive is not None:
         context["output_archive"] = output_archive
     if json_out is not None:
@@ -700,6 +736,10 @@ def build_final_byte_operation_contexts(
                 (
                     row.get("operation_family") == "member_recompress"
                     and row.get("target_kind") == PACKET_MEMBER_RECOMPRESS_TARGET_KIND
+                )
+                or (
+                    row.get("operation_family") == "member_merge"
+                    and row.get("target_kind") == PACKET_MEMBER_MERGE_TARGET_KIND
                 )
                 or (
                     row.get("operation_family") == "zip_header_elide"

@@ -97,6 +97,7 @@ from tac.optimization.byte_shaving_campaign import (
 )
 from tac.optimization.family_agnostic_materializers import (
     ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+    PACKET_MEMBER_MERGE_SCHEMA,
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
     TENSOR_FACTORIZE_SCHEMA,
@@ -926,6 +927,20 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
             PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER,
             "local_cpu",
         ),
+        (
+            {
+                "unit_id": "bolton_side_member",
+                "operation_id": "merge_bolton_side_member",
+                "operation_family": "member_merge",
+                "target_kind": PACKET_MEMBER_MERGE_TARGET_KIND,
+            },
+            {
+                "unit_id": "bolton_side_member",
+                "unit_kind": "packet_member",
+            },
+            PACKET_MEMBER_MERGE_MATERIALIZER,
+            "local_cpu",
+        ),
     ]
 
     for operation, unit, materializer_id, resource_kind in executable_cases:
@@ -980,20 +995,6 @@ def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None
                 "unit_kind": "tensor",
             },
             TENSOR_QUANTIZE_MATERIALIZER,
-            "local_cpu",
-        ),
-        (
-            {
-                "unit_id": "bolton_side_member",
-                "operation_id": "merge_bolton_side_member",
-                "operation_family": "member_merge",
-                "target_kind": PACKET_MEMBER_MERGE_TARGET_KIND,
-            },
-            {
-                "unit_id": "bolton_side_member",
-                "unit_kind": "packet_member",
-            },
-            PACKET_MEMBER_MERGE_MATERIALIZER,
             "local_cpu",
         ),
     ]
@@ -2015,6 +2016,105 @@ def test_materializer_work_queue_wraps_packet_member_zip_header_elide(
     ]
     assert str(runtime_proof) in row["telemetry"]["artifact_paths"]
     assert "packet_member_zip_header_elide_requires_runtime_consumption_proof" in (
+        row["dispatch_blockers"]
+    )
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_work_queue_wraps_packet_member_merge(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    packet_manifest = tmp_path / "packet_members.json"
+    merge_contract = tmp_path / "merge_contract.json"
+    source_runtime = tmp_path / "source_runtime"
+    output = tmp_path / "merge_candidate.zip"
+    out_manifest = tmp_path / "merge_candidate.json"
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "backlog_key": "packet_member_merge_fixture",
+                "unit_kind": "packet_member",
+                "operation_family": "member_merge",
+                "target_kind": PACKET_MEMBER_MERGE_TARGET_KIND,
+                "materializer_id": PACKET_MEMBER_MERGE_MATERIALIZER,
+            },
+        ],
+    }
+
+    queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts={
+            "packet_member_merge_fixture": {
+                "archive_path": str(archive),
+                "packet_member_manifest": str(packet_manifest),
+                "member_names": ["a.bin", "b.bin"],
+                "merge_contract": str(merge_contract),
+                "packet_member_merge_source_runtime_dir": str(source_runtime),
+                "merged_member_name": "merged.packet",
+                "output_archive": str(output),
+                "output_manifest": str(out_manifest),
+                "allow_size_regression": True,
+            },
+        },
+        source_plan_path="plan.json",
+    )
+
+    runtime_proof = out_manifest.with_name(
+        f"{out_manifest.stem}.runtime_consumption_proof.json"
+    )
+    runtime_dir = out_manifest.with_name(f"{out_manifest.stem}.runtime")
+    runtime_manifest = out_manifest.with_name(f"{out_manifest.stem}.runtime_adapter.json")
+    row = queue["rows"][0]
+    assert queue["executable_row_count"] == 1
+    assert row["tool"] == "tools/run_family_agnostic_materializer.py"
+    assert [
+        "--target-kind",
+        PACKET_MEMBER_MERGE_TARGET_KIND,
+    ] in [row["command"][index : index + 2] for index in range(len(row["command"]) - 1)]
+    assert ["--merge-contract", str(merge_contract)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--packet-member-merge-source-runtime-dir", str(source_runtime)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--packet-member-merge-runtime-dir-out", str(runtime_dir)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--packet-member-merge-runtime-manifest-out", str(runtime_manifest)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--member-names", "a.bin"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--member-names", "b.bin"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--merged-member-name", "merged.packet"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--runtime-consumption-proof-out", str(runtime_proof)] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert "--allow-size-regression" in row["command"]
+    _assert_typed_postconditions(
+        row["postconditions"],
+        path=out_manifest,
+        schema=PACKET_MEMBER_MERGE_SCHEMA,
+    )
+    assert row["telemetry"]["input_artifact_paths"] == [
+        str(archive),
+        str(packet_manifest),
+        str(merge_contract),
+        str(source_runtime),
+    ]
+    assert str(runtime_proof) in row["telemetry"]["artifact_paths"]
+    assert str(runtime_dir) in row["telemetry"]["artifact_paths"]
+    assert str(runtime_manifest) in row["telemetry"]["artifact_paths"]
+    assert "packet_member_merge_requires_cooperative_receiver_runtime_adapter" in (
         row["dispatch_blockers"]
     )
     assert row["score_claim"] is False

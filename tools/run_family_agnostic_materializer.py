@@ -18,14 +18,22 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.optimization.family_agnostic_materializers import (  # noqa: E402
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
     FamilyAgnosticMaterializerError,
     materialize_archive_section_entropy_recode_candidate,
+    materialize_packet_member_merge_candidate,
     materialize_packet_member_recompress_candidate,
     materialize_packet_member_zip_header_elide_candidate,
     materialize_tensor_factorize_candidate,
+    verify_runtime_consumption_proof,
+)
+from tac.optimization.packet_member_merge_receiver import (  # noqa: E402
+    PacketMemberMergeReceiverError,
+    build_packet_member_merge_receiver_runtime,
+    build_packet_member_merge_runtime_consumption_proof,
 )
 from tac.repo_io import (  # noqa: E402
     ArtifactWriteError,
@@ -43,6 +51,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         required=True,
         choices=(
             ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+            PACKET_MEMBER_MERGE_TARGET_KIND,
             PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
             PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
             TENSOR_FACTORIZE_TARGET_KIND,
@@ -60,6 +69,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--member-name")
     parser.add_argument("--member-names", action="append", default=[])
     parser.add_argument("--all-members", action="store_true")
+    parser.add_argument("--merge-contract", type=Path)
+    parser.add_argument("--merged-member-name")
+    parser.add_argument("--packet-member-merge-source-runtime-dir", type=Path)
+    parser.add_argument("--packet-member-merge-runtime-dir-out", type=Path)
+    parser.add_argument("--packet-member-merge-runtime-manifest-out", type=Path)
+    parser.add_argument(
+        "--allow-packet-member-merge-runtime-sidecars",
+        action="store_true",
+    )
     parser.add_argument("--header-elision-contract", type=Path)
     parser.add_argument("--zip-compression-method", action="append", default=[])
     parser.add_argument("--zip-compresslevel", action="append", type=int, default=[])
@@ -93,7 +111,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     try:
         manifest = _run_materializer(args, input_paths=input_paths)
-    except (OSError, ArtifactWriteError, FamilyAgnosticMaterializerError) as exc:
+    except (
+        OSError,
+        ArtifactWriteError,
+        FamilyAgnosticMaterializerError,
+        PacketMemberMergeReceiverError,
+    ) as exc:
         print(f"FATAL: family-agnostic materializer failed: {exc}", file=sys.stderr)
         return 2
     existing_manifest_sha = (
@@ -133,6 +156,7 @@ def _run_materializer(
 ) -> dict:
     proof_out_target_kinds = {
         ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        PACKET_MEMBER_MERGE_TARGET_KIND,
         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
         TENSOR_FACTORIZE_TARGET_KIND,
@@ -143,7 +167,8 @@ def _run_materializer(
     ):
         raise FamilyAgnosticMaterializerError(
             "--runtime-consumption-proof-out is currently supported only for "
-            "archive_section_entropy_recode_v1, packet_member_recompress_v1, "
+            "archive_section_entropy_recode_v1, packet_member_merge_v1, "
+            "packet_member_recompress_v1, "
             "packet_member_zip_header_elide_v1, and tensor_factorize_v1"
         )
     common = {
@@ -194,6 +219,122 @@ def _run_materializer(
                 args.expected_existing_runtime_consumption_proof_sha256
             ),
         )
+    if args.target_kind == PACKET_MEMBER_MERGE_TARGET_KIND:
+        if args.packet_member_manifest is not None:
+            input_paths.append(args.packet_member_manifest)
+        if args.merge_contract is not None:
+            input_paths.append(args.merge_contract)
+        runtime_proof_out = args.runtime_consumption_proof_out
+        if (
+            args.runtime_consumption_proof is None
+            and runtime_proof_out is None
+            and args.packet_member_merge_source_runtime_dir is None
+        ):
+            runtime_proof_out = args.output_manifest.with_name(
+                f"{args.output_manifest.stem}.runtime_consumption_proof.json"
+            )
+        materializer_runtime_proof_out = (
+            None
+            if args.packet_member_merge_source_runtime_dir is not None
+            else runtime_proof_out
+        )
+        manifest = materialize_packet_member_merge_candidate(
+            **common,
+            packet_member_manifest=args.packet_member_manifest,
+            member_name=args.member_name,
+            member_names=tuple(args.member_names),
+            all_members=args.all_members,
+            merge_contract=args.merge_contract,
+            merged_member_name=args.merged_member_name,
+            runtime_consumption_proof_out=materializer_runtime_proof_out,
+            expected_existing_runtime_consumption_proof_sha256=(
+                args.expected_existing_runtime_consumption_proof_sha256
+            ),
+        )
+        if args.packet_member_merge_source_runtime_dir is None:
+            return manifest
+        runtime_dir = (
+            args.packet_member_merge_runtime_dir_out
+            if args.packet_member_merge_runtime_dir_out is not None
+            else args.output_manifest.with_name(f"{args.output_manifest.stem}.runtime")
+        )
+        runtime_manifest_out = (
+            args.packet_member_merge_runtime_manifest_out
+            if args.packet_member_merge_runtime_manifest_out is not None
+            else args.output_manifest.with_name(
+                f"{args.output_manifest.stem}.runtime_adapter.json"
+            )
+        )
+        proof_out = (
+            args.runtime_consumption_proof_out
+            if args.runtime_consumption_proof_out is not None
+            else args.output_manifest.with_name(
+                f"{args.output_manifest.stem}.runtime_consumption_proof.json"
+            )
+        )
+        runtime_manifest = build_packet_member_merge_receiver_runtime(
+            source_runtime_dir=args.packet_member_merge_source_runtime_dir,
+            candidate_manifest=manifest,
+            runtime_dir_out=runtime_dir,
+            runtime_manifest_out=runtime_manifest_out,
+            repo_root=REPO_ROOT,
+            allow_runtime_sidecars=args.allow_packet_member_merge_runtime_sidecars,
+            allow_overwrite=args.allow_overwrite,
+            min_free_bytes=args.min_free_bytes,
+        )
+        runtime_proof = build_packet_member_merge_runtime_consumption_proof(
+            runtime_adapter_manifest=runtime_manifest,
+            candidate_manifest=manifest,
+            repo_root=REPO_ROOT,
+        )
+        write_json_artifact(
+            proof_out,
+            runtime_proof,
+            allow_overwrite=args.allow_overwrite,
+            expected_existing_sha256=(
+                args.expected_existing_runtime_consumption_proof_sha256
+            ),
+            min_free_bytes=args.min_free_bytes,
+        )
+        receiver_verification = verify_runtime_consumption_proof(
+            runtime_consumption_proof=runtime_proof,
+            required_candidate_archive_sha256=manifest["candidate_archive"]["sha256"],
+            required_candidate_member_sha256=manifest["candidate_member"]["sha256"],
+            repo_root=REPO_ROOT,
+        )
+        manifest["packet_member_merge_receiver_runtime"] = runtime_manifest
+        manifest["receiver_verification"] = receiver_verification
+        manifest["runtime_consumption_proof_path"] = proof_out.as_posix()
+        manifest["reconstruction_proof_satisfied"] = (
+            receiver_verification["receiver_contract_satisfied"] is True
+        )
+        manifest["receiver_contract_satisfied"] = (
+            receiver_verification["receiver_contract_satisfied"] is True
+            and receiver_verification.get("runtime_adapter_ready") is True
+        )
+        manifest["runtime_adapter_ready"] = (
+            receiver_verification.get("runtime_adapter_ready") is True
+        )
+        manifest["readiness_blockers"] = [
+            str(blocker)
+            for blocker in (manifest.get("readiness_blockers") or [])
+            if blocker
+            not in {
+                "runtime_consumption_proof_missing",
+                "runtime_consumption_proof_not_passed",
+                "packet_member_merge_receiver_contract_not_satisfied",
+                "packet_member_merge_exact_readiness_refused_until_byte_closed_runtime_adapter_lands",
+            }
+        ]
+        manifest["readiness_blockers"].extend(
+            str(blocker) for blocker in receiver_verification.get("blockers") or []
+        )
+        if manifest["receiver_contract_satisfied"] is not True:
+            manifest["readiness_blockers"].append(
+                "packet_member_merge_receiver_contract_not_satisfied"
+            )
+        manifest["readiness_blockers"] = list(dict.fromkeys(manifest["readiness_blockers"]))
+        return manifest
     if args.target_kind == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND:
         if args.packet_member_manifest is not None:
             input_paths.append(args.packet_member_manifest)

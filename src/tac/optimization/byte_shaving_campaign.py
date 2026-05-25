@@ -156,6 +156,7 @@ INVERSE_ACTION_COMPILER_TARGET_DEFAULTS: dict[str, dict[str, Any]] = {
 INVERSE_ACTION_EXECUTABLE_COMPILER_TARGETS: frozenset[str] = frozenset(
     {
         "archive_section_entropy_recode_v1",
+        "packet_member_merge_v1",
         "packet_member_recompress_v1",
         "tensor_factorize_v1",
     }
@@ -209,9 +210,10 @@ INVERSE_ACTION_COMPILER_TARGET_REQUIRED_CONTEXT_FIELDS: dict[str, tuple[str, ...
     ),
     "packet_member_merge_v1": (
         "archive_path",
-        "packet_member_manifest",
-        "member_merge_contract",
-        "runtime_consumption_proof",
+        "merge_contract",
+        "packet_member_merge_source_runtime_dir",
+        "output_archive",
+        "output_manifest",
     ),
     "tensor_quantize_v1": (
         "archive_path",

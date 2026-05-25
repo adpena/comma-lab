@@ -12,13 +12,21 @@ import numpy as np
 
 from tac.optimization.family_agnostic_materializers import (
     ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+    PACKET_MEMBER_MERGE_SCHEMA,
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
     TENSOR_FACTORIZE_SCHEMA,
     materialize_archive_section_entropy_recode_candidate,
+    materialize_packet_member_merge_candidate,
     materialize_packet_member_recompress_candidate,
     materialize_packet_member_zip_header_elide_candidate,
     materialize_tensor_factorize_candidate,
+    verify_runtime_consumption_proof,
+)
+from tac.optimization.packet_member_merge_receiver import (
+    build_packet_member_merge_receiver_runtime,
+    build_packet_member_merge_runtime_consumption_proof,
+    run_packet_member_merge_receiver_smoke,
 )
 from tac.repo_io import sha256_bytes
 
@@ -229,6 +237,258 @@ def test_packet_member_recompress_materializer_preserves_stored_method_zero(
     assert result["candidate_trials"][0]["compression_method"] == "stored"
     assert result["candidate_member"]["sha256"] == sha256_bytes(payload)
     assert result["byte_closed_candidate_emitted"] is True
+
+
+def test_packet_member_merge_materializer_emits_reconstruction_proof(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    proof = tmp_path / "runtime_consumption_proof.json"
+    payloads = {
+        "side_a.bin": b"side-a" * 128,
+        "side_b.bin": b"side-b" * 128,
+        "keep.bin": b"keep-me" * 64,
+    }
+    _write_zip(archive, payloads)
+
+    result = materialize_packet_member_merge_candidate(
+        archive_path=archive,
+        output_archive=output,
+        member_names=("side_a.bin", "side_b.bin"),
+        merge_contract={
+            "cooperative_receiver_id": "fixture_packet_member_merge_receiver",
+            "receiver_adapter_kind": "packet_member_merge_table_v1",
+        },
+        merged_member_name="merged.packet",
+        runtime_consumption_proof_out=proof,
+        allow_size_regression=True,
+        repo_root=tmp_path,
+    )
+
+    assert result["schema"] == PACKET_MEMBER_MERGE_SCHEMA
+    assert result["portability_contract"]["requires_gpu"] is False
+    assert result["portability_contract"]["requires_mlx"] is False
+    assert result["byte_closed_candidate_emitted"] is True
+    assert result["selected_member_names"] == ["side_a.bin", "side_b.bin"]
+    assert result["merged_member_name"] == "merged.packet"
+    assert result["candidate_member"]["name"] == "merged.packet"
+    assert result["merge_table"]["member_count"] == 2
+    assert "source_zip_compressed_stream_binary_table_v1" in {
+        trial["merge_payload_codec"] for trial in result["candidate_trials"]
+    }
+    assert result["reconstruction_proof_satisfied"] is True
+    assert result["receiver_contract_satisfied"] is False
+    assert result["runtime_adapter_ready"] is False
+    assert result["score_claim"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
+    assert (
+        "packet_member_merge_exact_readiness_refused_until_byte_closed_runtime_adapter_lands"
+        in result["readiness_blockers"]
+    )
+    with zipfile.ZipFile(output, "r") as zf:
+        assert sorted(zf.namelist()) == ["keep.bin", "merged.packet"]
+        assert zf.read("keep.bin") == payloads["keep.bin"]
+    proof_payload = json.loads(proof.read_text(encoding="utf-8"))
+    assert proof_payload["proof_kind"] == (
+        "packet_member_merge_original_member_reconstruction_receiver_proof.v1"
+    )
+    assert proof_payload["candidate_archive"]["sha256"] == result["candidate_archive"]["sha256"]
+    assert proof_payload["candidate_member"]["sha256"] == result["candidate_member"]["sha256"]
+    assert proof_payload["runtime_consumption_probe"]["passed"] is True
+    assert proof_payload["runtime_consumption_probe"]["internal_reconstruction_passed"] is True
+    assert proof_payload["runtime_adapter_ready"] is False
+    assert proof_payload["reconstructed_member_sha256s"] == {
+        "side_a.bin": sha256_bytes(payloads["side_a.bin"]),
+        "side_b.bin": sha256_bytes(payloads["side_b.bin"]),
+    }
+    assert proof_payload["non_selected_member_proofs"][0]["passed"] is True
+
+
+def test_packet_member_merge_receiver_runtime_proves_consumed_transform(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    runtime_dir = tmp_path / "runtime"
+    runtime_manifest_out = tmp_path / "runtime_adapter.json"
+    output_dir = tmp_path / "inflated"
+    payloads = {
+        "side_a.bin": b"side-a" * 16,
+        "side_b.bin": b"side-b" * 16,
+        "keep.bin": b"keep-me" * 8,
+    }
+    _write_zip(archive, payloads, compression=zipfile.ZIP_DEFLATED)
+    source_runtime = tmp_path / "source_runtime"
+    source_runtime.mkdir()
+    (source_runtime / "inflate.py").write_text(
+        "\n".join(
+            [
+                "import sys, zipfile",
+                "from pathlib import Path",
+                "archive_dir, output_dir, file_list = sys.argv[1:4]",
+                "out = Path(output_dir)",
+                "out.mkdir(parents=True, exist_ok=True)",
+                "with zipfile.ZipFile(Path(archive_dir) / 'archive.zip', 'r') as zf:",
+                "    payload = zf.read('side_a.bin') + zf.read('side_b.bin') + zf.read('keep.bin')",
+                "(out / file_list).write_bytes(payload)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = materialize_packet_member_merge_candidate(
+        archive_path=archive,
+        output_archive=output,
+        member_names=("side_a.bin", "side_b.bin"),
+        merge_contract={
+            "cooperative_receiver_id": "fixture_packet_member_merge_receiver",
+            "receiver_adapter_kind": "shadow_archive_packet_member_merge_receiver",
+        },
+        merged_member_name="merged.packet",
+        allow_size_regression=True,
+        repo_root=tmp_path,
+    )
+    assert result["selected_merge"]["merge_payload_codec"] in {
+        "fixed_order_raw_deflate_sequence_v1",
+        "source_zip_compressed_stream_binary_table_v1",
+        "source_zip_compressed_stream_v1",
+    }
+    runtime_manifest = build_packet_member_merge_receiver_runtime(
+        source_runtime_dir=source_runtime,
+        candidate_manifest=result,
+        runtime_dir_out=runtime_dir,
+        runtime_manifest_out=runtime_manifest_out,
+        repo_root=tmp_path,
+    )
+    proof = build_packet_member_merge_runtime_consumption_proof(
+        runtime_adapter_manifest=runtime_manifest,
+        candidate_manifest=result,
+        repo_root=tmp_path,
+    )
+    verification = verify_runtime_consumption_proof(
+        runtime_consumption_proof=proof,
+        required_candidate_archive_sha256=result["candidate_archive"]["sha256"],
+        required_candidate_member_sha256=result["candidate_member"]["sha256"],
+        repo_root=tmp_path,
+    )
+    smoke = run_packet_member_merge_receiver_smoke(
+        runtime_dir=runtime_dir,
+        candidate_archive=output,
+        output_dir=output_dir,
+        file_list="0.mkv",
+    )
+
+    assert runtime_manifest["runtime_adapter_ready"] is True
+    assert runtime_manifest["score_claim"] is False
+    assert proof["proof_kind"] == "packet_member_merge_runtime_adapter_consumption_proof.v1"
+    assert proof["receiver_contract_satisfied"] is True
+    assert verification["receiver_contract_satisfied"] is True
+    assert verification["runtime_adapter_ready"] is True
+    assert smoke["passed"] is True
+    assert (output_dir / "0.mkv").read_bytes() == (
+        payloads["side_a.bin"] + payloads["side_b.bin"] + payloads["keep.bin"]
+    )
+    assert proof["score_claim"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
+
+
+def test_packet_member_merge_receiver_runtime_materializes_member_tree(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    runtime_dir = tmp_path / "runtime"
+    runtime_manifest_out = tmp_path / "runtime_adapter.json"
+    output_dir = tmp_path / "inflated"
+    payloads = {
+        "renderer.bin": b"renderer" * 64,
+        "masks.mkv": b"mask" * 64,
+        "optimized_poses.pt": b"pose" * 64,
+    }
+    _write_zip(archive, payloads, compression=zipfile.ZIP_DEFLATED)
+    source_runtime = tmp_path / "source_runtime"
+    source_runtime.mkdir()
+    (source_runtime / "inflate.py").write_text(
+        "\n".join(
+            [
+                "import sys",
+                "from pathlib import Path",
+                "archive_dir, output_dir, file_list = sys.argv[1:4]",
+                "archive = Path(archive_dir)",
+                "out = Path(output_dir)",
+                "out.mkdir(parents=True, exist_ok=True)",
+                "payload = (archive / 'renderer.bin').read_bytes() + (archive / 'masks.mkv').read_bytes() + (archive / 'optimized_poses.pt').read_bytes()",
+                "(out / 'tree.raw').write_bytes(payload)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = materialize_packet_member_merge_candidate(
+        archive_path=archive,
+        output_archive=output,
+        member_names=("renderer.bin", "masks.mkv", "optimized_poses.pt"),
+        merge_contract={
+            "cooperative_receiver_id": "fixture_packet_member_merge_receiver",
+            "receiver_adapter_kind": "shadow_archive_packet_member_merge_receiver",
+        },
+        merged_member_name="merged.packet",
+        allow_size_regression=True,
+        repo_root=tmp_path,
+    )
+    runtime_manifest = build_packet_member_merge_receiver_runtime(
+        source_runtime_dir=source_runtime,
+        candidate_manifest=result,
+        runtime_dir_out=runtime_dir,
+        runtime_manifest_out=runtime_manifest_out,
+        repo_root=tmp_path,
+    )
+    smoke = run_packet_member_merge_receiver_smoke(
+        runtime_dir=runtime_dir,
+        candidate_archive=output,
+        output_dir=output_dir,
+        file_list="unused.txt",
+    )
+
+    assert result["selected_merge"]["merge_payload_codec"] == "fixed_order_raw_deflate_sequence_v1"
+    assert runtime_manifest["runtime_adapter_ready"] is True
+    assert smoke["passed"] is True
+    assert (output_dir / "tree.raw").read_bytes() == (
+        payloads["renderer.bin"] + payloads["masks.mkv"] + payloads["optimized_poses.pt"]
+    )
+
+
+def test_packet_member_merge_materializer_requires_cooperative_receiver(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    proof = tmp_path / "runtime_consumption_proof.json"
+    _write_zip(
+        archive,
+        {
+            "a.bin": b"A" * 64,
+            "b.bin": b"B" * 64,
+        },
+    )
+
+    result = materialize_packet_member_merge_candidate(
+        archive_path=archive,
+        output_archive=output,
+        member_names=("a.bin", "b.bin"),
+        runtime_consumption_proof_out=proof,
+        allow_size_regression=True,
+        repo_root=tmp_path,
+    )
+
+    proof_payload = json.loads(proof.read_text(encoding="utf-8"))
+    assert proof_payload["runtime_consumption_probe"]["cooperative_receiver_declared"] is False
+    assert result["receiver_contract_satisfied"] is False
+    assert "runtime_consumption_proof_not_passed" in result["readiness_blockers"]
+    assert "packet_member_merge_receiver_contract_not_satisfied" in result["readiness_blockers"]
+    assert result["score_claim"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
 
 
 def test_packet_member_zip_header_elide_materializer_preserves_payload(
@@ -728,6 +988,94 @@ def test_family_agnostic_materializer_cli_writes_false_authority_manifest(
     assert proof.is_file()
     assert payload["receiver_contract_satisfied"] is True
     assert payload["receiver_verification"]["proof_present"] is True
+    assert payload["runtime_consumption_proof_path"] == str(proof)
+    assert payload["tool_run_manifest"]["tool"] == "tools/run_family_agnostic_materializer.py"
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_packet_member_merge_materializer_cli_auto_writes_runtime_proof(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "source.zip"
+    output = tmp_path / "candidate.zip"
+    manifest = tmp_path / "candidate.json"
+    proof = tmp_path / "candidate.runtime_consumption_proof.json"
+    contract = tmp_path / "merge_contract.json"
+    source_runtime = tmp_path / "source_runtime"
+    source_runtime.mkdir()
+    (source_runtime / "inflate.py").write_text(
+        "\n".join(
+            [
+                "import sys, zipfile",
+                "from pathlib import Path",
+                "archive_dir, output_dir, file_list = sys.argv[1:4]",
+                "out = Path(output_dir)",
+                "out.mkdir(parents=True, exist_ok=True)",
+                "with zipfile.ZipFile(Path(archive_dir) / 'archive.zip', 'r') as zf:",
+                "    payload = zf.read('a.bin') + zf.read('b.bin')",
+                "(out / file_list).write_bytes(payload)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    _write_zip(
+        archive,
+        {
+            "a.bin": b"A" * 128,
+            "b.bin": b"B" * 128,
+        },
+    )
+    contract.write_text(
+        json.dumps(
+            {
+                "cooperative_receiver_id": "fixture_packet_member_merge_receiver",
+                "receiver_adapter_kind": "packet_member_merge_table_v1",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_family_agnostic_materializer.py"),
+            "--target-kind",
+            "packet_member_merge_v1",
+            "--archive-path",
+            str(archive),
+            "--output-archive",
+            str(output),
+            "--output-manifest",
+            str(manifest),
+            "--member-names",
+            "a.bin",
+            "--member-names",
+            "b.bin",
+            "--merge-contract",
+            str(contract),
+            "--packet-member-merge-source-runtime-dir",
+            str(source_runtime),
+            "--merged-member-name",
+            "merged.packet",
+            "--allow-size-regression",
+        ],
+        check=True,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    stdout_payload = json.loads(completed.stdout)
+    assert payload["schema"] == PACKET_MEMBER_MERGE_SCHEMA
+    assert stdout_payload["schema"] == PACKET_MEMBER_MERGE_SCHEMA
+    assert proof.is_file()
+    assert payload["receiver_contract_satisfied"] is True
+    assert payload["runtime_adapter_ready"] is True
+    assert payload["packet_member_merge_receiver_runtime"]["runtime_adapter_ready"] is True
+    assert payload["receiver_verification"]["proof_present"] is True
+    assert payload["receiver_verification"]["runtime_adapter_ready"] is True
     assert payload["runtime_consumption_proof_path"] == str(proof)
     assert payload["tool_run_manifest"]["tool"] == "tools/run_family_agnostic_materializer.py"
     assert payload["score_claim"] is False

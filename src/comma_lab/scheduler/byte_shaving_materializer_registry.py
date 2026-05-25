@@ -466,6 +466,8 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         materialization_resource_kind="local_cpu",
         required_context_fields=(
             "archive_path",
+            "merge_contract",
+            "packet_member_merge_source_runtime_dir",
             "output_archive",
             "output_manifest",
         ),
@@ -489,22 +491,29 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
             "runtime_consumption_proof",
         ),
     ),
-    _non_executable_family_adapter(
+    MaterializerAdapter(
         materializer_id=PACKET_MEMBER_MERGE_MATERIALIZER,
         unit_kind="packet_member",
         operation_family="member_merge",
         target_kind=PACKET_MEMBER_MERGE_TARGET_KIND,
+        executable=True,
         description=(
-            "Fail-closed contract for merging side members or bolted-on payload "
-            "members into a deterministic receiver-visible packet member."
+            "Family-agnostic packet-member merge materializer for side members, "
+            "bolt-on payloads, and non-NeRV archives. It emits a deterministic "
+            "merged packet plus reconstruction proof, while exact-readiness stays "
+            "blocked until a cooperative runtime adapter consumes it."
         ),
+        receiver_contract_id=f"{PACKET_MEMBER_MERGE_TARGET_KIND}.receiver.v1",
         receiver_contract_kind="family_agnostic_packet_member_merge",
+        cooperative_receiver_required=True,
+        materialization_resource_kind="local_cpu",
         required_context_fields=(
             "archive_path",
-            "packet_member_manifest",
-            "member_merge_contract",
-            "runtime_consumption_proof",
+            "output_archive",
+            "output_manifest",
         ),
+        implementation_module="tac.optimization.family_agnostic_materializers",
+        materialize_function="materialize_packet_member_merge_candidate",
     ),
 )
 

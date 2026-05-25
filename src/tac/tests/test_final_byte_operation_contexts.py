@@ -22,6 +22,8 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
     INVERSE_SCORER_CELL_MATERIALIZER,
     INVERSE_SCORER_CELL_TARGET_KIND,
+    PACKET_MEMBER_MERGE_MATERIALIZER,
+    PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER,
@@ -184,6 +186,33 @@ def _packet_header_elide_backlog() -> dict[str, object]:
                 "materializer_id": PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER,
                 "source_unit_ids": ["payload_member"],
                 "operation_params": {"packet_member": "payload.bin"},
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _packet_member_merge_backlog() -> dict[str, object]:
+    return {
+        "schema": "byte_shaving_materializer_backlog.v1",
+        "rows": [
+            {
+                "schema": "byte_shaving_materializer_backlog_row.v1",
+                "backlog_key": "packet_member_merge_fixture",
+                "backlog_rank": 1,
+                "unit_kind": "packet_member",
+                "operation_family": "member_merge",
+                "target_kind": PACKET_MEMBER_MERGE_TARGET_KIND,
+                "materializer_id": PACKET_MEMBER_MERGE_MATERIALIZER,
+                "source_unit_ids": ["payload_members"],
+                "operation_params": {"member_names": ["a.bin", "b.bin"]},
                 "score_claim": False,
                 "promotion_eligible": False,
                 "rank_or_kill_eligible": False,
@@ -471,6 +500,74 @@ def test_final_byte_context_compiler_covers_packet_member_zip_header_elide(
         row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
     ]
     assert "--runtime-consumption-proof-out" in row["command"]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_final_byte_context_compiler_covers_packet_member_merge(
+    tmp_path: Path,
+) -> None:
+    artifact_map = {
+        "schema": "final_byte_artifact_map.fixture.v1",
+        "artifacts": {
+            PACKET_MEMBER_MERGE_TARGET_KIND: {
+                "archive_path": str(tmp_path / "packet_source.zip"),
+                "packet_member_manifest": str(tmp_path / "members.json"),
+                "member_merge_contract": str(tmp_path / "merge_contract.json"),
+                "packet_member_merge_source_runtime_dir": str(tmp_path / "source_runtime"),
+                "member_names": ["a.bin", "b.bin"],
+                "merged_member_name": "merged.packet",
+                "allow_size_regression": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    payload = build_final_byte_operation_contexts(
+        _packet_member_merge_backlog(),
+        artifact_map=artifact_map,
+        repo_root=tmp_path,
+        default_output_root=tmp_path / "out",
+    )
+
+    assert payload["row_count"] == 1
+    assert payload["blocked_context_count"] == 0
+    context = payload["rows"][0]["context"]
+    assert context["member_names"] == ["a.bin", "b.bin"]
+    assert context["merge_contract"].endswith("merge_contract.json")
+    assert context["packet_member_merge_source_runtime_dir"].endswith("source_runtime")
+    assert context["merged_member_name"] == "merged.packet"
+    resolved = materializer_contexts_from_payload(payload)
+    work_queue = build_materializer_work_queue(
+        _packet_member_merge_backlog(),
+        repo_root=tmp_path,
+        contexts=resolved,
+        source_plan_path="plan.json",
+    )
+    row = work_queue["rows"][0]
+    assert work_queue["executable_row_count"] == 1
+    assert row["tool"] == "tools/run_family_agnostic_materializer.py"
+    assert [
+        "--target-kind",
+        PACKET_MEMBER_MERGE_TARGET_KIND,
+    ] in [row["command"][index : index + 2] for index in range(len(row["command"]) - 1)]
+    assert ["--merge-contract", str(tmp_path / "merge_contract.json")] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--packet-member-merge-source-runtime-dir", str(tmp_path / "source_runtime")] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert ["--merged-member-name", "merged.packet"] in [
+        row["command"][index : index + 2] for index in range(len(row["command"]) - 1)
+    ]
+    assert "--runtime-consumption-proof-out" in row["command"]
+    assert "--allow-size-regression" in row["command"]
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
 
