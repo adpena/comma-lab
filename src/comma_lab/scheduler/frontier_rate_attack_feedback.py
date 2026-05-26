@@ -9982,11 +9982,25 @@ def build_frontier_targeted_component_correction_acquisition(
                     "operation_levels": list(seed.get("operation_levels") or []),
                     "targeted_dimensions": list(seed.get("targeted_dimensions") or []),
                     "saved_bytes_budget": saved_bytes,
+                    "receiver_closed_saved_bytes": saved_bytes,
                     "estimated_rate_credit_score_units": rate_credit,
                     "estimated_rate_credit_byte_delta": -saved_bytes,
                     "receiver_closed_budget_gate": budget_row.get(
                         "correction_budget_gate"
                     ),
+                    "rate_packet_manifest_path": budget_row.get(
+                        "rate_packet_manifest_path"
+                    ),
+                    "parent_rate_packet_manifest_path": budget_row.get(
+                        "parent_rate_packet_manifest_path"
+                    ),
+                    "candidate_compact_selector_codec": budget_row.get(
+                        "candidate_compact_selector_codec"
+                    ),
+                    "parent_compact_selector_codec": budget_row.get(
+                        "parent_compact_selector_codec"
+                    ),
+                    "entropy_position": budget_row.get("entropy_position"),
                     "ready_for_budget_spend": False,
                     "budget_spend_allowed": False,
                     "submission_dir": submission_dir or None,

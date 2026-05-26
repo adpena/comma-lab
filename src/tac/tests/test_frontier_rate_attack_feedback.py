@@ -1983,6 +1983,12 @@ def test_receiver_closed_rate_packet_manifest_feeds_waterfill_budget(
     assert row["parent_compact_selector_codec"] == "fec6_fixed_huffman_k16"
     assert row["archive_byte_delta_vs_parent"] == -10
     assert row["selector_payload_wire_delta_bytes"] == -10
+    assert row["archive_file_sha256_verified"] is True
+    assert row["archive_file_bytes_verified"] is True
+    assert row["source_archive_file_sha256_verified"] is True
+    assert row["source_archive_file_bytes_verified"] is True
+    assert row["submission_dir_verified"] is True
+    assert row["source_submission_dir_verified"] is True
     assert row["receiver_closed"] is True
     assert row["release_to_targeted_correction_planning"] is True
     assert row["ready_for_budget_spend"] is False
@@ -2021,6 +2027,70 @@ def test_receiver_closed_rate_packet_manifest_feeds_waterfill_budget(
     assert targeted["receiver_closed_saved_bytes_total"] == 10
     assert targeted["active"] is True
     assert targeted["ready_for_exact_eval_dispatch"] is False
+    targeted_row = targeted["rows"][0]
+    assert targeted_row["receiver_closed_saved_bytes"] == 10
+    assert targeted_row["saved_bytes_budget"] == 10
+    assert targeted_row["rate_packet_manifest_path"].endswith(
+        "fec8_candidate/packet_manifest.json"
+    )
+    assert targeted_row["parent_rate_packet_manifest_path"].endswith(
+        "fec6_parent/packet_manifest.json"
+    )
+    assert targeted_row["candidate_compact_selector_codec"] == (
+        "fec8_static_second_order_markov_k16"
+    )
+    assert targeted_row["parent_compact_selector_codec"] == "fec6_fixed_huffman_k16"
+    _assert_false_authority(targeted_row)
+
+
+def test_receiver_closed_rate_packet_manifest_refuses_unverified_archive_file(
+    tmp_path: Path,
+) -> None:
+    results_root = tmp_path / "results"
+    parent_manifest = _write_rate_packet_manifest(
+        tmp_path,
+        root=results_root,
+        name="fec6_parent",
+        codec="fec6_fixed_huffman_k16",
+        archive_bytes=178517,
+        archive_sha256="6" * 64,
+        selector_payload_wire_bytes=249,
+        selector_code_bits_total=1944,
+        selector_avg_bits_per_pair=3.24,
+    )
+    candidate_manifest = _write_rate_packet_manifest(
+        tmp_path,
+        root=results_root,
+        name="fec8_candidate",
+        codec="fec8_static_second_order_markov_k16",
+        archive_bytes=178507,
+        archive_sha256="8" * 64,
+        selector_payload_wire_bytes=239,
+        selector_code_bits_total=1848,
+        selector_avg_bits_per_pair=3.08,
+    )
+    (results_root / "fec8_candidate" / "archive.zip").write_bytes(b"corrupt")
+
+    budget = build_receiver_closed_correction_budget(
+        repo_root=tmp_path,
+        results_root=results_root,
+        receiver_closed_rate_packet_paths=(candidate_manifest,),
+        receiver_closed_rate_parent_paths=(parent_manifest,),
+    )
+
+    assert budget["schema"] == RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA
+    _assert_false_authority(budget)
+    assert budget["active"] is False
+    assert budget["receiver_closed_candidate_count"] == 0
+    row = budget["rows"][0]
+    assert row["receiver_closed"] is False
+    assert row["archive_file_sha256_verified"] is False
+    assert row["archive_file_bytes_verified"] is False
+    assert "candidate_archive_file_sha256_mismatch" in row["critical_blockers"]
+    assert any(
+        blocker.startswith("candidate_archive_file_bytes_mismatch")
+        for blocker in row["critical_blockers"]
+    )
 
 
 def test_rate_budget_preservation_keeps_rate_only_floor_for_distortion_regressions(
