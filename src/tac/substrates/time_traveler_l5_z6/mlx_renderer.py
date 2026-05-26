@@ -359,54 +359,62 @@ class _Z6DecoderMLX(nn.Module if nn is not None else object):  # type: ignore[mi
 
 
 def _pixel_shuffle_2x_nhwc(x: Any) -> Any:
-    """PixelShuffle factor 2 for NHWC tensor (matches PyTorch nn.PixelShuffle(2))."""
+    """PixelShuffle 2x for NHWC tensors via canonical PR95 helper.
+
+    CONSOLIDATE-OP-1 D-MIGRATION (2026-05-26): delegates to canonical
+    ``tac.local_acceleration.pr95_hnerv_mlx::pixel_shuffle_2x_nhwc``, replacing
+    the prior local copy. D=Z6's original local implementation carried the
+    canonical channel-FIRST reshape convention ``(B, H, W, out_C, 2, 2)`` +
+    transpose ``(0, 1, 4, 2, 5, 3)`` and was the sister anchor cited by
+    A=DreamerV3 FIX-WAVE-R1 + F=Z8 FIX-WAVE-R1' (both empirically
+    PyTorch-byte-stable, 0.0 drift). Migration centralizes the canonical
+    convention to one source of truth so future Path 3 substrates can simply
+    import the helper rather than re-implement (and risk re-introducing the
+    channel-LAST convention drift class).
+
+    Catalog #295 self-containment is preserved because the canonical helper
+    is imported only at MLX training time in ``mlx_renderer.py``; the
+    substrate's inflate runtime at ``inflate.py`` is PyTorch-only and uses
+    native ``F.pixel_shuffle(x, upscale_factor=2)``.
+
+    Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" L9
+    runtime closure: MLX-trained-PyTorch-inflated model MUST be the same
+    runtime as the MLX trainer observes at convergence.
+    """
     require_mlx()
-    if len(x.shape) != 4:
-        raise ValueError(f"expected NHWC; got shape {x.shape}")
-    batch, height, width, channels = (int(d) for d in x.shape)
-    if channels % 4 != 0:
-        raise ValueError(f"channels must be divisible by 4 for 2x pixel shuffle; got {channels}")
-    out_channels = channels // 4
-    y = mx.reshape(x, (batch, height, width, out_channels, 2, 2))  # type: ignore[union-attr]
-    y = mx.transpose(y, (0, 1, 4, 2, 5, 3))  # type: ignore[union-attr]
-    return mx.reshape(y, (batch, height * 2, width * 2, out_channels))  # type: ignore[union-attr]
+    from tac.local_acceleration.pr95_hnerv_mlx import (
+        pixel_shuffle_2x_nhwc,
+    )
+
+    return pixel_shuffle_2x_nhwc(x)
 
 
 def _bilinear_resize_nhwc(x: Any, *, target_h: int, target_w: int) -> Any:
-    """Simple bilinear resize for NHWC tensor (align_corners=False matches PyTorch)."""
+    """Generalized bilinear resize for NHWC tensor via canonical PR95 helper.
+
+    CONSOLIDATE-OP-1 D-MIGRATION (2026-05-26): delegates to canonical
+    ``tac.local_acceleration.pr95_hnerv_mlx::bilinear_resize_nhwc`` (the
+    general-form helper added in the same CONSOLIDATE-OP-1 wave; the 2x
+    specialized helper ``bilinear_resize2x_align_corners_false_nhwc`` is
+    NOT used here because D=Z6 calls this with arbitrary
+    ``(target_h, target_w)`` on the final size-correction step). D=Z6's
+    original local implementation was the canonical reference the
+    generalized helper was extracted from; migration centralizes the
+    align_corners=False formula to one source of truth so future Path 3
+    substrates can simply import the helper rather than re-implement.
+
+    Catalog #295 self-containment is preserved because the canonical helper
+    is imported only at MLX training time in ``mlx_renderer.py``; the
+    substrate's inflate runtime at ``inflate.py`` is PyTorch-only and uses
+    native ``F.interpolate(size=(target_h, target_w), mode='bilinear',
+    align_corners=False)``.
+    """
     require_mlx()
-    if len(x.shape) != 4:
-        raise ValueError(f"expected NHWC; got shape {x.shape}")
-    batch, h_in, w_in, c = (int(d) for d in x.shape)
-    if h_in == target_h and w_in == target_w:
-        return x
-    # Compute interpolation indices (align_corners=False)
-    h_scale = h_in / target_h
-    w_scale = w_in / target_w
-    h_idx_f = (mx.arange(target_h, dtype=mx.float32) + 0.5) * h_scale - 0.5  # type: ignore[union-attr]
-    w_idx_f = (mx.arange(target_w, dtype=mx.float32) + 0.5) * w_scale - 0.5  # type: ignore[union-attr]
-    h_idx_f = mx.clip(h_idx_f, 0.0, h_in - 1.0)  # type: ignore[union-attr]
-    w_idx_f = mx.clip(w_idx_f, 0.0, w_in - 1.0)  # type: ignore[union-attr]
-    h_lo = mx.floor(h_idx_f).astype(mx.int32)  # type: ignore[union-attr]
-    h_hi = mx.minimum(h_lo + 1, h_in - 1)  # type: ignore[union-attr]
-    w_lo = mx.floor(w_idx_f).astype(mx.int32)  # type: ignore[union-attr]
-    w_hi = mx.minimum(w_lo + 1, w_in - 1)  # type: ignore[union-attr]
-    h_frac = h_idx_f - mx.floor(h_idx_f)  # type: ignore[union-attr]
-    w_frac = w_idx_f - mx.floor(w_idx_f)  # type: ignore[union-attr]
-    # Gather neighbors via fancy indexing
-    h_lo_b = h_lo[:, None]  # (Ht, 1)
-    h_hi_b = h_hi[:, None]
-    w_lo_b = w_lo[None, :]  # (1, Wt)
-    w_hi_b = w_hi[None, :]
-    tl = x[:, h_lo_b, w_lo_b, :]  # (B, Ht, Wt, C)
-    tr = x[:, h_lo_b, w_hi_b, :]
-    bl = x[:, h_hi_b, w_lo_b, :]
-    br = x[:, h_hi_b, w_hi_b, :]
-    h_frac_b = mx.reshape(h_frac, (1, target_h, 1, 1))  # type: ignore[union-attr]
-    w_frac_b = mx.reshape(w_frac, (1, 1, target_w, 1))  # type: ignore[union-attr]
-    top = tl * (1.0 - w_frac_b) + tr * w_frac_b
-    bot = bl * (1.0 - w_frac_b) + br * w_frac_b
-    return top * (1.0 - h_frac_b) + bot * h_frac_b
+    from tac.local_acceleration.pr95_hnerv_mlx import (
+        bilinear_resize_nhwc,
+    )
+
+    return bilinear_resize_nhwc(x, target_h=target_h, target_w=target_w)
 
 
 # ---------------------------------------------------------------------------

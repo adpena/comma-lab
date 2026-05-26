@@ -57618,6 +57618,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_path_3_recursive_adversarial_review_r2_combined_3_axis_landings_a_b_c_d_e_f_g_20260526",
+      "name": "Path 3 R2-COMBINED adversarial review across landings A/B'/C'/D/E/F/G",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_path_3_consolidate_op_1_canonical_mlx_primitives_extraction_20260526",
+      "name": "Path 3 CONSOLIDATE-OP-1 canonical MLX primitives extraction",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "STEP1-5 LANDED 2026-05-26: canonical MLX primitives extracted to tac.local_acceleration.pr95_hnerv_mlx (pixel_shuffle_2x_nhwc + bilinear_resize2x_align_corners_false_nhwc docstring-hardened + NEW bilinear_resize_nhwc general-form); 3 substrates (A=DreamerV3 + D=Z6 + F=Z8) migrated to delegate; META-CONSOLIDATE-OP-2 numpy_reference extracted to tac.local_acceleration.pr95_hnerv_numpy_reference (7 primitives from G=NIRVANA); 32 NEW canonical tests + 156 regression test suite all pass. .omx/research/path_3_consolidate_op_1_canonical_mlx_primitives_extraction_landed_20260526.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/path_3_consolidate_op_1_canonical_mlx_primitives_extraction_landed_20260526.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -57627,5 +57709,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T08:22:10Z"
+  "updated_at": "2026-05-26T08:54:06Z"
 }

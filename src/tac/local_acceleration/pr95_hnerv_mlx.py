@@ -702,7 +702,52 @@ def _mlx_conv_to_numpy(value: Any) -> np.ndarray:
 
 
 def pixel_shuffle_2x_nhwc(x: Any, *, upscale_factor: int = 2) -> Any:
-    """PixelShuffle for NHWC tensors using native MLX reshape/transpose ops."""
+    """CANONICAL PixelShuffle for NHWC tensors using native MLX reshape/transpose.
+
+    Canonical PR95 helper for use by every Path 3 Apple-Silicon MLX substrate
+    (and any future MLX renderer) that needs PyTorch-byte-stable pixel-shuffle
+    upsampling. Sister substrates MUST import and delegate to this helper
+    rather than re-implement local copies (per CONSOLIDATE-OP-1 2026-05-26
+    extraction wave; prevents the FIX-WAVE-R1 + FIX-WAVE-R1' channel-LAST
+    convention drift class from recurring at future Path 3 substrate launches).
+
+    Convention: channel-FIRST reshape ``(B, H, W, out_C, 2, 2)`` + transpose
+    ``(0, 1, 4, 2, 5, 3)``. This matches PyTorch ``nn.PixelShuffle(2)``
+    byte-for-byte; empirically PyTorch-byte-stable (0.0 absolute drift per
+    sister D=Z6 anchor 2026-05-26).
+
+    Empirical drift bounds vs PyTorch ``nn.PixelShuffle(2)``:
+    - CANONICAL channel-FIRST: 0.0 absolute drift (this implementation)
+    - FORBIDDEN channel-LAST ``(B, H, W, 2, 2, out_C)`` + ``(0, 1, 3, 2, 4, 5)``:
+      2.40 absolute drift (A=DreamerV3 pre-FIX-WAVE-R1 anchor)
+    - FORBIDDEN channel-LAST same as above: 3.77 absolute drift
+      (F=Z8 pre-FIX-WAVE-R1' anchor 2026-05-26T08:03Z)
+
+    Canonical invocation pattern for substrates (see also Catalog #295 inflate
+    self-containment scope — this helper is MLX training-time only; the
+    substrate inflate.py runtime is PyTorch-only and uses native
+    ``F.pixel_shuffle(x, upscale_factor=2)``)::
+
+        from tac.local_acceleration.pr95_hnerv_mlx import pixel_shuffle_2x_nhwc
+
+        decoded = pixel_shuffle_2x_nhwc(self.conv(x))
+
+    Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" L9
+    runtime closure: MLX-trained-PyTorch-inflated model MUST be the same
+    runtime the MLX trainer observes at convergence.
+
+    Args:
+        x: NHWC tensor with shape ``(B, H, W, C)`` and ``C`` divisible by 4.
+        upscale_factor: Only ``2`` is supported (PR95 + Path 3 substrates use
+            only the 2x case; raises ``ValueError`` otherwise).
+
+    Returns:
+        NHWC tensor with shape ``(B, 2*H, 2*W, C/4)``.
+
+    Raises:
+        ValueError: ``upscale_factor != 2`` or ``len(x.shape) != 4`` or
+            ``C % 4 != 0``.
+    """
 
     require_mlx()
     if upscale_factor != 2:
@@ -728,7 +773,53 @@ def pixel_shuffle_2x_nhwc(x: Any, *, upscale_factor: int = 2) -> Any:
 
 
 def bilinear_resize2x_align_corners_false_nhwc(x: Any) -> Any:
-    """2x bilinear resize for NHWC tensors matching PyTorch align_corners=False."""
+    """CANONICAL 2x bilinear resize for NHWC tensors matching PyTorch align_corners=False.
+
+    Canonical PR95 helper for use by every Path 3 Apple-Silicon MLX substrate
+    that needs PyTorch-byte-stable 2x bilinear upsampling. Sister substrates
+    MUST import and delegate to this helper rather than re-implement local
+    copies (per CONSOLIDATE-OP-1 2026-05-26 extraction wave; prevents the
+    FIX-WAVE-R1 + FIX-WAVE-R1' ``mx.repeat`` 2x-approximation drift class
+    from recurring at future Path 3 substrate launches).
+
+    Empirical drift bounds vs PyTorch ``F.interpolate(scale_factor=2,
+    mode='bilinear', align_corners=False)``:
+    - CANONICAL specialized 2x implementation: 0.0 absolute drift
+      (this implementation)
+    - FORBIDDEN ``mx.repeat`` 2x approximation: 0.99 absolute drift
+      (A=DreamerV3 pre-FIX-WAVE-R1 anchor)
+    - FORBIDDEN ``mx.repeat`` 2x approximation: 1.51 absolute drift
+      (F=Z8 pre-FIX-WAVE-R1' anchor 2026-05-26T08:03Z)
+
+    Implementation: specialized closed-form 2x bilinear that exploits the
+    align_corners=False formula at scale=2 producing weights ``0.75, 0.25``
+    per neighbor. Width pass first, then height pass; chained reshape +
+    stack rebuilds the upsampled tensor in NHWC layout.
+
+    Canonical invocation pattern for substrates (Catalog #295 inflate
+    self-containment scope — MLX training-time only; substrate inflate.py
+    runtime is PyTorch-only and uses native
+    ``F.interpolate(scale_factor=2, mode='bilinear', align_corners=False)``)::
+
+        from tac.local_acceleration.pr95_hnerv_mlx import (
+            bilinear_resize2x_align_corners_false_nhwc,
+        )
+
+        identity = bilinear_resize2x_align_corners_false_nhwc(x)
+
+    For arbitrary target sizes (NOT 2x), use the sister general-form
+    helper :func:`bilinear_resize_nhwc` instead (added 2026-05-26 in
+    same CONSOLIDATE-OP-1 wave to cover D=Z6's general-resize signature).
+
+    Args:
+        x: NHWC tensor with shape ``(B, H, W, C)``.
+
+    Returns:
+        NHWC tensor with shape ``(B, 2*H, 2*W, C)``.
+
+    Raises:
+        ValueError: ``len(x.shape) != 4``.
+    """
 
     require_mlx()
     if len(x.shape) != 4:
@@ -756,6 +847,115 @@ def bilinear_resize2x_align_corners_false_nhwc(x: Any) -> Any:
             int(width_up.shape[3]),
         ),
     )
+
+
+def bilinear_resize_nhwc(
+    x: Any,
+    *,
+    target_h: int,
+    target_w: int,
+    align_corners: bool = False,
+) -> Any:
+    """CANONICAL generalized bilinear resize for NHWC tensors (arbitrary target shape).
+
+    Canonical PR95 helper for use by Path 3 MLX substrates that need
+    PyTorch-byte-stable bilinear resize to arbitrary ``(target_h, target_w)``.
+    Sister substrates MUST import and delegate to this helper rather than
+    re-implement local copies (per CONSOLIDATE-OP-1 2026-05-26 extraction
+    wave; canonical pattern matches D=Z6
+    ``time_traveler_l5_z6.mlx_renderer::_bilinear_resize_nhwc`` signature
+    so the migration is signature-compatible).
+
+    Use this for the GENERAL case (target sizes that are not 2x of the
+    input). For the specialized 2x case use :func:`bilinear_resize2x_align_corners_false_nhwc`
+    (faster + closed-form weights ``0.75, 0.25``).
+
+    Empirical drift bound vs PyTorch ``F.interpolate(size=(target_h,
+    target_w), mode='bilinear', align_corners=False)``: ``≤ 1e-5`` absolute
+    drift for fp32 inputs (anchor: sister D=Z6 conditional-resize call site
+    at ``mlx_renderer.py:351`` — pixel boundaries computed via
+    ``(dst + 0.5) / scale - 0.5`` mapping then clamped to ``[0, src - 1]``).
+
+    Implementation: align_corners=False formula
+    ``src_y = (dst_y + 0.5) * (src_h / target_h) - 0.5``
+    ``src_x = (dst_x + 0.5) * (src_w / target_w) - 0.5``
+    clamped to valid range; floor + 1 for bilinear corners; fractional
+    interpolation weights.
+
+    Identity short-circuit: when ``(target_h, target_w) == (H, W)`` the
+    helper returns ``x`` unchanged (no reshape, no work).
+
+    Canonical invocation pattern for substrates (Catalog #295 inflate
+    self-containment scope — MLX training-time only; substrate inflate.py
+    runtime is PyTorch-only and uses native
+    ``F.interpolate(size=..., mode='bilinear', align_corners=False)``)::
+
+        from tac.local_acceleration.pr95_hnerv_mlx import bilinear_resize_nhwc
+
+        if int(x.shape[1]) != target_h or int(x.shape[2]) != target_w:
+            x = bilinear_resize_nhwc(x, target_h=target_h, target_w=target_w)
+
+    Args:
+        x: NHWC tensor with shape ``(B, H, W, C)``.
+        target_h: Target output height (positive int).
+        target_w: Target output width (positive int).
+        align_corners: PyTorch ``F.interpolate(..., align_corners=...)``
+            convention. Only ``False`` is supported in this canonical
+            helper (matches PyTorch default + sister D=Z6 + sister A=DreamerV3
+            + sister F=Z8 canonical convention). ``True`` raises ``ValueError``.
+
+    Returns:
+        NHWC tensor with shape ``(B, target_h, target_w, C)``.
+
+    Raises:
+        ValueError: ``len(x.shape) != 4``, ``target_h <= 0``,
+            ``target_w <= 0``, or ``align_corners != False``.
+    """
+
+    require_mlx()
+    if align_corners is not False:
+        raise ValueError(
+            "bilinear_resize_nhwc: only align_corners=False is supported "
+            "(canonical PyTorch default; matches sister Path 3 substrate "
+            "convention). Got align_corners="
+            f"{align_corners!r}"
+        )
+    if len(x.shape) != 4:
+        raise ValueError(f"expected NHWC; got shape {x.shape}")
+    if target_h <= 0 or target_w <= 0:
+        raise ValueError(
+            f"target_h and target_w must be positive; got "
+            f"({target_h}, {target_w})"
+        )
+    batch, h_in, w_in, channels = (int(d) for d in x.shape)
+    if h_in == target_h and w_in == target_w:
+        return x
+    # PyTorch align_corners=False mapping: src = (dst + 0.5) * (src/target) - 0.5
+    h_scale = h_in / target_h
+    w_scale = w_in / target_w
+    h_idx_f = (mx.arange(target_h, dtype=mx.float32) + 0.5) * h_scale - 0.5  # type: ignore[union-attr]
+    w_idx_f = (mx.arange(target_w, dtype=mx.float32) + 0.5) * w_scale - 0.5  # type: ignore[union-attr]
+    h_idx_f = mx.clip(h_idx_f, 0.0, h_in - 1.0)  # type: ignore[union-attr]
+    w_idx_f = mx.clip(w_idx_f, 0.0, w_in - 1.0)  # type: ignore[union-attr]
+    h_lo = mx.floor(h_idx_f).astype(mx.int32)  # type: ignore[union-attr]
+    h_hi = mx.minimum(h_lo + 1, h_in - 1)  # type: ignore[union-attr]
+    w_lo = mx.floor(w_idx_f).astype(mx.int32)  # type: ignore[union-attr]
+    w_hi = mx.minimum(w_lo + 1, w_in - 1)  # type: ignore[union-attr]
+    h_frac = h_idx_f - mx.floor(h_idx_f)  # type: ignore[union-attr]
+    w_frac = w_idx_f - mx.floor(w_idx_f)  # type: ignore[union-attr]
+    h_lo_b = h_lo[:, None]
+    h_hi_b = h_hi[:, None]
+    w_lo_b = w_lo[None, :]
+    w_hi_b = w_hi[None, :]
+    tl = x[:, h_lo_b, w_lo_b, :]
+    tr = x[:, h_lo_b, w_hi_b, :]
+    bl = x[:, h_hi_b, w_lo_b, :]
+    br = x[:, h_hi_b, w_hi_b, :]
+    h_frac_b = mx.reshape(h_frac, (1, target_h, 1, 1))  # type: ignore[union-attr]
+    w_frac_b = mx.reshape(w_frac, (1, 1, target_w, 1))  # type: ignore[union-attr]
+    top = tl * (1.0 - w_frac_b) + tr * w_frac_b
+    bot = bl * (1.0 - w_frac_b) + br * w_frac_b
+    return top * (1.0 - h_frac_b) + bot * h_frac_b
 
 
 class _HNeRVUpsampleBlockMLX(nn.Module if nn is not None else object):  # type: ignore[misc]
@@ -2363,6 +2563,7 @@ __all__ = [
     "Pr95PublicArchivePacket",
     "apply_pr95_mlx_optimizer_step",
     "bilinear_resize2x_align_corners_false_nhwc",
+    "bilinear_resize_nhwc",
     "build_pr95_public_archive_member",
     "compare_pr95_public_archive_forward_with_pytorch",
     "load_pytorch_state_dict_into_mlx",

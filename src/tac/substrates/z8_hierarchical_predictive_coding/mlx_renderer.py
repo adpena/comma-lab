@@ -262,36 +262,39 @@ def _mallat_sum_pool_2x_nhwc(x: Any) -> Any:
 
 
 def _pixel_shuffle_2x_nhwc(x: Any) -> Any:
-    """PixelShuffle 2x for NHWC tensors (canonical channel-FIRST convention).
+    """PixelShuffle 2x for NHWC tensors via canonical PR95 helper.
 
-    FIX-WAVE-R1' F-OP1 (2026-05-26): channel-FIRST convention matching sister
-    D=Z6 ``src/tac/substrates/time_traveler_l5_z6/mlx_renderer.py::
-    _pixel_shuffle_2x_nhwc`` AND canonical PR95 helper
-    ``tac.local_acceleration.pr95_hnerv_mlx::pixel_shuffle_2x_nhwc`` AND
-    sister A=DreamerV3 post-FIX-WAVE-R1 fix (commit `a23779a732e7bb056`).
-    The prior channel-LAST convention ``(B, H, W, 2, 2, out_C)`` + transpose
-    ``(0, 1, 3, 2, 4, 5)`` produced 3.77 absolute drift vs PyTorch
-    ``nn.PixelShuffle(2)`` (per R1' Path 3 F review empirical measurement
-    2026-05-26T08:03Z); the canonical channel-FIRST convention
-    ``(B, H, W, out_C, 2, 2)`` + transpose ``(0, 1, 4, 2, 5, 3)`` is
-    empirically PyTorch-byte-stable (0.0 drift per sister D=Z6 anchor).
+    CONSOLIDATE-OP-1 F-MIGRATION (2026-05-26): delegates to canonical
+    ``tac.local_acceleration.pr95_hnerv_mlx::pixel_shuffle_2x_nhwc``, replacing
+    the prior local copy that was empirically PyTorch-byte-stable (0.0 drift
+    per FIX-WAVE-R1' ``4684dbbab``) but DUPLICATED the canonical primitive.
+    Sister substrates (A=DreamerV3, D=Z6) also migrate to the canonical helper
+    in the same wave so the channel-FIRST reshape convention
+    ``(B, H, W, out_C, 2, 2)`` + transpose ``(0, 1, 4, 2, 5, 3)`` is owned
+    by exactly one canonical source of truth.
+
+    Historical FIX-WAVE-R1' F-OP1 anchor: the prior channel-LAST convention
+    ``(B, H, W, 2, 2, out_C)`` + transpose ``(0, 1, 3, 2, 4, 5)`` produced
+    3.77 absolute drift vs PyTorch ``nn.PixelShuffle(2)`` (per R1' Path 3 F
+    review empirical measurement 2026-05-26T08:03Z); the channel-FIRST
+    convention now in the canonical helper is empirically PyTorch-byte-stable
+    (0.0 drift per sister D=Z6 anchor).
+
+    Catalog #295 self-containment is preserved because the canonical helper
+    is imported only at MLX training time in ``mlx_renderer.py``; the
+    substrate's inflate runtime at ``inflate.py`` is PyTorch-only and uses
+    native ``F.pixel_shuffle(x, upscale_factor=2)``.
+
     Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" L9
     runtime closure: MLX-trained-PyTorch-inflated model MUST be the same
     runtime as the MLX trainer observes at convergence.
     """
     _require_mlx()
-    if len(x.shape) != 4:
-        raise ValueError(f"expected NHWC; got shape {x.shape}")
-    batch, height, width, channels = (int(dim) for dim in x.shape)
-    block = 4  # 2*2
-    if channels % block != 0:
-        raise ValueError(
-            f"channels {channels} must be divisible by {block} for 2x pixel shuffle"
-        )
-    out_channels = channels // block
-    y = mx.reshape(x, (batch, height, width, out_channels, 2, 2))  # type: ignore[union-attr]
-    y = mx.transpose(y, (0, 1, 4, 2, 5, 3))  # type: ignore[union-attr]
-    return mx.reshape(y, (batch, height * 2, width * 2, out_channels))  # type: ignore[union-attr]
+    from tac.local_acceleration.pr95_hnerv_mlx import (
+        pixel_shuffle_2x_nhwc,
+    )
+
+    return pixel_shuffle_2x_nhwc(x)
 
 
 def _bilinear_resize_2x_nhwc(x: Any) -> Any:
