@@ -1,0 +1,65 @@
+{
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "discovered_lattice_count": 1,
+  "discovered_lattices": [
+    {
+      "candidate_ids": [
+        "pairset_geometry_lowimpact_k003_h9dfec80f80",
+        "pairset_geometry_lowimpact_k004_h3d2fc811a7",
+        "pairset_geometry_lowimpact_k006_h7ce3073a1a",
+        "pairset_geometry_lowimpact_k008_hc4a555f7ab",
+        "pairset_geometry_lowimpact_k012_hc4a6f54207",
+        "pairset_geometry_lowimpact_k016_he503d277f6"
+      ],
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "drop_counts": [
+        3,
+        4,
+        6,
+        8,
+        12,
+        16
+      ],
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "path": ".omx/research/codex_dqs1_pair_frame_geometry_auto_refresh_20260525T170139Z/pair_frame_scorer_geometry_lattice.json",
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "request_count": 6,
+      "schema": "frontier_rate_attack_discovered_pair_frame_geometry_lattice.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false
+    }
+  ],
+  "dispatch_attempted": false,
+  "duplicate_request_count": 0,
+  "exact_cuda_auth_eval": false,
+  "explicit_pair_frame_geometry_paths": [
+    ".omx/research/codex_dqs1_pair_frame_geometry_auto_refresh_20260525T170139Z/pair_frame_scorer_geometry_lattice.json"
+  ],
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "frontier_artifact_roots": [
+    ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_cycle_targeted_component_correction/initial_refresh"
+  ],
+  "gpu_launched": false,
+  "ignored_lattices": [],
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_executable_request_count": 6,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "scanned_candidate_path_count": 1,
+  "schema": "frontier_rate_attack_pair_frame_geometry_discovery.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false
+}

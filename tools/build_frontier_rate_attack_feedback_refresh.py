@@ -249,6 +249,7 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
                 f"{report.get('queue_id') or 'frontier_feedback'}_"
                 "component_correction"
             ),
+            candidate_limit=int(report.get("candidate_limit") or 4),
         )
         if isinstance(correction_queue, dict):
             queue_path = output_dir / "targeted_component_correction_queue.json"

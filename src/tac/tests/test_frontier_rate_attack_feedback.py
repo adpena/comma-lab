@@ -30,6 +30,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     build_frontier_operation_chain_compiler_stage_plan,
     build_frontier_rate_attack_feedback_refresh,
     build_frontier_receiver_repair_work_order,
+    build_frontier_targeted_component_correction_queue,
     build_frontier_targeted_component_correction_work_order,
     build_receiver_closed_correction_budget,
     discover_local_cpu_eureka_planning_signals,
@@ -1084,6 +1085,39 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     )
     assert correction_budget["score_claim"] is False
     assert correction_budget["ready_for_exact_eval_dispatch"] is False
+    targeted_queue = build_frontier_targeted_component_correction_queue(
+        repo_root=tmp_path,
+        targeted_component_correction_acquisition=report[
+            "targeted_component_correction_acquisition"
+        ],
+        targeted_component_correction_acquisition_path=(
+            tmp_path / "targeted_component_correction_acquisition.json"
+        ),
+        results_root=str(results_root),
+        queue_id="targeted_family_round_robin_unit",
+        candidate_limit=4,
+        include_mlx_response=False,
+    )
+    assert targeted_queue is not None
+    assert targeted_queue["selection_policy"]["policy"] == (
+        "bounded_candidate_family_round_robin"
+    )
+    assert targeted_queue["selection_policy"]["selected_row_count"] == 4
+    assert targeted_queue["selection_policy"][
+        "selected_correction_family_count"
+    ] >= 4
+    assert {
+        experiment["metadata"]["correction_family"]
+        for experiment in targeted_queue["experiments"]
+    } >= {
+        "segnet_posenet_waterfill_region_repair",
+        "drop_within_selected_set_masked_boundary",
+        "inverse_scorer_cell_basis_expansion",
+    }
+    assert all(
+        experiment["metadata"]["selection_policy"]["budget_spend_allowed"] is False
+        for experiment in targeted_queue["experiments"]
+    )
     registered_chain = next(
         row
         for row in operation_portfolio["rows"]
@@ -2298,7 +2332,18 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     targeted_component_queue = json.loads(
         targeted_component_queue_path.read_text(encoding="utf-8")
     )
-    assert len(targeted_component_queue["experiments"]) >= 1
+    assert len(targeted_component_queue["experiments"]) == 2
+    assert targeted_component_queue["selection_policy"]["policy"] == (
+        "bounded_candidate_family_round_robin"
+    )
+    assert targeted_component_queue["selection_policy"]["selected_row_count"] == 2
+    assert {
+        experiment["metadata"]["correction_family"]
+        for experiment in targeted_component_queue["experiments"]
+    } == {
+        "segnet_posenet_waterfill_region_repair",
+        "drop_within_selected_set_masked_boundary",
+    }
     first_correction_step = targeted_component_queue["experiments"][0]["steps"][0]
     assert (
         first_correction_step["command"][1]

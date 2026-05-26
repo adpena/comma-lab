@@ -5361,23 +5361,81 @@ def _selected_targeted_component_correction_rows(
         for row in acquisition.get("rows") or []
         if isinstance(row, Mapping) and row.get("queue_actionable") is True
     ]
-    selected: list[Mapping[str, Any]] = []
-    seen_candidates: set[str] = set()
-    for row in sorted(
+    ranked_rows = sorted(
         rows,
         key=lambda item: (
             -float(item.get("priority_score") or 0.0),
             str(item.get("acquisition_id") or ""),
         ),
-    ):
+    )
+    rows_by_candidate: dict[str, list[Mapping[str, Any]]] = {}
+    for row in ranked_rows:
         candidate_key = str(row.get("candidate_id") or row.get("submission_dir") or "")
-        if candidate_key in seen_candidates:
-            continue
-        seen_candidates.add(candidate_key)
-        selected.append(row)
-        if len(selected) >= candidate_limit:
+        rows_by_candidate.setdefault(candidate_key, []).append(row)
+
+    candidate_order = sorted(
+        rows_by_candidate,
+        key=lambda candidate: (
+            -float(rows_by_candidate[candidate][0].get("priority_score") or 0.0),
+            candidate,
+        ),
+    )
+    candidate_offsets = dict.fromkeys(candidate_order, 0)
+    selected: list[Mapping[str, Any]] = []
+    seen_candidate_families: set[tuple[str, str]] = set()
+    while len(selected) < candidate_limit:
+        progressed = False
+        for candidate in candidate_order:
+            candidate_rows = rows_by_candidate[candidate]
+            offset = candidate_offsets[candidate]
+            while offset < len(candidate_rows):
+                row = candidate_rows[offset]
+                offset += 1
+                family = str(row.get("correction_family") or "")
+                key = (candidate, family)
+                if key in seen_candidate_families:
+                    continue
+                seen_candidate_families.add(key)
+                selected.append(row)
+                progressed = True
+                break
+            candidate_offsets[candidate] = offset
+            if len(selected) >= candidate_limit:
+                break
+        if not progressed:
             break
     return selected
+
+
+def _targeted_component_correction_queue_selection_policy(
+    *,
+    selected_rows: Sequence[Mapping[str, Any]],
+    candidate_limit: int,
+) -> dict[str, Any]:
+    selected_candidates = _unique_strings(
+        row.get("candidate_id") or row.get("submission_dir") for row in selected_rows
+    )
+    selected_families = _unique_strings(
+        row.get("correction_family") for row in selected_rows
+    )
+    return {
+        "schema": "frontier_rate_attack_targeted_component_queue_selection_policy.v1",
+        "policy": "bounded_candidate_family_round_robin",
+        "candidate_limit": candidate_limit,
+        "selected_row_count": len(selected_rows),
+        "selected_candidate_count": len(selected_candidates),
+        "selected_correction_family_count": len(selected_families),
+        "selected_candidate_ids": selected_candidates,
+        "selected_correction_families": selected_families,
+        "rationale": (
+            "fan out receiver-closed rate credit across multiple correction "
+            "operators instead of collapsing each candidate to one leaf probe"
+        ),
+        "budget_spend_allowed": False,
+        "allowed_use": "local_component_correction_acquisition_selection_only",
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
 
 
 def build_frontier_targeted_component_correction_queue(
@@ -5417,6 +5475,10 @@ def build_frontier_targeted_component_correction_queue(
     )
     if not selected_rows:
         return None
+    selection_policy = _targeted_component_correction_queue_selection_policy(
+        selected_rows=selected_rows,
+        candidate_limit=candidate_limit,
+    )
     acquisition_path = _resolve_path(
         targeted_component_correction_acquisition_path,
         repo_root=repo,
@@ -5678,6 +5740,7 @@ def build_frontier_targeted_component_correction_queue(
                     "local_mlx_response_enabled": include_mlx_response,
                     "mlx_device": mlx_device,
                     "budget_spend_ready": False,
+                    "selection_policy": dict(selection_policy),
                     "budget_spend_gate": dict(
                         row.get("budget_spend_gate")
                         if isinstance(row.get("budget_spend_gate"), Mapping)
@@ -5692,7 +5755,7 @@ def build_frontier_targeted_component_correction_queue(
                 "steps": steps,
             }
         )
-    return normalize_queue_definition(
+    queue = normalize_queue_definition(
         {
             "schema": QUEUE_SCHEMA,
             "queue_id": queue_id,
@@ -5708,15 +5771,10 @@ def build_frontier_targeted_component_correction_queue(
                 },
             },
             "experiments": experiments,
-            "allowed_use": (
-                "queue_owned_targeted_component_correction_local_acquisition_only"
-            ),
-            "forbidden_use": (
-                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
-            ),
-            **FALSE_AUTHORITY,
         }
     )
+    queue["selection_policy"] = selection_policy
+    return queue
 
 
 def _receiver_repair_classification(blocker: str) -> dict[str, Any]:
@@ -7212,6 +7270,7 @@ def build_frontier_rate_attack_feedback_refresh(
     return {
         "schema": FEEDBACK_REFRESH_SCHEMA,
         "generated_at_utc": _utc_now(),
+        "candidate_limit": candidate_limit,
         "discovery": discovery,
         "pair_frame_geometry_discovery": pair_frame_discovery,
         "pair_frame_geometry_request_source_paths": list(pair_frame_source_paths),
