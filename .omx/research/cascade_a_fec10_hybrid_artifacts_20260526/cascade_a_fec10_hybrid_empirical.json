@@ -1,0 +1,29 @@
+{
+  "evidence_grade": "macOS-CPU advisory only",
+  "axis_tag": "[macOS-CPU advisory]",
+  "n_pairs": 600,
+  "alpha_default": 2,
+  "wire_bytes": {
+    "FEC6_baseline": 249,
+    "FEC8_1st_order_static": 245,
+    "FEC8_2nd_order_static": 239,
+    "FEC10_hybrid_adaptive_blend_alpha_2": 236
+  },
+  "delta_vs_FEC6": {
+    "FEC8_1st": -4,
+    "FEC8_2nd": -10,
+    "FEC10_hybrid": -13
+  },
+  "delta_vs_FEC8_2nd": -3,
+  "roundtrip_verified": true,
+  "encode_time_ms": 0.4773139953613281,
+  "decode_time_ms": 0.7321834564208984,
+  "fec10_payload_sha256_first16": "969d99a94ecffe3a",
+  "per_pair_codelen_summary": {
+    "min": 2.033494548094259,
+    "max": 4.907242859080148,
+    "mean": 3.03239142615003,
+    "median": 2.962798259734487,
+    "total_bits_blend_rule": 1819.434855690018
+  }
+}
