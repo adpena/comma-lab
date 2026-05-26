@@ -948,6 +948,7 @@ def main(argv: list[str] | None = None) -> int:
                 "post_followup_eureka_signal_to_next_acquisition_hint",
                 "materializer_eureka_component_signals_to_many_operation_portfolio",
                 "operation_portfolio_to_chained_materializer_and_receiver_backlog",
+                "operation_portfolio_to_materializer_backlog_context_work_queue",
                 "exact_readiness_bridge_to_receiver_repair_backlog_and_correction_budget",
                 "receiver_closed_rate_budget_to_targeted_segnet_posenet_correction_planning",
                 "receiver_closed_correction_acquisition_to_local_component_correction_queue",

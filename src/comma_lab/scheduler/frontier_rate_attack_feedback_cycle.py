@@ -479,6 +479,22 @@ def write_frontier_refresh_artifacts(
         path = out / "operation_portfolio.json"
         write_json_artifact(path, dict(operation_portfolio))
         artifacts["operation_portfolio"] = repo_rel(path, repo_root)
+    operation_materializer_bridge = report.get("operation_materializer_bridge")
+    if isinstance(operation_materializer_bridge, Mapping):
+        path = out / "operation_materializer_bridge.json"
+        write_json_artifact(path, dict(operation_materializer_bridge))
+        artifacts["operation_materializer_bridge"] = repo_rel(path, repo_root)
+        bridge_artifacts = (
+            ("operation_materializer_backlog", "materializer_backlog"),
+            ("operation_materializer_contexts", "materializer_contexts"),
+            ("operation_materializer_work_queue", "materializer_work_queue"),
+        )
+        for artifact_name, bridge_key in bridge_artifacts:
+            payload = operation_materializer_bridge.get(bridge_key)
+            if isinstance(payload, Mapping):
+                artifact_path = out / f"{artifact_name}.json"
+                write_json_artifact(artifact_path, dict(payload))
+                artifacts[artifact_name] = repo_rel(artifact_path, repo_root)
     receiver_repair_backlog = report.get("receiver_repair_backlog")
     if isinstance(receiver_repair_backlog, Mapping):
         path = out / "receiver_repair_backlog.json"

@@ -11,6 +11,7 @@ import pytest
 from comma_lab.scheduler.frontier_rate_attack_feedback import (
     FEEDBACK_REFRESH_SCHEMA,
     LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA,
+    OPERATION_MATERIALIZER_BRIDGE_SCHEMA,
     OPERATION_PORTFOLIO_SCHEMA,
     OPERATION_PORTFOLIO_TAXONOMY_SCHEMA,
     RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA,
@@ -671,6 +672,31 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     )
     assert correction_budget["score_claim"] is False
     assert correction_budget["ready_for_exact_eval_dispatch"] is False
+    operation_materializer = report["operation_materializer_bridge"]
+    assert operation_materializer["schema"] == OPERATION_MATERIALIZER_BRIDGE_SCHEMA
+    _assert_false_authority(operation_materializer)
+    assert operation_materializer["bridge_row_count"] >= 6
+    assert operation_materializer["materializer_backlog_row_count"] == 2
+    assert operation_materializer["work_queue_row_count"] == 2
+    assert operation_materializer["blocked_work_row_count"] == 2
+    assert operation_materializer["executable_work_row_count"] == 0
+    assert operation_materializer["materializer_backlog"]["schema"] == (
+        "byte_shaving_materializer_backlog.v1"
+    )
+    assert operation_materializer["materializer_contexts"]["schema"] == (
+        "byte_shaving_materializer_contexts.v1"
+    )
+    assert operation_materializer["materializer_work_queue"]["schema"] == (
+        "byte_shaving_materializer_work_queue.v1"
+    )
+    assert "packet_member_merge_v1" in set(
+        operation_materializer["top_materializer_targets"]
+    )
+    assert all(
+        row["score_claim"] is False
+        and row["ready_for_exact_eval_dispatch"] is False
+        for row in operation_materializer["rows"]
+    )
     receiver_closed_budget = report["receiver_closed_correction_budget"]
     assert receiver_closed_budget["schema"] == RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA
     _assert_false_authority(receiver_closed_budget)
@@ -1995,6 +2021,26 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     assert initial_artifacts["targeted_component_correction_queue"].endswith(
         "targeted_component_correction_queue.json"
     )
+    assert initial_artifacts["operation_materializer_bridge"].endswith(
+        "operation_materializer_bridge.json"
+    )
+    assert initial_artifacts["operation_materializer_backlog"].endswith(
+        "operation_materializer_backlog.json"
+    )
+    assert initial_artifacts["operation_materializer_contexts"].endswith(
+        "operation_materializer_contexts.json"
+    )
+    assert initial_artifacts["operation_materializer_work_queue"].endswith(
+        "operation_materializer_work_queue.json"
+    )
+    operation_work_queue = json.loads(
+        (
+            REPO_ROOT / initial_artifacts["operation_materializer_work_queue"]
+        ).read_text(encoding="utf-8")
+    )
+    assert operation_work_queue["schema"] == "byte_shaving_materializer_work_queue.v1"
+    assert operation_work_queue["row_count"] >= 2
+    assert operation_work_queue["blocked_row_count"] >= 1
     targeted_validate = subprocess.run(
         [
             sys.executable,
@@ -2048,6 +2094,10 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     )
     assert (
         "receiver_closed_correction_acquisition_to_local_component_correction_queue"
+        in cycle_report["integration_edges"]
+    )
+    assert (
+        "operation_portfolio_to_materializer_backlog_context_work_queue"
         in cycle_report["integration_edges"]
     )
 

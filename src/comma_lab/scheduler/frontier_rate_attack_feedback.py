@@ -37,6 +37,12 @@ from tac.optimization.pairset_component_marginal import (
 )
 from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
 
+from .byte_shaving_campaign_queue import (
+    MATERIALIZER_BACKLOG_SCHEMA,
+    build_materializer_work_queue,
+    materializer_contexts_from_payload,
+)
+from .byte_shaving_materializer_registry import registry_manifest
 from .dqs1_local_first_queue import (
     DEFAULT_MLX_REFERENCE_CACHE_DIR,
     DEFAULT_QUEUE_ID,
@@ -50,6 +56,7 @@ from .experiment_queue import (
     ExperimentQueueError,
     normalize_queue_definition,
 )
+from .final_byte_operation_contexts import build_final_byte_operation_contexts
 
 FEEDBACK_REFRESH_SCHEMA = "frontier_rate_attack_feedback_refresh.v1"
 FRONTIER_RATE_ATTACK_FEEDBACK_REFRESH_SCHEMA = FEEDBACK_REFRESH_SCHEMA
@@ -76,6 +83,12 @@ OPERATION_PORTFOLIO_SCHEMA = "frontier_rate_attack_operation_portfolio.v1"
 OPERATION_PORTFOLIO_ROW_SCHEMA = "frontier_rate_attack_operation_portfolio_row.v1"
 OPERATION_PORTFOLIO_TAXONOMY_SCHEMA = (
     "frontier_rate_attack_operation_portfolio_taxonomy.v1"
+)
+OPERATION_MATERIALIZER_BRIDGE_SCHEMA = (
+    "frontier_rate_attack_operation_materializer_bridge.v1"
+)
+OPERATION_MATERIALIZER_BRIDGE_ROW_SCHEMA = (
+    "frontier_rate_attack_operation_materializer_bridge_row.v1"
 )
 MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA = (
     "materializer_chain_exact_readiness_bridge_report.v1"
@@ -3153,6 +3166,330 @@ def _rate_credit_score_units_for_saved_bytes(saved_bytes: int) -> float:
     return abs(rate_delta_for_archive_byte_delta(-int(saved_bytes)))
 
 
+def _materializer_registry_adapters_by_target() -> dict[str, Mapping[str, Any]]:
+    return {
+        str(adapter.get("target_kind") or ""): adapter
+        for adapter in registry_manifest().get("adapters", [])
+        if isinstance(adapter, Mapping) and adapter.get("target_kind")
+    }
+
+
+def _portfolio_row_materializer_target_kind(
+    row: Mapping[str, Any],
+    *,
+    adapters_by_target: Mapping[str, Mapping[str, Any]],
+) -> str | None:
+    evidence = row.get("evidence_summary")
+    if isinstance(evidence, Mapping):
+        target = str(evidence.get("target_kind") or "").strip()
+        if target in adapters_by_target:
+            return target
+    operation_id = str(row.get("operation_id") or "").strip()
+    for prefix in ("materializer_", "materializer_backlog_"):
+        if not operation_id.startswith(prefix):
+            continue
+        target = operation_id.removeprefix(prefix)
+        if target in adapters_by_target:
+            return target
+    return None
+
+
+def _portfolio_row_candidate_saved_bytes(row: Mapping[str, Any]) -> int:
+    evidence = row.get("evidence_summary")
+    if not isinstance(evidence, Mapping):
+        evidence = {}
+    for key in (
+        "total_positive_saved_bytes",
+        "max_saved_bytes",
+        "saved_bytes_at_risk",
+        "receiver_closed_saved_bytes_total",
+    ):
+        value = _finite_int_or_none(evidence.get(key))
+        if value is not None and value > 0:
+            return value
+    return 0
+
+
+def _portfolio_materializer_suggested_row(
+    adapter: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "schema": "byte_shaving_suggested_materializer.v1",
+        "materializer_id": adapter.get("materializer_id"),
+        "target_kind": adapter.get("target_kind"),
+        "receiver_contract_id": adapter.get("receiver_contract_id"),
+        "receiver_contract_kind": adapter.get("receiver_contract_kind"),
+        "cooperative_receiver_required": (
+            adapter.get("cooperative_receiver_required") is True
+        ),
+        "materialization_resource_kind": (
+            adapter.get("materialization_resource_kind") or "local_cpu"
+        ),
+        "required_context_fields": list(adapter.get("required_context_fields") or []),
+        "executable": adapter.get("executable") is True,
+        "emits_candidate_archive": adapter.get("emits_candidate_archive") is not False,
+        "planning_only": adapter.get("planning_only") is True,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _portfolio_materializer_backlog_row(
+    *,
+    row: Mapping[str, Any],
+    adapter: Mapping[str, Any],
+    rank: int,
+) -> dict[str, Any]:
+    operation_id = str(row.get("operation_id") or f"operation_{rank}")
+    target_kind = str(adapter.get("target_kind") or "unknown_target")
+    backlog_key = (
+        "frontier_operation_portfolio:"
+        f"{_slug_token(operation_id)}:{_slug_token(target_kind)}"
+    )
+    blockers = _string_list(row.get("blockers"))
+    blocker_counts = {blocker: blockers.count(blocker) for blocker in blockers}
+    saved_bytes = _portfolio_row_candidate_saved_bytes(row)
+    priority = _finite_float_or_none(row.get("priority_score")) or 0.0
+    suggested = _portfolio_materializer_suggested_row(adapter)
+    return {
+        "schema": "byte_shaving_materializer_backlog_row.v1",
+        "backlog_key": backlog_key,
+        "gap_class": "frontier_operation_portfolio_context_binding",
+        "target_kind": target_kind,
+        "materializer_id": adapter.get("materializer_id"),
+        "receiver_contract_id": adapter.get("receiver_contract_id"),
+        "receiver_contract_kind": adapter.get("receiver_contract_kind"),
+        "receiver_contract_status": (
+            "receiver_context_required_before_exact_readiness"
+        ),
+        "cooperative_receiver_required": (
+            adapter.get("cooperative_receiver_required") is True
+        ),
+        "materialization_resource_kind": (
+            adapter.get("materialization_resource_kind") or "local_cpu"
+        ),
+        "suggested_materializer_count": 1,
+        "suggested_materializers": [suggested],
+        "unit_kind": adapter.get("unit_kind"),
+        "operation_family": adapter.get("operation_family"),
+        "blocked_row_count": 1,
+        "blocked_resolution_count": 1,
+        "selected_operation_count": 1,
+        "affected_unit_count": 1,
+        "candidate_saved_bytes_sum": saved_bytes,
+        "expected_score_gain_sum": priority,
+        "best_expected_score_gain": priority,
+        "best_expected_delta_score": None,
+        "best_candidate_saved_bytes": saved_bytes,
+        "blocker_counts": dict(sorted(blocker_counts.items())),
+        "source_unit_ids": [operation_id],
+        "source_selection_ids": [operation_id],
+        "source_selection_samples": [
+            {
+                "selection_id": operation_id,
+                "selection_kind": row.get("source_kind"),
+                "unit_id": operation_id,
+                "candidate_saved_bytes": saved_bytes,
+                "expected_score_gain": priority,
+                "expected_delta_score": None,
+            }
+        ],
+        "source_packet_ir_operation_indices": [],
+        "source_packet_ir_operation_indices_by_unit": {},
+        "operation_params": {
+            "frontier_operation_id": operation_id,
+            "frontier_operation_family": row.get("operation_family"),
+            "frontier_queue_consumer": row.get("queue_consumer"),
+        },
+        "source_operation_params_by_unit": {
+            operation_id: {
+                "frontier_operation_id": operation_id,
+                "frontier_operation_family": row.get("operation_family"),
+                "frontier_queue_consumer": row.get("queue_consumer"),
+            }
+        },
+        "frontier_operation_portfolio_row": {
+            "operation_id": operation_id,
+            "operation_family": row.get("operation_family"),
+            "operation_levels": list(row.get("operation_levels") or []),
+            "queue_consumer": row.get("queue_consumer"),
+            "recommended_next_action": row.get("recommended_next_action"),
+            "evidence_sources": list(row.get("evidence_sources") or []),
+            "evidence_summary": dict(
+                row.get("evidence_summary")
+                if isinstance(row.get("evidence_summary"), Mapping)
+                else {}
+            ),
+            "blockers": blockers,
+            **FALSE_AUTHORITY,
+        },
+        "backlog_rank": rank,
+        "implementation_priority_score": priority + float(saved_bytes) * 1e-9,
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_frontier_operation_materializer_bridge(
+    *,
+    repo_root: str | Path,
+    operation_portfolio: Mapping[str, Any],
+    default_output_root: str | Path | None = None,
+    candidate_limit: int | None = None,
+) -> dict[str, Any]:
+    """Compile operation-portfolio rows into materializer compiler surfaces."""
+
+    repo = Path(repo_root)
+    if candidate_limit is not None and candidate_limit < 1:
+        raise FrontierRateAttackFeedbackError("candidate_limit must be >= 1")
+    require_no_truthy_authority_fields(
+        operation_portfolio,
+        context="operation_materializer_bridge_operation_portfolio",
+    )
+    adapters_by_target = _materializer_registry_adapters_by_target()
+    selected_rows: list[tuple[Mapping[str, Any], Mapping[str, Any], str]] = []
+    bridge_rows: list[dict[str, Any]] = []
+    for portfolio_index, source_row in enumerate(operation_portfolio.get("rows") or []):
+        if not isinstance(source_row, Mapping):
+            continue
+        require_no_truthy_authority_fields(
+            source_row,
+            context=f"operation_materializer_bridge.rows.{portfolio_index}",
+        )
+        queue_consumer = str(source_row.get("queue_consumer") or "")
+        operation_id = str(source_row.get("operation_id") or f"operation_{portfolio_index}")
+        evidence = (
+            source_row.get("evidence_summary")
+            if isinstance(source_row.get("evidence_summary"), Mapping)
+            else {}
+        )
+        chain_targets = _string_list(evidence.get("chain_targets"))
+        materializer_consumer = queue_consumer in {
+            "frontier_final_rate_attack_materializer_queue",
+            "byte_shaving_campaign_queue",
+        }
+        target_kind = _portfolio_row_materializer_target_kind(
+            source_row,
+            adapters_by_target=adapters_by_target,
+        )
+        if not materializer_consumer and target_kind is None and not chain_targets:
+            continue
+        adapter = adapters_by_target.get(target_kind or "")
+        bridge_blockers = _string_list(source_row.get("blockers"))
+        if adapter is None:
+            bridge_blockers.append(
+                "operation_portfolio_row_has_no_registered_materializer_target"
+            )
+        bridge_row = {
+            "schema": OPERATION_MATERIALIZER_BRIDGE_ROW_SCHEMA,
+            "source_operation_id": operation_id,
+            "source_operation_family": source_row.get("operation_family"),
+            "source_kind": source_row.get("source_kind"),
+            "queue_consumer": queue_consumer,
+            "operation_levels": list(source_row.get("operation_levels") or []),
+            "target_kind": target_kind,
+            "materializer_id": None if adapter is None else adapter.get("materializer_id"),
+            "unit_kind": None if adapter is None else adapter.get("unit_kind"),
+            "operation_family": (
+                None if adapter is None else adapter.get("operation_family")
+            ),
+            "receiver_contract_id": (
+                None if adapter is None else adapter.get("receiver_contract_id")
+            ),
+            "receiver_contract_kind": (
+                None if adapter is None else adapter.get("receiver_contract_kind")
+            ),
+            "chain_targets": chain_targets,
+            "candidate_saved_bytes": _portfolio_row_candidate_saved_bytes(source_row),
+            "priority_score": source_row.get("priority_score"),
+            "materializer_backlog_key": (
+                None
+                if adapter is None
+                else (
+                    "frontier_operation_portfolio:"
+                    f"{_slug_token(operation_id)}:{_slug_token(target_kind)}"
+                )
+            ),
+            "queue_actionable": adapter is not None,
+            "blockers": _unique_strings(bridge_blockers),
+            "allowed_use": "frontier_operation_to_materializer_compiler_bridge_only",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+            **FALSE_AUTHORITY,
+        }
+        bridge_rows.append(bridge_row)
+        if adapter is not None:
+            selected_rows.append((source_row, adapter, target_kind or ""))
+    if candidate_limit is not None:
+        selected_rows = selected_rows[:candidate_limit]
+
+    backlog_rows = [
+        _portfolio_materializer_backlog_row(row=row, adapter=adapter, rank=rank)
+        for rank, (row, adapter, _target_kind) in enumerate(selected_rows, start=1)
+    ]
+    materializer_backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "tool": "comma_lab.scheduler.frontier_rate_attack_feedback",
+        "generated_at_utc": _utc_now(),
+        "backlog_row_count": len(backlog_rows),
+        "rows": backlog_rows,
+        "allowed_use": "frontier_operation_portfolio_to_materializer_backlog_only",
+        "forbidden_use": (
+            "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+        ),
+        **FALSE_AUTHORITY,
+    }
+    materializer_contexts = build_final_byte_operation_contexts(
+        materializer_backlog,
+        artifact_map=None,
+        repo_root=repo,
+        default_output_root=default_output_root,
+    )
+    materializer_work_queue = build_materializer_work_queue(
+        materializer_backlog,
+        repo_root=repo,
+        contexts=materializer_contexts_from_payload(materializer_contexts),
+        source_plan_path=None,
+        limit=candidate_limit,
+    )
+    bridge = {
+        "schema": OPERATION_MATERIALIZER_BRIDGE_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "operation_portfolio_schema": operation_portfolio.get("schema"),
+        "operation_count": operation_portfolio.get("operation_count"),
+        "bridge_row_count": len(bridge_rows),
+        "materializer_backlog_row_count": len(backlog_rows),
+        "context_row_count": materializer_contexts.get("row_count"),
+        "blocked_context_count": materializer_contexts.get("blocked_context_count"),
+        "work_queue_row_count": materializer_work_queue.get("row_count"),
+        "executable_work_row_count": materializer_work_queue.get(
+            "executable_row_count"
+        ),
+        "blocked_work_row_count": materializer_work_queue.get("blocked_row_count"),
+        "top_source_operation_ids": [
+            str(row.get("source_operation_id") or "") for row in bridge_rows[:8]
+        ],
+        "top_materializer_targets": _unique_strings(
+            row.get("target_kind") for row in bridge_rows[:8]
+        ),
+        "materializer_backlog": materializer_backlog,
+        "materializer_contexts": materializer_contexts,
+        "materializer_work_queue": materializer_work_queue,
+        "rows": bridge_rows,
+        "allowed_use": (
+            "queue_owned_operation_portfolio_materializer_compiler_bridge_only"
+        ),
+        "forbidden_use": (
+            "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+        ),
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        bridge,
+        context="operation_materializer_bridge",
+    )
+    return bridge
+
+
 def _targeted_component_prior_status(
     *,
     seed: Mapping[str, Any],
@@ -5350,6 +5687,16 @@ def build_frontier_rate_attack_feedback_refresh(
     receiver_repair_backlog = build_frontier_receiver_repair_backlog(
         operation_portfolio
     )
+    operation_materializer_bridge = build_frontier_operation_materializer_bridge(
+        repo_root=repo,
+        operation_portfolio=operation_portfolio,
+        default_output_root=(
+            Path(results_root)
+            / "frontier_operation_materializer"
+            / _slug_token(queue_id)
+        ),
+        candidate_limit=candidate_limit,
+    )
     targeted_component_correction_acquisition = (
         build_frontier_targeted_component_correction_acquisition(
             operation_portfolio=operation_portfolio,
@@ -5454,6 +5801,7 @@ def build_frontier_rate_attack_feedback_refresh(
         ],
         "dqs1_observation_discovery": dqs1_observation_discovery,
         "operation_portfolio": operation_portfolio,
+        "operation_materializer_bridge": operation_materializer_bridge,
         "receiver_repair_backlog": receiver_repair_backlog,
         "receiver_closed_correction_budget": receiver_closed_correction_budget,
         "targeted_component_correction_acquisition": (
@@ -5504,6 +5852,7 @@ __all__ = [
     "LOCAL_CPU_EUREKA_PAIRSET_PROFILE_SCHEMA",
     "LOCAL_CPU_EUREKA_PLANNER_HINT_SCHEMA",
     "MATERIALIZER_FEEDBACK_DISCOVERY_SCHEMA",
+    "OPERATION_MATERIALIZER_BRIDGE_SCHEMA",
     "OPERATION_PORTFOLIO_SCHEMA",
     "OPERATION_PORTFOLIO_TAXONOMY_SCHEMA",
     "PAIR_FRAME_GEOMETRY_DISCOVERY_SCHEMA",
@@ -5516,6 +5865,7 @@ __all__ = [
     "TARGETED_COMPONENT_CORRECTION_QUEUE_METADATA_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA",
     "FrontierRateAttackFeedbackError",
+    "build_frontier_operation_materializer_bridge",
     "build_frontier_operation_portfolio",
     "build_frontier_rate_attack_feedback_refresh",
     "build_frontier_receiver_repair_backlog",
