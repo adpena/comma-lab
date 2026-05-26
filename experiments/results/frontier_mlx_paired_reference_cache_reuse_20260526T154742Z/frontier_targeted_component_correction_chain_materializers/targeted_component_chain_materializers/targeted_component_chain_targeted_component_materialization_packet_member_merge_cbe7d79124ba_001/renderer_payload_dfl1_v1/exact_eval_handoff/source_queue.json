@@ -22,7 +22,7 @@
   },
   "exact_cuda_auth_eval": false,
   "field_selection_ready_for_exact_eval_dispatch": false,
-  "generated_at_utc": "2026-05-26T16:56:35Z",
+  "generated_at_utc": "2026-05-26T18:08:33Z",
   "gpu_launched": false,
   "n_candidates": 1,
   "promotable": false,
@@ -85,14 +85,7 @@
         "materializer_candidate_is_not_dispatch_authorization",
         "materialized_archive_runtime_custody_required",
         "exact_readiness_promotion_required",
-        "exact_auth_eval_result_required_before_score_claim",
-        "family_agnostic_receiver_contract_not_satisfied",
-        "renderer_payload_dfl1_full_frame_inflate_parity_missing",
-        "renderer_payload_dfl1_full_frame_inflate_parity_proof_missing",
-        "runtime_consumption_proof_not_passed",
-        "renderer_payload_dfl1_v1_runtime_adapter_not_ready",
-        "renderer_payload_dfl1_full_frame_inflate_parity_not_satisfied",
-        "renderer_payload_dfl1_receiver_contract_not_satisfied"
+        "exact_auth_eval_result_required_before_score_claim"
       ],
       "evidence_grade": "[family-agnostic-materializer-no-score]",
       "evidence_semantics": "family_agnostic_materializer_candidate_pending_exact_readiness",
@@ -131,7 +124,7 @@
         "submission_tree_sha256": "a2a413dfe584a9e8c9b01fa397dc91deebc05c5ee09b1213121a0fdcd69ca203"
       },
       "gpu_launched": false,
-      "harvested_at_utc": "2026-05-26T16:56:35Z",
+      "harvested_at_utc": "2026-05-26T18:08:33Z",
       "lane_class": "family_agnostic_materializer_harvest",
       "lane_id": "materializer_harvest::renderer_payload_dfl1_candidate.v1",
       "local_advisory_axes": [],
@@ -189,18 +182,11 @@
       "promotion_eligible": false,
       "rank_or_kill_eligible": false,
       "rate_positive": true,
-      "readiness_blockers": [
-        "renderer_payload_dfl1_full_frame_inflate_parity_missing",
-        "renderer_payload_dfl1_full_frame_inflate_parity_proof_missing",
-        "runtime_consumption_proof_not_passed",
-        "renderer_payload_dfl1_v1_runtime_adapter_not_ready",
-        "renderer_payload_dfl1_full_frame_inflate_parity_not_satisfied",
-        "renderer_payload_dfl1_receiver_contract_not_satisfied"
-      ],
+      "readiness_blockers": [],
       "ready_for_exact_eval_dispatch": false,
       "realized_saved_bytes": 380,
       "receiver_contract_kind": "source_runtime_native_renderer_payload_dfl1",
-      "receiver_contract_satisfied": false,
+      "receiver_contract_satisfied": true,
       "reconstructed_member_sha256s": {
         "masks.mkv": "16c95d40ec2ff4db9e0ae21dfafe04b3c322668290e9f7e545b9c151914c11dd",
         "optimized_poses.pt": "9624b96c7304ecac9aa7c06703413893a5c467350b86b8e9c2b37449288ff3af",
@@ -216,7 +202,7 @@
       "runtime_adapter_ready": false,
       "runtime_consumption_proof_path": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/runtime_consumption_proof.json",
       "runtime_consumption_proof_required": true,
-      "runtime_consumption_proof_status": "present",
+      "runtime_consumption_proof_status": "sidecar_full_frame_parity_applied",
       "runtime_full_frame_inflate_parity_verification": {
         "blockers": [
           "renderer_payload_dfl1_full_frame_inflate_parity_proof_missing"
@@ -340,14 +326,7 @@
         "materializer_candidate_is_not_dispatch_authorization",
         "materialized_archive_runtime_custody_required",
         "exact_readiness_promotion_required",
-        "exact_auth_eval_result_required_before_score_claim",
-        "family_agnostic_receiver_contract_not_satisfied",
-        "renderer_payload_dfl1_full_frame_inflate_parity_missing",
-        "renderer_payload_dfl1_full_frame_inflate_parity_proof_missing",
-        "runtime_consumption_proof_not_passed",
-        "renderer_payload_dfl1_v1_runtime_adapter_not_ready",
-        "renderer_payload_dfl1_full_frame_inflate_parity_not_satisfied",
-        "renderer_payload_dfl1_receiver_contract_not_satisfied"
+        "exact_auth_eval_result_required_before_score_claim"
       ],
       "evidence_grade": "[family-agnostic-materializer-no-score]",
       "evidence_semantics": "family_agnostic_materializer_candidate_pending_exact_readiness",
@@ -386,7 +365,7 @@
         "submission_tree_sha256": "a2a413dfe584a9e8c9b01fa397dc91deebc05c5ee09b1213121a0fdcd69ca203"
       },
       "gpu_launched": false,
-      "harvested_at_utc": "2026-05-26T16:56:35Z",
+      "harvested_at_utc": "2026-05-26T18:08:33Z",
       "lane_class": "family_agnostic_materializer_harvest",
       "lane_id": "materializer_harvest::renderer_payload_dfl1_candidate.v1",
       "local_advisory_axes": [],
@@ -444,18 +423,11 @@
       "promotion_eligible": false,
       "rank_or_kill_eligible": false,
       "rate_positive": true,
-      "readiness_blockers": [
-        "renderer_payload_dfl1_full_frame_inflate_parity_missing",
-        "renderer_payload_dfl1_full_frame_inflate_parity_proof_missing",
-        "runtime_consumption_proof_not_passed",
-        "renderer_payload_dfl1_v1_runtime_adapter_not_ready",
-        "renderer_payload_dfl1_full_frame_inflate_parity_not_satisfied",
-        "renderer_payload_dfl1_receiver_contract_not_satisfied"
-      ],
+      "readiness_blockers": [],
       "ready_for_exact_eval_dispatch": false,
       "realized_saved_bytes": 380,
       "receiver_contract_kind": "source_runtime_native_renderer_payload_dfl1",
-      "receiver_contract_satisfied": false,
+      "receiver_contract_satisfied": true,
       "reconstructed_member_sha256s": {
         "masks.mkv": "16c95d40ec2ff4db9e0ae21dfafe04b3c322668290e9f7e545b9c151914c11dd",
         "optimized_poses.pt": "9624b96c7304ecac9aa7c06703413893a5c467350b86b8e9c2b37449288ff3af",
@@ -471,7 +443,7 @@
       "runtime_adapter_ready": false,
       "runtime_consumption_proof_path": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/runtime_consumption_proof.json",
       "runtime_consumption_proof_required": true,
-      "runtime_consumption_proof_status": "present",
+      "runtime_consumption_proof_status": "sidecar_full_frame_parity_applied",
       "runtime_full_frame_inflate_parity_verification": {
         "blockers": [
           "renderer_payload_dfl1_full_frame_inflate_parity_proof_missing"
