@@ -93,6 +93,12 @@ MATERIALIZER_SUBMISSION_CLOSURE_TOOL = (
 MATERIALIZER_SUBMISSION_CLOSURE_REPORT_SCHEMA = (
     "materializer_submission_runtime_closure_report.v1"
 )
+RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA = (
+    "frontier_rate_attack_receiver_closed_correction_budget.v1"
+)
+RECEIVER_CLOSED_CORRECTION_BUDGET_QUEUE_METADATA_SCHEMA = (
+    "frontier_rate_attack_receiver_closed_correction_budget_queue_metadata.v1"
+)
 QUEUE_FALSE_AUTHORITY_FALSE_OR_MISSING_FIELDS = tuple(
     field
     for field in DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS
@@ -1599,6 +1605,325 @@ def _exact_readiness_bridge_summary(
     }
 
 
+_RECEIVER_CLOSED_BUDGET_SAFE_BLOCKERS = frozenset(
+    {
+        "bridge_report_is_not_dispatch_authority",
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "use_per_candidate_exact_ready_queue_only_when_present",
+        "lane_claim_required_before_gpu_or_remote_eval",
+    }
+)
+_RECEIVER_CLOSED_BUDGET_SAFE_BLOCKER_PREFIXES = (
+    "above_active_floor_archive_bytes_without_operator_override",
+)
+
+
+def _receiver_closed_budget_safe_blocker(blocker: str) -> bool:
+    lowered = str(blocker or "").strip().lower()
+    if not lowered:
+        return True
+    if lowered in _RECEIVER_CLOSED_BUDGET_SAFE_BLOCKERS:
+        return True
+    return any(
+        lowered.startswith(prefix)
+        for prefix in _RECEIVER_CLOSED_BUDGET_SAFE_BLOCKER_PREFIXES
+    )
+
+
+def _paired_submission_closure_bridge_path(closure_report_path: Path) -> Path:
+    closure_dir = closure_report_path.parent
+    if closure_dir.name.startswith("submission_closure"):
+        suffix = closure_dir.name.removeprefix("submission_closure")
+        return closure_dir.parent / f"exact_readiness_bridge{suffix}" / (
+            "exact_readiness_bridge_report.json"
+        )
+    return closure_dir / "exact_readiness_bridge_report.json"
+
+
+def _discover_submission_closure_report_paths(
+    *,
+    repo_root: Path,
+    frontier_artifact_roots: Sequence[str | Path],
+    results_root: str | Path,
+) -> list[Path]:
+    roots: list[Path] = []
+    for root in frontier_artifact_roots:
+        roots.append(_resolve_path(root, repo_root=repo_root))
+    resolved_results = _resolve_path(results_root, repo_root=repo_root)
+    roots.extend(
+        [
+            resolved_results / "frontier_operation_portfolio",
+            resolved_results / "frontier_operation_portfolio" / "frontier_receiver_repair",
+        ]
+    )
+    paths: list[Path] = []
+    seen: set[str] = set()
+    for root in roots:
+        candidates: list[Path] = []
+        if root.is_file() and root.name == "submission_closure_report.json":
+            candidates = [root]
+        elif root.is_dir():
+            candidates = list(root.rglob("submission_closure_report.json"))
+        for path in candidates:
+            key = path.resolve(strict=False).as_posix()
+            if key in seen:
+                continue
+            seen.add(key)
+            paths.append(path)
+    return sorted(paths, key=lambda path: path.resolve(strict=False).as_posix())
+
+
+def _bridge_rows_for_candidate(
+    payload: Mapping[str, Any],
+    candidate_id: str,
+) -> list[Mapping[str, Any]]:
+    rows = [row for row in payload.get("rows") or [] if isinstance(row, Mapping)]
+    if not candidate_id:
+        return rows
+    matched = [row for row in rows if str(row.get("candidate_id") or "") == candidate_id]
+    return matched
+
+
+def _submission_closure_budget_row(
+    closure_report_path: Path,
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    try:
+        closure = _load_json(closure_report_path)
+        require_no_truthy_authority_fields(
+            closure,
+            context=f"{closure_report_path} submission closure",
+        )
+    except (FrontierRateAttackFeedbackError, ValueError) as exc:
+        return {
+            "closure_report_path": _repo_rel(closure_report_path, repo_root),
+            "generated_at_utc": None,
+            "receiver_closed": False,
+            "critical_blockers": [f"invalid_submission_closure_report:{exc}"],
+            "saved_bytes_at_risk": 0,
+            **FALSE_AUTHORITY,
+        }
+    if closure.get("schema") != MATERIALIZER_SUBMISSION_CLOSURE_REPORT_SCHEMA:
+        return {
+            "closure_report_path": _repo_rel(closure_report_path, repo_root),
+            "generated_at_utc": None,
+            "receiver_closed": False,
+            "critical_blockers": ["submission_closure_report_schema_mismatch"],
+            "saved_bytes_at_risk": 0,
+            **FALSE_AUTHORITY,
+        }
+
+    candidate_id = str(closure.get("candidate_id") or "")
+    target_kind = str(closure.get("target_kind") or "")
+    signal = closure.get("targeted_correction_budget_signal")
+    saved = _finite_int_or_none(closure.get("saved_bytes_at_risk"))
+    if saved is None and isinstance(signal, Mapping):
+        saved = _finite_int_or_none(signal.get("saved_bytes_at_risk"))
+    if saved is None:
+        saved = 0
+
+    bridge_path = _paired_submission_closure_bridge_path(closure_report_path)
+    bridge_blockers: list[str] = []
+    critical_blockers: list[str] = []
+    bridge_candidate_count = 0
+    if not bridge_path.is_file():
+        critical_blockers.append("paired_exact_readiness_bridge_report_missing")
+    else:
+        try:
+            bridge = _load_json(bridge_path)
+            require_no_truthy_authority_fields(
+                bridge,
+                context=f"{bridge_path} receiver-closed budget bridge",
+            )
+        except (FrontierRateAttackFeedbackError, ValueError) as exc:
+            bridge = {}
+            critical_blockers.append(f"invalid_exact_readiness_bridge_report:{exc}")
+        if bridge and bridge.get("schema") != MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA:
+            critical_blockers.append("paired_exact_readiness_bridge_schema_mismatch")
+        elif bridge:
+            rows = _bridge_rows_for_candidate(bridge, candidate_id)
+            bridge_candidate_count = len(rows)
+            if not rows:
+                critical_blockers.append("paired_exact_readiness_bridge_candidate_missing")
+            for row in rows:
+                bridge_blockers.extend(_string_list(row.get("blockers")))
+            bridge_blockers.extend(_string_list(bridge.get("dispatch_blockers")))
+            critical_blockers.extend(
+                blocker
+                for blocker in bridge_blockers
+                if not _receiver_closed_budget_safe_blocker(blocker)
+            )
+
+    if saved <= 0:
+        critical_blockers.append("saved_bytes_at_risk_missing_or_non_positive")
+    receiver_closed = not critical_blockers
+    return {
+        "schema": "frontier_rate_attack_receiver_closed_correction_budget_row.v1",
+        "candidate_id": candidate_id,
+        "target_kind": target_kind,
+        "archive_sha256": closure.get("archive_sha256"),
+        "archive_bytes": closure.get("archive_bytes"),
+        "generated_at_utc": closure.get("generated_at_utc"),
+        "saved_bytes_at_risk": saved,
+        "receiver_closed": receiver_closed,
+        "release_to_targeted_correction_planning": receiver_closed,
+        "ready_for_budget_spend": False,
+        "correction_budget_gate": (
+            "receiver_static_runtime_closed_active_floor_only"
+            if receiver_closed
+            else "receiver_closure_or_bridge_blocker_present"
+        ),
+        "closure_report_path": _repo_rel(closure_report_path, repo_root),
+        "paired_exact_readiness_bridge_report_path": _repo_rel(bridge_path, repo_root),
+        "closed_source_queue_path": closure.get("closed_source_queue_path"),
+        "submission_dir": closure.get("submission_dir"),
+        "bridge_candidate_count": bridge_candidate_count,
+        "bridge_blockers": _unique_strings(bridge_blockers),
+        "critical_blockers": _unique_strings(critical_blockers),
+        "active_rate_floor_blocked": any(
+            str(blocker).startswith(
+                "above_active_floor_archive_bytes_without_operator_override"
+            )
+            for blocker in bridge_blockers
+        ),
+        "allowed_use": "receiver_closed_rate_budget_for_targeted_correction_planning_only",
+        "forbidden_use": "score_claim_or_dispatch_or_promotion_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_receiver_closed_correction_budget(
+    *,
+    repo_root: str | Path,
+    frontier_artifact_roots: Sequence[str | Path] = (),
+    results_root: str | Path = DEFAULT_RESULTS_ROOT,
+) -> dict[str, Any]:
+    """Harvest receiver-closed materializer bytes into repair-budget signal."""
+
+    repo = Path(repo_root)
+    paths = _discover_submission_closure_report_paths(
+        repo_root=repo,
+        frontier_artifact_roots=frontier_artifact_roots,
+        results_root=results_root,
+    )
+    rows_by_key: dict[tuple[str, str, str], dict[str, Any]] = {}
+    duplicate_count = 0
+    for path in paths:
+        row = _submission_closure_budget_row(path, repo_root=repo)
+        key = (
+            str(row.get("candidate_id") or row.get("closure_report_path") or ""),
+            str(row.get("target_kind") or ""),
+            str(row.get("archive_sha256") or ""),
+        )
+        existing = rows_by_key.get(key)
+        if existing is None:
+            rows_by_key[key] = row
+            continue
+        duplicate_count += 1
+        row_order = (
+            str(row.get("generated_at_utc") or ""),
+            str(row.get("closure_report_path") or ""),
+        )
+        existing_order = (
+            str(existing.get("generated_at_utc") or ""),
+            str(existing.get("closure_report_path") or ""),
+        )
+        if row_order > existing_order:
+            rows_by_key[key] = row
+
+    rows = sorted(
+        rows_by_key.values(),
+        key=lambda row: (
+            str(row.get("target_kind") or ""),
+            str(row.get("candidate_id") or ""),
+            str(row.get("closure_report_path") or ""),
+        ),
+    )
+    closed_rows = [row for row in rows if row.get("receiver_closed") is True]
+    blocked_rows = [row for row in rows if row.get("receiver_closed") is not True]
+    blocker_counts: dict[str, int] = {}
+    for row in rows:
+        for blocker in _string_list(row.get("critical_blockers")):
+            blocker_counts[blocker] = blocker_counts.get(blocker, 0) + 1
+        for blocker in _string_list(row.get("bridge_blockers")):
+            blocker_counts[blocker] = blocker_counts.get(blocker, 0) + 1
+    saved_values = [
+        int(row.get("saved_bytes_at_risk") or 0)
+        for row in closed_rows
+        if int(row.get("saved_bytes_at_risk") or 0) > 0
+    ]
+    blockers: list[str] = []
+    if not closed_rows:
+        blockers.append("no_receiver_closed_materializer_budget_candidates_discovered")
+    if any(row.get("active_rate_floor_blocked") is True for row in closed_rows):
+        blockers.append("active_rate_floor_override_required_before_exact_dispatch")
+    if closed_rows:
+        blockers.append("segnet_posenet_component_eval_required_before_budget_spend")
+        blockers.append("exact_auth_eval_required_before_score_or_promotion_claim")
+    if blocked_rows:
+        blockers.append("some_submission_closure_reports_still_have_receiver_blockers")
+    return {
+        "schema": RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "active": bool(closed_rows),
+        "closure_report_count": len(paths),
+        "deduped_closure_report_count": len(rows),
+        "duplicate_closure_report_count": duplicate_count,
+        "receiver_closed_candidate_count": len(closed_rows),
+        "blocked_candidate_count": len(blocked_rows),
+        "receiver_closed_saved_bytes_total": sum(saved_values),
+        "receiver_closed_saved_bytes_max": max(saved_values) if saved_values else 0,
+        "receiver_closed_budget_source_targets": _unique_strings(
+            [row.get("target_kind") for row in closed_rows]
+        ),
+        "blocker_counts": dict(sorted(blocker_counts.items())),
+        "top_blockers": [
+            blocker
+            for blocker, _count in sorted(
+                blocker_counts.items(),
+                key=lambda item: (-item[1], item[0]),
+            )[:16]
+        ],
+        "blockers": _unique_strings(blockers),
+        "rows": rows,
+        "recommended_next_action": (
+            "feed_receiver_closed_rate_budget_into_targeted_segnet_posenet_"
+            "correction_acquisition_under_component_eval_gate"
+            if closed_rows
+            else "run_receiver_repair_queue_until_static_runtime_closure_bridge_is_closed"
+        ),
+        "allowed_use": "receiver_closed_rate_budget_for_targeted_correction_planning_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _receiver_closed_correction_budget_queue_metadata(
+    budget: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "schema": RECEIVER_CLOSED_CORRECTION_BUDGET_QUEUE_METADATA_SCHEMA,
+        "receiver_closed_correction_budget_schema": budget.get("schema"),
+        "active": budget.get("active") is True,
+        "receiver_closed_candidate_count": budget.get("receiver_closed_candidate_count"),
+        "receiver_closed_saved_bytes_total": budget.get(
+            "receiver_closed_saved_bytes_total"
+        ),
+        "receiver_closed_saved_bytes_max": budget.get("receiver_closed_saved_bytes_max"),
+        "receiver_closed_budget_source_targets": list(
+            budget.get("receiver_closed_budget_source_targets") or []
+        ),
+        "blockers": list(budget.get("blockers") or []),
+        "allowed_use": "queue_metadata_pointer_to_receiver_closed_correction_budget",
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def _operation_portfolio_taxonomy() -> dict[str, Any]:
     return {
         "schema": OPERATION_PORTFOLIO_TAXONOMY_SCHEMA,
@@ -1916,6 +2241,7 @@ def _targeted_correction_budget_summary(
     *,
     component_summary: Mapping[str, Any],
     materializer_rows: Sequence[Mapping[str, Any]],
+    receiver_closed_correction_budget: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     local_rows = [
         row
@@ -1951,13 +2277,51 @@ def _targeted_correction_budget_summary(
         target = str(summary.get("target_kind") or row.get("operation_id") or "")
         if target:
             materializer_targets.append(target)
+    receiver_closed = (
+        receiver_closed_correction_budget
+        if isinstance(receiver_closed_correction_budget, Mapping)
+        else {}
+    )
+    receiver_closed_saved_total = (
+        _finite_int_or_none(receiver_closed.get("receiver_closed_saved_bytes_total"))
+        or 0
+    )
+    receiver_closed_saved_max = (
+        _finite_int_or_none(receiver_closed.get("receiver_closed_saved_bytes_max"))
+        or 0
+    )
+    receiver_closed_candidate_count = (
+        _finite_int_or_none(receiver_closed.get("receiver_closed_candidate_count"))
+        or 0
+    )
+    estimated_credit_per_byte = max(score_credit_per_byte) if score_credit_per_byte else None
+    receiver_closed_credit = (
+        float(receiver_closed_saved_total) * float(estimated_credit_per_byte)
+        if estimated_credit_per_byte is not None and receiver_closed_saved_total > 0
+        else None
+    )
 
-    active = bool(local_byte_savings or materializer_saved_bytes)
+    active = bool(local_byte_savings or materializer_saved_bytes or receiver_closed_saved_total)
     blockers: list[str] = []
     if not local_rate_credits:
         blockers.append("requires_component_measured_rate_credit_for_repair_budget")
     if materializer_saved_bytes:
-        blockers.append("materializer_saved_bytes_require_receiver_runtime_proof_before_spend")
+        remaining_unclosed = max(sum(materializer_saved_bytes) - receiver_closed_saved_total, 0)
+        if receiver_closed_saved_total <= 0:
+            blockers.append(
+                "materializer_saved_bytes_require_receiver_runtime_proof_before_spend"
+            )
+        elif remaining_unclosed:
+            blockers.append(
+                "some_materializer_saved_bytes_still_require_receiver_runtime_proof_before_spend"
+            )
+    if receiver_closed_saved_total > 0:
+        blockers.append(
+            "receiver_closed_materializer_bytes_require_component_eval_before_correction_spend"
+        )
+        blockers.append(
+            "receiver_closed_materializer_bytes_still_require_exact_auth_eval_before_score_claim"
+        )
     if component_summary.get("active") is not True:
         blockers.append("requires_segnet_posenet_component_behavior_rows")
     return {
@@ -1978,8 +2342,24 @@ def _targeted_correction_budget_summary(
             max(materializer_saved_bytes) if materializer_saved_bytes else 0
         ),
         "materializer_budget_source_targets": _unique_strings(materializer_targets),
+        "receiver_closed_materializer_budget_candidate_count": (
+            receiver_closed_candidate_count
+        ),
+        "receiver_closed_materializer_saved_bytes_total": receiver_closed_saved_total,
+        "receiver_closed_materializer_saved_bytes_max": receiver_closed_saved_max,
+        "receiver_closed_materializer_budget_source_targets": list(
+            receiver_closed.get("receiver_closed_budget_source_targets") or []
+        ),
+        "receiver_closed_materializer_estimated_score_credit_units_total": (
+            receiver_closed_credit
+        ),
+        "receiver_closed_correction_budget_schema": receiver_closed.get("schema"),
+        "receiver_closed_rate_budget_planning_active": receiver_closed_saved_total > 0,
         "recommended_next_action": (
-            "compose_rate_positive_ops_with_targeted_segnet_posenet_repairs_and_accept_"
+            "feed_receiver_closed_rate_budget_into_targeted_segnet_posenet_repairs_"
+            "and_accept_only_if_delta_segnet_plus_delta_posenet_plus_lambda_delta_bytes_improves"
+            if receiver_closed_saved_total > 0
+            else "compose_rate_positive_ops_with_targeted_segnet_posenet_repairs_and_accept_"
             "only_if_delta_segnet_plus_delta_posenet_plus_lambda_delta_bytes_improves"
         ),
         "blockers": _unique_strings(blockers),
@@ -2264,6 +2644,7 @@ def build_frontier_operation_portfolio(
     eureka_planning: Mapping[str, Any],
     pair_frame_requests: Sequence[Mapping[str, Any]],
     pair_frame_source_paths: Sequence[str],
+    receiver_closed_correction_budget: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Compose many operation families into one queue-owned acquisition surface."""
 
@@ -2278,6 +2659,7 @@ def build_frontier_operation_portfolio(
     targeted_correction_budget = _targeted_correction_budget_summary(
         component_summary=component_summary,
         materializer_rows=materializer_rows,
+        receiver_closed_correction_budget=receiver_closed_correction_budget,
     )
     rows = [
         *materializer_rows,
@@ -2335,6 +2717,7 @@ def build_frontier_operation_portfolio(
         ],
         "component_behavior_summary": component_summary,
         "targeted_correction_budget_summary": targeted_correction_budget,
+        "receiver_closed_correction_budget": dict(receiver_closed_correction_budget or {}),
         "master_gradient_summary": master_gradient,
         "rows": rows,
         "allowed_use": "queue_owned_many_operation_acquisition_planning_only",
@@ -2352,6 +2735,11 @@ def _operation_portfolio_queue_metadata(portfolio: Mapping[str, Any]) -> dict[st
     correction_budget = (
         portfolio.get("targeted_correction_budget_summary")
         if isinstance(portfolio.get("targeted_correction_budget_summary"), Mapping)
+        else {}
+    )
+    receiver_closed = (
+        portfolio.get("receiver_closed_correction_budget")
+        if isinstance(portfolio.get("receiver_closed_correction_budget"), Mapping)
         else {}
     )
     return {
@@ -2380,6 +2768,14 @@ def _operation_portfolio_queue_metadata(portfolio: Mapping[str, Any]) -> dict[st
         "targeted_correction_budget_active": correction_budget.get("active") is True,
         "targeted_correction_budget_saved_bytes_total": correction_budget.get(
             "materializer_rate_positive_saved_bytes_total"
+        ),
+        "receiver_closed_correction_budget_active": receiver_closed.get("active")
+        is True,
+        "receiver_closed_materializer_saved_bytes_total": receiver_closed.get(
+            "receiver_closed_saved_bytes_total"
+        ),
+        "receiver_closed_materializer_budget_candidate_count": receiver_closed.get(
+            "receiver_closed_candidate_count"
         ),
         "allowed_use": "queue_metadata_pointer_to_operation_portfolio_artifact",
         "forbidden_use": "score_claim_or_dispatch_authority",
@@ -3765,6 +4161,11 @@ def build_frontier_rate_attack_feedback_refresh(
             *discovered_dqs1_observation_paths,
         ),
     )
+    receiver_closed_correction_budget = build_receiver_closed_correction_budget(
+        repo_root=repo,
+        frontier_artifact_roots=frontier_artifact_roots,
+        results_root=results_root,
+    )
     operation_portfolio = build_frontier_operation_portfolio(
         repo_root=repo,
         materializer_feedback_payloads=payloads,
@@ -3773,6 +4174,7 @@ def build_frontier_rate_attack_feedback_refresh(
         eureka_planning=eureka_planning,
         pair_frame_requests=pair_frame_requests,
         pair_frame_source_paths=pair_frame_source_paths,
+        receiver_closed_correction_budget=receiver_closed_correction_budget,
     )
     receiver_repair_backlog = build_frontier_receiver_repair_backlog(
         operation_portfolio
@@ -3823,6 +4225,9 @@ def build_frontier_rate_attack_feedback_refresh(
             receiver_repair_metadata = _receiver_repair_backlog_queue_metadata(
                 receiver_repair_backlog
             )
+            receiver_closed_metadata = _receiver_closed_correction_budget_queue_metadata(
+                receiver_closed_correction_budget
+            )
             for experiment in queue_payload.get("experiments", []):
                 if not isinstance(experiment, dict):
                     continue
@@ -3831,6 +4236,9 @@ def build_frontier_rate_attack_feedback_refresh(
                     metadata["frontier_operation_portfolio"] = portfolio_metadata
                     metadata["frontier_receiver_repair_backlog"] = (
                         receiver_repair_metadata
+                    )
+                    metadata["frontier_receiver_closed_correction_budget"] = (
+                        receiver_closed_metadata
                     )
         bridge = result.materializer_feedback_bridge
         selected_pairset_acquisition = result.selected_pairset_acquisition
@@ -3862,6 +4270,7 @@ def build_frontier_rate_attack_feedback_refresh(
         "dqs1_observation_discovery": dqs1_observation_discovery,
         "operation_portfolio": operation_portfolio,
         "receiver_repair_backlog": receiver_repair_backlog,
+        "receiver_closed_correction_budget": receiver_closed_correction_budget,
         "materializer_feedback_source_paths": list(source_paths),
         "materializer_feedback_payload_count": len(payloads),
         "dqs1_observation_source_paths": list(dqs1_source_paths),
@@ -3910,6 +4319,7 @@ __all__ = [
     "OPERATION_PORTFOLIO_SCHEMA",
     "OPERATION_PORTFOLIO_TAXONOMY_SCHEMA",
     "PAIR_FRAME_GEOMETRY_DISCOVERY_SCHEMA",
+    "RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA",
     "RECEIVER_REPAIR_BACKLOG_SCHEMA",
     "RECEIVER_REPAIR_QUEUE_METADATA_SCHEMA",
     "RECEIVER_REPAIR_ROW_SCHEMA",
@@ -3920,6 +4330,7 @@ __all__ = [
     "build_frontier_receiver_repair_backlog",
     "build_frontier_receiver_repair_queue",
     "build_frontier_receiver_repair_work_order",
+    "build_receiver_closed_correction_budget",
     "discover_dqs1_observation_jsonl_paths",
     "discover_local_cpu_eureka_planning_signals",
     "discover_materializer_feedback_payloads",

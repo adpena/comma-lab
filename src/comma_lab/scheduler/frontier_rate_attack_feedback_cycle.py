@@ -492,6 +492,11 @@ def write_frontier_refresh_artifacts(
             queue_path = out / "receiver_repair_queue.json"
             write_json_artifact(queue_path, dict(repair_queue))
             artifacts["receiver_repair_queue"] = repo_rel(queue_path, repo_root)
+    receiver_closed_budget = report.get("receiver_closed_correction_budget")
+    if isinstance(receiver_closed_budget, Mapping):
+        path = out / "receiver_closed_correction_budget.json"
+        write_json_artifact(path, dict(receiver_closed_budget))
+        artifacts["receiver_closed_correction_budget"] = repo_rel(path, repo_root)
     selected_acquisition = report.get("selected_pairset_acquisition")
     if isinstance(selected_acquisition, Mapping):
         path = out / "dqs1_selected_pairset_acquisition.json"

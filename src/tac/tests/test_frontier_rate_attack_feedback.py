@@ -13,6 +13,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA,
     OPERATION_PORTFOLIO_SCHEMA,
     OPERATION_PORTFOLIO_TAXONOMY_SCHEMA,
+    RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA,
     RECEIVER_REPAIR_BACKLOG_SCHEMA,
     RECEIVER_REPAIR_ROW_SCHEMA,
     RECEIVER_REPAIR_WORK_ORDER_SCHEMA,
@@ -375,6 +376,93 @@ def _write_materializer_feedback(root: Path) -> Path:
     return sweep
 
 
+def _write_receiver_closed_budget_signal(
+    repo: Path,
+    *,
+    results_root: Path,
+    candidate_id: str = "packet_member_zip_header_elide_544c5f580ec2",
+    target_kind: str = "packet_member_zip_header_elide_v1",
+    saved_bytes: int = 156,
+    bridge_blockers: list[str] | None = None,
+) -> Path:
+    repair_dir = (
+        results_root
+        / "frontier_operation_portfolio"
+        / "frontier_receiver_repair"
+        / f"receiver_repair_{target_kind}_unit"
+    )
+    closure_dir = repair_dir / "submission_closure"
+    closure_report = _write_json(
+        closure_dir / "submission_closure_report.json",
+        {
+            "schema": "materializer_submission_runtime_closure_report.v1",
+            **_false_authority(),
+            "candidate_id": candidate_id,
+            "target_kind": target_kind,
+            "archive_sha256": "5" * 64,
+            "archive_bytes": 345646,
+            "closed_source_queue_path": (
+                closure_dir / "closed_source_queue.json"
+            ).relative_to(repo).as_posix(),
+            "submission_dir": (closure_dir / "submission").relative_to(repo).as_posix(),
+            "saved_bytes_at_risk": saved_bytes,
+            "targeted_correction_budget_signal": {
+                "freed_bytes_require_receiver_and_exact_readiness_before_spend": True,
+                "saved_bytes_at_risk": saved_bytes,
+                **_false_authority(),
+            },
+            "allowed_use": "exact_readiness_static_submission_closure_only",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+        },
+    )
+    _write_json(
+        repair_dir / "exact_readiness_bridge" / "exact_readiness_bridge_report.json",
+        {
+            "schema": "materializer_chain_exact_readiness_bridge_report.v1",
+            **_false_authority(),
+            "source_queue_path": (
+                closure_dir / "closed_source_queue.json"
+            ).relative_to(repo).as_posix(),
+            "candidate_count": 1,
+            "ready_candidate_count": 0,
+            "blocked_candidate_count": 1,
+            "dispatch_blockers": [
+                "bridge_report_is_not_dispatch_authority",
+                "requires_exact_eval_readiness_gate",
+                "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+                "requires_non_proxy_score_evidence_before_promotion",
+                "optimizer_candidate_queue_is_planning_only",
+            ],
+            "rows": [
+                {
+                    **_false_authority(),
+                    "candidate_id": candidate_id,
+                    "blockers": bridge_blockers
+                    if bridge_blockers is not None
+                    else [
+                        (
+                            "above_active_floor_archive_bytes_without_operator_override:"
+                            "345646>185578, active_score_frontier=0.206316386616; "
+                            "above rate-only byte floor"
+                        )
+                    ],
+                    "exact_readiness_report_path": (
+                        repair_dir
+                        / "exact_readiness_bridge"
+                        / "exact_readiness"
+                        / f"{candidate_id}.exact_readiness_report.json"
+                    ).relative_to(repo).as_posix(),
+                    "exact_ready_queue_path": None,
+                    "readiness_verdict": "blocked",
+                }
+            ],
+        },
+    )
+    return closure_report
+
+
 def _pair_frame_geometry_lattice(
     *,
     candidate_id: str = "pairset_geometry_lowimpact_k003_habcdef1234",
@@ -495,6 +583,8 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     action_summary = _write_action_summary(tmp_path)
     artifact_root = tmp_path / "frontier_artifacts"
     _write_materializer_feedback(artifact_root)
+    results_root = tmp_path / "results"
+    _write_receiver_closed_budget_signal(tmp_path, results_root=results_root)
     dqs1_observations = _write_jsonl(
         tmp_path / "dqs1_observations.jsonl",
         [_dqs1_observation_row()],
@@ -505,7 +595,7 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
         frontier_artifact_roots=(artifact_root,),
         dqs1_observation_paths=(dqs1_observations,),
         action_summary_path=action_summary,
-        results_root=str(tmp_path / "results"),
+        results_root=str(results_root),
         queue_id="frontier_feedback_unit",
         candidate_limit=2,
         raw_retention_execute=True,
@@ -571,8 +661,25 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     assert correction_budget["local_drop_saved_bytes_max"] == 4
     assert correction_budget["local_drop_rate_credit_score_units_max"] == 0.00002
     assert correction_budget["materializer_rate_positive_saved_bytes_total"] > 0
+    assert correction_budget["receiver_closed_materializer_saved_bytes_total"] == 156
+    assert correction_budget["receiver_closed_rate_budget_planning_active"] is True
+    assert "some_materializer_saved_bytes_still_require_receiver_runtime_proof_before_spend" in (
+        correction_budget["blockers"]
+    )
     assert correction_budget["score_claim"] is False
     assert correction_budget["ready_for_exact_eval_dispatch"] is False
+    receiver_closed_budget = report["receiver_closed_correction_budget"]
+    assert receiver_closed_budget["schema"] == RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA
+    _assert_false_authority(receiver_closed_budget)
+    assert receiver_closed_budget["active"] is True
+    assert receiver_closed_budget["receiver_closed_candidate_count"] == 1
+    assert receiver_closed_budget["receiver_closed_saved_bytes_total"] == 156
+    assert receiver_closed_budget["duplicate_closure_report_count"] == 0
+    assert receiver_closed_budget["rows"][0]["release_to_targeted_correction_planning"] is True
+    assert receiver_closed_budget["rows"][0]["ready_for_budget_spend"] is False
+    assert "active_rate_floor_override_required_before_exact_dispatch" in (
+        receiver_closed_budget["blockers"]
+    )
     assert operation_portfolio["top_operation_ids"][0] == (
         "dqs1_component_coupled_pair_batch_expansion"
     )
@@ -720,6 +827,20 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
         for experiment in queue["experiments"]
     )
     assert all(
+        experiment["metadata"]["frontier_operation_portfolio"][
+            "receiver_closed_correction_budget_active"
+        ]
+        is True
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        experiment["metadata"]["frontier_receiver_closed_correction_budget"][
+            "receiver_closed_saved_bytes_total"
+        ]
+        == 156
+        for experiment in queue["experiments"]
+    )
+    assert all(
         experiment["metadata"]["frontier_receiver_repair_backlog"]["row_count"]
         == receiver_repair_backlog["row_count"]
         for experiment in queue["experiments"]
@@ -765,6 +886,47 @@ def test_frontier_feedback_discovers_dqs1_observation_jsonls_from_artifact_roots
     assert report["selected_candidate_ids"] == ["pairset_drop_one_rank024_pair0112"]
     _assert_false_authority(discovery)
     assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_receiver_closed_correction_budget_refuses_static_runtime_gaps(
+    tmp_path: Path,
+) -> None:
+    action_summary = _write_action_summary(tmp_path)
+    artifact_root = tmp_path / "frontier_artifacts"
+    _write_materializer_feedback(artifact_root)
+    results_root = tmp_path / "results"
+    _write_receiver_closed_budget_signal(
+        tmp_path,
+        results_root=results_root,
+        bridge_blockers=[
+            "archive_manifest_missing",
+            "runtime_tree_sha256_missing",
+        ],
+    )
+
+    report = build_frontier_rate_attack_feedback_refresh(
+        repo_root=tmp_path,
+        frontier_artifact_roots=(artifact_root,),
+        action_summary_path=action_summary,
+        results_root=str(results_root),
+        queue_id="frontier_feedback_static_gap_unit",
+        candidate_limit=1,
+    )
+
+    receiver_budget = report["receiver_closed_correction_budget"]
+    assert receiver_budget["schema"] == RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA
+    _assert_false_authority(receiver_budget)
+    assert receiver_budget["active"] is False
+    assert receiver_budget["receiver_closed_candidate_count"] == 0
+    assert receiver_budget["receiver_closed_saved_bytes_total"] == 0
+    assert receiver_budget["blocked_candidate_count"] == 1
+    assert receiver_budget["rows"][0]["release_to_targeted_correction_planning"] is False
+    assert "archive_manifest_missing" in receiver_budget["rows"][0]["critical_blockers"]
+    correction_budget = report["operation_portfolio"]["targeted_correction_budget_summary"]
+    assert correction_budget["receiver_closed_materializer_saved_bytes_total"] == 0
+    assert "materializer_saved_bytes_require_receiver_runtime_proof_before_spend" in (
+        correction_budget["blockers"]
+    )
 
 
 def test_frontier_feedback_compiler_turns_eureka_near_misses_into_beyond_drop_two_hints(
@@ -1257,6 +1419,8 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     action_summary = _write_action_summary(tmp_path)
     artifact_root = tmp_path / "frontier_artifacts"
     _write_materializer_feedback(artifact_root)
+    results_root = tmp_path / "results"
+    _write_receiver_closed_budget_signal(tmp_path, results_root=results_root)
     dqs1_observations = _write_jsonl(
         tmp_path / "dqs1_observations.jsonl",
         [_dqs1_observation_row()],
@@ -1276,7 +1440,7 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
             "--output-dir",
             str(output_dir),
             "--results-root",
-            str(tmp_path / "results"),
+            str(results_root),
             "--queue-id",
             "frontier_feedback_cli_unit",
             "--candidate-limit",
@@ -1300,14 +1464,19 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert payload["receiver_repair_backlog_summary"][
         "queue_actionable_repair_count"
     ] >= 2
+    assert payload["receiver_closed_correction_budget_summary"][
+        "receiver_closed_saved_bytes_total"
+    ] == 156
     queue_path = output_dir / "dqs1_followup_queue.json"
     bridge_path = output_dir / "materializer_feedback_bridge.json"
     receiver_repair_backlog_path = output_dir / "receiver_repair_backlog.json"
+    receiver_closed_budget_path = output_dir / "receiver_closed_correction_budget.json"
     receiver_repair_queue_path = output_dir / "receiver_repair_queue.json"
     report_path = output_dir / "feedback_refresh_report.json"
     assert queue_path.exists()
     assert bridge_path.exists()
     assert receiver_repair_backlog_path.exists()
+    assert receiver_closed_budget_path.exists()
     assert receiver_repair_queue_path.exists()
     assert report_path.exists()
     report = json.loads(report_path.read_text(encoding="utf-8"))
@@ -1317,6 +1486,9 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     )
     assert report["artifacts"]["receiver_repair_queue"].endswith(
         "receiver_repair_queue.json"
+    )
+    assert report["artifacts"]["receiver_closed_correction_budget"].endswith(
+        "receiver_closed_correction_budget.json"
     )
     assert report["operator_commands"]["validate_followup_queue"][0] == ".venv/bin/python"
     assert (

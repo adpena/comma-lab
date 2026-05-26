@@ -227,6 +227,11 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             queue_path = output_dir / "receiver_repair_queue.json"
             write_json_artifact(queue_path, repair_queue)
             artifacts["receiver_repair_queue"] = _display_path(queue_path)
+    receiver_closed_budget = report.get("receiver_closed_correction_budget")
+    if isinstance(receiver_closed_budget, dict):
+        path = output_dir / "receiver_closed_correction_budget.json"
+        write_json_artifact(path, receiver_closed_budget)
+        artifacts["receiver_closed_correction_budget"] = _display_path(path)
     bridge = report.get("materializer_feedback_bridge")
     if isinstance(bridge, dict):
         path = output_dir / "materializer_feedback_bridge.json"
@@ -406,6 +411,33 @@ def main(argv: list[str] | None = None) -> int:
                             "top_repair_families"
                         )
                         if isinstance(report.get("receiver_repair_backlog"), dict)
+                        else None
+                    ),
+                },
+                "receiver_closed_correction_budget_summary": {
+                    "active": (
+                        report.get("receiver_closed_correction_budget", {}).get("active")
+                        if isinstance(
+                            report.get("receiver_closed_correction_budget"), dict
+                        )
+                        else None
+                    ),
+                    "receiver_closed_candidate_count": (
+                        report.get("receiver_closed_correction_budget", {}).get(
+                            "receiver_closed_candidate_count"
+                        )
+                        if isinstance(
+                            report.get("receiver_closed_correction_budget"), dict
+                        )
+                        else None
+                    ),
+                    "receiver_closed_saved_bytes_total": (
+                        report.get("receiver_closed_correction_budget", {}).get(
+                            "receiver_closed_saved_bytes_total"
+                        )
+                        if isinstance(
+                            report.get("receiver_closed_correction_budget"), dict
+                        )
                         else None
                     ),
                 },
