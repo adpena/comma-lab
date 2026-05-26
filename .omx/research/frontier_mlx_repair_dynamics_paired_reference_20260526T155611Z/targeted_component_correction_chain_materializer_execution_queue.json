@@ -370,6 +370,7 @@
             "--report-out",
             "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/harvest_report.json",
             "--require-accepted",
+            "--overwrite",
             "--work-queue",
             ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/targeted_component_correction_chain_materializer_work_queue.json",
             "--chain-manifest",
@@ -527,7 +528,8 @@
             "--estimated-cost-per-dispatch",
             "0.3",
             "--max-total-cost",
-            "5"
+            "5",
+            "--overwrite"
           ],
           "id": "build_exact_eval_dispatch_plan",
           "kind": "command",
@@ -756,6 +758,7 @@
             "--report-out",
             "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/harvest_report.json",
             "--require-accepted",
+            "--overwrite",
             "--work-queue",
             ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/targeted_component_correction_chain_materializer_work_queue.json",
             "--chain-manifest",
@@ -909,7 +912,8 @@
             "--estimated-cost-per-dispatch",
             "0.3",
             "--max-total-cost",
-            "5"
+            "5",
+            "--overwrite"
           ],
           "id": "build_exact_eval_dispatch_plan",
           "kind": "command",

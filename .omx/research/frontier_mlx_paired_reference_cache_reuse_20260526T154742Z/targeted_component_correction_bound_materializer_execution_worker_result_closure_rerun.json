@@ -1,0 +1,305 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 1,
+  "idle_cycles": 0,
+  "max_experiments": 1,
+  "max_parallel": 1,
+  "noncanonical_state_rationale": null,
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "frontier_mlx_paired_reference_cache_reuse_20260526t154742z_bound_materializer_execution",
+  "requested_max_parallel": 1,
+  "resource_limits": {
+    "local_cpu": 1,
+    "local_io_heavy": 1
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-05-26T18:10:38Z",
+  "started_experiment_ids": [
+    "materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1"
+  ],
+  "state": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_frontier_mlx_paired_reference_cache_reuse_20260526t154742z_bound_materializer_execution.sqlite",
+  "step_results": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_materializer_submission_closure.py",
+        "--source-queue",
+        "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/source_queue.json",
+        "--submission-dir-out",
+        "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission",
+        "--closed-source-queue-out",
+        "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+        "--closure-report-out",
+        "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission_closure_report.json",
+        "--overwrite"
+      ],
+      "elapsed_seconds": 2.5425460409605876,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_mlx_paired_reference_cache_reuse_20260526t154742z_bound_materializer_execution/materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1/build_materializer_submission_closure/20260526T181038Z_51d66060c96bba12.log",
+      "pid": 25878,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_materializer_submission_closure.py",
+          "--source-queue",
+          "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/source_queue.json",
+          "--submission-dir-out",
+          "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission",
+          "--closed-source-queue-out",
+          "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+          "--closure-report-out",
+          "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission_closure_report.json",
+          "--overwrite"
+        ],
+        "experiment_id": "materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1",
+        "priority": 1,
+        "queue_id": "frontier_mlx_paired_reference_cache_reuse_20260526t154742z_bound_materializer_execution",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "1d0d5b3871af3bbc7ae84714b01e1ee9e3c70b1d4769f47307dd833c01dfe005",
+          "definition_hash": "d84b135ea64fc07fb584b2b4f56ce9f3945d595c6d29fd2b4aeb71b5273a37db",
+          "postcondition_hash": "567ef16c3e08ab1db63a66c96b683a22e3fbd6cf8947ba026f0f3b04b7490bc4"
+        },
+        "step_id": "build_materializer_submission_closure"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 3,
+        "artifact_records": [
+          {
+            "bytes": 96,
+            "exists": true,
+            "is_dir": true,
+            "is_file": false,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-26T18:10:38Z",
+            "path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission",
+            "recursive_bytes": 1062729,
+            "recursive_entry_count": 20,
+            "recursive_entry_limit": 256,
+            "recursive_truncated": false,
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 50373,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-26T18:10:40Z",
+            "path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 101488,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-26T18:10:40Z",
+            "path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission_closure_report.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 1432,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "51d66060c96bba12"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/run_materializer_exact_readiness_bridge.py",
+        "--source-queue",
+        "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+        "--exact-readiness-out-dir",
+        "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness",
+        "--bridge-report-out",
+        "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+        "--overwrite",
+        "--force-recompute"
+      ],
+      "elapsed_seconds": 3.0505503331078216,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_mlx_paired_reference_cache_reuse_20260526t154742z_bound_materializer_execution/materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1/run_materializer_exact_readiness_bridge/20260526T181040Z_de36d6f3d7b8961f.log",
+      "pid": 26194,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/run_materializer_exact_readiness_bridge.py",
+          "--source-queue",
+          "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+          "--exact-readiness-out-dir",
+          "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness",
+          "--bridge-report-out",
+          "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+          "--overwrite",
+          "--force-recompute"
+        ],
+        "experiment_id": "materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1",
+        "priority": 1,
+        "queue_id": "frontier_mlx_paired_reference_cache_reuse_20260526t154742z_bound_materializer_execution",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "c86101cc372a03d42db0e882bfa62d032e2ed23a785b19f95f857561a7e89197",
+          "definition_hash": "9e149e105dabab0057598dc74e1eb4caf7b765b75d61232f6c107c5202ae0061",
+          "postcondition_hash": "51795252395470abb2938627c3cca8ad4c22228781785112b80c40ed7efe8a48"
+        },
+        "step_id": "run_materializer_exact_readiness_bridge"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 0,
+      "succeeded": true,
+      "telemetry": {
+        "artifact_record_count": 2,
+        "artifact_records": [
+          {
+            "bytes": 96,
+            "exists": true,
+            "is_dir": true,
+            "is_file": false,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-26T18:09:11Z",
+            "path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness",
+            "recursive_bytes": 5709,
+            "recursive_entry_count": 1,
+            "recursive_entry_limit": 256,
+            "recursive_truncated": false,
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 3541,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-26T18:10:43Z",
+            "path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 707,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "de36d6f3d7b8961f"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/build_materializer_exact_eval_dispatch_plan.py",
+        "--repo-root",
+        "/Users/adpena/Projects/pact",
+        "--bridge-report",
+        "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+        "--dispatch-plan-out",
+        "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/dispatch_plan.json",
+        "--experiment-queue-out",
+        "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/dispatch_queue.json",
+        "--experiment-queue-id",
+        "frontier_mlx_paired_reference_cache_reuse_20260526t154742z_bound_materializer_execution_materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1_exact_eval_dispatch",
+        "--provider",
+        "lightning",
+        "--label-prefix",
+        "materializer_exact_eval",
+        "--estimated-cost-per-dispatch",
+        "0.3",
+        "--max-total-cost",
+        "5"
+      ],
+      "elapsed_seconds": 0.7651678749825805,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_mlx_paired_reference_cache_reuse_20260526t154742z_bound_materializer_execution/materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1/build_exact_eval_dispatch_plan/20260526T181043Z_b77da5d14bd4043e.log",
+      "pid": 26693,
+      "postcondition_errors": [],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_materializer_exact_eval_dispatch_plan.py",
+          "--repo-root",
+          "/Users/adpena/Projects/pact",
+          "--bridge-report",
+          "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+          "--dispatch-plan-out",
+          "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/dispatch_plan.json",
+          "--experiment-queue-out",
+          "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/dispatch_queue.json",
+          "--experiment-queue-id",
+          "frontier_mlx_paired_reference_cache_reuse_20260526t154742z_bound_materializer_execution_materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1_exact_eval_dispatch",
+          "--provider",
+          "lightning",
+          "--label-prefix",
+          "materializer_exact_eval",
+          "--estimated-cost-per-dispatch",
+          "0.3",
+          "--max-total-cost",
+          "5"
+        ],
+        "experiment_id": "materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1",
+        "priority": 1,
+        "queue_id": "frontier_mlx_paired_reference_cache_reuse_20260526t154742z_bound_materializer_execution",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "d3e4afd4f3a0f92bef991ef409c35f4ca3ca7083484e25c6b912cbcda602b805",
+          "definition_hash": "b044d5d2a9824a17d28e6af402ffa17a99729ecfe9294320b82a93e4dde46b8e",
+          "postcondition_hash": "f315d78273c4d994c401e67e4eb6eb737ef8fafbddaec6d0faf7b36f96a53128"
+        },
+        "step_id": "build_exact_eval_dispatch_plan"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 1,
+      "succeeded": false,
+      "telemetry": {
+        "artifact_record_count": 2,
+        "artifact_records": [
+          {
+            "bytes": 2895,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-26T18:09:24Z",
+            "path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/dispatch_plan.json",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "bytes": 1756,
+            "exists": true,
+            "is_dir": false,
+            "is_file": true,
+            "is_symlink": false,
+            "mtime_utc": "2026-05-26T18:09:24Z",
+            "path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/dispatch_queue.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 1016,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "b77da5d14bd4043e"
+    }
+  ],
+  "steps_started": 3,
+  "stop_reason": "max_steps_reached",
+  "stop_signals": [],
+  "success_count": 2
+}

@@ -13,7 +13,7 @@
   "exact_cuda_auth_eval": false,
   "field_selection_ready_for_exact_eval_dispatch": false,
   "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
-  "generated_at_utc": "2026-05-26T16:53:13Z",
+  "generated_at_utc": "2026-05-26T18:13:03Z",
   "gpu_launched": false,
   "promotable": false,
   "promotion_eligible": false,

@@ -1,0 +1,183 @@
+{
+  "candidate_archive": {
+    "bytes": 345422,
+    "path": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/candidate.zip",
+    "sha256": "e20295f0a662101567f36afe8ce17142635f976cb2f2b8937b4cbc76455ee3c4"
+  },
+  "candidate_archive_sha256": "e20295f0a662101567f36afe8ce17142635f976cb2f2b8937b4cbc76455ee3c4",
+  "candidate_member": {
+    "bytes": 345322,
+    "name": "p",
+    "sha256": "a2db04866b0e5bf4f28ab0b10f8be26222a803e85c63842ee2622a6693675f01",
+    "zip_compressed_bytes": 345322,
+    "zip_compressed_payload_sha256": "a2db04866b0e5bf4f28ab0b10f8be26222a803e85c63842ee2622a6693675f01",
+    "zip_compressed_sha256": "a2db04866b0e5bf4f28ab0b10f8be26222a803e85c63842ee2622a6693675f01",
+    "zip_compression_method": "stored"
+  },
+  "candidate_member_sha256": "a2db04866b0e5bf4f28ab0b10f8be26222a803e85c63842ee2622a6693675f01",
+  "candidate_member_sha256s": {
+    "p": "a2db04866b0e5bf4f28ab0b10f8be26222a803e85c63842ee2622a6693675f01"
+  },
+  "dispatch_attempted": false,
+  "full_frame_inflate_parity_verification": {
+    "blockers": [
+      "renderer_payload_dfl1_full_frame_inflate_parity_proof_missing"
+    ],
+    "dispatch_attempted": false,
+    "full_frame_inflate_parity_satisfied": false,
+    "gpu_launched": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "proof_path": null,
+    "proof_present": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "renderer_payload_dfl1_full_frame_parity_verification.v1",
+    "score_claim": false,
+    "score_claim_valid": false
+  },
+  "gpu_launched": false,
+  "materializer_id": "renderer_payload_dfl1_adapter",
+  "passed": false,
+  "payload_member_name": "p",
+  "payload_table": {
+    "binary_table_bytes": 4,
+    "binary_table_sha256": "08b9117830bf51d253fdbded0425c3704ff318099767829f469900c5f598c752",
+    "concatenated_payload_bytes": 345318,
+    "concatenated_payload_sha256": "74a0fb32d09f6cad2476e7e8dda9aa38c877bf8d77dce2962345dd1a0d48f762",
+    "member_count": 3,
+    "members": [
+      {
+        "compressed_sha256": "748bbdcb43ad66b70431c13c3d0b31d8a5bbde7fe06a17b0872d916155b44075",
+        "length": 266831,
+        "name": "renderer.bin",
+        "offset": 0,
+        "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+        "uncompressed_length": 296776,
+        "zip_compress_type": 8
+      },
+      {
+        "compressed_sha256": "e8c678d418bb7bc481b56b909922fa90a6e7602098e7facdd940edc7a16c7d11",
+        "length": 64526,
+        "name": "masks.mkv",
+        "offset": 266831,
+        "sha256": "16c95d40ec2ff4db9e0ae21dfafe04b3c322668290e9f7e545b9c151914c11dd",
+        "uncompressed_length": 79071,
+        "zip_compress_type": 8
+      },
+      {
+        "compressed_sha256": "2270f266ff4344cfe7c180d081e8bf2a17dbdd4be5021ad5428232906b0c48eb",
+        "length": 13961,
+        "name": "optimized_poses.pt",
+        "offset": 331357,
+        "sha256": "9624b96c7304ecac9aa7c06703413893a5c467350b86b8e9c2b37449288ff3af",
+        "uncompressed_length": 15645,
+        "zip_compress_type": 8
+      }
+    ],
+    "merged_payload_sha256": "a2db04866b0e5bf4f28ab0b10f8be26222a803e85c63842ee2622a6693675f01",
+    "payload_codec": "native_fixed_order_raw_deflate_sequence_v1",
+    "schema": "renderer_payload_dfl1_table.v1",
+    "table_format": "fixed_order_no_charged_table_v1"
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "proof_kind": "renderer_payload_dfl1_native_unpacker_reconstruction_smoke.v1",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_kind": "source_runtime_native_renderer_payload_dfl1",
+  "receiver_contract_satisfied": false,
+  "reconstructed_member_sha256s": {
+    "masks.mkv": "16c95d40ec2ff4db9e0ae21dfafe04b3c322668290e9f7e545b9c151914c11dd",
+    "optimized_poses.pt": "9624b96c7304ecac9aa7c06703413893a5c467350b86b8e9c2b37449288ff3af",
+    "renderer.bin": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+  },
+  "runtime_adapter_manifest": {
+    "native_unpacker_parse_ready": true,
+    "path": "/Users/adpena/Projects/pact/submissions/robust_current/unpack_renderer_payload.py",
+    "requires_full_frame_shell_parity": true,
+    "runtime_adapter_ready": false,
+    "schema": "source_runtime_native_unpacker_manifest.v1",
+    "sha256": "87061bc1ceb8f835ee59beaf4d7879be3c380447c09eb1df82b55a82e3c11caf"
+  },
+  "runtime_adapter_ready": false,
+  "runtime_consumption_probe": {
+    "full_frame_inflate_parity_satisfied": false,
+    "member_proofs": [
+      {
+        "candidate_reconstructed_sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+        "member_name": "renderer.bin",
+        "passed": true,
+        "source_member_sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+      },
+      {
+        "candidate_reconstructed_sha256": "16c95d40ec2ff4db9e0ae21dfafe04b3c322668290e9f7e545b9c151914c11dd",
+        "member_name": "masks.mkv",
+        "passed": true,
+        "source_member_sha256": "16c95d40ec2ff4db9e0ae21dfafe04b3c322668290e9f7e545b9c151914c11dd"
+      },
+      {
+        "candidate_reconstructed_sha256": "9624b96c7304ecac9aa7c06703413893a5c467350b86b8e9c2b37449288ff3af",
+        "member_name": "optimized_poses.pt",
+        "passed": true,
+        "source_member_sha256": "9624b96c7304ecac9aa7c06703413893a5c467350b86b8e9c2b37449288ff3af"
+      }
+    ],
+    "native_member_proofs": [
+      {
+        "member_name": "renderer.bin",
+        "native_unpacker_sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+        "passed": true,
+        "source_member_sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+      },
+      {
+        "member_name": "masks.mkv",
+        "native_unpacker_sha256": "16c95d40ec2ff4db9e0ae21dfafe04b3c322668290e9f7e545b9c151914c11dd",
+        "passed": true,
+        "source_member_sha256": "16c95d40ec2ff4db9e0ae21dfafe04b3c322668290e9f7e545b9c151914c11dd"
+      },
+      {
+        "member_name": "optimized_poses.pt",
+        "native_unpacker_sha256": "9624b96c7304ecac9aa7c06703413893a5c467350b86b8e9c2b37449288ff3af",
+        "passed": true,
+        "source_member_sha256": "9624b96c7304ecac9aa7c06703413893a5c467350b86b8e9c2b37449288ff3af"
+      }
+    ],
+    "native_unpacker_probe": {
+      "blockers": [],
+      "member_sha256s": {
+        "masks.mkv": "16c95d40ec2ff4db9e0ae21dfafe04b3c322668290e9f7e545b9c151914c11dd",
+        "optimized_poses.pt": "9624b96c7304ecac9aa7c06703413893a5c467350b86b8e9c2b37449288ff3af",
+        "renderer.bin": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+      },
+      "passed": true,
+      "runtime_adapter_manifest": {
+        "path": "/Users/adpena/Projects/pact/submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_adapter_ready": true,
+        "schema": "source_runtime_native_unpacker_manifest.v1",
+        "sha256": "87061bc1ceb8f835ee59beaf4d7879be3c380447c09eb1df82b55a82e3c11caf"
+      },
+      "schema": "renderer_payload_dfl1_native_unpacker_probe.v1"
+    },
+    "parser_reconstruction_passed": true,
+    "passed": false,
+    "schema": "renderer_payload_dfl1_reconstruction_probe.v1"
+  },
+  "runtime_consumption_proof_passed": false,
+  "schema": "family_agnostic_runtime_consumption_proof_v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "selected_member_names": [
+    "renderer.bin",
+    "masks.mkv",
+    "optimized_poses.pt"
+  ],
+  "source_archive": {
+    "bytes": 345802,
+    "path": "/Users/adpena/Projects/pact/submissions/robust_current/archive_correct.zip",
+    "sha256": "4dd46fed78ed064bc97c9b3205088e82838c03667394f7936c8ae8d20f9837ab"
+  },
+  "source_runtime_native_unpacker": true,
+  "source_runtime_unpacker_parse_satisfied": true,
+  "target_kind": "renderer_payload_dfl1_v1"
+}

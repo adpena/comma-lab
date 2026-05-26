@@ -1,0 +1,1950 @@
+{
+  "allowed_use": "exact_readiness_static_submission_closure_only",
+  "archive_bytes": 345422,
+  "archive_manifest_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/archive_manifest.json",
+  "archive_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/archive.zip",
+  "archive_sha256": "e20295f0a662101567f36afe8ce17142635f976cb2f2b8937b4cbc76455ee3c4",
+  "candidate_id": "renderer_payload_dfl1_e20295f0a662",
+  "charged_bits_changed": false,
+  "closed_source_queue_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/candidate_closure_sidecars/renderer_payload_dfl1_e20295f0a662/closed_source_queue.json",
+  "closure_queue_schema": "optimizer_candidate_queue_v1",
+  "contest_cuda_auth_eval": false,
+  "copied_runtime_file_count": 16,
+  "copied_runtime_files": [
+    {
+      "bytes": 189,
+      "relative_path": "analyze_roi.py",
+      "sha256": "722ea96bc14e013fc4260f24dd86431d11966419292ea546d31a8f644d4dd16c"
+    },
+    {
+      "bytes": 53371,
+      "relative_path": "apply_qzs3_postprocess.py",
+      "sha256": "75343a7eea822d97d64fbad85884b45c814ab89b890085d77614db727a179906"
+    },
+    {
+      "bytes": 507,
+      "relative_path": "config.env",
+      "sha256": "3b160a6747e6eec3588456e4ca3a5cb91613d2acce38557a31ea330ec0fa1e09"
+    },
+    {
+      "bytes": 1657,
+      "relative_path": "config_env.py",
+      "sha256": "1ed6df5bc08a9db4eed8c2d1f935e7cacf60b3b3f14e4b44c15bcf48608e40cc"
+    },
+    {
+      "bytes": 21281,
+      "relative_path": "inflate.sh",
+      "sha256": "ed3cef1ab7e20dc06b7f6bad8e4f7b0d9b685d29e626873b5089fb76336bc40a"
+    },
+    {
+      "bytes": 54486,
+      "relative_path": "inflate_postfilter.py",
+      "sha256": "89cb5ff35f3490f2d425c2353181857826fe54dc99b9b991eb299d394ba4376f"
+    },
+    {
+      "bytes": 322572,
+      "relative_path": "inflate_renderer.py",
+      "sha256": "0bc94508dfd654a06493f485f492ad453934a258d8f39c4ed125ab1c9bbd0dd8"
+    },
+    {
+      "bytes": 16076,
+      "relative_path": "inflate_renderer_grayscale.py",
+      "sha256": "383407e20aff8a5b7791f61d3cdfd7516ef870bab99145854ff2f399471b8f69"
+    },
+    {
+      "bytes": 13973,
+      "relative_path": "inflate_segmap.py",
+      "sha256": "192468500b243a6acbb216d649e3eccafb27f4b20e73a8336ac5d849c2859420"
+    },
+    {
+      "bytes": 12449,
+      "relative_path": "inflate_segmap_arithmetic.py",
+      "sha256": "d0c07c0bb005801177d8971e6d1ec08d6d3f38aa68445dc611cebb0aa1880965"
+    },
+    {
+      "bytes": 10158,
+      "relative_path": "inflate_segmap_film_canvas.py",
+      "sha256": "612159f32d3c9f2e985985cb56047f4aa8302671fa355d79c82e20bfe0046a1a"
+    },
+    {
+      "bytes": 91347,
+      "relative_path": "jcsp_runtime_bridge.py",
+      "sha256": "d5783045386dd4afbc525b10b70edef45754647f22f40fc9503018a0644b0c0e"
+    },
+    {
+      "bytes": 11693,
+      "relative_path": "range_mask_codec.cpp",
+      "sha256": "26b44194c9b364ae3e4b7a30832204c008324df91bc12281d30cee30c43b4676"
+    },
+    {
+      "bytes": 890,
+      "relative_path": "report.txt",
+      "sha256": "db613ab30f714010e6de0edca4874abd4a441abccadb86ac5a80359c2eb42c66"
+    },
+    {
+      "bytes": 9625,
+      "relative_path": "sky_degrade.py",
+      "sha256": "a9e6561235d8179368e934486356bc3eab8a2950765e47516ea7594759d8b289"
+    },
+    {
+      "bytes": 85581,
+      "relative_path": "unpack_renderer_payload.py",
+      "sha256": "87061bc1ceb8f835ee59beaf4d7879be3c380447c09eb1df82b55a82e3c11caf"
+    }
+  ],
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "submission_closure_report_is_not_dispatch_authority",
+    "run_exact_readiness_bridge_on_closed_source_queue",
+    "lane_claim_required_before_gpu_or_remote_eval",
+    "contest_exact_auth_eval_required_before_score_claim"
+  ],
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "generated_at_utc": "2026-05-26T18:13:41Z",
+  "gpu_launched": false,
+  "materializer_submission_closure_kind": "source_runtime_static_closure_with_candidate_archive",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "runtime_consumption_proof_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/runtime_consumption_proof.json",
+  "runtime_manifest": {
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 189,
+        "relative_path": "analyze_roi.py",
+        "repo_relative_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/analyze_roi.py",
+        "sha256": "722ea96bc14e013fc4260f24dd86431d11966419292ea546d31a8f644d4dd16c"
+      },
+      {
+        "bytes": 53371,
+        "relative_path": "apply_qzs3_postprocess.py",
+        "repo_relative_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/apply_qzs3_postprocess.py",
+        "sha256": "75343a7eea822d97d64fbad85884b45c814ab89b890085d77614db727a179906"
+      },
+      {
+        "bytes": 3791,
+        "relative_path": "archive_manifest.json",
+        "repo_relative_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/archive_manifest.json",
+        "sha256": "d2b2f3fb2e07fe219a55400b9fdaf114308e0c0ad5080026bdbd256a04267c11"
+      },
+      {
+        "bytes": 507,
+        "relative_path": "config.env",
+        "repo_relative_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/config.env",
+        "sha256": "3b160a6747e6eec3588456e4ca3a5cb91613d2acce38557a31ea330ec0fa1e09"
+      },
+      {
+        "bytes": 1657,
+        "relative_path": "config_env.py",
+        "repo_relative_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/config_env.py",
+        "sha256": "1ed6df5bc08a9db4eed8c2d1f935e7cacf60b3b3f14e4b44c15bcf48608e40cc"
+      },
+      {
+        "bytes": 21281,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/inflate.sh",
+        "sha256": "ed3cef1ab7e20dc06b7f6bad8e4f7b0d9b685d29e626873b5089fb76336bc40a"
+      },
+      {
+        "bytes": 54486,
+        "relative_path": "inflate_postfilter.py",
+        "repo_relative_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/inflate_postfilter.py",
+        "sha256": "89cb5ff35f3490f2d425c2353181857826fe54dc99b9b991eb299d394ba4376f"
+      },
+      {
+        "bytes": 322572,
+        "relative_path": "inflate_renderer.py",
+        "repo_relative_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/inflate_renderer.py",
+        "sha256": "0bc94508dfd654a06493f485f492ad453934a258d8f39c4ed125ab1c9bbd0dd8"
+      },
+      {
+        "bytes": 16076,
+        "relative_path": "inflate_renderer_grayscale.py",
+        "repo_relative_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/inflate_renderer_grayscale.py",
+        "sha256": "383407e20aff8a5b7791f61d3cdfd7516ef870bab99145854ff2f399471b8f69"
+      },
+      {
+        "bytes": 13973,
+        "relative_path": "inflate_segmap.py",
+        "repo_relative_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/inflate_segmap.py",
+        "sha256": "192468500b243a6acbb216d649e3eccafb27f4b20e73a8336ac5d849c2859420"
+      },
+      {
+        "bytes": 12449,
+        "relative_path": "inflate_segmap_arithmetic.py",
+        "repo_relative_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/inflate_segmap_arithmetic.py",
+        "sha256": "d0c07c0bb005801177d8971e6d1ec08d6d3f38aa68445dc611cebb0aa1880965"
+      },
+      {
+        "bytes": 10158,
+        "relative_path": "inflate_segmap_film_canvas.py",
+        "repo_relative_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/inflate_segmap_film_canvas.py",
+        "sha256": "612159f32d3c9f2e985985cb56047f4aa8302671fa355d79c82e20bfe0046a1a"
+      },
+      {
+        "bytes": 91347,
+        "relative_path": "jcsp_runtime_bridge.py",
+        "repo_relative_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/jcsp_runtime_bridge.py",
+        "sha256": "d5783045386dd4afbc525b10b70edef45754647f22f40fc9503018a0644b0c0e"
+      },
+      {
+        "bytes": 11693,
+        "relative_path": "range_mask_codec.cpp",
+        "repo_relative_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/range_mask_codec.cpp",
+        "sha256": "26b44194c9b364ae3e4b7a30832204c008324df91bc12281d30cee30c43b4676"
+      },
+      {
+        "bytes": 463,
+        "relative_path": "report.txt",
+        "repo_relative_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/report.txt",
+        "sha256": "44ac326284d6c5b46903ada360b637a41273464c6c9e3ed2bd8d6a8a18bb8b5a"
+      },
+      {
+        "bytes": 8088,
+        "relative_path": "runtime_consumption_proof.json",
+        "repo_relative_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/runtime_consumption_proof.json",
+        "sha256": "c70280c4c34c369fb079619736848ae96b5f3f314cc5bce8189937ab967d6432"
+      },
+      {
+        "bytes": 9625,
+        "relative_path": "sky_degrade.py",
+        "repo_relative_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/sky_degrade.py",
+        "sha256": "a9e6561235d8179368e934486356bc3eab8a2950765e47516ea7594759d8b289"
+      },
+      {
+        "bytes": 85581,
+        "relative_path": "unpack_renderer_payload.py",
+        "repo_relative_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/unpack_renderer_payload.py",
+        "sha256": "87061bc1ceb8f835ee59beaf4d7879be3c380447c09eb1df82b55a82e3c11caf"
+      }
+    ],
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 270,
+      "files": [
+        {
+          "bytes": 3192,
+          "module": "tac",
+          "relative_path": "src/tac/__init__.py",
+          "sha256": "ead03ad440517bfc6fd083a59cc153ef4d99676d66ce162c6fe12109d6a3762a"
+        },
+        {
+          "bytes": 35544,
+          "module": "tac.architectures",
+          "relative_path": "src/tac/architectures.py",
+          "sha256": "31acafc658b8291044c3c0d401e4d315ff634b72d598ec373d6e72bc7fec9f5c"
+        },
+        {
+          "bytes": 20259,
+          "module": "tac.archive_byte_profile",
+          "relative_path": "src/tac/archive_byte_profile.py",
+          "sha256": "954d47753c6945ef9dc0072030d5b4887e3e3c635610f7d953bd33d05478fdb0"
+        },
+        {
+          "bytes": 43415,
+          "module": "tac.arithmetic_qint_codec",
+          "relative_path": "src/tac/arithmetic_qint_codec.py",
+          "sha256": "3b5ea16123ef0ada7dffdc9cf2b121b0e6ed00a3c631474ebbe87e7842696233"
+        },
+        {
+          "bytes": 36965,
+          "module": "tac.artifact_lifecycle",
+          "relative_path": "src/tac/artifact_lifecycle.py",
+          "sha256": "9d299f20c5bc081ebe0a3c8ebcf1de557c91a98b5300b3346522e7040043252b"
+        },
+        {
+          "bytes": 7306,
+          "module": "tac.auth_eval_result",
+          "relative_path": "src/tac/auth_eval_result.py",
+          "sha256": "8cf8fb31b5b411ad4001252082598019edb728ec53f94d254ddbef76f279d193"
+        },
+        {
+          "bytes": 1952,
+          "module": "tac.authority_contract",
+          "relative_path": "src/tac/authority_contract.py",
+          "sha256": "1674ea2ce18920b884ecf02fdff268aa077a8ab5edb7615e7e83f74be55b6b39"
+        },
+        {
+          "bytes": 45252,
+          "module": "tac.block_fp_codec",
+          "relative_path": "src/tac/block_fp_codec.py",
+          "sha256": "bc6f84a49c2b87ec96338dbfd9e24a9256a45cc3a89ed84d8ae0191a7e0a8231"
+        },
+        {
+          "bytes": 35772,
+          "module": "tac.block_fp_jfg",
+          "relative_path": "src/tac/block_fp_jfg.py",
+          "sha256": "0fefe4b9906b51f318ffef7db8d2f46ab0df4e0dae5b64bd088f99e7044ca276"
+        },
+        {
+          "bytes": 9285,
+          "module": "tac.camera",
+          "relative_path": "src/tac/camera.py",
+          "sha256": "d0d670737eec06f5db7969ea794c15a08c4b0ce3d41a88b2d192a871183dc727"
+        },
+        {
+          "bytes": 45037,
+          "module": "tac.canonical_council_roster",
+          "relative_path": "src/tac/canonical_council_roster.py",
+          "sha256": "94c2a881a6480a46a5843414d5e06bd13738a4fc211030a2a285e818f1fa133b"
+        },
+        {
+          "bytes": 7047,
+          "module": "tac.canonical_equations",
+          "relative_path": "src/tac/canonical_equations/__init__.py",
+          "sha256": "89301cc8cd6c318febafb7a1e408d5e7989274a606bc7726f9f0c842baf56e27"
+        },
+        {
+          "bytes": 33108,
+          "module": "tac.canonical_equations.bayesian_posterior_update",
+          "relative_path": "src/tac/canonical_equations/bayesian_posterior_update.py",
+          "sha256": "22a02586354e512325f537c90f767d37e23df82f5c9959426148312b82ee63dc"
+        },
+        {
+          "bytes": 25094,
+          "module": "tac.canonical_equations.builtins",
+          "relative_path": "src/tac/canonical_equations/builtins.py",
+          "sha256": "96edc16e4f8d9439ee20028d03a4accd4e620b35b28d9fd89e53df8a51932db3"
+        },
+        {
+          "bytes": 17837,
+          "module": "tac.canonical_equations.equation",
+          "relative_path": "src/tac/canonical_equations/equation.py",
+          "sha256": "7d7da9df740048ee439d533365fb61d62dee6e007c822f49dcd96e93b3f6bfdb"
+        },
+        {
+          "bytes": 15868,
+          "module": "tac.canonical_equations.mlx_matmul_m_series_floor",
+          "relative_path": "src/tac/canonical_equations/mlx_matmul_m_series_floor.py",
+          "sha256": "4d31ada9cd0ec6c9adb850e71fd5f2b4fc036b7f29764acecf4eb5a3899b8b72"
+        },
+        {
+          "bytes": 12650,
+          "module": "tac.canonical_equations.mlx_pytorch_drift",
+          "relative_path": "src/tac/canonical_equations/mlx_pytorch_drift.py",
+          "sha256": "9f7e2db592278dbbe475ffa543ba455a985b3c49ae3abb407b5ccabb1c12cc7f"
+        },
+        {
+          "bytes": 14181,
+          "module": "tac.canonical_equations.pairset_component_marginal",
+          "relative_path": "src/tac/canonical_equations/pairset_component_marginal.py",
+          "sha256": "e7d47a8baf194a5ad92a2b1e51ac66eadec061c336d12ba2fcb15f4cf1b09b1f"
+        },
+        {
+          "bytes": 24476,
+          "module": "tac.canonical_equations.procedural_codebook_savings",
+          "relative_path": "src/tac/canonical_equations/procedural_codebook_savings.py",
+          "sha256": "ff09aab7cfd8ba5f3b907712eec4d5b6743e4dde85136c35ef3281911e9ea605"
+        },
+        {
+          "bytes": 12360,
+          "module": "tac.canonical_equations.procedural_predictor_residual_savings",
+          "relative_path": "src/tac/canonical_equations/procedural_predictor_residual_savings.py",
+          "sha256": "a214155fe11722296332bea7e080875cd96a17e72f4a2f4aed3a93601805407c"
+        },
+        {
+          "bytes": 26899,
+          "module": "tac.canonical_equations.registry",
+          "relative_path": "src/tac/canonical_equations/registry.py",
+          "sha256": "bfc701586bcc5bb1bd286efb87753db9c60f9b95cf6a2cae99c3cf44a9e17516"
+        },
+        {
+          "bytes": 13714,
+          "module": "tac.canonical_equations.scorer_input_cache_hash_identity",
+          "relative_path": "src/tac/canonical_equations/scorer_input_cache_hash_identity.py",
+          "sha256": "f70c6c04084cc4d2635372e15c4b76ffc2abd34b68ae542230a1c5781d3c91e7"
+        },
+        {
+          "bytes": 1386,
+          "module": "tac.canonical_task_status",
+          "relative_path": "src/tac/canonical_task_status/__init__.py",
+          "sha256": "e5920078502779e83cb78ebcaea6a7c6e8b08c4ac5b9e80673b58ab35bd83a85"
+        },
+        {
+          "bytes": 2948,
+          "module": "tac.cathedral",
+          "relative_path": "src/tac/cathedral/__init__.py",
+          "sha256": "c127bca87aa0cf4b6b3a2eadb48a9438dce474afced733d3f412d9a02297e038"
+        },
+        {
+          "bytes": 33138,
+          "module": "tac.cathedral.consumer_contract",
+          "relative_path": "src/tac/cathedral/consumer_contract.py",
+          "sha256": "a63b557277e7bb3373acce488e9cf3efc5b3c3a885c6e2c34affa33d43cd0da1"
+        },
+        {
+          "bytes": 17505,
+          "module": "tac.cathedral.verdict_ledger",
+          "relative_path": "src/tac/cathedral/verdict_ledger.py",
+          "sha256": "832ef887e59862cf6d434a051106b61f1e655d9916e997dbf11759291c50a574"
+        },
+        {
+          "bytes": 2373,
+          "module": "tac.checkpoint_names",
+          "relative_path": "src/tac/checkpoint_names.py",
+          "sha256": "2aff8afad3913b51258a9c170f3a29b1192a3a6809f9a0428f1b7d20b5373d83"
+        },
+        {
+          "bytes": 271,
+          "module": "tac.codec",
+          "relative_path": "src/tac/codec/__init__.py",
+          "sha256": "2f648f71f2471308105972802c3c489f423b9025e4a651362efa2aaeed9720be"
+        },
+        {
+          "bytes": 2583,
+          "module": "tac.codec.cooperative_receiver",
+          "relative_path": "src/tac/codec/cooperative_receiver/__init__.py",
+          "sha256": "a1fc6d87c8891031884b9075fcc1227d6f8ec9a5443ed605efb6cf8694f53cca"
+        },
+        {
+          "bytes": 11146,
+          "module": "tac.codec.cooperative_receiver.atick_redlich",
+          "relative_path": "src/tac/codec/cooperative_receiver/atick_redlich.py",
+          "sha256": "39d33244148ea95b8a89a41546c7610c8fa3dbcc45db554965819e93afc58544"
+        },
+        {
+          "bytes": 6397,
+          "module": "tac.codec.cooperative_receiver.predictive_coding",
+          "relative_path": "src/tac/codec/cooperative_receiver/predictive_coding.py",
+          "sha256": "0fbe3e4cdafabeba7195f811229a724a9d37f45ef301b1256f7613962fdf88c1"
+        },
+        {
+          "bytes": 44490,
+          "module": "tac.codec.wyner_ziv_layer",
+          "relative_path": "src/tac/codec/wyner_ziv_layer.py",
+          "sha256": "f792bc1f5e01078dc7c427239d3c21f8c4d305a3108cdf3658035e69f0d045b9"
+        },
+        {
+          "bytes": 24613,
+          "module": "tac.codex_to_claude_inbox",
+          "relative_path": "src/tac/codex_to_claude_inbox.py",
+          "sha256": "734d152efe0001a645a1db658e710eeff9587bb7c0e5843d6be7c4c19e7041ac"
+        },
+        {
+          "bytes": 7092,
+          "module": "tac.composition",
+          "relative_path": "src/tac/composition/__init__.py",
+          "sha256": "67decc62b4d0a5e5ddf8e56d3f1deee95a688d38a193caae268147d06dc51699"
+        },
+        {
+          "bytes": 23603,
+          "module": "tac.composition.adapters",
+          "relative_path": "src/tac/composition/adapters.py",
+          "sha256": "e4977e4641c25ea46853f9cbd4698ae28d84da2938dbc5d8cd94acfe760299f4"
+        },
+        {
+          "bytes": 17931,
+          "module": "tac.composition.bregman_mixing",
+          "relative_path": "src/tac/composition/bregman_mixing.py",
+          "sha256": "53ee82f006aff1e6fe705f64f5ae37cdb527e250648282ea9c21616da8052005"
+        },
+        {
+          "bytes": 10353,
+          "module": "tac.composition.distillation",
+          "relative_path": "src/tac/composition/distillation.py",
+          "sha256": "f19f2c634c8defc6383b3683ee5806e53559c6329635adf7773080d83d9bd967"
+        },
+        {
+          "bytes": 12438,
+          "module": "tac.composition.distillation_chain",
+          "relative_path": "src/tac/composition/distillation_chain.py",
+          "sha256": "c16d6fce06b0cf4c9d6288b9c26a5bf69def027ca1c65ccc172b23f2511d96f1"
+        },
+        {
+          "bytes": 29414,
+          "module": "tac.composition.enumerate",
+          "relative_path": "src/tac/composition/enumerate.py",
+          "sha256": "50823d10d5be2c973b60bfb66c337f3e75e359e416ef753b1a8052aa81c6d7ac"
+        },
+        {
+          "bytes": 21718,
+          "module": "tac.composition.frontier_primitives",
+          "relative_path": "src/tac/composition/frontier_primitives.py",
+          "sha256": "21f390f5da6611408f9e7b266f2a00e833e13e4ffed8cf684a866c378998d2d2"
+        },
+        {
+          "bytes": 12493,
+          "module": "tac.composition.hypernetwork",
+          "relative_path": "src/tac/composition/hypernetwork.py",
+          "sha256": "96dd42669fa8d88220fad4bd9976638bfbd7eac84c64f18645c14d92fbb420df"
+        },
+        {
+          "bytes": 14631,
+          "module": "tac.composition.product_of_experts",
+          "relative_path": "src/tac/composition/product_of_experts.py",
+          "sha256": "6e7bfa30c3ed161e66095310706336627126fef859e58ccc77c55a915d7fd624"
+        },
+        {
+          "bytes": 64990,
+          "module": "tac.composition.registry",
+          "relative_path": "src/tac/composition/registry.py",
+          "sha256": "cd77caaecc40c44c346b48aa633004596444bc8007ab369c7066d0a38f7377f5"
+        },
+        {
+          "bytes": 15152,
+          "module": "tac.composition.sinkhorn_ot_mixing",
+          "relative_path": "src/tac/composition/sinkhorn_ot_mixing.py",
+          "sha256": "8feaa4f95882859fa482e7ad2958354401147af31371a4021e27c0ebabb03ac6"
+        },
+        {
+          "bytes": 113880,
+          "module": "tac.constrained_gen",
+          "relative_path": "src/tac/constrained_gen.py",
+          "sha256": "bd63e3a163f4b4c49dd4afc20a3798f62f8ace99faec6eb25a029dc8019e3cda"
+        },
+        {
+          "bytes": 580,
+          "module": "tac.contrib",
+          "relative_path": "src/tac/contrib/__init__.py",
+          "sha256": "ae29cc2171527cc6e6be7ae2680f151e58034ca3e9c3a567b9939e931e9aad41"
+        },
+        {
+          "bytes": 9817,
+          "module": "tac.contrib.coolchic_renderer",
+          "relative_path": "src/tac/contrib/coolchic_renderer.py",
+          "sha256": "890b431b42fe0d1d02887d000a07c8b39933df78ba2c1848392fc24c613451b1"
+        },
+        {
+          "bytes": 24632,
+          "module": "tac.contrib.hamiltonian_dynamics",
+          "relative_path": "src/tac/contrib/hamiltonian_dynamics.py",
+          "sha256": "22dd9f89f7cb81d7fa1d3db1c95718516a3114e56c2a6fa38e281f02e08232f4"
+        },
+        {
+          "bytes": 28640,
+          "module": "tac.contrib.scorer_manifold",
+          "relative_path": "src/tac/contrib/scorer_manifold.py",
+          "sha256": "c60f2d02e5699a47f7278c4f5d642bf960234a315c620d5bd4f4a18c5bacf90f"
+        },
+        {
+          "bytes": 23350,
+          "module": "tac.contrib.szabolcs_renderer",
+          "relative_path": "src/tac/contrib/szabolcs_renderer.py",
+          "sha256": "c8fafc013ace58282f532866bbeef0536ce7b8f4edcea87775450f6a05f6d320"
+        },
+        {
+          "bytes": 31875,
+          "module": "tac.contrib.variational_gen",
+          "relative_path": "src/tac/contrib/variational_gen.py",
+          "sha256": "880e82e88efcfd35f2884027d7c87978c21671ca456aecf070e5a577e419166c"
+        },
+        {
+          "bytes": 68883,
+          "module": "tac.cost_band_calibration",
+          "relative_path": "src/tac/cost_band_calibration.py",
+          "sha256": "1afc00a1a3b294b8cb09c896cc71ecbafc4518d5cf901e5803c7cec75a1348ab"
+        },
+        {
+          "bytes": 8473,
+          "module": "tac.cost_tracker",
+          "relative_path": "src/tac/cost_tracker.py",
+          "sha256": "a759ae5bad607e1bd48fc18ca6eaf9564a8282fff9922c811bb36d6d31293f47"
+        },
+        {
+          "bytes": 9366,
+          "module": "tac.data",
+          "relative_path": "src/tac/data.py",
+          "sha256": "e7c83acd6c0d9b7370c8ce2943af5160564e55aa446371c562b8aeb46d6e112b"
+        },
+        {
+          "bytes": 31,
+          "module": "tac.deploy",
+          "relative_path": "src/tac/deploy/__init__.py",
+          "sha256": "5be230fa13a76b43315ce684e1e849c7104db7aa30af69f7d91144b4b665e2d3"
+        },
+        {
+          "bytes": 6580,
+          "module": "tac.deploy.claims",
+          "relative_path": "src/tac/deploy/claims.py",
+          "sha256": "27e065723af915d5a0a1b5d164134e7882ce5f71dd8961ce1b54722620dfffd0"
+        },
+        {
+          "bytes": 1515,
+          "module": "tac.deploy.lightning",
+          "relative_path": "src/tac/deploy/lightning/__init__.py",
+          "sha256": "da2a19fb292bc28512793ba6598fdf6493763235363a6c4f0b746a35c6cb1cb4"
+        },
+        {
+          "bytes": 265627,
+          "module": "tac.deploy.lightning.batch_jobs",
+          "relative_path": "src/tac/deploy/lightning/batch_jobs.py",
+          "sha256": "0b5c1054306772ec4991e756dc2f0e9f7f21f23d4289e67315f523e777f9e97b"
+        },
+        {
+          "bytes": 31,
+          "module": "tac.deploy.modal",
+          "relative_path": "src/tac/deploy/modal/__init__.py",
+          "sha256": "5be230fa13a76b43315ce684e1e849c7104db7aa30af69f7d91144b4b665e2d3"
+        },
+        {
+          "bytes": 31408,
+          "module": "tac.deploy.modal.auth_eval",
+          "relative_path": "src/tac/deploy/modal/auth_eval.py",
+          "sha256": "04608b3d99f1a95278318c5fdd3dcc7a5a6d1b6c71e3bc197ec6bb97fc3a3aa4"
+        },
+        {
+          "bytes": 4918,
+          "module": "tac.deploy.modal.paired_dispatch",
+          "relative_path": "src/tac/deploy/modal/paired_dispatch.py",
+          "sha256": "ad6a344d80ad54d1b2caa6b7c1877e20aed4fd0dae3dda46267880ca6ba984db"
+        },
+        {
+          "bytes": 1965,
+          "module": "tac.deploy.modal.paired_dispatch_contract",
+          "relative_path": "src/tac/deploy/modal/paired_dispatch_contract.py",
+          "sha256": "1acd32905839c7f833629c10dcfe09f2c2475b9f2f8795142a008b5806e3e1b4"
+        },
+        {
+          "bytes": 2781,
+          "module": "tac.deploy.modal.runtime",
+          "relative_path": "src/tac/deploy/modal/runtime.py",
+          "sha256": "29405de5196d87a10c200f9fbd30452757fb72049d22ba040b2cf75d622af9ab"
+        },
+        {
+          "bytes": 11779,
+          "module": "tac.deploy.provider_contracts",
+          "relative_path": "src/tac/deploy/provider_contracts.py",
+          "sha256": "0c9a54cfdc8fcabf7d525953cc8a105402f4963d2eef54673ff7343988dab677"
+        },
+        {
+          "bytes": 10996,
+          "module": "tac.depth_motion",
+          "relative_path": "src/tac/depth_motion.py",
+          "sha256": "c74f363182066cb7799364cf80527f0055e095daac39efd6187babbda7aa1d1c"
+        },
+        {
+          "bytes": 27475,
+          "module": "tac.differentiable_eval_roundtrip",
+          "relative_path": "src/tac/differentiable_eval_roundtrip.py",
+          "sha256": "9f75e30439a335c4ebd33fe094964c12bd512e4795b522bfa936f181d5d66bca"
+        },
+        {
+          "bytes": 43601,
+          "module": "tac.dp_sims_renderer",
+          "relative_path": "src/tac/dp_sims_renderer.py",
+          "sha256": "e46649183c32f46cace624bbea330ce1b3498af1e729b6d7594754d8791f3512"
+        },
+        {
+          "bytes": 3986,
+          "module": "tac.entropy_bottleneck",
+          "relative_path": "src/tac/entropy_bottleneck.py",
+          "sha256": "27ff595f107dbf004fc88e31d4243306045a7e23e9aeedd9c32fd0d24dbe8731"
+        },
+        {
+          "bytes": 10565,
+          "module": "tac.evaluate",
+          "relative_path": "src/tac/evaluate.py",
+          "sha256": "5c8324502c02414d4463fd8f6ebeb70340d5567b83bb66b1f78b579e56be1329"
+        },
+        {
+          "bytes": 27614,
+          "module": "tac.exact_eval_custody",
+          "relative_path": "src/tac/exact_eval_custody.py",
+          "sha256": "3c16f7c1c6e2b52566fd6fe6655318a7fa5c62228c6447a9d2c65399c1d7863b"
+        },
+        {
+          "bytes": 36936,
+          "module": "tac.fp4_quantize",
+          "relative_path": "src/tac/fp4_quantize.py",
+          "sha256": "f18e28b0212f651d6eaa2ef11616df4e419bd4dcbb48d1d4fb23f5d1b71103bd"
+        },
+        {
+          "bytes": 56197,
+          "module": "tac.fridrich",
+          "relative_path": "src/tac/fridrich.py",
+          "sha256": "012095e4b14e4f73d66d166e1cdd2c49695ec70ceecc6be4db1561bd8236db2e"
+        },
+        {
+          "bytes": 33544,
+          "module": "tac.frontier_scan",
+          "relative_path": "src/tac/frontier_scan.py",
+          "sha256": "42fcf3a1ed46d62a3dd09f8cef9a8a44545f367cd3528ddbe0f829e16752a126"
+        },
+        {
+          "bytes": 23535,
+          "module": "tac.hdm8_selector_cuda_gate",
+          "relative_path": "src/tac/hdm8_selector_cuda_gate.py",
+          "sha256": "fdeb36f93519762d8de88eb37f5412e7d93a40fdc60e6fbb1a71d06acb2ab97c"
+        },
+        {
+          "bytes": 1295,
+          "module": "tac.hnerv_frontier_defaults",
+          "relative_path": "src/tac/hnerv_frontier_defaults.py",
+          "sha256": "6e66054bebd777b6698bfbab7304f7f3d08aa473aab5ba260fe792a910219580"
+        },
+        {
+          "bytes": 47190,
+          "module": "tac.hnerv_lowlevel_packer",
+          "relative_path": "src/tac/hnerv_lowlevel_packer.py",
+          "sha256": "249a9f9897f80c1f21a20171d5b204b294c96b68bced897e265de44cb8b231ea"
+        },
+        {
+          "bytes": 33335,
+          "module": "tac.hnerv_pr103_lc_ac_schema",
+          "relative_path": "src/tac/hnerv_pr103_lc_ac_schema.py",
+          "sha256": "c43d95dd6d57ab5c38c27a2bc1e92f8a144969fc4e1ed01609502cd4adca99bc"
+        },
+        {
+          "bytes": 26535,
+          "module": "tac.hnerv_section_repack",
+          "relative_path": "src/tac/hnerv_section_repack.py",
+          "sha256": "1c2be5132949dc6745b7e6a4b0a075dbf54a4c6821f34884b9dc312020244f2f"
+        },
+        {
+          "bytes": 20421,
+          "module": "tac.hnerv_training_parity_guard",
+          "relative_path": "src/tac/hnerv_training_parity_guard.py",
+          "sha256": "f39fe1e9cde07d34df8f5659b3de5c104150916f5c08cda482bdbf36b6e142ca"
+        },
+        {
+          "bytes": 25139,
+          "module": "tac.imps_renderer_archive",
+          "relative_path": "src/tac/imps_renderer_archive.py",
+          "sha256": "5e1580574cc8a837900e15ca10574265cc99b82d3f5a2ecf06bd78e1767b8692"
+        },
+        {
+          "bytes": 23724,
+          "module": "tac.iterative_magnitude_pruning",
+          "relative_path": "src/tac/iterative_magnitude_pruning.py",
+          "sha256": "b84ab0c85cf2916ff0be2daa4afd433f3e24e7def76345ae590e2df6e0c4775c"
+        },
+        {
+          "bytes": 36298,
+          "module": "tac.kl_config",
+          "relative_path": "src/tac/kl_config.py",
+          "sha256": "8b9376aa0bce345702b2e2a8e0f5857844c8836a2cf9f3e62fa9853db30a16d1"
+        },
+        {
+          "bytes": 33380,
+          "module": "tac.lane_c_compliance",
+          "relative_path": "src/tac/lane_c_compliance.py",
+          "sha256": "c194c36ed6a13b0793b6251f1fee93c3ac5d93d4a022ab10e4e7d252dfa9859f"
+        },
+        {
+          "bytes": 12004,
+          "module": "tac.lane_mark_pose",
+          "relative_path": "src/tac/lane_mark_pose.py",
+          "sha256": "7888169e99526dd4f6e4b1625576225a1dfdb085615cd06e453dd6f7fb133741"
+        },
+        {
+          "bytes": 9534,
+          "module": "tac.lane_mark_speed",
+          "relative_path": "src/tac/lane_mark_speed.py",
+          "sha256": "644b198c9a4a53ce8cd0bfa620ac01825759ebffe0cc18f7582e49a213c1f7d7"
+        },
+        {
+          "bytes": 45722,
+          "module": "tac.learnable_bit_quant",
+          "relative_path": "src/tac/learnable_bit_quant.py",
+          "sha256": "6e97ad6218627c4663811d3b6c1267339e3137a3b00a8a1c20bc08d3f5af3270"
+        },
+        {
+          "bytes": 15523,
+          "module": "tac.learnable_class_targets",
+          "relative_path": "src/tac/learnable_class_targets.py",
+          "sha256": "f689c1a5a48d0f9af428962a1a27241045fb11b15d3de3ab2a01e3e0af72a25f"
+        },
+        {
+          "bytes": 8982,
+          "module": "tac.lora_pose",
+          "relative_path": "src/tac/lora_pose.py",
+          "sha256": "acb349c1684535d26a6a6b7724574ca6e432906d26efee0053156b309de7e5ed"
+        },
+        {
+          "bytes": 12693,
+          "module": "tac.lora_pose_v2",
+          "relative_path": "src/tac/lora_pose_v2.py",
+          "sha256": "507a4f083249281ca76a11a8e466c1fb4cb00c1b1b997db751f018a9f4901ff9"
+        },
+        {
+          "bytes": 4864,
+          "module": "tac.losses",
+          "relative_path": "src/tac/losses/__init__.py",
+          "sha256": "6dae7d34d8fe6aefb913460f5aa719a22d60ff8e5ef105caca561b6959c6d1e2"
+        },
+        {
+          "bytes": 97967,
+          "module": "tac.losses.core",
+          "relative_path": "src/tac/losses/core.py",
+          "sha256": "7bff7486171393e10ab93a4aa7923549ccea499bbc69017a83fba76865882ffc"
+        },
+        {
+          "bytes": 2971,
+          "module": "tac.lossless",
+          "relative_path": "src/tac/lossless/__init__.py",
+          "sha256": "3e0d43131b869beaba52a8a72b273f74617a7de39197a8c60d11fe012fdaa4cf"
+        },
+        {
+          "bytes": 34744,
+          "module": "tac.lossless.argmax_codec",
+          "relative_path": "src/tac/lossless/argmax_codec.py",
+          "sha256": "ea0ae9eef0653c2145b85a32672bc29909f8fd8cb5c7748b377f97690a71f569"
+        },
+        {
+          "bytes": 39457,
+          "module": "tac.mask_codec",
+          "relative_path": "src/tac/mask_codec.py",
+          "sha256": "fdd2a92c4f6ef361211de3040dc0785f51644543fb54786e1417ea633fc29d8a"
+        },
+        {
+          "bytes": 18176,
+          "module": "tac.mask_entropy_coder",
+          "relative_path": "src/tac/mask_entropy_coder.py",
+          "sha256": "b5fc7a28ce25cbcd703885f9badf1a88e71fddc4e5627305dc52e0fa4d737442"
+        },
+        {
+          "bytes": 8502,
+          "module": "tac.mask_grayscale_lut",
+          "relative_path": "src/tac/mask_grayscale_lut.py",
+          "sha256": "421ef73fa5de1bbba7d5e232957b9108ef4230ae1634ca5702e15e80e77fb8a3"
+        },
+        {
+          "bytes": 42257,
+          "module": "tac.master_gradient",
+          "relative_path": "src/tac/master_gradient.py",
+          "sha256": "2208ba559b3b7b7593b6ebc5c39581396a47fe040972a7f72e18017385956f6a"
+        },
+        {
+          "bytes": 227036,
+          "module": "tac.master_gradient_consumers",
+          "relative_path": "src/tac/master_gradient_consumers.py",
+          "sha256": "f4ad73a27746aaf3e40dc1fbe5cc3f784ddaf687f8ce04c08ef28e59268a41cd"
+        },
+        {
+          "bytes": 14788,
+          "module": "tac.master_gradient_feasibility",
+          "relative_path": "src/tac/master_gradient_feasibility.py",
+          "sha256": "49eec663a9cf229c5e90635828d31e0cd44e141579f2e676263b9c566e7e8428"
+        },
+        {
+          "bytes": 25762,
+          "module": "tac.master_gradient_operator_plan",
+          "relative_path": "src/tac/master_gradient_operator_plan.py",
+          "sha256": "baadaf56a028ee9e823bb1ba30a1688d275b739237e29b26e16efd1d6510c43f"
+        },
+        {
+          "bytes": 37741,
+          "module": "tac.mini_scorer",
+          "relative_path": "src/tac/mini_scorer.py",
+          "sha256": "3e3b97db1ef7476ba81b7e57ef7466e81ed916948b857c38a8393f9702d43a4b"
+        },
+        {
+          "bytes": 23839,
+          "module": "tac.mixed_precision_export",
+          "relative_path": "src/tac/mixed_precision_export.py",
+          "sha256": "9fb4b19ba805892da37107008cf006b4ab96f152bae9a97c927469bb080d8f21"
+        },
+        {
+          "bytes": 2177,
+          "module": "tac.models",
+          "relative_path": "src/tac/models.py",
+          "sha256": "94a112d84e1aa9734d87174ab761a3a0d8159280a88d3365daf6258b513be9f8"
+        },
+        {
+          "bytes": 11335,
+          "module": "tac.multi_model_inflate",
+          "relative_path": "src/tac/multi_model_inflate.py",
+          "sha256": "5ea0616bf12d7581e7f83f9126cf74a008fe8917031968fadbf5235e46967b2e"
+        },
+        {
+          "bytes": 37713,
+          "module": "tac.nerv_mask_codec",
+          "relative_path": "src/tac/nerv_mask_codec.py",
+          "sha256": "b15ea44e5a167f9757f618bcfe935f9429faa0f2874e1509cdd83c5ef514405a"
+        },
+        {
+          "bytes": 16664,
+          "module": "tac.neural_weight_codec",
+          "relative_path": "src/tac/neural_weight_codec.py",
+          "sha256": "80d8cfe627911a473762361d85c0f1629c99881ce885fc458a32dd828c89869e"
+        },
+        {
+          "bytes": 51170,
+          "module": "tac.neural_weight_codec_sensitivity",
+          "relative_path": "src/tac/neural_weight_codec_sensitivity.py",
+          "sha256": "b393c4eb94b3b4e6a6c2ed8563aa246ec859b4818f20363ce2d63e991d920aca"
+        },
+        {
+          "bytes": 22827,
+          "module": "tac.neural_weight_corpus",
+          "relative_path": "src/tac/neural_weight_corpus.py",
+          "sha256": "3015b749178b0b1e6a15ac0b8e837b5c9ff2467a65dbfa41bd0ecc68a19da191"
+        },
+        {
+          "bytes": 12200,
+          "module": "tac.optimization",
+          "relative_path": "src/tac/optimization/__init__.py",
+          "sha256": "80b47f36b07449784ceb97e99befde716a6f49117be92ecaa21d005d66cce546"
+        },
+        {
+          "bytes": 29166,
+          "module": "tac.optimization.byte_range_entropy_recode_materializer",
+          "relative_path": "src/tac/optimization/byte_range_entropy_recode_materializer.py",
+          "sha256": "2e1934540c7534b0649517d700b96d6c6270a6a846f986cdf00fa4203912c805"
+        },
+        {
+          "bytes": 17600,
+          "module": "tac.optimization.candidate_evidence_contract",
+          "relative_path": "src/tac/optimization/candidate_evidence_contract.py",
+          "sha256": "e633cf2d46d50396641e18000ed67ced7394cd6038e83ea411dbff0f3fa0c284"
+        },
+        {
+          "bytes": 21850,
+          "module": "tac.optimization.cuda_cpu_axis_calibration",
+          "relative_path": "src/tac/optimization/cuda_cpu_axis_calibration.py",
+          "sha256": "42f496203feb943746fe306a6f684c5376b44b3fce8fdab6be134de25f4faf0f"
+        },
+        {
+          "bytes": 175828,
+          "module": "tac.optimization.family_agnostic_materializers",
+          "relative_path": "src/tac/optimization/family_agnostic_materializers.py",
+          "sha256": "3f038eef378cb8febcf114986f252e8b2e6b16e9c2be743d18ce5c3226bc433e"
+        },
+        {
+          "bytes": 391877,
+          "module": "tac.optimization.l5_staircase_v2",
+          "relative_path": "src/tac/optimization/l5_staircase_v2.py",
+          "sha256": "55523d3c09815d8a2b292a600fa3c214de60415f8dbbdc4119c8686c57a726ac"
+        },
+        {
+          "bytes": 30716,
+          "module": "tac.optimization.l5_v2_measurement_schedule",
+          "relative_path": "src/tac/optimization/l5_v2_measurement_schedule.py",
+          "sha256": "b21a8b40a6b01fa5e769b45a5338047c63fc1341ec68a6b31927bdf8bc53ca1e"
+        },
+        {
+          "bytes": 16226,
+          "module": "tac.optimization.l5_v2_paired_measurement_dispatch_plan",
+          "relative_path": "src/tac/optimization/l5_v2_paired_measurement_dispatch_plan.py",
+          "sha256": "d2d0fcf8e85874dbb3d7750c15bd00b7542dc36b97319ba75135c696716b2c51"
+        },
+        {
+          "bytes": 26214,
+          "module": "tac.optimization.l5_v2_probe_disambiguator",
+          "relative_path": "src/tac/optimization/l5_v2_probe_disambiguator.py",
+          "sha256": "1e3efc594cc8d53c2d226bc2ac0ea7a64456cdde6b1146927cb992a8aeebbc98"
+        },
+        {
+          "bytes": 36547,
+          "module": "tac.optimization.l5_v2_probe_intake",
+          "relative_path": "src/tac/optimization/l5_v2_probe_intake.py",
+          "sha256": "339c8241512805f1a025ecd4dea2974594c1423850ca4be736250bbed4f3007c"
+        },
+        {
+          "bytes": 13011,
+          "module": "tac.optimization.l5_v2_tt5l_lightning_doctor_plan",
+          "relative_path": "src/tac/optimization/l5_v2_tt5l_lightning_doctor_plan.py",
+          "sha256": "665f899f852c9fa5c5917cc27a98a6abcae9462ce7454ea2fbc6387a7bf7caf2"
+        },
+        {
+          "bytes": 27272,
+          "module": "tac.optimization.l5_v2_tt5l_lightning_route_unblock_packet",
+          "relative_path": "src/tac/optimization/l5_v2_tt5l_lightning_route_unblock_packet.py",
+          "sha256": "fd1fb9e82844694a7e18583320fb15a36cdfc461ec71c70ddef92303baeaf436"
+        },
+        {
+          "bytes": 50419,
+          "module": "tac.optimization.l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan",
+          "relative_path": "src/tac/optimization/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan.py",
+          "sha256": "0c3d512a049ae313b33372cb7f0f96997768892ef41e6f4eda4df7d3f7c1880e"
+        },
+        {
+          "bytes": 23484,
+          "module": "tac.optimization.l5_v2_tt5l_sideinfo_effect_curve_harvest",
+          "relative_path": "src/tac/optimization/l5_v2_tt5l_sideinfo_effect_curve_harvest.py",
+          "sha256": "67d6f82a3603076a253e44b51a0db9a78a2678b4724a57841608c6ac33aa03a9"
+        },
+        {
+          "bytes": 34911,
+          "module": "tac.optimization.l5_v2_tt5l_sideinfo_lightning_execution_bundle",
+          "relative_path": "src/tac/optimization/l5_v2_tt5l_sideinfo_lightning_execution_bundle.py",
+          "sha256": "9838b1e1656e90b8f14ada7b3bbcbfa50237a88e93c85201a404a64667bbbc0d"
+        },
+        {
+          "bytes": 46150,
+          "module": "tac.optimization.l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run",
+          "relative_path": "src/tac/optimization/l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run.py",
+          "sha256": "9d593882ddf5fc02c3f024076de1384ee831ab6a38c86fafff0a334834bc40c5"
+        },
+        {
+          "bytes": 21659,
+          "module": "tac.optimization.l5_v2_tt5l_sideinfo_lightning_execution_preflight",
+          "relative_path": "src/tac/optimization/l5_v2_tt5l_sideinfo_lightning_execution_preflight.py",
+          "sha256": "adc8092a30d90b03e2bc620bfae9374b8ca53fd9189d16847d6b40866c2ab0f4"
+        },
+        {
+          "bytes": 3771,
+          "module": "tac.optimization.literature_source_scope",
+          "relative_path": "src/tac/optimization/literature_source_scope.py",
+          "sha256": "1257a8b49b93cdae3a942bcc35195c0b05ef9666d9577d7bf2bcc4ecd499f7a9"
+        },
+        {
+          "bytes": 9539,
+          "module": "tac.optimization.pairset_component_marginal",
+          "relative_path": "src/tac/optimization/pairset_component_marginal.py",
+          "sha256": "75b4f071e6f97516c5ba7a32db26839587caa5b450b38b614512a8d396d96c37"
+        },
+        {
+          "bytes": 26081,
+          "module": "tac.optimization.prediction_band",
+          "relative_path": "src/tac/optimization/prediction_band.py",
+          "sha256": "3f47b36a72e7eca153bc69f783de1e69c694b6eb578da9fd6ff7086355c7eb3b"
+        },
+        {
+          "bytes": 7382,
+          "module": "tac.optimization.proxy_candidate_contract",
+          "relative_path": "src/tac/optimization/proxy_candidate_contract.py",
+          "sha256": "4721fe1e20a6c40c1f755d22f69f81ee9e5c2778bb4ac11f851ce4dc53924119"
+        },
+        {
+          "bytes": 101762,
+          "module": "tac.optimization.research_basis",
+          "relative_path": "src/tac/optimization/research_basis.py",
+          "sha256": "0676e8d121fdb16e5876f8f2e3af8858f3e1ef4a2d19e7bf4adbce3bec838e77"
+        },
+        {
+          "bytes": 5753,
+          "module": "tac.optimization.serialized_archive_economics",
+          "relative_path": "src/tac/optimization/serialized_archive_economics.py",
+          "sha256": "07fdd121aa01bd0c242f9cef67b1dabbe2fdea59fd4d49ef6629af76065be041"
+        },
+        {
+          "bytes": 103721,
+          "module": "tac.optimization.substrate_composition_matrix",
+          "relative_path": "src/tac/optimization/substrate_composition_matrix.py",
+          "sha256": "e6dbc44de87a4b92467d2ba2cc416de363ef5e1b78d08015659f137a9456ec1a"
+        },
+        {
+          "bytes": 31940,
+          "module": "tac.optimization.tier_c_density_post_training_validator",
+          "relative_path": "src/tac/optimization/tier_c_density_post_training_validator.py",
+          "sha256": "5787995b24b5bd8d06f9c884df127b228817c2a8e677036f4e040bc5b6ed6fc2"
+        },
+        {
+          "bytes": 995,
+          "module": "tac.optimizer",
+          "relative_path": "src/tac/optimizer/__init__.py",
+          "sha256": "c10f099fe6e8d203db82fa877c252d4c3d5726df017c2106bfb9120f340ce283"
+        },
+        {
+          "bytes": 14629,
+          "module": "tac.optimizer.exact_dispatch_authority",
+          "relative_path": "src/tac/optimizer/exact_dispatch_authority.py",
+          "sha256": "c0f294d8985cf91978b46d6cc09f0d7ca5b6ce83e5e4fefc7eb95b502abab9d0"
+        },
+        {
+          "bytes": 93701,
+          "module": "tac.optimizer.exact_readiness",
+          "relative_path": "src/tac/optimizer/exact_readiness.py",
+          "sha256": "64973765403a9312138527d7ab1c09af3fdf2ee2f313d69449cc6080b901c96a"
+        },
+        {
+          "bytes": 19738,
+          "module": "tac.optimizer.meta_lagrangian",
+          "relative_path": "src/tac/optimizer/meta_lagrangian.py",
+          "sha256": "ce8ab4deb3c005c3e8cf36ab3f781c011dbafa5a5dd66af2fc0e91ef77fa2fa3"
+        },
+        {
+          "bytes": 24605,
+          "module": "tac.owv2_renderer_archive",
+          "relative_path": "src/tac/owv2_renderer_archive.py",
+          "sha256": "b23b4343ccfba2c11473f24a411daa4b8ac237457141d531ed15060354fb9968"
+        },
+        {
+          "bytes": 44131,
+          "module": "tac.owv3_sensitivity_weighted",
+          "relative_path": "src/tac/owv3_sensitivity_weighted.py",
+          "sha256": "6c04c7a80af6c57e248045d5b8464f22754da61dd34e9cf8a38d2d5ec0bd0ec0"
+        },
+        {
+          "bytes": 27470,
+          "module": "tac.packet_compiler",
+          "relative_path": "src/tac/packet_compiler/__init__.py",
+          "sha256": "b054556eb98792d0065c7cd07a25aba13c365ab457a0be2bc80370272810da45"
+        },
+        {
+          "bytes": 16515,
+          "module": "tac.packet_compiler.balle_hyperprior",
+          "relative_path": "src/tac/packet_compiler/balle_hyperprior.py",
+          "sha256": "5bc7978de35fb15fa70620245a6175b5b277c2bc2c464db4dfb77b05543e3422"
+        },
+        {
+          "bytes": 14526,
+          "module": "tac.packet_compiler.cheng2020",
+          "relative_path": "src/tac/packet_compiler/cheng2020.py",
+          "sha256": "55fe02a7efd0a6ddea701828cc42c835cc385ff1ea4f2453fdb37d4a2341ba4a"
+        },
+        {
+          "bytes": 43197,
+          "module": "tac.packet_compiler.deterministic_compiler",
+          "relative_path": "src/tac/packet_compiler/deterministic_compiler.py",
+          "sha256": "3b6bef74069146fb8f1fbf61f3f8d88c6e9d25328677ee783e84cf428c9aa6f2"
+        },
+        {
+          "bytes": 13473,
+          "module": "tac.packet_compiler.factorized_prior",
+          "relative_path": "src/tac/packet_compiler/factorized_prior.py",
+          "sha256": "f43402fdd90897b7fc0ab93ab7fc1dcf5c3949b973798813c6984fb370a96fb2"
+        },
+        {
+          "bytes": 35576,
+          "module": "tac.packet_compiler.magic_codec",
+          "relative_path": "src/tac/packet_compiler/magic_codec.py",
+          "sha256": "f9f568c577b4e75e7174faed779a57388499cb495e2c1f3a97c2b384a0538d2d"
+        },
+        {
+          "bytes": 21831,
+          "module": "tac.packet_compiler.magic_codec_dense_streams",
+          "relative_path": "src/tac/packet_compiler/magic_codec_dense_streams.py",
+          "sha256": "18f1530c1c738f25ff81cc68a601a59c05cd1c35805a9092c23587b07342ae48"
+        },
+        {
+          "bytes": 10801,
+          "module": "tac.packet_compiler.pr100_schema_driven_decoder",
+          "relative_path": "src/tac/packet_compiler/pr100_schema_driven_decoder.py",
+          "sha256": "edaac676b6b675589a3045459708e7efb47edd69169c607c31ee2ff053f3735e"
+        },
+        {
+          "bytes": 14001,
+          "module": "tac.packet_compiler.pr101_conv4_storage_perms",
+          "relative_path": "src/tac/packet_compiler/pr101_conv4_storage_perms.py",
+          "sha256": "068dd5739afba08731004c73668f35aacfd4839047a529a316dfbbdc53c6d99c"
+        },
+        {
+          "bytes": 13772,
+          "module": "tac.packet_compiler.pr101_decoder_byte_maps",
+          "relative_path": "src/tac/packet_compiler/pr101_decoder_byte_maps.py",
+          "sha256": "afcde3b7e70f3d090692dcb27c413d1b3fa23dd7533ab58d4b5cb1d119256c64"
+        },
+        {
+          "bytes": 14171,
+          "module": "tac.packet_compiler.pr101_decoder_storage_order",
+          "relative_path": "src/tac/packet_compiler/pr101_decoder_storage_order.py",
+          "sha256": "5c7daf3ea8e386ab2af25b66d215a339234b08260cd07652acb2d0da7a26a6ef"
+        },
+        {
+          "bytes": 27906,
+          "module": "tac.packet_compiler.pr101_fec6_candidate_queue",
+          "relative_path": "src/tac/packet_compiler/pr101_fec6_candidate_queue.py",
+          "sha256": "2da526a96cb4d69d8a6fa4739d401afe26bbc621474c8489f52985f210996b08"
+        },
+        {
+          "bytes": 23572,
+          "module": "tac.packet_compiler.pr101_fec6_packetir",
+          "relative_path": "src/tac/packet_compiler/pr101_fec6_packetir.py",
+          "sha256": "99d2798f355f27b613f10dfc141cf087ccb00cb5ff9f553d851ffb1faf9e846f"
+        },
+        {
+          "bytes": 33539,
+          "module": "tac.packet_compiler.pr101_fec6_source_anatomy",
+          "relative_path": "src/tac/packet_compiler/pr101_fec6_source_anatomy.py",
+          "sha256": "be30d91012ee61e7c759b345ae7f0ac0549a3e844e47644181bcb9bdd501bc90"
+        },
+        {
+          "bytes": 39148,
+          "module": "tac.packet_compiler.pr101_sidecar_grammar",
+          "relative_path": "src/tac/packet_compiler/pr101_sidecar_grammar.py",
+          "sha256": "02a49a5070f51c3aea1d018b151f231a5fb250c7ce65351ccb1404a4860d55dd"
+        },
+        {
+          "bytes": 16894,
+          "module": "tac.packet_compiler.pr103_arithmetic_coding",
+          "relative_path": "src/tac/packet_compiler/pr103_arithmetic_coding.py",
+          "sha256": "440d47593974ca4ee25ce0c5adce8d00748066aec2d713bc3c5a75985cfe361f"
+        },
+        {
+          "bytes": 5308,
+          "module": "tac.packet_compiler.pr105_packed_state_schema",
+          "relative_path": "src/tac/packet_compiler/pr105_packed_state_schema.py",
+          "sha256": "c7d1c6119f324381cb14b75777843cba46e865e9f5e517779c099c9af3532210"
+        },
+        {
+          "bytes": 60216,
+          "module": "tac.packet_compiler.pr106_candidate_matrix",
+          "relative_path": "src/tac/packet_compiler/pr106_candidate_matrix.py",
+          "sha256": "82f1cbb07058598ed0a3a2ad190cdd2dc57e6232c89b7fd9a111c98bcf91d8ed"
+        },
+        {
+          "bytes": 24243,
+          "module": "tac.packet_compiler.pr106_fixed_latent_recode",
+          "relative_path": "src/tac/packet_compiler/pr106_fixed_latent_recode.py",
+          "sha256": "fb2a6dd27d37004a48d8e275355007bd30c84bbaee0e6c42d069a9fe8ee29725"
+        },
+        {
+          "bytes": 22465,
+          "module": "tac.packet_compiler.pr106_latent_sidecar_selection",
+          "relative_path": "src/tac/packet_compiler/pr106_latent_sidecar_selection.py",
+          "sha256": "86018107056c37757b5d373730c73b01651775fe653edcf95e57f593f6f65667"
+        },
+        {
+          "bytes": 48576,
+          "module": "tac.packet_compiler.pr106_runtime_consumption",
+          "relative_path": "src/tac/packet_compiler/pr106_runtime_consumption.py",
+          "sha256": "95a1406f7dc767a793088966edcfa3dcd27880593a9b96de6f361e524e90daf5"
+        },
+        {
+          "bytes": 190084,
+          "module": "tac.packet_compiler.pr106_sidecar_packet",
+          "relative_path": "src/tac/packet_compiler/pr106_sidecar_packet.py",
+          "sha256": "bef42de44fb7dcfc455a4197b9f65edf7a6fd8391213397efd98308169e8f18b"
+        },
+        {
+          "bytes": 13758,
+          "module": "tac.packet_compiler.pr63_qpose14_codec",
+          "relative_path": "src/tac/packet_compiler/pr63_qpose14_codec.py",
+          "sha256": "d88aa8e7706337ca895ff5265486273f9eef3d8c384a183593720299a151d92c"
+        },
+        {
+          "bytes": 8222,
+          "module": "tac.packet_compiler.pr64_unified_brotli_pose_velocity",
+          "relative_path": "src/tac/packet_compiler/pr64_unified_brotli_pose_velocity.py",
+          "sha256": "e4f43c058e0e84a99520f5f90ee1468b079995343be5465120fac044d5b6d144"
+        },
+        {
+          "bytes": 11495,
+          "module": "tac.packet_compiler.pr65_pq12_pose_codec",
+          "relative_path": "src/tac/packet_compiler/pr65_pq12_pose_codec.py",
+          "sha256": "b89bbe8c84ac27f035195915aa4dcbf9f782064c5a515ec514748dbdaf0c87db"
+        },
+        {
+          "bytes": 13665,
+          "module": "tac.packet_compiler.pr81_quantizr",
+          "relative_path": "src/tac/packet_compiler/pr81_quantizr.py",
+          "sha256": "4a7ac5e716ecb7cceb78c7c920d3792f01e88f76d745d45da33cdb84470abf2b"
+        },
+        {
+          "bytes": 8738,
+          "module": "tac.packet_compiler.pr84_adaptive_mask",
+          "relative_path": "src/tac/packet_compiler/pr84_adaptive_mask.py",
+          "sha256": "938211327abdd1cb5fbe23291e8a49ae4a76fa01f5b7597f6ad36a381b13cbb3"
+        },
+        {
+          "bytes": 10128,
+          "module": "tac.packet_compiler.pr91_hpac_grammar",
+          "relative_path": "src/tac/packet_compiler/pr91_hpac_grammar.py",
+          "sha256": "d86413a39d14e665e985d6b8bbc8eab353380d80295b7d913ed371cc7a1c8871"
+        },
+        {
+          "bytes": 10985,
+          "module": "tac.packet_compiler.pr92_joint_stream",
+          "relative_path": "src/tac/packet_compiler/pr92_joint_stream.py",
+          "sha256": "79415910e0e3ac76b2ca7e3902b7bea4fea0ac2500f66385f432550a6ca5f3c9"
+        },
+        {
+          "bytes": 7297,
+          "module": "tac.packet_compiler.pr93_lowpass_luma",
+          "relative_path": "src/tac/packet_compiler/pr93_lowpass_luma.py",
+          "sha256": "ee8a3af34d56d751f040789d1488b9e17534361c8d8984546fac0a8f42eda97e"
+        },
+        {
+          "bytes": 15365,
+          "module": "tac.packet_compiler.pr93_pose_codec",
+          "relative_path": "src/tac/packet_compiler/pr93_pose_codec.py",
+          "sha256": "cea3321c331fef7ecacbb84d3924f6a7f46d916b49f4c2cf5b14c0aa14d5a768"
+        },
+        {
+          "bytes": 8202,
+          "module": "tac.packet_compiler.pr97_h3_grammar",
+          "relative_path": "src/tac/packet_compiler/pr97_h3_grammar.py",
+          "sha256": "7337a56d4a16334fe09077bb87ebf3cc3c85fe147383ef6fca6d5afc5334fef8"
+        },
+        {
+          "bytes": 11456,
+          "module": "tac.packet_compiler.pr98_cd1_compact_format",
+          "relative_path": "src/tac/packet_compiler/pr98_cd1_compact_format.py",
+          "sha256": "e8e09b94e91ea0f3c97e8fe226f2cc3d69b81a778da884146b2812391b87429f"
+        },
+        {
+          "bytes": 19217,
+          "module": "tac.packet_compiler.sign_encoding",
+          "relative_path": "src/tac/packet_compiler/sign_encoding.py",
+          "sha256": "0a8195eef6e3ee6652d25c433e7fc937e4f17898a440ac6d433fcc1a6037ee46"
+        },
+        {
+          "bytes": 36456,
+          "module": "tac.packet_compiler.sparse_packet_ir",
+          "relative_path": "src/tac/packet_compiler/sparse_packet_ir.py",
+          "sha256": "b58516b254aa7ef286e2bc3f0beb5b660822c0416caa323aa15d404f99b5f6ac"
+        },
+        {
+          "bytes": 12147,
+          "module": "tac.parallel_inflate",
+          "relative_path": "src/tac/parallel_inflate.py",
+          "sha256": "1f14cf8b2a920b8e236d102128d63151f80345efdaaaed31c372647eb36ae738"
+        },
+        {
+          "bytes": 9372,
+          "module": "tac.pose_delta_codec",
+          "relative_path": "src/tac/pose_delta_codec.py",
+          "sha256": "51b9d3298bf10558c08b7f17df3a987f206f617b34c0011cde241ca1b6b304d7"
+        },
+        {
+          "bytes": 19511,
+          "module": "tac.pose_delta_codec_v2",
+          "relative_path": "src/tac/pose_delta_codec_v2.py",
+          "sha256": "dba68eda28277d5cf1500055bb7621d678b31889b1f0283532c0322c04c4c91c"
+        },
+        {
+          "bytes": 16019,
+          "module": "tac.pose_from_embedding",
+          "relative_path": "src/tac/pose_from_embedding.py",
+          "sha256": "68d5ed851920a526cf4e038562c3984df70a136c350174a34b9f31815fe172f3"
+        },
+        {
+          "bytes": 116058,
+          "module": "tac.pr103_arithmetic_transform_plan",
+          "relative_path": "src/tac/pr103_arithmetic_transform_plan.py",
+          "sha256": "ebf062adf2fb702d9d6145120397f9aa18cedd8a16b84e420c1b5f0317e8a18b"
+        },
+        {
+          "bytes": 36145,
+          "module": "tac.precompute_corrections",
+          "relative_path": "src/tac/precompute_corrections.py",
+          "sha256": "c4f45cff87dbb72ed0a14202d87a48465ffcb68f23047a53c9df2b0207deacca"
+        },
+        {
+          "bytes": 895,
+          "module": "tac.predictor",
+          "relative_path": "src/tac/predictor/__init__.py",
+          "sha256": "6132f8c550d14ef21710affa011ea8c95b011c79e297a370365265369e70019c"
+        },
+        {
+          "bytes": 22791,
+          "module": "tac.predictor.score_band",
+          "relative_path": "src/tac/predictor/score_band.py",
+          "sha256": "d9d7f1a8742e2146f7e5d16fca4887a17ce5261e6b2465703c7fd0768a695b67"
+        },
+        {
+          "bytes": 3411660,
+          "module": "tac.preflight",
+          "relative_path": "src/tac/preflight.py",
+          "sha256": "96386e042e40cd17bb235b61008cc763b65e6b87790c992648b7071f471b95f2"
+        },
+        {
+          "bytes": 9139,
+          "module": "tac.preflight_charm_class_check",
+          "relative_path": "src/tac/preflight_charm_class_check.py",
+          "sha256": "4dc404f07f4850f08f8f9ce8f95b0564c10f59e08888af697315d598ba2a68db"
+        },
+        {
+          "bytes": 11813,
+          "module": "tac.preflight_fs_cache",
+          "relative_path": "src/tac/preflight_fs_cache.py",
+          "sha256": "ac0b8054dd137ff2e27263bd3f0252565a06a90ac52fc24435e5d2ad2b41c414"
+        },
+        {
+          "bytes": 11821,
+          "module": "tac.preflight_runtime_refs",
+          "relative_path": "src/tac/preflight_runtime_refs.py",
+          "sha256": "afe16441b90904c92494cc0f54240481244db34b1fb87a11f881796905b24e1a"
+        },
+        {
+          "bytes": 39943,
+          "module": "tac.probe_outcomes_ledger",
+          "relative_path": "src/tac/probe_outcomes_ledger.py",
+          "sha256": "8b1380fc44d032d10c189bc813c12ecb077f6568b1c6607e40d700c786b8d116"
+        },
+        {
+          "bytes": 2589,
+          "module": "tac.procedural_codebook_generator",
+          "relative_path": "src/tac/procedural_codebook_generator/__init__.py",
+          "sha256": "25835264cbd9f3675fbed8a3f91595ad173a102fc6b6348432804343aadf7aa5"
+        },
+        {
+          "bytes": 181730,
+          "module": "tac.profiles",
+          "relative_path": "src/tac/profiles.py",
+          "sha256": "cbb4b29527c69dc7e8cd1584e58763c3287329ec851e41d371bd2c30bd39ca20"
+        },
+        {
+          "bytes": 4996,
+          "module": "tac.provenance",
+          "relative_path": "src/tac/provenance/__init__.py",
+          "sha256": "5b69aa751049a1028fd62362f2ebf6da9f17821627ce3995f64c345d5dd75751"
+        },
+        {
+          "bytes": 18921,
+          "module": "tac.provenance.adapters",
+          "relative_path": "src/tac/provenance/adapters.py",
+          "sha256": "2b9f55d31b65e33acfdf3eb7d95f70cfc7a3ed95e9bd2b7947543d015ff28f44"
+        },
+        {
+          "bytes": 33233,
+          "module": "tac.provenance.builders",
+          "relative_path": "src/tac/provenance/builders.py",
+          "sha256": "7b5c71c1ae4c02bf732a3f30b3b0ccfa44867d87b4954e230d2f82ab051b91e0"
+        },
+        {
+          "bytes": 30600,
+          "module": "tac.provenance.contract",
+          "relative_path": "src/tac/provenance/contract.py",
+          "sha256": "ec1be3914b7e820dedca4d78f347f4a3dde64bc56ef5fd062194c088b109876c"
+        },
+        {
+          "bytes": 16112,
+          "module": "tac.provenance.validator",
+          "relative_path": "src/tac/provenance/validator.py",
+          "sha256": "cb387171e1d860dbc62fcc796e8b7f1c5edf4c6413532ab2fd4be83fec6d4f7d"
+        },
+        {
+          "bytes": 13962,
+          "module": "tac.psd_lumaskip_renderer",
+          "relative_path": "src/tac/psd_lumaskip_renderer.py",
+          "sha256": "de3818f2c0e17ec223f21df62829424aac812f09edf85d9cd39a69aa718dc1a9"
+        },
+        {
+          "bytes": 6285,
+          "module": "tac.python_ast_indexer_bridge",
+          "relative_path": "src/tac/python_ast_indexer_bridge.py",
+          "sha256": "07e8f5aed48b1b2d8044d4d24253ea588dce7f0724b41a5dfd0eed8879f99e16"
+        },
+        {
+          "bytes": 43319,
+          "module": "tac.qbf1_renderer_codec",
+          "relative_path": "src/tac/qbf1_renderer_codec.py",
+          "sha256": "b3ffbcfd3dfdbd89c23d751815d332aa0aa421f44fe2f1e49db25adf658ecf1e"
+        },
+        {
+          "bytes": 16478,
+          "module": "tac.qh0_renderer_codec",
+          "relative_path": "src/tac/qh0_renderer_codec.py",
+          "sha256": "9718da0a7fed09056eff8a8163c6e4c9e073e7524459595650d723dfbf317092"
+        },
+        {
+          "bytes": 54928,
+          "module": "tac.qma9_range_mask_contract",
+          "relative_path": "src/tac/qma9_range_mask_contract.py",
+          "sha256": "21939b2904340bdbd69ab0ddf979200f69ebe8e3fc202f5ad4e4f5612e4310b7"
+        },
+        {
+          "bytes": 41748,
+          "module": "tac.quantization",
+          "relative_path": "src/tac/quantization.py",
+          "sha256": "12f07cb3ac737933900e4e72dbe40053fc194e43b6021399faa2970d9ff6f4b6"
+        },
+        {
+          "bytes": 11842,
+          "module": "tac.quantizr_faithful_renderer",
+          "relative_path": "src/tac/quantizr_faithful_renderer.py",
+          "sha256": "a873164f8c129190f94b9988901ba1691931b23fac8c42702e37913f4fbc167f"
+        },
+        {
+          "bytes": 29362,
+          "module": "tac.quantizr_qzs3_codec",
+          "relative_path": "src/tac/quantizr_qzs3_codec.py",
+          "sha256": "b0ec906d2d9bc9c71537866f2e05aeb19d4918e48520fae3175cdb700a16f182"
+        },
+        {
+          "bytes": 9368,
+          "module": "tac.quantizr_torch_fp4_codec",
+          "relative_path": "src/tac/quantizr_torch_fp4_codec.py",
+          "sha256": "79a85a7464712d087574441abf1ee839322cbf3a9088276cffe9f7326550e241"
+        },
+        {
+          "bytes": 19203,
+          "module": "tac.radial_zoom",
+          "relative_path": "src/tac/radial_zoom.py",
+          "sha256": "ff012e1bbb6578f291b8dfadccf95ab27b9c8404fd30f87e6927a532b713f84b"
+        },
+        {
+          "bytes": 80983,
+          "module": "tac.renderer",
+          "relative_path": "src/tac/renderer.py",
+          "sha256": "ef9e10ba619eaada7abd8b22b65b514ec5283018f376d4e1b4121af170baee0f"
+        },
+        {
+          "bytes": 183642,
+          "module": "tac.renderer_export",
+          "relative_path": "src/tac/renderer_export.py",
+          "sha256": "2bc8c8b67dcab6d8852932d4f7e78ed6186cbe926f66c686ace1f06a3963c4df"
+        },
+        {
+          "bytes": 11181,
+          "module": "tac.repo_io",
+          "relative_path": "src/tac/repo_io.py",
+          "sha256": "a081e533abd5dc6be1c575d4536065d2dd22fb724c45af876685d4ec8dfacc67"
+        },
+        {
+          "bytes": 28191,
+          "module": "tac.roi_analysis",
+          "relative_path": "src/tac/roi_analysis.py",
+          "sha256": "ea0f7bfd74d704dd26cf2dd5c6d34b94ebe6505abac749726347a7e9ca332f85"
+        },
+        {
+          "bytes": 43322,
+          "module": "tac.score_geometry",
+          "relative_path": "src/tac/score_geometry.py",
+          "sha256": "1e3a0a775ae9f709b3b4f1f3dc2de4baae7a6d6c7c48963c2f5c47567a8c00e5"
+        },
+        {
+          "bytes": 18599,
+          "module": "tac.scorer",
+          "relative_path": "src/tac/scorer.py",
+          "sha256": "a275489a8616115b0f5f80e89cfe7f8bd0f40e48d0e7d9c7d9caf78822e2b280"
+        },
+        {
+          "bytes": 50770,
+          "module": "tac.scorer_exploits",
+          "relative_path": "src/tac/scorer_exploits.py",
+          "sha256": "bec9bb4c8e6b2c0a954c4a1579a5c35b13657029e9f1ed61199f49dfd3152405"
+        },
+        {
+          "bytes": 9914,
+          "module": "tac.scorer_loss_convergence_detector",
+          "relative_path": "src/tac/scorer_loss_convergence_detector.py",
+          "sha256": "c50cd052ca549eb4c766d654720d137b5adcb0c1a4165d55417754b5f498d6e3"
+        },
+        {
+          "bytes": 10085,
+          "module": "tac.scorer_targets",
+          "relative_path": "src/tac/scorer_targets.py",
+          "sha256": "429a320829061144f8b5e0afe6099405199b0016ecb4e5ff0b776eff1b4caf7d"
+        },
+        {
+          "bytes": 7098,
+          "module": "tac.segmap_film_canvas_renderer",
+          "relative_path": "src/tac/segmap_film_canvas_renderer.py",
+          "sha256": "9d9f0dd36ef0f6ab5fe262320588fe6760683c56b06e719195dafcd32f363f5f"
+        },
+        {
+          "bytes": 37018,
+          "module": "tac.segmap_renderer",
+          "relative_path": "src/tac/segmap_renderer.py",
+          "sha256": "08729f346bf50ed6974228c7471aaabce90550e55f2f62fe6c5c9400732b0e27"
+        },
+        {
+          "bytes": 64829,
+          "module": "tac.self_compress",
+          "relative_path": "src/tac/self_compress.py",
+          "sha256": "39b4a52fa51c344cfa829e90ac0e3c8db26d10ffc0f4b46699e45146303e313d"
+        },
+        {
+          "bytes": 3772,
+          "module": "tac.semantic_label_contract",
+          "relative_path": "src/tac/semantic_label_contract.py",
+          "sha256": "b564d61c25e757c7cf132c77e830b26d3fea096a58e55569df8df684c0a9df8e"
+        },
+        {
+          "bytes": 36065,
+          "module": "tac.sensitivity_map",
+          "relative_path": "src/tac/sensitivity_map/__init__.py",
+          "sha256": "6a3d4022168df2c1cfede6af547ef2d8fa7cd1b95479b36acf6db3ae803f1d8a"
+        },
+        {
+          "bytes": 16715,
+          "module": "tac.sensitivity_map.axis_weights",
+          "relative_path": "src/tac/sensitivity_map/axis_weights.py",
+          "sha256": "cf5caf06fdf0b3b409277f4ac292093c14bba53c30bd0e27d1cca34c5ba0780b"
+        },
+        {
+          "bytes": 16518,
+          "module": "tac.sensitivity_map.wyner_ziv_reweight",
+          "relative_path": "src/tac/sensitivity_map/wyner_ziv_reweight.py",
+          "sha256": "bda45c904440287a3800b2adfd69cf79726ccce4f62c456af68c04b6a264ccd3"
+        },
+        {
+          "bytes": 46692,
+          "module": "tac.sjkl_basis",
+          "relative_path": "src/tac/sjkl_basis.py",
+          "sha256": "49f6a7e4c97e6a9eeec2b61d070971c0676058796e4c44e2b66556435d31e311"
+        },
+        {
+          "bytes": 47854,
+          "module": "tac.source_index",
+          "relative_path": "src/tac/source_index.py",
+          "sha256": "b890d9280843f9fe406a3afa70d8c34678a81195d5608573cd4d3191d50ca73f"
+        },
+        {
+          "bytes": 9846,
+          "module": "tac.stbm1br_mask_codec",
+          "relative_path": "src/tac/stbm1br_mask_codec.py",
+          "sha256": "982a438ff6259e795ec615ec0003c4ed9a3ea9cb8e7980b7065b0ec86b993cda"
+        },
+        {
+          "bytes": 5051,
+          "module": "tac.stbm1br_rust_bridge",
+          "relative_path": "src/tac/stbm1br_rust_bridge.py",
+          "sha256": "a86dcb608e6d66ee3ed47786cb1b540b2ac17a976ac6ea2699cda086b0b6e389"
+        },
+        {
+          "bytes": 25263,
+          "module": "tac.stc_boundary_codec",
+          "relative_path": "src/tac/stc_boundary_codec.py",
+          "sha256": "863174d89ec96a75d438e4011a61c0b3290e5401a1719563b61c730dfc111fdc"
+        },
+        {
+          "bytes": 86902,
+          "module": "tac.submission_archive",
+          "relative_path": "src/tac/submission_archive.py",
+          "sha256": "b0447e58e0b8953d517c5a0a3cd1e3c0338560faf7f9478d9b3d872ec643ce59"
+        },
+        {
+          "bytes": 9092,
+          "module": "tac.submission_inflate_loc_budget",
+          "relative_path": "src/tac/submission_inflate_loc_budget.py",
+          "sha256": "e15877dd5289536facfaf3dab458df2d1c244444279b9040ed08969737b3b021"
+        },
+        {
+          "bytes": 30821,
+          "module": "tac.submission_packet_compiler",
+          "relative_path": "src/tac/submission_packet_compiler.py",
+          "sha256": "1b9684d7f15b7fccd0f6e37cc3f274111fb7c668cb89aea8b2174f7880d3c838"
+        },
+        {
+          "bytes": 4042,
+          "module": "tac.substrate_registry",
+          "relative_path": "src/tac/substrate_registry/__init__.py",
+          "sha256": "fb391333fcdf263f52ac569a268945fbbc74c6071c27925ce42bc09f7f612259"
+        },
+        {
+          "bytes": 5592,
+          "module": "tac.substrate_registry.auto_wire",
+          "relative_path": "src/tac/substrate_registry/auto_wire.py",
+          "sha256": "5478e9ad21d3a467ed40623229e74af46bf3bdf79459366c7cff120f9c43d7ca"
+        },
+        {
+          "bytes": 22828,
+          "module": "tac.substrate_registry.contract",
+          "relative_path": "src/tac/substrate_registry/contract.py",
+          "sha256": "2fb0effbddb047d8a8e8f56f278112da12b13152a14fc14dd01de4d8d9e828b5"
+        },
+        {
+          "bytes": 8042,
+          "module": "tac.substrate_registry.decorator",
+          "relative_path": "src/tac/substrate_registry/decorator.py",
+          "sha256": "8f2649e3fdbbdf8980d666bdf990cd68f30b67f9e06da28903df12ed3579d4c4"
+        },
+        {
+          "bytes": 11575,
+          "module": "tac.substrate_registry.driver_generator",
+          "relative_path": "src/tac/substrate_registry/driver_generator.py",
+          "sha256": "7681b715d6ee486775da454c56f821c3b9a7831957ade581eb2baadd8e90309f"
+        },
+        {
+          "bytes": 3555,
+          "module": "tac.substrate_registry.example_template",
+          "relative_path": "src/tac/substrate_registry/example_template.py",
+          "sha256": "f04be876af5790a3e0960fcfd570230f10a40ddca6aa47836f90e9a05763683a"
+        },
+        {
+          "bytes": 6971,
+          "module": "tac.substrate_registry.recipe_generator",
+          "relative_path": "src/tac/substrate_registry/recipe_generator.py",
+          "sha256": "09b10e43b1b8069af25d35ffc139e13eb582adcaf849fb44d873c394bf1f01f6"
+        },
+        {
+          "bytes": 9141,
+          "module": "tac.substrates",
+          "relative_path": "src/tac/substrates/__init__.py",
+          "sha256": "97f4f13db5902f5c50b6277240254b51b4aac4d0b3ab8436d3fed4d506f105e2"
+        },
+        {
+          "bytes": 10004,
+          "module": "tac.substrates.pretrained_driving_prior",
+          "relative_path": "src/tac/substrates/pretrained_driving_prior/__init__.py",
+          "sha256": "c19d50aea8c652c6644946d1c8e912ccc4f2fba2018beeb7531bf73da6a9b1cd"
+        },
+        {
+          "bytes": 5518,
+          "module": "tac.substrates.pretrained_driving_prior.architecture",
+          "relative_path": "src/tac/substrates/pretrained_driving_prior/architecture.py",
+          "sha256": "79fa13e9d2c810738438c9e793451317e752db12816f5b260c6e305aeae7f9de"
+        },
+        {
+          "bytes": 16926,
+          "module": "tac.substrates.pretrained_driving_prior.archive",
+          "relative_path": "src/tac/substrates/pretrained_driving_prior/archive.py",
+          "sha256": "6576da9c987dc27f1e7b04bd2bcd1d8c499f710cd67dbcdb43fb2dd273394d84"
+        },
+        {
+          "bytes": 14395,
+          "module": "tac.substrates.pretrained_driving_prior.codebook",
+          "relative_path": "src/tac/substrates/pretrained_driving_prior/codebook.py",
+          "sha256": "d69c4cafed52c667d240eb33a1283da17fdee7bf292a56b5161dc332c80a8837"
+        },
+        {
+          "bytes": 15829,
+          "module": "tac.substrates.pretrained_driving_prior.composition",
+          "relative_path": "src/tac/substrates/pretrained_driving_prior/composition.py",
+          "sha256": "a3521b579ecd3e5d6894dbeaa2d13490b69d2d617592dbb14e89561d3017a7d7"
+        },
+        {
+          "bytes": 9004,
+          "module": "tac.substrates.pretrained_driving_prior.dataset_source",
+          "relative_path": "src/tac/substrates/pretrained_driving_prior/dataset_source.py",
+          "sha256": "7a5ff7c7832492d93974fadd4f5ab014c466ee680cc6637c44fc06015720d898"
+        },
+        {
+          "bytes": 27833,
+          "module": "tac.substrates.pretrained_driving_prior.distillation",
+          "relative_path": "src/tac/substrates/pretrained_driving_prior/distillation.py",
+          "sha256": "04850f9976201ed3defb226ff8dcf420455b5a1b0b5eb38e8a31350d84db074e"
+        },
+        {
+          "bytes": 21092,
+          "module": "tac.substrates.pretrained_driving_prior.distillation_procedural_variant",
+          "relative_path": "src/tac/substrates/pretrained_driving_prior/distillation_procedural_variant.py",
+          "sha256": "27f27af4be3470443d3419eae7f61727adf672b6a5b8214821330c218d926d56"
+        },
+        {
+          "bytes": 28207,
+          "module": "tac.substrates.pretrained_driving_prior.local_chunk_cache",
+          "relative_path": "src/tac/substrates/pretrained_driving_prior/local_chunk_cache.py",
+          "sha256": "164b4e8673c34ffe874872a0f8baf35d658872ecddce65d293b48d959d7b1cdf"
+        },
+        {
+          "bytes": 40722,
+          "module": "tac.substrates.pretrained_driving_prior.local_chunk_streamer",
+          "relative_path": "src/tac/substrates/pretrained_driving_prior/local_chunk_streamer.py",
+          "sha256": "7ebd0c430d42f1ae13d23caf23c157a9a3d37498fc00d41abff1ff22df9ee76e"
+        },
+        {
+          "bytes": 27649,
+          "module": "tac.substrates.pretrained_driving_prior.log_incremental_feeder",
+          "relative_path": "src/tac/substrates/pretrained_driving_prior/log_incremental_feeder.py",
+          "sha256": "a5dce85d063ba92c818004697010f0929aec80ad0bb0467df4bc40d542e9508f"
+        },
+        {
+          "bytes": 12135,
+          "module": "tac.substrates.pretrained_driving_prior.prior_application",
+          "relative_path": "src/tac/substrates/pretrained_driving_prior/prior_application.py",
+          "sha256": "aaabbf70e6ec05ac2133ae4886c7f1fd11493b26f51e8a4a26badad5893e3b26"
+        },
+        {
+          "bytes": 9538,
+          "module": "tac.substrates.pretrained_driving_prior.score_aware_loss",
+          "relative_path": "src/tac/substrates/pretrained_driving_prior/score_aware_loss.py",
+          "sha256": "702314ab101157ee3f78bf1ed766c2e3569347cc349985d71fe8978ea5d4b652"
+        },
+        {
+          "bytes": 13596,
+          "module": "tac.substrates.score_aware_common",
+          "relative_path": "src/tac/substrates/score_aware_common.py",
+          "sha256": "74aa9d18874564caa0a6bb2b0d66525759f038078ef4a6bfffba24fc40bbe06d"
+        },
+        {
+          "bytes": 4925,
+          "module": "tac.substrates.time_traveler_l5_autonomy",
+          "relative_path": "src/tac/substrates/time_traveler_l5_autonomy/__init__.py",
+          "sha256": "314745e9c5fe7b93c7698a11dc44832e687ee09bcec0ac703ee6aa6c25f37901"
+        },
+        {
+          "bytes": 23018,
+          "module": "tac.substrates.time_traveler_l5_autonomy.architecture",
+          "relative_path": "src/tac/substrates/time_traveler_l5_autonomy/architecture.py",
+          "sha256": "43d4af9bbc341b1760db78340de4baaa6e2e8389e61e596e53aae6b524ec2c45"
+        },
+        {
+          "bytes": 24100,
+          "module": "tac.substrates.time_traveler_l5_autonomy.archive",
+          "relative_path": "src/tac/substrates/time_traveler_l5_autonomy/archive.py",
+          "sha256": "819b6a5d1ad3fc5698606abf028bb052308b5069fd0a700df263f56d85aad66f"
+        },
+        {
+          "bytes": 4159,
+          "module": "tac.substrates.time_traveler_l5_autonomy.registered_substrate",
+          "relative_path": "src/tac/substrates/time_traveler_l5_autonomy/registered_substrate.py",
+          "sha256": "4255b08c99457ad4e9f495e6d410315a3184854cd626eead2abfec8a59aaeaae"
+        },
+        {
+          "bytes": 7537,
+          "module": "tac.substrates.time_traveler_l5_autonomy.score_aware_loss",
+          "relative_path": "src/tac/substrates/time_traveler_l5_autonomy/score_aware_loss.py",
+          "sha256": "33db799ef05c9309a0f4841e81cc00c4a2ee461bd87fa9c8487aea38dc4961b3"
+        },
+        {
+          "bytes": 9239,
+          "module": "tac.substrates.z5_predictive_coding_world_model",
+          "relative_path": "src/tac/substrates/z5_predictive_coding_world_model/__init__.py",
+          "sha256": "07bcffb30914ec4233e859611d57456785f2aeb2ef0ba5962f821f2a947ba20d"
+        },
+        {
+          "bytes": 16264,
+          "module": "tac.substrates.z5_predictive_coding_world_model.architecture",
+          "relative_path": "src/tac/substrates/z5_predictive_coding_world_model/architecture.py",
+          "sha256": "b50b9bf584213f466a345df77ecb1dc8c5b305115bc039facf1c82bdfcd97345"
+        },
+        {
+          "bytes": 22105,
+          "module": "tac.substrates.z5_predictive_coding_world_model.archive",
+          "relative_path": "src/tac/substrates/z5_predictive_coding_world_model/archive.py",
+          "sha256": "31eaec0feb1e5c32aa1262e683c66a342ce0bee10e1f262a1f2b0a001c52c34e"
+        },
+        {
+          "bytes": 8150,
+          "module": "tac.substrates.z5_predictive_coding_world_model.score_aware_loss",
+          "relative_path": "src/tac/substrates/z5_predictive_coding_world_model/score_aware_loss.py",
+          "sha256": "92df2854a5177da7042d0aa6de76b1b64c4f0a8dd957ff05837629e9f96a2499"
+        },
+        {
+          "bytes": 13435,
+          "module": "tac.szabolcs_archive",
+          "relative_path": "src/tac/szabolcs_archive.py",
+          "sha256": "271b8d68c39c4329702eb924ec15c2c0ff7fdf70ef1d1ade902512d147d3403c"
+        },
+        {
+          "bytes": 8472,
+          "module": "tac.trainer_optimization_helper_audit",
+          "relative_path": "src/tac/trainer_optimization_helper_audit.py",
+          "sha256": "b1451fbcb62eecdbb3fe7ba9eed73cc55e708a993ef72de2929d0c7a49b984ce"
+        },
+        {
+          "bytes": 118377,
+          "module": "tac.training",
+          "relative_path": "src/tac/training.py",
+          "sha256": "7a7c7779abddc83fdba8f376593309887b4ea258a8758fb8fdf6bdafa72e6ed8"
+        },
+        {
+          "bytes": 2537,
+          "module": "tac.training",
+          "relative_path": "src/tac/training/__init__.py",
+          "sha256": "cff31721be83588d9374fb7990fdecc5bacc53059b4db6838fca06af8a4f99d5"
+        },
+        {
+          "bytes": 60074,
+          "module": "tac.trick_stack",
+          "relative_path": "src/tac/trick_stack.py",
+          "sha256": "725c8b29aa61248265cfe2515a96f9b1600297f0bf87f267ee1c6c140b6b3382"
+        },
+        {
+          "bytes": 22108,
+          "module": "tac.tto",
+          "relative_path": "src/tac/tto.py",
+          "sha256": "8ded40cc87842d11544137dcd767766c9296203d3e811110fa69bd652138d1ee"
+        },
+        {
+          "bytes": 36375,
+          "module": "tac.uniward_delta",
+          "relative_path": "src/tac/uniward_delta.py",
+          "sha256": "73f7b6b0db43526a24a2f36bf87c2118973de34462ca6fe8b039ab1b12b590b2"
+        },
+        {
+          "bytes": 23381,
+          "module": "tac.water_filling_codec",
+          "relative_path": "src/tac/water_filling_codec.py",
+          "sha256": "1360479321b0378f0ead2552a64609580c5edfcd19910ae0838423e0d5bd270a"
+        },
+        {
+          "bytes": 24270,
+          "module": "tac.water_filling_codec_v2",
+          "relative_path": "src/tac/water_filling_codec_v2.py",
+          "sha256": "3c83fe4cacc86e53a58d6df0a4e64c39d7c2d9d5dcd8f3de2239cab1bfdfa2f7"
+        },
+        {
+          "bytes": 7609,
+          "module": "tac.wavelet_variance",
+          "relative_path": "src/tac/wavelet_variance.py",
+          "sha256": "87dcbdb90399db9a73e2788b8683939b8877bca8714512f24d80e66f24b01e43"
+        },
+        {
+          "bytes": 10530,
+          "module": "tac.zipwire_archive",
+          "relative_path": "src/tac/zipwire_archive.py",
+          "sha256": "86226af906d942ac5c5d63c05bea49e07dc28e3904a4eafcdcfa79988dd3670e"
+        }
+      ],
+      "module_count": 279,
+      "parse_errors": [],
+      "root_import_modules": [
+        "tac.architectures",
+        "tac.arithmetic_qint_codec",
+        "tac.block_fp_codec",
+        "tac.block_fp_jfg",
+        "tac.camera",
+        "tac.constrained_gen",
+        "tac.contrib.szabolcs_renderer",
+        "tac.dp_sims_renderer",
+        "tac.imps_renderer_archive",
+        "tac.lane_mark_pose",
+        "tac.learnable_class_targets",
+        "tac.lossless.argmax_codec",
+        "tac.mask_codec",
+        "tac.mask_grayscale_lut",
+        "tac.mini_scorer",
+        "tac.nerv_mask_codec",
+        "tac.owv2_renderer_archive",
+        "tac.owv3_sensitivity_weighted",
+        "tac.pose_from_embedding",
+        "tac.profiles",
+        "tac.qbf1_renderer_codec",
+        "tac.qh0_renderer_codec",
+        "tac.qma9_range_mask_contract",
+        "tac.quantization",
+        "tac.quantizr_faithful_renderer",
+        "tac.quantizr_qzs3_codec",
+        "tac.quantizr_torch_fp4_codec",
+        "tac.radial_zoom",
+        "tac.renderer",
+        "tac.renderer_export",
+        "tac.roi_analysis",
+        "tac.scorer",
+        "tac.scorer_targets",
+        "tac.segmap_film_canvas_renderer",
+        "tac.segmap_renderer",
+        "tac.sjkl_basis",
+        "tac.stbm1br_mask_codec",
+        "tac.stbm1br_rust_bridge",
+        "tac.stc_boundary_codec",
+        "tac.submission_archive",
+        "tac.trick_stack",
+        "tac.tto",
+        "tac.uniward_delta"
+      ],
+      "runtime_root_name": "renderer_payload_dfl1_e20295f0a662",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_content_tree_sha256": "bd2b5d2d43a5e603a86df94efd221af6f10a239b77a3930c1dd47666503367ef",
+    "runtime_file_count": 18,
+    "runtime_root": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662",
+    "runtime_tree_sha256": "a166bf948bd65444d35ce54b552c241669adfc09732d65012efddc6fe73b0051",
+    "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "runtime_source_dir": "submissions/robust_current",
+  "saved_bytes_at_risk": 380,
+  "schema": "materializer_submission_runtime_closure_report.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_queue_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/source_queue.json",
+  "source_runtime_adapter_ready": false,
+  "source_runtime_dir": "submissions/robust_current",
+  "submission_dir": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662",
+  "target_kind": "renderer_payload_dfl1_v1",
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "targeted_correction_budget_signal": {
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "freed_bytes_require_receiver_and_exact_readiness_before_spend": true,
+    "gpu_launched": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "saved_bytes_at_risk": 380,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false
+  },
+  "tool": "tac.optimizer.materializer_submission_closure"
+}

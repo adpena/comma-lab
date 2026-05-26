@@ -4847,6 +4847,7 @@ def test_materializer_execution_queue_can_append_exact_readiness_followups(
         for index in range(len(harvest_step["command"]) - 1)
     ]
     assert "--allow-unfinished-state" not in harvest_step["command"]
+    assert "--overwrite" in harvest_step["command"]
     assert f"chain_out/{CHAIN_MANIFEST_NAME}" in harvest_step["command"]
     assert "chain_out/exact_eval_handoff/source_queue.json" in (harvest_step["command"])
     assert dispatch_step["command"][:2] == [
@@ -4877,6 +4878,7 @@ def test_materializer_execution_queue_can_append_exact_readiness_followups(
     ]
     assert "--dispatch-mode" not in dispatch_step["command"]
     assert "--allow-paid-dispatch-queue" not in dispatch_step["command"]
+    assert "--overwrite" in dispatch_step["command"]
     assert "chain_out/exact_eval_handoff/dispatch_queue.json" in (dispatch_step["command"])
 
     dag = build_staircase_dag_from_experiment_queue(
@@ -6320,6 +6322,7 @@ def test_byte_shaving_campaign_queue_cli_wires_generated_dfl1_parity_followup(
         for index in range(len(parity_step["command"]) - 1)
     ]
     harvest_step = steps[2]
+    assert "--overwrite" in harvest_step["command"]
     assert [
         "--renderer-payload-dfl1-inflate-parity-proof",
         f"{parity_dir.relative_to(tmp_path).as_posix()}/shell_inflate_parity.json",
@@ -6334,7 +6337,9 @@ def test_byte_shaving_campaign_queue_cli_wires_generated_dfl1_parity_followup(
         harvest_step["command"][index : index + 2]
         for index in range(len(harvest_step["command"]) - 1)
     ]
+    dispatch_step = steps[5]
     metadata = loaded_execution_queue["experiments"][0]["metadata"]
+    assert "--overwrite" in dispatch_step["command"]
     assert metadata["renderer_payload_dfl1_parity_followup_requested"] is True
     assert metadata["renderer_payload_dfl1_parity_followup_enabled"] is True
     assert metadata["renderer_payload_dfl1_parity_followup_blockers"] == []

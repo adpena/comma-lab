@@ -1,0 +1,79 @@
+{
+  "allowed_use": "archive_manifest_for_exact_readiness_static_custody_only",
+  "archive_bytes": 345422,
+  "archive_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/archive.zip",
+  "archive_sha256": "e20295f0a662101567f36afe8ce17142635f976cb2f2b8937b4cbc76455ee3c4",
+  "candidate_archive": {
+    "bytes": 345422,
+    "path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/archive.zip",
+    "sha256": "e20295f0a662101567f36afe8ce17142635f976cb2f2b8937b4cbc76455ee3c4"
+  },
+  "candidate_id": "renderer_payload_dfl1_e20295f0a662",
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "generated_at_utc": "2026-05-26T18:13:39Z",
+  "gpu_launched": false,
+  "materializer_id": "renderer_payload_dfl1_adapter",
+  "members": [
+    {
+      "bytes": 345322,
+      "compress_type": 0,
+      "compressed_bytes": 345322,
+      "member_name": "p",
+      "name": "p",
+      "sha256": "a2db04866b0e5bf4f28ab0b10f8be26222a803e85c63842ee2622a6693675f01",
+      "uncompressed_bytes": 345322,
+      "zip_compressed_bytes": 345322,
+      "zip_compression_method": 0,
+      "zip_uncompressed_bytes": 345322
+    }
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "realized_saved_bytes": 380,
+  "receiver_contract_kind": "source_runtime_native_renderer_payload_dfl1",
+  "schema": "materializer_submission_runtime_closure_archive_manifest.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "serialized_archive_delta": {
+    "archive_delta_bytes": -380,
+    "blockers": [],
+    "candidate_archive_bytes": 345422,
+    "dispatch_attempted": false,
+    "gpu_launched": false,
+    "modeled_cost_bytes": null,
+    "modeled_saved_bytes": null,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "rate_only_control": false,
+    "ready_for_exact_eval_dispatch": false,
+    "realized_saved_bytes": 380,
+    "require_realized_saving": false,
+    "savings_realized": true,
+    "schema": "serialized_archive_delta_contract.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_archive_bytes": 345802,
+    "status": "realized_saving"
+  },
+  "source_archive": {
+    "bytes": 345802,
+    "path": "submissions/robust_current/archive_correct.zip",
+    "sha256": "4dd46fed78ed064bc97c9b3205088e82838c03667394f7936c8ae8d20f9837ab"
+  },
+  "source_queue_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/source_queue.json",
+  "target_kind": "renderer_payload_dfl1_v1",
+  "zipwire": {
+    "blockers": [],
+    "duplicate_member_names": [],
+    "member_count": 1,
+    "zip_strict": true
+  }
+}

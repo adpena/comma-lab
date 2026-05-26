@@ -21,7 +21,7 @@
   "experiment_queue_id": "frontier_mlx_paired_reference_cache_reuse_20260526t154742z_bound_materializer_execution",
   "experiment_queue_state_path": ".omx/state/experiment_queue_frontier_mlx_paired_reference_cache_reuse_20260526t154742z_bound_materializer_execution.sqlite",
   "field_selection_ready_for_exact_eval_dispatch": false,
-  "generated_at_utc": "2026-05-26T18:08:33Z",
+  "generated_at_utc": "2026-05-26T18:13:38Z",
   "gpu_launched": false,
   "promotable": false,
   "promotion_eligible": false,

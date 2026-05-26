@@ -370,6 +370,7 @@
             "--report-out",
             "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/harvest_report.json",
             "--require-accepted",
+            "--overwrite",
             "--work-queue",
             ".omx/research/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/targeted_component_correction_bound_materializer_work_queue.json",
             "--chain-manifest",
@@ -527,7 +528,8 @@
             "--estimated-cost-per-dispatch",
             "0.3",
             "--max-total-cost",
-            "5"
+            "5",
+            "--overwrite"
           ],
           "id": "build_exact_eval_dispatch_plan",
           "kind": "command",

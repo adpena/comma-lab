@@ -80,7 +80,7 @@
             "--request-out",
             "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_materialize/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_component_materialization/packet_member_merge_cbe7d79124ba/targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/materialization_request.json",
             "--candidate-limit",
-            "4",
+            "2",
             "--family-limit-per-candidate",
             "8",
             "--overwrite"

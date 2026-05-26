@@ -590,7 +590,7 @@
             "full_video"
           ]
         },
-        "targeted_drop_many_dqs1_candidate_limit": 4,
+        "targeted_drop_many_dqs1_candidate_limit": 2,
         "targeted_drop_many_dqs1_followup_queue_enabled": false,
         "targeted_drop_many_dqs1_followup_queue_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_operation_chain_compiler/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_component_operation_chain/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/targeted_drop_many_pairset/targeted_drop_many_dqs1_followup_queue.json",
         "targeted_drop_many_dqs1_materializer_feedback_bridge_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_operation_chain_compiler/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_component_operation_chain/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/targeted_drop_many_pairset/dqs1_materializer_feedback_bridge.json",

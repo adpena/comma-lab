@@ -4243,6 +4243,7 @@ def _materializer_exact_readiness_followup_steps(
         "--report-out",
         _repo_rel(harvest_report_path, repo_root),
         "--require-accepted",
+        "--overwrite",
     ]
     if manifest_ref_kind == "sweep_manifest":
         harvest_command.extend(
@@ -4323,6 +4324,7 @@ def _materializer_exact_readiness_followup_steps(
         f"{dispatch_estimated_cost_per_dispatch:.8g}",
         "--max-total-cost",
         f"{dispatch_max_total_cost:.8g}",
+        "--overwrite",
     ]
     if dispatch_require_authorized:
         dispatch_plan_command.append("--require-authorized")
