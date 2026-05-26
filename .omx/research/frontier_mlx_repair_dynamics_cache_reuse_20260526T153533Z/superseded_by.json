@@ -1,0 +1,32 @@
+{
+  "schema": "frontier_mlx_repair_dynamics_cache_reuse_supersession.v1",
+  "generated_at_utc": "2026-05-26T15:42:24Z",
+  "queue_id": "frontier_mlx_repair_dynamics_cache_reuse_20260526T153533Z",
+  "status": "superseded_planning_artifact",
+  "superseded_by_queue_id": "frontier_mlx_repair_dynamics_cache_reuse_20260526T153810Z",
+  "superseded_by_commit": "667a492ba",
+  "reason": "This earlier queue imported the false-authority local CPU advisory cache but still planned build_mlx_component_cache. The later queue reused the existing false-authority MLX scorer-input cache and is the executed artifact.",
+  "validated": true,
+  "validation_command": ".venv/bin/python tools/experiment_queue.py --queue .omx/research/frontier_mlx_repair_dynamics_cache_reuse_20260526T153533Z/targeted_component_correction_queue.json validate",
+  "resource_limits": {
+    "local_cpu": 1,
+    "local_io_heavy": 1,
+    "local_mlx": 1
+  },
+  "allowed_use": "historical_queue_planning_evidence_only",
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_dispatch_authority",
+  "ready_for_exact_eval_dispatch": false,
+  "dispatch_attempted": false,
+  "score_claim": false,
+  "score_claim_valid": false,
+  "score_claim_eligible": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "promotable": false,
+  "gpu_launched": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "exact_cuda_auth_eval": false,
+  "contest_cuda_auth_eval": false,
+  "score_affecting_payload_changed": false,
+  "charged_bits_changed": false
+}
