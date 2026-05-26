@@ -185,6 +185,9 @@ MATERIALIZER_SUBMISSION_CLOSURE_REPORT_SCHEMA = (
 RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA = (
     "frontier_rate_attack_receiver_closed_correction_budget.v1"
 )
+RECEIVER_CLOSED_RATE_PACKET_SIGNAL_SCHEMA = (
+    "frontier_rate_attack_receiver_closed_rate_packet_materialization_signal.v1"
+)
 RECEIVER_CLOSED_CORRECTION_BUDGET_QUEUE_METADATA_SCHEMA = (
     "frontier_rate_attack_receiver_closed_correction_budget_queue_metadata.v1"
 )
@@ -2391,15 +2394,434 @@ def _submission_closure_budget_row(
     }
 
 
+def _load_receiver_closed_rate_packet_payload(
+    manifest_path: Path,
+    *,
+    repo_root: Path,
+) -> tuple[dict[str, Any], Path]:
+    payload = _load_json(manifest_path)
+    if payload.get("schema") == "pr101_frame_exploit_selector_archive_manifest_v1":
+        sibling_packet_manifest = manifest_path.parent / "packet_manifest.json"
+        if sibling_packet_manifest.is_file():
+            return _load_json(sibling_packet_manifest), sibling_packet_manifest
+    return payload, manifest_path
+
+
+def _rate_packet_archive_info(payload: Mapping[str, Any]) -> dict[str, Any]:
+    archive = payload.get("archive")
+    archive_map = archive if isinstance(archive, Mapping) else {}
+    selector_pack = archive_map.get("selector_pack_manifest")
+    if not isinstance(selector_pack, Mapping):
+        selector_pack = payload.get("selector_pack_manifest")
+    selector_pack_map = selector_pack if isinstance(selector_pack, Mapping) else {}
+    return {
+        "archive_path": archive_map.get("path") or payload.get("archive_path"),
+        "archive_sha256": archive_map.get("sha256") or payload.get("archive_sha256"),
+        "archive_bytes": _finite_int_or_none(
+            archive_map.get("bytes") or payload.get("archive_bytes")
+        ),
+        "source_archive_path": (
+            archive_map.get("source")
+            or payload.get("source_archive")
+            or payload.get("source_archive_path")
+        ),
+        "source_archive_sha256": payload.get("source_archive_sha256"),
+        "source_archive_bytes": _finite_int_or_none(payload.get("source_archive_bytes")),
+        "selector_pack_manifest": dict(selector_pack_map),
+        "compact_selector_codec": (
+            payload.get("compact_selector_codec")
+            or selector_pack_map.get("compact_selector_codec")
+        ),
+        "selector_policy_mode": payload.get("selector_policy_mode"),
+        "selector_payload_wire_bytes": _finite_int_or_none(
+            selector_pack_map.get("selector_payload_wire_bytes")
+            or selector_pack_map.get("selector_payload_bytes")
+        ),
+        "selector_code_bits_total": _finite_int_or_none(
+            selector_pack_map.get("selector_code_bits_total")
+        ),
+        "selector_avg_bits_per_pair": _finite_float_or_none(
+            selector_pack_map.get("selector_avg_bits_per_pair")
+            or selector_pack_map.get("selector_bits_per_pair")
+        ),
+        "palette_size": _finite_int_or_none(selector_pack_map.get("palette_size")),
+        "n_pairs": _finite_int_or_none(selector_pack_map.get("n_pairs")),
+        "compact_palette_mode_ids": list(
+            selector_pack_map.get("compact_palette_mode_ids") or []
+        ),
+    }
+
+
+def _rate_packet_runtime_info(payload: Mapping[str, Any]) -> dict[str, Any]:
+    runtime = payload.get("runtime")
+    runtime_map = runtime if isinstance(runtime, Mapping) else {}
+    manifest = runtime_map.get("manifest")
+    manifest_map = manifest if isinstance(manifest, Mapping) else {}
+    return {
+        "submission_dir": runtime_map.get("path"),
+        "runtime_content_tree_sha256": runtime_map.get("runtime_content_tree_sha256")
+        or manifest_map.get("runtime_content_tree_sha256"),
+        "runtime_tree_sha256": runtime_map.get("runtime_tree_sha256")
+        or manifest_map.get("runtime_tree_sha256"),
+        "runtime_file_count": _finite_int_or_none(
+            runtime_map.get("runtime_file_count") or manifest_map.get("runtime_file_count")
+        ),
+    }
+
+
+def _resolved_manifest_path_value(value: object, *, repo_root: Path) -> Path | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    return _resolve_path(value, repo_root=repo_root)
+
+
+def _manifest_path_display(value: object, *, repo_root: Path) -> str | None:
+    resolved = _resolved_manifest_path_value(value, repo_root=repo_root)
+    if resolved is None:
+        return None
+    return _repo_rel(resolved, repo_root)
+
+
+def _verify_rate_packet_archive_file(
+    info: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    role: str,
+    critical_blockers: list[str],
+) -> tuple[bool, bool]:
+    archive_path = _resolved_manifest_path_value(
+        info.get("archive_path"),
+        repo_root=repo_root,
+    )
+    if archive_path is None:
+        return False, False
+    if not archive_path.is_file():
+        critical_blockers.append(f"{role}_archive_file_missing")
+        return False, False
+
+    bytes_verified = False
+    sha_verified = False
+    expected_bytes = _finite_int_or_none(info.get("archive_bytes"))
+    if expected_bytes is not None:
+        actual_bytes = archive_path.stat().st_size
+        if actual_bytes != expected_bytes:
+            critical_blockers.append(
+                f"{role}_archive_file_bytes_mismatch:{actual_bytes}!={expected_bytes}"
+            )
+        else:
+            bytes_verified = True
+
+    expected_sha = str(info.get("archive_sha256") or "").strip().lower()
+    if expected_sha:
+        actual_sha = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+        if actual_sha != expected_sha:
+            critical_blockers.append(f"{role}_archive_file_sha256_mismatch")
+        else:
+            sha_verified = True
+    return bytes_verified, sha_verified
+
+
+def _verify_rate_packet_runtime_dir(
+    runtime_info: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    role: str,
+    critical_blockers: list[str],
+) -> bool:
+    runtime_dir = _resolved_manifest_path_value(
+        runtime_info.get("submission_dir"),
+        repo_root=repo_root,
+    )
+    if runtime_dir is None:
+        return False
+    if not runtime_dir.is_dir():
+        critical_blockers.append(f"{role}_submission_dir_missing_on_disk")
+        return False
+    return True
+
+
+def _receiver_closed_rate_packet_budget_row(
+    packet_manifest_path: Path,
+    *,
+    repo_root: Path,
+    parent_manifest_path: Path | None = None,
+) -> dict[str, Any]:
+    bridge_blockers = [
+        "packet_manifest_is_not_score_or_dispatch_authority",
+        "component_eval_required_before_budget_spend",
+        "exact_auth_eval_required_before_score_or_promotion_claim",
+    ]
+    critical_blockers: list[str] = []
+    try:
+        packet, resolved_packet_path = _load_receiver_closed_rate_packet_payload(
+            packet_manifest_path,
+            repo_root=repo_root,
+        )
+        require_no_truthy_authority_fields(
+            packet,
+            context=f"{resolved_packet_path} receiver-closed rate packet",
+        )
+    except (FrontierRateAttackFeedbackError, ValueError) as exc:
+        return {
+            "schema": RECEIVER_CLOSED_RATE_PACKET_SIGNAL_SCHEMA,
+            "source_kind": "receiver_closed_rate_packet_materialization",
+            "rate_packet_manifest_path": _repo_rel(packet_manifest_path, repo_root),
+            "candidate_id": _bounded_content_key(
+                "receiver_closed_rate_packet",
+                (packet_manifest_path,),
+            ),
+            "target_kind": "pr101_frame_exploit_selector_packet_recode_v1",
+            "receiver_closed": False,
+            "release_to_targeted_correction_planning": False,
+            "ready_for_budget_spend": False,
+            "saved_bytes_at_risk": 0,
+            "bridge_blockers": bridge_blockers,
+            "critical_blockers": [f"invalid_rate_packet_manifest:{exc}"],
+            "allowed_use": "receiver_closed_rate_budget_for_targeted_correction_planning_only",
+            "forbidden_use": "score_claim_or_dispatch_or_promotion_authority",
+            **FALSE_AUTHORITY,
+        }
+
+    packet_info = _rate_packet_archive_info(packet)
+    runtime_info = _rate_packet_runtime_info(packet)
+    if packet.get("schema") != "pr101_frame_exploit_selector_packet_manifest_v1":
+        critical_blockers.append("rate_packet_manifest_schema_mismatch")
+    if packet.get("candidate_archive_built") is False:
+        critical_blockers.append("candidate_archive_not_built")
+    if not packet_info.get("archive_path"):
+        critical_blockers.append("candidate_archive_path_missing")
+    if not packet_info.get("archive_sha256"):
+        critical_blockers.append("candidate_archive_sha256_missing")
+    if not packet_info.get("archive_bytes"):
+        critical_blockers.append("candidate_archive_bytes_missing")
+    if not runtime_info.get("submission_dir"):
+        critical_blockers.append("candidate_submission_dir_missing")
+    if not runtime_info.get("runtime_content_tree_sha256"):
+        critical_blockers.append("candidate_runtime_content_tree_sha256_missing")
+    (
+        candidate_archive_file_bytes_verified,
+        candidate_archive_file_sha256_verified,
+    ) = _verify_rate_packet_archive_file(
+        packet_info,
+        repo_root=repo_root,
+        role="candidate",
+        critical_blockers=critical_blockers,
+    )
+    candidate_runtime_dir_verified = _verify_rate_packet_runtime_dir(
+        runtime_info,
+        repo_root=repo_root,
+        role="candidate",
+        critical_blockers=critical_blockers,
+    )
+
+    parent: dict[str, Any] = {}
+    resolved_parent_path: Path | None = None
+    parent_info: dict[str, Any] = {}
+    parent_runtime_info: dict[str, Any] = {}
+    parent_archive_file_bytes_verified = False
+    parent_archive_file_sha256_verified = False
+    parent_runtime_dir_verified = False
+    if parent_manifest_path is None:
+        critical_blockers.append("parent_rate_packet_manifest_required_for_saved_bytes")
+    else:
+        try:
+            parent, resolved_parent_path = _load_receiver_closed_rate_packet_payload(
+                parent_manifest_path,
+                repo_root=repo_root,
+            )
+            require_no_truthy_authority_fields(
+                parent,
+                context=f"{resolved_parent_path} receiver-closed rate packet parent",
+            )
+            parent_info = _rate_packet_archive_info(parent)
+            parent_runtime_info = _rate_packet_runtime_info(parent)
+            if parent.get("schema") != "pr101_frame_exploit_selector_packet_manifest_v1":
+                critical_blockers.append("parent_rate_packet_manifest_schema_mismatch")
+            if not parent_info.get("archive_path"):
+                critical_blockers.append("parent_archive_path_missing")
+            if not parent_info.get("archive_sha256"):
+                critical_blockers.append("parent_archive_sha256_missing")
+            if not parent_info.get("archive_bytes"):
+                critical_blockers.append("parent_archive_bytes_missing")
+            if not parent_runtime_info.get("submission_dir"):
+                critical_blockers.append("parent_submission_dir_missing")
+            if not parent_runtime_info.get("runtime_content_tree_sha256"):
+                critical_blockers.append("parent_runtime_content_tree_sha256_missing")
+            (
+                parent_archive_file_bytes_verified,
+                parent_archive_file_sha256_verified,
+            ) = _verify_rate_packet_archive_file(
+                parent_info,
+                repo_root=repo_root,
+                role="parent",
+                critical_blockers=critical_blockers,
+            )
+            parent_runtime_dir_verified = _verify_rate_packet_runtime_dir(
+                parent_runtime_info,
+                repo_root=repo_root,
+                role="parent",
+                critical_blockers=critical_blockers,
+            )
+        except (FrontierRateAttackFeedbackError, ValueError) as exc:
+            critical_blockers.append(f"invalid_parent_rate_packet_manifest:{exc}")
+
+    candidate_bytes = _finite_int_or_none(packet_info.get("archive_bytes"))
+    parent_bytes = _finite_int_or_none(parent_info.get("archive_bytes"))
+    archive_byte_delta_vs_parent: int | None = None
+    saved_bytes = 0
+    if candidate_bytes is not None and parent_bytes is not None:
+        archive_byte_delta_vs_parent = candidate_bytes - parent_bytes
+        saved_bytes = max(0, parent_bytes - candidate_bytes)
+    if saved_bytes <= 0:
+        critical_blockers.append("saved_bytes_vs_parent_missing_or_non_positive")
+
+    candidate_codec = str(packet_info.get("compact_selector_codec") or "unknown_codec")
+    parent_codec = str(parent_info.get("compact_selector_codec") or "unknown_parent_codec")
+    lane_id = str(packet.get("lane_id") or "")
+    candidate_id = _bounded_content_key(
+        "receiver_closed_rate_packet",
+        (
+            lane_id,
+            candidate_codec,
+            packet_info.get("archive_sha256"),
+            resolved_packet_path,
+            parent_info.get("archive_sha256"),
+        ),
+    )
+    target_kind = "pr101_frame_exploit_selector_packet_recode_v1"
+    receiver_closed = not critical_blockers
+    candidate_archive_path = _manifest_path_display(
+        packet_info.get("archive_path"),
+        repo_root=repo_root,
+    )
+    candidate_submission_dir = _manifest_path_display(
+        runtime_info.get("submission_dir"),
+        repo_root=repo_root,
+    )
+    parent_archive_path = _manifest_path_display(
+        parent_info.get("archive_path"),
+        repo_root=repo_root,
+    )
+    parent_submission_dir = _manifest_path_display(
+        parent_runtime_info.get("submission_dir"),
+        repo_root=repo_root,
+    )
+    parent_inflate_sh_path = (
+        f"{parent_submission_dir}/inflate.sh" if parent_submission_dir else None
+    )
+    return {
+        "schema": RECEIVER_CLOSED_RATE_PACKET_SIGNAL_SCHEMA,
+        "source_kind": "receiver_closed_rate_packet_materialization",
+        "candidate_id": candidate_id,
+        "lane_id": lane_id or None,
+        "target_kind": target_kind,
+        "candidate_compact_selector_codec": candidate_codec,
+        "parent_compact_selector_codec": parent_codec,
+        "selector_policy_mode": packet_info.get("selector_policy_mode")
+        or parent_info.get("selector_policy_mode"),
+        "archive_sha256": packet_info.get("archive_sha256"),
+        "archive_bytes": candidate_bytes,
+        "archive_path": candidate_archive_path,
+        "archive_file_sha256_verified": candidate_archive_file_sha256_verified,
+        "archive_file_bytes_verified": candidate_archive_file_bytes_verified,
+        "submission_dir": candidate_submission_dir,
+        "submission_dir_verified": candidate_runtime_dir_verified,
+        "runtime_content_tree_sha256": runtime_info.get(
+            "runtime_content_tree_sha256"
+        ),
+        "runtime_tree_sha256": runtime_info.get("runtime_tree_sha256"),
+        "runtime_file_count": runtime_info.get("runtime_file_count"),
+        "source_archive_path": parent_archive_path,
+        "source_archive_sha256": parent_info.get("archive_sha256"),
+        "source_archive_bytes": parent_bytes,
+        "source_archive_file_sha256_verified": parent_archive_file_sha256_verified,
+        "source_archive_file_bytes_verified": parent_archive_file_bytes_verified,
+        "source_submission_dir": parent_submission_dir,
+        "source_submission_dir_verified": parent_runtime_dir_verified,
+        "source_inflate_sh_path": parent_inflate_sh_path,
+        "reference_component_eval_context": {
+            "source_archive_path": parent_archive_path,
+            "source_archive_sha256": parent_info.get("archive_sha256"),
+            "source_archive_bytes": parent_bytes,
+            "source_archive_file_sha256_verified": parent_archive_file_sha256_verified,
+            "source_archive_file_bytes_verified": parent_archive_file_bytes_verified,
+            "source_submission_dir": parent_submission_dir,
+            "source_submission_dir_verified": parent_runtime_dir_verified,
+            "source_inflate_sh_path": parent_inflate_sh_path,
+            "reference_eval_role": "receiver_closed_parent_rate_packet_reference",
+            "allowed_use": "parent_rate_packet_reference_for_component_delta_only",
+            "forbidden_use": "score_claim_or_dispatch_authority",
+            **FALSE_AUTHORITY,
+        },
+        "rate_packet_manifest_path": _repo_rel(resolved_packet_path, repo_root),
+        "parent_rate_packet_manifest_path": (
+            None
+            if resolved_parent_path is None
+            else _repo_rel(resolved_parent_path, repo_root)
+        ),
+        "saved_bytes_at_risk": saved_bytes,
+        "archive_byte_delta_vs_parent": archive_byte_delta_vs_parent,
+        "selector_payload_wire_bytes": packet_info.get("selector_payload_wire_bytes"),
+        "parent_selector_payload_wire_bytes": parent_info.get(
+            "selector_payload_wire_bytes"
+        ),
+        "selector_payload_wire_delta_bytes": (
+            int(packet_info["selector_payload_wire_bytes"])
+            - int(parent_info["selector_payload_wire_bytes"])
+            if packet_info.get("selector_payload_wire_bytes") is not None
+            and parent_info.get("selector_payload_wire_bytes") is not None
+            else None
+        ),
+        "selector_code_bits_total": packet_info.get("selector_code_bits_total"),
+        "parent_selector_code_bits_total": parent_info.get("selector_code_bits_total"),
+        "selector_avg_bits_per_pair": packet_info.get("selector_avg_bits_per_pair"),
+        "parent_selector_avg_bits_per_pair": parent_info.get(
+            "selector_avg_bits_per_pair"
+        ),
+        "palette_size": packet_info.get("palette_size"),
+        "n_pairs": packet_info.get("n_pairs"),
+        "compact_palette_mode_ids": packet_info.get("compact_palette_mode_ids"),
+        "entropy_position": "at_entropy_coder_integer_codeword_boundary",
+        "receiver_closed": receiver_closed,
+        "release_to_targeted_correction_planning": receiver_closed,
+        "ready_for_budget_spend": False,
+        "correction_budget_gate": (
+            "receiver_static_runtime_closed_active_floor_only"
+            if receiver_closed
+            else "receiver_rate_packet_parent_or_runtime_blocker_present"
+        ),
+        "bridge_candidate_count": 1 if receiver_closed else 0,
+        "bridge_blockers": _unique_strings(bridge_blockers),
+        "critical_blockers": _unique_strings(critical_blockers),
+        "active_rate_floor_blocked": False,
+        "allowed_use": "receiver_closed_rate_budget_for_targeted_correction_planning_only",
+        "forbidden_use": "score_claim_or_dispatch_or_promotion_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def build_receiver_closed_correction_budget(
     *,
     repo_root: str | Path,
     frontier_artifact_roots: Sequence[str | Path] = (),
     results_root: str | Path = DEFAULT_RESULTS_ROOT,
+    receiver_closed_rate_packet_paths: Sequence[str | Path] = (),
+    receiver_closed_rate_parent_paths: Sequence[str | Path] = (),
 ) -> dict[str, Any]:
     """Harvest receiver-closed materializer bytes into repair-budget signal."""
 
     repo = Path(repo_root)
+    packet_paths = [
+        _resolve_path(path, repo_root=repo) for path in receiver_closed_rate_packet_paths
+    ]
+    parent_paths = [
+        _resolve_path(path, repo_root=repo) for path in receiver_closed_rate_parent_paths
+    ]
+    if parent_paths and len(parent_paths) not in (1, len(packet_paths)):
+        raise FrontierRateAttackFeedbackError(
+            "receiver_closed_rate_parent_paths must be empty, length 1, or match "
+            "receiver_closed_rate_packet_paths"
+        )
     paths = _discover_submission_closure_report_paths(
         repo_root=repo,
         frontier_artifact_roots=frontier_artifact_roots,
@@ -2430,12 +2852,41 @@ def build_receiver_closed_correction_budget(
         if row_order > existing_order:
             rows_by_key[key] = row
 
+    for index, packet_path in enumerate(packet_paths):
+        parent_path = (
+            parent_paths[index]
+            if len(parent_paths) == len(packet_paths)
+            else parent_paths[0]
+            if parent_paths
+            else None
+        )
+        row = _receiver_closed_rate_packet_budget_row(
+            packet_path,
+            repo_root=repo,
+            parent_manifest_path=parent_path,
+        )
+        key = (
+            str(row.get("candidate_id") or row.get("rate_packet_manifest_path") or ""),
+            str(row.get("target_kind") or ""),
+            str(row.get("archive_sha256") or ""),
+        )
+        existing = rows_by_key.get(key)
+        if existing is None:
+            rows_by_key[key] = row
+            continue
+        duplicate_count += 1
+        if str(row.get("rate_packet_manifest_path") or "") > str(
+            existing.get("rate_packet_manifest_path") or ""
+        ):
+            rows_by_key[key] = row
+
     rows = sorted(
         rows_by_key.values(),
         key=lambda row: (
             str(row.get("target_kind") or ""),
             str(row.get("candidate_id") or ""),
             str(row.get("closure_report_path") or ""),
+            str(row.get("rate_packet_manifest_path") or ""),
         ),
     )
     closed_rows = [row for row in rows if row.get("receiver_closed") is True]
@@ -2451,6 +2902,7 @@ def build_receiver_closed_correction_budget(
         for row in closed_rows
         if int(row.get("saved_bytes_at_risk") or 0) > 0
     ]
+    deduped_closure_count = sum(1 for row in rows if row.get("closure_report_path"))
     blockers: list[str] = []
     if not closed_rows:
         blockers.append("no_receiver_closed_materializer_budget_candidates_discovered")
@@ -2466,8 +2918,11 @@ def build_receiver_closed_correction_budget(
         "generated_at_utc": _utc_now(),
         "active": bool(closed_rows),
         "closure_report_count": len(paths),
-        "deduped_closure_report_count": len(rows),
+        "rate_packet_manifest_count": len(packet_paths),
+        "deduped_closure_report_count": deduped_closure_count,
+        "deduped_budget_row_count": len(rows),
         "duplicate_closure_report_count": duplicate_count,
+        "duplicate_budget_row_count": duplicate_count,
         "receiver_closed_candidate_count": len(closed_rows),
         "blocked_candidate_count": len(blocked_rows),
         "receiver_closed_saved_bytes_total": sum(saved_values),
@@ -3360,6 +3815,7 @@ def _materializer_rate_preservation_rows(
         saved = _finite_int_or_none(budget_row.get("saved_bytes_at_risk")) or 0
         if target and saved > 0:
             closed_by_target[target] = max(saved, closed_by_target.get(target, 0))
+    matched_receiver_targets: set[str] = set()
     for row in materializer_rows:
         evidence = row.get("evidence_summary")
         if not isinstance(evidence, Mapping):
@@ -3370,6 +3826,7 @@ def _materializer_rate_preservation_rows(
             saved = closed_by_target.get(target_kind, 0)
         if saved <= 0:
             continue
+        matched_receiver_targets.add(target_kind)
         rate_credit = _rate_credit_score_units_for_saved_bytes(saved)
         candidate_id = str(row.get("operation_id") or target_kind or "materializer")
         rows.append(
@@ -3402,6 +3859,74 @@ def _materializer_rate_preservation_rows(
                 "recommended_next_action": (
                     "preserve_receiver_closed_rate_only_archive_before_any_"
                     "distortion_reinvestment"
+                ),
+                "allowed_use": "rate_only_floor_preservation_and_reinvestment_planning",
+                "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
+                **FALSE_AUTHORITY,
+            }
+        )
+    for budget_row in receiver_closed.get("rows") or []:
+        if not isinstance(budget_row, Mapping) or budget_row.get("receiver_closed") is not True:
+            continue
+        target_kind = str(budget_row.get("target_kind") or "")
+        if not target_kind or target_kind in matched_receiver_targets:
+            continue
+        saved = _finite_int_or_none(budget_row.get("saved_bytes_at_risk")) or 0
+        if saved <= 0:
+            continue
+        rate_credit = _rate_credit_score_units_for_saved_bytes(saved)
+        candidate_id = str(
+            budget_row.get("candidate_id") or target_kind or "receiver_closed_rate"
+        )
+        archive_delta = _finite_int_or_none(
+            budget_row.get("archive_byte_delta_vs_parent")
+        )
+        if archive_delta is None:
+            archive_delta = -saved
+        rows.append(
+            {
+                "schema": RATE_BUDGET_PRESERVATION_ROW_SCHEMA,
+                "preservation_id": _bounded_content_key(
+                    "rate_budget_preserve",
+                    (candidate_id, target_kind, saved, budget_row.get("archive_sha256")),
+                ),
+                "source_kind": str(
+                    budget_row.get("source_kind")
+                    or "receiver_closed_materializer_rate_budget"
+                ),
+                "candidate_id": candidate_id,
+                "family": "receiver_closed_rate_packet",
+                "target_kind": target_kind,
+                "saved_bytes": saved,
+                "archive_byte_delta_vs_baseline": archive_delta,
+                "rate_credit_score_units": rate_credit,
+                "segnet_delta_score_units": 0.0,
+                "posenet_delta_score_units": 0.0,
+                "distortion_debt_score_units": 0.0,
+                "net_score_delta_score_units": -rate_credit,
+                "receiver_closed_saved_bytes": saved,
+                "rate_packet_manifest_path": budget_row.get("rate_packet_manifest_path"),
+                "parent_rate_packet_manifest_path": budget_row.get(
+                    "parent_rate_packet_manifest_path"
+                ),
+                "candidate_compact_selector_codec": budget_row.get(
+                    "candidate_compact_selector_codec"
+                ),
+                "parent_compact_selector_codec": budget_row.get(
+                    "parent_compact_selector_codec"
+                ),
+                "entropy_position": budget_row.get("entropy_position"),
+                "rate_only_archive_preservation_required": True,
+                "preserve_as_rate_only_candidate": True,
+                "budget_reinvestment_candidate": True,
+                "budget_reinvestment_mode": (
+                    "preserve_receiver_closed_rate_packet_floor_then_optionally_"
+                    "spend_credit_on_component_guarded_repair"
+                ),
+                "minimum_repair_score_units_to_beat_rate_only_floor": 0.0,
+                "recommended_next_action": (
+                    "feed_receiver_closed_rate_packet_credit_into_repair_waterfill_"
+                    "after_preserving_parent_and_child_rate_only_floors"
                 ),
                 "allowed_use": "rate_only_floor_preservation_and_reinvestment_planning",
                 "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
@@ -17133,6 +17658,8 @@ def build_frontier_rate_attack_feedback_refresh(
     repair_dynamics_palette_priors: Sequence[Mapping[str, Any]] = (),
     repair_dynamics_prior_source_paths: Sequence[str] = (),
     component_response_cache_roots: Sequence[str | Path] = (),
+    receiver_closed_rate_packet_paths: Sequence[str | Path] = (),
+    receiver_closed_rate_parent_paths: Sequence[str | Path] = (),
 ) -> dict[str, Any]:
     """Build a forest-level feedback refresh and optional DQS1 follow-up queue."""
 
@@ -17192,6 +17719,8 @@ def build_frontier_rate_attack_feedback_refresh(
         repo_root=repo,
         frontier_artifact_roots=frontier_artifact_roots,
         results_root=results_root,
+        receiver_closed_rate_packet_paths=receiver_closed_rate_packet_paths,
+        receiver_closed_rate_parent_paths=receiver_closed_rate_parent_paths,
     )
     manual_repair_dynamics_palette_prior = _repair_dynamics_palette_prior(
         repair_palette_modes,
@@ -17348,6 +17877,14 @@ def build_frontier_rate_attack_feedback_refresh(
         "operation_materializer_bridge": operation_materializer_bridge,
         "receiver_repair_backlog": receiver_repair_backlog,
         "receiver_closed_correction_budget": receiver_closed_correction_budget,
+        "receiver_closed_rate_packet_manifest_paths": [
+            _repo_rel(_resolve_path(path, repo_root=repo), repo)
+            for path in receiver_closed_rate_packet_paths
+        ],
+        "receiver_closed_rate_parent_manifest_paths": [
+            _repo_rel(_resolve_path(path, repo_root=repo), repo)
+            for path in receiver_closed_rate_parent_paths
+        ],
         "repair_dynamics_palette_prior": repair_dynamics_palette_prior,
         "repair_dynamics_prior_source_paths": list(repair_dynamics_prior_source_paths),
         "manual_repair_dynamics_palette_prior": manual_repair_dynamics_palette_prior,
@@ -17418,6 +17955,7 @@ __all__ = [
     "RATE_BUDGET_PRESERVATION_PLAN_SCHEMA",
     "RATE_BUDGET_PRESERVATION_ROW_SCHEMA",
     "RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA",
+    "RECEIVER_CLOSED_RATE_PACKET_SIGNAL_SCHEMA",
     "RECEIVER_REPAIR_BACKLOG_SCHEMA",
     "RECEIVER_REPAIR_QUEUE_METADATA_SCHEMA",
     "RECEIVER_REPAIR_ROW_SCHEMA",

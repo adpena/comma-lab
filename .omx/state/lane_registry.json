@@ -58884,6 +58884,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_fec8_rate_packet_budget_bridge_20260526",
+      "name": "FEC8 receiver-closed rate packet budget bridge",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "receiver-closed rate packet manifest bridge + refresh CLI args + focused test; ruff clean; frontier feedback pytest 43 passed"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_fec8_rate_packet_budget_bridge_20260526T2007Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -58893,5 +58934,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T19:50:28Z"
+  "updated_at": "2026-05-26T20:02:42Z"
 }

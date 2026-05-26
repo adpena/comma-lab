@@ -27,6 +27,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     RATE_BUDGET_PRESERVATION_PLAN_SCHEMA,
     RATE_BUDGET_PRESERVATION_ROW_SCHEMA,
     RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA,
+    RECEIVER_CLOSED_RATE_PACKET_SIGNAL_SCHEMA,
     RECEIVER_REPAIR_BACKLOG_SCHEMA,
     RECEIVER_REPAIR_ROW_SCHEMA,
     RECEIVER_REPAIR_WORK_ORDER_SCHEMA,
@@ -517,6 +518,64 @@ def _write_receiver_closed_budget_signal(
         },
     )
     return closure_report
+
+
+def _write_rate_packet_manifest(
+    repo: Path,
+    *,
+    root: Path,
+    name: str,
+    codec: str,
+    archive_bytes: int,
+    archive_sha256: str,
+    selector_payload_wire_bytes: int,
+    selector_code_bits_total: int,
+    selector_avg_bits_per_pair: float,
+) -> Path:
+    packet_dir = root / name
+    runtime_dir = packet_dir / "submission_dir"
+    archive_path = packet_dir / "archive.zip"
+    return _write_json(
+        packet_dir / "packet_manifest.json",
+        {
+            "schema": "pr101_frame_exploit_selector_packet_manifest_v1",
+            **_false_authority(),
+            "candidate_archive_built": True,
+            "lane_id": f"lane_{name}",
+            "selector_policy_mode": "compact_exact_k16",
+            "compact_selector_codec": codec,
+            "archive": {
+                "path": archive_path.relative_to(repo).as_posix(),
+                "bytes": archive_bytes,
+                "sha256": archive_sha256,
+                "source": "experiments/results/public_pr101/archive.zip",
+                "selector_pack_manifest": {
+                    "compact_selector_codec": codec,
+                    "selector_payload_wire_bytes": selector_payload_wire_bytes,
+                    "selector_payload_bytes": selector_payload_wire_bytes,
+                    "selector_code_bits_total": selector_code_bits_total,
+                    "selector_avg_bits_per_pair": selector_avg_bits_per_pair,
+                    "selector_bits_per_pair": selector_avg_bits_per_pair,
+                    "palette_size": 16,
+                    "n_pairs": 600,
+                    "compact_palette_mode_ids": [
+                        "none",
+                        "frame0_blue_chroma_amp_1",
+                    ],
+                },
+            },
+            "runtime": {
+                "path": runtime_dir.relative_to(repo).as_posix(),
+                "runtime_content_tree_sha256": "c" * 64,
+                "runtime_tree_sha256": "d" * 64,
+                "runtime_file_count": 7,
+            },
+            "allowed_use": "receiver_closed_rate_packet_manifest_fixture",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+        },
+    )
 
 
 def _pair_frame_geometry_lattice(
@@ -1865,6 +1924,96 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     )
     assert report["queue_summary"]["experiment_count"] == 2
     assert report["queue_summary"]["score_claim"] is False
+
+
+def test_receiver_closed_rate_packet_manifest_feeds_waterfill_budget(
+    tmp_path: Path,
+) -> None:
+    results_root = tmp_path / "results"
+    parent_manifest = _write_rate_packet_manifest(
+        tmp_path,
+        root=results_root,
+        name="fec6_parent",
+        codec="fec6_fixed_huffman_k16",
+        archive_bytes=178517,
+        archive_sha256="6" * 64,
+        selector_payload_wire_bytes=249,
+        selector_code_bits_total=1944,
+        selector_avg_bits_per_pair=3.24,
+    )
+    candidate_manifest = _write_rate_packet_manifest(
+        tmp_path,
+        root=results_root,
+        name="fec8_candidate",
+        codec="fec8_static_second_order_markov_k16",
+        archive_bytes=178507,
+        archive_sha256="8" * 64,
+        selector_payload_wire_bytes=239,
+        selector_code_bits_total=1848,
+        selector_avg_bits_per_pair=3.08,
+    )
+
+    budget = build_receiver_closed_correction_budget(
+        repo_root=tmp_path,
+        results_root=results_root,
+        receiver_closed_rate_packet_paths=(candidate_manifest,),
+        receiver_closed_rate_parent_paths=(parent_manifest,),
+    )
+
+    assert budget["schema"] == RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA
+    _assert_false_authority(budget)
+    assert budget["active"] is True
+    assert budget["rate_packet_manifest_count"] == 1
+    assert budget["receiver_closed_candidate_count"] == 1
+    assert budget["receiver_closed_saved_bytes_total"] == 10
+    row = budget["rows"][0]
+    assert row["schema"] == RECEIVER_CLOSED_RATE_PACKET_SIGNAL_SCHEMA
+    _assert_false_authority(row)
+    assert row["source_kind"] == "receiver_closed_rate_packet_materialization"
+    assert row["candidate_compact_selector_codec"] == (
+        "fec8_static_second_order_markov_k16"
+    )
+    assert row["parent_compact_selector_codec"] == "fec6_fixed_huffman_k16"
+    assert row["archive_byte_delta_vs_parent"] == -10
+    assert row["selector_payload_wire_delta_bytes"] == -10
+    assert row["receiver_closed"] is True
+    assert row["release_to_targeted_correction_planning"] is True
+    assert row["ready_for_budget_spend"] is False
+    assert "component_eval_required_before_budget_spend" in row["bridge_blockers"]
+
+    report = build_frontier_rate_attack_feedback_refresh(
+        repo_root=tmp_path,
+        action_summary_path=None,
+        results_root=str(results_root),
+        queue_id="frontier_feedback_rate_packet_unit",
+        receiver_closed_rate_packet_paths=(candidate_manifest,),
+        receiver_closed_rate_parent_paths=(parent_manifest,),
+    )
+    rate_plan = report["rate_budget_preservation_plan"]
+    assert rate_plan["schema"] == RATE_BUDGET_PRESERVATION_PLAN_SCHEMA
+    _assert_false_authority(rate_plan)
+    assert rate_plan["active"] is True
+    assert rate_plan["rate_only_saved_bytes_total"] == 10
+    assert rate_plan["source_kinds"] == [
+        "receiver_closed_rate_packet_materialization"
+    ]
+    plan_row = rate_plan["rows"][0]
+    assert plan_row["schema"] == RATE_BUDGET_PRESERVATION_ROW_SCHEMA
+    assert plan_row["archive_byte_delta_vs_baseline"] == -10
+    assert plan_row["receiver_closed_saved_bytes"] == 10
+    assert plan_row["candidate_compact_selector_codec"] == (
+        "fec8_static_second_order_markov_k16"
+    )
+    action_term = rate_plan["operator_action_ledger"]["terms"][0]
+    assert action_term["schema"] == OPERATOR_ACTION_TERM_SCHEMA
+    assert action_term["T_i"]["archive_byte_delta_vs_baseline"] == -10
+    assert action_term["rate_only_floor_hard_constraint"] is True
+    targeted = report["targeted_component_correction_acquisition"]
+    assert targeted["schema"] == TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA
+    _assert_false_authority(targeted)
+    assert targeted["receiver_closed_saved_bytes_total"] == 10
+    assert targeted["active"] is True
+    assert targeted["ready_for_exact_eval_dispatch"] is False
 
 
 def test_rate_budget_preservation_keeps_rate_only_floor_for_distortion_regressions(

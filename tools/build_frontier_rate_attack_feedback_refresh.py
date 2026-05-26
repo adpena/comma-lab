@@ -302,6 +302,28 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--receiver-closed-rate-packet",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Receiver-closed packet_manifest.json or archive_manifest.json for a "
+            "materialized rate recode whose saved bytes should enter the repair "
+            "budget planner. May repeat."
+        ),
+    )
+    parser.add_argument(
+        "--receiver-closed-rate-parent",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Parent packet/archive manifest used to compute saved bytes for "
+            "--receiver-closed-rate-packet. Supply once for all packets or once "
+            "per packet."
+        ),
+    )
+    parser.add_argument(
         "--repair-palette-mode",
         action="append",
         default=[],
@@ -1446,6 +1468,8 @@ def main(argv: list[str] | None = None) -> int:
             repair_dynamics_palette_priors=tuple(repair_dynamics_priors),
             repair_dynamics_prior_source_paths=tuple(repair_dynamics_source_paths),
             component_response_cache_roots=tuple(args.component_response_cache_root),
+            receiver_closed_rate_packet_paths=tuple(args.receiver_closed_rate_packet),
+            receiver_closed_rate_parent_paths=tuple(args.receiver_closed_rate_parent),
         )
         if generated_pair_frame_lattice is not None:
             report["generated_pair_frame_geometry_lattice_path"] = _display_path(
