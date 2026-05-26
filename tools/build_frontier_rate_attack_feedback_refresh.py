@@ -391,6 +391,8 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
         write_json_artifact(path, rate_budget_preservation_plan)
         artifacts["rate_budget_preservation_plan"] = _display_path(path)
     operation_materializer_bridge = report.get("operation_materializer_bridge")
+    operation_work_queue: dict[str, object] | None = None
+    operation_execution_queue: dict[str, object] | None = None
     if isinstance(operation_materializer_bridge, dict):
         path = output_dir / "operation_materializer_bridge.json"
         write_json_artifact(path, operation_materializer_bridge)
@@ -740,6 +742,20 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             ),
             receiver_closed_correction_budget_path=artifacts.get(
                 "receiver_closed_correction_budget"
+            ),
+            materializer_work_queue=(
+                operation_work_queue if isinstance(operation_work_queue, dict) else None
+            ),
+            materializer_work_queue_path=artifacts.get(
+                "operation_materializer_work_queue"
+            ),
+            materializer_execution_queue=(
+                operation_execution_queue
+                if isinstance(operation_execution_queue, dict)
+                else None
+            ),
+            materializer_execution_queue_path=artifacts.get(
+                "operation_materializer_execution_queue"
             ),
             results_root=str(report.get("results_root") or DEFAULT_RESULTS_ROOT),
             queue_id=(

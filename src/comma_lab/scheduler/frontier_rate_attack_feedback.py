@@ -198,6 +198,15 @@ REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA = (
 REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA = (
     "frontier_rate_attack_repair_budget_materialization_plan_row.v1"
 )
+REPAIR_BUDGET_MATERIALIZER_BINDING_REPORT_SCHEMA = (
+    "frontier_rate_attack_repair_budget_materializer_binding_report.v1"
+)
+REPAIR_BUDGET_MATERIALIZER_BINDING_ROW_SCHEMA = (
+    "frontier_rate_attack_repair_budget_materializer_binding_row.v1"
+)
+REPAIR_DYNAMICS_PALETTE_PRIOR_SCHEMA = (
+    "frontier_rate_attack_repair_dynamics_palette_prior.v1"
+)
 REPAIR_BUDGET_MATERIALIZATION_EXECUTION_REPORT_SCHEMA = (
     "frontier_rate_attack_repair_budget_materialization_execution_report.v1"
 )
@@ -6558,18 +6567,686 @@ def build_frontier_repair_budget_materialization_plan(
     return payload
 
 
+def _materializer_manifest_candidate_chain_ids(
+    manifest: Mapping[str, Any],
+) -> list[str]:
+    ids: list[str] = []
+    for key in (
+        "repair_budget_candidate_chain_id",
+        "candidate_chain_id",
+        "candidate_id",
+    ):
+        value = manifest.get(key)
+        if isinstance(value, str) and value.strip():
+            ids.append(value.strip())
+    for key in (
+        "repair_budget_candidate_chain_ids",
+        "candidate_chain_ids",
+        "candidate_ids",
+    ):
+        ids.extend(_string_list(manifest.get(key)))
+    return _unique_strings(ids)
+
+
+def _palette_modes_from_mapping(payload: Mapping[str, Any]) -> list[str]:
+    modes: list[str] = []
+    for key in (
+        "selector_palette",
+        "palette",
+        "mode_palette",
+        "palette_modes",
+        "canonical_palette",
+        "repair_palette_modes",
+    ):
+        value = payload.get(key)
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+            modes.extend(_string_list(value))
+    for key in (
+        "archive_manifest",
+        "packet_manifest",
+        "selector_manifest",
+        "repair_dynamics_prior",
+        "selector",
+        "fec6_selector",
+    ):
+        nested = payload.get(key)
+        if isinstance(nested, Mapping):
+            modes.extend(_palette_modes_from_mapping(nested))
+    return _unique_strings(modes)
+
+
+def _palette_mode_frame_index(mode: str) -> int | None:
+    if not mode.startswith("frame"):
+        return None
+    suffix = mode[len("frame") :]
+    number = suffix.split("_", 1)[0]
+    return int(number) if number.isdigit() else None
+
+
+def _palette_mode_family(mode: str) -> str:
+    if mode == "none":
+        return "identity"
+    if "blue_chroma" in mode:
+        return "blue_chroma"
+    if "luma_bias" in mode:
+        return "luma_bias"
+    if "rgb_bias" in mode:
+        return "rgb_bias"
+    if "roll_" in mode:
+        return "geometry_roll"
+    return "other"
+
+
+def _increment_count(counts: dict[str, int], key: str) -> None:
+    counts[key] = counts.get(key, 0) + 1
+
+
+def _repair_dynamics_palette_prior(
+    modes: Sequence[str],
+    *,
+    source: str,
+) -> dict[str, Any]:
+    palette_modes = _unique_strings(modes)
+    if not palette_modes:
+        return {}
+    frame_counts: dict[str, int] = {}
+    family_counts: dict[str, int] = {}
+    for mode in palette_modes:
+        frame_index = _palette_mode_frame_index(mode)
+        frame_key = f"frame{frame_index}" if frame_index is not None else "no_frame"
+        _increment_count(frame_counts, frame_key)
+        _increment_count(family_counts, _palette_mode_family(mode))
+    total = len(palette_modes)
+    identity_count = family_counts.get("identity", 0)
+    non_identity_total = max(0, total - identity_count)
+    frame0_count = frame_counts.get("frame0", 0)
+    frame1_count = frame_counts.get("frame1", 0)
+    color_family_count = sum(
+        family_counts.get(key, 0)
+        for key in ("blue_chroma", "luma_bias", "rgb_bias")
+    )
+    hints: list[str] = []
+    if frame0_count:
+        hints.append("frame0_palette_modes_are_first_class_repair_operators")
+    if non_identity_total and frame0_count == non_identity_total:
+        hints.append("empirical_non_identity_palette_is_all_frame0")
+    if frame1_count == 0:
+        hints.append("do_not_assume_frame1_direct_repair_mode_exists")
+    if color_family_count:
+        hints.append("prioritize_global_chroma_luma_rgb_bias_repair_before_pixel_leaf_search")
+    if family_counts.get("geometry_roll", 0):
+        hints.append("keep_frame0_roll_as_geometry_interaction_term")
+    return {
+        "schema": REPAIR_DYNAMICS_PALETTE_PRIOR_SCHEMA,
+        "source": source,
+        "palette_modes": palette_modes,
+        "mode_count": total,
+        "identity_mode_count": identity_count,
+        "non_identity_mode_count": non_identity_total,
+        "frame_mode_counts": dict(sorted(frame_counts.items())),
+        "mode_family_counts": dict(sorted(family_counts.items())),
+        "frame0_mode_count": frame0_count,
+        "frame1_mode_count": frame1_count,
+        "frame0_mode_fraction": frame0_count / total,
+        "frame0_non_identity_fraction": (
+            frame0_count / non_identity_total if non_identity_total else 0.0
+        ),
+        "zero_frame1_modes": frame1_count == 0,
+        "dominant_dynamics_interpretation": (
+            "frame0_global_color_geometry_calibration_prior"
+            if frame0_count and frame1_count == 0
+            else "mixed_or_unclassified_palette_prior"
+        ),
+        "repair_waterfill_hints": _unique_strings(hints),
+        "action_functional_implications": [
+            "treat_frame0_palette_repairs_as_global_interaction_terms",
+            "remeasure_parent_child_synergy_before_budget_spend",
+            "do_not_rank_frame1_repairs_without_empirical_component_response",
+        ],
+        "budget_spend_allowed": False,
+        "allowed_use": "repair_dynamics_prior_for_local_waterfill_planning_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _aggregate_repair_dynamics_priors(
+    priors: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    modes: list[str] = []
+    sources: list[str] = []
+    for prior in priors:
+        if not isinstance(prior, Mapping):
+            continue
+        modes.extend(_string_list(prior.get("palette_modes")))
+        source = str(prior.get("source") or "").strip()
+        if source:
+            sources.append(source)
+    aggregate = _repair_dynamics_palette_prior(
+        modes,
+        source="repair_budget_materializer_binding_report_aggregate",
+    )
+    if aggregate:
+        aggregate["source_prior_count"] = len(priors)
+        aggregate["source_prior_refs"] = _unique_strings(sources)
+    return aggregate
+
+
+def _materializer_manifest_record(
+    *,
+    manifest: Mapping[str, Any],
+    manifest_path: str | Path | None,
+) -> dict[str, Any]:
+    require_no_truthy_authority_fields(
+        manifest,
+        context=f"repair_budget_materializer_manifest:{manifest_path or '<inline>'}",
+    )
+    candidate_archive = (
+        manifest.get("candidate_archive")
+        if isinstance(manifest.get("candidate_archive"), Mapping)
+        else {}
+    )
+    source_archive = (
+        manifest.get("source_archive")
+        if isinstance(manifest.get("source_archive"), Mapping)
+        else {}
+    )
+    receiver_verification = (
+        manifest.get("receiver_verification")
+        if isinstance(manifest.get("receiver_verification"), Mapping)
+        else {}
+    )
+    candidate_archive_path = str(candidate_archive.get("path") or "").strip()
+    candidate_archive_sha = str(candidate_archive.get("sha256") or "").strip()
+    runtime_proof_path = str(
+        manifest.get("runtime_consumption_proof_path")
+        or receiver_verification.get("proof_path")
+        or ""
+    ).strip()
+    runtime_proof_present = (
+        bool(runtime_proof_path)
+        or receiver_verification.get("proof_present") is True
+        or receiver_verification.get("runtime_consumption_proof_passed") is True
+    )
+    receiver_contract_satisfied = (
+        manifest.get("receiver_contract_satisfied") is True
+        or receiver_verification.get("receiver_contract_satisfied") is True
+    )
+    byte_closed = manifest.get("byte_closed_candidate_emitted") is True
+    selector_palette_modes = _palette_modes_from_mapping(manifest)
+    repair_dynamics_prior = _repair_dynamics_palette_prior(
+        selector_palette_modes,
+        source=str(manifest_path or manifest.get("archive_sha256") or "inline_manifest"),
+    )
+    return {
+        "schema": "frontier_rate_attack_materializer_manifest_binding_input.v1",
+        "manifest_path": str(manifest_path or ""),
+        "manifest_schema": manifest.get("schema"),
+        "materializer_id": manifest.get("materializer_id"),
+        "target_kind": manifest.get("target_kind"),
+        "candidate_chain_ids": _materializer_manifest_candidate_chain_ids(manifest),
+        "byte_closed_candidate_emitted": byte_closed,
+        "candidate_archive_path": candidate_archive_path or None,
+        "candidate_archive_sha256": candidate_archive_sha or None,
+        "candidate_archive_bytes": candidate_archive.get("bytes"),
+        "source_archive_path": source_archive.get("path"),
+        "source_archive_sha256": source_archive.get("sha256"),
+        "runtime_consumption_proof_path": runtime_proof_path or None,
+        "runtime_consumption_proof_present": runtime_proof_present,
+        "receiver_contract_kind": manifest.get("receiver_contract_kind"),
+        "receiver_contract_satisfied": receiver_contract_satisfied,
+        "runtime_adapter_ready": manifest.get("runtime_adapter_ready") is True,
+        "readiness_blockers": _string_list(manifest.get("readiness_blockers")),
+        "selector_palette_modes": selector_palette_modes,
+        "repair_dynamics_prior": repair_dynamics_prior,
+        "candidate_archive_materialized": bool(
+            byte_closed and candidate_archive_path and candidate_archive_sha
+        ),
+        "receiver_consumed": bool(runtime_proof_present and receiver_contract_satisfied),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _load_materializer_manifest_records(
+    *,
+    repo_root: str | Path,
+    materializer_manifests: Sequence[Mapping[str, Any]] = (),
+    materializer_manifest_paths: Sequence[str | Path] = (),
+) -> tuple[list[dict[str, Any]], list[str]]:
+    repo = Path(repo_root)
+    records: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    for manifest in materializer_manifests:
+        records.append(
+            _materializer_manifest_record(manifest=manifest, manifest_path=None)
+        )
+    for raw_path in materializer_manifest_paths:
+        path = _resolve_path(raw_path, repo_root=repo)
+        if not path.is_file():
+            blockers.append(f"materializer_manifest_missing:{raw_path}")
+            continue
+        payload = _load_json(path)
+        records.append(
+            _materializer_manifest_record(
+                manifest=payload,
+                manifest_path=_repo_rel(path, repo),
+            )
+        )
+    return records, _unique_strings(blockers)
+
+
+def _expected_materializer_manifest_paths_from_queue(
+    queue: Mapping[str, Any] | None,
+) -> list[str]:
+    if not isinstance(queue, Mapping):
+        return []
+    paths: list[str] = []
+    for row in queue.get("rows") or []:
+        if not isinstance(row, Mapping):
+            continue
+        command = row.get("command")
+        if isinstance(command, Sequence) and not isinstance(command, (str, bytes)):
+            for index, item in enumerate(command[:-1]):
+                if item == "--output-manifest":
+                    paths.append(str(command[index + 1]))
+        for condition in row.get("postconditions") or []:
+            if not isinstance(condition, Mapping):
+                continue
+            path = condition.get("path")
+            if isinstance(path, str) and path.strip():
+                paths.append(path.strip())
+    for experiment in queue.get("experiments") or []:
+        if not isinstance(experiment, Mapping):
+            continue
+        for step in experiment.get("steps") or []:
+            if not isinstance(step, Mapping):
+                continue
+            for condition in step.get("postconditions") or []:
+                if not isinstance(condition, Mapping):
+                    continue
+                path = condition.get("path")
+                if isinstance(path, str) and path.strip():
+                    paths.append(path.strip())
+    return _unique_strings(paths)
+
+
+def _materializer_work_queue_summary(
+    queue: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if not isinstance(queue, Mapping):
+        return {
+            "present": False,
+            "schema": None,
+            "row_count": 0,
+            "executable_row_count": 0,
+            "expected_manifest_paths": [],
+            **FALSE_AUTHORITY,
+        }
+    return {
+        "present": True,
+        "schema": queue.get("schema"),
+        "row_count": queue.get("row_count"),
+        "executable_row_count": queue.get("executable_row_count"),
+        "blocked_row_count": queue.get("blocked_row_count"),
+        "expected_manifest_paths": _expected_materializer_manifest_paths_from_queue(queue),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _direct_manifest_ready(record: Mapping[str, Any]) -> bool:
+    return (
+        record.get("candidate_archive_materialized") is True
+        and record.get("runtime_consumption_proof_present") is True
+        and record.get("receiver_consumed") is True
+    )
+
+
+def _repair_budget_materializer_binding_row(
+    *,
+    plan_row: Mapping[str, Any],
+    manifest_records: Sequence[Mapping[str, Any]],
+    parent_candidate_chain_id: str,
+    bound_parent_ids: set[str],
+) -> dict[str, Any]:
+    candidate_chain_id = str(plan_row.get("candidate_chain_id") or "")
+    candidate_kind = str(plan_row.get("candidate_kind") or "unknown_candidate_kind")
+    operator_terms = [
+        term
+        for term in plan_row.get("operator_action_terms") or []
+        if isinstance(term, Mapping)
+    ]
+    required_term_ids = _unique_strings(
+        term.get("operator_action_id") for term in operator_terms
+    )
+    required_target_kinds = _unique_strings(
+        (
+            term.get("target_kind")
+            or (
+                term.get("T_i", {}).get("target_kind")
+                if isinstance(term.get("T_i"), Mapping)
+                else None
+            )
+        )
+        for term in operator_terms
+    )
+    direct_matches = [
+        record
+        for record in manifest_records
+        if candidate_chain_id
+        and candidate_chain_id in set(record.get("candidate_chain_ids") or [])
+    ]
+    required_target_kind_set = set(required_target_kinds)
+    coverage_matches = [
+        record
+        for record in manifest_records
+        if str(record.get("target_kind") or "") in required_target_kind_set
+    ]
+    direct_ready = [record for record in direct_matches if _direct_manifest_ready(record)]
+    selected = direct_ready[0] if direct_ready else {}
+    blockers: list[str] = []
+    if not candidate_chain_id:
+        blockers.append("candidate_chain_id_missing")
+    if candidate_kind != "rate_only_floor_parent":
+        if str(plan_row.get("parent_candidate_chain_id") or "") != parent_candidate_chain_id:
+            blockers.append("child_parent_candidate_chain_id_mismatch")
+        if parent_candidate_chain_id not in bound_parent_ids:
+            blockers.append("parent_rate_only_archive_materialization_required")
+    if direct_ready:
+        if candidate_kind == "rate_only_floor_parent":
+            bound_parent_ids.add(candidate_chain_id)
+    elif direct_matches:
+        blockers.append("direct_materializer_manifest_not_receiver_consumed")
+    elif coverage_matches:
+        blockers.append("individual_materializer_manifests_not_composed_single_candidate_archive")
+    else:
+        blockers.append("candidate_chain_materializer_manifest_missing")
+    for record in direct_matches:
+        blockers.extend(_string_list(record.get("readiness_blockers")))
+    candidate_archive_materialized = bool(selected)
+    receiver_consumed = bool(selected)
+    return {
+        "schema": REPAIR_BUDGET_MATERIALIZER_BINDING_ROW_SCHEMA,
+        "candidate_chain_id": candidate_chain_id,
+        "candidate_kind": candidate_kind,
+        "chain_id": plan_row.get("chain_id"),
+        "materialization_order": plan_row.get("materialization_order"),
+        "parent_candidate_chain_id": plan_row.get("parent_candidate_chain_id"),
+        "direct_manifest_count": len(direct_matches),
+        "coverage_manifest_count": len(coverage_matches),
+        "required_operator_action_term_count": len(required_term_ids),
+        "covered_operator_action_term_count": (
+            sum(
+                1
+                for term in operator_terms
+                if str(
+                    term.get("target_kind")
+                    or (
+                        term.get("T_i", {}).get("target_kind")
+                        if isinstance(term.get("T_i"), Mapping)
+                        else ""
+                    )
+                )
+                in {
+                    str(record.get("target_kind") or "")
+                    for record in coverage_matches
+                }
+            )
+            if coverage_matches and not direct_ready
+            else 0
+        ),
+        "required_operator_action_ids": required_term_ids,
+        "required_target_kinds": required_target_kinds,
+        "direct_manifest_paths": _unique_strings(
+            record.get("manifest_path") for record in direct_matches
+        ),
+        "coverage_manifest_paths": _unique_strings(
+            record.get("manifest_path") for record in coverage_matches
+        ),
+        "candidate_archive_path": selected.get("candidate_archive_path"),
+        "candidate_archive_sha256": selected.get("candidate_archive_sha256"),
+        "runtime_consumption_proof_path": selected.get(
+            "runtime_consumption_proof_path"
+        ),
+        "repair_dynamics_prior": dict(
+            selected.get("repair_dynamics_prior")
+            if isinstance(selected.get("repair_dynamics_prior"), Mapping)
+            else {}
+        ),
+        "runtime_consumption_proof_present": bool(selected),
+        "receiver_consumed": receiver_consumed,
+        "component_response_replayed": (
+            plan_row.get("component_response_replayed") is True
+            or candidate_kind == "rate_only_floor_parent"
+        ),
+        "candidate_archive_materialized": candidate_archive_materialized,
+        "ready_for_materialization_execution_audit": candidate_archive_materialized
+        and receiver_consumed,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": _unique_strings(blockers),
+        "allowed_use": "repair_budget_materializer_binding_row_for_execution_audit",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_frontier_repair_budget_materializer_binding_report(
+    *,
+    repo_root: str | Path,
+    repair_budget_materialization_plan: Mapping[str, Any],
+    repair_budget_materialization_plan_path: str | Path | None = None,
+    materializer_work_queue: Mapping[str, Any] | None = None,
+    materializer_work_queue_path: str | Path | None = None,
+    materializer_execution_queue: Mapping[str, Any] | None = None,
+    materializer_execution_queue_path: str | Path | None = None,
+    materializer_manifests: Sequence[Mapping[str, Any]] = (),
+    materializer_manifest_paths: Sequence[str | Path] = (),
+    repair_palette_modes: Sequence[str] = (),
+) -> dict[str, Any]:
+    """Bind materializer outputs to repair-budget parent/child plan rows.
+
+    A leaf materializer manifest is not enough to promote a cumulative
+    rate-only parent. Parent/child rows become materialized only when a manifest
+    explicitly binds to that candidate chain id and carries receiver proof.
+    """
+
+    if (
+        repair_budget_materialization_plan.get("schema")
+        != REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA
+    ):
+        raise FrontierRateAttackFeedbackError(
+            "repair budget materialization plan has unexpected schema"
+        )
+    require_no_truthy_authority_fields(
+        repair_budget_materialization_plan,
+        context="repair_budget_materializer_binding_plan",
+    )
+    repo = Path(repo_root)
+    expected_paths = [
+        *_expected_materializer_manifest_paths_from_queue(materializer_work_queue),
+        *_expected_materializer_manifest_paths_from_queue(materializer_execution_queue),
+    ]
+    manifest_records, manifest_blockers = _load_materializer_manifest_records(
+        repo_root=repo,
+        materializer_manifests=materializer_manifests,
+        materializer_manifest_paths=(
+            *tuple(materializer_manifest_paths),
+            *tuple(expected_paths),
+        ),
+    )
+    repair_dynamics_priors: list[Mapping[str, Any]] = []
+    manual_prior = _repair_dynamics_palette_prior(
+        repair_palette_modes,
+        source="operator_supplied_repair_palette_modes",
+    )
+    if manual_prior:
+        repair_dynamics_priors.append(manual_prior)
+    for record in manifest_records:
+        prior = record.get("repair_dynamics_prior")
+        if isinstance(prior, Mapping) and prior:
+            repair_dynamics_priors.append(prior)
+    aggregate_repair_dynamics_prior = _aggregate_repair_dynamics_priors(
+        repair_dynamics_priors
+    )
+    parent_candidate_chain_id = str(
+        repair_budget_materialization_plan.get("parent_candidate_chain_id") or ""
+    )
+    sorted_rows = sorted(
+        [
+            row
+            for row in repair_budget_materialization_plan.get("candidate_chain_rows") or []
+            if isinstance(row, Mapping)
+        ],
+        key=lambda row: (
+            _finite_int_or_none(row.get("materialization_order")) or 10**9,
+            str(row.get("candidate_chain_id") or ""),
+        ),
+    )
+    bound_parent_ids: set[str] = set()
+    binding_rows = [
+        _repair_budget_materializer_binding_row(
+            plan_row=row,
+            manifest_records=manifest_records,
+            parent_candidate_chain_id=parent_candidate_chain_id,
+            bound_parent_ids=bound_parent_ids,
+        )
+        for row in sorted_rows
+    ]
+    bound_count = sum(
+        1 for row in binding_rows if row.get("candidate_archive_materialized") is True
+    )
+    blockers = [
+        "exact_auth_eval_required_before_score_or_promotion_claim",
+        *manifest_blockers,
+        *[
+            blocker
+            for row in binding_rows
+            for blocker in row.get("blockers") or []
+        ],
+    ]
+    if not binding_rows:
+        blockers.append("candidate_chain_rows_missing")
+    if bound_count < len(binding_rows):
+        blockers.append("not_all_candidate_chain_rows_bound_to_receiver_consumed_manifests")
+    payload = {
+        "schema": REPAIR_BUDGET_MATERIALIZER_BINDING_REPORT_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "chain_id": repair_budget_materialization_plan.get("chain_id"),
+        "source_materialization_plan_path": str(
+            repair_budget_materialization_plan_path or ""
+        ),
+        "source_materialization_plan_schema": repair_budget_materialization_plan.get(
+            "schema"
+        ),
+        "materializer_work_queue_path": str(materializer_work_queue_path or ""),
+        "materializer_execution_queue_path": str(
+            materializer_execution_queue_path or ""
+        ),
+        "materializer_work_queue_summary": _materializer_work_queue_summary(
+            materializer_work_queue
+        ),
+        "materializer_execution_queue_summary": _materializer_work_queue_summary(
+            materializer_execution_queue
+        ),
+        "materializer_manifest_count": len(manifest_records),
+        "materializer_manifest_paths": _unique_strings(
+            record.get("manifest_path") for record in manifest_records
+        ),
+        "repair_dynamics_prior_count": len(repair_dynamics_priors),
+        "repair_dynamics_palette_prior": aggregate_repair_dynamics_prior,
+        "candidate_chain_row_count": len(binding_rows),
+        "candidate_archive_materialized_count": bound_count,
+        "candidate_archive_materialized": bool(binding_rows)
+        and bound_count == len(binding_rows),
+        "runtime_consumption_proof_present_count": sum(
+            1
+            for row in binding_rows
+            if row.get("runtime_consumption_proof_present") is True
+        ),
+        "receiver_consumed_count": sum(
+            1 for row in binding_rows if row.get("receiver_consumed") is True
+        ),
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_materializer_execution": False,
+        "ready_for_exact_eval_dispatch": False,
+        "binding_rows": binding_rows,
+        "blockers": _unique_strings(blockers),
+        "recommended_next_action": (
+            "run_or_compose_receiver_consumed_materializer_manifests_for_each_"
+            "repair_budget_candidate_chain_row"
+        ),
+        "allowed_use": "repair_budget_materializer_binding_for_execution_audit_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_promotion_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        payload,
+        context="frontier_repair_budget_materializer_binding_report",
+    )
+    return payload
+
+
+def _binding_rows_by_candidate_id(
+    binding_report: Mapping[str, Any] | None,
+) -> dict[str, Mapping[str, Any]]:
+    if not isinstance(binding_report, Mapping):
+        return {}
+    if binding_report.get("schema") != REPAIR_BUDGET_MATERIALIZER_BINDING_REPORT_SCHEMA:
+        raise FrontierRateAttackFeedbackError(
+            "repair budget materializer binding report has unexpected schema"
+        )
+    require_no_truthy_authority_fields(
+        binding_report,
+        context="repair_budget_materializer_binding_report",
+    )
+    rows: dict[str, Mapping[str, Any]] = {}
+    for row in binding_report.get("binding_rows") or []:
+        if not isinstance(row, Mapping):
+            continue
+        candidate_id = str(row.get("candidate_chain_id") or "")
+        if candidate_id:
+            rows[candidate_id] = row
+    return rows
+
+
+_BINDING_CLEARS_PLAN_BLOCKERS = frozenset(
+    {
+        "rate_only_candidate_archive_materialization_missing",
+        "repair_candidate_archive_materialization_missing",
+        "candidate_archive_materialization_missing",
+        "receiver_runtime_consumption_proof_missing",
+        "parent_rate_only_archive_materialization_required",
+    }
+)
+
+
 def _repair_budget_materialization_execution_row(
     *,
     row: Mapping[str, Any],
     parent_candidate_chain_id: str,
     materialized_parent_ids: set[str],
     materialization_order_seen: list[int],
+    binding_rows_by_candidate_id: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     candidate_chain_id = str(row.get("candidate_chain_id") or "")
     candidate_kind = str(row.get("candidate_kind") or "unknown_candidate_kind")
     order = _finite_int_or_none(row.get("materialization_order")) or 0
     materialization_order_seen.append(order)
+    binding_row = (
+        binding_rows_by_candidate_id.get(candidate_chain_id)
+        if isinstance(binding_rows_by_candidate_id, Mapping)
+        else None
+    )
     blockers = _string_list(row.get("blockers"))
+    if isinstance(binding_row, Mapping):
+        blockers = [
+            blocker
+            for blocker in blockers
+            if blocker not in _BINDING_CLEARS_PLAN_BLOCKERS
+        ]
+        blockers.extend(_string_list(binding_row.get("blockers")))
     if not candidate_chain_id:
         blockers.append("candidate_chain_id_missing")
     if order <= 0:
@@ -6584,6 +7261,25 @@ def _repair_budget_materialization_execution_row(
     runtime_proof_present = row.get("runtime_consumption_proof_present") is True
     receiver_consumed = row.get("receiver_consumed") is True
     component_replayed = row.get("component_response_replayed") is True
+    if isinstance(binding_row, Mapping):
+        archive_path = str(
+            binding_row.get("candidate_archive_path") or archive_path or ""
+        ).strip()
+        archive_materialized = (
+            archive_materialized
+            or binding_row.get("candidate_archive_materialized") is True
+        )
+        runtime_proof_present = (
+            runtime_proof_present
+            or binding_row.get("runtime_consumption_proof_present") is True
+        )
+        receiver_consumed = (
+            receiver_consumed or binding_row.get("receiver_consumed") is True
+        )
+        component_replayed = (
+            component_replayed
+            or binding_row.get("component_response_replayed") is True
+        )
     if archive_materialized and candidate_kind == "rate_only_floor_parent":
         materialized_parent_ids.add(candidate_chain_id)
     if not archive_materialized:
@@ -6657,6 +7353,8 @@ def build_frontier_repair_budget_materialization_execution_report(
     *,
     repair_budget_materialization_plan: Mapping[str, Any],
     repair_budget_materialization_plan_path: str | Path | None = None,
+    materializer_binding_report: Mapping[str, Any] | None = None,
+    materializer_binding_report_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Audit repair-budget candidate-chain materialization readiness."""
 
@@ -6680,6 +7378,9 @@ def build_frontier_repair_budget_materialization_execution_report(
     parent_candidate_chain_id = str(
         repair_budget_materialization_plan.get("parent_candidate_chain_id") or ""
     )
+    binding_rows_by_candidate_id = _binding_rows_by_candidate_id(
+        materializer_binding_report
+    )
     sorted_rows = sorted(
         plan_rows,
         key=lambda row: (
@@ -6695,29 +7396,10 @@ def build_frontier_repair_budget_materialization_execution_report(
             parent_candidate_chain_id=parent_candidate_chain_id,
             materialized_parent_ids=materialized_parent_ids,
             materialization_order_seen=materialization_order_seen,
+            binding_rows_by_candidate_id=binding_rows_by_candidate_id,
         )
         for row in sorted_rows
     ]
-    blockers = [
-        "candidate_archives_not_materialized",
-        "receiver_runtime_consumption_proof_missing",
-        "exact_auth_eval_required_before_score_or_promotion_claim",
-    ]
-    if not plan_rows:
-        blockers.append("candidate_chain_rows_missing")
-    if not parent_candidate_chain_id:
-        blockers.append("parent_candidate_chain_id_missing")
-    if materialization_order_seen and materialization_order_seen != sorted(
-        materialization_order_seen
-    ):
-        blockers.append("candidate_chain_rows_not_sorted_by_materialization_order")
-    if not execution_rows or execution_rows[0].get("candidate_kind") != "rate_only_floor_parent":
-        blockers.append("rate_only_floor_parent_not_first")
-    blockers.extend(
-        blocker
-        for row in execution_rows
-        for blocker in row.get("blockers") or []
-    )
     ready_count = sum(
         1 for row in execution_rows if row.get("ready_for_local_materialization") is True
     )
@@ -6726,6 +7408,29 @@ def build_frontier_repair_budget_materialization_execution_report(
     )
     runtime_proof_count = sum(
         1 for row in execution_rows if row.get("runtime_consumption_proof_present") is True
+    )
+    blockers = ["exact_auth_eval_required_before_score_or_promotion_claim"]
+    if archive_materialized_count < len(execution_rows) or not execution_rows:
+        blockers.append("candidate_archives_not_materialized")
+    if runtime_proof_count < len(execution_rows) or not execution_rows:
+        blockers.append("receiver_runtime_consumption_proof_missing")
+    if not plan_rows:
+        blockers.append("candidate_chain_rows_missing")
+    if not parent_candidate_chain_id:
+        blockers.append("parent_candidate_chain_id_missing")
+    if materialization_order_seen and materialization_order_seen != sorted(
+        materialization_order_seen
+    ):
+        blockers.append("candidate_chain_rows_not_sorted_by_materialization_order")
+    if (
+        not execution_rows
+        or execution_rows[0].get("candidate_kind") != "rate_only_floor_parent"
+    ):
+        blockers.append("rate_only_floor_parent_not_first")
+    blockers.extend(
+        blocker
+        for row in execution_rows
+        for blocker in row.get("blockers") or []
     )
     payload = {
         "schema": REPAIR_BUDGET_MATERIALIZATION_EXECUTION_REPORT_SCHEMA,
@@ -6737,6 +7442,15 @@ def build_frontier_repair_budget_materialization_execution_report(
         "source_materialization_plan_schema": repair_budget_materialization_plan.get(
             "schema"
         ),
+        "source_materializer_binding_report_path": str(
+            materializer_binding_report_path or ""
+        ),
+        "source_materializer_binding_report_schema": (
+            materializer_binding_report.get("schema")
+            if isinstance(materializer_binding_report, Mapping)
+            else None
+        ),
+        "materializer_binding_row_count": len(binding_rows_by_candidate_id),
         "candidate_chain_row_count": len(execution_rows),
         "parent_candidate_chain_id": parent_candidate_chain_id or None,
         "rate_only_floor_parent_first": bool(
@@ -6818,6 +7532,10 @@ def build_frontier_repair_budget_waterfill_queue(
     targeted_component_correction_response_harvest_path: str | Path | None = None,
     receiver_closed_correction_budget: Mapping[str, Any] | None = None,
     receiver_closed_correction_budget_path: str | Path | None = None,
+    materializer_work_queue: Mapping[str, Any] | None = None,
+    materializer_work_queue_path: str | Path | None = None,
+    materializer_execution_queue: Mapping[str, Any] | None = None,
+    materializer_execution_queue_path: str | Path | None = None,
     results_root: str | Path = DEFAULT_RESULTS_ROOT,
     queue_id: str = "frontier_repair_budget_waterfill_queue",
     chain_limit: int = 4,
@@ -7004,6 +7722,11 @@ def build_frontier_repair_budget_waterfill_queue(
             / _slug_token(chain_id)
             / "repair_budget_materialization_plan.json"
         )
+        materializer_binding_report_path = (
+            queue_root
+            / _slug_token(chain_id)
+            / "repair_budget_materializer_binding_report.json"
+        )
         execution_report_path = (
             queue_root
             / _slug_token(chain_id)
@@ -7011,7 +7734,24 @@ def build_frontier_repair_budget_waterfill_queue(
         )
         work_order_ref = _repo_rel(work_order_path, repo)
         materialization_plan_ref = _repo_rel(materialization_plan_path, repo)
+        materializer_binding_report_ref = _repo_rel(
+            materializer_binding_report_path,
+            repo,
+        )
         execution_report_ref = _repo_rel(execution_report_path, repo)
+        materializer_work_queue_ref = (
+            _repo_rel(_resolve_path(materializer_work_queue_path, repo_root=repo), repo)
+            if materializer_work_queue_path is not None
+            else ""
+        )
+        materializer_execution_queue_ref = (
+            _repo_rel(
+                _resolve_path(materializer_execution_queue_path, repo_root=repo),
+                repo,
+            )
+            if materializer_execution_queue_path is not None
+            else ""
+        )
         metadata = {
             "schema": REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA,
             "chain_id": chain_id,
@@ -7037,8 +7777,24 @@ def build_frontier_repair_budget_waterfill_queue(
             ),
             "preserve_rate_only_archive_before_budget_spend": True,
             "candidate_chain_materialization_plan_path": materialization_plan_ref,
+            "candidate_chain_materializer_binding_report_path": (
+                materializer_binding_report_ref
+            ),
             "candidate_chain_execution_report_path": execution_report_ref,
             "candidate_archive_materialized": False,
+            "materializer_work_queue_schema": (
+                materializer_work_queue.get("schema")
+                if isinstance(materializer_work_queue, Mapping)
+                else None
+            ),
+            "materializer_execution_queue_schema": (
+                materializer_execution_queue.get("schema")
+                if isinstance(materializer_execution_queue, Mapping)
+                else None
+            ),
+            "materializer_work_queue_path": materializer_work_queue_ref or None,
+            "materializer_execution_queue_path": materializer_execution_queue_ref
+            or None,
             "queue_actuation_ready": True,
             "budget_spend_allowed": False,
             "ready_for_exact_eval_dispatch": False,
@@ -7173,6 +7929,75 @@ def build_frontier_repair_budget_waterfill_queue(
                         },
                     },
                     {
+                        "id": "bind_repair_budget_materializer_execution",
+                        "kind": "command",
+                        "command": [
+                            ".venv/bin/python",
+                            "tools/build_frontier_repair_budget_materializer_binding_report.py",
+                            "--materialization-plan",
+                            materialization_plan_ref,
+                            "--binding-report-out",
+                            materializer_binding_report_ref,
+                            *(
+                                [
+                                    "--materializer-work-queue",
+                                    materializer_work_queue_ref,
+                                ]
+                                if materializer_work_queue_ref
+                                else []
+                            ),
+                            *(
+                                [
+                                    "--materializer-execution-queue",
+                                    materializer_execution_queue_ref,
+                                ]
+                                if materializer_execution_queue_ref
+                                else []
+                            ),
+                            "--overwrite",
+                        ],
+                        "requires": ["emit_repair_budget_materialization_plan"],
+                        "resources": {"kind": "local_io_heavy"},
+                        "timeout_seconds": 120,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": materializer_binding_report_ref,
+                                "key": "schema",
+                                "equals": (
+                                    REPAIR_BUDGET_MATERIALIZER_BINDING_REPORT_SCHEMA
+                                ),
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": materializer_binding_report_ref,
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": materializer_binding_report_ref,
+                                "key": "ready_for_exact_eval_dispatch",
+                                "equals": False,
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": materializer_binding_report_ref,
+                                "key": "budget_spend_allowed",
+                                "equals": False,
+                            },
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [materializer_binding_report_ref],
+                            "input_artifact_paths": _unique_strings(
+                                [
+                                    materialization_plan_ref,
+                                    materializer_work_queue_ref,
+                                    materializer_execution_queue_ref,
+                                ]
+                            ),
+                            "include_postcondition_paths": True,
+                        },
+                    },
+                    {
                         "id": "audit_repair_budget_materialization_execution",
                         "kind": "command",
                         "command": [
@@ -7180,11 +8005,13 @@ def build_frontier_repair_budget_waterfill_queue(
                             "tools/build_frontier_repair_budget_materialization_execution_report.py",
                             "--materialization-plan",
                             materialization_plan_ref,
+                            "--materializer-binding-report",
+                            materializer_binding_report_ref,
                             "--execution-report-out",
                             execution_report_ref,
                             "--overwrite",
                         ],
-                        "requires": ["emit_repair_budget_materialization_plan"],
+                        "requires": ["bind_repair_budget_materializer_execution"],
                         "resources": {"kind": "local_io_heavy"},
                         "timeout_seconds": 120,
                         "postconditions": [
@@ -7221,7 +8048,10 @@ def build_frontier_repair_budget_waterfill_queue(
                         ],
                         "telemetry": {
                             "artifact_paths": [execution_report_ref],
-                            "input_artifact_paths": [materialization_plan_ref],
+                            "input_artifact_paths": [
+                                materialization_plan_ref,
+                                materializer_binding_report_ref,
+                            ],
                             "include_postcondition_paths": True,
                         },
                     },
@@ -14805,9 +15635,12 @@ __all__ = [
     "REPAIR_BUDGET_MATERIALIZATION_EXECUTION_ROW_SCHEMA",
     "REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA",
     "REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA",
+    "REPAIR_BUDGET_MATERIALIZER_BINDING_REPORT_SCHEMA",
+    "REPAIR_BUDGET_MATERIALIZER_BINDING_ROW_SCHEMA",
     "REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA",
     "REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA",
     "REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA",
+    "REPAIR_DYNAMICS_PALETTE_PRIOR_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_CHAIN_MATERIALIZER_HANDOFF_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_QUEUE_METADATA_SCHEMA",
@@ -14834,6 +15667,7 @@ __all__ = [
     "build_frontier_receiver_repair_work_order",
     "build_frontier_repair_budget_materialization_execution_report",
     "build_frontier_repair_budget_materialization_plan",
+    "build_frontier_repair_budget_materializer_binding_report",
     "build_frontier_repair_budget_waterfill_queue",
     "build_frontier_repair_budget_waterfill_work_order",
     "build_frontier_targeted_component_correction_acquisition",

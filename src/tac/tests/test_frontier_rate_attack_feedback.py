@@ -34,6 +34,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     REPAIR_BUDGET_MATERIALIZATION_EXECUTION_ROW_SCHEMA,
     REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA,
     REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA,
+    REPAIR_BUDGET_MATERIALIZER_BINDING_REPORT_SCHEMA,
     REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA,
     REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
@@ -54,6 +55,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     build_frontier_receiver_repair_work_order,
     build_frontier_repair_budget_materialization_execution_report,
     build_frontier_repair_budget_materialization_plan,
+    build_frontier_repair_budget_materializer_binding_report,
     build_frontier_repair_budget_waterfill_queue,
     build_frontier_repair_budget_waterfill_work_order,
     build_frontier_targeted_component_correction_acquisition,
@@ -2937,10 +2939,23 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert child_rows[0]["allocation_action_term"]["schema"] == (
         REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
     )
+    binding_report = build_frontier_repair_budget_materializer_binding_report(
+        repo_root=REPO_ROOT,
+        repair_budget_materialization_plan=materialization_plan,
+        repair_budget_materialization_plan_path=tmp_path
+        / "repair_budget_materialization_plan.json",
+    )
+    assert binding_report["schema"] == REPAIR_BUDGET_MATERIALIZER_BINDING_REPORT_SCHEMA
+    assert binding_report["candidate_archive_materialized"] is False
+    assert binding_report["ready_for_exact_eval_dispatch"] is False
+    _assert_false_authority(binding_report)
     execution_report = build_frontier_repair_budget_materialization_execution_report(
         repair_budget_materialization_plan=materialization_plan,
         repair_budget_materialization_plan_path=tmp_path
         / "repair_budget_materialization_plan.json",
+        materializer_binding_report=binding_report,
+        materializer_binding_report_path=tmp_path
+        / "repair_budget_materializer_binding_report.json",
     )
     assert execution_report["schema"] == (
         REPAIR_BUDGET_MATERIALIZATION_EXECUTION_REPORT_SCHEMA
@@ -3032,10 +3047,39 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     )
     assert materialization_materialized["candidate_archive_materialized"] is False
     _assert_false_authority(materialization_materialized)
-    execution_step = repair_waterfill_experiment["steps"][2]
+    binding_step = repair_waterfill_experiment["steps"][2]
+    assert binding_step["command"][1] == (
+        "tools/build_frontier_repair_budget_materializer_binding_report.py"
+    )
+    result = subprocess.run(
+        [sys.executable, *binding_step["command"][1:]],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    binding_payload = json.loads(result.stdout)
+    assert binding_payload["candidate_archive_materialized"] is False
+    binding_report_path = Path(
+        binding_step["command"][
+            binding_step["command"].index("--binding-report-out") + 1
+        ]
+    )
+    binding_materialized = json.loads(
+        (REPO_ROOT / binding_report_path).read_text(encoding="utf-8")
+    )
+    assert (
+        binding_materialized["schema"]
+        == REPAIR_BUDGET_MATERIALIZER_BINDING_REPORT_SCHEMA
+    )
+    assert binding_materialized["candidate_archive_materialized"] is False
+    _assert_false_authority(binding_materialized)
+    execution_step = repair_waterfill_experiment["steps"][3]
     assert execution_step["command"][1] == (
         "tools/build_frontier_repair_budget_materialization_execution_report.py"
     )
+    assert "--materializer-binding-report" in execution_step["command"]
     result = subprocess.run(
         [sys.executable, *execution_step["command"][1:]],
         cwd=REPO_ROOT,

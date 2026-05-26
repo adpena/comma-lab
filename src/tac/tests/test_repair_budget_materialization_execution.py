@@ -12,10 +12,15 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     REPAIR_BUDGET_MATERIALIZATION_EXECUTION_ROW_SCHEMA,
     REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA,
     REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA,
+    REPAIR_BUDGET_MATERIALIZER_BINDING_REPORT_SCHEMA,
+    REPAIR_BUDGET_MATERIALIZER_BINDING_ROW_SCHEMA,
+    REPAIR_DYNAMICS_PALETTE_PRIOR_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA,
     build_frontier_repair_budget_materialization_execution_report,
+    build_frontier_repair_budget_materializer_binding_report,
     build_frontier_repair_budget_waterfill_queue,
 )
+from tac.fec6_selector_operator_space import FEC6_FIXED_K16_MODE_IDS
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -97,6 +102,49 @@ def _materialization_plan() -> dict[str, object]:
     }
 
 
+def _receiver_consumed_manifest(
+    tmp_path: Path,
+    *,
+    candidate_chain_id: str,
+    target_kind: str = "archive_section_entropy_recode_v1",
+    palette_modes: list[str] | None = None,
+) -> dict[str, object]:
+    archive_path = tmp_path / f"{candidate_chain_id}.zip"
+    proof_path = tmp_path / f"{candidate_chain_id}.proof.json"
+    archive_path.write_bytes(b"PK\x05\x06" + b"\0" * 18)
+    proof_path.write_text('{"receiver_consumed": true}\n', encoding="utf-8")
+    return {
+        "schema": "frontier_rate_attack_materializer_manifest_fixture.v1",
+        "materializer_id": "fixture_receiver_consumed_materializer",
+        "target_kind": target_kind,
+        "candidate_chain_id": candidate_chain_id,
+        "byte_closed_candidate_emitted": True,
+        "candidate_archive": {
+            "path": str(archive_path),
+            "sha256": "a" * 64,
+            "bytes": archive_path.stat().st_size,
+        },
+        "source_archive": {
+            "path": str(tmp_path / "source.zip"),
+            "sha256": "b" * 64,
+            "bytes": 128,
+        },
+        "runtime_consumption_proof_path": str(proof_path),
+        "receiver_contract_satisfied": True,
+        "receiver_verification": {
+            "proof_path": str(proof_path),
+            "proof_present": True,
+            "receiver_contract_satisfied": True,
+            "runtime_consumption_proof_passed": True,
+        },
+        "archive_manifest": {
+            "canonical_palette": list(palette_modes or []),
+        },
+        "readiness_blockers": [],
+        **FALSE_AUTHORITY,
+    }
+
+
 def test_repair_budget_materialization_execution_report_refuses_until_runtime_proof(
     tmp_path: Path,
 ) -> None:
@@ -150,6 +198,119 @@ def test_repair_budget_materialization_execution_report_refuses_until_runtime_pr
     materialized = json.loads(report_path.read_text(encoding="utf-8"))
     assert materialized["schema"] == REPAIR_BUDGET_MATERIALIZATION_EXECUTION_REPORT_SCHEMA
     assert materialized["exact_readiness_refusal"]["ready"] is False
+
+
+def test_repair_budget_materializer_binding_report_preserves_parent_fail_closed(
+    tmp_path: Path,
+) -> None:
+    plan = _materialization_plan()
+    parent_id = str(plan["parent_candidate_chain_id"])
+    pr110_palette = list(FEC6_FIXED_K16_MODE_IDS)
+    parent_manifest = _receiver_consumed_manifest(
+        tmp_path,
+        candidate_chain_id=parent_id,
+        palette_modes=pr110_palette,
+    )
+
+    binding_report = build_frontier_repair_budget_materializer_binding_report(
+        repo_root=REPO_ROOT,
+        repair_budget_materialization_plan=plan,
+        repair_budget_materialization_plan_path=tmp_path
+        / "repair_budget_materialization_plan.json",
+        materializer_manifests=[parent_manifest],
+    )
+
+    assert binding_report["schema"] == REPAIR_BUDGET_MATERIALIZER_BINDING_REPORT_SCHEMA
+    _assert_false_authority(binding_report)
+    assert binding_report["candidate_archive_materialized"] is False
+    assert binding_report["candidate_archive_materialized_count"] == 1
+    assert binding_report["repair_dynamics_prior_count"] == 1
+    assert (
+        "not_all_candidate_chain_rows_bound_to_receiver_consumed_manifests"
+        in binding_report["blockers"]
+    )
+    parent_row, child_row = binding_report["binding_rows"]
+    assert parent_row["schema"] == REPAIR_BUDGET_MATERIALIZER_BINDING_ROW_SCHEMA
+    assert parent_row["candidate_chain_id"] == parent_id
+    assert parent_row["candidate_archive_materialized"] is True
+    assert parent_row["runtime_consumption_proof_present"] is True
+    assert parent_row["receiver_consumed"] is True
+    parent_prior = parent_row["repair_dynamics_prior"]
+    assert parent_prior["schema"] == REPAIR_DYNAMICS_PALETTE_PRIOR_SCHEMA
+    assert parent_prior["mode_count"] == 16
+    assert parent_prior["frame0_mode_count"] == 15
+    assert parent_prior["frame1_mode_count"] == 0
+    assert parent_prior["zero_frame1_modes"] is True
+    assert parent_prior["dominant_dynamics_interpretation"] == (
+        "frame0_global_color_geometry_calibration_prior"
+    )
+    assert (
+        "empirical_non_identity_palette_is_all_frame0"
+        in parent_prior["repair_waterfill_hints"]
+    )
+    assert child_row["candidate_archive_materialized"] is False
+    assert "candidate_chain_materializer_manifest_missing" in child_row["blockers"]
+    aggregate_prior = binding_report["repair_dynamics_palette_prior"]
+    assert aggregate_prior["schema"] == REPAIR_DYNAMICS_PALETTE_PRIOR_SCHEMA
+    assert aggregate_prior["mode_count"] == 16
+    assert aggregate_prior["identity_mode_count"] == 1
+    assert aggregate_prior["frame0_mode_count"] == 15
+    assert aggregate_prior["frame1_mode_count"] == 0
+    assert aggregate_prior["frame0_non_identity_fraction"] == 1.0
+    assert aggregate_prior["zero_frame1_modes"] is True
+
+    execution_report = build_frontier_repair_budget_materialization_execution_report(
+        repair_budget_materialization_plan=plan,
+        repair_budget_materialization_plan_path=tmp_path
+        / "repair_budget_materialization_plan.json",
+        materializer_binding_report=binding_report,
+        materializer_binding_report_path=tmp_path
+        / "repair_budget_materializer_binding_report.json",
+    )
+
+    assert execution_report["schema"] == (
+        REPAIR_BUDGET_MATERIALIZATION_EXECUTION_REPORT_SCHEMA
+    )
+    assert execution_report["materializer_binding_row_count"] == 2
+    assert execution_report["candidate_archive_materialized_count"] == 1
+    assert execution_report["runtime_consumption_proof_present_count"] == 1
+    assert execution_report["execution_rows"][0]["candidate_archive_materialized"] is True
+    assert execution_report["execution_rows"][0]["receiver_consumed"] is True
+    assert execution_report["execution_rows"][1]["candidate_archive_materialized"] is False
+    assert execution_report["ready_for_exact_eval_dispatch"] is False
+    _assert_false_authority(execution_report)
+
+    plan_path = _write_json(tmp_path / "repair_budget_materialization_plan.json", plan)
+    manifest_path = _write_json(tmp_path / "parent_manifest.json", parent_manifest)
+    binding_path = tmp_path / "repair_budget_materializer_binding_report.json"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "tools/build_frontier_repair_budget_materializer_binding_report.py",
+            "--materialization-plan",
+            str(plan_path),
+            "--materializer-manifest",
+            str(manifest_path),
+            "--repair-palette-mode",
+            "frame0_blue_chroma_amp_1",
+            "--binding-report-out",
+            str(binding_path),
+            "--overwrite",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    stdout = json.loads(result.stdout)
+    assert stdout["candidate_archive_materialized"] is False
+    assert stdout["repair_dynamics_palette_prior_present"] is True
+    materialized = json.loads(binding_path.read_text(encoding="utf-8"))
+    assert materialized["schema"] == REPAIR_BUDGET_MATERIALIZER_BINDING_REPORT_SCHEMA
+    assert materialized["candidate_archive_materialized_count"] == 1
+    assert materialized["repair_dynamics_prior_count"] == 2
+    assert materialized["repair_dynamics_palette_prior"]["frame1_mode_count"] == 0
 
 
 def test_repair_budget_waterfill_queue_emits_execution_audit_step(
@@ -209,16 +370,32 @@ def test_repair_budget_waterfill_queue_emits_execution_audit_step(
     assert step_ids == [
         "emit_repair_budget_waterfill_work_order",
         "emit_repair_budget_materialization_plan",
+        "bind_repair_budget_materializer_execution",
         "audit_repair_budget_materialization_execution",
     ]
-    audit_step = experiment["steps"][2]
-    assert audit_step["requires"] == ["emit_repair_budget_materialization_plan"]
+    binding_step = experiment["steps"][2]
+    assert binding_step["requires"] == ["emit_repair_budget_materialization_plan"]
+    assert binding_step["command"][1] == (
+        "tools/build_frontier_repair_budget_materializer_binding_report.py"
+    )
+    assert any(
+        condition.get("equals") == REPAIR_BUDGET_MATERIALIZER_BINDING_REPORT_SCHEMA
+        for condition in binding_step["postconditions"]
+    )
+    audit_step = experiment["steps"][3]
+    assert audit_step["requires"] == ["bind_repair_budget_materializer_execution"]
     assert audit_step["command"][1] == (
         "tools/build_frontier_repair_budget_materialization_execution_report.py"
     )
+    assert "--materializer-binding-report" in audit_step["command"]
     assert any(
         condition.get("equals") == REPAIR_BUDGET_MATERIALIZATION_EXECUTION_REPORT_SCHEMA
         for condition in audit_step["postconditions"]
+    )
+    assert (
+        experiment["metadata"]["candidate_chain_materializer_binding_report_path"].endswith(
+            "repair_budget_materializer_binding_report.json"
+        )
     )
     assert (
         experiment["metadata"]["candidate_chain_execution_report_path"].endswith(
