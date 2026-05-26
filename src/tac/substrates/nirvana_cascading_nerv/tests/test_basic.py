@@ -44,9 +44,11 @@ def test_module_exposes_canonical_public_api() -> None:
     import tac.substrates.nirvana_cascading_nerv as mod
 
     expected = {
+        "ARCHITECTURE_CLASS",
         "ARCHIVE_GRAMMAR_FIELDS",
         "ARCHIVE_MAGIC",
         "ARCHIVE_VERSION",
+        "CANONICAL_EQUATION_IDS",
         "DEFAULT_BASE_H",
         "DEFAULT_BASE_W",
         "DEFAULT_NUM_LEVELS",
@@ -55,6 +57,8 @@ def test_module_exposes_canonical_public_api() -> None:
         "NIRVANA1_HEADER_LEN",
         "NirvanaCascadingNervConfig",
         "SISTER_SUBSTRATES",
+        "SUBSTRATE_ID",
+        "emit_landing_posterior_anchor",
     }
     assert set(mod.__all__) == expected
 

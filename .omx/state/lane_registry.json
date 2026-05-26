@@ -57623,11 +57623,11 @@
       "id": "lane_path_3_recursive_adversarial_review_r2_combined_3_axis_landings_a_b_c_d_e_f_g_20260526",
       "name": "Path 3 R2-COMBINED adversarial review across landings A/B'/C'/D/E/F/G",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "8 NEW memos landed via canonical serializer commit de1512549 (7 per-substrate + 1 aggregate); 369/369 tests PASS; per-substrate counter: A=1/3 B'=2/3 C'=2/3 D=2/3 E=1/3 F=1/3 G=1/3; D=Z6+B'+C' reachable at R3 SEAL = paid CUDA dispatch authorized"
         },
         "real_archive_empirical": {
           "status": false,
@@ -57650,8 +57650,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/path_3_recursive_adversarial_review_r2_combined_aggregate_3_axis_landings_a_b_c_d_e_f_g_20260526.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -57700,6 +57700,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_path_3_fix_wave_r3_g_op1_nirvana_test_expand_20260526",
+      "name": "Path 3 FIX-WAVE-G-OP1: NIRVANA test expand for Wave #1 canonical exports",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Test expansion at G test_basic.py lines 46-62 with 4 NEW Wave 1 canonical exports per Catalog #335 narrow-public-API contract; 27/27 G tests + 75/75 sister Wave 1 posterior emission tests pass; R3-COMBINED finding closed; G counter ready to start fresh R1prime on next review round"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/path_3_fix_wave_r3_g_op1_nirvana_test_expand_landed_20260526.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -57709,5 +57750,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T08:54:06Z"
+  "updated_at": "2026-05-26T12:35:46Z"
 }
