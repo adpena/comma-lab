@@ -83,11 +83,31 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--a-log-init-scheme", type=str, default="z_plus_1",
                    choices=["z_plus_1", "hippo_like", "log_uniform"],
                    help="CC-D unwind: configurable A_log init scheme.")
-    p.add_argument("--learning-rate", type=float, default=1e-3)
+    p.add_argument("--learning-rate", type=float, default=1e-3,
+                   help="DEPRECATED in favor of --peak-lr when --enable-warmup-decay; kept for backward compat.")
     p.add_argument("--ema-decay", type=float, default=0.997)
     p.add_argument("--disable-ema", action="store_true")
     p.add_argument("--lambda-residual", type=float, default=5e-4,
                    help="CC-H unwind: ib_scale=5e-4 (was 1e-3 in v1).")
+    # ---- L2 STABILITY HARDENING (Catalog #354 cross-paradigm sub-ingredient optimization) ----
+    # PR95-sniped-lesson recursive per-sub-ingredient doctrine 2026-05-26.
+    # Sub-ingredient #9 (Optimizer): gradient clipping
+    p.add_argument("--max-grad-norm", type=float, default=0.0,
+                   help="L2 stability: global-norm gradient clip (Mamba-2 canonical 1.0). 0=disabled.")
+    # Sub-ingredient #1 (Architecture): A_log clamp (SSM-specific NaN risk)
+    p.add_argument("--a-log-clamp-min", type=float, default=float("-inf"),
+                   help="L2 stability: clamp A_log lower bound (Mamba-2 canonical -10). -inf=disabled.")
+    p.add_argument("--a-log-clamp-max", type=float, default=float("inf"),
+                   help="L2 stability: clamp A_log upper bound (Mamba-2 canonical 0). +inf=disabled.")
+    # Sub-ingredient #9 (Optimizer): warmup-decay schedule
+    p.add_argument("--enable-warmup-decay", action="store_true",
+                   help="L2 stability: linear-warmup + cosine-decay LR schedule (else constant LR).")
+    p.add_argument("--peak-lr", type=float, default=1e-3,
+                   help="L2 stability: warmup-decay peak LR (used when --enable-warmup-decay).")
+    p.add_argument("--warmup-steps", type=int, default=50,
+                   help="L2 stability: linear warmup steps.")
+    p.add_argument("--min-lr-ratio", type=float, default=1e-2,
+                   help="L2 stability: cosine-decay endpoint = peak_lr * min_lr_ratio.")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--video-path", type=Path,
                    default=REPO_ROOT / "upstream" / "videos" / "0.mkv")
@@ -268,7 +288,15 @@ class Z7Mamba2V2MLXRenderer:
         x_inner = xz[:, : self.d_inner]
         z_gate = xz[:, self.d_inner:]
         dt = mlx_nn.softplus(x_inner @ self.mamba_dt_proj_w.T + self.mamba_dt_proj_b)
-        A = -mx.exp(self.mamba_A_log)
+        # L2 stability sub-ingredient #1 (Architecture): optional A_log clamp per Mamba-2
+        # canonical [-10, 0] range so exp(A_log) ∈ [4.5e-5, 1] (state spectrum bounded).
+        # PR95-sniped-lesson recursive per-sub-ingredient doctrine; SSM-specific NaN risk.
+        a_log_clamp_min = getattr(self.args, "a_log_clamp_min", float("-inf"))
+        a_log_clamp_max = getattr(self.args, "a_log_clamp_max", float("inf"))
+        if a_log_clamp_min > float("-inf") or a_log_clamp_max < float("inf"):
+            A = -mx.exp(mx.clip(self.mamba_A_log, a_log_clamp_min, a_log_clamp_max))
+        else:
+            A = -mx.exp(self.mamba_A_log)
         B = x_inner @ self.mamba_B_proj_w.T
         C = x_inner @ self.mamba_C_proj_w.T
         # Discretize
@@ -452,13 +480,40 @@ def main(argv: list[str] | None = None) -> int:
         return recon + args.lambda_residual * residual_l2
 
     loss_and_grad = mx.value_and_grad(loss_function)
-    optimizer = mlx_optim.AdamW(learning_rate=args.learning_rate)
+
+    # L2 stability sub-ingredient #9 (Optimizer): warmup-decay LR schedule.
+    # PR95-sniped-lesson recursive per-sub-ingredient doctrine; canonical Mamba-2
+    # linear-warmup + cosine-decay composition via mlx.optimizers.join_schedules.
+    if args.enable_warmup_decay:
+        warmup_steps = max(1, int(args.warmup_steps))
+        decay_steps = max(1, int(args.epochs) - warmup_steps)
+        end_lr = float(args.peak_lr) * float(args.min_lr_ratio)
+        warmup_sched = mlx_optim.linear_schedule(0.0, float(args.peak_lr), warmup_steps)
+        decay_sched = mlx_optim.cosine_decay(float(args.peak_lr), decay_steps, end_lr)
+        lr_sched = mlx_optim.join_schedules([warmup_sched, decay_sched], [warmup_steps])
+        optimizer = mlx_optim.AdamW(learning_rate=lr_sched)
+        print(f"[z7-mamba2-v2-mlx] [L2-STABILITY] warmup-decay: peak_lr={args.peak_lr} "
+              f"warmup_steps={warmup_steps} decay_steps={decay_steps} end_lr={end_lr:.2e}")
+    else:
+        optimizer = mlx_optim.AdamW(learning_rate=args.learning_rate)
+    if args.max_grad_norm > 0.0:
+        print(f"[z7-mamba2-v2-mlx] [L2-STABILITY] grad clip: max_grad_norm={args.max_grad_norm}")
+    if args.a_log_clamp_min > float("-inf") or args.a_log_clamp_max < float("inf"):
+        print(f"[z7-mamba2-v2-mlx] [L2-STABILITY] A_log clamp: "
+              f"[{args.a_log_clamp_min}, {args.a_log_clamp_max}]")
 
     per_epoch_metrics: list[dict[str, float]] = []
+    nan_first_epoch: int | None = None
     t_start = time.time()
     for epoch in range(args.epochs):
         params = renderer.parameters_flat()
         loss_val, grads = loss_and_grad(params)
+        # L2 stability sub-ingredient #9 (Optimizer): optional global-norm gradient clip.
+        # PR95-sniped-lesson recursive per-sub-ingredient doctrine; Mamba-2 canonical 1.0.
+        grad_norm_pre: float | None = None
+        if args.max_grad_norm > 0.0:
+            grads, total_norm = mlx_optim.clip_grad_norm(grads, args.max_grad_norm)
+            grad_norm_pre = float(total_norm.item())
         # Apply optimizer update
         new_params = optimizer.apply_gradients(grads, params)
         renderer.set_parameters_flat(new_params)
@@ -471,9 +526,23 @@ def main(argv: list[str] | None = None) -> int:
                 else:
                     ema_shadow[k] = mx.array(v)
         loss_float = float(loss_val.item())
-        per_epoch_metrics.append({"epoch": epoch + 1, "loss": loss_float})
-        if epoch < 3 or (epoch + 1) % 5 == 0 or epoch == args.epochs - 1:
-            print(f"[z7-mamba2-v2-mlx] epoch {epoch+1:3d}/{args.epochs}: loss={loss_float:.6f}")
+        is_nan = not (loss_float == loss_float and abs(loss_float) < float("inf"))
+        epoch_row: dict[str, float] = {"epoch": epoch + 1, "loss": loss_float}
+        if grad_norm_pre is not None:
+            epoch_row["grad_norm_pre_clip"] = grad_norm_pre
+        if is_nan and nan_first_epoch is None:
+            nan_first_epoch = epoch + 1
+            epoch_row["nan_detected"] = 1.0
+        per_epoch_metrics.append(epoch_row)
+        if epoch < 3 or (epoch + 1) % 5 == 0 or epoch == args.epochs - 1 or is_nan:
+            gn_str = f" gn={grad_norm_pre:.3f}" if grad_norm_pre is not None else ""
+            nan_str = " [NAN]" if is_nan else ""
+            print(f"[z7-mamba2-v2-mlx] epoch {epoch+1:3d}/{args.epochs}: "
+                  f"loss={loss_float:.6f}{gn_str}{nan_str}")
+        if is_nan:
+            # Stop early on NaN; record for verdict but don't waste epochs
+            print(f"[z7-mamba2-v2-mlx] [L2-STABILITY] NaN detected at epoch {epoch+1}; halting early")
+            break
 
     train_wall = time.time() - t_start
     print(f"[z7-mamba2-v2-mlx] training: {train_wall:.1f}s; "
@@ -574,6 +643,17 @@ def main(argv: list[str] | None = None) -> int:
             "cc_d_a_log_init_scheme": args.a_log_init_scheme,
             "cc_h_ib_scale": float(args.lambda_residual),
             "cc_j_a_log_regenerated_not_serialized": True,
+        },
+        "l2_stability_hardening": {
+            "max_grad_norm": float(args.max_grad_norm),
+            "a_log_clamp_min": float(args.a_log_clamp_min) if args.a_log_clamp_min > float("-inf") else None,
+            "a_log_clamp_max": float(args.a_log_clamp_max) if args.a_log_clamp_max < float("inf") else None,
+            "warmup_decay_enabled": bool(args.enable_warmup_decay),
+            "peak_lr": float(args.peak_lr) if args.enable_warmup_decay else None,
+            "warmup_steps": int(args.warmup_steps) if args.enable_warmup_decay else None,
+            "min_lr_ratio": float(args.min_lr_ratio) if args.enable_warmup_decay else None,
+            "nan_first_epoch": nan_first_epoch,
+            "nan_free_full_run": nan_first_epoch is None,
         },
         "loss_curve_summary": {
             "loss_initial": per_epoch_metrics[0]["loss"] if per_epoch_metrics else None,
