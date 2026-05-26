@@ -26,6 +26,7 @@ import pytest
 from tac.training.long_training_canonical import (
     CANONICAL_EMA_DECAY,
     CANONICAL_NON_PROMOTABLE_MARKERS,
+    EMA_ACCUMULATION_MODES,
     PR95_8STAGE_CURRICULUM_DEFAULT,
     TRAINING_ARTIFACT_SCHEMA_VERSION,
     CheckpointWriter,
@@ -249,9 +250,12 @@ def test_long_training_config_happy_path(tmp_path: Path) -> None:
     config = _make_simple_config(tmp_path)
     assert config.substrate_id == "test_substrate"
     assert config.ema_decay == CANONICAL_EMA_DECAY
+    assert config.ema_accumulation == "naive"
+    assert frozenset({"kahan", "naive"}) == EMA_ACCUMULATION_MODES
     assert config.curriculum_hash() == config.curriculum_hash()  # deterministic
     d = config.as_dict()
     assert d["curriculum_hash"] == config.curriculum_hash()
+    assert d["ema_accumulation"] == "naive"
 
 
 def test_long_training_config_rejects_lane_id_without_prefix(tmp_path: Path) -> None:
@@ -318,6 +322,18 @@ def test_long_training_config_rejects_ema_decay_outside_open_interval(tmp_path: 
                 output_dir=tmp_path,
                 ema_decay=bad_decay,
             )
+
+
+def test_long_training_config_rejects_unknown_ema_accumulation(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="ema_accumulation must be one of"):
+        LongTrainingConfig(
+            substrate_id="x",
+            lane_id="lane_x_20260526",
+            epochs=10,
+            curriculum_stages=(CurriculumStage(name="s", start_epoch=0, end_epoch=10),),
+            output_dir=tmp_path,
+            ema_accumulation="magic",
+        )
 
 
 def test_long_training_config_stage_at_epoch_returns_correct_stage(tmp_path: Path) -> None:
@@ -471,6 +487,33 @@ def test_checkpoint_writer_writes_canonical_metadata(tmp_path: Path) -> None:
     assert meta["promotion_eligible"] is False
 
 
+def test_checkpoint_writer_persists_kahan_compensation_metadata(tmp_path: Path) -> None:
+    config = _make_simple_config(tmp_path)
+    writer = CheckpointWriter(
+        checkpoint_dir=tmp_path / "ckpt",
+        substrate_id=config.substrate_id,
+        lane_id=config.lane_id,
+        curriculum_hash=config.curriculum_hash(),
+    )
+    adapter = _MockSubstrateAdapter()
+    ema = KahanCompensatedPolyakEMAShadow(adapter.model, decay=0.99)
+    adapter.model._params["w_0"][0] = 2.0
+    ema.update(adapter.model)
+    meta_path = writer.write(
+        adapter=adapter,
+        ema_shadow=ema,
+        global_epoch=1,
+        loss=0.1,
+        wall_clock_seconds=10.0,
+    )
+    meta = json.loads(meta_path.read_text())
+    assert meta["ema_accumulation"] == "kahan"
+    assert meta["ema_kahan_enabled"] is True
+    assert meta["ema_kahan_compensation_key_count"] >= 1
+    comp_path = Path(meta["ema_kahan_compensation_state_path"])
+    assert comp_path.is_file()
+
+
 def test_checkpoint_writer_refuses_cross_substrate_resume(tmp_path: Path) -> None:
     writer = CheckpointWriter(
         checkpoint_dir=tmp_path / "ckpt",
@@ -575,6 +618,27 @@ def test_run_long_training_happy_path_returns_artifact(tmp_path: Path) -> None:
     assert artifact.ready_for_exact_eval_dispatch is False
     assert artifact.rank_or_kill_eligible is False
     assert artifact.promotable is False
+
+
+def test_run_long_training_kahan_mode_records_artifact_and_checkpoint(tmp_path: Path) -> None:
+    config = LongTrainingConfig(
+        substrate_id="test_substrate",
+        lane_id="lane_test_substrate_kahan_20260526",
+        epochs=3,
+        curriculum_stages=(CurriculumStage(name="s", start_epoch=0, end_epoch=3),),
+        output_dir=tmp_path / "kahan_run",
+        checkpoint_interval_epochs=1,
+        ema_accumulation="kahan",
+    )
+    artifact = run_long_training(_MockSubstrateAdapter(), config)
+    assert artifact.config_snapshot["ema_accumulation"] == "kahan"
+    data = json.loads((config.output_dir / "training_artifact.json").read_text())
+    assert data["config_snapshot"]["ema_accumulation"] == "kahan"
+    final_meta = sorted(config.resolved_checkpoint_dir().glob("final_*.meta.json"))[-1]
+    meta = json.loads(final_meta.read_text())
+    assert meta["ema_accumulation"] == "kahan"
+    assert meta["ema_kahan_compensation_state_path"]
+    assert Path(meta["ema_kahan_compensation_state_path"]).is_file()
 
 
 def test_run_long_training_emits_telemetry_jsonl(tmp_path: Path) -> None:
@@ -772,6 +836,7 @@ def test_checkpoint_resume_advances_global_epoch(tmp_path: Path) -> None:
     artifact2 = run_long_training(adapter2, config_resume)
     # Resume worked; no exception raised.
     assert artifact2.total_epochs_completed >= 1
+    assert adapter2.batch_history[0][1] == config_resume.seed + 1
 
 
 # ---------------------------------------------------------------------------

@@ -125,6 +125,7 @@ __all__ = [
     "DEFAULT_CHECKPOINT_INTERVAL_EPOCHS",
     "DEFAULT_EARLY_STOPPING_PATIENCE",
     "DEFAULT_TELEMETRY_FLUSH_INTERVAL_EPOCHS",
+    "EMA_ACCUMULATION_MODES",
     "PR95_8STAGE_CURRICULUM_DEFAULT",
     "TRAINING_ARTIFACT_SCHEMA_VERSION",
     "CheckpointWriter",
@@ -167,6 +168,7 @@ CANONICAL_NON_PROMOTABLE_MARKERS: dict[str, bool] = {
 DEFAULT_CHECKPOINT_INTERVAL_EPOCHS: int = 100
 DEFAULT_EARLY_STOPPING_PATIENCE: int = 200
 DEFAULT_TELEMETRY_FLUSH_INTERVAL_EPOCHS: int = 10
+EMA_ACCUMULATION_MODES: frozenset[str] = frozenset({"kahan", "naive"})
 
 # Canonical schema version for TrainingArtifact JSON emission.
 TRAINING_ARTIFACT_SCHEMA_VERSION: str = "long_training_canonical_artifact.v1"
@@ -422,6 +424,9 @@ class LongTrainingConfig:
             contiguously (no gaps, no overlap). Default = PR95 8-stage.
         ema_decay: Polyak EMA decay coefficient per Catalog #2 NON-NEGOTIABLE.
             Default = 0.997 (Quantizr PR101 canonical anchor).
+        ema_accumulation: floating-point accumulation mode for the EMA shadow.
+            ``"naive"`` preserves historical Polyak updates; ``"kahan"``
+            enables compensated accumulation and strict fallback refusal.
         checkpoint_interval_epochs: emit canonical checkpoint every N epochs.
         early_stopping_patience: stop training if no loss improvement for N
             consecutive checkpoint-intervals.
@@ -463,6 +468,7 @@ class LongTrainingConfig:
     batch_pair_indices_per_step: int = 2
     curriculum_stages: tuple[CurriculumStage, ...] = PR95_8STAGE_CURRICULUM_DEFAULT
     ema_decay: float = CANONICAL_EMA_DECAY
+    ema_accumulation: str = "naive"
     checkpoint_interval_epochs: int = DEFAULT_CHECKPOINT_INTERVAL_EPOCHS
     early_stopping_patience: int = DEFAULT_EARLY_STOPPING_PATIENCE
     score_aware_loss_kwargs: Mapping[str, Any] = field(default_factory=dict)
@@ -528,6 +534,11 @@ class LongTrainingConfig:
             raise ValueError(
                 f"ema_decay must be in (0, 1); got {self.ema_decay!r}. "
                 "Per Catalog #2 NON-NEGOTIABLE the canonical default is 0.997."
+            )
+        if self.ema_accumulation not in EMA_ACCUMULATION_MODES:
+            raise ValueError(
+                "ema_accumulation must be one of "
+                f"{sorted(EMA_ACCUMULATION_MODES)}; got {self.ema_accumulation!r}"
             )
         if not isinstance(self.checkpoint_interval_epochs, int) or self.checkpoint_interval_epochs <= 0:
             raise ValueError(
@@ -607,6 +618,7 @@ class LongTrainingConfig:
             "curriculum_stages": [s.as_dict() for s in self.curriculum_stages],
             "curriculum_hash": self.curriculum_hash(),
             "ema_decay": float(self.ema_decay),
+            "ema_accumulation": self.ema_accumulation,
             "checkpoint_interval_epochs": int(self.checkpoint_interval_epochs),
             "early_stopping_patience": int(self.early_stopping_patience),
             "score_aware_loss_kwargs": dict(self.score_aware_loss_kwargs),
@@ -1025,6 +1037,7 @@ class PolyakEMAShadow:
         decay: float = CANONICAL_EMA_DECAY,
         *,
         enable_kahan: bool = False,
+        strict_kahan: bool = False,
     ):
         """Construct canonical Polyak EMA shadow primitive.
 
@@ -1044,6 +1057,8 @@ class PolyakEMAShadow:
                 the canonical wrapper class ``KahanCompensatedPolyakEMAShadow``
                 sets this flag True by default for callers who want the
                 hardened semantics by construction.
+            strict_kahan: when True, any Kahan branch fallback raises instead
+                of silently degrading to naive Polyak for that tensor key.
         """
         if not (0.0 < decay < 1.0):
             raise ValueError(
@@ -1063,6 +1078,9 @@ class PolyakEMAShadow:
             )
         self.decay = decay
         self.enable_kahan = bool(enable_kahan)
+        self.strict_kahan = bool(strict_kahan)
+        if self.strict_kahan and not self.enable_kahan:
+            raise ValueError("strict_kahan=True requires enable_kahan=True")
         self._shadow: dict[str, Any] = self._clone_state_dict(
             self._get_flat_state(model)
         )
@@ -1074,6 +1092,7 @@ class PolyakEMAShadow:
         # is deferred to first update() so we can match each shadow tensor's
         # type / shape via duck-typed subtraction `shadow - shadow`.
         self._kahan_compensation: dict[str, Any] = {}
+        self._kahan_fallback_keys: set[str] = set()
 
     @staticmethod
     def _detect_mlx_mode(model: Any) -> bool:
@@ -1205,6 +1224,12 @@ class PolyakEMAShadow:
                     # a later successful Kahan step restarts from a typed zero
                     # buffer instead of mixing stale arithmetic state.
                     self._kahan_compensation.pop(k, None)
+                    self._kahan_fallback_keys.add(k)
+                    if self.strict_kahan:
+                        raise RuntimeError(
+                            "Kahan EMA update failed in strict mode for "
+                            f"state key {k!r}; refusing silent naive fallback"
+                        ) from None
                     if isinstance(shadow_v, (list, tuple)) and isinstance(v, (list, tuple)):
                         self._shadow[k] = [
                             self.decay * float(sv) + (1.0 - self.decay) * float(lv)
@@ -1244,6 +1269,45 @@ class PolyakEMAShadow:
     def state_dict(self) -> dict[str, Any]:
         """Return a clone of the canonical EMA shadow state_dict."""
         return self._clone_state_dict(self._shadow)
+
+    def load_state_dict(self, state: Mapping[str, Any]) -> None:
+        """Replace EMA shadow state from a checkpoint mapping."""
+        if not isinstance(state, Mapping):
+            raise TypeError(f"state must be Mapping; got {type(state).__name__}")
+        self._shadow = self._clone_state_dict(state)
+
+    def compensation_state_dict(self) -> dict[str, Any]:
+        """Return a clone of the Kahan compensation state."""
+        return self._clone_state_dict(self._kahan_compensation)
+
+    def load_compensation_state_dict(self, state: Mapping[str, Any]) -> None:
+        """Replace Kahan compensation state from a checkpoint mapping."""
+        if not self.enable_kahan and state:
+            raise ValueError("cannot load Kahan compensation when enable_kahan=False")
+        if not isinstance(state, Mapping):
+            raise TypeError(f"state must be Mapping; got {type(state).__name__}")
+        self._kahan_compensation = self._clone_state_dict(state)
+
+    @property
+    def kahan_fallback_keys(self) -> tuple[str, ...]:
+        """Tensor keys that degraded from Kahan to naive in non-strict mode."""
+        return tuple(sorted(self._kahan_fallback_keys))
+
+    def write_compensation_state(self, path: Path) -> None:
+        """Persist Kahan compensation state for checkpoint/resume durability."""
+        import pickle
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("wb") as fh:
+            pickle.dump(self._kahan_compensation, fh, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def load_compensation_state(self, path: Path) -> None:
+        """Load persisted Kahan compensation state."""
+        import pickle
+
+        with path.open("rb") as fh:
+            state = pickle.load(fh)
+        self.load_compensation_state_dict(state)
 
     def apply_to(self, model: Any) -> Mapping[str, Any]:
         """Apply EMA shadow to model; return live state snapshot for restore.
@@ -1337,9 +1401,9 @@ class KahanCompensatedPolyakEMAShadow(PolyakEMAShadow):
     helpers" standing directive: this is a thin canonical wrapper that
     inherits PolyakEMAShadow's full duck-typed surface (torch / MLX /
     plain Python list / numpy) and only overrides the default
-    ``enable_kahan`` flag — zero LOC duplication, full API parity, and
-    every cross-substrate consumer (B' + C' + D + E + F + G + H + I +
-    J + K) inherits Kahan via the canonical L2 helper extension.
+    ``enable_kahan`` flag. Canonical long-training callers opt into this
+    path with ``LongTrainingConfig(ema_accumulation="kahan")``; default
+    ``"naive"`` preserves historical behavior.
 
     Per CLAUDE.md "EMA -- NON-NEGOTIABLE" + Quantizr PR101 anchor:
     decay=0.997 is the canonical default. Per CLAUDE.md "Forbidden
@@ -1349,8 +1413,19 @@ class KahanCompensatedPolyakEMAShadow(PolyakEMAShadow):
     smoke).
     """
 
-    def __init__(self, model: Any, decay: float = CANONICAL_EMA_DECAY):
-        super().__init__(model, decay=decay, enable_kahan=True)
+    def __init__(
+        self,
+        model: Any,
+        decay: float = CANONICAL_EMA_DECAY,
+        *,
+        strict_kahan: bool = False,
+    ):
+        super().__init__(
+            model,
+            decay=decay,
+            enable_kahan=True,
+            strict_kahan=strict_kahan,
+        )
 
 
 class TelemetrySink:
@@ -1475,6 +1550,11 @@ class CheckpointWriter:
             stem = f"final_{stem}"
         live_path = self.checkpoint_dir / f"{stem}.live.state"
         ema_path = self.checkpoint_dir / f"{stem}.ema_shadow.state"
+        kahan_compensation_path = (
+            self.checkpoint_dir / f"{stem}.ema_kahan_compensation.pkl"
+            if ema_shadow.enable_kahan
+            else None
+        )
         meta_path = self.checkpoint_dir / f"{stem}.meta.json"
 
         # Write live state via adapter's canonical export.
@@ -1487,6 +1567,9 @@ class CheckpointWriter:
         finally:
             ema_shadow.restore_from_snapshot(adapter.model, live_snapshot)
 
+        if kahan_compensation_path is not None:
+            ema_shadow.write_compensation_state(kahan_compensation_path)
+
         # Write canonical metadata JSON.
         meta = {
             "schema_version": "long_training_canonical_checkpoint.v1",
@@ -1497,6 +1580,16 @@ class CheckpointWriter:
             "loss": float(loss),
             "wall_clock_seconds": float(wall_clock_seconds),
             "is_final": bool(is_final),
+            "ema_accumulation": "kahan" if ema_shadow.enable_kahan else "naive",
+            "ema_kahan_enabled": bool(ema_shadow.enable_kahan),
+            "ema_kahan_strict": bool(ema_shadow.strict_kahan),
+            "ema_kahan_fallback_keys": list(ema_shadow.kahan_fallback_keys),
+            "ema_kahan_compensation_key_count": len(
+                ema_shadow.compensation_state_dict()
+            ),
+            "ema_kahan_compensation_state_path": (
+                str(kahan_compensation_path) if kahan_compensation_path else None
+            ),
             "live_state_path": str(live_path),
             "ema_shadow_state_path": str(ema_path),
             "captured_at_utc": _utc_now_iso(),
@@ -1753,6 +1846,42 @@ def _emit_canonical_posterior_anchor(
         return False, f"posterior_emission_helper_runtime_failed:{type(exc).__name__}:{exc!s}"
 
 
+def _load_checkpoint_model_state(
+    adapter: SubstrateLongTrainingAdapter,
+    state_path: Path,
+) -> None:
+    """Load a checkpoint state into ``adapter.model`` or fail closed.
+
+    The canonical writer only requires ``export_state_dict`` because
+    substrates serialize differently. Resume is stricter: an adapter that uses
+    a non-JSON/binary format must provide ``import_state_dict(path)`` so the
+    helper never pretends that metadata-only resume restored real weights.
+    """
+
+    if hasattr(adapter, "import_state_dict") and callable(adapter.import_state_dict):
+        adapter.import_state_dict(adapter.model, state_path)
+        return
+    if not hasattr(adapter.model, "load_state_dict") or not callable(
+        adapter.model.load_state_dict
+    ):
+        raise RuntimeError(
+            "resume_from_checkpoint requires adapter.import_state_dict(model, path) "
+            "or model.load_state_dict(JSON_state); refusing metadata-only resume"
+        )
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError(
+            "resume_from_checkpoint points at a non-JSON state file but adapter "
+            "does not expose import_state_dict(model, path); refusing fake resume"
+        ) from exc
+    if not isinstance(state, Mapping):
+        raise RuntimeError(
+            f"resume state file must decode to a Mapping; got {type(state).__name__}"
+        )
+    adapter.model.load_state_dict(state)
+
+
 # ---------------------------------------------------------------------------
 # Canonical entry-point: run_long_training
 # ---------------------------------------------------------------------------
@@ -1845,14 +1974,40 @@ def run_long_training(
         lane_id=config.lane_id,
         curriculum_hash=config.curriculum_hash(),
     )
-    ema_shadow = PolyakEMAShadow(adapter.model, decay=config.ema_decay)
     oom_runner = OOMSafeStepRunner()
 
     # 2) Resume metadata (best-effort; warn-on-failure is the caller's job).
     resume_global_epoch = 0
+    resume_meta: Mapping[str, Any] | None = None
     if config.resume_from_checkpoint is not None:
-        meta = checkpoint_writer.load_resume_metadata(config.resume_from_checkpoint)
-        resume_global_epoch = int(meta.get("global_epoch", 0))
+        resume_meta = checkpoint_writer.load_resume_metadata(config.resume_from_checkpoint)
+        resume_global_epoch = int(resume_meta.get("global_epoch", -1)) + 1
+        checkpoint_accumulation = str(resume_meta.get("ema_accumulation") or "naive")
+        if checkpoint_accumulation != config.ema_accumulation:
+            raise RuntimeError(
+                "resume_from_checkpoint ema_accumulation mismatch: "
+                f"checkpoint={checkpoint_accumulation!r}, config={config.ema_accumulation!r}"
+            )
+        ema_state_path = Path(str(resume_meta.get("ema_shadow_state_path") or ""))
+        live_state_path = Path(str(resume_meta.get("live_state_path") or ""))
+        _load_checkpoint_model_state(adapter, ema_state_path)
+
+    ema_shadow = PolyakEMAShadow(
+        adapter.model,
+        decay=config.ema_decay,
+        enable_kahan=config.ema_accumulation == "kahan",
+        strict_kahan=config.ema_accumulation == "kahan",
+    )
+    if resume_meta is not None:
+        kahan_compensation_path = resume_meta.get("ema_kahan_compensation_state_path")
+        if config.ema_accumulation == "kahan":
+            if not isinstance(kahan_compensation_path, str) or not kahan_compensation_path:
+                raise RuntimeError(
+                    "resume_from_checkpoint in Kahan mode requires "
+                    "ema_kahan_compensation_state_path"
+                )
+            ema_shadow.load_compensation_state(Path(kahan_compensation_path))
+        _load_checkpoint_model_state(adapter, live_state_path)
 
     # 3) Training loop.
     per_epoch_metrics: list[PerEpochMetrics] = []
@@ -1885,6 +2040,8 @@ def run_long_training(
         try:
             ema_shadow.update(adapter.model)
         except Exception as exc:
+            if config.ema_accumulation == "kahan":
+                raise
             # EMA update failure is recoverable; log + continue.
             traceback.print_exc()
             print(f"[long_training_canonical] WARN: EMA update failed at epoch {epoch}: {exc!r}")
@@ -1955,6 +2112,8 @@ def run_long_training(
                     is_final=False,
                 )
             except Exception as exc:
+                if config.ema_accumulation == "kahan":
+                    raise
                 # Per Catalog #339 sister discipline: never silently swallow
                 # checkpoint failures; print + continue (subsequent emission
                 # may succeed).
@@ -1976,6 +2135,8 @@ def run_long_training(
             is_final=True,
         )
     except Exception as exc:
+        if config.ema_accumulation == "kahan":
+            raise
         traceback.print_exc()
         print(f"[long_training_canonical] WARN: final checkpoint emission failed: {exc!r}")
 

@@ -363,6 +363,21 @@ def cmd_run_worker(args: argparse.Namespace) -> int:
             **result,
         }
     )
+    if args.output is not None:
+        payload = {
+            "state": str(state),
+            "stop_signals": [signal.Signals(signum).name for signum in stop_signals],
+            **result,
+        }
+        try:
+            write_json_artifact(
+                args.output,
+                payload,
+                allow_overwrite=args.expected_output_sha256 is not None,
+                expected_existing_sha256=args.expected_output_sha256,
+            )
+        except ArtifactWriteError as exc:
+            raise ExperimentQueueError(str(exc)) from exc
     return 2 if result.get("failure_count", 0) else 0
 
 
@@ -620,6 +635,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=5.0,
         help="grace period before killing children after terminate stop-policy",
     )
+    sp.add_argument("--output", type=Path, default=None)
+    sp.add_argument("--expected-output-sha256", default=None)
     sp.set_defaults(func=cmd_run_worker)
 
     sp = sub.add_parser("control")

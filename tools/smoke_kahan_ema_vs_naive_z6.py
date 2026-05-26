@@ -8,12 +8,13 @@ canonical Kahan-compensated ``KahanCompensatedPolyakEMAShadow`` on the
 Z6 L2 substrate's real training trajectory.
 
 The methodology is the simplest faithful comparison: run the Z6 L2
-trainer ONCE, snapshot the per-step live-weight sequence in memory, then
-replay that sequence through BOTH a naive and a Kahan EMA shadow. The
-final shadow divergence (kahan_shadow - naive_shadow) IS the M2
-accumulated drift Kahan mitigates. Because both shadows see the EXACT
-same live-weight sequence, the comparison isolates M2 perfectly without
-needing two full retraining runs.
+trainer ONCE, snapshot the initial + per-step live-weight sequence in
+memory, then replay that sequence through BOTH a naive and a Kahan EMA
+shadow plus an fp64 NumPy reference. The reference-relative errors, not
+live-vs-shadow lag, determine whether Kahan materially reduces numerical
+EMA accumulation error on the real Z6 trajectory. Because both shadows
+see the exact same live-weight sequence, the comparison isolates EMA
+accumulation arithmetic without needing two full retraining runs.
 
 Cost: $0 (all MLX-local per CLAUDE.md "MLX portable-local-substrate
 authority"); wall-clock ~5 minutes total at 300/500/1000 epoch grid.
@@ -123,7 +124,10 @@ def _capture_live_weight_sequence(
     )
     adapter.model.ego_motion_buffer = mx.array(ego)
 
-    live_state_sequence: list[dict[str, Any]] = []
+    flat_initial = dict(tree_flatten(adapter.model.parameters()))
+    live_state_sequence: list[dict[str, Any]] = [
+        {k: np.array(v, copy=True) for k, v in flat_initial.items()}
+    ]
     loss_traj: list[float] = []
     batch_size = min(num_pairs, 8)
     loss_weights = {"recon": 1.0, "residual": lambda_residual}
@@ -154,6 +158,7 @@ def _capture_live_weight_sequence(
         "output_h": output_h,
         "output_w": output_w,
         "seed": seed,
+        "captured_initial_state": True,
         "n_param_keys": len(live_state_sequence[0]),
     }
     return live_state_sequence, telemetry
@@ -193,6 +198,56 @@ def _run_ema_shadow_on_sequence(
     final_live = _FrozenModel(live_state_sequence[-1])
     drift_l2 = shadow.drift_l2(final_live)
     return shadow.state_dict(), drift_l2
+
+
+def _run_fp64_reference_ema_on_sequence(
+    live_state_sequence: list[dict[str, Any]],
+    *,
+    decay: float,
+) -> dict[str, Any]:
+    """Replay the EMA recurrence in NumPy fp64 as the numerical reference."""
+    import numpy as np
+
+    reference: dict[str, Any] = {
+        k: np.asarray(v, dtype=np.float64).copy()
+        for k, v in live_state_sequence[0].items()
+    }
+    for state in live_state_sequence[1:]:
+        for key, live_value in state.items():
+            live64 = np.asarray(live_value, dtype=np.float64)
+            if key not in reference:
+                reference[key] = live64.copy()
+                continue
+            reference[key] = decay * reference[key] + (1.0 - decay) * live64
+    return reference
+
+
+def _measure_shadow_error_vs_reference(
+    shadow: dict[str, Any],
+    reference: dict[str, Any],
+) -> dict[str, float]:
+    """Measure L2/max_abs shadow error against an fp64 reference EMA."""
+    import numpy as np
+
+    total_l2_sq = 0.0
+    max_abs = 0.0
+    n_elements = 0
+    for key, ref_value in reference.items():
+        if key not in shadow:
+            continue
+        shadow_value = np.asarray(shadow[key], dtype=np.float64)
+        ref_arr = np.asarray(ref_value, dtype=np.float64)
+        if shadow_value.shape != ref_arr.shape:
+            continue
+        diff = shadow_value - ref_arr
+        total_l2_sq += float(np.sum(diff * diff))
+        max_abs = max(max_abs, float(np.max(np.abs(diff))))
+        n_elements += int(diff.size)
+    return {
+        "error_vs_fp64_l2": float(total_l2_sq ** 0.5),
+        "error_vs_fp64_max_abs": max_abs,
+        "n_reference_elements": float(n_elements),
+    }
 
 
 def _measure_pairwise_shadow_divergence(
@@ -322,12 +377,27 @@ def main(argv: list[str] | None = None) -> int:
             live_seq, decay=args.decay, enable_kahan=True
         )
         wall_kahan = time.time() - t_kahan
-        # 4) Compute pairwise shadow divergence (the M2 mitigation magnitude).
+        # 4) Compute fp64-reference numerical error and pairwise divergence.
+        fp64_reference = _run_fp64_reference_ema_on_sequence(
+            live_seq,
+            decay=args.decay,
+        )
+        naive_error = _measure_shadow_error_vs_reference(naive_shadow, fp64_reference)
+        kahan_error = _measure_shadow_error_vs_reference(kahan_shadow, fp64_reference)
         divergence = _measure_pairwise_shadow_divergence(naive_shadow, kahan_shadow)
-        # 5) Canonical drift-reduction ratio.
+        # 5) Canonical numerical-error reduction ratio. live-vs-shadow drift is
+        # lag telemetry, not proof that one accumulator is more correct.
         drift_reduction_ratio = (
             naive_drift / kahan_drift if kahan_drift > 0.0 else float("inf")
         )
+        naive_error_l2 = naive_error["error_vs_fp64_l2"]
+        kahan_error_l2 = kahan_error["error_vs_fp64_l2"]
+        if kahan_error_l2 > 0.0:
+            error_reduction_ratio = naive_error_l2 / kahan_error_l2
+        elif naive_error_l2 > 0.0:
+            error_reduction_ratio = float("inf")
+        else:
+            error_reduction_ratio = 1.0
         # 6) Sister #1265 verdict bookkeeping.
         # NB: Sister #1265 gate's canonical metric is max_abs(mlx_decoder_output -
         # pytorch_decoder_output) on a reconstruction probe — i.e. CROSS-RUNTIME
@@ -350,6 +420,11 @@ def main(argv: list[str] | None = None) -> int:
             "naive_drift_l2": float(naive_drift),
             "kahan_drift_l2": float(kahan_drift),
             "drift_reduction_ratio_naive_over_kahan": float(drift_reduction_ratio),
+            "naive_error_vs_fp64_l2": naive_error_l2,
+            "kahan_error_vs_fp64_l2": kahan_error_l2,
+            "naive_error_vs_fp64_max_abs": naive_error["error_vs_fp64_max_abs"],
+            "kahan_error_vs_fp64_max_abs": kahan_error["error_vs_fp64_max_abs"],
+            "error_reduction_ratio_naive_over_kahan": float(error_reduction_ratio),
             "kahan_vs_naive_shadow_divergence_l2": divergence["kahan_vs_naive_shadow_l2"],
             "kahan_vs_naive_shadow_divergence_max_abs": divergence["kahan_vs_naive_shadow_max_abs"],
             "n_shadow_elements": divergence["n_shadow_elements"],
@@ -363,7 +438,7 @@ def main(argv: list[str] | None = None) -> int:
             f"[smoke] epochs={epochs:>4d} | "
             f"naive_drift={naive_drift:.4e} ({sister_1265_proxy_naive}) | "
             f"kahan_drift={kahan_drift:.4e} ({sister_1265_proxy_kahan}) | "
-            f"reduction_ratio={drift_reduction_ratio:.3f}x | "
+            f"error_reduction={error_reduction_ratio:.3f}x | "
             f"kahan_vs_naive_max_abs={divergence['kahan_vs_naive_shadow_max_abs']:.4e}"
         )
 
@@ -378,7 +453,7 @@ def main(argv: list[str] | None = None) -> int:
     print("=" * 100)
     print(
         f"{'epochs':>6} | {'wall_s':>6} | {'loss_init':>9} | {'loss_final':>10} | "
-        f"{'naive_drift':>13} | {'kahan_drift':>13} | {'reduction_x':>11} | "
+        f"{'naive_err64':>13} | {'kahan_err64':>13} | {'err_red_x':>11} | "
         f"{'naive_1265':>10} | {'kahan_1265':>10}"
     )
     print("-" * 100)
@@ -386,8 +461,9 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"{r['epochs']:>6d} | {r['wall_seconds']:>6.1f} | "
             f"{r['loss_initial']:>9.4f} | {r['loss_final']:>10.4f} | "
-            f"{r['naive_drift_l2']:>13.4e} | {r['kahan_drift_l2']:>13.4e} | "
-            f"{r['drift_reduction_ratio_naive_over_kahan']:>11.3f} | "
+            f"{r['naive_error_vs_fp64_l2']:>13.4e} | "
+            f"{r['kahan_error_vs_fp64_l2']:>13.4e} | "
+            f"{r['error_reduction_ratio_naive_over_kahan']:>11.3f} | "
             f"{r['sister_1265_proxy_verdict_naive']:>10s} | "
             f"{r['sister_1265_proxy_verdict_kahan']:>10s}"
         )
@@ -424,10 +500,10 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _classify_verdict(results: list[dict[str, Any]]) -> dict[str, Any]:
-    """Classify the empirical reduction ratio per T3 council 2x threshold."""
+    """Classify fp64-reference error reduction per T3 council 2x threshold."""
     if not results:
         return {"summary": "NO_RESULTS", "max_reduction_ratio": 0.0}
-    ratios = [r["drift_reduction_ratio_naive_over_kahan"] for r in results]
+    ratios = [r["error_reduction_ratio_naive_over_kahan"] for r in results]
     finite_ratios = [r for r in ratios if r != float("inf")]
     max_ratio = max(finite_ratios) if finite_ratios else 0.0
     if max_ratio >= 2.0:
@@ -450,6 +526,7 @@ def _classify_verdict(results: list[dict[str, Any]]) -> dict[str, Any]:
         "summary": summary,
         "max_reduction_ratio_observed": float(max_ratio),
         "all_reduction_ratios": [float(x) for x in ratios],
+        "ratio_metric": "fp64_reference_error_l2_naive_over_kahan",
         "threshold_canonical_equation": 2.0,
         "registration_recommended": bool(max_ratio >= 2.0),
     }
