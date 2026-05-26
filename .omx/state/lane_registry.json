@@ -57413,6 +57413,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_path_3_c_prime_nscs06_v8_chroma_lut_cargo_cult_first_20260526",
+      "name": "Path 3 C' NSCS06 v8 chroma_lut cargo-cult-first L0/L1 SCAFFOLD",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Phase 3 L0 SCAFFOLD lands 3 NEW modules (distinguishing_feature_smoke.py + gt_distribution_matched_seed.py + predicted_band_axis_attribution.py) + mlx_iteration.py EXTENSION; 44 dedicated tests pass + 136 sister/predecessor preserved = 180 total"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "180 tests pass in 2.77s; new symbols importable from package root; sister + predecessor 136 tests preserved per Catalog #110/#113 APPEND-ONLY"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/path_3_c_nscs06_v8_chroma_lut_L0_scaffold_landed_20260526.md (Phase 3 landing) + path_3_c_*_design_20260526.md (Phase 3 design) + path_3_c_*_substrate_design_decision_20260526.md (Phase 2) + path_3_c_*_cargo_cult_audit_of_existing_scaffold_20260526.md (Phase 1)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; cargo-cult-pass-first methodology per operator directive #2 2026-05-26; sister to lane_wave_3_nscs06_v8_chroma_lut_substrate_build_20260521; 4 FORK paths per Phase 1 audit a6e2a06e3 unwinding cargo-cults #3 #5 #8 #12; 44 dedicated tests pass + 136 sister/predecessor tests preserved = 180 total; per-substrate symposium per Catalog #325 pending window 2026-05-26 to 2026-06-09"
     }
   ],
   "level_rules": {
@@ -57422,5 +57463,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T07:26:04Z"
+  "updated_at": "2026-05-26T07:36:40Z"
 }
