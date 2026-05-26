@@ -114,7 +114,7 @@ def test_materializer_submission_closure_clears_static_readiness_blockers(
                 "materializer_id": "packet_member_zip_header_elide_adapter",
                 "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
                 "receiver_contract_satisfied": True,
-                "runtime_adapter_ready": False,
+                "runtime_adapter_ready": True,
                 "runtime_consumption_proof_required": True,
                 "runtime_consumption_proof_status": "present",
                 "runtime_consumption_proof_path": proof_path.relative_to(repo).as_posix(),

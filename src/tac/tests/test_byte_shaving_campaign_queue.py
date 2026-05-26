@@ -4894,6 +4894,67 @@ def test_materializer_execution_queue_can_append_exact_readiness_followups(
     ]
 
 
+def test_materializer_execution_queue_guards_family_overwrite_with_existing_hashes(
+    tmp_path: Path,
+) -> None:
+    output_archive = tmp_path / "candidate.zip"
+    output_manifest = tmp_path / "manifest.json"
+    runtime_proof = tmp_path / "runtime_consumption_proof.json"
+    output_archive.write_bytes(b"candidate archive")
+    output_manifest.write_text('{"schema":"packet_member_zip_header_elide_candidate.v1"}\n')
+    runtime_proof.write_text('{"schema":"runtime_consumption_proof.v1"}\n')
+    work_queue = {
+        "schema": MATERIALIZER_WORK_QUEUE_SCHEMA,
+        "rows": [
+            {
+                "work_id": "zip_header_fixture",
+                "work_rank": 1,
+                "target_kind": PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+                "executable": True,
+                "resource_kind": "local_cpu",
+                "command": [
+                    ".venv/bin/python",
+                    "tools/run_family_agnostic_materializer.py",
+                    "--target-kind",
+                    PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+                    "--archive-path",
+                    "archive.zip",
+                    "--output-archive",
+                    output_archive.relative_to(tmp_path).as_posix(),
+                    "--output-manifest",
+                    output_manifest.relative_to(tmp_path).as_posix(),
+                    "--runtime-consumption-proof-out",
+                    runtime_proof.relative_to(tmp_path).as_posix(),
+                ],
+                "postconditions": [],
+                "telemetry": {},
+                **_false_authority(),
+            }
+        ],
+    }
+
+    execution_queue = build_materializer_execution_queue(
+        work_queue,
+        queue_id="family_overwrite_fixture",
+        repo_root=tmp_path,
+    )
+
+    command = execution_queue["experiments"][0]["steps"][0]["command"]
+    assert "--allow-overwrite" in command
+    assert [
+        "--expected-existing-output-sha256",
+        hashlib.sha256(output_archive.read_bytes()).hexdigest(),
+    ] in [command[index : index + 2] for index in range(len(command) - 1)]
+    assert [
+        "--expected-existing-manifest-sha256",
+        hashlib.sha256(output_manifest.read_bytes()).hexdigest(),
+    ] in [command[index : index + 2] for index in range(len(command) - 1)]
+    assert [
+        "--expected-existing-runtime-consumption-proof-sha256",
+        hashlib.sha256(runtime_proof.read_bytes()).hexdigest(),
+    ] in [command[index : index + 2] for index in range(len(command) - 1)]
+
+
 def test_materializer_execution_queue_requires_source_work_queue_path_for_exact_followup(
     tmp_path: Path,
 ) -> None:
@@ -6298,6 +6359,7 @@ def test_byte_shaving_campaign_queue_cli_wires_generated_dfl1_parity_followup(
         MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     ]
     parity_step = steps[1]
+    assert "--overwrite" in parity_step["command"]
     assert ["--file-list-entry", "0.raw"] in [
         parity_step["command"][index : index + 2]
         for index in range(len(parity_step["command"]) - 1)
@@ -6321,6 +6383,7 @@ def test_byte_shaving_campaign_queue_cli_wires_generated_dfl1_parity_followup(
         parity_step["command"][index : index + 2]
         for index in range(len(parity_step["command"]) - 1)
     ]
+    assert "--allow-overwrite" in steps[0]["command"]
     harvest_step = steps[2]
     assert "--overwrite" in harvest_step["command"]
     assert [

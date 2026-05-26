@@ -1,8 +1,8 @@
 {
   "artifact_write": {
-    "allow_overwrite": false,
+    "allow_overwrite": true,
     "bytes_written": 345422,
-    "free_bytes_before": 632926031872,
+    "free_bytes_before": 628178833408,
     "path": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/candidate.zip",
     "sha256": "e20295f0a662101567f36afe8ce17142635f976cb2f2b8937b4cbc76455ee3c4"
   },
@@ -130,9 +130,9 @@
   "runtime_adapter_ready": false,
   "runtime_consumption_proof_path": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/runtime_consumption_proof.json",
   "runtime_consumption_proof_write": {
-    "allow_overwrite": false,
+    "allow_overwrite": true,
     "bytes_written": 8092,
-    "free_bytes_before": 632925679616,
+    "free_bytes_before": 628178829312,
     "path": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/runtime_consumption_proof.json",
     "sha256": "00059578315477c25dc2d246baf43211644599cf6c4e6c740be464ccee17225f"
   },
@@ -222,9 +222,16 @@
       "--output-manifest",
       "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/manifest.json",
       "--runtime-consumption-proof-out",
-      "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/runtime_consumption_proof.json"
+      "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/runtime_consumption_proof.json",
+      "--allow-overwrite",
+      "--expected-existing-output-sha256",
+      "e20295f0a662101567f36afe8ce17142635f976cb2f2b8937b4cbc76455ee3c4",
+      "--expected-existing-manifest-sha256",
+      "1de8bdf6a3f559463ee949e097ce1528427337104faf238f2f7326c408f3bd48",
+      "--expected-existing-runtime-consumption-proof-sha256",
+      "00059578315477c25dc2d246baf43211644599cf6c4e6c740be464ccee17225f"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "3be905d4465be39a441aea80b9f1c0a31035beb6f93c8847d1d6b75d650f4483",
+    "canonical_payload_without_tool_manifest_sha256": "92182ceaf498f13b7144fd0e1dd1ea80a503a3a74e29b62cc31f6340728432dd",
     "dispatch_attempted": false,
     "input_files": [
       {

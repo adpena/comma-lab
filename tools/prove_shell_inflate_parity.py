@@ -146,16 +146,86 @@ def _safe_extract_zip(archive_path: Path, output_dir: Path) -> None:
         archive.extractall(output_dir)
 
 
-def _prepare_output_dir(output_dir: Path) -> None:
+def _validate_overwrite_output_dir(output_dir: Path) -> None:
+    resolved = output_dir.resolve(strict=False)
+    protected = {
+        Path.cwd().resolve(strict=False),
+        Path.home().resolve(strict=False),
+        Path("/").resolve(strict=False),
+    }
+    if resolved in protected:
+        raise ValueError(f"refusing dangerous overwrite output dir: {output_dir}")
+    markers = {
+        "shell_inflate_parity.json",
+        "shell_inflate_parity.md",
+        "scratch",
+    }
+    if not any((output_dir / marker).exists() for marker in markers):
+        raise ValueError(
+            "refusing overwrite output dir without shell-parity marker: "
+            f"{output_dir}"
+        )
+
+
+def _prepare_output_dir(output_dir: Path, *, overwrite: bool = False) -> None:
     if output_dir.is_symlink():
         raise ValueError(f"refusing symlink output dir: {output_dir}")
     if output_dir.exists():
         if not output_dir.is_dir():
             raise ValueError(f"output path exists and is not a directory: {output_dir}")
         if any(output_dir.iterdir()):
-            raise ValueError(f"refusing non-empty output dir: {output_dir}")
+            if not overwrite:
+                raise ValueError(f"refusing non-empty output dir: {output_dir}")
+            _validate_overwrite_output_dir(output_dir)
+            shutil.rmtree(output_dir)
+            output_dir.mkdir(parents=True)
     else:
         output_dir.mkdir(parents=True)
+
+
+def _atomic_overwrite_backup_path(output_dir: Path) -> Path:
+    parent = output_dir.parent
+    base = f".{output_dir.name}.overwrite-backup-{_utc_stamp()}-{os.getpid()}"
+    candidate = parent / base
+    suffix = 0
+    while candidate.exists():
+        suffix += 1
+        candidate = parent / f"{base}-{suffix}"
+    return candidate
+
+
+def _begin_atomic_output_dir_overwrite(
+    output_dir: Path,
+    *,
+    overwrite: bool,
+) -> Path | None:
+    """Move the existing proof aside so failed reruns preserve last-good proof."""
+
+    if not overwrite or not output_dir.exists() or not any(output_dir.iterdir()):
+        return None
+    _validate_overwrite_output_dir(output_dir)
+    backup = _atomic_overwrite_backup_path(output_dir)
+    shutil.move(str(output_dir), str(backup))
+    output_dir.mkdir(parents=True)
+    return backup
+
+
+def _restore_atomic_output_dir_overwrite(output_dir: Path, backup: Path | None) -> None:
+    if backup is None:
+        return
+    if output_dir.exists():
+        if output_dir.is_symlink():
+            raise ValueError(f"refusing symlink output dir during restore: {output_dir}")
+        if output_dir.is_dir():
+            shutil.rmtree(output_dir)
+        else:
+            output_dir.unlink()
+    shutil.move(str(backup), str(output_dir))
+
+
+def _finish_atomic_output_dir_overwrite(backup: Path | None) -> None:
+    if backup is not None and backup.exists():
+        shutil.rmtree(backup)
 
 
 def _submission_tree_record(path: Path) -> tuple[int, str]:
@@ -322,8 +392,9 @@ def build_proof(
     full_frame_file_list_source: str | None = None,
     parity_scope_kind: str = SHELL_PARITY_SCOPE_DECLARED_FILE_LIST,
     contest_full_sample_claim: bool = False,
+    overwrite: bool = False,
 ) -> ShellInflateParityProof:
-    _prepare_output_dir(output_dir)
+    _prepare_output_dir(output_dir, overwrite=overwrite)
     if not file_list_entries:
         file_list_entries = _ordered_file_list_entries([file_list_entry or "0.mkv"])
     else:
@@ -540,6 +611,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     )
     parser.add_argument("--python-bin", default=sys.executable)
     parser.add_argument("--keep-scratch", action="store_true")
+    parser.add_argument("--overwrite", action="store_true")
     parser.add_argument(
         "--output-dir",
         type=Path,
@@ -554,30 +626,44 @@ def main(argv: list[str] | None = None) -> int:
         file_list_entries = _load_file_list_entries(args.file_list)
     else:
         file_list_entries = _ordered_file_list_entries(args.file_list_entry or ["0.mkv"])
-    proof = build_proof(
-        left_archive=args.left_archive,
-        left_submission_dir=args.left_submission_dir,
-        right_archive=args.right_archive,
-        right_submission_dir=args.right_submission_dir,
-        output_dir=args.output_dir,
-        file_list_entries=file_list_entries,
-        python_bin=args.python_bin,
-        keep_scratch=args.keep_scratch,
-        full_frame_file_list_claim=args.full_frame_file_list_claim,
-        expected_full_frame_file_list_sha256=(
-            args.expected_full_frame_file_list_sha256
-        ),
-        expected_full_frame_entry_count=args.expected_full_frame_entry_count,
-        full_frame_file_list_source=args.full_frame_file_list_source,
-        parity_scope_kind=args.parity_scope_kind,
-        contest_full_sample_claim=args.contest_full_sample_claim,
+    backup = _begin_atomic_output_dir_overwrite(
+        args.output_dir,
+        overwrite=args.overwrite,
     )
-    payload = json.dumps(proof.to_dict(), indent=2, sort_keys=True) + "\n"
-    (args.output_dir / "shell_inflate_parity.json").write_text(payload, encoding="utf-8")
-    (args.output_dir / "shell_inflate_parity.md").write_text(
-        render_markdown(proof),
-        encoding="utf-8",
-    )
+    try:
+        proof = build_proof(
+            left_archive=args.left_archive,
+            left_submission_dir=args.left_submission_dir,
+            right_archive=args.right_archive,
+            right_submission_dir=args.right_submission_dir,
+            output_dir=args.output_dir,
+            file_list_entries=file_list_entries,
+            python_bin=args.python_bin,
+            keep_scratch=args.keep_scratch,
+            full_frame_file_list_claim=args.full_frame_file_list_claim,
+            expected_full_frame_file_list_sha256=(
+                args.expected_full_frame_file_list_sha256
+            ),
+            expected_full_frame_entry_count=args.expected_full_frame_entry_count,
+            full_frame_file_list_source=args.full_frame_file_list_source,
+            parity_scope_kind=args.parity_scope_kind,
+            contest_full_sample_claim=args.contest_full_sample_claim,
+            overwrite=False,
+        )
+        payload = json.dumps(proof.to_dict(), indent=2, sort_keys=True) + "\n"
+        (args.output_dir / "shell_inflate_parity.json").write_text(
+            payload,
+            encoding="utf-8",
+        )
+        (args.output_dir / "shell_inflate_parity.md").write_text(
+            render_markdown(proof),
+            encoding="utf-8",
+        )
+    except Exception:
+        _restore_atomic_output_dir_overwrite(args.output_dir, backup)
+        raise
+    else:
+        _finish_atomic_output_dir_overwrite(backup)
     sys.stdout.write(payload)
     return 0 if proof.full_frame_inflate_output_parity_claim else 1
 

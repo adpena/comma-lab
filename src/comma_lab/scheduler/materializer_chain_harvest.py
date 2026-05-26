@@ -683,6 +683,12 @@ def _discover_chain_manifest_candidates(
     sweep_manifest_specs: Sequence[str | Path],
 ) -> list[dict[str, Any]]:
     discoveries: list[dict[str, Any]] = []
+    explicit_chain_paths = [
+        _resolve_path(raw_path, repo_root=repo_root).resolve(strict=False)
+        for raw_path in chain_manifest_paths
+    ]
+    explicit_chain_path_set = set(explicit_chain_paths)
+    matched_explicit_paths: set[Path] = set()
     for raw_spec in sweep_manifest_specs:
         work_id, path = _parse_sweep_manifest_spec(raw_spec)
         discoveries.extend(
@@ -694,14 +700,25 @@ def _discover_chain_manifest_candidates(
             )
         )
     if work_queue_path is not None:
-        discoveries.extend(
-            _work_queue_manifest_candidates(
-                _load_json(_resolve_path(work_queue_path, repo_root=repo_root)),
-                work_queue_path=_resolve_path(work_queue_path, repo_root=repo_root),
-                repo_root=repo_root,
-            )
+        work_queue_discoveries = _work_queue_manifest_candidates(
+            _load_json(_resolve_path(work_queue_path, repo_root=repo_root)),
+            work_queue_path=_resolve_path(work_queue_path, repo_root=repo_root),
+            repo_root=repo_root,
         )
+        for discovery in work_queue_discoveries:
+            if explicit_chain_path_set:
+                discovery_path = _resolve_path(
+                    discovery["path"],
+                    repo_root=repo_root,
+                ).resolve(strict=False)
+                if discovery_path not in explicit_chain_path_set:
+                    continue
+                matched_explicit_paths.add(discovery_path)
+            discoveries.append(discovery)
     for raw_path in chain_manifest_paths:
+        resolved = _resolve_path(raw_path, repo_root=repo_root).resolve(strict=False)
+        if resolved in matched_explicit_paths:
+            continue
         discoveries.append(
             {
                 "source": "explicit_chain_manifest",

@@ -1,0 +1,12 @@
+Materializer submission runtime closure
+
+candidate_id: packet_member_zip_header_elide_cbe7d79124ba
+archive_sha256: cbe7d79124ba2e01255a923f9c76751edb0b4836d38d57c89b772bc81dc6b862
+archive_bytes: 345544
+score_claim: false
+promotion_eligible: false
+rank_or_kill_eligible: false
+ready_for_exact_eval_dispatch: false
+
+This packet is a local exact-readiness closure artifact. It is not a score,
+rank, promotion, or dispatch authority until the canonical exact-eval gates pass.

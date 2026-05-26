@@ -26,7 +26,7 @@
   "exact_cuda_auth_eval": false,
   "field_selection_ready_for_exact_eval_dispatch": false,
   "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
-  "generated_at_utc": "2026-05-26T16:59:13Z",
+  "generated_at_utc": "2026-05-26T18:31:16Z",
   "gpu_launched": false,
   "n_candidates": 1,
   "promotable": false,
@@ -122,7 +122,7 @@
         "proof_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/renderer_payload_dfl1_shell_parity/shell_inflate_parity.json",
         "proof_present": true,
         "proof_schema": "shell_inflate_parity_proof_v2",
-        "proof_sha256": "3e7e8d7f1528c81f9ce2877af693f251e7bead3f2d9bac61e6762108a1fb6abd",
+        "proof_sha256": "08bb7ab315cfd2a74f6990cad141e9d0712e0e15f63cba32fc10015df555eb07",
         "rank_or_kill_eligible": false,
         "ready_for_exact_eval_dispatch": false,
         "schema": "renderer_payload_dfl1_full_frame_parity_verification.v1",
@@ -133,7 +133,7 @@
         "submission_tree_sha256": "a2a413dfe584a9e8c9b01fa397dc91deebc05c5ee09b1213121a0fdcd69ca203"
       },
       "gpu_launched": false,
-      "harvested_at_utc": "2026-05-26T16:59:01Z",
+      "harvested_at_utc": "2026-05-26T18:31:14Z",
       "lane_class": "family_agnostic_materializer_harvest",
       "lane_id": "materializer_harvest::renderer_payload_dfl1_candidate.v1",
       "local_advisory_axes": [],
@@ -205,16 +205,16 @@
       },
       "renderer_payload_dfl1_anatomy_semantics": "non_authoritative_planning_signal_only",
       "renderer_payload_dfl1_full_frame_inflate_parity_proof_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/renderer_payload_dfl1_shell_parity/shell_inflate_parity.json",
-      "renderer_payload_dfl1_full_frame_inflate_parity_proof_sha256": "3e7e8d7f1528c81f9ce2877af693f251e7bead3f2d9bac61e6762108a1fb6abd",
+      "renderer_payload_dfl1_full_frame_inflate_parity_proof_sha256": "08bb7ab315cfd2a74f6990cad141e9d0712e0e15f63cba32fc10015df555eb07",
       "renderer_payload_dfl1_full_frame_inflate_parity_satisfied": true,
       "renderer_payload_dfl1_inflate_parity_proof_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/renderer_payload_dfl1_shell_parity/shell_inflate_parity.json",
-      "renderer_payload_dfl1_inflate_parity_proof_sha256": "3e7e8d7f1528c81f9ce2877af693f251e7bead3f2d9bac61e6762108a1fb6abd",
+      "renderer_payload_dfl1_inflate_parity_proof_sha256": "08bb7ab315cfd2a74f6990cad141e9d0712e0e15f63cba32fc10015df555eb07",
       "renderer_payload_dfl1_inflate_parity_satisfied": true,
       "runtime_adapter_ready": false,
       "runtime_consumption_proof_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/runtime_consumption_proof.json",
       "runtime_consumption_proof_required": true,
       "runtime_consumption_proof_status": "present",
-      "runtime_content_tree_sha256": "17c50ea83c483d27bc7300d3e8972e0331c54d9c4f2981ff583d4c16f5185d8e",
+      "runtime_content_tree_sha256": "34fd326c36e66e8cd07c2fc629e9c5117e2c62daad77c2a1f9389bd3cb9f6ee0",
       "runtime_full_frame_inflate_parity_verification": {
         "blockers": [
           "renderer_payload_dfl1_full_frame_inflate_parity_proof_missing"
@@ -233,7 +233,7 @@
         "score_claim_valid": false
       },
       "runtime_source_dir": "submissions/robust_current",
-      "runtime_tree_sha256": "ccb778e6d6ee0958262cc7b7bac14bbd9903e63109691fc83e70adf1e417bc24",
+      "runtime_tree_sha256": "5ff08bf9dc166561eae8407e1cd2b9f61a2dc8bdc9e78438781fe7ab34fb300d",
       "schema": "renderer_payload_dfl1_candidate.v1",
       "score_affecting_change_proof": {
         "archive_changed": true,
@@ -295,8 +295,8 @@
       ],
       "source_runtime_unpacker_parse_satisfied": true,
       "submission_dir": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662",
-      "submission_runtime_content_tree_sha256": "17c50ea83c483d27bc7300d3e8972e0331c54d9c4f2981ff583d4c16f5185d8e",
-      "submission_runtime_tree_sha256": "ccb778e6d6ee0958262cc7b7bac14bbd9903e63109691fc83e70adf1e417bc24",
+      "submission_runtime_content_tree_sha256": "34fd326c36e66e8cd07c2fc629e9c5117e2c62daad77c2a1f9389bd3cb9f6ee0",
+      "submission_runtime_tree_sha256": "5ff08bf9dc166561eae8407e1cd2b9f61a2dc8bdc9e78438781fe7ab34fb300d",
       "target_kind": "renderer_payload_dfl1_v1",
       "target_modes": [
         "contest_exact_eval_planning"
@@ -371,7 +371,7 @@
         "proof_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/renderer_payload_dfl1_shell_parity/shell_inflate_parity.json",
         "proof_present": true,
         "proof_schema": "shell_inflate_parity_proof_v2",
-        "proof_sha256": "3e7e8d7f1528c81f9ce2877af693f251e7bead3f2d9bac61e6762108a1fb6abd",
+        "proof_sha256": "08bb7ab315cfd2a74f6990cad141e9d0712e0e15f63cba32fc10015df555eb07",
         "rank_or_kill_eligible": false,
         "ready_for_exact_eval_dispatch": false,
         "schema": "renderer_payload_dfl1_full_frame_parity_verification.v1",
@@ -382,7 +382,7 @@
         "submission_tree_sha256": "a2a413dfe584a9e8c9b01fa397dc91deebc05c5ee09b1213121a0fdcd69ca203"
       },
       "gpu_launched": false,
-      "harvested_at_utc": "2026-05-26T16:59:01Z",
+      "harvested_at_utc": "2026-05-26T18:31:14Z",
       "lane_class": "family_agnostic_materializer_harvest",
       "lane_id": "materializer_harvest::renderer_payload_dfl1_candidate.v1",
       "local_advisory_axes": [],
@@ -452,10 +452,10 @@
       },
       "renderer_payload_dfl1_anatomy_semantics": "non_authoritative_planning_signal_only",
       "renderer_payload_dfl1_full_frame_inflate_parity_proof_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/renderer_payload_dfl1_shell_parity/shell_inflate_parity.json",
-      "renderer_payload_dfl1_full_frame_inflate_parity_proof_sha256": "3e7e8d7f1528c81f9ce2877af693f251e7bead3f2d9bac61e6762108a1fb6abd",
+      "renderer_payload_dfl1_full_frame_inflate_parity_proof_sha256": "08bb7ab315cfd2a74f6990cad141e9d0712e0e15f63cba32fc10015df555eb07",
       "renderer_payload_dfl1_full_frame_inflate_parity_satisfied": true,
       "renderer_payload_dfl1_inflate_parity_proof_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/renderer_payload_dfl1_shell_parity/shell_inflate_parity.json",
-      "renderer_payload_dfl1_inflate_parity_proof_sha256": "3e7e8d7f1528c81f9ce2877af693f251e7bead3f2d9bac61e6762108a1fb6abd",
+      "renderer_payload_dfl1_inflate_parity_proof_sha256": "08bb7ab315cfd2a74f6990cad141e9d0712e0e15f63cba32fc10015df555eb07",
       "renderer_payload_dfl1_inflate_parity_satisfied": true,
       "runtime_adapter_ready": false,
       "runtime_consumption_proof_path": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/runtime_consumption_proof.json",
@@ -613,7 +613,7 @@
         "proof_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/renderer_payload_dfl1_shell_parity/shell_inflate_parity.json",
         "proof_present": true,
         "proof_schema": "shell_inflate_parity_proof_v2",
-        "proof_sha256": "3e7e8d7f1528c81f9ce2877af693f251e7bead3f2d9bac61e6762108a1fb6abd",
+        "proof_sha256": "08bb7ab315cfd2a74f6990cad141e9d0712e0e15f63cba32fc10015df555eb07",
         "rank_or_kill_eligible": false,
         "ready_for_exact_eval_dispatch": false,
         "schema": "renderer_payload_dfl1_full_frame_parity_verification.v1",
@@ -624,7 +624,7 @@
         "submission_tree_sha256": "a2a413dfe584a9e8c9b01fa397dc91deebc05c5ee09b1213121a0fdcd69ca203"
       },
       "gpu_launched": false,
-      "harvested_at_utc": "2026-05-26T16:59:01Z",
+      "harvested_at_utc": "2026-05-26T18:31:14Z",
       "lane_class": "family_agnostic_materializer_harvest",
       "lane_id": "materializer_harvest::renderer_payload_dfl1_candidate.v1",
       "local_advisory_axes": [],
@@ -696,16 +696,16 @@
       },
       "renderer_payload_dfl1_anatomy_semantics": "non_authoritative_planning_signal_only",
       "renderer_payload_dfl1_full_frame_inflate_parity_proof_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/renderer_payload_dfl1_shell_parity/shell_inflate_parity.json",
-      "renderer_payload_dfl1_full_frame_inflate_parity_proof_sha256": "3e7e8d7f1528c81f9ce2877af693f251e7bead3f2d9bac61e6762108a1fb6abd",
+      "renderer_payload_dfl1_full_frame_inflate_parity_proof_sha256": "08bb7ab315cfd2a74f6990cad141e9d0712e0e15f63cba32fc10015df555eb07",
       "renderer_payload_dfl1_full_frame_inflate_parity_satisfied": true,
       "renderer_payload_dfl1_inflate_parity_proof_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/renderer_payload_dfl1_shell_parity/shell_inflate_parity.json",
-      "renderer_payload_dfl1_inflate_parity_proof_sha256": "3e7e8d7f1528c81f9ce2877af693f251e7bead3f2d9bac61e6762108a1fb6abd",
+      "renderer_payload_dfl1_inflate_parity_proof_sha256": "08bb7ab315cfd2a74f6990cad141e9d0712e0e15f63cba32fc10015df555eb07",
       "renderer_payload_dfl1_inflate_parity_satisfied": true,
       "runtime_adapter_ready": false,
       "runtime_consumption_proof_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662/runtime_consumption_proof.json",
       "runtime_consumption_proof_required": true,
       "runtime_consumption_proof_status": "present",
-      "runtime_content_tree_sha256": "17c50ea83c483d27bc7300d3e8972e0331c54d9c4f2981ff583d4c16f5185d8e",
+      "runtime_content_tree_sha256": "34fd326c36e66e8cd07c2fc629e9c5117e2c62daad77c2a1f9389bd3cb9f6ee0",
       "runtime_full_frame_inflate_parity_verification": {
         "blockers": [
           "renderer_payload_dfl1_full_frame_inflate_parity_proof_missing"
@@ -724,7 +724,7 @@
         "score_claim_valid": false
       },
       "runtime_source_dir": "submissions/robust_current",
-      "runtime_tree_sha256": "ccb778e6d6ee0958262cc7b7bac14bbd9903e63109691fc83e70adf1e417bc24",
+      "runtime_tree_sha256": "5ff08bf9dc166561eae8407e1cd2b9f61a2dc8bdc9e78438781fe7ab34fb300d",
       "schema": "renderer_payload_dfl1_candidate.v1",
       "score_affecting_change_proof": {
         "archive_changed": true,
@@ -786,8 +786,8 @@
       ],
       "source_runtime_unpacker_parse_satisfied": true,
       "submission_dir": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission/renderer_payload_dfl1_e20295f0a662",
-      "submission_runtime_content_tree_sha256": "17c50ea83c483d27bc7300d3e8972e0331c54d9c4f2981ff583d4c16f5185d8e",
-      "submission_runtime_tree_sha256": "ccb778e6d6ee0958262cc7b7bac14bbd9903e63109691fc83e70adf1e417bc24",
+      "submission_runtime_content_tree_sha256": "34fd326c36e66e8cd07c2fc629e9c5117e2c62daad77c2a1f9389bd3cb9f6ee0",
+      "submission_runtime_tree_sha256": "5ff08bf9dc166561eae8407e1cd2b9f61a2dc8bdc9e78438781fe7ab34fb300d",
       "target_kind": "renderer_payload_dfl1_v1",
       "target_modes": [
         "contest_exact_eval_planning"

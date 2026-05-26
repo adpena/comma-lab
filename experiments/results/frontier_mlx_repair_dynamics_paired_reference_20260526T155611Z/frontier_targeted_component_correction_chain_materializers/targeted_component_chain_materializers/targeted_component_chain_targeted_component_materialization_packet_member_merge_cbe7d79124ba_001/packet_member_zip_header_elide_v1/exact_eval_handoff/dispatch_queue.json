@@ -1,0 +1,55 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1
+    },
+    "mode": "paused"
+  },
+  "experiments": [
+    {
+      "id": "no_authorized_materializer_exact_eval_dispatch",
+      "lane_id": null,
+      "metadata": {
+        "dispatch_attempted": false,
+        "dispatch_plan_schema": "materializer_exact_eval_dispatch_plan.v1",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "no_authorized_rows",
+        "score_claim": false,
+        "score_claim_valid": false
+      },
+      "priority": 100,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "-c",
+            "print('no authorized materializer exact-eval dispatch rows')"
+          ],
+          "id": "noop",
+          "kind": "command",
+          "postconditions": [],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        }
+      ],
+      "tags": []
+    }
+  ],
+  "queue_id": "frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2_materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_packet_member_zip_header_elide_v1_003_packet_member_zip_header_elide_v1_exact_eval_dispatch",
+  "schema": "experiment_queue.v1"
+}

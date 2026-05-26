@@ -577,6 +577,92 @@ def test_harvest_work_queue_chain_manifest_into_source_queue(
     assert str(external) in row["candidate_archive_path"]
 
 
+def test_harvest_work_queue_explicit_chain_manifest_filters_sibling_rows(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    external = tmp_path / "VertigoDataTier"
+    chain_a = _chain_manifest(
+        external / "a",
+        authority_overrides={"candidate_id": "candidate_a"},
+    )
+    chain_b = _chain_manifest(
+        external / "b",
+        authority_overrides={"candidate_id": "candidate_b"},
+    )
+    work_queue = _write_json(
+        repo / "materializer_work_queue.json",
+        {
+            "schema": MATERIALIZER_WORK_QUEUE_SCHEMA,
+            "tool": "fixture",
+            "row_count": 2,
+            "executable_row_count": 2,
+            "blocked_row_count": 0,
+            "rows": [
+                {
+                    "schema": "byte_shaving_materializer_work_row.v1",
+                    "work_id": "Materializer Work A",
+                    "work_rank": 1,
+                    "backlog_key": "fixture_a",
+                    "unit_kind": "byte_range",
+                    "operation_family": "entropy_recode",
+                    "target_kind": "byte_range_entropy_recode_v1",
+                    "resource_kind": "local_cpu",
+                    "executable": True,
+                    "postconditions": [
+                        {
+                            "type": "materializer_chain_complete",
+                            "path": str(chain_a),
+                            "schema": CHAIN_SCHEMA,
+                        }
+                    ],
+                    **_false_authority(),
+                },
+                {
+                    "schema": "byte_shaving_materializer_work_row.v1",
+                    "work_id": "Materializer Work B",
+                    "work_rank": 2,
+                    "backlog_key": "fixture_b",
+                    "unit_kind": "byte_range",
+                    "operation_family": "entropy_recode",
+                    "target_kind": "byte_range_entropy_recode_v1",
+                    "resource_kind": "local_cpu",
+                    "executable": True,
+                    "postconditions": [
+                        {
+                            "type": "materializer_chain_complete",
+                            "path": str(chain_b),
+                            "schema": CHAIN_SCHEMA,
+                        }
+                    ],
+                    **_false_authority(),
+                },
+            ],
+            **_false_authority(),
+        },
+    )
+    state = _state_path(
+        repo,
+        status="succeeded",
+        experiment_id="materializer_work_b",
+    )
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        work_queue_path=work_queue,
+        chain_manifest_paths=[chain_b],
+        experiment_queue_state_path=state,
+        experiment_queue_id="materializer_execution_queue",
+    )
+
+    queue = result["source_queue"]
+    assert queue["n_candidates"] == 1
+    assert queue["top_k"][0]["candidate_id"] == "candidate_b"
+    assert result["report"]["accepted_manifest_count"] == 1
+    assert result["report"]["rows"][0]["work_id"] == "Materializer Work B"
+
+
 def test_harvest_chain_manifest_prefers_live_runtime_dir_tree_sha(
     tmp_path: Path,
 ) -> None:
@@ -1247,6 +1333,121 @@ def test_shell_inflate_parity_proof_refuses_nonempty_output_dir(
     assert proc.returncode != 0
     assert sentinel.read_text(encoding="utf-8") == "preserve"
     assert not (out_dir / "shell_inflate_parity.json").exists()
+
+
+def test_shell_inflate_parity_overwrite_replaces_prior_parity_dir(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    source = repo / "source.zip"
+    candidate = repo / "candidate.zip"
+    runtime = _write_simple_shell_runtime(repo / "runtime")
+    out_dir = repo / "parity"
+    out_dir.mkdir()
+    (out_dir / "shell_inflate_parity.json").write_text(
+        '{"schema":"stale"}\n',
+        encoding="utf-8",
+    )
+    (out_dir / "stale.txt").write_text("remove me", encoding="utf-8")
+    with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+    with zipfile.ZipFile(candidate, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SHELL_PARITY_TOOL),
+            "--left-archive",
+            str(source),
+            "--left-submission-dir",
+            str(runtime),
+            "--right-archive",
+            str(candidate),
+            "--right-submission-dir",
+            str(runtime),
+            "--file-list-entry",
+            "0.mkv",
+            "--full-frame-file-list-claim",
+            "--expected-full-frame-file-list-sha256",
+            hashlib.sha256(b"0.mkv\n").hexdigest(),
+            "--expected-full-frame-entry-count",
+            "1",
+            "--full-frame-file-list-source",
+            "unit",
+            "--output-dir",
+            str(out_dir),
+            "--overwrite",
+        ],
+        check=False,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    assert proc.returncode == 0
+    proof = json.loads((out_dir / "shell_inflate_parity.json").read_text())
+    assert proof["schema"] == "shell_inflate_parity_proof_v2"
+    assert not (out_dir / "stale.txt").exists()
+
+
+def test_shell_inflate_parity_overwrite_restores_prior_proof_on_failure(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    source = repo / "source.zip"
+    candidate = repo / "candidate.zip"
+    runtime = _write_simple_shell_runtime(repo / "runtime")
+    out_dir = repo / "parity"
+    out_dir.mkdir()
+    (out_dir / "shell_inflate_parity.json").write_text(
+        '{"schema":"last_good"}\n',
+        encoding="utf-8",
+    )
+    (out_dir / "stale.txt").write_text("keep me", encoding="utf-8")
+    with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("data.bin", b"payload")
+    with zipfile.ZipFile(candidate, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("not-data.bin", b"candidate cannot inflate")
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SHELL_PARITY_TOOL),
+            "--left-archive",
+            str(source),
+            "--left-submission-dir",
+            str(runtime),
+            "--right-archive",
+            str(candidate),
+            "--right-submission-dir",
+            str(runtime),
+            "--file-list-entry",
+            "0.mkv",
+            "--full-frame-file-list-claim",
+            "--expected-full-frame-file-list-sha256",
+            hashlib.sha256(b"0.mkv\n").hexdigest(),
+            "--expected-full-frame-entry-count",
+            "1",
+            "--full-frame-file-list-source",
+            "unit",
+            "--output-dir",
+            str(out_dir),
+            "--overwrite",
+        ],
+        check=False,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+    assert proc.returncode != 0
+    assert json.loads((out_dir / "shell_inflate_parity.json").read_text()) == {
+        "schema": "last_good"
+    }
+    assert (out_dir / "stale.txt").read_text(encoding="utf-8") == "keep me"
 
 
 def test_exact_readiness_bridge_blocks_dfl1_without_full_frame_parity(

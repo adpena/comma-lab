@@ -27,9 +27,9 @@
   ],
   "dispatch_claims_path": ".omx/state/active_lane_dispatch_claims.md",
   "exact_cuda_auth_eval": false,
-  "exact_readiness_out_dir": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness",
+  "exact_readiness_out_dir": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness",
   "field_selection_ready_for_exact_eval_dispatch": false,
-  "generated_at_utc": "2026-05-26T18:31:19Z",
+  "generated_at_utc": "2026-05-26T18:34:41Z",
   "gpu_launched": false,
   "operator_clearable_source_blockers": [],
   "promotable": false,
@@ -40,10 +40,12 @@
   "rows": [
     {
       "blockers": [
-        "above_active_floor_archive_bytes_without_operator_override:345422>185578, active_score_frontier=0.206316386616; above rate-only byte floor"
+        "unknown_uncleared_source_dispatch_blocker:candidate_not_rate_positive",
+        "score_affecting_change_proof_missing",
+        "above_active_floor_archive_bytes_without_operator_override:345544>185578, active_score_frontier=0.206316386616; above rate-only byte floor"
       ],
-      "candidate_id": "renderer_payload_dfl1_e20295f0a662",
-      "exact_readiness_report_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness/renderer_payload_dfl1_e20295f0a662.exact_readiness_report.json",
+      "candidate_id": "packet_member_zip_header_elide_cbe7d79124ba",
+      "exact_readiness_report_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness/packet_member_zip_header_elide_cbe7d79124ba.exact_readiness_report.json",
       "exact_ready_queue_path": null,
       "exact_ready_queue_written": false,
       "readiness_verdict": "blocked"
@@ -54,7 +56,7 @@
   "score_claim": false,
   "score_claim_eligible": false,
   "score_claim_valid": false,
-  "source_queue_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+  "source_queue_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
   "target_modes": [
     "contest_exact_eval_planning"
   ],

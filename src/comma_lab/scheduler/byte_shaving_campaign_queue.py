@@ -60,6 +60,7 @@ from tac.packet_compiler.deterministic_compiler import (
     PACKET_IR_OPERATION_SET_SCHEMA,
     packetir_operation_set_bridge_contract,
 )
+from tac.repo_io import sha256_file
 
 from .byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
@@ -4083,6 +4084,37 @@ def _materializer_execution_experiment_id(
     return experiment_id
 
 
+def _idempotent_materializer_execution_command_items(
+    command: Sequence[Any],
+    *,
+    repo_root: Path,
+) -> list[str]:
+    """Make queue-owned materializer steps rerunnable against prior artifacts."""
+
+    command_items = [str(item) for item in command]
+    if len(command_items) <= 1 or command_items[1] != FAMILY_AGNOSTIC_MATERIALIZER_TOOL:
+        return command_items
+    if "--allow-overwrite" not in command_items:
+        command_items.append("--allow-overwrite")
+    for output_flag, expected_flag in (
+        ("--output-archive", "--expected-existing-output-sha256"),
+        ("--output-manifest", "--expected-existing-manifest-sha256"),
+        (
+            "--runtime-consumption-proof-out",
+            "--expected-existing-runtime-consumption-proof-sha256",
+        ),
+    ):
+        if expected_flag in command_items:
+            continue
+        paths = _command_flag_values(command_items, {output_flag})
+        if not paths:
+            continue
+        existing_path = _resolve_repo_path(paths[-1], repo_root=repo_root)
+        if existing_path.is_file():
+            command_items.extend([expected_flag, sha256_file(existing_path)])
+    return command_items
+
+
 def _resolve_repo_path(path: str | Path, *, repo_root: Path) -> Path:
     candidate = Path(path).expanduser()
     if not candidate.is_absolute():
@@ -4636,6 +4668,7 @@ def _renderer_payload_dfl1_parity_followup_step(
         file_list_source,
         "--output-dir",
         _repo_rel_no_resolve(parity_dir, repo_root),
+        "--overwrite",
     ]
     if file_list is not None:
         command.extend(["--file-list", file_list])
@@ -4974,7 +5007,10 @@ def build_materializer_execution_queue(
         command = row.get("command")
         if not isinstance(command, list) or not command:
             raise ExperimentQueueError(f"materializer work row {rank} command must be non-empty")
-        command_items = [str(item) for item in command]
+        command_items = _idempotent_materializer_execution_command_items(
+            command,
+            repo_root=repo,
+        )
         resource_kind = str(row.get("resource_kind") or "local_cpu")
         if not resource_kind.startswith("local"):
             raise ExperimentQueueError(f"materializer work row {rank} uses non-local resource {resource_kind!r}")

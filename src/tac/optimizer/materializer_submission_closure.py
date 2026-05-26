@@ -679,12 +679,6 @@ def build_materializer_submission_runtime_closure(
     )
     if row.get("receiver_contract_satisfied") is not True:
         raise MaterializerSubmissionClosureError("receiver_contract_not_satisfied")
-    # Static submission closure copies the source contest runtime and swaps only
-    # the candidate archive.  Some family-agnostic transforms, such as ZIP
-    # header elision, do not need a generated receiver adapter even though they
-    # still need exact-readiness to validate the copied runtime and proof.
-    runtime_adapter_ready = row.get("runtime_adapter_ready") is True
-
     candidate_archive = _resolve_path(
         _candidate_archive_path(row),
         repo_root=repo,
@@ -718,6 +712,19 @@ def build_materializer_submission_runtime_closure(
     proof_payload = read_json(proof_source)
     if not isinstance(proof_payload, Mapping):
         raise MaterializerSubmissionClosureError("runtime_consumption_proof_not_object")
+
+    # Static submission closure copies the source contest runtime and swaps only
+    # the candidate archive.  Some family-agnostic transforms, such as ZIP
+    # header elision, can carry a broad runtime_adapter_ready marker from the
+    # verifier even though no generated receiver adapter is needed or present.
+    adapter_values = [
+        value
+        for value in _runtime_adapter_candidate_values(row, proof_payload)
+        if isinstance(value, (str, os.PathLike)) and str(value).strip()
+    ]
+    runtime_adapter_ready = row.get("runtime_adapter_ready") is True and bool(
+        adapter_values
+    )
 
     if runtime_adapter_ready:
         runtime_source = _resolve_runtime_adapter_dir(
@@ -776,6 +783,7 @@ def build_materializer_submission_runtime_closure(
             "submission_dir": _repo_rel(submission_dir, repo),
             "archive_manifest_path": _repo_rel(archive_manifest_path, repo),
             "runtime_source_dir": _repo_rel(runtime_source, repo),
+            "runtime_adapter_ready": runtime_adapter_ready,
             "runtime_tree_sha256": runtime_manifest["runtime_tree_sha256"],
             "submission_runtime_tree_sha256": runtime_manifest["runtime_tree_sha256"],
             "runtime_content_tree_sha256": runtime_manifest[

@@ -1,0 +1,798 @@
+{
+  "mode": "running",
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "queue_id": "frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2",
+  "ready_steps": [],
+  "schema": "experiment_queue_summary.v1",
+  "state": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2.sqlite",
+  "status_counts": {
+    "succeeded": 11
+  },
+  "step_count": 11,
+  "steps": [
+    {
+      "attempts": 1,
+      "experiment_id": "materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_packet_member_zip_header_elide_v1_003_packet_member_zip_header_elide_v1",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_materializer_exact_eval_dispatch_plan.py",
+          "--repo-root",
+          "/Users/adpena/Projects/pact",
+          "--bridge-report",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+          "--dispatch-plan-out",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/dispatch_plan.json",
+          "--experiment-queue-out",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/dispatch_queue.json",
+          "--experiment-queue-id",
+          "frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2_materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_packet_member_zip_header_elide_v1_003_packet_member_zip_header_elide_v1_exact_eval_dispatch",
+          "--provider",
+          "lightning",
+          "--label-prefix",
+          "materializer_exact_eval",
+          "--estimated-cost-per-dispatch",
+          "0.3",
+          "--max-total-cost",
+          "5",
+          "--overwrite"
+        ],
+        "elapsed_seconds": 0.7847456249874085,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2/materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_packet_member_zip_header_elide_v1_003_packet_member_zip_header_elide_v1/build_exact_eval_dispatch_plan/20260526T183126Z_b5716f3aab2697d9.log",
+        "pid": 54283,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 2,
+          "artifact_records": [
+            {
+              "bytes": 2942,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:27Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/dispatch_plan.json",
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 1790,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:27Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/dispatch_queue.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 440,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "b5716f3aab2697d9"
+      },
+      "status": "succeeded",
+      "step_id": "build_exact_eval_dispatch_plan",
+      "updated_at_utc": "2026-05-26T18:31:27Z"
+    },
+    {
+      "attempts": 2,
+      "experiment_id": "materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_packet_member_zip_header_elide_v1_003_packet_member_zip_header_elide_v1",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_materializer_submission_closure.py",
+          "--source-queue",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/source_queue.json",
+          "--submission-dir-out",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/submission",
+          "--closed-source-queue-out",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+          "--closure-report-out",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/submission_closure_report.json",
+          "--overwrite"
+        ],
+        "elapsed_seconds": 2.3236775839468464,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2/materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_packet_member_zip_header_elide_v1_003_packet_member_zip_header_elide_v1/build_materializer_submission_closure/20260526T183121Z_356333173455897f.log",
+        "pid": 54133,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 3,
+          "artifact_records": [
+            {
+              "bytes": 96,
+              "exists": true,
+              "is_dir": true,
+              "is_file": false,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:21Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/submission",
+              "recursive_bytes": 1077031,
+              "recursive_entry_count": 24,
+              "recursive_entry_limit": 256,
+              "recursive_truncated": false,
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 31205,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:23Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 105594,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:23Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/submission_closure_report.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 1471,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "356333173455897f"
+      },
+      "status": "succeeded",
+      "step_id": "build_materializer_submission_closure",
+      "updated_at_utc": "2026-05-26T18:31:23Z"
+    },
+    {
+      "attempts": 2,
+      "experiment_id": "materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_packet_member_zip_header_elide_v1_003_packet_member_zip_header_elide_v1",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/harvest_materializer_chain_candidates.py",
+          "--repo-root",
+          "/Users/adpena/Projects/pact",
+          "--state",
+          ".omx/state/experiment_queue_frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2.sqlite",
+          "--queue-id",
+          "frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2",
+          "--source-queue-out",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/source_queue.json",
+          "--report-out",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/harvest_report.json",
+          "--require-accepted",
+          "--overwrite",
+          "--work-queue",
+          ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/targeted_component_correction_chain_materializer_work_queue.json",
+          "--chain-manifest",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/manifest.json"
+        ],
+        "elapsed_seconds": 0.7846993750426918,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2/materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_packet_member_zip_header_elide_v1_003_packet_member_zip_header_elide_v1/harvest_materializer_chains/20260526T183120Z_5c0a0c425364dd19.log",
+        "pid": 54024,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 2,
+          "artifact_records": [
+            {
+              "bytes": 17947,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:21Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/source_queue.json",
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 9168,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:21Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/harvest_report.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 785,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "5c0a0c425364dd19"
+      },
+      "status": "succeeded",
+      "step_id": "harvest_materializer_chains",
+      "updated_at_utc": "2026-05-26T18:31:21Z"
+    },
+    {
+      "attempts": 4,
+      "experiment_id": "materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_packet_member_zip_header_elide_v1_003_packet_member_zip_header_elide_v1",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/run_family_agnostic_materializer.py",
+          "--target-kind",
+          "packet_member_zip_header_elide_v1",
+          "--archive-path",
+          "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/archive.zip",
+          "--output-archive",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/candidate.zip",
+          "--output-manifest",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/manifest.json",
+          "--runtime-consumption-proof-out",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/runtime_consumption_proof.json",
+          "--allow-overwrite",
+          "--expected-existing-output-sha256",
+          "cbe7d79124ba2e01255a923f9c76751edb0b4836d38d57c89b772bc81dc6b862",
+          "--expected-existing-manifest-sha256",
+          "4028ccd9f4f99e705d001a8a76be10cbd993c81655d7121786a5826afd061ed1",
+          "--expected-existing-runtime-consumption-proof-sha256",
+          "bdafdab2e09c65a59da5d3ec6d83a9d7e29ad4aa0372c79cd7f9f2e1b2680c76"
+        ],
+        "elapsed_seconds": 0.26424770802259445,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2/materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_packet_member_zip_header_elide_v1_003_packet_member_zip_header_elide_v1/materialize_local_proof_chain/20260526T183120Z_671d93d7b5f1162f.log",
+        "pid": 53916,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 3,
+          "artifact_records": [
+            {
+              "bytes": 345544,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:20Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/candidate.zip",
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 13567,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:20Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/manifest.json",
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 9542,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:20Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/runtime_consumption_proof.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 13567,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "671d93d7b5f1162f"
+      },
+      "status": "succeeded",
+      "step_id": "materialize_local_proof_chain",
+      "updated_at_utc": "2026-05-26T18:31:20Z"
+    },
+    {
+      "attempts": 1,
+      "experiment_id": "materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_packet_member_zip_header_elide_v1_003_packet_member_zip_header_elide_v1",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/run_materializer_exact_readiness_bridge.py",
+          "--source-queue",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+          "--exact-readiness-out-dir",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness",
+          "--bridge-report-out",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+          "--overwrite",
+          "--force-recompute"
+        ],
+        "elapsed_seconds": 2.8687125419965014,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2/materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_packet_member_zip_header_elide_v1_003_packet_member_zip_header_elide_v1/run_materializer_exact_readiness_bridge/20260526T183123Z_39d2f92205986557.log",
+        "pid": 54169,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 2,
+          "artifact_records": [
+            {
+              "bytes": 96,
+              "exists": true,
+              "is_dir": true,
+              "is_file": false,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:26Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness",
+              "recursive_bytes": 5655,
+              "recursive_entry_count": 1,
+              "recursive_entry_limit": 256,
+              "recursive_truncated": false,
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 3727,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:26Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 720,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "39d2f92205986557"
+      },
+      "status": "succeeded",
+      "step_id": "run_materializer_exact_readiness_bridge",
+      "updated_at_utc": "2026-05-26T18:31:26Z"
+    },
+    {
+      "attempts": 2,
+      "experiment_id": "materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_materializer_exact_eval_dispatch_plan.py",
+          "--repo-root",
+          "/Users/adpena/Projects/pact",
+          "--bridge-report",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+          "--dispatch-plan-out",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/dispatch_plan.json",
+          "--experiment-queue-out",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/dispatch_queue.json",
+          "--experiment-queue-id",
+          "frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2_materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1_exact_eval_dispatch",
+          "--provider",
+          "lightning",
+          "--label-prefix",
+          "materializer_exact_eval",
+          "--estimated-cost-per-dispatch",
+          "0.3",
+          "--max-total-cost",
+          "5",
+          "--overwrite"
+        ],
+        "elapsed_seconds": 0.7770655000349507,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2/materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1/build_exact_eval_dispatch_plan/20260526T183119Z_2f765b0b358d23b5.log",
+        "pid": 53806,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 2,
+          "artifact_records": [
+            {
+              "bytes": 2915,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:20Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/dispatch_plan.json",
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 1772,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:20Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/dispatch_queue.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 431,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "2f765b0b358d23b5"
+      },
+      "status": "succeeded",
+      "step_id": "build_exact_eval_dispatch_plan",
+      "updated_at_utc": "2026-05-26T18:31:20Z"
+    },
+    {
+      "attempts": 3,
+      "experiment_id": "materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_materializer_submission_closure.py",
+          "--source-queue",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/source_queue.json",
+          "--submission-dir-out",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission",
+          "--closed-source-queue-out",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+          "--closure-report-out",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission_closure_report.json",
+          "--overwrite"
+        ],
+        "elapsed_seconds": 2.3352128750411794,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2/materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1/build_materializer_submission_closure/20260526T183114Z_48df38b1bcf6d880.log",
+        "pid": 53783,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 3,
+          "artifact_records": [
+            {
+              "bytes": 96,
+              "exists": true,
+              "is_dir": true,
+              "is_file": false,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:14Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission",
+              "recursive_bytes": 1062745,
+              "recursive_entry_count": 20,
+              "recursive_entry_limit": 256,
+              "recursive_truncated": false,
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 50509,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:16Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 101600,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:16Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/submission_closure_report.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 1444,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "48df38b1bcf6d880"
+      },
+      "status": "succeeded",
+      "step_id": "build_materializer_submission_closure",
+      "updated_at_utc": "2026-05-26T18:31:16Z"
+    },
+    {
+      "attempts": 3,
+      "experiment_id": "materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/harvest_materializer_chain_candidates.py",
+          "--repo-root",
+          "/Users/adpena/Projects/pact",
+          "--state",
+          ".omx/state/experiment_queue_frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2.sqlite",
+          "--queue-id",
+          "frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2",
+          "--source-queue-out",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/source_queue.json",
+          "--report-out",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/harvest_report.json",
+          "--require-accepted",
+          "--overwrite",
+          "--work-queue",
+          ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/targeted_component_correction_chain_materializer_work_queue.json",
+          "--chain-manifest",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/manifest.json",
+          "--renderer-payload-dfl1-inflate-parity-proof",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/renderer_payload_dfl1_shell_parity/shell_inflate_parity.json",
+          "--allowed-artifact-root",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/renderer_payload_dfl1_shell_parity"
+        ],
+        "elapsed_seconds": 0.776214582961984,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2/materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1/harvest_materializer_chains/20260526T183113Z_cfd95fdde9456cc5.log",
+        "pid": 53781,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 2,
+          "artifact_records": [
+            {
+              "bytes": 31125,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:14Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/source_queue.json",
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 9525,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:14Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/harvest_report.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 767,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "cfd95fdde9456cc5"
+      },
+      "status": "succeeded",
+      "step_id": "harvest_materializer_chains",
+      "updated_at_utc": "2026-05-26T18:31:14Z"
+    },
+    {
+      "attempts": 4,
+      "experiment_id": "materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/run_family_agnostic_materializer.py",
+          "--target-kind",
+          "renderer_payload_dfl1_v1",
+          "--archive-path",
+          "submissions/robust_current/archive_correct.zip",
+          "--output-archive",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/candidate.zip",
+          "--output-manifest",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/manifest.json",
+          "--runtime-consumption-proof-out",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/runtime_consumption_proof.json",
+          "--allow-overwrite",
+          "--expected-existing-output-sha256",
+          "e20295f0a662101567f36afe8ce17142635f976cb2f2b8937b4cbc76455ee3c4",
+          "--expected-existing-manifest-sha256",
+          "1de8bdf6a3f559463ee949e097ce1528427337104faf238f2f7326c408f3bd48",
+          "--expected-existing-runtime-consumption-proof-sha256",
+          "00059578315477c25dc2d246baf43211644599cf6c4e6c740be464ccee17225f"
+        ],
+        "elapsed_seconds": 0.2605184999993071,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2/materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1/materialize_local_proof_chain/20260526T182852Z_a79dbe0323aa89fa.log",
+        "pid": 51479,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 3,
+          "artifact_records": [
+            {
+              "bytes": 345422,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:28:52Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/candidate.zip",
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 12779,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:28:52Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/manifest.json",
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 8092,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:28:52Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/runtime_consumption_proof.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 12779,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "a79dbe0323aa89fa"
+      },
+      "status": "succeeded",
+      "step_id": "materialize_local_proof_chain",
+      "updated_at_utc": "2026-05-26T18:28:52Z"
+    },
+    {
+      "attempts": 3,
+      "experiment_id": "materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/prove_shell_inflate_parity.py",
+          "--left-archive",
+          "submissions/robust_current/archive_correct.zip",
+          "--left-submission-dir",
+          "submissions/robust_current",
+          "--right-archive",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/candidate.zip",
+          "--right-submission-dir",
+          "submissions/robust_current",
+          "--full-frame-file-list-claim",
+          "--expected-full-frame-file-list-sha256",
+          "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8",
+          "--expected-full-frame-entry-count",
+          "1",
+          "--full-frame-file-list-source",
+          "upstream/public_test_video_names.txt",
+          "--output-dir",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/renderer_payload_dfl1_shell_parity",
+          "--overwrite",
+          "--file-list",
+          "upstream/public_test_video_names.txt"
+        ],
+        "elapsed_seconds": 140.97051637491677,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2/materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1/prove_renderer_payload_dfl1_shell_parity/20260526T182852Z_3b0298df5b28bf79.log",
+        "pid": 51480,
+        "postcondition_errors": [],
+        "resource_kind": "local_io_heavy",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 2,
+          "artifact_records": [
+            {
+              "bytes": 160,
+              "exists": true,
+              "is_dir": true,
+              "is_file": false,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:13Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/renderer_payload_dfl1_shell_parity",
+              "recursive_bytes": 6036,
+              "recursive_entry_count": 3,
+              "recursive_entry_limit": 256,
+              "recursive_truncated": false,
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 4106,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:13Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/renderer_payload_dfl1_shell_parity/shell_inflate_parity.json",
+              "source": "step.postconditions.path"
+            }
+          ],
+          "log_bytes": 11660,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "3b0298df5b28bf79"
+      },
+      "status": "succeeded",
+      "step_id": "prove_renderer_payload_dfl1_shell_parity",
+      "updated_at_utc": "2026-05-26T18:31:13Z"
+    },
+    {
+      "attempts": 2,
+      "experiment_id": "materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/run_materializer_exact_readiness_bridge.py",
+          "--source-queue",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+          "--exact-readiness-out-dir",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness",
+          "--bridge-report-out",
+          "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+          "--overwrite",
+          "--force-recompute"
+        ],
+        "elapsed_seconds": 2.857670458033681,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_targeted_chain_materializer_execution_r2/materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1/run_materializer_exact_readiness_bridge/20260526T183116Z_1c7ca5740fc8b158.log",
+        "pid": 53799,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 2,
+          "artifact_records": [
+            {
+              "bytes": 96,
+              "exists": true,
+              "is_dir": true,
+              "is_file": false,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T16:59:44Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness",
+              "recursive_bytes": 5733,
+              "recursive_entry_count": 1,
+              "recursive_entry_limit": 256,
+              "recursive_truncated": false,
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 3553,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T18:31:19Z",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 711,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "1c7ca5740fc8b158"
+      },
+      "status": "succeeded",
+      "step_id": "run_materializer_exact_readiness_bridge",
+      "updated_at_utc": "2026-05-26T18:31:19Z"
+    }
+  ]
+}

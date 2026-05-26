@@ -94,7 +94,14 @@
             "--output-manifest",
             "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/manifest.json",
             "--runtime-consumption-proof-out",
-            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/runtime_consumption_proof.json"
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/runtime_consumption_proof.json",
+            "--allow-overwrite",
+            "--expected-existing-output-sha256",
+            "e20295f0a662101567f36afe8ce17142635f976cb2f2b8937b4cbc76455ee3c4",
+            "--expected-existing-manifest-sha256",
+            "1de8bdf6a3f559463ee949e097ce1528427337104faf238f2f7326c408f3bd48",
+            "--expected-existing-runtime-consumption-proof-sha256",
+            "00059578315477c25dc2d246baf43211644599cf6c4e6c740be464ccee17225f"
           ],
           "id": "materialize_local_proof_chain",
           "kind": "command",
@@ -204,6 +211,7 @@
             "upstream/public_test_video_names.txt",
             "--output-dir",
             "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/renderer_payload_dfl1_shell_parity",
+            "--overwrite",
             "--file-list",
             "upstream/public_test_video_names.txt"
           ],
@@ -654,7 +662,14 @@
             "--output-manifest",
             "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/manifest.json",
             "--runtime-consumption-proof-out",
-            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/runtime_consumption_proof.json"
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/runtime_consumption_proof.json",
+            "--allow-overwrite",
+            "--expected-existing-output-sha256",
+            "cbe7d79124ba2e01255a923f9c76751edb0b4836d38d57c89b772bc81dc6b862",
+            "--expected-existing-manifest-sha256",
+            "4028ccd9f4f99e705d001a8a76be10cbd993c81655d7121786a5826afd061ed1",
+            "--expected-existing-runtime-consumption-proof-sha256",
+            "bdafdab2e09c65a59da5d3ec6d83a9d7e29ad4aa0372c79cd7f9f2e1b2680c76"
           ],
           "id": "materialize_local_proof_chain",
           "kind": "command",

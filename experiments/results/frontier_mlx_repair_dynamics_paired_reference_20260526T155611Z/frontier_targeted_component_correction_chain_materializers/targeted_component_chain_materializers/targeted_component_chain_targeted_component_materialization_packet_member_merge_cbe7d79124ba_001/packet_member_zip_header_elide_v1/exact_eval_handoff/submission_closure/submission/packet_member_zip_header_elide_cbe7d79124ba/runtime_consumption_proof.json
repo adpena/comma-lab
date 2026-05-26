@@ -1,17 +1,13 @@
 {
-  "artifact_write": {
-    "allow_overwrite": true,
-    "bytes_written": 345544,
-    "free_bytes_before": 628173717504,
-    "path": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/candidate.zip",
-    "sha256": "cbe7d79124ba2e01255a923f9c76751edb0b4836d38d57c89b772bc81dc6b862"
-  },
-  "byte_closed_candidate_emitted": true,
+  "all_member_compressed_stream_lengths_identical_to_source": true,
+  "all_member_compressed_streams_identical_to_source": true,
+  "all_member_payloads_identical_to_source": true,
   "candidate_archive": {
     "bytes": 345544,
     "path": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/candidate.zip",
     "sha256": "cbe7d79124ba2e01255a923f9c76751edb0b4836d38d57c89b772bc81dc6b862"
   },
+  "candidate_archive_sha256": "cbe7d79124ba2e01255a923f9c76751edb0b4836d38d57c89b772bc81dc6b862",
   "candidate_member": {
     "bytes": 345390,
     "name": "__packet_member_merge_v1.bin",
@@ -20,6 +16,11 @@
     "zip_compressed_payload_sha256": "620c6cf15a13f8bb7b5d5114fcbd061dd1f0396abe2af779cab98b80d1bf22b7",
     "zip_compressed_sha256": "620c6cf15a13f8bb7b5d5114fcbd061dd1f0396abe2af779cab98b80d1bf22b7",
     "zip_compression_method": "stored"
+  },
+  "candidate_member_payload_identical_to_source": true,
+  "candidate_member_sha256": "620c6cf15a13f8bb7b5d5114fcbd061dd1f0396abe2af779cab98b80d1bf22b7",
+  "candidate_member_sha256s": {
+    "__packet_member_merge_v1.bin": "620c6cf15a13f8bb7b5d5114fcbd061dd1f0396abe2af779cab98b80d1bf22b7"
   },
   "candidate_members": [
     {
@@ -74,9 +75,15 @@
       "zip_compression_method": "stored"
     }
   ],
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
   "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
   "gpu_launched": false,
+  "header_elision_contract": {},
   "materializer_id": "packet_member_zip_header_elide_adapter",
+  "member_sha256": "620c6cf15a13f8bb7b5d5114fcbd061dd1f0396abe2af779cab98b80d1bf22b7",
+  "passed": true,
   "portability_contract": {
     "deterministic_surface": "python_stdlib_raw_zip32_wire_rewrite",
     "implementation_language": "python",
@@ -105,51 +112,50 @@
   },
   "promotable": false,
   "promotion_eligible": false,
+  "proof_kind": "packet_member_zip_header_elide_payload_identity_receiver_proof.v1",
+  "proof_scope": "zip_header_metadata_elision_with_member_payload_identity",
   "rank_or_kill_eligible": false,
-  "readiness_blockers": [
-    "candidate_not_rate_positive"
-  ],
   "ready_for_exact_eval_dispatch": false,
   "receiver_contract_id": "packet_member_zip_header_elide_v1.receiver.v1",
   "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
   "receiver_contract_satisfied": true,
-  "receiver_verification": {
-    "blockers": [],
-    "candidate_archive_sha256": "cbe7d79124ba2e01255a923f9c76751edb0b4836d38d57c89b772bc81dc6b862",
+  "runtime_consumption_probe": {
+    "candidate_elidable_header_bytes": 0,
+    "candidate_member_bytes": 345390,
     "candidate_member_sha256": "620c6cf15a13f8bb7b5d5114fcbd061dd1f0396abe2af779cab98b80d1bf22b7",
-    "candidate_member_sha256s": {
-      "__packet_member_merge_v1.bin": "620c6cf15a13f8bb7b5d5114fcbd061dd1f0396abe2af779cab98b80d1bf22b7"
-    },
-    "materializer_id": "packet_member_zip_header_elide_adapter",
-    "proof_kind": "packet_member_zip_header_elide_payload_identity_receiver_proof.v1",
-    "proof_path": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/runtime_consumption_proof.json",
-    "proof_present": true,
-    "proof_schema": "family_agnostic_runtime_consumption_proof_v1",
-    "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
-    "receiver_contract_satisfied": true,
-    "runtime_adapter_ready": false,
-    "runtime_adapter_sha256": null,
-    "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
-    "target_kind": "packet_member_zip_header_elide_v1"
+    "candidate_total_elidable_header_bytes": 0,
+    "elided_header_bytes": 0,
+    "member_proofs": [
+      {
+        "candidate_compressed_stream_identical_to_source": true,
+        "candidate_compressed_stream_length_identical_to_source": true,
+        "candidate_member_payload_identical_to_source": true,
+        "candidate_member_sha256": "620c6cf15a13f8bb7b5d5114fcbd061dd1f0396abe2af779cab98b80d1bf22b7",
+        "candidate_zip_compressed_bytes": 345390,
+        "candidate_zip_compressed_sha256": "620c6cf15a13f8bb7b5d5114fcbd061dd1f0396abe2af779cab98b80d1bf22b7",
+        "member_name": "__packet_member_merge_v1.bin",
+        "member_sha256": "620c6cf15a13f8bb7b5d5114fcbd061dd1f0396abe2af779cab98b80d1bf22b7",
+        "passed": true,
+        "source_member_sha256": "620c6cf15a13f8bb7b5d5114fcbd061dd1f0396abe2af779cab98b80d1bf22b7",
+        "source_zip_compressed_bytes": 345390,
+        "source_zip_compressed_sha256": "620c6cf15a13f8bb7b5d5114fcbd061dd1f0396abe2af779cab98b80d1bf22b7"
+      }
+    ],
+    "passed": true,
+    "schema": "packet_member_zip_header_elide_payload_identity_probe.v1",
+    "source_elidable_header_bytes": 0,
+    "source_member_bytes": 345390,
+    "source_member_sha256": "620c6cf15a13f8bb7b5d5114fcbd061dd1f0396abe2af779cab98b80d1bf22b7",
+    "source_total_elidable_header_bytes": 0
   },
-  "runtime_consumption_proof_path": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/runtime_consumption_proof.json",
-  "runtime_consumption_proof_write": {
-    "allow_overwrite": true,
-    "bytes_written": 9542,
-    "free_bytes_before": 628173709312,
-    "path": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/runtime_consumption_proof.json",
-    "sha256": "bdafdab2e09c65a59da5d3ec6d83a9d7e29ad4aa0372c79cd7f9f2e1b2680c76"
-  },
-  "schema": "packet_member_zip_header_elide_candidate.v1",
+  "runtime_consumption_proof_passed": true,
+  "schema": "family_agnostic_runtime_consumption_proof_v1",
+  "score_affecting_payload_changed": false,
   "score_claim": false,
   "score_claim_valid": false,
   "selected_elision": {
     "candidate_archive_bytes": 345544,
-    "elided_header_bytes": 0,
     "saved_bytes": 0,
-    "selected_member_names": [
-      "__packet_member_merge_v1.bin"
-    ],
     "source_archive_bytes": 345544,
     "strip_archive_comment": true,
     "strip_member_comment": true,
@@ -159,29 +165,6 @@
   "selected_member_names": [
     "__packet_member_merge_v1.bin"
   ],
-  "selection_scope": "single_member",
-  "serialized_archive_delta": {
-    "archive_delta_bytes": 0,
-    "blockers": [],
-    "candidate_archive_bytes": 345544,
-    "dispatch_attempted": false,
-    "gpu_launched": false,
-    "modeled_cost_bytes": null,
-    "modeled_saved_bytes": 0,
-    "promotable": false,
-    "promotion_eligible": false,
-    "rank_or_kill_eligible": false,
-    "rate_only_control": false,
-    "ready_for_exact_eval_dispatch": false,
-    "realized_saved_bytes": 0,
-    "require_realized_saving": false,
-    "savings_realized": false,
-    "schema": "serialized_archive_delta_contract.v1",
-    "score_claim": false,
-    "score_claim_valid": false,
-    "source_archive_bytes": 345544,
-    "status": "zero_delta"
-  },
   "source_archive": {
     "bytes": 345544,
     "path": "/Users/adpena/Projects/pact/experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/archive.zip",
@@ -196,6 +179,7 @@
     "zip_compressed_sha256": "620c6cf15a13f8bb7b5d5114fcbd061dd1f0396abe2af779cab98b80d1bf22b7",
     "zip_compression_method": "stored"
   },
+  "source_member_sha256": "620c6cf15a13f8bb7b5d5114fcbd061dd1f0396abe2af779cab98b80d1bf22b7",
   "source_members": [
     {
       "bytes": 345390,
@@ -249,40 +233,5 @@
       "zip_compression_method": "stored"
     }
   ],
-  "target_kind": "packet_member_zip_header_elide_v1",
-  "tool_run_manifest": {
-    "argv": [
-      "--target-kind",
-      "packet_member_zip_header_elide_v1",
-      "--archive-path",
-      "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/archive.zip",
-      "--output-archive",
-      "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/candidate.zip",
-      "--output-manifest",
-      "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/manifest.json",
-      "--runtime-consumption-proof-out",
-      "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/runtime_consumption_proof.json",
-      "--allow-overwrite",
-      "--expected-existing-output-sha256",
-      "cbe7d79124ba2e01255a923f9c76751edb0b4836d38d57c89b772bc81dc6b862",
-      "--expected-existing-manifest-sha256",
-      "4028ccd9f4f99e705d001a8a76be10cbd993c81655d7121786a5826afd061ed1",
-      "--expected-existing-runtime-consumption-proof-sha256",
-      "bdafdab2e09c65a59da5d3ec6d83a9d7e29ad4aa0372c79cd7f9f2e1b2680c76"
-    ],
-    "canonical_payload_without_tool_manifest_sha256": "15441fd1246e7547bd393975f8827ae9bc949bea94793260ec8bf01ad24dd916",
-    "dispatch_attempted": false,
-    "input_files": [
-      {
-        "bytes": 345544,
-        "path": "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/archive.zip",
-        "sha256": "cbe7d79124ba2e01255a923f9c76751edb0b4836d38d57c89b772bc81dc6b862"
-      }
-    ],
-    "output_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/packet_member_zip_header_elide_v1/manifest.json",
-    "ready_for_exact_eval_dispatch": false,
-    "schema_version": 1,
-    "score_claim": false,
-    "tool": "tools/run_family_agnostic_materializer.py"
-  }
+  "target_kind": "packet_member_zip_header_elide_v1"
 }
