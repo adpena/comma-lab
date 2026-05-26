@@ -17,7 +17,6 @@ import hashlib
 import numpy as np
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Test 1: top-level import without MLX
 # ---------------------------------------------------------------------------
@@ -530,6 +529,69 @@ def test_mlx_availability_gate() -> None:
         # MLX is NOT installed; the gate should raise with actionable message
         with pytest.raises(RuntimeError, match="numpy_reference"):
             _ensure_mlx_available()
+
+
+def test_mlx_renderer_export_matches_pytorch_inflate_decoder() -> None:
+    """MLX renderer export preserves PyTorch inflate decoder ordering.
+
+    This guards the NCHW-to-NHWC stem-layout boundary: MLX executes Conv2d in
+    NHWC, but the archive's PyTorch runtime views the stem vector as NCHW.
+    """
+    mx = pytest.importorskip("mlx.core")
+    import torch
+
+    from tac.substrates.nirvana_cascading_nerv.inflate import (
+        NirvanaCascadingDecoderTorch,
+    )
+    from tac.substrates.nirvana_cascading_nerv.mlx_renderer import (
+        NirvanaCascadingNervConfig,
+        NirvanaCascadingNervRendererMLX,
+    )
+
+    cfg = NirvanaCascadingNervConfig()
+    renderer = NirvanaCascadingNervRendererMLX(cfg, seed=123)
+    assert hasattr(renderer, "trainable_parameters")
+
+    latents_np = np.random.default_rng(0).standard_normal(
+        (2, cfg.per_pair_latent_dim)
+    ).astype(np.float32)
+    residuals_mlx = []
+    residuals_torch = []
+    for level in range(cfg.num_levels):
+        h, w = cfg.per_level_shape(level)
+        residual_np = np.zeros((h, w, 3), dtype=np.float32)
+        residuals_mlx.append(mx.array(residual_np))
+        residuals_torch.append(torch.from_numpy(residual_np))
+
+    mlx_rgb = np.asarray(
+        renderer.cascade_reconstruct(mx.array(latents_np), residuals_mlx)
+    )
+
+    torch_decoder = NirvanaCascadingDecoderTorch(
+        num_levels=cfg.num_levels,
+        per_pair_latent_dim=cfg.per_pair_latent_dim,
+        base_h=cfg.base_h,
+        base_w=cfg.base_w,
+        base_channels=cfg.base_channels,
+    )
+    state_dict = {}
+    for key, arr in renderer.state_dict_for_inflate_export().items():
+        arr_np = np.asarray(arr).astype(np.float32)
+        if arr_np.ndim == 4:
+            arr_np = arr_np.transpose(0, 3, 1, 2).copy()
+        state_dict[key] = torch.from_numpy(arr_np)
+    load_result = torch_decoder.load_state_dict(state_dict, strict=False)
+    assert load_result.missing_keys == []
+    assert load_result.unexpected_keys == []
+
+    with torch.inference_mode():
+        torch_rgb = torch_decoder(
+            torch.from_numpy(latents_np),
+            residuals_torch,
+        ).permute(0, 2, 3, 1).numpy()
+
+    max_abs = float(np.max(np.abs(mlx_rgb - torch_rgb)))
+    assert max_abs < 1e-3
 
 
 # ---------------------------------------------------------------------------
