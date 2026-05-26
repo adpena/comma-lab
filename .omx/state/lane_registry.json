@@ -57823,6 +57823,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_t3_op7_op8_doctrine_amendments_20260526",
+      "name": "T3 OP #7+#8 doctrine amendments (cascade L6 3-verdict map + MLX-first per-substrate-class depth-aware forecast)",
+      "phase": 7.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "T3 op-routables #7 + #8 executed in commit b96418424; cascade doctrine + MLX-first doctrine APPEND-ONLY amendments + canonical posterior anchor (op_routable_executed event_type)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/t3_op7_op8_doctrine_amendments_landed_20260526T160000Z.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -57832,5 +57873,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T12:50:36Z"
+  "updated_at": "2026-05-26T13:19:27Z"
 }
