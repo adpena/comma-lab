@@ -17,7 +17,6 @@ import hashlib
 import numpy as np
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Test 1: top-level import without MLX
 # ---------------------------------------------------------------------------
@@ -620,23 +619,37 @@ def test_mlx_numpy_parity_skipped_if_mlx_unavailable() -> None:
     """MLX↔numpy parity test infrastructure exists; gracefully skips if MLX missing.
 
     Per axis 2 MLX drift minimization (operator directive #3 2026-05-26):
-    captures empirical drift bound for `mx.matmul` vs numpy `np.matmul`. The
-    design memo §"MLX drift minimization per primitive" predicts ≤ 1e-5 for
-    fp32 matmul; empirical anchor 2026-05-26 on M-series MPS reveals matmul
-    drift up to ~5e-3 due to MLX's internal mixed-precision accumulation
-    strategy on Apple Silicon — this is a HIGHER-than-predicted drift bound
-    that documents the as-built MLX behavior.
+    captures empirical drift bound for `mx.matmul` vs numpy `np.matmul`.
 
-    The 5e-3 bound is consistent with sister A=DreamerV3 max_abs=24.34 anchor
-    (which was 4 orders of magnitude worse due to align_corners=True bilinear
-    + mx.repeat anti-pattern); the COIN++ substrate AVOIDS those anti-patterns,
-    so 5e-3 is the residual hardware-induced bound, NOT a substrate bug.
+    **CORRECTION** (FIX-WAVE-R1''-K 2026-05-26): the earlier prose claimed a
+    5e-3 absolute drift bound. R1'' independent verification across K-typical
+    substrate dimensions empirically falsified that claim — actual drift is
+    O(1e-2) abs / O(1e-3) rms / 7.6e-4 rel-median (see canonical equation
+    `mlx_matmul_drift_m_series_canonical_floor_v1` registered in
+    `tac.canonical_equations` per Catalog #344). The 5e-3 number was an
+    artifact of the small (4x16)@(16x8) test fixture below; it is NOT the
+    canonical floor at substrate-typical dims (32x32, 64x64, 128x128,
+    256x64, 64x256 all measured >5e-3 abs_max).
 
-    Operator-routable next step: queue Catalog #1255 MLX drift mitigation
-    findings cross-reference + per-primitive characterization at L1.
+    This test asserts against the canonical floor via the canonical helper
+    `classify_mlx_matmul_drift` from
+    `tac.canonical_equations.mlx_matmul_m_series_floor` (Catalog #344 +
+    canonical-equation-reference enforcement) so a future K-substrate change
+    that introduces an anti-pattern (align_corners=True / mx.repeat / fp16
+    matmul) will produce drift ABOVE_CANONICAL_FLOOR_NEEDS_MITIGATION and
+    the canonical classifier will flag the verdict shift.
+
+    Source for the canonical floor: R1'' independent verification per
+    `.omx/research/path_3_k_recursive_adversarial_review_r1_prime_prime_3_axis_20260526.md`
+    + `.omx/research/path_3_fix_wave_r1_prime_prime_k_coin_pp_landed_*.md`
+    [empirical:tac.canonical_equations.mlx_matmul_m_series_floor].
+
+    Operator-routable next step: per-substrate-class characterization at L1
+    (M1/M2/M3/M4/M5/Ultra/Pro/Max variants); see canonical equation
+    `mlx_matmul_drift_m_series_canonical_floor_v1` reactivation criteria.
     """
     try:
-        import mlx.core as mx  # noqa: F401
+        import mlx.core as mx
 
         mlx_available = True
     except ImportError:
@@ -645,6 +658,10 @@ def test_mlx_numpy_parity_skipped_if_mlx_unavailable() -> None:
     if not mlx_available:
         pytest.skip("MLX not installed; numpy reference path remains operable per axis 3")
 
+    from tac.canonical_equations.mlx_matmul_m_series_floor import (
+        CANONICAL_ABS_MAX_UPPER_BOUND,
+        classify_mlx_matmul_drift,
+    )
     from tac.substrates.coin_pp_implicit_neural_representation.numpy_reference import (
         linear as numpy_linear,
     )
@@ -663,15 +680,33 @@ def test_mlx_numpy_parity_skipped_if_mlx_unavailable() -> None:
     y_mlx_arr = mx.matmul(x_mx, mx.transpose(weight_mx)) + bias_mx
     y_mlx = np.array(y_mlx_arr)
 
-    max_abs = np.abs(y_numpy - y_mlx).max()
-    # EMPIRICAL bound: 5e-3 (NOT 1e-5 as initially predicted in design memo)
-    # This is the as-built MLX matmul drift on Apple Silicon; documents real
-    # hardware behavior. Tighter bounds queued for L1 cargo-cult-unwind.
-    # AVOIDED anti-patterns (align_corners=True, mx.repeat, fp16 matmul) are
-    # NOT present; this 5e-3 is the residual hardware-induced bound.
-    assert max_abs < 5e-3, (
-        f"MLX↔numpy linear parity drift {max_abs} > 5e-3 EMPIRICAL bound; "
-        f"this exceeds the as-built MLX matmul drift on Apple Silicon. "
-        f"Verify no align_corners=True bilinear or mx.repeat anti-pattern "
-        f"introduced per axis 2 MLX drift minimization discipline."
+    diff = np.abs(y_numpy - y_mlx)
+    max_abs = float(diff.max())
+    rms = float(np.sqrt(np.mean(diff**2)))
+
+    # Canonical M-series MPS fp32 matmul drift hardware floor per
+    # `tac.canonical_equations.mlx_matmul_m_series_floor` Catalog #344
+    # registration. Per FIX-WAVE-R1''-K (2026-05-26) independent verification
+    # the upper bound is 6e-2 abs (covers (64,256)@(256,64) worst-case) /
+    # 1.5e-2 rms / 7.6e-4 rel-median across K-typical substrate dims.
+    #
+    # If this assertion fires it means EITHER (a) the hardware-class floor
+    # has shifted (e.g. new M-series generation; route to per-class
+    # characterization op-routable on the canonical equation), OR (b) the
+    # substrate introduced an anti-pattern (align_corners=True / mx.repeat /
+    # fp16 matmul) — re-verify per axis 2 MLX drift minimization discipline.
+    verdict = classify_mlx_matmul_drift(
+        measured_abs_max=max_abs,
+        measured_rms=rms,
+        matmul_shape=(4, 16, 8),
+    )
+    assert verdict["verdict"] in {"BIT_EXACT_LIKE_SINUSOIDAL", "WITHIN_CANONICAL_FLOOR"}, (
+        f"MLX↔numpy linear parity drift abs_max={max_abs:.6e} rms={rms:.6e} "
+        f"exceeds canonical M-series MPS fp32 floor (abs_max upper bound "
+        f"{CANONICAL_ABS_MAX_UPPER_BOUND:.2e}); verdict={verdict['verdict']}. "
+        f"Either the substrate introduced an anti-pattern (align_corners=True "
+        f"/ mx.repeat / fp16 matmul) per axis 2 MLX drift minimization "
+        f"discipline, OR the hardware-class floor has shifted (route to "
+        f"per-M-series-class characterization op-routable on canonical "
+        f"equation `mlx_matmul_drift_m_series_canonical_floor_v1`)."
     )

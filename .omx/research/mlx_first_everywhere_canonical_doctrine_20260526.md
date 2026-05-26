@@ -202,3 +202,129 @@ The MLX-first principle has compound effects across THREE dimensions:
 Catalog #229 PV (read cascade doctrine + #1265 gate landing + MLX bridge memos + CLAUDE.md MLX-relevant sections BEFORE writing) + #117/#157/#174 canonical serializer with POST-EDIT `--expected-content-sha256` + #119 Co-Authored-By + #110/#113 APPEND-ONLY (NEW canonical doctrine file; zero mutation of existing memos or CLAUDE.md) + #208 docs/local-paths (NO `/Users/adpena/...` in body) + #230 sister-subagent ownership map (no file collision; doctrine is in-context work for main agent) + #287 placeholder-rationale rejection + #299 quota brake (no new STRICT gates introduced) + #300 v2 frontmatter + #340 sister-checkpoint guard (passes structurally; in-context work).
 
 EOF
+
+---
+
+## M-series MPS fp32 hardware floor canonical anchor (2026-05-26 R1'' verification)
+
+**APPEND-ONLY** per Catalog #110/#113 HISTORICAL_PROVENANCE. This section
+appends the canonical M-series MPS fp32 matmul drift hardware-floor
+reference per FIX-WAVE-R1''-K landing 2026-05-26. The original doctrine
+body above remains unchanged; this section adds the canonical floor
+anchor that ALL future Path 3 (and Path N) substrate designs MUST cite as
+the binding reference for MLX matmul drift expectations.
+
+### Canonical floor reference (per Catalog #344)
+
+Canonical equation registered in `tac.canonical_equations` per FIX-WAVE-R1''-K
+2026-05-26: **`mlx_matmul_drift_m_series_canonical_floor_v1`**
+
+* **Module**: `tac.canonical_equations.mlx_matmul_m_series_floor`
+* **Callable**: `classify_mlx_matmul_drift(measured_abs_max, measured_rms=None, measured_rel_median=None, matmul_shape=None) -> dict`
+* **Verdict taxonomy**: `BIT_EXACT_LIKE_SINUSOIDAL` (~1e-7) /
+  `WITHIN_CANONICAL_FLOOR` (≤ 6e-2 abs ∧ ≤ 1.5e-2 rms) /
+  `ABOVE_CANONICAL_FLOOR_NEEDS_MITIGATION`
+* **Canonical Provenance**: research-sidecar; `[macOS-MLX research-signal]`;
+  non-promotable per Catalog #127/#192/#317/#341
+
+### Canonical M-series MPS fp32 matmul drift hardware floor
+
+Per FIX-WAVE-R1''-K independent verification 2026-05-26 across K-typical
+substrate dimensions `[empirical:.omx/research/path_3_k_recursive_adversarial_review_r1_prime_prime_3_axis_20260526.md§4.2]`:
+
+| (m,k)@(k,n)         | abs_max  | rms      | rel_median |
+|---------------------|----------|----------|------------|
+| (32,32)@(32,32)     | 1.54e-2  | 4.52e-3  | 7.76e-4    |
+| (64,64)@(64,64)     | 2.42e-2  | 6.16e-3  | 7.66e-4    |
+| (128,128)@(128,128) | 3.62e-2  | 8.81e-3  | 7.59e-4    |
+| (256,64)@(64,256)   | 2.97e-2  | 6.20e-3  | 7.64e-4    |
+| (64,256)@(256,64)   | 4.60e-2  | 1.24e-2  | 7.75e-4    |
+
+**Canonical floor (upper bounds + dimension-independent floor):**
+
+* **abs_max upper bound**: **6e-2** (covers worst-case across canonical dims + safety margin)
+* **rms upper bound**: **1.5e-2** (covers worst-case rms)
+* **rel_median canonical floor**: **7.6e-4** (dimension-independent; hardware-class property)
+* **Sinusoidal encoding** (sin/cos special case): **bit-exact ~1.2e-7** (independent of matmul accumulation)
+
+The original H+K landing memos claimed tighter bounds (H: "1e-3 to 1e-2 abs";
+K: "5e-3 abs") that R1'' empirically falsified at substrate-typical dims.
+Sister FIX-WAVE-R1''-K commit corrects both with the canonical floor above.
+
+### Canonical-substrate-design implication
+
+Substrates requiring **<1e-2 abs precision per matmul** MUST satisfy ONE of:
+
+1. **Route through canonical mitigation primitives** at
+   `tac.local_acceleration.deterministic_primitives` — fp32 + Kahan-compensated
+   summation (per sister canonical equation `mlx_pytorch_conv2d_kahan_summation_drift_reduction_v1`
+   + `mlx_pytorch_conv2d_fp64_accumulation_drift_reduction_v1`).
+2. **Accept drift as PROXY-grade** per Catalog #341 Tier A observability-only
+   markers; the routing recommendation cannot leak into score/promotion signals.
+3. **Operate primarily on bit-exact primitives** (sinusoidal positional
+   encodings + elementwise multiply/add + sigmoid + softmax-with-epsilon)
+   where the local floor is ~1e-7 independent of matmul accumulation.
+
+### Producer/consumer map per Catalog #344
+
+* **Producers** (helpers that emit empirical anchors for this equation):
+  * `path_3_fix_wave_r1_prime_prime_k_independent_verification` (THIS landing)
+  * `tools.measure_pr95_mlx_pytorch_full_decoder_downstream_scorer_drift` (sister at decoder-output granularity)
+  * Future per-M-series-class characterization helpers (M1/M2/M3/M4/M5/Ultra/Pro/Max)
+* **Consumers** (helpers that read this equation's floor):
+  * `tac.substrates.coin_pp_implicit_neural_representation.tests.test_basic` (K test threshold)
+  * `path_3_recursive_adversarial_review_r1_prime_prime_axis_2_reviewer` (R1'' axis 2 framework)
+  * `tools.gate_mlx_candidate_contest_equivalence` (sister Catalog #1265 gate threshold rationale)
+  * `tac.cathedral_consumers.canonical_equation_lookup_consumer` (auto-discovers per Catalog #335)
+  * `mlx_first_everywhere_canonical_doctrine` (THIS doctrine cites the floor)
+
+### Cross-substrate META implication
+
+R1'' aggregate memo §8 measured the SAME hardware floor across H + K
+substrates independently — empirically validating that this is a
+**hardware-class property** (M-series Apple Silicon MPS fp32 matmul
+accumulation), NOT a per-substrate artifact. Future Path 3 substrate
+authors should:
+
+1. **Cite this canonical equation** in design memos per Catalog #344
+2. **Use the canonical classifier** in MLX parity tests instead of
+   hardcoding drift literals
+3. **Declare per-matmul accuracy requirement** at design-memo time per
+   §"MLX drift minimization per primitive" Axis 2 discipline
+4. **Document mitigation path** (Kahan / fp64 accumulation / accept-as-proxy)
+   if any matmul requires <1e-2 abs precision
+
+### Reactivation criteria for canonical equation
+
+Per the canonical equation's `provenance.rejection_reason`:
+
+> *"rerun on wider dim sweep + per-Apple-Silicon-class characterization
+> (M1/M2/M3/M4/M5/M-Ultra/M-Pro/M-Max) before promoting to cross-machine
+> canonical hardware-floor reference"*
+
+The current anchor is from M5 Max per primary M-series-MPS measurement
+machine; per-class characterization would expand the canonical floor to
+cross-machine reference for the entire Path N+ Apple Silicon ecosystem.
+
+### Sister convergence anchor
+
+R1'' aggregate memo §8 measured EQUIVALENT drift across H and K substrates
+independently (H typical dim (64,256): abs=4.97e-2; K typical dim
+(64,256)@(256,64): abs=4.60e-2). This convergence is the empirical
+HARD-EARNED-CANONICAL anchor that the canonical floor IS the M-series
+MPS hardware property, not a per-substrate artifact. Sister FIX-WAVE-R1''-H
+also corrects against this same floor; the two corrections converge on
+the canonical equation as single source of truth.
+
+### Cross-references
+
+* Canonical equation module: `src/tac/canonical_equations/mlx_matmul_m_series_floor.py`
+* Canonical equation registry event: `.omx/state/canonical_equations_registry.jsonl`
+  (registered 2026-05-26 via `register_canonical_equation`)
+* R1'' K per-substrate memo: `.omx/research/path_3_k_recursive_adversarial_review_r1_prime_prime_3_axis_20260526.md`
+* R1'' aggregate memo §8 Empirical anchor: `.omx/research/path_3_recursive_adversarial_review_r1_prime_prime_aggregate_3_axis_landings_h_i_j_k_20260526.md`
+* FIX-WAVE-R1''-K landing memo: `.omx/research/path_3_fix_wave_r1_prime_prime_k_coin_pp_landed_*.md`
+* K landing memo correction footer: `.omx/research/path_3_k_coin_pp_L0_scaffold_landed_20260526.md` (APPEND-ONLY)
+* Sister `mlx_pytorch_full_decoder_downstream_scorer_drift_propagation_v1` (downstream scorer-drift at decoder output)
+* CLAUDE.md "Apples-to-apples evidence discipline" + "MPS auth eval is NOISE" + "MLX portable-local-substrate authority"
+* Catalog #344 (canonical-equation-reference enforcement) + #287 (placeholder-rationale rejection) + #341 (canonical-routing markers)

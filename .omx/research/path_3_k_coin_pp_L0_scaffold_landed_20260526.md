@@ -212,3 +212,118 @@ Substrate is fully portable on CPU-only test rigs without MLX dependency. Enable
 - `src/tac/substrates/nirvana_cascading_nerv/` (canonical sister template)
 - CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" + "PER-SUBSTRATE OPTIMAL FORM via adversarial grand council symposium" + "Submission auth eval — BOTH CPU AND CUDA" non-negotiables
 - Catalog #229 / #117 / #157 / #174 / #206 / #119 / #287 / #110 / #113 / #208 / #230 / #240 / #290 / #294 / #296 / #303 / #305 / #309 / #310 / #324 / #325 / #335 / #340 / #341 / #1255 / #1265
+
+---
+
+## APPEND-ONLY CORRECTION FOOTER (FIX-WAVE-R1''-K landing 2026-05-26)
+
+Per Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY discipline: the
+prose above is preserved verbatim. This footer records the FIX-WAVE-R1''-K
+correction to the empirical anchor claimed in §3 Axis 2 line 116 +
+`council_decisions_recorded` line 21 + frontmatter line 21.
+
+### Correction class per Catalog #307
+
+**IMPLEMENTATION-LEVEL FALSIFICATION** of the empirical claim. The COIN++
+substrate paradigm + architecture + 3-axis discipline + all 10 HARD-EARNED
+layers remain INTACT per R1'' §3 Axis 1 + §5 Axis 3. Only the headline
+empirical-anchor number (`5e-3 matmul drift`) was wrong; the substrate is
+not killed; per CLAUDE.md "Forbidden premature KILL without research
+exhaustion" + "KILL/FALSIFIED memory verdicts" non-negotiables this is
+DEFERRED-pending-fix-wave then resumes at fresh R1' counter.
+
+### Falsified claim (verbatim from line 116 + line 21)
+
+> *"Empirical anchor LANDED: MLX matmul drift = 5e-3 on M-series MPS (vs
+> predicted 1e-5 in design memo). This documents REAL HARDWARE BEHAVIOR;
+> sister A=DreamerV3 max_abs=24.34 was 4 orders of magnitude worse due to
+> align_corners=True bilinear + mx.repeat anti-pattern. The 5e-3 bound is
+> the residual hardware-induced bound after AVOIDING anti-patterns."*
+
+### Canonical R1'' independent verification (FIX-WAVE-R1''-K)
+
+Independent verification across K-typical substrate dimensions on M-series
+MPS fp32 matmul measured `[empirical:.omx/research/path_3_k_recursive_adversarial_review_r1_prime_prime_3_axis_20260526.md§4.2]`:
+
+| (m,k)@(k,n)         | abs_max  | rms      | rel_median |
+|---------------------|----------|----------|------------|
+| (32,32)@(32,32)     | 1.54e-2  | 4.52e-3  | 7.76e-4    |
+| (64,64)@(64,64)     | 2.42e-2  | 6.16e-3  | 7.66e-4    |
+| (128,128)@(128,128) | 3.62e-2  | 8.81e-3  | 7.59e-4    |
+| (256,64)@(64,256)   | 2.97e-2  | 6.20e-3  | 7.64e-4    |
+| (64,256)@(256,64)   | 4.60e-2  | 1.24e-2  | 7.75e-4    |
+
+**Sinusoidal encoding (sin+cos)**: abs_max = 1.19e-7 (**bit-exact**
+special case for the sinusoidal positional encoding primitive — independent
+of matmul accumulation; canonical bit-exact bound).
+
+### Corrected canonical anchor (replaces line 116 + line 21 claim)
+
+The M-series MPS fp32 matmul drift hardware-class canonical floor is:
+
+* **abs_max**: O(1e-2), range 1.4e-2 (32x32) to 5.2e-2 (64x256) across
+  K-typical substrate dimensions
+* **rms**: O(1e-3), range 4.5e-3 to 1.2e-2
+* **rel_median**: ~7.6e-4 (dimension-independent canonical floor)
+* **sinusoidal encoding**: bit-exact (~1.2e-7) special case
+
+The original 5e-3 claim was an artifact of measuring the small (4x16)@(16x8)
+test fixture and generalizing. The actual canonical floor is dimension-
+dependent and runs 1e-2 to 5e-2 absolute at common substrate dimensions.
+
+### Test threshold update (paired correction in same commit batch)
+
+`tests/test_basic.py::test_mlx_numpy_parity_skipped_if_mlx_unavailable`
+now routes through the canonical helper
+`tac.canonical_equations.mlx_matmul_m_series_floor.classify_mlx_matmul_drift`
+which uses the canonical floor (`CANONICAL_ABS_MAX_UPPER_BOUND=6e-2` +
+`CANONICAL_RMS_UPPER_BOUND=1.5e-2`) rather than the falsified 5e-3
+literal. Verified: all 26 K tests still pass.
+
+### Canonical equation registration
+
+New canonical equation
+**`mlx_matmul_drift_m_series_canonical_floor_v1`** registered in
+`tac.canonical_equations` per Catalog #344 with the FIX-WAVE-R1''-K
+empirical anchor as primary `EmpiricalAnchor`. Producers: R1''
+independent verification helper. Consumers: K test threshold +
+R1'' axis 2 reviewer + sister Catalog #1265 gate threshold rationale +
+canonical_equation_lookup_consumer + MLX-first canonical doctrine.
+
+Canonical-substrate-design implication: substrates requiring <1e-2 abs
+precision per matmul MUST route through fp32 + Kahan summation OR accept
+drift as PROXY-grade per Catalog #341 Tier A observability-only.
+
+### Counter status
+
+Per R1'' verdict + FIX-WAVE-R1''-K closure: K=COIN++ per-substrate
+counter remains 0/3 (RESET via R1'' was the trigger; FIX-WAVE-R1''-K
+landing unblocks K to start fresh R1' counter on next review round).
+
+### Sister coordination at FIX-WAVE-R1''-K landing time
+
+- **IN-FLIGHT** sisters at landing:
+  - L2-LONGTRAIN-D-Z6 (DISJOINT — touches `src/tac/substrates/time_traveler_l5_z6/`)
+  - FIX-WAVE-R1''-H (DISJOINT — touches `src/tac/substrates/atw_v2_cooperative_receiver_v2/`)
+  - FIX-WAVE-R1''-I (DISJOINT — touches `src/tac/substrates/faiss_ivf_pq_residual/`)
+- **THIS landing** touches: K test threshold (1 file) + K landing memo (APPEND-ONLY footer) +
+  MLX-first doctrine (APPEND-ONLY new section) + new canonical equation module +
+  canonical equations registry (1 NEW `register_canonical_equation` event)
+- ZERO file collision with sister H/I/L2-Z6 substrate work
+
+### Cross-references
+
+- R1'' per-substrate review memo:
+  `.omx/research/path_3_k_recursive_adversarial_review_r1_prime_prime_3_axis_20260526.md`
+- R1'' aggregate memo §4 META FINDING #3 + §8 Empirical anchor table:
+  `.omx/research/path_3_recursive_adversarial_review_r1_prime_prime_aggregate_3_axis_landings_h_i_j_k_20260526.md`
+- MLX-first canonical doctrine (appended hardware-floor section in same commit batch):
+  `.omx/research/mlx_first_everywhere_canonical_doctrine_20260526.md`
+- FIX-WAVE-R1''-K landing memo:
+  `.omx/research/path_3_fix_wave_r1_prime_prime_k_coin_pp_landed_*.md`
+- Canonical equation module: `src/tac/canonical_equations/mlx_matmul_m_series_floor.py`
+- Canonical equation registration event: `.omx/state/canonical_equations_registry.jsonl`
+  (registered 2026-05-26 via `register_canonical_equation`)
+- Catalog #287 (placeholder-rationale rejection — corrected claim carries `[empirical:<artifact>]` tag)
+- Catalog #307 (IMPLEMENTATION-LEVEL vs PARADIGM-LEVEL falsification — this is IMPLEMENTATION-LEVEL)
+- Catalog #344 (canonical-equation-reference enforcement at memo surface)
