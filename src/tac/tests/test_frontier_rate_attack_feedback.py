@@ -33,6 +33,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     build_frontier_operation_chain_compiler_stage_plan,
     build_frontier_rate_attack_feedback_refresh,
     build_frontier_receiver_repair_work_order,
+    build_frontier_targeted_component_correction_acquisition,
     build_frontier_targeted_component_correction_materialization_queue,
     build_frontier_targeted_component_correction_materialization_request,
     build_frontier_targeted_component_correction_materialization_requests,
@@ -1599,6 +1600,167 @@ def test_targeted_component_correction_response_harvest_measures_lagrangian(
     ]
 
 
+def test_targeted_component_response_harvest_derives_paired_local_cpu_deltas(
+    tmp_path: Path,
+) -> None:
+    action_summary = _write_action_summary(tmp_path)
+    artifact_root = tmp_path / "frontier_artifacts"
+    _write_materializer_feedback(artifact_root)
+    results_root = tmp_path / "results"
+    _write_receiver_closed_budget_signal(tmp_path, results_root=results_root)
+
+    report = build_frontier_rate_attack_feedback_refresh(
+        repo_root=tmp_path,
+        frontier_artifact_roots=(artifact_root,),
+        action_summary_path=action_summary,
+        results_root=str(results_root),
+        queue_id="frontier_feedback_paired_response_delta_unit",
+        candidate_limit=2,
+    )
+    targeted_component = report["targeted_component_correction_acquisition"]
+    work_order = build_frontier_targeted_component_correction_work_order(
+        targeted_component_correction_acquisition=targeted_component,
+        acquisition_id=targeted_component["top_acquisition_ids"][0],
+    )
+    candidate_advisory = {
+        "schema_version": "contest_auth_eval_result.v1",
+        **_false_authority(),
+        "score_axis": "cpu_advisory",
+        "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+        "archive_size_bytes": 345_544,
+        "avg_posenet_dist": 0.001,
+        "avg_segnet_dist": 0.0008,
+    }
+    reference_advisory = {
+        "schema_version": "contest_auth_eval_result.v1",
+        **_false_authority(),
+        "score_axis": "cpu_advisory",
+        "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+        "archive_size_bytes": 345_802,
+        "avg_posenet_dist": 0.001,
+        "avg_segnet_dist": 0.001,
+    }
+
+    row = build_frontier_targeted_component_correction_response_harvest_from_artifacts(
+        work_order=work_order,
+        local_cpu_advisory=candidate_advisory,
+        reference_local_cpu_advisory=reference_advisory,
+        work_order_path="work_order.json",
+        local_cpu_advisory_path="candidate_local_cpu_advisory.json",
+        reference_local_cpu_advisory_path="reference_local_cpu_advisory.json",
+        response_artifact_path="component_correction_response_harvest.json",
+    )
+
+    _assert_false_authority(row)
+    assert row["local_cpu_component_terms"]["segnet_delta_score_units"] == pytest.approx(
+        -0.02
+    )
+    assert row["local_cpu_component_terms"]["posenet_delta_score_units"] == pytest.approx(
+        0.0
+    )
+    assert row["local_cpu_component_terms"]["correction_rate_delta_score_units"] == 0.0
+    assert row["local_cpu_paired_reference_terms"][
+        "receiver_closed_archive_byte_delta_vs_reference"
+    ] == -258
+    assert row["negative_measured_lagrangian_delta"] is True
+    assert row["local_acquisition_recommended"] is True
+    assert row["reference_local_cpu_advisory_path"] == "reference_local_cpu_advisory.json"
+    assert (
+        "paired_reference_local_cpu_advisory_required_for_component_delta"
+        not in row["budget_spend_blockers"]
+    )
+    assert "exact_axis_component_response_required_before_budget_spend" in row[
+        "budget_spend_blockers"
+    ]
+
+
+def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
+    tmp_path: Path,
+) -> None:
+    action_summary = _write_action_summary(tmp_path)
+    artifact_root = tmp_path / "frontier_artifacts"
+    _write_materializer_feedback(artifact_root)
+    results_root = tmp_path / "results"
+    _write_receiver_closed_budget_signal(tmp_path, results_root=results_root)
+    report = build_frontier_rate_attack_feedback_refresh(
+        repo_root=tmp_path,
+        frontier_artifact_roots=(artifact_root,),
+        action_summary_path=action_summary,
+        results_root=str(results_root),
+        queue_id="frontier_feedback_paired_response_cli_unit",
+        candidate_limit=1,
+    )
+    work_order = build_frontier_targeted_component_correction_work_order(
+        targeted_component_correction_acquisition=report[
+            "targeted_component_correction_acquisition"
+        ],
+        acquisition_id=report["targeted_component_correction_acquisition"][
+            "top_acquisition_ids"
+        ][0],
+    )
+    work_order_path = _write_json(tmp_path / "work_order.json", work_order)
+    candidate_path = _write_json(
+        tmp_path / "candidate_local_cpu_advisory.json",
+        {
+            "schema_version": "contest_auth_eval_result.v1",
+            **_false_authority(),
+            "score_axis": "cpu_advisory",
+            "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+            "archive_size_bytes": 345_544,
+            "avg_posenet_dist": 0.001,
+            "avg_segnet_dist": 0.0008,
+        },
+    )
+    reference_path = _write_json(
+        tmp_path / "reference_local_cpu_advisory.json",
+        {
+            "schema_version": "contest_auth_eval_result.v1",
+            **_false_authority(),
+            "score_axis": "cpu_advisory",
+            "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+            "archive_size_bytes": 345_802,
+            "avg_posenet_dist": 0.001,
+            "avg_segnet_dist": 0.001,
+        },
+    )
+    output = tmp_path / "component_correction_response_harvest.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "tools/harvest_frontier_targeted_component_correction_response.py",
+            "--work-order",
+            str(work_order_path),
+            "--local-cpu-advisory",
+            str(candidate_path),
+            "--reference-local-cpu-advisory",
+            str(reference_path),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(tmp_path),
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["schema"] == TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA
+    _assert_false_authority(payload)
+    assert payload["row_count"] == 1
+    assert payload["local_acquisition_recommended_count"] == 1
+    row = payload["rows"][0]
+    assert row["local_cpu_component_terms"]["segnet_delta_score_units"] == pytest.approx(
+        -0.02
+    )
+    assert row["reference_local_cpu_advisory_path"].endswith(
+        "reference_local_cpu_advisory.json"
+    )
+
+
 def test_targeted_component_response_harvest_expands_grouped_request_metadata(
     tmp_path: Path,
 ) -> None:
@@ -1977,6 +2139,157 @@ def test_receiver_closed_correction_budget_pairs_handoff_root_bridge(
     )
     assert row["receiver_closed"] is False
     assert row["release_to_targeted_correction_planning"] is False
+
+
+def test_targeted_component_queue_carries_receiver_closed_reference_eval(
+    tmp_path: Path,
+) -> None:
+    results_root = tmp_path / "results"
+    source_dir = tmp_path / "source_submission"
+    source_dir.mkdir()
+    source_archive = _write_json(source_dir / "archive_correct.zip", {"fixture": True})
+    source_inflate = source_dir / "inflate.sh"
+    source_inflate.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    candidate_runtime_dir = tmp_path / "candidate_runtime"
+    candidate_runtime_dir.mkdir()
+    (candidate_runtime_dir / "inflate.sh").write_text(
+        "#!/usr/bin/env bash\n", encoding="utf-8"
+    )
+    candidate_id = "packet_member_merge_reference_eval_unit"
+    closure_dir = (
+        results_root
+        / "frontier_final_rate_attack"
+        / "reference_eval_unit"
+        / "submission_closure"
+    )
+    source_queue = closure_dir / "closed_source_queue.json"
+    closure_report = closure_dir / "submission_closure_report.json"
+    _write_json(
+        source_queue,
+        {
+            "schema": "optimizer_candidate_queue.v1",
+            **_false_authority(),
+            "top_k_forensic": [
+                {
+                    **_false_authority(),
+                    "candidate_id": candidate_id,
+                    "candidate_archive_sha256": "8" * 64,
+                    "source_archive_path": source_archive.relative_to(tmp_path).as_posix(),
+                    "source_archive_sha256": "7" * 64,
+                    "source_archive_bytes": 345_802,
+                    "packet_member_merge_source_runtime_dir": (
+                        source_dir.relative_to(tmp_path).as_posix()
+                    ),
+                }
+            ],
+        },
+    )
+    _write_json(
+        closure_report,
+        {
+            "schema": "materializer_submission_runtime_closure_report.v1",
+            **_false_authority(),
+            "candidate_id": candidate_id,
+            "target_kind": "packet_member_merge_v1",
+            "archive_sha256": "8" * 64,
+            "archive_bytes": 345_544,
+            "closed_source_queue_path": source_queue.relative_to(tmp_path).as_posix(),
+            "submission_dir": (closure_dir / "submission").relative_to(tmp_path).as_posix(),
+            "source_runtime_dir": candidate_runtime_dir.relative_to(tmp_path).as_posix(),
+            "saved_bytes_at_risk": 258,
+            "targeted_correction_budget_signal": {
+                "freed_bytes_require_receiver_and_exact_readiness_before_spend": True,
+                "saved_bytes_at_risk": 258,
+                **_false_authority(),
+            },
+            "allowed_use": "exact_readiness_static_submission_closure_only",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+        },
+    )
+    _write_json(
+        closure_dir.parent / "exact_readiness_bridge" / "exact_readiness_bridge_report.json",
+        {
+            "schema": "materializer_chain_exact_readiness_bridge_report.v1",
+            **_false_authority(),
+            "candidate_count": 1,
+            "ready_candidate_count": 0,
+            "blocked_candidate_count": 1,
+            "dispatch_blockers": [
+                "bridge_report_is_not_dispatch_authority",
+                "requires_exact_eval_readiness_gate",
+            ],
+            "rows": [
+                {
+                    **_false_authority(),
+                    "candidate_id": candidate_id,
+                    "readiness_verdict": "blocked",
+                    "blockers": [],
+                }
+            ],
+        },
+    )
+
+    budget = build_receiver_closed_correction_budget(
+        repo_root=tmp_path,
+        results_root=results_root,
+    )
+    budget_row = next(row for row in budget["rows"] if row["candidate_id"] == candidate_id)
+    assert budget_row["receiver_closed"] is True
+    assert budget_row["source_archive_path"] == "source_submission/archive_correct.zip"
+    assert budget_row["source_inflate_sh_path"] == "source_submission/inflate.sh"
+
+    acquisition = build_frontier_targeted_component_correction_acquisition(
+        operation_portfolio={
+            "schema": OPERATION_PORTFOLIO_SCHEMA,
+            **_false_authority(),
+            "component_behavior_summary": {
+                "schema": "frontier_rate_attack_component_behavior_summary.v1",
+                **_false_authority(),
+                "active": True,
+            },
+            "master_gradient_summary": {
+                "schema": "frontier_rate_attack_master_gradient_summary.v1",
+                **_false_authority(),
+                "active": True,
+            },
+            "targeted_correction_budget_summary": {
+                "schema": "frontier_rate_attack_targeted_correction_budget_summary.v1",
+                **_false_authority(),
+            },
+        },
+        receiver_closed_correction_budget=budget,
+    )
+    acquisition_path = _write_json(tmp_path / "targeted_acquisition.json", acquisition)
+    queue = build_frontier_targeted_component_correction_queue(
+        repo_root=tmp_path,
+        targeted_component_correction_acquisition=acquisition,
+        targeted_component_correction_acquisition_path=acquisition_path,
+        results_root=tmp_path / "queue_results",
+        queue_id="targeted_component_reference_eval_unit",
+        candidate_limit=1,
+    )
+
+    assert queue is not None
+    experiment = queue["experiments"][0]
+    step_ids = [step["id"] for step in experiment["steps"]]
+    assert "local_cpu_reference_advisory" in step_ids
+    assert experiment["metadata"]["reference_component_eval_available"] is True
+    assert experiment["metadata"]["reference_archive_path"] == (
+        "source_submission/archive_correct.zip"
+    )
+    harvest_steps = [
+        step
+        for step in experiment["steps"]
+        if step["id"].startswith("harvest_targeted_component_correction_response")
+    ]
+    assert harvest_steps
+    assert "--reference-local-cpu-advisory" in harvest_steps[0]["command"]
+    request = experiment["metadata"]["correction_requests"][0]
+    assert request["reference_local_cpu_advisory_path"].endswith(
+        "reference_local_cpu_advisory.json"
+    )
 
 
 def test_frontier_feedback_compiler_turns_eureka_near_misses_into_beyond_drop_two_hints(

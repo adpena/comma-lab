@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import math
 import time
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -1964,6 +1965,162 @@ def _bridge_rows_for_candidate(
     return matched
 
 
+def _path_text_from_value(value: Any) -> str | None:
+    if isinstance(value, Mapping):
+        nested = value.get("path")
+        return str(nested) if nested else None
+    if value:
+        return str(value)
+    return None
+
+
+def _source_queue_candidate_entries(
+    payload: Mapping[str, Any],
+) -> list[Mapping[str, Any]]:
+    entries: list[Mapping[str, Any]] = []
+    for key in ("top_k_forensic", "top_k", "dispatch_ready", "rows"):
+        value = payload.get(key)
+        if isinstance(value, Sequence) and not isinstance(
+            value, (str, bytes, bytearray)
+        ):
+            entries.extend(row for row in value if isinstance(row, Mapping))
+    return entries
+
+
+def _submission_closure_reference_eval_context(
+    closure: Mapping[str, Any],
+    closure_report_path: Path,
+    *,
+    repo_root: Path,
+    candidate_id: str,
+) -> dict[str, Any]:
+    source_queue_text = _path_text_from_value(
+        closure.get("closed_source_queue_path") or closure.get("source_queue_path")
+    )
+    source_runtime_text = _path_text_from_value(
+        closure.get("source_submission_dir")
+        or closure.get("source_reference_runtime_dir")
+    )
+    source_inflate_text = _path_text_from_value(
+        closure.get("source_inflate_sh_path")
+        or closure.get("source_reference_inflate_sh_path")
+    )
+    source_archive_text = _path_text_from_value(closure.get("source_archive_path"))
+    source_archive_sha256 = closure.get("source_archive_sha256")
+    source_archive_bytes = closure.get("source_archive_bytes")
+    source_queue_path: Path | None = None
+    if source_queue_text:
+        source_queue_path = _resolve_path(source_queue_text, repo_root=repo_root)
+        if not source_queue_path.exists():
+            source_queue_path = (
+                closure_report_path.parent / source_queue_text
+            ).resolve(strict=False)
+    if source_queue_path is not None and source_queue_path.is_file():
+        try:
+            queue = _load_json(source_queue_path)
+        except FrontierRateAttackFeedbackError:
+            queue = {}
+        candidate_archive_sha = str(closure.get("archive_sha256") or "")
+        entries = _source_queue_candidate_entries(queue)
+        matched = [
+            entry
+            for entry in entries
+            if str(entry.get("candidate_id") or "") == candidate_id
+            or str(entry.get("archive_sha256") or "") == candidate_archive_sha
+            or str(entry.get("candidate_archive_sha256") or "") == candidate_archive_sha
+        ]
+        for entry in matched or entries[:1]:
+            source_archive_text = source_archive_text or _path_text_from_value(
+                entry.get("source_archive_path") or entry.get("source_archive")
+            )
+            source_archive_sha256 = source_archive_sha256 or entry.get(
+                "source_archive_sha256"
+            )
+            source_archive_bytes = source_archive_bytes or entry.get(
+                "source_archive_bytes"
+            )
+            source_inflate_text = source_inflate_text or _path_text_from_value(
+                entry.get("source_inflate_sh_path")
+                or entry.get("source_reference_inflate_sh_path")
+            )
+            source_runtime_text = (
+                source_runtime_text
+                or _path_text_from_value(entry.get("source_submission_dir"))
+                or _path_text_from_value(entry.get("source_reference_runtime_dir"))
+                or _path_text_from_value(entry.get("packet_member_merge_source_runtime_dir"))
+            )
+            runtime = entry.get("packet_member_merge_receiver_runtime")
+            if isinstance(runtime, Mapping):
+                source_runtime_text = source_runtime_text or _path_text_from_value(
+                    runtime.get("source_runtime_dir")
+                )
+                entrypoint = runtime.get("entrypoint")
+                if isinstance(entrypoint, Mapping):
+                    source_runtime = entrypoint.get("source_runtime")
+                    if isinstance(source_runtime, Mapping):
+                        source_runtime_inflate = _path_text_from_value(
+                            source_runtime.get("path")
+                        )
+                        if source_runtime_text is None:
+                            source_inflate_text = (
+                                source_inflate_text or source_runtime_inflate
+                            )
+            if source_archive_text and (source_runtime_text or source_inflate_text):
+                break
+    source_archive_path = (
+        _resolve_path(source_archive_text, repo_root=repo_root)
+        if source_archive_text
+        else None
+    )
+    source_runtime_dir = (
+        _resolve_path(source_runtime_text, repo_root=repo_root)
+        if source_runtime_text
+        else None
+    )
+    explicit_source_inflate = (
+        _resolve_path(source_inflate_text, repo_root=repo_root)
+        if source_inflate_text
+        else None
+    )
+    if source_runtime_dir is None and explicit_source_inflate is not None:
+        source_runtime_dir = explicit_source_inflate.parent
+    source_inflate_sh = (
+        explicit_source_inflate
+        if explicit_source_inflate is not None
+        else source_runtime_dir / "inflate.sh"
+        if source_runtime_dir is not None
+        else None
+    )
+    return {
+        "source_archive_path": (
+            None
+            if source_archive_path is None
+            else _repo_rel(source_archive_path, repo_root)
+        ),
+        "source_archive_sha256": source_archive_sha256,
+        "source_archive_bytes": _finite_int_or_none(source_archive_bytes),
+        "source_submission_dir": (
+            None
+            if source_runtime_dir is None
+            else _repo_rel(source_runtime_dir, repo_root)
+        ),
+        "source_inflate_sh_path": (
+            None
+            if source_inflate_sh is None
+            else _repo_rel(source_inflate_sh, repo_root)
+        ),
+        "source_queue_path": (
+            None
+            if source_queue_path is None
+            else _repo_rel(source_queue_path, repo_root)
+        ),
+        "reference_eval_role": "receiver_closed_source_reference",
+        "allowed_use": "receiver_closed_source_reference_for_component_delta_only",
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def _submission_closure_budget_row(
     closure_report_path: Path,
     *,
@@ -2042,6 +2199,12 @@ def _submission_closure_budget_row(
     if saved <= 0:
         critical_blockers.append("saved_bytes_at_risk_missing_or_non_positive")
     receiver_closed = not critical_blockers
+    reference_eval_context = _submission_closure_reference_eval_context(
+        closure,
+        closure_report_path,
+        repo_root=repo_root,
+        candidate_id=candidate_id,
+    )
     return {
         "schema": "frontier_rate_attack_receiver_closed_correction_budget_row.v1",
         "candidate_id": candidate_id,
@@ -2062,6 +2225,12 @@ def _submission_closure_budget_row(
         "paired_exact_readiness_bridge_report_path": _repo_rel(bridge_path, repo_root),
         "closed_source_queue_path": closure.get("closed_source_queue_path"),
         "submission_dir": closure.get("submission_dir"),
+        "source_archive_path": reference_eval_context.get("source_archive_path"),
+        "source_archive_sha256": reference_eval_context.get("source_archive_sha256"),
+        "source_archive_bytes": reference_eval_context.get("source_archive_bytes"),
+        "source_submission_dir": reference_eval_context.get("source_submission_dir"),
+        "source_inflate_sh_path": reference_eval_context.get("source_inflate_sh_path"),
+        "reference_component_eval_context": reference_eval_context,
         "bridge_candidate_count": bridge_candidate_count,
         "bridge_blockers": _unique_strings(bridge_blockers),
         "critical_blockers": _unique_strings(critical_blockers),
@@ -4051,6 +4220,9 @@ def build_frontier_targeted_component_correction_acquisition(
         candidate_id = str(budget_row.get("candidate_id") or "unknown_candidate")
         target_kind = str(budget_row.get("target_kind") or "unknown_target")
         submission_dir = str(budget_row.get("submission_dir") or "")
+        source_archive_path = str(budget_row.get("source_archive_path") or "")
+        source_submission_dir = str(budget_row.get("source_submission_dir") or "")
+        source_inflate_sh_path = str(budget_row.get("source_inflate_sh_path") or "")
         closure_report_path = str(budget_row.get("closure_report_path") or "")
         bridge_report_path = str(
             budget_row.get("paired_exact_readiness_bridge_report_path") or ""
@@ -4103,6 +4275,19 @@ def build_frontier_targeted_component_correction_acquisition(
                     "submission_dir": submission_dir or None,
                     "archive_path": f"{submission_dir}/archive.zip" if submission_dir else None,
                     "inflate_sh_path": f"{submission_dir}/inflate.sh" if submission_dir else None,
+                    "source_archive_path": source_archive_path or None,
+                    "source_archive_sha256": budget_row.get("source_archive_sha256"),
+                    "source_archive_bytes": budget_row.get("source_archive_bytes"),
+                    "source_submission_dir": source_submission_dir or None,
+                    "source_inflate_sh_path": source_inflate_sh_path or None,
+                    "reference_component_eval_context": dict(
+                        budget_row.get("reference_component_eval_context")
+                        if isinstance(
+                            budget_row.get("reference_component_eval_context"),
+                            Mapping,
+                        )
+                        else {}
+                    ),
                     "closure_report_path": closure_report_path,
                     "paired_exact_readiness_bridge_report_path": bridge_report_path,
                     "component_behavior_active": component_summary.get("active") is True,
@@ -4363,6 +4548,16 @@ def build_frontier_targeted_component_correction_work_order(
         "submission_dir": row.get("submission_dir"),
         "archive_path": row.get("archive_path"),
         "inflate_sh_path": row.get("inflate_sh_path"),
+        "source_archive_path": row.get("source_archive_path"),
+        "source_archive_sha256": row.get("source_archive_sha256"),
+        "source_archive_bytes": row.get("source_archive_bytes"),
+        "source_submission_dir": row.get("source_submission_dir"),
+        "source_inflate_sh_path": row.get("source_inflate_sh_path"),
+        "reference_component_eval_context": dict(
+            row.get("reference_component_eval_context")
+            if isinstance(row.get("reference_component_eval_context"), Mapping)
+            else {}
+        ),
         "closure_report_path": row.get("closure_report_path"),
         "paired_exact_readiness_bridge_report_path": row.get(
             "paired_exact_readiness_bridge_report_path"
@@ -4384,6 +4579,8 @@ def build_frontier_targeted_component_correction_work_order(
         "component_eval_plan": {
             "schema": "frontier_rate_attack_targeted_component_eval_plan.v1",
             "local_cpu_advisory_required": True,
+            "reference_local_cpu_advisory_required": True,
+            "reference_role": "receiver_closed_source_reference",
             "mlx_response_required_or_exact_axis_component_trace": True,
             "acceptance_rule": (
                 "use local CPU/MLX as acquisition signal only; exact auth-axis "
@@ -4458,6 +4655,45 @@ def _first_finite_int(
     return None
 
 
+def _advisory_archive_size_bytes(payload: Mapping[str, Any]) -> int | None:
+    for key in ("archive_size_bytes", "archive_bytes", "compressed_size", "bytes"):
+        value = _finite_int_or_none(payload.get(key))
+        if value is not None and value > 0:
+            return value
+    provenance = payload.get("provenance")
+    if isinstance(provenance, Mapping):
+        value = _finite_int_or_none(provenance.get("archive_size_bytes"))
+        if value is not None and value > 0:
+            return value
+    return None
+
+
+def _advisory_segnet_score_units(payload: Mapping[str, Any]) -> float | None:
+    raw = _first_finite_float(
+        payload,
+        ("avg_segnet_dist", "segnet_dist", "segnet_distortion"),
+    )
+    if raw is not None:
+        return 100.0 * raw
+    return _first_finite_float(
+        payload,
+        ("score_seg_contribution", "segnet_score_contribution"),
+    )
+
+
+def _advisory_posenet_score_units(payload: Mapping[str, Any]) -> float | None:
+    raw = _first_finite_float(
+        payload,
+        ("avg_posenet_dist", "pose_dist", "pose_distortion", "posenet_dist"),
+    )
+    if raw is not None and raw >= 0.0:
+        return math.sqrt(10.0 * raw)
+    return _first_finite_float(
+        payload,
+        ("score_pose_contribution", "posenet_score_contribution"),
+    )
+
+
 def _targeted_component_response_delta_source(
     payload: Mapping[str, Any],
 ) -> Mapping[str, Any]:
@@ -4529,18 +4765,88 @@ def _targeted_component_response_delta_terms(
     }
 
 
+def _targeted_component_response_paired_delta_terms(
+    *,
+    candidate: Mapping[str, Any],
+    reference: Mapping[str, Any],
+    reference_role: str,
+) -> dict[str, Any]:
+    candidate_seg = _advisory_segnet_score_units(candidate)
+    reference_seg = _advisory_segnet_score_units(reference)
+    candidate_pose = _advisory_posenet_score_units(candidate)
+    reference_pose = _advisory_posenet_score_units(reference)
+    candidate_bytes = _advisory_archive_size_bytes(candidate)
+    reference_bytes = _advisory_archive_size_bytes(reference)
+    archive_delta = (
+        candidate_bytes - reference_bytes
+        if candidate_bytes is not None and reference_bytes is not None
+        else None
+    )
+    receiver_closed_rate_delta = (
+        rate_delta_for_archive_byte_delta(archive_delta)
+        if archive_delta is not None
+        else None
+    )
+    if reference_role == "correction_spend_reference":
+        correction_added_bytes = archive_delta
+        correction_rate_delta = receiver_closed_rate_delta
+    else:
+        correction_added_bytes = 0
+        correction_rate_delta = 0.0
+    return {
+        "segnet_delta_score_units": (
+            None
+            if candidate_seg is None or reference_seg is None
+            else candidate_seg - reference_seg
+        ),
+        "posenet_delta_score_units": (
+            None
+            if candidate_pose is None or reference_pose is None
+            else candidate_pose - reference_pose
+        ),
+        "correction_rate_delta_score_units": correction_rate_delta,
+        "correction_added_archive_bytes": correction_added_bytes,
+        "paired_reference_role": reference_role,
+        "candidate_segnet_score_units": candidate_seg,
+        "reference_segnet_score_units": reference_seg,
+        "candidate_posenet_score_units": candidate_pose,
+        "reference_posenet_score_units": reference_pose,
+        "candidate_archive_size_bytes": candidate_bytes,
+        "reference_archive_size_bytes": reference_bytes,
+        "receiver_closed_archive_byte_delta_vs_reference": archive_delta,
+        "receiver_closed_rate_delta_score_units": receiver_closed_rate_delta,
+        "delta_source_keys": sorted(
+            [
+                *(f"candidate.{key}" for key in candidate),
+                *(f"reference.{key}" for key in reference),
+            ]
+        ),
+    }
+
+
 def build_frontier_targeted_component_correction_response_harvest_from_artifacts(
     *,
     work_order: Mapping[str, Any],
     local_cpu_advisory: Mapping[str, Any] | None = None,
+    reference_local_cpu_advisory: Mapping[str, Any] | None = None,
     local_mlx_response: Mapping[str, Any] | None = None,
     work_order_path: str | Path | None = None,
     local_cpu_advisory_path: str | Path | None = None,
+    reference_local_cpu_advisory_path: str | Path | None = None,
     local_mlx_response_path: str | Path | None = None,
     response_artifact_path: str | Path | None = None,
+    reference_role: str = "receiver_closed_source_reference",
 ) -> dict[str, Any]:
     """Harvest one component-correction response into a false-authority row."""
 
+    if reference_role not in {
+        "receiver_closed_source_reference",
+        "correction_spend_reference",
+    }:
+        raise FrontierRateAttackFeedbackError(
+            "reference_role must be receiver_closed_source_reference or "
+            "correction_spend_reference"
+        )
     require_no_truthy_authority_fields(
         work_order,
         context="targeted_component_correction_response_work_order",
@@ -4549,6 +4855,11 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
         require_no_truthy_authority_fields(
             local_cpu_advisory,
             context="targeted_component_correction_local_cpu_advisory",
+        )
+    if reference_local_cpu_advisory is not None:
+        require_no_truthy_authority_fields(
+            reference_local_cpu_advisory,
+            context="targeted_component_correction_reference_local_cpu_advisory",
         )
     if local_mlx_response is not None:
         require_no_truthy_authority_fields(
@@ -4580,6 +4891,8 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
         "correction_added_archive_bytes": None,
         "delta_source_keys": [],
     }
+    local_paired_reference_terms: dict[str, Any] | None = None
+    reference_local_axis = None
     if local_cpu_advisory is None:
         blockers.append("local_cpu_component_advisory_missing")
     else:
@@ -4587,6 +4900,54 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
         if local_axis != "cpu_advisory":
             blockers.append("local_cpu_component_advisory_axis_not_cpu_advisory")
         local_terms = _targeted_component_response_delta_terms(local_cpu_advisory)
+        if reference_local_cpu_advisory is not None:
+            reference_local_axis = str(
+                reference_local_cpu_advisory.get("score_axis") or ""
+            )
+            if reference_local_axis != "cpu_advisory":
+                blockers.append(
+                    "reference_local_cpu_component_advisory_axis_not_cpu_advisory"
+                )
+            local_paired_reference_terms = (
+                _targeted_component_response_paired_delta_terms(
+                    candidate=local_cpu_advisory,
+                    reference=reference_local_cpu_advisory,
+                    reference_role=reference_role,
+                )
+            )
+            if (
+                local_terms["segnet_delta_score_units"] is None
+                and local_paired_reference_terms["segnet_delta_score_units"] is not None
+            ):
+                local_terms["segnet_delta_score_units"] = (
+                    local_paired_reference_terms["segnet_delta_score_units"]
+                )
+            if (
+                local_terms["posenet_delta_score_units"] is None
+                and local_paired_reference_terms["posenet_delta_score_units"] is not None
+            ):
+                local_terms["posenet_delta_score_units"] = (
+                    local_paired_reference_terms["posenet_delta_score_units"]
+                )
+            if local_terms["correction_rate_delta_score_units"] is None:
+                local_terms["correction_rate_delta_score_units"] = (
+                    local_paired_reference_terms[
+                        "correction_rate_delta_score_units"
+                    ]
+                )
+            if local_terms["correction_added_archive_bytes"] is None:
+                local_terms["correction_added_archive_bytes"] = (
+                    local_paired_reference_terms["correction_added_archive_bytes"]
+                )
+            local_terms["paired_reference_role"] = reference_role
+            local_terms["paired_reference_delta_source_keys"] = list(
+                local_paired_reference_terms["delta_source_keys"]
+            )
+        elif (
+            local_terms["segnet_delta_score_units"] is None
+            or local_terms["posenet_delta_score_units"] is None
+        ):
+            blockers.append("paired_reference_local_cpu_advisory_required_for_component_delta")
 
     if local_terms["segnet_delta_score_units"] is None:
         blockers.append("local_cpu_segnet_delta_missing")
@@ -4654,6 +5015,11 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
         "local_cpu_advisory_path": (
             None if local_cpu_advisory_path is None else str(local_cpu_advisory_path)
         ),
+        "reference_local_cpu_advisory_path": (
+            None
+            if reference_local_cpu_advisory_path is None
+            else str(reference_local_cpu_advisory_path)
+        ),
         "local_mlx_response_path": (
             None if local_mlx_response_path is None else str(local_mlx_response_path)
         ),
@@ -4661,6 +5027,7 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
             None if response_artifact_path is None else str(response_artifact_path)
         ),
         "local_cpu_score_axis": local_axis,
+        "reference_local_cpu_score_axis": reference_local_axis,
         "local_mlx_score_axis": mlx_axis,
         "saved_bytes_budget": saved_bytes,
         "estimated_receiver_closed_rate_credit_score_units": rate_credit,
@@ -4670,6 +5037,7 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
             work_order.get("sibling_correction_families") or []
         ),
         "local_cpu_component_terms": local_terms,
+        "local_cpu_paired_reference_terms": local_paired_reference_terms,
         "local_mlx_component_terms": mlx_terms,
         "measured_component_delta_score_units": measured_component_delta,
         "measured_lagrangian_delta_score_units": measured_lagrangian_delta,
@@ -4740,6 +5108,11 @@ def _targeted_component_response_rows_from_queue(
                 or metadata.get("local_cpu_advisory_path")
                 or ""
             )
+            reference_local_cpu_path_text = str(
+                request.get("reference_local_cpu_advisory_path")
+                or metadata.get("reference_local_cpu_advisory_path")
+                or ""
+            )
             response_path_text = str(
                 request.get("component_correction_response_harvest_path")
                 or metadata.get("component_correction_response_harvest_path")
@@ -4758,6 +5131,11 @@ def _targeted_component_response_rows_from_queue(
                 if local_cpu_path_text
                 else None
             )
+            reference_local_cpu_path = (
+                _resolve_path(reference_local_cpu_path_text, repo_root=repo_root)
+                if reference_local_cpu_path_text
+                else None
+            )
             local_mlx_path = (
                 _resolve_path(local_mlx_path_text, repo_root=repo_root)
                 if local_mlx_path_text
@@ -4770,7 +5148,7 @@ def _targeted_component_response_rows_from_queue(
             )
             missing = [
                 _repo_rel(path, repo_root)
-                for path in (work_order_path, local_cpu_path)
+                for path in (work_order_path, local_cpu_path, reference_local_cpu_path)
                 if path is not None and not path.exists()
             ]
             if missing:
@@ -4787,6 +5165,9 @@ def _targeted_component_response_rows_from_queue(
                     ),
                     "work_order_path": work_order_path_text or None,
                     "local_cpu_advisory_path": local_cpu_path_text or None,
+                    "reference_local_cpu_advisory_path": (
+                        reference_local_cpu_path_text or None
+                    ),
                     "local_mlx_response_path": local_mlx_path_text or None,
                     "response_artifact_path": response_path_text or None,
                     "saved_bytes_budget": request.get("saved_bytes_budget")
@@ -4824,6 +5205,11 @@ def _targeted_component_response_rows_from_queue(
             local_cpu = (
                 _load_json(local_cpu_path) if local_cpu_path is not None else None
             )
+            reference_local_cpu = (
+                _load_json(reference_local_cpu_path)
+                if reference_local_cpu_path is not None
+                else None
+            )
             local_mlx = (
                 _load_json(local_mlx_path)
                 if local_mlx_path is not None and local_mlx_path.exists()
@@ -4833,12 +5219,18 @@ def _targeted_component_response_rows_from_queue(
                 build_frontier_targeted_component_correction_response_harvest_from_artifacts(
                     work_order=work_order,
                     local_cpu_advisory=local_cpu,
+                    reference_local_cpu_advisory=reference_local_cpu,
                     local_mlx_response=local_mlx,
                     work_order_path=_repo_rel(work_order_path, repo_root),
                     local_cpu_advisory_path=(
                         None
                         if local_cpu_path is None
                         else _repo_rel(local_cpu_path, repo_root)
+                    ),
+                    reference_local_cpu_advisory_path=(
+                        None
+                        if reference_local_cpu_path is None
+                        else _repo_rel(reference_local_cpu_path, repo_root)
                     ),
                     local_mlx_response_path=(
                         None
@@ -6608,12 +7000,27 @@ def build_frontier_targeted_component_correction_queue(
         local_cpu_advisory = shared_dir / "local_cpu_advisory.json"
         local_cpu_work_dir = shared_dir / "local_cpu_advisory_work"
         scorer_hashes = shared_dir / "scorer_input_cache_hashes.json"
+        reference_local_cpu_advisory = shared_dir / "reference_local_cpu_advisory.json"
+        reference_local_cpu_work_dir = shared_dir / "reference_local_cpu_advisory_work"
+        reference_scorer_hashes = shared_dir / "reference_scorer_input_cache_hashes.json"
         submission_dir = str(primary_row.get("submission_dir") or "")
         archive_path = str(
             primary_row.get("archive_path") or f"{submission_dir}/archive.zip"
         )
         inflate_sh_path = str(
             primary_row.get("inflate_sh_path") or f"{submission_dir}/inflate.sh"
+        )
+        reference_archive_path = str(primary_row.get("source_archive_path") or "")
+        reference_inflate_sh_path = str(
+            primary_row.get("source_inflate_sh_path")
+            or (
+                f"{primary_row.get('source_submission_dir')}/inflate.sh"
+                if primary_row.get("source_submission_dir")
+                else ""
+            )
+        )
+        reference_eval_available = bool(
+            reference_archive_path and reference_inflate_sh_path
         )
         local_mlx_response: Path | None = None
         request_metadata: list[dict[str, Any]] = []
@@ -6654,6 +7061,18 @@ def build_frontier_targeted_component_correction_queue(
                         repo,
                     ),
                     "local_cpu_advisory_path": _repo_rel(local_cpu_advisory, repo),
+                    "reference_local_cpu_advisory_path": (
+                        _repo_rel(reference_local_cpu_advisory, repo)
+                        if reference_eval_available
+                        else None
+                    ),
+                    "reference_archive_path": reference_archive_path or None,
+                    "reference_inflate_sh_path": reference_inflate_sh_path or None,
+                    "reference_component_eval_context": dict(
+                        row.get("reference_component_eval_context")
+                        if isinstance(row.get("reference_component_eval_context"), Mapping)
+                        else {}
+                    ),
                     "local_mlx_response_path": (
                         None
                         if not include_mlx_response
@@ -6740,6 +7159,62 @@ def build_frontier_targeted_component_correction_queue(
                 "timeout_seconds": 120,
             },
         )
+        if reference_eval_available:
+            steps.append(
+                {
+                    "id": "local_cpu_reference_advisory",
+                    "kind": "command",
+                    "requires": ["emit_targeted_component_correction_work_order"],
+                    "command": [
+                        ".venv/bin/python",
+                        "experiments/contest_auth_eval.py",
+                        "--archive",
+                        reference_archive_path,
+                        "--inflate-sh",
+                        reference_inflate_sh_path,
+                        "--upstream-dir",
+                        str(upstream_dir),
+                        "--video-names-file",
+                        str(video_names_file),
+                        "--device",
+                        "cpu",
+                        "--work-dir",
+                        _repo_rel(reference_local_cpu_work_dir, repo),
+                        "--json-out",
+                        _repo_rel(reference_local_cpu_advisory, repo),
+                        "--inflate-timeout",
+                        "1800",
+                        "--evaluate-timeout",
+                        "1800",
+                        "--keep-work-dir",
+                        "--scorer-input-cache-hashes-out",
+                        _repo_rel(reference_scorer_hashes, repo),
+                    ],
+                    "resources": {"kind": "local_cpu"},
+                    "timeout_seconds": 3900,
+                    "postconditions": [
+                        {
+                            "type": "json_false_authority",
+                            "path": _repo_rel(reference_local_cpu_advisory, repo),
+                            "axis_key": "score_axis",
+                            "axis_equals": "cpu_advisory",
+                        }
+                    ],
+                    "telemetry": {
+                        "artifact_paths": [
+                            _repo_rel(reference_local_cpu_advisory, repo),
+                            _repo_rel(reference_local_cpu_work_dir, repo),
+                            _repo_rel(reference_scorer_hashes, repo),
+                        ],
+                        "input_artifact_paths": [
+                            reference_archive_path,
+                            reference_inflate_sh_path,
+                        ],
+                        "recursive": True,
+                        "include_postcondition_paths": True,
+                    },
+                }
+            )
         steps.append(
             {
                 "id": "local_cpu_component_advisory",
@@ -6938,6 +7413,15 @@ def build_frontier_targeted_component_correction_queue(
                 work_order_path_text,
                 _repo_rel(local_cpu_advisory, repo),
             ]
+            if reference_eval_available:
+                harvest_command.extend(
+                    [
+                        "--reference-local-cpu-advisory",
+                        _repo_rel(reference_local_cpu_advisory, repo),
+                    ]
+                )
+                harvest_requires.append("local_cpu_reference_advisory")
+                harvest_input_paths.append(_repo_rel(reference_local_cpu_advisory, repo))
             if local_mlx_response is not None:
                 harvest_command.extend(
                     ["--local-mlx-response", _repo_rel(local_mlx_response, repo)]
@@ -7013,6 +7497,14 @@ def build_frontier_targeted_component_correction_queue(
                     "submission_dir": primary_row.get("submission_dir"),
                     "work_dir": _repo_rel(candidate_dir, repo),
                     "local_cpu_advisory_path": _repo_rel(local_cpu_advisory, repo),
+                    "reference_local_cpu_advisory_path": (
+                        _repo_rel(reference_local_cpu_advisory, repo)
+                        if reference_eval_available
+                        else None
+                    ),
+                    "reference_archive_path": reference_archive_path or None,
+                    "reference_inflate_sh_path": reference_inflate_sh_path or None,
+                    "reference_component_eval_available": reference_eval_available,
                     "local_mlx_response_path": (
                         None
                         if local_mlx_response is None

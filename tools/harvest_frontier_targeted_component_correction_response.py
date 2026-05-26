@@ -30,6 +30,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--work-order", required=True, type=Path)
     parser.add_argument("--local-cpu-advisory", required=True, type=Path)
+    parser.add_argument("--reference-local-cpu-advisory", type=Path, default=None)
+    parser.add_argument(
+        "--reference-role",
+        choices=("receiver_closed_source_reference", "correction_spend_reference"),
+        default="receiver_closed_source_reference",
+    )
     parser.add_argument("--local-mlx-response", type=Path, default=None)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--repo-root", type=Path, default=Path("."))
@@ -58,6 +64,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         work_order = _load_json(args.work_order)
         local_cpu_advisory = _load_json(args.local_cpu_advisory)
+        reference_local_cpu_advisory = (
+            None
+            if args.reference_local_cpu_advisory is None
+            else _load_json(args.reference_local_cpu_advisory)
+        )
         local_mlx_response = (
             None
             if args.local_mlx_response is None
@@ -66,11 +77,20 @@ def main(argv: list[str] | None = None) -> int:
         row = build_frontier_targeted_component_correction_response_harvest_from_artifacts(
             work_order=work_order,
             local_cpu_advisory=local_cpu_advisory,
+            reference_local_cpu_advisory=reference_local_cpu_advisory,
             local_mlx_response=local_mlx_response,
             work_order_path=_display_path(args.work_order, repo_root=repo_root),
             local_cpu_advisory_path=_display_path(
                 args.local_cpu_advisory,
                 repo_root=repo_root,
+            ),
+            reference_local_cpu_advisory_path=(
+                None
+                if args.reference_local_cpu_advisory is None
+                else _display_path(
+                    args.reference_local_cpu_advisory,
+                    repo_root=repo_root,
+                )
             ),
             local_mlx_response_path=(
                 None
@@ -78,6 +98,7 @@ def main(argv: list[str] | None = None) -> int:
                 else _display_path(args.local_mlx_response, repo_root=repo_root)
             ),
             response_artifact_path=_display_path(args.output, repo_root=repo_root),
+            reference_role=args.reference_role,
         )
         harvest = build_frontier_targeted_component_correction_response_harvest(
             repo_root=repo_root,
