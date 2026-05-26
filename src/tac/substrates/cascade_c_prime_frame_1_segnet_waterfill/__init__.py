@@ -115,7 +115,55 @@ substrate per Catalog #308 alternative reducer enumeration.
 from __future__ import annotations
 
 from .substrate_contract import CASCADE_C_PRIME_FRAME_1_SEGNET_WATERFILL_SUBSTRATE_CONTRACT
+from .trainer import (
+    DEFAULT_MLX_AXIS_TAG,
+    MLX_NON_PROMOTABLE_PROVENANCE,
+    MLXFirstTrainerConfig,
+    MLXFirstTrainerError,
+    MLXFirstTrainerVerdict,
+    is_mlx_available,
+    run_mlx_first_compress_pass,
+)
+from .mlx_to_numpy_bridge import (
+    EXPECTED_STATE_DICT_KEYS,
+    BridgeRoundtripVerdict,
+    MLXNumpyBridgeError,
+    export_state_dict_to_npz,
+    load_state_dict_from_npz,
+    roundtrip_state_dict_through_archive,
+    verify_state_dict_shape_contract,
+)
+from .tier_c_hook import (
+    FORMALIZATION_PENDING_VERDICT,
+    TierCAblationHookVerdict,
+    TierCAblationProbeRequest,
+    build_tier_c_ablation_probe_request,
+    classify_tier_c_density_verdict,
+)
 
 __all__ = [
+    # Scaffold (RECOVERY-2 landed commit aaf0b1eb6)
     "CASCADE_C_PRIME_FRAME_1_SEGNET_WATERFILL_SUBSTRATE_CONTRACT",
+    # Trainer (subagent A landing)
+    "DEFAULT_MLX_AXIS_TAG",
+    "MLX_NON_PROMOTABLE_PROVENANCE",
+    "MLXFirstTrainerConfig",
+    "MLXFirstTrainerError",
+    "MLXFirstTrainerVerdict",
+    "is_mlx_available",
+    "run_mlx_first_compress_pass",
+    # MLX → numpy bridge (subagent A landing)
+    "EXPECTED_STATE_DICT_KEYS",
+    "BridgeRoundtripVerdict",
+    "MLXNumpyBridgeError",
+    "export_state_dict_to_npz",
+    "load_state_dict_from_npz",
+    "roundtrip_state_dict_through_archive",
+    "verify_state_dict_shape_contract",
+    # Tier-C MDL ablation hook (subagent A landing)
+    "FORMALIZATION_PENDING_VERDICT",
+    "TierCAblationHookVerdict",
+    "TierCAblationProbeRequest",
+    "build_tier_c_ablation_probe_request",
+    "classify_tier_c_density_verdict",
 ]
