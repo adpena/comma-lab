@@ -15,8 +15,10 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     OPERATION_PORTFOLIO_TAXONOMY_SCHEMA,
     RECEIVER_REPAIR_BACKLOG_SCHEMA,
     RECEIVER_REPAIR_ROW_SCHEMA,
+    RECEIVER_REPAIR_WORK_ORDER_SCHEMA,
     FrontierRateAttackFeedbackError,
     build_frontier_rate_attack_feedback_refresh,
+    build_frontier_receiver_repair_work_order,
     discover_local_cpu_eureka_planning_signals,
 )
 from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (
@@ -561,7 +563,15 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     assert "submission_runtime_manifest_closure" in receiver_repair_backlog[
         "top_repair_families"
     ]
-    first_repair = receiver_repair_backlog["rows"][0]
+    assert any(
+        row["source_operation_id"] == "materializer_backlog_byte_range_entropy_recode_v1"
+        and row["queue_actionable"] is True
+        and row["bridge_report_paths"] == []
+        for row in receiver_repair_backlog["rows"]
+    )
+    first_repair = next(
+        row for row in receiver_repair_backlog["rows"] if row["bridge_report_paths"]
+    )
     assert first_repair["schema"] == RECEIVER_REPAIR_ROW_SCHEMA
     _assert_false_authority(first_repair)
     assert first_repair["source_operation_id"] in {
@@ -570,9 +580,24 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
         "materializer_packet_member_zip_header_elide_v1",
         "materializer_renderer_payload_dfl1_v1",
     }
+    assert first_repair["bridge_report_paths"]
+    assert first_repair["candidate_ids"] == ["receiver_smoke_candidate"]
     assert first_repair["correction_budget_context"][
         "materializer_rate_positive_saved_bytes_total"
     ] == receiver_repair_backlog["materializer_rate_positive_saved_bytes_total"]
+    work_order = build_frontier_receiver_repair_work_order(
+        repo_root=tmp_path,
+        receiver_repair_backlog=receiver_repair_backlog,
+        repair_id=first_repair["repair_id"],
+    )
+    assert work_order["schema"] == RECEIVER_REPAIR_WORK_ORDER_SCHEMA
+    _assert_false_authority(work_order)
+    assert work_order["bridge_report_paths"] == first_repair["bridge_report_paths"]
+    assert work_order["bridge_details"]["bridge_reports"]
+    assert work_order["budget_spend_gate"][
+        "ready_for_targeted_correction_budget_spend"
+    ] is False
+    assert work_order["command_hints"]
     recompress_row = next(
         row
         for row in operation_portfolio["rows"]
@@ -1217,17 +1242,26 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     queue_path = output_dir / "dqs1_followup_queue.json"
     bridge_path = output_dir / "materializer_feedback_bridge.json"
     receiver_repair_backlog_path = output_dir / "receiver_repair_backlog.json"
+    receiver_repair_queue_path = output_dir / "receiver_repair_queue.json"
     report_path = output_dir / "feedback_refresh_report.json"
     assert queue_path.exists()
     assert bridge_path.exists()
     assert receiver_repair_backlog_path.exists()
+    assert receiver_repair_queue_path.exists()
     assert report_path.exists()
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["artifacts"]["dqs1_followup_queue"].endswith("dqs1_followup_queue.json")
     assert report["artifacts"]["receiver_repair_backlog"].endswith(
         "receiver_repair_backlog.json"
     )
+    assert report["artifacts"]["receiver_repair_queue"].endswith(
+        "receiver_repair_queue.json"
+    )
     assert report["operator_commands"]["validate_followup_queue"][0] == ".venv/bin/python"
+    assert (
+        report["operator_commands"]["validate_receiver_repair_queue"][0]
+        == ".venv/bin/python"
+    )
 
     validate = subprocess.run(
         [
@@ -1243,6 +1277,66 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         check=False,
     )
     assert validate.returncode == 0, validate.stderr
+    repair_validate = subprocess.run(
+        [
+            sys.executable,
+            "tools/experiment_queue.py",
+            "--queue",
+            str(receiver_repair_queue_path),
+            "validate",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert repair_validate.returncode == 0, repair_validate.stderr
+    repair_queue = json.loads(receiver_repair_queue_path.read_text(encoding="utf-8"))
+    selected_sources = [
+        experiment["metadata"]["source_operation_id"]
+        for experiment in repair_queue["experiments"]
+    ]
+    actionable_sources = {
+        row["source_operation_id"]
+        for row in json.loads(
+            receiver_repair_backlog_path.read_text(encoding="utf-8")
+        )["rows"]
+        if row["queue_actionable"] is True
+    }
+    if len(actionable_sources) >= len(selected_sources):
+        assert len(selected_sources) == len(set(selected_sources))
+    first_step = repair_queue["experiments"][0]["steps"][0]
+    assert first_step["command"][1] == "tools/build_frontier_receiver_repair_work_order.py"
+    work_order_command = [sys.executable, *first_step["command"][1:]]
+    work_order_first = subprocess.run(
+        work_order_command,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert work_order_first.returncode == 0, work_order_first.stderr
+    work_order_payload_first = json.loads(work_order_first.stdout)
+    assert work_order_payload_first["bytes_written"] > 0
+    assert work_order_payload_first["skipped_identical_existing_artifact"] is False
+    work_order_path = Path(
+        first_step["command"][first_step["command"].index("--work-order-out") + 1]
+    )
+    if not work_order_path.is_absolute():
+        work_order_path = REPO_ROOT / work_order_path
+    assert work_order_path.exists()
+
+    work_order_retry = subprocess.run(
+        work_order_command,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert work_order_retry.returncode == 0, work_order_retry.stderr
+    work_order_payload_retry = json.loads(work_order_retry.stdout)
+    assert work_order_payload_retry["bytes_written"] == 0
+    assert work_order_payload_retry["skipped_identical_existing_artifact"] is True
 
 
 def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Path) -> None:

@@ -40,7 +40,7 @@ from .dqs1_local_first_queue import (
     PAIR_FRAME_GEOMETRY_QUEUE_REQUEST_SCHEMA,
     build_queue_from_action_summary,
 )
-from .experiment_queue import ExperimentQueueError, normalize_queue_definition
+from .experiment_queue import QUEUE_SCHEMA, ExperimentQueueError, normalize_queue_definition
 
 FEEDBACK_REFRESH_SCHEMA = "frontier_rate_attack_feedback_refresh.v1"
 FRONTIER_RATE_ATTACK_FEEDBACK_REFRESH_SCHEMA = FEEDBACK_REFRESH_SCHEMA
@@ -73,6 +73,12 @@ MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA = (
 )
 RECEIVER_REPAIR_BACKLOG_SCHEMA = "frontier_rate_attack_receiver_repair_backlog.v1"
 RECEIVER_REPAIR_ROW_SCHEMA = "frontier_rate_attack_receiver_repair_row.v1"
+RECEIVER_REPAIR_WORK_ORDER_SCHEMA = (
+    "frontier_rate_attack_receiver_repair_work_order.v1"
+)
+RECEIVER_REPAIR_QUEUE_METADATA_SCHEMA = (
+    "frontier_rate_attack_receiver_repair_queue_metadata.v1"
+)
 
 _OPERATION_LEVELS = (
     "bit",
@@ -1807,6 +1813,12 @@ def _materializer_chain_operation_rows(
             exact_blocker_counts[str(blocker)] = exact_blocker_counts.get(
                 str(blocker), 0
             ) + (parsed or 0)
+    exact_bridge_reports = [
+        dict(report)
+        for summary in exact_bridge_summaries
+        for report in summary.get("reports") or []
+        if isinstance(report, Mapping)
+    ]
     blockers = [
         "chain_requires_single_runtime_consumption_proof",
         "chain_requires_exact_readiness_handoff_after_composition",
@@ -1858,6 +1870,7 @@ def _materializer_chain_operation_rows(
                             key=lambda item: (-item[1], item[0]),
                         )[:16]
                     ],
+                    "reports": exact_bridge_reports,
                     **FALSE_AUTHORITY,
                 },
                 "synergy_terms_to_measure": [
@@ -2398,6 +2411,9 @@ def _receiver_repair_classification(blocker: str) -> dict[str, Any]:
             "native_unpacker",
             "shadow_archive_reconstruction",
             "receiver_runtime",
+            "receiver_binding",
+            "materializer_or_receiver",
+            "queue_context",
         )
     ):
         family = "receiver_runtime_contract_repair"
@@ -2490,6 +2506,34 @@ def _bridge_summaries_from_operation_row(row: Mapping[str, Any]) -> list[Mapping
     return summaries
 
 
+def _bridge_report_rows(summary: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    return [
+        report
+        for report in summary.get("reports") or []
+        if isinstance(report, Mapping)
+    ]
+
+
+def _bridge_report_paths(summary: Mapping[str, Any]) -> list[str]:
+    return _unique_strings(
+        report.get("path") for report in _bridge_report_rows(summary)
+    )
+
+
+def _bridge_candidate_ids(summary: Mapping[str, Any]) -> list[str]:
+    candidate_ids: list[Any] = []
+    for report in _bridge_report_rows(summary):
+        candidate_ids.extend(_string_list(report.get("candidate_ids")))
+    return _unique_strings(candidate_ids)
+
+
+def _bridge_row_blocker_samples(summary: Mapping[str, Any]) -> list[str]:
+    blockers: list[Any] = []
+    for report in _bridge_report_rows(summary):
+        blockers.extend(_string_list(report.get("row_blockers_sample")))
+    return _unique_strings(blockers)[:16]
+
+
 def _saved_bytes_at_risk(row: Mapping[str, Any]) -> int:
     evidence = row.get("evidence_summary")
     if not isinstance(evidence, Mapping):
@@ -2503,6 +2547,25 @@ def _saved_bytes_at_risk(row: Mapping[str, Any]) -> int:
         if saved is not None and saved > 0:
             return saved
     return 0
+
+
+def _source_blocker_receiver_repair_candidate(blocker: str) -> bool:
+    lowered = str(blocker or "").lower()
+    if lowered.startswith("exact_readiness_bridge:"):
+        return False
+    return any(
+        token in lowered
+        for token in (
+            "receiver",
+            "runtime",
+            "proof",
+            "parity",
+            "exact_readiness",
+            "queue_context",
+            "materializer_or_receiver",
+            "payload_grammar",
+        )
+    )
 
 
 def _receiver_repair_priority(
@@ -2550,8 +2613,7 @@ def build_frontier_receiver_repair_backlog(
             continue
         source_operation_id = str(source_row.get("operation_id") or "unknown_operation")
         bridge_summaries = _bridge_summaries_from_operation_row(source_row)
-        if not bridge_summaries:
-            continue
+        bridge_blockers: set[str] = set()
         source_priority = _finite_float_or_none(source_row.get("priority_score"))
         saved_bytes = _saved_bytes_at_risk(source_row)
         source_queue_consumer = str(
@@ -2565,6 +2627,7 @@ def build_frontier_receiver_repair_backlog(
             else source_operation_id
         )
         for summary_index, bridge_summary in enumerate(bridge_summaries):
+            bridge_blockers.update(_bridge_blocker_counts(bridge_summary))
             candidate_count = _finite_int_or_none(
                 bridge_summary.get("candidate_count")
             ) or 0
@@ -2574,6 +2637,9 @@ def build_frontier_receiver_repair_backlog(
             blocked_count = _finite_int_or_none(
                 bridge_summary.get("blocked_candidate_count")
             ) or 0
+            bridge_report_paths = _bridge_report_paths(bridge_summary)
+            bridge_candidate_ids = _bridge_candidate_ids(bridge_summary)
+            bridge_row_blockers = _bridge_row_blocker_samples(bridge_summary)
             for blocker, count in sorted(_bridge_blocker_counts(bridge_summary).items()):
                 classification = _receiver_repair_classification(blocker)
                 family = str(classification["repair_family"])
@@ -2602,6 +2668,9 @@ def build_frontier_receiver_repair_backlog(
                         "candidate_count": candidate_count,
                         "ready_candidate_count": ready_count,
                         "blocked_candidate_count": blocked_count,
+                        "bridge_report_paths": bridge_report_paths,
+                        "candidate_ids": bridge_candidate_ids,
+                        "row_blocker_samples": bridge_row_blockers,
                         "saved_bytes_at_risk": saved_bytes,
                         "priority_score": _receiver_repair_priority(
                             priority_base=float(classification["priority_base"]),
@@ -2634,6 +2703,70 @@ def build_frontier_receiver_repair_backlog(
                         **FALSE_AUTHORITY,
                     }
                 )
+        for blocker in _string_list(source_row.get("blockers")):
+            if blocker in bridge_blockers:
+                continue
+            if not _source_blocker_receiver_repair_candidate(blocker):
+                continue
+            classification = _receiver_repair_classification(blocker)
+            family = str(classification["repair_family"])
+            family_counts[family] = family_counts.get(family, 0) + 1
+            queue_actionable = bool(classification["queue_actionable"])
+            if queue_actionable:
+                queue_actionable_count += 1
+            repair_id = (
+                "receiver_repair_"
+                f"{_slug_token(source_operation_id)}_"
+                f"{_slug_token(family)}_"
+                f"{_slug_token(blocker)}"
+            )
+            rows.append(
+                {
+                    "schema": RECEIVER_REPAIR_ROW_SCHEMA,
+                    "repair_id": repair_id,
+                    "source_operation_id": source_operation_id,
+                    "target_kind": target_kind,
+                    "repair_family": family,
+                    "blocker": blocker,
+                    "blocker_count": 1,
+                    "candidate_count": 0,
+                    "ready_candidate_count": 0,
+                    "blocked_candidate_count": 0,
+                    "bridge_report_paths": [],
+                    "candidate_ids": [],
+                    "row_blocker_samples": [],
+                    "saved_bytes_at_risk": saved_bytes,
+                    "priority_score": _receiver_repair_priority(
+                        priority_base=float(classification["priority_base"]),
+                        blocker_count=1,
+                        saved_bytes_at_risk=saved_bytes,
+                        source_priority=source_priority,
+                    ),
+                    "queue_consumer": classification["queue_consumer"],
+                    "source_queue_consumer": source_queue_consumer,
+                    "queue_actionable": queue_actionable,
+                    "recommended_next_action": classification[
+                        "recommended_next_action"
+                    ],
+                    "correction_budget_context": {
+                        "materializer_rate_positive_saved_bytes_total": (
+                            materializer_budget_total
+                        ),
+                        "local_drop_saved_bytes_total": local_budget_total,
+                        "saved_bytes_at_risk_from_source_operation": saved_bytes,
+                        "spend_policy": (
+                            "receiver_repair_must_prove_runtime_consumption_before_"
+                            "freed_rate_budget_can_fund_segnet_posenet_corrections"
+                        ),
+                        **FALSE_AUTHORITY,
+                    },
+                    "allowed_use": "receiver_runtime_repair_planning_only",
+                    "forbidden_use": (
+                        "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+                    ),
+                    **FALSE_AUTHORITY,
+                }
+            )
     rows = sorted(
         rows,
         key=lambda row: (
@@ -2696,6 +2829,509 @@ def _receiver_repair_backlog_queue_metadata(backlog: Mapping[str, Any]) -> dict[
         "forbidden_use": "score_claim_or_dispatch_authority",
         **FALSE_AUTHORITY,
     }
+
+
+def _receiver_repair_row_by_id(
+    backlog: Mapping[str, Any],
+    repair_id: str,
+) -> Mapping[str, Any]:
+    for row in backlog.get("rows") or []:
+        if isinstance(row, Mapping) and row.get("repair_id") == repair_id:
+            return row
+    raise FrontierRateAttackFeedbackError(f"unknown receiver repair id: {repair_id}")
+
+
+def _bridge_report_details(
+    *,
+    bridge_report_paths: Sequence[str],
+    candidate_ids: Sequence[str],
+    repo_root: Path,
+) -> dict[str, Any]:
+    candidate_filter = {str(candidate) for candidate in candidate_ids if candidate}
+    reports: list[dict[str, Any]] = []
+    source_queue_paths: list[str] = []
+    exact_readiness_report_paths: list[str] = []
+    exact_ready_queue_paths: list[str] = []
+    source_manifest_paths: list[str] = []
+    candidate_rows: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    for rel_path in bridge_report_paths:
+        path = _resolve_path(rel_path, repo_root=repo_root)
+        if not path.is_file():
+            blockers.append(f"bridge_report_missing:{rel_path}")
+            continue
+        payload = _load_json(path)
+        try:
+            require_no_truthy_authority_fields(
+                payload,
+                context=f"receiver_repair_bridge_report:{rel_path}",
+            )
+        except ValueError as exc:
+            blockers.append(f"bridge_report_authority_leak:{rel_path}:{exc}")
+            continue
+        source_queue = payload.get("source_queue_path")
+        if isinstance(source_queue, str) and source_queue.strip():
+            source_queue_paths.append(source_queue)
+        for bridge_row in payload.get("rows") or []:
+            if not isinstance(bridge_row, Mapping):
+                continue
+            candidate_id = str(bridge_row.get("candidate_id") or "")
+            if candidate_filter and candidate_id not in candidate_filter:
+                continue
+            exact_report = bridge_row.get("exact_readiness_report_path")
+            if isinstance(exact_report, str) and exact_report.strip():
+                exact_readiness_report_paths.append(exact_report)
+            exact_queue = bridge_row.get("exact_ready_queue_path")
+            if isinstance(exact_queue, str) and exact_queue.strip():
+                exact_ready_queue_paths.append(exact_queue)
+        reports.append(
+            {
+                "path": _repo_rel(path, repo_root),
+                "schema": payload.get("schema"),
+                "candidate_count": payload.get("candidate_count"),
+                "ready_candidate_count": payload.get("ready_candidate_count"),
+                "blocked_candidate_count": payload.get("blocked_candidate_count"),
+                "source_queue_path": source_queue,
+                "dispatch_blockers": _string_list(payload.get("dispatch_blockers")),
+                **FALSE_AUTHORITY,
+            }
+        )
+
+    for source_queue in _unique_strings(source_queue_paths):
+        queue_path = _resolve_path(source_queue, repo_root=repo_root)
+        if not queue_path.is_file():
+            blockers.append(f"source_queue_missing:{source_queue}")
+            continue
+        payload = _load_json(queue_path)
+        rows: list[Mapping[str, Any]] = []
+        for key in ("top_k", "dispatch_ready"):
+            for row in payload.get(key) or []:
+                if isinstance(row, Mapping):
+                    rows.append(row)
+        seen_rows: set[str] = set()
+        for source_row in rows:
+            candidate_id = str(source_row.get("candidate_id") or "")
+            if candidate_filter and candidate_id not in candidate_filter:
+                continue
+            stable_key = candidate_id or json.dumps(source_row, sort_keys=True)
+            if stable_key in seen_rows:
+                continue
+            seen_rows.add(stable_key)
+            source_manifest = source_row.get("source_manifest_path")
+            if isinstance(source_manifest, str) and source_manifest.strip():
+                source_manifest_paths.append(source_manifest)
+            candidate_rows.append(
+                {
+                    "candidate_id": candidate_id,
+                    "target_kind": source_row.get("target_kind"),
+                    "candidate_archive_path": source_row.get("candidate_archive_path")
+                    or source_row.get("archive_path"),
+                    "candidate_archive_sha256": source_row.get(
+                        "candidate_archive_sha256"
+                    )
+                    or source_row.get("archive_sha256"),
+                    "source_archive_path": source_row.get("source_archive_path"),
+                    "source_archive_sha256": source_row.get("source_archive_sha256"),
+                    "source_manifest_path": source_manifest,
+                    "runtime_consumption_proof_path": source_row.get(
+                        "runtime_consumption_proof_path"
+                    ),
+                    "receiver_contract_kind": source_row.get(
+                        "receiver_contract_kind"
+                    ),
+                    "receiver_contract_satisfied": source_row.get(
+                        "receiver_contract_satisfied"
+                    )
+                    is True,
+                    "runtime_adapter_ready": source_row.get("runtime_adapter_ready")
+                    is True,
+                    "readiness_blockers": _string_list(
+                        source_row.get("readiness_blockers")
+                    ),
+                    **FALSE_AUTHORITY,
+                }
+            )
+    return {
+        "bridge_reports": reports,
+        "source_queue_paths": _unique_strings(source_queue_paths),
+        "exact_readiness_report_paths": _unique_strings(exact_readiness_report_paths),
+        "exact_ready_queue_paths": _unique_strings(exact_ready_queue_paths),
+        "source_manifest_paths": _unique_strings(source_manifest_paths),
+        "candidate_rows": candidate_rows,
+        "blockers": _unique_strings(blockers),
+    }
+
+
+def _receiver_repair_command_hints(
+    *,
+    row: Mapping[str, Any],
+    bridge_details: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    bridge_paths = _string_list(row.get("bridge_report_paths"))
+    target_kind = str(row.get("target_kind") or "")
+    repair_family = str(row.get("repair_family") or "")
+    hints: list[dict[str, Any]] = []
+    if bridge_paths:
+        hints.append(
+            {
+                "action_id": "rebuild_exact_eval_consumer_after_receiver_repair",
+                "when": "after_exact_ready_queue_written_true",
+                "command_template": [
+                    ".venv/bin/python",
+                    "tools/build_materializer_exact_eval_consumer.py",
+                    *[
+                        item
+                        for bridge_path in bridge_paths
+                        for item in ("--bridge-report", bridge_path)
+                    ],
+                    "--consumer-report-out",
+                    "<receiver_repair_dir>/exact_eval_consumer_report.json",
+                    "--experiment-queue-out",
+                    "<receiver_repair_dir>/exact_eval_consumer_queue.json",
+                    "--overwrite",
+                ],
+                "blocked_until": [
+                    "receiver_runtime_contract_satisfied",
+                    "runtime_consumption_proof_passed",
+                    "exact_ready_queue_written_true",
+                ],
+                **FALSE_AUTHORITY,
+            }
+        )
+    if repair_family in {
+        "runtime_consumption_proof_repair",
+        "receiver_runtime_contract_repair",
+    }:
+        required_context = [
+            "source_runtime_dir",
+            "packet_or_section_materializer_context",
+        ]
+        if target_kind == "packet_member_merge_v1":
+            required_context.append("packet_member_merge_source_runtime_dir")
+        if target_kind == "renderer_payload_dfl1_v1":
+            required_context.append("full_frame_inflate_parity_proof")
+        hints.append(
+            {
+                "action_id": "rerun_materializer_with_receiver_runtime_context",
+                "target_kind": target_kind,
+                "queue_consumer": row.get("queue_consumer"),
+                "source_manifest_paths": list(
+                    bridge_details.get("source_manifest_paths") or []
+                ),
+                "required_context": _unique_strings(required_context),
+                "command_template": [
+                    ".venv/bin/python",
+                    "tools/run_family_agnostic_materializer.py",
+                    "--target-kind",
+                    target_kind or "<target_kind>",
+                    "--archive-path",
+                    "<source_archive_path>",
+                    "--output-archive",
+                    "<receiver_repair_dir>/candidate.zip",
+                    "--output-manifest",
+                    "<receiver_repair_dir>/candidate.json",
+                    "--runtime-consumption-proof-out",
+                    "<receiver_repair_dir>/candidate.runtime_consumption_proof.json",
+                    "--allow-overwrite",
+                ],
+                "blocked_until": required_context,
+                **FALSE_AUTHORITY,
+            }
+        )
+    if repair_family == "full_frame_inflate_parity_repair":
+        hints.append(
+            {
+                "action_id": "prove_same_runtime_full_frame_inflate_parity",
+                "target_kind": target_kind,
+                "command_template": [
+                    ".venv/bin/python",
+                    "tools/prove_shell_inflate_parity.py",
+                    "--left-archive",
+                    "<source_archive_path>",
+                    "--left-submission-dir",
+                    "<source_runtime_dir>",
+                    "--right-archive",
+                    "<candidate_archive_path>",
+                    "--right-submission-dir",
+                    "<candidate_runtime_dir>",
+                    "--full-frame-file-list-claim",
+                    "--output-dir",
+                    "<receiver_repair_dir>/shell_inflate_parity",
+                ],
+                "blocked_until": [
+                    "source_runtime_dir",
+                    "candidate_runtime_dir",
+                    "full_frame_file_list",
+                ],
+                **FALSE_AUTHORITY,
+            }
+        )
+    return hints
+
+
+def build_frontier_receiver_repair_work_order(
+    *,
+    repo_root: str | Path,
+    receiver_repair_backlog: Mapping[str, Any],
+    repair_id: str,
+) -> dict[str, Any]:
+    """Build a machine-readable handoff for one receiver/exact-readiness repair."""
+
+    repo = Path(repo_root)
+    require_no_truthy_authority_fields(
+        receiver_repair_backlog,
+        context="receiver_repair_backlog",
+    )
+    row = _receiver_repair_row_by_id(receiver_repair_backlog, repair_id)
+    require_no_truthy_authority_fields(row, context=f"receiver_repair_row:{repair_id}")
+    bridge_details = _bridge_report_details(
+        bridge_report_paths=_string_list(row.get("bridge_report_paths")),
+        candidate_ids=_string_list(row.get("candidate_ids")),
+        repo_root=repo,
+    )
+    source_backlog_generated_at = str(
+        receiver_repair_backlog.get("generated_at_utc")
+        or "unknown_source_backlog_generation_time"
+    )
+    work_order = {
+        "schema": RECEIVER_REPAIR_WORK_ORDER_SCHEMA,
+        "generated_at_utc": source_backlog_generated_at,
+        "source_backlog_generated_at_utc": source_backlog_generated_at,
+        "repair_id": repair_id,
+        "repair_family": row.get("repair_family"),
+        "source_operation_id": row.get("source_operation_id"),
+        "target_kind": row.get("target_kind"),
+        "queue_consumer": row.get("queue_consumer"),
+        "source_queue_consumer": row.get("source_queue_consumer"),
+        "recommended_next_action": row.get("recommended_next_action"),
+        "blocker": row.get("blocker"),
+        "blocker_count": row.get("blocker_count"),
+        "saved_bytes_at_risk": row.get("saved_bytes_at_risk"),
+        "candidate_ids": list(row.get("candidate_ids") or []),
+        "bridge_report_paths": list(row.get("bridge_report_paths") or []),
+        "bridge_details": bridge_details,
+        "command_hints": _receiver_repair_command_hints(
+            row=row,
+            bridge_details=bridge_details,
+        ),
+        "correction_budget_context": dict(
+            row.get("correction_budget_context")
+            if isinstance(row.get("correction_budget_context"), Mapping)
+            else {}
+        ),
+        "budget_spend_gate": {
+            "schema": "frontier_rate_attack_receiver_repair_budget_spend_gate.v1",
+            "ready_for_targeted_correction_budget_spend": False,
+            "required_before_spend": [
+                "runtime_consumption_proof_passed",
+                "receiver_contract_satisfied",
+                "component_guarded_segnet_posenet_repair_candidate_selected",
+            ],
+            "allowed_budget_sources": [
+                "materializer_rate_positive_saved_bytes_total_after_receiver_proof",
+                "local_drop_saved_bytes_total_component_measured",
+            ],
+            "forbidden_use": "score_claim_or_dispatch_authority",
+            **FALSE_AUTHORITY,
+        },
+        "allowed_use": "receiver_repair_work_order_for_queue_owned_runtime_repair_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        work_order,
+        context=f"receiver_repair_work_order:{repair_id}",
+    )
+    return work_order
+
+
+def _selected_receiver_repair_rows(
+    backlog: Mapping[str, Any],
+    *,
+    candidate_limit: int,
+) -> list[Mapping[str, Any]]:
+    actionable_rows = [
+        row
+        for row in backlog.get("rows") or []
+        if isinstance(row, Mapping) and row.get("queue_actionable") is True
+    ]
+    selected: list[Mapping[str, Any]] = []
+    selected_repair_ids: set[str] = set()
+    seen_sources: set[str] = set()
+    seen_groups: set[tuple[str, str, str]] = set()
+
+    def add_row(row: Mapping[str, Any]) -> None:
+        repair_id = str(row.get("repair_id") or json.dumps(row, sort_keys=True))
+        if repair_id in selected_repair_ids:
+            return
+        selected_repair_ids.add(repair_id)
+        selected.append(row)
+        seen_sources.add(str(row.get("source_operation_id") or ""))
+        seen_groups.add(
+            (
+                str(row.get("source_operation_id") or ""),
+                str(row.get("repair_family") or ""),
+                str(row.get("queue_consumer") or ""),
+            )
+        )
+
+    for row in actionable_rows:
+        source = str(row.get("source_operation_id") or "")
+        if source in seen_sources:
+            continue
+        add_row(row)
+        if len(selected) >= candidate_limit:
+            return selected
+
+    for row in actionable_rows:
+        group = (
+            str(row.get("source_operation_id") or ""),
+            str(row.get("repair_family") or ""),
+            str(row.get("queue_consumer") or ""),
+        )
+        if group in seen_groups:
+            continue
+        add_row(row)
+        if len(selected) >= candidate_limit:
+            break
+    return selected
+
+
+def build_frontier_receiver_repair_queue(
+    *,
+    repo_root: str | Path,
+    receiver_repair_backlog: Mapping[str, Any],
+    receiver_repair_backlog_path: str | Path,
+    results_root: str | Path = DEFAULT_RESULTS_ROOT,
+    queue_id: str = "frontier_receiver_repair_queue",
+    candidate_limit: int = 4,
+    local_io_concurrency: int = 1,
+) -> dict[str, Any] | None:
+    """Compile top receiver repair rows into a bounded local work-order queue."""
+
+    repo = Path(repo_root)
+    if candidate_limit < 1:
+        raise FrontierRateAttackFeedbackError("candidate_limit must be >= 1")
+    if local_io_concurrency < 1:
+        raise FrontierRateAttackFeedbackError("local_io_concurrency must be >= 1")
+    require_no_truthy_authority_fields(
+        receiver_repair_backlog,
+        context="receiver_repair_backlog_queue_input",
+    )
+    selected_rows = _selected_receiver_repair_rows(
+        receiver_repair_backlog,
+        candidate_limit=candidate_limit,
+    )
+    if not selected_rows:
+        return None
+    backlog_path = _resolve_path(receiver_repair_backlog_path, repo_root=repo)
+    results_base = _resolve_path(str(results_root), repo_root=repo)
+    queue_root = results_base / "frontier_receiver_repair" / _slug_token(queue_id)
+    experiments: list[dict[str, Any]] = []
+    for priority, row in enumerate(selected_rows, start=1):
+        repair_id = str(row.get("repair_id") or f"receiver_repair_{priority}")
+        repair_dir = queue_root / _slug_token(repair_id)
+        work_order_path = repair_dir / "work_order.json"
+        experiments.append(
+            {
+                "id": _slug_token(repair_id),
+                "status": "queued",
+                "priority": priority,
+                "lane_id": "lane_frontier_receiver_repair_queue_20260526",
+                "tags": [
+                    "receiver_repair",
+                    str(row.get("repair_family") or "unknown_family"),
+                    str(row.get("target_kind") or "unknown_target"),
+                ],
+                "metadata": {
+                    "schema": RECEIVER_REPAIR_QUEUE_METADATA_SCHEMA,
+                    "repair_id": repair_id,
+                    "repair_family": row.get("repair_family"),
+                    "source_operation_id": row.get("source_operation_id"),
+                    "target_kind": row.get("target_kind"),
+                    "queue_consumer": row.get("queue_consumer"),
+                    "source_queue_consumer": row.get("source_queue_consumer"),
+                    "candidate_ids": list(row.get("candidate_ids") or []),
+                    "bridge_report_paths": list(row.get("bridge_report_paths") or []),
+                    "saved_bytes_at_risk": row.get("saved_bytes_at_risk"),
+                    "correction_budget_context": dict(
+                        row.get("correction_budget_context")
+                        if isinstance(row.get("correction_budget_context"), Mapping)
+                        else {}
+                    ),
+                    "receiver_repair_required_before_budget_spend": True,
+                    "allowed_use": "receiver_repair_queue_metadata_only",
+                    "forbidden_use": "score_claim_or_dispatch_authority",
+                    **FALSE_AUTHORITY,
+                },
+                "steps": [
+                    {
+                        "id": "emit_receiver_repair_work_order",
+                        "kind": "command",
+                        "command": [
+                            ".venv/bin/python",
+                            "tools/build_frontier_receiver_repair_work_order.py",
+                            "--receiver-repair-backlog",
+                            _repo_rel(backlog_path, repo),
+                            "--repair-id",
+                            repair_id,
+                            "--work-order-out",
+                            _repo_rel(work_order_path, repo),
+                            "--overwrite",
+                        ],
+                        "resources": {"kind": "local_io_heavy"},
+                        "timeout_seconds": 120,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(work_order_path, repo),
+                                "key": "schema",
+                                "equals": RECEIVER_REPAIR_WORK_ORDER_SCHEMA,
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(work_order_path, repo),
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(work_order_path, repo),
+                                "key": "budget_spend_gate.ready_for_targeted_correction_budget_spend",
+                                "equals": False,
+                            },
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [_repo_rel(work_order_path, repo)],
+                            "input_artifact_paths": [
+                                _repo_rel(backlog_path, repo),
+                                *list(row.get("bridge_report_paths") or []),
+                            ],
+                            "include_postcondition_paths": True,
+                        },
+                    }
+                ],
+            }
+        )
+    return normalize_queue_definition(
+        {
+            "schema": QUEUE_SCHEMA,
+            "queue_id": queue_id,
+            "controls": {
+                "mode": "running",
+                "local_first": True,
+                "max_concurrency": {
+                    "local_cpu": 1,
+                    "local_io_heavy": local_io_concurrency,
+                    "local_mlx": 0,
+                    "modal_cpu": 0,
+                    "modal_gpu": 0,
+                },
+            },
+            "experiments": experiments,
+            "allowed_use": "queue_owned_receiver_repair_work_orders_only",
+            "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+            **FALSE_AUTHORITY,
+        }
+    )
 
 
 def _queue_summary(queue: Mapping[str, Any]) -> dict[str, Any]:
@@ -2939,11 +3575,15 @@ __all__ = [
     "OPERATION_PORTFOLIO_TAXONOMY_SCHEMA",
     "PAIR_FRAME_GEOMETRY_DISCOVERY_SCHEMA",
     "RECEIVER_REPAIR_BACKLOG_SCHEMA",
+    "RECEIVER_REPAIR_QUEUE_METADATA_SCHEMA",
     "RECEIVER_REPAIR_ROW_SCHEMA",
+    "RECEIVER_REPAIR_WORK_ORDER_SCHEMA",
     "FrontierRateAttackFeedbackError",
     "build_frontier_operation_portfolio",
     "build_frontier_rate_attack_feedback_refresh",
     "build_frontier_receiver_repair_backlog",
+    "build_frontier_receiver_repair_queue",
+    "build_frontier_receiver_repair_work_order",
     "discover_dqs1_observation_jsonl_paths",
     "discover_local_cpu_eureka_planning_signals",
     "discover_materializer_feedback_payloads",

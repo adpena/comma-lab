@@ -47,6 +47,7 @@ from tac.repo_io import (
 )
 
 from .experiment_queue import ExperimentQueueError
+from .frontier_rate_attack_feedback import build_frontier_receiver_repair_queue
 
 FRONTIER_RATE_ATTACK_FEEDBACK_CYCLE_SCHEMA = "frontier_rate_attack_feedback_cycle.v1"
 FRONTIER_RATE_ATTACK_DQS1_OBSERVATION_BUNDLE_SCHEMA = (
@@ -480,6 +481,17 @@ def write_frontier_refresh_artifacts(
         path = out / "receiver_repair_backlog.json"
         write_json_artifact(path, dict(receiver_repair_backlog))
         artifacts["receiver_repair_backlog"] = repo_rel(path, repo_root)
+        repair_queue = build_frontier_receiver_repair_queue(
+            repo_root=repo_root,
+            receiver_repair_backlog=receiver_repair_backlog,
+            receiver_repair_backlog_path=path,
+            results_root=str(report.get("results_root") or "experiments/results"),
+            queue_id=f"{report.get('queue_id') or 'frontier_feedback'}_receiver_repair",
+        )
+        if isinstance(repair_queue, Mapping):
+            queue_path = out / "receiver_repair_queue.json"
+            write_json_artifact(queue_path, dict(repair_queue))
+            artifacts["receiver_repair_queue"] = repo_rel(queue_path, repo_root)
     selected_acquisition = report.get("selected_pairset_acquisition")
     if isinstance(selected_acquisition, Mapping):
         path = out / "dqs1_selected_pairset_acquisition.json"
@@ -499,26 +511,39 @@ def write_frontier_refresh_artifacts(
     report_path = out / report_filename
     report_to_write = dict(report)
     report_to_write["artifacts"] = dict(artifacts)
+    operator_commands: dict[str, Any] = {}
     if "dqs1_followup_queue" in artifacts:
-        report_to_write["operator_commands"] = {
-            "validate_followup_queue": [
-                ".venv/bin/python",
-                "tools/experiment_queue.py",
-                "--queue",
-                artifacts["dqs1_followup_queue"],
-                "validate",
-            ],
-            "run_frontier_feedback_cycle": [
-                ".venv/bin/python",
-                "tools/run_frontier_rate_attack_feedback_cycle.py",
-                "--frontier-artifact-root",
-                ".omx/research",
-                "--action-summary",
-                str(report.get("action_summary_path") or "latest"),
-                "--results-root",
-                str(report.get("results_root") or ""),
-            ],
-        }
+        operator_commands.update(
+            {
+                "validate_followup_queue": [
+                    ".venv/bin/python",
+                    "tools/experiment_queue.py",
+                    "--queue",
+                    artifacts["dqs1_followup_queue"],
+                    "validate",
+                ],
+                "run_frontier_feedback_cycle": [
+                    ".venv/bin/python",
+                    "tools/run_frontier_rate_attack_feedback_cycle.py",
+                    "--frontier-artifact-root",
+                    ".omx/research",
+                    "--action-summary",
+                    str(report.get("action_summary_path") or "latest"),
+                    "--results-root",
+                    str(report.get("results_root") or ""),
+                ],
+            }
+        )
+    if "receiver_repair_queue" in artifacts:
+        operator_commands["validate_receiver_repair_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["receiver_repair_queue"],
+            "validate",
+        ]
+    if operator_commands:
+        report_to_write["operator_commands"] = operator_commands
     write_json_artifact(report_path, report_to_write)
     artifacts["feedback_refresh_report"] = repo_rel(report_path, repo_root)
     return artifacts

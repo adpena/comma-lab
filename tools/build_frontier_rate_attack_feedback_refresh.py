@@ -33,6 +33,7 @@ from comma_lab.scheduler.experiment_queue import ExperimentQueueError  # noqa: E
 from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
     FrontierRateAttackFeedbackError,
     build_frontier_rate_attack_feedback_refresh,
+    build_frontier_receiver_repair_queue,
 )
 from tac.repo_io import ArtifactWriteError, json_text, write_json_artifact  # noqa: E402
 
@@ -215,6 +216,17 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
         path = output_dir / "receiver_repair_backlog.json"
         write_json_artifact(path, receiver_repair_backlog)
         artifacts["receiver_repair_backlog"] = _display_path(path)
+        repair_queue = build_frontier_receiver_repair_queue(
+            repo_root=REPO_ROOT,
+            receiver_repair_backlog=receiver_repair_backlog,
+            receiver_repair_backlog_path=path,
+            results_root=str(report.get("results_root") or DEFAULT_RESULTS_ROOT),
+            queue_id=f"{report.get('queue_id') or 'frontier_feedback'}_receiver_repair",
+        )
+        if isinstance(repair_queue, dict):
+            queue_path = output_dir / "receiver_repair_queue.json"
+            write_json_artifact(queue_path, repair_queue)
+            artifacts["receiver_repair_queue"] = _display_path(queue_path)
     bridge = report.get("materializer_feedback_bridge")
     if isinstance(bridge, dict):
         path = output_dir / "materializer_feedback_bridge.json"
@@ -229,33 +241,46 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
     report_path = output_dir / "feedback_refresh_report.json"
     report_to_write = dict(report)
     report_to_write["artifacts"] = dict(artifacts)
+    operator_commands: dict[str, Any] = {}
     if "dqs1_followup_queue" in artifacts:
-        report_to_write["operator_commands"] = {
-            "validate_followup_queue": [
-                ".venv/bin/python",
-                "tools/experiment_queue.py",
-                "--queue",
-                artifacts["dqs1_followup_queue"],
-                "validate",
-            ],
-            "init_followup_queue": [
-                ".venv/bin/python",
-                "tools/experiment_queue.py",
-                "--queue",
-                artifacts["dqs1_followup_queue"],
-                "init",
-            ],
-            "run_frontier_feedback_cycle": [
-                ".venv/bin/python",
-                "tools/run_frontier_rate_attack_feedback_cycle.py",
-                "--action-summary",
-                str(report.get("action_summary_path") or "latest"),
-                "--results-root",
-                str(report.get("results_root") or DEFAULT_RESULTS_ROOT),
-                "--output-dir",
-                _display_path(output_dir.parent / f"{output_dir.name}_cycle"),
-            ],
-        }
+        operator_commands.update(
+            {
+                "validate_followup_queue": [
+                    ".venv/bin/python",
+                    "tools/experiment_queue.py",
+                    "--queue",
+                    artifacts["dqs1_followup_queue"],
+                    "validate",
+                ],
+                "init_followup_queue": [
+                    ".venv/bin/python",
+                    "tools/experiment_queue.py",
+                    "--queue",
+                    artifacts["dqs1_followup_queue"],
+                    "init",
+                ],
+                "run_frontier_feedback_cycle": [
+                    ".venv/bin/python",
+                    "tools/run_frontier_rate_attack_feedback_cycle.py",
+                    "--action-summary",
+                    str(report.get("action_summary_path") or "latest"),
+                    "--results-root",
+                    str(report.get("results_root") or DEFAULT_RESULTS_ROOT),
+                    "--output-dir",
+                    _display_path(output_dir.parent / f"{output_dir.name}_cycle"),
+                ],
+            }
+        )
+    if "receiver_repair_queue" in artifacts:
+        operator_commands["validate_receiver_repair_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["receiver_repair_queue"],
+            "validate",
+        ]
+    if operator_commands:
+        report_to_write["operator_commands"] = operator_commands
     write_json_artifact(report_path, report_to_write)
     artifacts["feedback_refresh_report"] = _display_path(report_path)
     return artifacts

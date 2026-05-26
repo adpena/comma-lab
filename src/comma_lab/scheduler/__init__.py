@@ -100,6 +100,8 @@ from .frontier_rate_attack_feedback import (
     MATERIALIZER_FEEDBACK_DISCOVERY_SCHEMA,
     FrontierRateAttackFeedbackError,
     build_frontier_rate_attack_feedback_refresh,
+    build_frontier_receiver_repair_queue,
+    build_frontier_receiver_repair_work_order,
     discover_materializer_feedback_payloads,
     load_dqs1_observations,
 )
@@ -271,6 +273,8 @@ __all__ = [
     "build_frontier_rate_attack_archive_record",
     "build_frontier_rate_attack_feedback_refresh",
     "build_frontier_rate_attack_payloads",
+    "build_frontier_receiver_repair_queue",
+    "build_frontier_receiver_repair_work_order",
     "build_local_training_execution_queue",
     "build_materializer_exact_eval_consumer_queue",
     "build_materializer_exact_eval_dispatch_plan",
