@@ -90,6 +90,9 @@ OPERATION_MATERIALIZER_BRIDGE_SCHEMA = (
 OPERATION_MATERIALIZER_BRIDGE_ROW_SCHEMA = (
     "frontier_rate_attack_operation_materializer_bridge_row.v1"
 )
+OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA = (
+    "frontier_rate_attack_operation_chain_compiler_work_order.v1"
+)
 MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA = (
     "materializer_chain_exact_readiness_bridge_report.v1"
 )
@@ -2586,6 +2589,157 @@ def _materializer_chain_operation_rows(
     ]
 
 
+def _registered_materializer_chain_operation_rows(
+    backlog_rows: Sequence[Mapping[str, Any]],
+    *,
+    targeted_correction_budget: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    registered_rows = [
+        row
+        for row in backlog_rows
+        if str(row.get("operation_id") or "").startswith("materializer_backlog_")
+    ]
+    if len(registered_rows) < 2:
+        return []
+    chain_targets = [
+        str(row.get("operation_id") or "").removeprefix("materializer_backlog_")
+        for row in registered_rows
+    ]
+    materializer_levels = _unique_strings(
+        [
+            level
+            for row in registered_rows
+            for level in _string_list(row.get("operation_levels"))
+        ]
+    )
+    missing_contracts = [
+        "payload_grammar_schema_manifest",
+        "archive_section_header_elision_contract",
+        "archive_section_order_independence_contract",
+        "tensor_sensitivity_rank_quant_prune_contract",
+        "shared_codebook_dictionary_contract",
+        "single_composed_receiver_runtime_consumption_proof",
+        "chain_exact_readiness_handoff_after_composition",
+    ]
+    receiver_closed_saved = _finite_int_or_none(
+        targeted_correction_budget.get("receiver_closed_materializer_saved_bytes_total")
+    ) or 0
+    local_drop_saved = _finite_int_or_none(
+        targeted_correction_budget.get("local_drop_saved_bytes_total")
+    ) or 0
+    return [
+        _operation_row(
+            operation_id="chain_registered_multisurface_materializer_program",
+            operation_family="registered_multisurface_materializer_chain",
+            operation_levels=materializer_levels,
+            queue_consumer="frontier_materializer_chain_acquisition_queue",
+            recommended_next_action=(
+                "compile_registered_bit_byte_archive_tensor_receiver_ops_into_"
+                "one_scored_chain_plan_before_more_leaf_materializer_work"
+            ),
+            priority_score=72.0
+            + min(float(max(receiver_closed_saved + local_drop_saved, 0)) / 64.0, 12.0),
+            evidence_summary={
+                "schema": "frontier_rate_attack_registered_materializer_chain_summary.v1",
+                "operator_model": (
+                    "minimize_delta_segnet_plus_delta_posenet_plus_lambda_delta_bytes_"
+                    "for_score_R_T_of_T_archive_under_single_receiver_proof"
+                ),
+                "chain_targets": chain_targets,
+                "source_operation_ids": [
+                    str(row.get("operation_id") or "") for row in registered_rows
+                ],
+                "materializer_levels": materializer_levels,
+                "stage_plan": [
+                    {
+                        "stage": "payload_grammar_and_entropy",
+                        "targets": ["byte_range_entropy_recode_v1"],
+                        "required_before_execution": [
+                            "schema_manifest",
+                            "beam_probe_reports",
+                            "source_runtime_dir",
+                        ],
+                    },
+                    {
+                        "stage": "archive_section_receiver_contracts",
+                        "targets": [
+                            "archive_section_header_elide_v1",
+                            "archive_section_reorder_v1",
+                            "archive_section_proceduralize_v1",
+                        ],
+                        "required_before_execution": [
+                            "header_elision_contract",
+                            "section_order_contract",
+                            "runtime_consumption_proof",
+                        ],
+                    },
+                    {
+                        "stage": "tensor_scorer_sensitive_layout",
+                        "targets": [
+                            "tensor_quantize_v1",
+                            "tensor_prune_v1",
+                            "tensor_shared_codebook_v1",
+                        ],
+                        "required_before_execution": [
+                            "component_sensitivity_rows",
+                            "receiver_exact_reconstruction_contract",
+                        ],
+                    },
+                    {
+                        "stage": "packet_member_lookup_and_high_level_action_sets",
+                        "targets": [
+                            "packet_member_reorder_v1",
+                            "inverse_steganalysis_high_level_operation_set_v1",
+                        ],
+                        "required_before_execution": [
+                            "member_lookup_proof",
+                            "inverse_scorer_action_surface_binding",
+                        ],
+                    },
+                ],
+                "synergy_terms_to_measure": [
+                    "entropy_recode_after_section_reorder",
+                    "header_elide_after_proceduralized_section_constants",
+                    "shared_codebook_after_tensor_quant_prune",
+                    "component_repair_budget_after_receiver_closed_rate_savings",
+                    "single_receiver_adapter_amortizes_multiple_archive_ops",
+                ],
+                "antagonism_terms_to_measure": [
+                    "section_reorder_breaks_payload_offsets_without_lookup_table",
+                    "tensor_prune_changes_posenet_geometry_more_than_rate_credit",
+                    "quantization_noise_consumes_segnet_boundary_budget",
+                    "receiver_adapter_bytes_exceed_chained_rate_savings",
+                ],
+                "targeted_correction_budget": {
+                    "schema": targeted_correction_budget.get("schema"),
+                    "active": targeted_correction_budget.get("active"),
+                    "receiver_closed_materializer_saved_bytes_total": receiver_closed_saved,
+                    "local_drop_saved_bytes_total": local_drop_saved,
+                    "blockers": _string_list(targeted_correction_budget.get("blockers")),
+                    **FALSE_AUTHORITY,
+                },
+                "missing_contracts": missing_contracts,
+                "queue_work_order_schema": OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA,
+                **FALSE_AUTHORITY,
+            },
+            blockers=[
+                "chain_requires_registered_materializer_context_binding",
+                "chain_requires_single_composed_receiver_runtime_consumption_proof",
+                "chain_requires_component_marginal_rows_before_budget_reallocation",
+                "chain_requires_exact_readiness_handoff_after_composition",
+                *[
+                    f"chain_missing_contract:{contract}"
+                    for contract in missing_contracts
+                ],
+            ],
+            queue_executable=False,
+            followup_signal=True,
+            source_kind="registered_materializer_chain_acquisition",
+            suppression_keys=chain_targets,
+        )
+    ]
+
+
 def _targeted_correction_budget_summary(
     *,
     component_summary: Mapping[str, Any],
@@ -3010,9 +3164,17 @@ def build_frontier_operation_portfolio(
         materializer_rows=materializer_rows,
         receiver_closed_correction_budget=receiver_closed_correction_budget,
     )
+    backlog_rows = _backlog_operation_rows(
+        component_summary=component_summary,
+        master_gradient=master_gradient,
+    )
     rows = [
         *materializer_rows,
         *_materializer_chain_operation_rows(materializer_rows),
+        *_registered_materializer_chain_operation_rows(
+            backlog_rows,
+            targeted_correction_budget=targeted_correction_budget,
+        ),
         *_dqs1_component_operation_rows(dqs1_observations, component_summary),
         *_eureka_operation_rows(eureka_planning),
         *_pair_frame_operation_rows(pair_frame_requests, pair_frame_source_paths),
@@ -3020,10 +3182,7 @@ def build_frontier_operation_portfolio(
             component_summary=component_summary,
             master_gradient=master_gradient,
         ),
-        *_backlog_operation_rows(
-            component_summary=component_summary,
-            master_gradient=master_gradient,
-        ),
+        *backlog_rows,
     ]
     rows = sorted(
         rows,
@@ -3566,7 +3725,42 @@ def build_frontier_operation_materializer_bridge(
             continue
         adapter = adapters_by_target.get(target_kind or "")
         bridge_blockers = _string_list(source_row.get("blockers"))
-        if adapter is None:
+        chain_compiler_work_order: dict[str, Any] | None = None
+        if adapter is None and chain_targets:
+            bridge_blockers.append(
+                "operation_portfolio_chain_requires_chain_compiler_work_order"
+            )
+            chain_compiler_work_order = {
+                "schema": OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA,
+                "source_operation_id": operation_id,
+                "source_operation_family": source_row.get("operation_family"),
+                "chain_targets": chain_targets,
+                "required_before_execution": [
+                    "per_stage_materializer_contexts",
+                    "single_composed_receiver_runtime_consumption_proof",
+                    "chain_exact_readiness_bridge",
+                    "targeted_component_budget_spend_gate",
+                ],
+                "targeted_correction_budget": (
+                    evidence.get("targeted_correction_budget")
+                    if isinstance(evidence.get("targeted_correction_budget"), Mapping)
+                    else {}
+                ),
+                "stage_plan": (
+                    evidence.get("stage_plan")
+                    if isinstance(evidence.get("stage_plan"), Sequence)
+                    and not isinstance(evidence.get("stage_plan"), (str, bytes, bytearray))
+                    else []
+                ),
+                "allowed_use": (
+                    "operation_chain_compiler_work_order_planning_only"
+                ),
+                "forbidden_use": (
+                    "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+                ),
+                **FALSE_AUTHORITY,
+            }
+        elif adapter is None:
             bridge_blockers.append(
                 "operation_portfolio_row_has_no_registered_materializer_target"
             )
@@ -3590,6 +3784,7 @@ def build_frontier_operation_materializer_bridge(
                 None if adapter is None else adapter.get("receiver_contract_kind")
             ),
             "chain_targets": chain_targets,
+            "chain_compiler_work_order": chain_compiler_work_order,
             "candidate_saved_bytes": _portfolio_row_candidate_saved_bytes(source_row),
             "priority_score": source_row.get("priority_score"),
             "materializer_backlog_key": (

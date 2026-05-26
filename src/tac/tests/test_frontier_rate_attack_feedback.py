@@ -813,6 +813,33 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     )
     assert correction_budget["score_claim"] is False
     assert correction_budget["ready_for_exact_eval_dispatch"] is False
+    registered_chain = next(
+        row
+        for row in operation_portfolio["rows"]
+        if row["operation_id"] == "chain_registered_multisurface_materializer_program"
+    )
+    assert registered_chain["queue_executable"] is False
+    assert registered_chain["followup_signal"] is True
+    assert registered_chain["queue_consumer"] == (
+        "frontier_materializer_chain_acquisition_queue"
+    )
+    assert {
+        "byte_range_entropy_recode_v1",
+        "archive_section_header_elide_v1",
+        "archive_section_reorder_v1",
+        "tensor_quantize_v1",
+        "tensor_prune_v1",
+        "tensor_shared_codebook_v1",
+    }.issubset(set(registered_chain["evidence_summary"]["chain_targets"]))
+    assert registered_chain["evidence_summary"]["queue_work_order_schema"] == (
+        "frontier_rate_attack_operation_chain_compiler_work_order.v1"
+    )
+    assert "single_receiver_adapter_amortizes_multiple_archive_ops" in (
+        registered_chain["evidence_summary"]["synergy_terms_to_measure"]
+    )
+    assert "chain_requires_single_composed_receiver_runtime_consumption_proof" in (
+        registered_chain["blockers"]
+    )
     operation_materializer = report["operation_materializer_bridge"]
     assert operation_materializer["schema"] == OPERATION_MATERIALIZER_BRIDGE_SCHEMA
     _assert_false_authority(operation_materializer)
@@ -828,6 +855,23 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
         "renderer_payload_dfl1_v1",
         "packet_member_merge_v1",
     ]
+    registered_chain_bridge = next(
+        row
+        for row in operation_materializer["rows"]
+        if row["source_operation_id"]
+        == "chain_registered_multisurface_materializer_program"
+    )
+    assert registered_chain_bridge["chain_compiler_work_order"]["schema"] == (
+        "frontier_rate_attack_operation_chain_compiler_work_order.v1"
+    )
+    assert "operation_portfolio_chain_requires_chain_compiler_work_order" in (
+        registered_chain_bridge["blockers"]
+    )
+    assert "operation_portfolio_row_has_no_registered_materializer_target" not in (
+        registered_chain_bridge["blockers"]
+    )
+    assert registered_chain_bridge["score_claim"] is False
+    assert registered_chain_bridge["ready_for_exact_eval_dispatch"] is False
     assert all(
         row["source_selection_samples"][0]["selection_kind"] == "materializer_feedback"
         for row in operation_materializer["materializer_backlog"]["rows"]
@@ -1241,9 +1285,30 @@ def test_frontier_feedback_compiler_turns_eureka_near_misses_into_beyond_drop_tw
         "local_cpu_eureka_planning.json"
     )
     assert artifacts["operation_portfolio"].endswith("operation_portfolio.json")
+    assert artifacts["operation_chain_compiler_work_orders"].endswith(
+        "operation_chain_compiler_work_orders.json"
+    )
     assert artifacts["receiver_repair_backlog"].endswith(
         "receiver_repair_backlog.json"
     )
+    chain_work_orders = json.loads(
+        (tmp_path / artifacts["operation_chain_compiler_work_orders"]).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert chain_work_orders["schema"] == (
+        "frontier_rate_attack_operation_chain_compiler_work_orders.v1"
+    )
+    assert chain_work_orders["work_order_count"] >= 1
+    assert {
+        "per_stage_materializer_contexts",
+        "single_composed_receiver_runtime_consumption_proof",
+        "chain_exact_readiness_bridge",
+        "targeted_component_budget_spend_gate",
+    }.issubset(
+        set(chain_work_orders["work_orders"][0]["required_before_execution"])
+    )
+    _assert_false_authority(chain_work_orders)
     artifact_payload = json.loads(
         (tmp_path / artifacts["local_cpu_eureka_planning"]).read_text(
             encoding="utf-8"
@@ -2182,6 +2247,18 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     assert initial_artifacts["operation_materializer_work_queue"].endswith(
         "operation_materializer_work_queue.json"
     )
+    assert initial_artifacts["operation_chain_compiler_work_orders"].endswith(
+        "operation_chain_compiler_work_orders.json"
+    )
+    operation_chain_orders = json.loads(
+        (
+            REPO_ROOT / initial_artifacts["operation_chain_compiler_work_orders"]
+        ).read_text(encoding="utf-8")
+    )
+    assert operation_chain_orders["schema"] == (
+        "frontier_rate_attack_operation_chain_compiler_work_orders.v1"
+    )
+    _assert_false_authority(operation_chain_orders)
     operation_work_queue = json.loads(
         (
             REPO_ROOT / initial_artifacts["operation_materializer_work_queue"]

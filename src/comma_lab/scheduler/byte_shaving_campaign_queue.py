@@ -62,6 +62,7 @@ from tac.packet_compiler.deterministic_compiler import (
 from .byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
     ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND,
+    ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND,
     ARCHIVE_SECTION_REORDER_TARGET_KIND,
     DQS1_PAIRSET_TARGET_KIND,
     INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
@@ -2992,6 +2993,10 @@ def _archive_section_contract_handoff(
         contract_key = "section_order_contract"
         blocker_prefix = "archive_section_reorder"
         receiver_contract_kind = "family_agnostic_archive_section_reorder"
+    elif target_kind == ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND:
+        contract_key = "procedural_receiver_spec"
+        blocker_prefix = "archive_section_proceduralize"
+        receiver_contract_kind = "family_agnostic_archive_section_proceduralize"
     else:
         return [f"archive_section_contract_handoff_unknown_target:{target_kind}"], {}
 
@@ -3052,6 +3057,13 @@ def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
             [
                 "archive_section_reorder_requires_order_independence_contract",
                 "archive_section_reorder_requires_runtime_consumption_proof",
+            ]
+        )
+    if target_kind == ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND:
+        blockers.extend(
+            [
+                "archive_section_proceduralize_requires_receiver_procedure_spec",
+                "archive_section_proceduralize_requires_runtime_consumption_proof",
             ]
         )
     if target_kind == PACKET_MEMBER_RECOMPRESS_TARGET_KIND:
@@ -3538,6 +3550,16 @@ def build_materializer_work_queue(
             command_blockers, telemetry = _archive_section_contract_handoff(
                 context,
                 target_kind=ARCHIVE_SECTION_REORDER_TARGET_KIND,
+            )
+            blockers.extend(command_blockers)
+        elif (
+            unit_kind == "archive_section"
+            and operation_family == "section_proceduralize"
+            and target_kind == ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND
+        ):
+            command_blockers, telemetry = _archive_section_contract_handoff(
+                context,
+                target_kind=ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND,
             )
             blockers.extend(command_blockers)
         elif (

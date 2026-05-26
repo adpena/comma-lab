@@ -1,0 +1,477 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1,
+      "local_io_heavy": 1,
+      "local_mlx": 0,
+      "modal_cpu": 0,
+      "modal_gpu": 0
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "receiver_repair_materializer_archive_section_entropy_recode_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_passed",
+      "lane_id": "lane_frontier_receiver_repair_queue_20260526",
+      "metadata": {
+        "allowed_use": "receiver_repair_queue_metadata_only",
+        "bridge_report_paths": [],
+        "candidate_ids": [],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "correction_budget_context": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "local_drop_saved_bytes_total": 0,
+          "materializer_rate_positive_saved_bytes_total": 132,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "saved_bytes_at_risk_from_source_operation": 132,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "spend_policy": "receiver_repair_must_prove_runtime_consumption_before_freed_rate_budget_can_fund_segnet_posenet_corrections"
+        },
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "exact_readiness_bridge_step_count": 0,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_consumer": "frontier_final_rate_attack_materializer_queue",
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_repair_required_before_budget_spend": true,
+        "repair_family": "runtime_consumption_proof_repair",
+        "repair_id": "receiver_repair_materializer_archive_section_entropy_recode_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_passed",
+        "saved_bytes_at_risk": 132,
+        "schema": "frontier_rate_attack_receiver_repair_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_operation_id": "materializer_archive_section_entropy_recode_v1",
+        "source_queue_consumer": "frontier_final_rate_attack_materializer_queue",
+        "source_queue_paths": [],
+        "submission_closure_step_count": 0,
+        "target_kind": "archive_section_entropy_recode_v1"
+      },
+      "priority": 1,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_receiver_repair_work_order.py",
+            "--receiver-repair-backlog",
+            ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_multisurface_chain_acquisition/initial_refresh/receiver_repair_backlog.json",
+            "--repair-id",
+            "receiver_repair_materializer_archive_section_entropy_recode_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_passed",
+            "--work-order-out",
+            "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_materializer_archive_section_entropy_recode_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_passed/work_order.json",
+            "--overwrite"
+          ],
+          "id": "emit_receiver_repair_work_order",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_receiver_repair_work_order.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_materializer_archive_section_entropy_recode_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_passed/work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_materializer_archive_section_entropy_recode_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_passed/work_order.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_gate.ready_for_targeted_correction_budget_spend",
+              "path": "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_materializer_archive_section_entropy_recode_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_passed/work_order.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_materializer_archive_section_entropy_recode_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_passed/work_order.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_multisurface_chain_acquisition/initial_refresh/receiver_repair_backlog.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "receiver_repair",
+        "runtime_consumption_proof_repair",
+        "archive_section_entropy_recode_v1"
+      ]
+    },
+    {
+      "id": "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+      "lane_id": "lane_frontier_receiver_repair_queue_20260526",
+      "metadata": {
+        "allowed_use": "receiver_repair_queue_metadata_only",
+        "bridge_report_paths": [],
+        "candidate_ids": [],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "correction_budget_context": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "local_drop_saved_bytes_total": 0,
+          "materializer_rate_positive_saved_bytes_total": 132,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "saved_bytes_at_risk_from_source_operation": 0,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "spend_policy": "receiver_repair_must_prove_runtime_consumption_before_freed_rate_budget_can_fund_segnet_posenet_corrections"
+        },
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "exact_readiness_bridge_step_count": 0,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_consumer": "frontier_final_rate_attack_materializer_queue",
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_repair_required_before_budget_spend": true,
+        "repair_family": "runtime_consumption_proof_repair",
+        "repair_id": "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+        "saved_bytes_at_risk": 0,
+        "schema": "frontier_rate_attack_receiver_repair_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_operation_id": "chain_registered_multisurface_materializer_program",
+        "source_queue_consumer": "frontier_materializer_chain_acquisition_queue",
+        "source_queue_paths": [],
+        "submission_closure_step_count": 0,
+        "target_kind": "chain_registered_multisurface_materializer_program"
+      },
+      "priority": 2,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_receiver_repair_work_order.py",
+            "--receiver-repair-backlog",
+            ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_multisurface_chain_acquisition/initial_refresh/receiver_repair_backlog.json",
+            "--repair-id",
+            "receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof",
+            "--work-order-out",
+            "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof/work_order.json",
+            "--overwrite"
+          ],
+          "id": "emit_receiver_repair_work_order",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_receiver_repair_work_order.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof/work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof/work_order.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_gate.ready_for_targeted_correction_budget_spend",
+              "path": "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof/work_order.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_chain_registered_multisurface_materializer_program_runtime_consumption_proof_repair_chain_missing_contract_single_composed_receiver_runtime_consumption_proof/work_order.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_multisurface_chain_acquisition/initial_refresh/receiver_repair_backlog.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "receiver_repair",
+        "runtime_consumption_proof_repair",
+        "chain_registered_multisurface_materializer_program"
+      ]
+    },
+    {
+      "id": "receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+      "lane_id": "lane_frontier_receiver_repair_queue_20260526",
+      "metadata": {
+        "allowed_use": "receiver_repair_queue_metadata_only",
+        "bridge_report_paths": [],
+        "candidate_ids": [],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "correction_budget_context": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "local_drop_saved_bytes_total": 0,
+          "materializer_rate_positive_saved_bytes_total": 132,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "saved_bytes_at_risk_from_source_operation": 0,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "spend_policy": "receiver_repair_must_prove_runtime_consumption_before_freed_rate_budget_can_fund_segnet_posenet_corrections"
+        },
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "exact_readiness_bridge_step_count": 0,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_consumer": "frontier_final_rate_attack_materializer_queue",
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_repair_required_before_budget_spend": true,
+        "repair_family": "runtime_consumption_proof_repair",
+        "repair_id": "receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+        "saved_bytes_at_risk": 0,
+        "schema": "frontier_rate_attack_receiver_repair_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_operation_id": "materializer_backlog_byte_range_entropy_recode_v1",
+        "source_queue_consumer": "byte_shaving_campaign_queue",
+        "source_queue_paths": [],
+        "submission_closure_step_count": 0,
+        "target_kind": "materializer_backlog_byte_range_entropy_recode_v1"
+      },
+      "priority": 3,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_receiver_repair_work_order.py",
+            "--receiver-repair-backlog",
+            ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_multisurface_chain_acquisition/initial_refresh/receiver_repair_backlog.json",
+            "--repair-id",
+            "receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "--work-order-out",
+            "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+            "--overwrite"
+          ],
+          "id": "emit_receiver_repair_work_order",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_receiver_repair_work_order.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_gate.ready_for_targeted_correction_budget_spend",
+              "path": "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_materializer_backlog_byte_range_entropy_recode_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_multisurface_chain_acquisition/initial_refresh/receiver_repair_backlog.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "receiver_repair",
+        "runtime_consumption_proof_repair",
+        "materializer_backlog_byte_range_entropy_recode_v1"
+      ]
+    },
+    {
+      "id": "receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+      "lane_id": "lane_frontier_receiver_repair_queue_20260526",
+      "metadata": {
+        "allowed_use": "receiver_repair_queue_metadata_only",
+        "bridge_report_paths": [],
+        "candidate_ids": [],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "correction_budget_context": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "local_drop_saved_bytes_total": 0,
+          "materializer_rate_positive_saved_bytes_total": 132,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "saved_bytes_at_risk_from_source_operation": 0,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "spend_policy": "receiver_repair_must_prove_runtime_consumption_before_freed_rate_budget_can_fund_segnet_posenet_corrections"
+        },
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "exact_readiness_bridge_step_count": 0,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_consumer": "frontier_final_rate_attack_materializer_queue",
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_repair_required_before_budget_spend": true,
+        "repair_family": "runtime_consumption_proof_repair",
+        "repair_id": "receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+        "saved_bytes_at_risk": 0,
+        "schema": "frontier_rate_attack_receiver_repair_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_operation_id": "materializer_backlog_archive_section_header_elide_v1",
+        "source_queue_consumer": "byte_shaving_campaign_queue",
+        "source_queue_paths": [],
+        "submission_closure_step_count": 0,
+        "target_kind": "materializer_backlog_archive_section_header_elide_v1"
+      },
+      "priority": 4,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_receiver_repair_work_order.py",
+            "--receiver-repair-backlog",
+            ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_multisurface_chain_acquisition/initial_refresh/receiver_repair_backlog.json",
+            "--repair-id",
+            "receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof",
+            "--work-order-out",
+            "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+            "--overwrite"
+          ],
+          "id": "emit_receiver_repair_work_order",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_receiver_repair_work_order.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_gate.ready_for_targeted_correction_budget_spend",
+              "path": "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_receiver_repair/frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair/receiver_repair_materializer_backlog_archive_section_header_elide_v1_runtime_consumption_proof_repair_requires_queue_context_and_runtime_consumption_proof/work_order.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_multisurface_chain_acquisition/initial_refresh/receiver_repair_backlog.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "receiver_repair",
+        "runtime_consumption_proof_repair",
+        "materializer_backlog_archive_section_header_elide_v1"
+      ]
+    }
+  ],
+  "queue_id": "frontier_rate_attack_feedback_cycle_multisurface_chain_acquisition_20260526_receiver_repair",
+  "schema": "experiment_queue.v1"
+}

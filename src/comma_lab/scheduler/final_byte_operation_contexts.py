@@ -30,6 +30,7 @@ from .byte_shaving_campaign_queue import (
 from .byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
     ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND,
+    ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND,
     ARCHIVE_SECTION_REORDER_TARGET_KIND,
     BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
     INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
@@ -472,6 +473,8 @@ def _archive_section_context_row(
         archive_section_contract_keys = ("header_elision_contract",)
     elif target_kind == ARCHIVE_SECTION_REORDER_TARGET_KIND:
         archive_section_contract_keys = ("section_order_contract",)
+    elif target_kind == ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND:
+        archive_section_contract_keys = ("procedural_receiver_spec",)
     for key in archive_section_contract_keys:
         value = _first_text(hints, (key,))
         if value is None:
@@ -1113,6 +1116,10 @@ def _known_materializer_context_row(
             or (
                 row.get("operation_family") == "section_reorder"
                 and row.get("target_kind") == ARCHIVE_SECTION_REORDER_TARGET_KIND
+            )
+            or (
+                row.get("operation_family") == "section_proceduralize"
+                and row.get("target_kind") == ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND
             )
         )
     ):

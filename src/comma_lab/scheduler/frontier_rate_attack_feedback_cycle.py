@@ -48,11 +48,15 @@ from tac.repo_io import (
 
 from .experiment_queue import ExperimentQueueError
 from .frontier_rate_attack_feedback import (
+    OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA,
     build_frontier_receiver_repair_queue,
     build_frontier_targeted_component_correction_queue,
 )
 
 FRONTIER_RATE_ATTACK_FEEDBACK_CYCLE_SCHEMA = "frontier_rate_attack_feedback_cycle.v1"
+OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA = (
+    "frontier_rate_attack_operation_chain_compiler_work_orders.v1"
+)
 FRONTIER_RATE_ATTACK_DQS1_OBSERVATION_BUNDLE_SCHEMA = (
     "frontier_rate_attack_dqs1_observation_bundle.v1"
 )
@@ -484,6 +488,47 @@ def write_frontier_refresh_artifacts(
         path = out / "operation_materializer_bridge.json"
         write_json_artifact(path, dict(operation_materializer_bridge))
         artifacts["operation_materializer_bridge"] = repo_rel(path, repo_root)
+        chain_work_orders: list[dict[str, Any]] = []
+        for index, row in enumerate(operation_materializer_bridge.get("rows") or []):
+            if not isinstance(row, Mapping):
+                continue
+            work_order = row.get("chain_compiler_work_order")
+            if not isinstance(work_order, Mapping):
+                continue
+            if work_order.get("schema") != OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA:
+                continue
+            chain_work_orders.append(
+                {
+                    **dict(work_order),
+                    "source_bridge_row_index": index,
+                    "source_bridge_blockers": list(row.get("blockers") or []),
+                }
+            )
+        if chain_work_orders:
+            payload = {
+                "schema": OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA,
+                "generated_at_utc": report.get("generated_at_utc"),
+                "operation_materializer_bridge_schema": (
+                    operation_materializer_bridge.get("schema")
+                ),
+                "work_order_count": len(chain_work_orders),
+                "work_orders": chain_work_orders,
+                "allowed_use": "queue_owned_operation_chain_compiler_work_orders_only",
+                "forbidden_use": (
+                    "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+                ),
+                **FALSE_AUTHORITY,
+            }
+            require_no_truthy_authority_fields(
+                payload,
+                context="operation_chain_compiler_work_orders",
+            )
+            chain_path = out / "operation_chain_compiler_work_orders.json"
+            write_json_artifact(chain_path, payload)
+            artifacts["operation_chain_compiler_work_orders"] = repo_rel(
+                chain_path,
+                repo_root,
+            )
         bridge_artifacts = (
             ("operation_materializer_backlog", "materializer_backlog"),
             ("operation_materializer_contexts", "materializer_contexts"),

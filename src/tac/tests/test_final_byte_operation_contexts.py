@@ -19,6 +19,8 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
     ARCHIVE_SECTION_HEADER_ELIDE_MATERIALIZER,
     ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND,
+    ARCHIVE_SECTION_PROCEDURALIZE_MATERIALIZER,
+    ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND,
     ARCHIVE_SECTION_REORDER_MATERIALIZER,
     ARCHIVE_SECTION_REORDER_TARGET_KIND,
     BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER,
@@ -118,6 +120,24 @@ def _archive_section_contract_backlog() -> dict[str, object]:
                     "section_manifest": "sections.json",
                 },
                 "source_unit_ids": ["decoder_sections"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            {
+                "schema": "byte_shaving_materializer_backlog_row.v1",
+                "backlog_key": "archive_section_proceduralize_fixture",
+                "backlog_rank": 3,
+                "unit_kind": "archive_section",
+                "operation_family": "section_proceduralize",
+                "target_kind": ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND,
+                "materializer_id": ARCHIVE_SECTION_PROCEDURALIZE_MATERIALIZER,
+                "operation_params": {
+                    "archive_path": "source.zip",
+                    "section_manifest": "sections.json",
+                },
+                "source_unit_ids": ["decoder_constants"],
                 "score_claim": False,
                 "promotion_eligible": False,
                 "rank_or_kill_eligible": False,
@@ -559,7 +579,7 @@ def test_final_byte_context_compiler_wires_archive_section_contract_handoffs(
     )
 
     assert payload["unsupported_backlog_keys"] == []
-    assert payload["row_count"] == 2
+    assert payload["row_count"] == 3
     header_context = next(
         row["context"]
         for row in payload["rows"]
@@ -569,6 +589,11 @@ def test_final_byte_context_compiler_wires_archive_section_contract_handoffs(
         row["context"]
         for row in payload["rows"]
         if row["target_kind"] == ARCHIVE_SECTION_REORDER_TARGET_KIND
+    )
+    proceduralize_context = next(
+        row["context"]
+        for row in payload["rows"]
+        if row["target_kind"] == ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND
     )
     assert header_context["archive_path"] == "source.zip"
     assert header_context["section_manifest"] == "sections.json"
@@ -581,6 +606,9 @@ def test_final_byte_context_compiler_wires_archive_section_contract_handoffs(
     assert "materializer_context_missing:section_order_contract" in (
         reorder_context["context_blockers"]
     )
+    assert "materializer_context_missing:procedural_receiver_spec" in (
+        proceduralize_context["context_blockers"]
+    )
 
     work_queue = build_materializer_work_queue(
         _archive_section_contract_backlog(),
@@ -590,7 +618,7 @@ def test_final_byte_context_compiler_wires_archive_section_contract_handoffs(
     )
 
     assert work_queue["executable_row_count"] == 0
-    assert work_queue["blocked_row_count"] == 2
+    assert work_queue["blocked_row_count"] == 3
     for row in work_queue["rows"]:
         assert row["score_claim"] is False
         assert row["ready_for_exact_eval_dispatch"] is False
@@ -618,6 +646,14 @@ def test_final_byte_context_compiler_wires_archive_section_contract_handoffs(
     assert "archive_section_reorder_materializer_requires_byte_closed_adapter" in (
         reorder_work["materialization_blockers"]
     )
+    proceduralize_work = next(
+        row
+        for row in work_queue["rows"]
+        if row["target_kind"] == ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND
+    )
+    assert "archive_section_proceduralize_materializer_requires_byte_closed_adapter" in (
+        proceduralize_work["materialization_blockers"]
+    )
 
 
 def test_final_byte_context_compiler_preserves_archive_section_contract_proof_signal(
@@ -636,6 +672,12 @@ def test_final_byte_context_compiler_preserves_archive_section_contract_proof_si
     rows[1]["operation_params"].update(
         {
             "section_order_contract": "section_order_contract.json",
+            "runtime_consumption_proof": str(runtime_proof),
+        }
+    )
+    rows[2]["operation_params"].update(
+        {
+            "procedural_receiver_spec": "procedural_receiver_spec.json",
             "runtime_consumption_proof": str(runtime_proof),
         }
     )
@@ -667,7 +709,12 @@ def test_final_byte_context_compiler_preserves_archive_section_contract_proof_si
         for row in work_queue["rows"]
         if row["target_kind"] == ARCHIVE_SECTION_REORDER_TARGET_KIND
     )
-    for row in (header_work, reorder_work):
+    proceduralize_work = next(
+        row
+        for row in work_queue["rows"]
+        if row["target_kind"] == ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND
+    )
+    for row in (header_work, reorder_work, proceduralize_work):
         assert "materializer_context_missing:runtime_consumption_proof" not in (
             row["materialization_blockers"]
         )
@@ -680,6 +727,9 @@ def test_final_byte_context_compiler_preserves_archive_section_contract_proof_si
     )
     assert reorder_work["telemetry"]["receiver_contract_work_order"]["section_order_contract"] == (
         "section_order_contract.json"
+    )
+    assert proceduralize_work["telemetry"]["receiver_contract_work_order"]["procedural_receiver_spec"] == (
+        "procedural_receiver_spec.json"
     )
 
 
