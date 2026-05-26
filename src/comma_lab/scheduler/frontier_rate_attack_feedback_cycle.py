@@ -50,7 +50,7 @@ from .experiment_queue import ExperimentQueueError
 from .frontier_rate_attack_feedback import (
     OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA,
     OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA,
-    build_frontier_autonomous_chain_optimization,
+    attach_frontier_autonomous_chain_optimization,
     build_frontier_operation_chain_compiler_queue,
     build_frontier_receiver_repair_queue,
     build_frontier_targeted_component_correction_chain_materializer_handoff,
@@ -759,20 +759,12 @@ def write_frontier_refresh_artifacts(
             report["targeted_component_correction_chain_materializer_handoff"] = (
                 targeted_chain_materializer_handoff
             )
-            if isinstance(operation_portfolio, Mapping) and isinstance(
-                operation_materializer_bridge,
-                Mapping,
-            ):
-                report["autonomous_chain_optimization"] = (
-                    build_frontier_autonomous_chain_optimization(
-                        operation_portfolio=operation_portfolio,
-                        operation_materializer_bridge=operation_materializer_bridge,
-                        targeted_component_correction_chain_materializer_handoff=(
-                            targeted_chain_materializer_handoff
-                        ),
-                        chain_limit=int(report.get("candidate_limit") or 4),
-                    )
-                )
+            attach_frontier_autonomous_chain_optimization(
+                report,
+                targeted_component_correction_chain_materializer_handoff=(
+                    targeted_chain_materializer_handoff
+                ),
+            )
     autonomous_chain_optimization = report.get("autonomous_chain_optimization")
     if isinstance(autonomous_chain_optimization, Mapping):
         path = out / "autonomous_chain_optimization.json"

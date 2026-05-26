@@ -2601,6 +2601,17 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert tensor_quantize_rows[0]["telemetry"]["receiver_contract_work_order"][
         "schema"
     ] == "tensor_receiver_contract_work_order.v1"
+    bridge_only_autonomous = build_frontier_autonomous_chain_optimization(
+        operation_portfolio=report["operation_portfolio"],
+        operation_materializer_bridge=report["operation_materializer_bridge"],
+        chain_limit=3,
+    )
+    assert bridge_only_autonomous["registered_target_count"] == 0
+    assert all(
+        action["id"] != "bind_targeted_chain_materializer_contexts"
+        for row in bridge_only_autonomous["rows"]
+        for action in row["scheduler_actions"]
+    )
     autonomous = build_frontier_autonomous_chain_optimization(
         operation_portfolio=report["operation_portfolio"],
         operation_materializer_bridge=report["operation_materializer_bridge"],
@@ -2619,6 +2630,9 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     first_chain = autonomous["rows"][0]
     assert first_chain["schema"] == AUTONOMOUS_CHAIN_OPTIMIZATION_ROW_SCHEMA
     _assert_false_authority(first_chain)
+    assert first_chain["registered_chain_target_count"] == handoff[
+        "registered_chain_target_count"
+    ]
     assert {"pixel", "region", "boundary", "frame", "pair", "batch"}.issubset(
         set(first_chain["operation_levels"])
     )
@@ -2633,6 +2647,29 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert "fit_segnet_posenet_repair_waterfill_policy" in {
         action["id"] for action in first_chain["scheduler_actions"]
     }
+    bind_actions = [
+        action
+        for row in autonomous["rows"]
+        for action in row["scheduler_actions"]
+        if action["id"] == "bind_targeted_chain_materializer_contexts"
+    ]
+    assert bind_actions
+    assert all(
+        action["target_count"] == handoff["registered_chain_target_count"]
+        for action in bind_actions
+    )
+    emitted_artifact_keys = {
+        "operation_materializer_work_queue",
+        "receiver_repair_queue",
+        "targeted_component_correction_chain_materializer_handoff",
+        "targeted_component_correction_operation_chain_queue",
+    }
+    for row in autonomous["rows"]:
+        for action in row["scheduler_actions"]:
+            if action.get("advisory_only"):
+                assert "queue_artifact_key" not in action
+            else:
+                assert action["queue_artifact_key"] in emitted_artifact_keys
     assert first_chain["repair_budget_waterfill_plan"][
         "budget_spend_allowed"
     ] is False
@@ -3872,6 +3909,14 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     )
     assert autonomous_artifact["schema"] == AUTONOMOUS_CHAIN_OPTIMIZATION_SCHEMA
     _assert_false_authority(autonomous_artifact)
+    followup_queue = json.loads(queue_path.read_text(encoding="utf-8"))
+    autonomous_metadata = followup_queue["experiments"][0]["metadata"][
+        "frontier_autonomous_chain_optimization"
+    ]
+    assert autonomous_metadata["chain_count"] == autonomous_artifact["chain_count"]
+    assert autonomous_metadata["registered_target_count"] == autonomous_artifact[
+        "registered_target_count"
+    ]
     assert autonomous_artifact["rows"][0]["repair_budget_waterfill_plan"][
         "exact_auth_eval_required_before_score_claim"
     ] is True
@@ -4632,6 +4677,15 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     )
     assert initial_autonomous_chain["schema"] == AUTONOMOUS_CHAIN_OPTIMIZATION_SCHEMA
     _assert_false_authority(initial_autonomous_chain)
+    initial_autonomous_metadata = initial_dqs1_queue["experiments"][0]["metadata"][
+        "frontier_autonomous_chain_optimization"
+    ]
+    assert initial_autonomous_metadata["chain_count"] == initial_autonomous_chain[
+        "chain_count"
+    ]
+    assert initial_autonomous_metadata["registered_target_count"] == (
+        initial_autonomous_chain["registered_target_count"]
+    )
     assert "fit_segnet_posenet_repair_waterfill_policy" in {
         action["id"]
         for row in initial_autonomous_chain["rows"]

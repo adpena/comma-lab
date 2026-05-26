@@ -95,3 +95,43 @@ all generated queue/report JSON intended for commit should express repository
 relative paths, artifact IDs, or custody SHA records rather than absolute
 machine-local paths. That will make autonomous-chain refresh outputs portable
 and suitable as durable `.omx/research/` ledgers without leaking local layout.
+
+## Fix-Forward After Adversarial Audit
+
+Subagent audit caught three integration bugs before push:
+
+- bridge-only targets were incorrectly allowed to emit
+  `bind_targeted_chain_materializer_contexts`;
+- queue metadata could remain tied to the pre-handoff autonomous payload after
+  writers generated a handoff-aware artifact;
+- advisory scheduler actions were labeled like runnable queue artifacts.
+
+Fix-forward patch:
+
+- separates `target_kinds` from true `registered_chain_targets`;
+- adds `attach_frontier_autonomous_chain_optimization(...)` to rebuild the
+  final payload and update queue experiment metadata after handoff creation;
+- marks non-queue policy/exact-readiness actions as `advisory_only=true` with
+  `source_artifact_key` instead of `queue_artifact_key`;
+- adds regressions for bridge-only no-bind behavior, handoff target counts,
+  queue metadata/artifact consistency, and advisory-only action classification.
+
+Fresh fixed smoke:
+
+```bash
+.venv/bin/python tools/build_frontier_rate_attack_feedback_refresh.py \
+  --output-dir .omx/research/frontier_rate_attack_feedback_refresh_20260526T132000Z_autonomous_chain_optimization_fixed \
+  --action-summary latest \
+  --candidate-limit 4
+```
+
+Observed fix checks:
+
+- `registered_target_count=0`
+- `bind_action_count=0`
+- queue metadata `registered_target_count=0`
+- queue metadata `chain_count=3`, matching artifact `chain_count=3`
+- non-advisory scheduler artifact keys: `operation_materializer_work_queue`
+- advisory-only actions:
+  `fit_segnet_posenet_repair_waterfill_policy`,
+  `replay_component_response_and_exact_readiness_bridge`

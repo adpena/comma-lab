@@ -4377,7 +4377,7 @@ def _autonomous_chain_bridge_summary(
 def _autonomous_chain_scheduler_actions(
     *,
     target_classes: Sequence[str],
-    registered_targets: Sequence[str],
+    registered_chain_targets: Sequence[str],
     unregistered_targets: Sequence[str],
     receiver_closure: Mapping[str, Any],
     bridge_summary: Mapping[str, Any],
@@ -4390,11 +4390,12 @@ def _autonomous_chain_scheduler_actions(
                 "queue_artifact_key": "operation_materializer_work_queue",
                 "purpose": "bind portfolio materializer contexts across packet_archive_tensor_targets",
                 "bounded_local_execution": True,
+                "advisory_only": False,
                 "requires_exact_auth_before_score_claim": True,
                 **FALSE_AUTHORITY,
             }
         )
-    if registered_targets:
+    if registered_chain_targets:
         actions.append(
             {
                 "id": "bind_targeted_chain_materializer_contexts",
@@ -4402,8 +4403,9 @@ def _autonomous_chain_scheduler_actions(
                     "targeted_component_correction_chain_materializer_handoff"
                 ),
                 "purpose": "close receiver_consumed_context_for_many_registered_targets",
-                "target_count": len(registered_targets),
+                "target_count": len(registered_chain_targets),
                 "bounded_local_execution": True,
+                "advisory_only": False,
                 "requires_exact_auth_before_score_claim": True,
                 **FALSE_AUTHORITY,
             }
@@ -4418,6 +4420,7 @@ def _autonomous_chain_scheduler_actions(
                     receiver_closure.get("missing_context_field_count")
                 ),
                 "bounded_local_execution": True,
+                "advisory_only": False,
                 "requires_exact_auth_before_score_claim": True,
                 **FALSE_AUTHORITY,
             }
@@ -4433,6 +4436,7 @@ def _autonomous_chain_scheduler_actions(
                 ),
                 "purpose": "search_pair_frame_batch_drop_many_under_segnet_posenet_guard",
                 "bounded_local_execution": True,
+                "advisory_only": False,
                 "requires_exact_auth_before_score_claim": True,
                 **FALSE_AUTHORITY,
             }
@@ -4440,12 +4444,17 @@ def _autonomous_chain_scheduler_actions(
     actions.append(
         {
             "id": "fit_segnet_posenet_repair_waterfill_policy",
-            "queue_artifact_key": "targeted_component_correction_response_harvest",
+            "source_artifact_key": "targeted_component_correction_response_harvest",
             "purpose": (
                 "estimate_where_drop_many_distortion_debt_should_be_repaired_"
                 "from_receiver_closed_rate_budget"
             ),
             "bounded_local_execution": True,
+            "advisory_only": True,
+            "advisory_reason": (
+                "policy-fit intent only until a concrete response-harvest queue "
+                "or worker artifact is emitted"
+            ),
             "requires_exact_auth_before_score_claim": True,
             **FALSE_AUTHORITY,
         }
@@ -4453,9 +4462,14 @@ def _autonomous_chain_scheduler_actions(
     actions.append(
         {
             "id": "replay_component_response_and_exact_readiness_bridge",
-            "queue_artifact_key": "materializer_chain_exact_readiness_bridge",
+            "source_artifact_key": "materializer_chain_exact_readiness_bridge",
             "purpose": "convert_local_many_op_candidate_into_exact_axis_request_only",
             "bounded_local_execution": False,
+            "advisory_only": True,
+            "advisory_reason": (
+                "bridge intent only until a concrete many-op candidate archive "
+                "and exact-readiness artifact exist"
+            ),
             "requires_exact_auth_before_score_claim": True,
             **FALSE_AUTHORITY,
         }
@@ -4563,6 +4577,7 @@ def _autonomous_chain_build_row(
     objective: str,
     operation_levels: Sequence[str],
     target_kinds: Sequence[str],
+    registered_chain_targets: Sequence[str],
     unregistered_targets: Sequence[str],
     correction_families: Sequence[str],
     receiver_closure: Mapping[str, Any],
@@ -4598,7 +4613,7 @@ def _autonomous_chain_build_row(
         blockers.append("component_correction_family_not_yet_bound")
     scheduler_actions = _autonomous_chain_scheduler_actions(
         target_classes=target_classes,
-        registered_targets=target_kinds,
+        registered_chain_targets=registered_chain_targets,
         unregistered_targets=unregistered_targets,
         receiver_closure=receiver_closure,
         bridge_summary=bridge_summary,
@@ -4628,6 +4643,8 @@ def _autonomous_chain_build_row(
         "target_classes": target_classes,
         "target_class_count": len(target_classes),
         "materializer_target_count": len(_unique_strings(target_kinds)),
+        "registered_chain_targets": _unique_strings(registered_chain_targets),
+        "registered_chain_target_count": len(_unique_strings(registered_chain_targets)),
         "unregistered_targets": _unique_strings(unregistered_targets),
         "correction_families": _unique_strings(correction_families),
         "correction_family_count": len(_unique_strings(correction_families)),
@@ -4638,7 +4655,9 @@ def _autonomous_chain_build_row(
         "scheduler_action_count": len(scheduler_actions),
         "source_artifact_keys": _unique_strings(source_artifact_keys),
         "next_queue_edges": _unique_strings(next_queue_edges),
-        "local_queue_execution_plan_present": bool(scheduler_actions),
+        "local_queue_execution_plan_present": any(
+            not bool(action.get("advisory_only")) for action in scheduler_actions
+        ),
         "budget_spend_allowed": False,
         "ready_for_budget_spend": False,
         "ready_for_materializer_execution": False,
@@ -4716,6 +4735,7 @@ def build_frontier_autonomous_chain_optimization(
             ),
             operation_levels=operation_levels,
             target_kinds=target_kinds,
+            registered_chain_targets=registered_targets,
             unregistered_targets=all_unregistered_targets,
             correction_families=correction_families,
             receiver_closure=receiver_closure,
@@ -4736,6 +4756,7 @@ def build_frontier_autonomous_chain_optimization(
                 ),
                 operation_levels=operation_levels,
                 target_kinds=registered_targets,
+                registered_chain_targets=registered_targets,
                 unregistered_targets=all_unregistered_targets,
                 correction_families=correction_families,
                 receiver_closure=receiver_closure,
@@ -4755,6 +4776,7 @@ def build_frontier_autonomous_chain_optimization(
                 ),
                 operation_levels=operation_levels,
                 target_kinds=bridge_targets,
+                registered_chain_targets=(),
                 unregistered_targets=(),
                 correction_families=correction_families,
                 receiver_closure=receiver_closure,
@@ -4789,6 +4811,12 @@ def build_frontier_autonomous_chain_optimization(
                 target_kinds=[
                     target
                     for target in target_kinds
+                    if _autonomous_chain_target_class(target)
+                    in {"component_response", "inverse_scorer", "tensor"}
+                ],
+                registered_chain_targets=[
+                    target
+                    for target in registered_targets
                     if _autonomous_chain_target_class(target)
                     in {"component_response", "inverse_scorer", "tensor"}
                 ],
@@ -4871,6 +4899,54 @@ def _autonomous_chain_optimization_queue_metadata(
         "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
         **FALSE_AUTHORITY,
     }
+
+
+def attach_frontier_autonomous_chain_optimization(
+    report: dict[str, Any],
+    *,
+    targeted_component_correction_chain_materializer_handoff: Mapping[str, Any]
+    | None = None,
+    update_queue_metadata: bool = True,
+) -> dict[str, Any] | None:
+    """Attach final autonomous-chain payload and keep queue metadata in sync."""
+
+    operation_portfolio = report.get("operation_portfolio")
+    operation_materializer_bridge = report.get("operation_materializer_bridge")
+    if not isinstance(operation_portfolio, Mapping) or not isinstance(
+        operation_materializer_bridge,
+        Mapping,
+    ):
+        return None
+    handoff: Mapping[str, Any] | None
+    if targeted_component_correction_chain_materializer_handoff is not None:
+        handoff = targeted_component_correction_chain_materializer_handoff
+    else:
+        maybe_handoff = report.get(
+            "targeted_component_correction_chain_materializer_handoff"
+        )
+        handoff = maybe_handoff if isinstance(maybe_handoff, Mapping) else None
+    autonomous_chain_optimization = build_frontier_autonomous_chain_optimization(
+        operation_portfolio=operation_portfolio,
+        operation_materializer_bridge=operation_materializer_bridge,
+        targeted_component_correction_chain_materializer_handoff=handoff,
+        chain_limit=int(report.get("candidate_limit") or 4),
+    )
+    report["autonomous_chain_optimization"] = autonomous_chain_optimization
+    if update_queue_metadata:
+        queue = report.get("queue")
+        if isinstance(queue, dict):
+            metadata_payload = _autonomous_chain_optimization_queue_metadata(
+                autonomous_chain_optimization
+            )
+            for experiment in queue.get("experiments") or []:
+                if not isinstance(experiment, dict):
+                    continue
+                metadata = experiment.setdefault("metadata", {})
+                if isinstance(metadata, dict):
+                    metadata["frontier_autonomous_chain_optimization"] = (
+                        metadata_payload
+                    )
+    return autonomous_chain_optimization
 
 
 def _targeted_component_prior_status(
@@ -11848,11 +11924,6 @@ def build_frontier_rate_attack_feedback_refresh(
         ),
         candidate_limit=candidate_limit,
     )
-    autonomous_chain_optimization = build_frontier_autonomous_chain_optimization(
-        operation_portfolio=operation_portfolio,
-        operation_materializer_bridge=operation_materializer_bridge,
-        chain_limit=candidate_limit,
-    )
     targeted_component_correction_acquisition = (
         build_frontier_targeted_component_correction_acquisition(
             operation_portfolio=operation_portfolio,
@@ -11913,11 +11984,6 @@ def build_frontier_rate_attack_feedback_refresh(
                     targeted_component_correction_acquisition
                 )
             )
-            autonomous_chain_metadata = (
-                _autonomous_chain_optimization_queue_metadata(
-                    autonomous_chain_optimization
-                )
-            )
             for experiment in queue_payload.get("experiments", []):
                 if not isinstance(experiment, dict):
                     continue
@@ -11932,9 +11998,6 @@ def build_frontier_rate_attack_feedback_refresh(
                     )
                     metadata["frontier_targeted_component_correction_acquisition"] = (
                         targeted_component_metadata
-                    )
-                    metadata["frontier_autonomous_chain_optimization"] = (
-                        autonomous_chain_metadata
                     )
         bridge = result.materializer_feedback_bridge
         selected_pairset_acquisition = result.selected_pairset_acquisition
@@ -11951,7 +12014,7 @@ def build_frontier_rate_attack_feedback_refresh(
         except ValueError as exc:
             raise FrontierRateAttackFeedbackError(str(exc)) from exc
 
-    return {
+    report = {
         "schema": FEEDBACK_REFRESH_SCHEMA,
         "generated_at_utc": _utc_now(),
         "candidate_limit": candidate_limit,
@@ -11967,7 +12030,6 @@ def build_frontier_rate_attack_feedback_refresh(
         "dqs1_observation_discovery": dqs1_observation_discovery,
         "operation_portfolio": operation_portfolio,
         "operation_materializer_bridge": operation_materializer_bridge,
-        "autonomous_chain_optimization": autonomous_chain_optimization,
         "receiver_repair_backlog": receiver_repair_backlog,
         "receiver_closed_correction_budget": receiver_closed_correction_budget,
         "targeted_component_correction_acquisition": (
@@ -12007,6 +12069,8 @@ def build_frontier_rate_attack_feedback_refresh(
         "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
         **FALSE_AUTHORITY,
     }
+    attach_frontier_autonomous_chain_optimization(report, update_queue_metadata=True)
+    return report
 
 
 __all__ = [
@@ -12040,6 +12104,7 @@ __all__ = [
     "TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA",
     "TARGETED_DROP_MANY_STAGE_INPUTS_SCHEMA",
     "FrontierRateAttackFeedbackError",
+    "attach_frontier_autonomous_chain_optimization",
     "build_frontier_autonomous_chain_optimization",
     "build_frontier_byte_range_stage_inputs",
     "build_frontier_operation_materializer_bridge",
