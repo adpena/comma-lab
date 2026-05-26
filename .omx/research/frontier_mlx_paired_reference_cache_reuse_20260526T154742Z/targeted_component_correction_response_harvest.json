@@ -20,7 +20,7 @@
   "exact_cuda_auth_eval": false,
   "field_selection_ready_for_exact_eval_dispatch": false,
   "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
-  "generated_at_utc": "2026-05-26T16:04:04Z",
+  "generated_at_utc": "2026-05-26T16:53:13Z",
   "gpu_launched": false,
   "local_acquisition_recommended_count": 1,
   "mlx_cpu_drift_summary": {
@@ -79,7 +79,7 @@
       "exact_cuda_auth_eval": false,
       "field_selection_ready_for_exact_eval_dispatch": false,
       "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
-      "generated_at_utc": "2026-05-26T16:04:04Z",
+      "generated_at_utc": "2026-05-26T16:53:13Z",
       "gpu_launched": false,
       "local_acquisition_recommended": true,
       "local_cpu_advisory_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction/shared_candidate_component_response/candidate_component_response_experiments_results_frontier_final_rate_attack_f_69eeac5a5371ec64/local_cpu_advisory.json",

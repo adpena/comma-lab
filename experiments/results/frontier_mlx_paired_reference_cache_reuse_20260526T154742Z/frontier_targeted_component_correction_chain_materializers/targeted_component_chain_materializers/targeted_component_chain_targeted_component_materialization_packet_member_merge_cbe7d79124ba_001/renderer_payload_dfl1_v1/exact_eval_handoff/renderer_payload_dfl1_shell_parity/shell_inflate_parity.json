@@ -1,0 +1,83 @@
+{
+  "blockers": [],
+  "cmp_equal": true,
+  "contest_full_sample_claim": false,
+  "contest_full_sample_parity_claim": false,
+  "expected_full_frame_entry_count": 1,
+  "expected_full_frame_file_list_sha256": "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8",
+  "file_list_entries": [
+    "0.mkv"
+  ],
+  "file_list_entry": "0.mkv",
+  "file_list_entry_count": 1,
+  "file_list_sha256": "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8",
+  "full_frame_entry_count_match": true,
+  "full_frame_file_list_claim": true,
+  "full_frame_file_list_sha256_match": true,
+  "full_frame_file_list_source": "upstream/public_test_video_names.txt",
+  "full_frame_inflate_output_parity_claim": true,
+  "generated_at_utc": "2026-05-26T16:56:34Z",
+  "left": {
+    "archive": "submissions/robust_current/archive_correct.zip",
+    "archive_bytes": 345802,
+    "archive_sha256": "4dd46fed78ed064bc97c9b3205088e82838c03667394f7936c8ae8d20f9837ab",
+    "inflate_seconds": 88.11585445795208,
+    "inflate_sh": "submissions/robust_current/inflate.sh",
+    "inflate_sh_sha256": "ed3cef1ab7e20dc06b7f6bad8e4f7b0d9b685d29e626873b5089fb76336bc40a",
+    "label": "left",
+    "output_count": 1,
+    "output_manifest_sha256": "2f7145d85c612daabeb1c0cfc71773fd783612d2da4bf40df521a1f722052e0b",
+    "output_raw_bytes": 3662409600,
+    "output_raw_sha256": "e5d05ee72b4cf9c9a8699009bb97a508ef3826da21f5767acfe15c334a2afad1",
+    "outputs": [
+      {
+        "file_list_entry": "0.mkv",
+        "output_basename": "0.raw",
+        "output_raw_bytes": 3662409600,
+        "output_raw_sha256": "e5d05ee72b4cf9c9a8699009bb97a508ef3826da21f5767acfe15c334a2afad1"
+      }
+    ],
+    "submission_dir": "submissions/robust_current",
+    "submission_tree_file_count": 85,
+    "submission_tree_sha256": "a2a413dfe584a9e8c9b01fa397dc91deebc05c5ee09b1213121a0fdcd69ca203"
+  },
+  "output_basename": "0.raw",
+  "output_bytes_match": true,
+  "output_count": 1,
+  "output_manifest_sha256_match": true,
+  "output_sha256_match": true,
+  "parity_scope_kind": "declared_file_list",
+  "promotable": false,
+  "promotion_eligible": false,
+  "python_bin": "/Users/adpena/Projects/pact/.venv/bin/python",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "right": {
+    "archive": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/candidate.zip",
+    "archive_bytes": 345422,
+    "archive_sha256": "e20295f0a662101567f36afe8ce17142635f976cb2f2b8937b4cbc76455ee3c4",
+    "inflate_seconds": 82.49896516697481,
+    "inflate_sh": "submissions/robust_current/inflate.sh",
+    "inflate_sh_sha256": "ed3cef1ab7e20dc06b7f6bad8e4f7b0d9b685d29e626873b5089fb76336bc40a",
+    "label": "right",
+    "output_count": 1,
+    "output_manifest_sha256": "2f7145d85c612daabeb1c0cfc71773fd783612d2da4bf40df521a1f722052e0b",
+    "output_raw_bytes": 3662409600,
+    "output_raw_sha256": "e5d05ee72b4cf9c9a8699009bb97a508ef3826da21f5767acfe15c334a2afad1",
+    "outputs": [
+      {
+        "file_list_entry": "0.mkv",
+        "output_basename": "0.raw",
+        "output_raw_bytes": 3662409600,
+        "output_raw_sha256": "e5d05ee72b4cf9c9a8699009bb97a508ef3826da21f5767acfe15c334a2afad1"
+      }
+    ],
+    "submission_dir": "submissions/robust_current",
+    "submission_tree_file_count": 85,
+    "submission_tree_sha256": "a2a413dfe584a9e8c9b01fa397dc91deebc05c5ee09b1213121a0fdcd69ca203"
+  },
+  "schema": "shell_inflate_parity_proof_v2",
+  "score_claim": false,
+  "scratch_dir": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/renderer_payload_dfl1_shell_parity/scratch",
+  "scratch_retained": false
+}

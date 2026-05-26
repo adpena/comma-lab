@@ -1,0 +1,168 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 1,
+  "idle_cycles": 1,
+  "max_experiments": 1,
+  "max_parallel": 1,
+  "noncanonical_state_rationale": null,
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "frontier_mlx_paired_reference_cache_reuse_20260526t154742z_bound_materializer_execution",
+  "requested_max_parallel": 1,
+  "resource_limits": {
+    "local_cpu": 1,
+    "local_io_heavy": 1
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-05-26T16:49:29Z",
+  "started_experiment_ids": [
+    "materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1"
+  ],
+  "state": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_frontier_mlx_paired_reference_cache_reuse_20260526t154742z_bound_materializer_execution.sqlite",
+  "step_results": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/run_family_agnostic_materializer.py",
+        "--target-kind",
+        "renderer_payload_dfl1_v1",
+        "--archive-path",
+        "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/archive.zip",
+        "--output-archive",
+        "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/candidate.zip",
+        "--output-manifest",
+        "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/manifest.json",
+        "--runtime-consumption-proof-out",
+        "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/runtime_consumption_proof.json"
+      ],
+      "elapsed_seconds": 0.2580962920328602,
+      "executed": true,
+      "execution_error": null,
+      "failed_postconditions": [
+        {
+          "equals": "renderer_payload_dfl1_candidate.v1",
+          "key": "schema",
+          "path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/manifest.json",
+          "type": "json_equals"
+        },
+        {
+          "false_or_missing": [
+            "ready_for_exact_eval_dispatch",
+            "dispatch_attempted",
+            "gpu_launched"
+          ],
+          "forbidden_statuses": [
+            "failed"
+          ],
+          "path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/manifest.json",
+          "required_artifact_records": [
+            "candidate_archive"
+          ],
+          "required_equals": {
+            "receiver_contract_kind": "source_runtime_native_renderer_payload_dfl1",
+            "receiver_verification.schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+            "schema": "renderer_payload_dfl1_candidate.v1",
+            "serialized_archive_delta.schema": "serialized_archive_delta_contract.v1"
+          },
+          "required_false": [
+            "score_claim",
+            "promotion_eligible",
+            "rank_or_kill_eligible"
+          ],
+          "required_nonempty": [
+            "runtime_consumption_proof_path"
+          ],
+          "required_nonempty_unless_true": [],
+          "required_positive_int": [
+            "candidate_archive.bytes",
+            "candidate_member.bytes",
+            "serialized_archive_delta.source_archive_bytes",
+            "serialized_archive_delta.candidate_archive_bytes",
+            "selected_payload.payload_bytes"
+          ],
+          "required_sha256": [
+            "candidate_archive.sha256",
+            "candidate_member.sha256"
+          ],
+          "required_true": [
+            "byte_closed_candidate_emitted"
+          ],
+          "type": "json_completion_contract"
+        }
+      ],
+      "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_mlx_paired_reference_cache_reuse_20260526t154742z_bound_materializer_execution/materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1/materialize_local_proof_chain/20260526T164929Z_9e5e27ed1a436d3f.log",
+      "pid": 60127,
+      "postcondition_errors": [
+        {
+          "condition": "{\"equals\":\"renderer_payload_dfl1_candidate.v1\",\"key\":\"schema\",\"path\":\"experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/manifest.json\",\"type\":\"json_equals\"}",
+          "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/manifest.json'"
+        },
+        {
+          "condition": "{\"false_or_missing\":[\"ready_for_exact_eval_dispatch\",\"dispatch_attempted\",\"gpu_launched\"],\"forbidden_statuses\":[\"failed\"],\"path\":\"experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/manifest.json\",\"required_artifact_records\":[\"candidate_archive\"],\"required_equals\":{\"receiver_contract_kind\":\"source_runtime_native_renderer_payload_dfl1\",\"receiver_verification.schema\":\"family_agnostic_runtime_consumption_proof_verification.v1\",\"schema\":\"renderer_payload_dfl1_candidate.v1\",\"serialized_archive_delta.schema\":\"serialized_archive_delta_contract.v1\"},\"required_false\":[\"score_claim\",\"promotion_eligible\",\"rank_or_kill_eligible\"],\"required_nonempty\":[\"runtime_consumption_proof_path\"],\"required_nonempty_unless_true\":[],\"required_positive_int\":[\"candidate_archive.bytes\",\"candidate_member.bytes\",\"serialized_archive_delta.source_archive_bytes\",\"serialized_archive_delta.candidate_archive_bytes\",\"selected_payload.payload_bytes\"],\"required_sha256\":[\"candidate_archive.sha256\",\"candidate_member.sha256\"],\"required_true\":[\"byte_closed_candidate_emitted\"],\"type\":\"json_completion_contract\"}",
+          "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/adpena/Projects/pact/experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/manifest.json'"
+        }
+      ],
+      "ready_step": {
+        "command": [
+          ".venv/bin/python",
+          "tools/run_family_agnostic_materializer.py",
+          "--target-kind",
+          "renderer_payload_dfl1_v1",
+          "--archive-path",
+          "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/archive.zip",
+          "--output-archive",
+          "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/candidate.zip",
+          "--output-manifest",
+          "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/manifest.json",
+          "--runtime-consumption-proof-out",
+          "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/runtime_consumption_proof.json"
+        ],
+        "experiment_id": "materializer_work_frontier_operation_portfolio_targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001_renderer_payload_dfl1_v1_001_renderer_payload_dfl1_v1",
+        "priority": 1,
+        "queue_id": "frontier_mlx_paired_reference_cache_reuse_20260526t154742z_bound_materializer_execution",
+        "resource_kind": "local_cpu",
+        "step_hashes": {
+          "command_hash": "45f905bcbdf5e49c5c3ea73f4f671ea1f908b7a3f6c6c9c5128746ef3c579cf0",
+          "definition_hash": "218606548bfb14ab360f95cffc9d752f79446284b3e069c44c729bdbf4271b6f",
+          "postcondition_hash": "2cb4e4af4355b320c108ec2d81927a351d292245af76a6405b0c1def133cf738"
+        },
+        "step_id": "materialize_local_proof_chain"
+      },
+      "resource_kind": "local_cpu",
+      "returncode": 2,
+      "succeeded": false,
+      "telemetry": {
+        "artifact_record_count": 3,
+        "artifact_records": [
+          {
+            "exists": false,
+            "path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/candidate.zip",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "exists": false,
+            "path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/manifest.json",
+            "source": "step.telemetry.artifact_paths"
+          },
+          {
+            "exists": false,
+            "path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/runtime_consumption_proof.json",
+            "source": "step.telemetry.artifact_paths"
+          }
+        ],
+        "log_bytes": 119,
+        "recursive_truncated": false,
+        "schema": "experiment_queue_step_telemetry.v1"
+      },
+      "timed_out": false,
+      "worker_run_id": "9e5e27ed1a436d3f"
+    }
+  ],
+  "steps_started": 1,
+  "stop_reason": "idle_limit_reached",
+  "stop_signals": [],
+  "success_count": 0
+}

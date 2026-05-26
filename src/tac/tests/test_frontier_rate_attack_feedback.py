@@ -2215,6 +2215,8 @@ def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
     operation_chain_work_orders = tmp_path / "operation_chain_work_orders.json"
     operation_chain_queue = tmp_path / "operation_chain_queue.json"
     operation_chain_handoff = tmp_path / "operation_chain_handoff.json"
+    operation_chain_work_queue = tmp_path / "operation_chain_work_queue.json"
+    operation_chain_execution_queue = tmp_path / "operation_chain_execution_queue.json"
 
     result = subprocess.run(
         [
@@ -2242,6 +2244,12 @@ def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
             "targeted_component_operation_chain_cli_unit",
             "--operation-chain-materializer-handoff-output",
             str(operation_chain_handoff),
+            "--operation-chain-materializer-work-queue-output",
+            str(operation_chain_work_queue),
+            "--operation-chain-materializer-execution-queue-output",
+            str(operation_chain_execution_queue),
+            "--operation-chain-materializer-execution-queue-id",
+            "targeted_component_chain_materializer_execution_cli_unit",
             "--results-root",
             str(tmp_path / "results"),
             "--repo-root",
@@ -2260,6 +2268,11 @@ def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
     assert stdout["operation_chain_work_order_count"] == 1
     assert stdout["operation_chain_queue_experiment_count"] == 1
     assert stdout["operation_chain_materializer_handoff_work_rows"] >= 1
+    assert stdout["operation_chain_materializer_work_queue_executable_rows"] >= 1
+    assert (
+        stdout["operation_chain_materializer_execution_queue_experiment_count"]
+        == 1
+    )
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert payload["schema"] == TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA
     _assert_false_authority(payload)
@@ -2331,6 +2344,16 @@ def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
     assert params_budget["paired_delta_basis"][0]["local_cpu_score_delta_summary"][
         "receiver_closed_archive_byte_delta_vs_reference"
     ] == -258
+    work_queue = json.loads(operation_chain_work_queue.read_text(encoding="utf-8"))
+    assert work_queue["schema"] == "byte_shaving_materializer_work_queue.v1"
+    _assert_false_authority(work_queue)
+    assert work_queue["executable_row_count"] >= 1
+    execution_queue = json.loads(
+        operation_chain_execution_queue.read_text(encoding="utf-8")
+    )
+    assert execution_queue["schema"] == "experiment_queue.v1"
+    _assert_false_authority(execution_queue)
+    assert len(execution_queue["experiments"]) == 1
 
 
 def test_targeted_component_response_harvest_expands_grouped_request_metadata(
@@ -2776,6 +2799,24 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert packet_merge_plan["receiver_proof_request"][
         "parser_only_proof_rejected"
     ] is True
+    dfl1_plan = context_closure_by_target["renderer_payload_dfl1_v1"]
+    assert dfl1_plan["missing_context_fields"] == []
+    if dfl1_plan["context_blockers"]:
+        assert dfl1_plan["ready_for_materializer_execution"] is False
+        assert any(
+            blocker.startswith(
+                "renderer_payload_dfl1_source_archive_missing_required_members"
+            )
+            for blocker in dfl1_plan["context_blockers"]
+        )
+    else:
+        assert dfl1_plan["ready_for_materializer_execution"] is True
+    assert {
+        "renderer_payload_dfl1_full_frame_file_list_or_entries",
+        "renderer_payload_dfl1_expected_full_frame_file_list_sha256",
+        "renderer_payload_dfl1_expected_full_frame_entry_count",
+        "renderer_payload_dfl1_full_frame_file_list_source",
+    }.issubset(set(dfl1_plan["provided_context_fields"]))
     tensor_quantize_plan = context_closure_by_target["tensor_quantize_v1"]
     assert "quantization_contract" in tensor_quantize_plan[
         "missing_context_fields"
@@ -2797,6 +2838,24 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert "materializer_context_missing:merge_contract" in packet_merge_rows[0][
         "materialization_blockers"
     ]
+    dfl1_rows = [
+        row
+        for row in handoff["materializer_work_queue"]["rows"]
+        if row["target_kind"] == "renderer_payload_dfl1_v1"
+    ]
+    assert dfl1_rows
+    assert dfl1_rows[0]["executable"] is (not bool(dfl1_plan["context_blockers"]))
+    assert dfl1_rows[0]["renderer_payload_dfl1_parity_context"][
+        "file_list"
+    ] == "upstream/public_test_video_names.txt"
+    assert dfl1_rows[0]["renderer_payload_dfl1_parity_context"][
+        "expected_full_frame_entry_count"
+    ] == 1
+    assert len(
+        dfl1_rows[0]["renderer_payload_dfl1_parity_context"][
+            "expected_full_frame_file_list_sha256"
+        ]
+    ) == 64
     packet_reorder_rows = [
         row
         for row in handoff["materializer_work_queue"]["rows"]
@@ -3382,6 +3441,96 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert (
         "many_op_plan_to_component_replay_and_exact_readiness_bridge"
         in first_chain["next_queue_edges"]
+    )
+
+
+def test_targeted_dfl1_binds_member_compatible_source_archive(
+    tmp_path: Path,
+) -> None:
+    upstream_dir = tmp_path / "upstream"
+    upstream_dir.mkdir()
+    (upstream_dir / "public_test_video_names.txt").write_text(
+        "0.mkv\n",
+        encoding="utf-8",
+    )
+    runtime_dir = tmp_path / "source_runtime"
+    runtime_dir.mkdir()
+    source_archive = tmp_path / "source.zip"
+    with zipfile.ZipFile(source_archive, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("renderer.bin", b"renderer")
+        archive.writestr("masks.mkv", b"masks")
+        archive.writestr("optimized_poses.pt", b"poses")
+    merged_candidate = tmp_path / "merged_candidate.zip"
+    with zipfile.ZipFile(
+        merged_candidate,
+        "w",
+        compression=zipfile.ZIP_DEFLATED,
+    ) as archive:
+        archive.writestr("__packet_member_merge_v1.bin", b"merged")
+    work_orders = {
+        "schema": OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA,
+        **_false_authority(),
+        "work_order_count": 1,
+        "work_orders": [
+            {
+                "schema": OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA,
+                **_false_authority(),
+                "source_operation_id": "dfl1_source_selection_unit",
+                "source_materialization_request_id": "request_dfl1_source_selection",
+                "chain_targets": ["renderer_payload_dfl1_v1"],
+                "source_bridge_blockers": [],
+                "targeted_correction_budget": {
+                    "schema": "frontier_rate_attack_targeted_chain_budget.v1",
+                    **_false_authority(),
+                    "saved_bytes_budget": 1,
+                    "source_archive_path": source_archive.as_posix(),
+                    "candidate_archive_path": merged_candidate.as_posix(),
+                    "source_submission_dir": runtime_dir.as_posix(),
+                    "candidate_submission_dir": (tmp_path / "candidate_runtime").as_posix(),
+                    "receiver_runtime_binding_context": {
+                        "schema": (
+                            "frontier_rate_attack_targeted_component_receiver_runtime_binding.v1"
+                        ),
+                        **_false_authority(),
+                        "source_archive_path": source_archive.as_posix(),
+                        "candidate_archive_path": merged_candidate.as_posix(),
+                        "source_submission_dir": runtime_dir.as_posix(),
+                        "candidate_submission_dir": (tmp_path / "candidate_runtime").as_posix(),
+                    },
+                },
+            }
+        ],
+    }
+
+    handoff = build_frontier_targeted_component_correction_chain_materializer_handoff(
+        repo_root=tmp_path,
+        targeted_component_correction_chain_work_orders=work_orders,
+        default_output_root=tmp_path / "out",
+    )
+
+    plan = handoff["context_closure_plans"][0]
+    assert plan["target_kind"] == "renderer_payload_dfl1_v1"
+    assert plan["missing_context_fields"] == []
+    assert plan["context_blockers"] == []
+    assert plan["ready_for_materializer_execution"] is True
+    params = handoff["materializer_backlog"]["rows"][0]["operation_params"]
+    assert params["archive_path"] == source_archive.as_posix()
+    assert params["source_archive"] == source_archive.as_posix()
+    assert params["renderer_payload_dfl1_source_archive_role"] == (
+        "source_archive_path"
+    )
+    assert params["renderer_payload_dfl1_source_runtime_dir"] == runtime_dir.as_posix()
+    assert params["renderer_payload_dfl1_candidate_runtime_dir"] == runtime_dir.as_posix()
+    row = handoff["materializer_work_queue"]["rows"][0]
+    assert row["executable"] is True
+    assert row["command"][
+        row["command"].index("--archive-path") + 1
+    ] == source_archive.as_posix()
+    assert row["renderer_payload_dfl1_parity_context"]["source_runtime_dir"] == (
+        runtime_dir.as_posix()
+    )
+    assert row["renderer_payload_dfl1_parity_context"]["candidate_runtime_dir"] == (
+        runtime_dir.as_posix()
     )
 
 

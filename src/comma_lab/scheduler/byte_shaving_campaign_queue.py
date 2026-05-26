@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import re
 import time
+import zipfile
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from math import isfinite
@@ -37,6 +38,7 @@ from tac.optimization.family_agnostic_materializers import (
     PACKET_MEMBER_MERGE_SCHEMA,
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
+    RENDERER_PAYLOAD_DFL1_MEMBER_NAMES,
     RENDERER_PAYLOAD_DFL1_SCHEMA,
     TENSOR_FACTORIZE_SCHEMA,
 )
@@ -2114,10 +2116,34 @@ def _strict_single_member_zip_blockers(path: str, *, repo: Path) -> list[str]:
     return []
 
 
+def _renderer_payload_dfl1_archive_member_blockers(
+    archive_path: str,
+    *,
+    repo_root: Path | None,
+) -> list[str]:
+    candidate = Path(archive_path).expanduser()
+    if not candidate.is_absolute() and repo_root is not None:
+        candidate = repo_root / candidate
+    if not candidate.exists():
+        return []
+    try:
+        with zipfile.ZipFile(candidate, "r") as archive:
+            names = [info.filename for info in archive.infolist() if not info.is_dir()]
+    except zipfile.BadZipFile as exc:
+        return [f"renderer_payload_dfl1_archive_preflight_bad_zip:{exc}"]
+    except OSError as exc:
+        return [f"renderer_payload_dfl1_archive_preflight_unreadable:{exc}"]
+    missing = [name for name in RENDERER_PAYLOAD_DFL1_MEMBER_NAMES if name not in names]
+    if missing:
+        return ["renderer_payload_dfl1_archive_members_missing:" + ",".join(missing)]
+    return []
+
+
 def _family_agnostic_materializer_command(
     context: Mapping[str, Any],
     *,
     target_kind: str,
+    repo_root: Path | None = None,
 ) -> tuple[list[str], list[str], dict[str, Any]]:
     blockers: list[str] = _string_list_context_value(context, "context_blockers")
     archive_path = _path_context_value(context, "archive_path")
@@ -2178,6 +2204,13 @@ def _family_agnostic_materializer_command(
         packet_member_manifest = _path_context_value(context, "packet_member_manifest")
         if packet_member_manifest is not None:
             input_paths.append(packet_member_manifest)
+        if archive_path is not None:
+            blockers.extend(
+                _renderer_payload_dfl1_archive_member_blockers(
+                    archive_path,
+                    repo_root=repo_root,
+                )
+            )
         parity_proof = _path_context_value(context, "full_frame_inflate_parity_proof")
         if parity_proof is None:
             parity_proof = _path_context_value(
@@ -2932,6 +2965,7 @@ def _family_agnostic_materializer_queue_adapter(
     *,
     target_kind: str,
     schema: str,
+    repo_root: Path | None = None,
 ) -> tuple[list[str], list[str], dict[str, Any], list[dict[str, Any]]]:
     if _context_has_family_materializer_sweep(context):
         command, blockers, telemetry = _family_agnostic_materializer_sweep_command(
@@ -2961,6 +2995,7 @@ def _family_agnostic_materializer_queue_adapter(
     command, blockers, telemetry = _family_agnostic_materializer_command(
         context,
         target_kind=target_kind,
+        repo_root=repo_root,
     )
     postconditions: list[dict[str, Any]] = []
     manifest_out = _path_context_value(context, "output_manifest")
@@ -3452,7 +3487,6 @@ def _materializer_candidate_postconditions(
                         PACKET_MEMBER_MERGE_TARGET_KIND,
                         PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
                         PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
-                        RENDERER_PAYLOAD_DFL1_TARGET_KIND,
                         TENSOR_FACTORIZE_TARGET_KIND,
                     }
                     else []
@@ -3476,10 +3510,15 @@ def _materializer_candidate_postconditions(
                         "receiver_verification.runtime_adapter_ready",
                     ]
                     if target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND
+                    and require_dfl1_full_frame_parity
                     else []
                 ),
                 *(
                     [
+                        "receiver_contract_satisfied",
+                        "receiver_verification.receiver_contract_satisfied",
+                        "runtime_adapter_ready",
+                        "receiver_verification.runtime_adapter_ready",
                         "full_frame_inflate_parity_proven",
                         "full_frame_inflate_parity_verification.full_frame_inflate_parity_satisfied",
                         "renderer_payload_dfl1_inflate_parity_satisfied",
@@ -3669,6 +3708,7 @@ def build_materializer_work_queue(
                 context,
                 target_kind=ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
                 schema=ARCHIVE_SECTION_ENTROPY_RECODE_SCHEMA,
+                repo_root=repo,
                 )
             )
             blockers.extend(command_blockers)
@@ -3712,6 +3752,7 @@ def build_materializer_work_queue(
                 context,
                 target_kind=PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
                 schema=PACKET_MEMBER_RECOMPRESS_SCHEMA,
+                repo_root=repo,
                 )
             )
             blockers.extend(command_blockers)
@@ -3725,6 +3766,7 @@ def build_materializer_work_queue(
                 context,
                 target_kind=PACKET_MEMBER_MERGE_TARGET_KIND,
                 schema=PACKET_MEMBER_MERGE_SCHEMA,
+                repo_root=repo,
                 )
             )
             blockers.extend(command_blockers)
@@ -3748,6 +3790,7 @@ def build_materializer_work_queue(
                 context,
                 target_kind=RENDERER_PAYLOAD_DFL1_TARGET_KIND,
                 schema=RENDERER_PAYLOAD_DFL1_SCHEMA,
+                repo_root=repo,
                 )
             )
             blockers.extend(command_blockers)
@@ -3761,6 +3804,7 @@ def build_materializer_work_queue(
                 context,
                 target_kind=PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
                 schema=PACKET_MEMBER_ZIP_HEADER_ELIDE_SCHEMA,
+                repo_root=repo,
                 )
             )
             blockers.extend(command_blockers)
@@ -3774,6 +3818,7 @@ def build_materializer_work_queue(
                 context,
                 target_kind=TENSOR_FACTORIZE_TARGET_KIND,
                 schema=TENSOR_FACTORIZE_SCHEMA,
+                repo_root=repo,
                 )
             )
             blockers.extend(command_blockers)

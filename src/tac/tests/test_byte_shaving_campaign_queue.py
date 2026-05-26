@@ -3619,6 +3619,56 @@ def test_materializer_work_queue_wraps_native_renderer_payload_dfl1(
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_materializer_work_queue_blocks_dfl1_when_archive_members_are_absent(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "packet_member_merge.zip"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("__packet_member_merge_v1.bin", b"merged packet")
+    output = tmp_path / "renderer_payload_candidate.zip"
+    out_manifest = tmp_path / "renderer_payload_candidate.json"
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "backlog_key": "renderer_payload_dfl1_fixture",
+                "unit_kind": "packet_member",
+                "operation_family": "native_renderer_payload",
+                "target_kind": RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+                "materializer_id": RENDERER_PAYLOAD_DFL1_MATERIALIZER,
+            },
+        ],
+    }
+
+    queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts={
+            "renderer_payload_dfl1_fixture": {
+                "archive_path": str(archive),
+                "member_names": ["renderer.bin", "masks.mkv", "optimized_poses.pt"],
+                "payload_member_name": "p",
+                "output_archive": str(output),
+                "output_manifest": str(out_manifest),
+            },
+        },
+        source_plan_path="plan.json",
+    )
+
+    row = queue["rows"][0]
+    assert queue["executable_row_count"] == 0
+    assert row["executable"] is False
+    assert row["tool"] is None
+    assert row["command"] == []
+    assert row["materialization_blockers"] == [
+        "renderer_payload_dfl1_archive_members_missing:"
+        "renderer.bin,masks.mkv,optimized_poses.pt"
+    ]
+    assert row["materialization_blockers"][0] in row["dispatch_blockers"]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
 def test_family_agnostic_candidate_postconditions_reject_weak_receiver_manifest(
     tmp_path: Path,
 ) -> None:
@@ -5026,8 +5076,10 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
         if condition.get("type") == "json_completion_contract"
     )
     materialize_required_true = set(materialize_contract["required_true"])
-    assert "runtime_adapter_ready" in materialize_required_true
-    assert "receiver_verification.runtime_adapter_ready" in materialize_required_true
+    assert "receiver_contract_satisfied" not in materialize_required_true
+    assert "receiver_verification.receiver_contract_satisfied" not in materialize_required_true
+    assert "runtime_adapter_ready" not in materialize_required_true
+    assert "receiver_verification.runtime_adapter_ready" not in materialize_required_true
     assert "full_frame_inflate_parity_proven" not in materialize_required_true
     assert (
         "full_frame_inflate_parity_verification.full_frame_inflate_parity_satisfied"

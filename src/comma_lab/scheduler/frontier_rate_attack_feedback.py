@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 import time
+import zipfile
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -693,6 +694,16 @@ _MISSING_CLASS_SEEDS: tuple[dict[str, Any], ...] = (
 
 class FrontierRateAttackFeedbackError(ExperimentQueueError):
     """Raised when frontier feedback discovery or compilation is unsafe."""
+
+
+DEFAULT_TARGETED_CHAIN_FULL_FRAME_FILE_LIST = Path(
+    "upstream/public_test_video_names.txt"
+)
+RENDERER_PAYLOAD_DFL1_REQUIRED_MEMBERS = (
+    "renderer.bin",
+    "masks.mkv",
+    "optimized_poses.pt",
+)
 
 
 def _utc_now() -> str:
@@ -1608,6 +1619,36 @@ def _finite_int_or_none(value: object) -> int | None:
     except (TypeError, ValueError):
         return None
     return parsed
+
+
+def _normalized_file_list_entries(path: Path) -> list[str]:
+    return [
+        line.strip()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+
+def _normalized_file_list_sha256(entries: Sequence[str]) -> str:
+    payload = "\n".join(str(entry).strip() for entry in entries if str(entry).strip())
+    return hashlib.sha256((payload + "\n").encode("utf-8")).hexdigest()
+
+
+def _zip_contains_all_members(
+    path_value: str | Path | None,
+    *,
+    repo_root: Path,
+    member_names: Sequence[str],
+) -> bool:
+    if path_value in (None, ""):
+        return False
+    try:
+        archive_path = _resolve_path(str(path_value), repo_root=repo_root)
+        with zipfile.ZipFile(archive_path) as archive:
+            names = set(archive.namelist())
+    except (OSError, zipfile.BadZipFile):
+        return False
+    return all(name in names for name in member_names)
 
 
 def _component_deltas(row: Mapping[str, Any]) -> dict[str, float] | None:
@@ -5697,6 +5738,17 @@ def build_frontier_materializer_execution_queue_if_available(
         scheduler_results_root=str(results_root),
         step_timeout_seconds=900,
         limit=limit,
+        include_exact_readiness_followup=True,
+        require_renderer_payload_dfl1_parity_followup=True,
+    )
+    queue.update(
+        {
+            "allowed_use": "bounded_local_materializer_execution_queue_only",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+            **FALSE_AUTHORITY,
+        }
     )
     for experiment in queue.get("experiments") or []:
         if not isinstance(experiment, dict):
@@ -5720,6 +5772,10 @@ def build_frontier_materializer_execution_queue_if_available(
             metadata,
             context=f"{queue_id}_materializer_execution_metadata",
         )
+    require_no_truthy_authority_fields(
+        queue,
+        context=f"{queue_id}_materializer_execution_queue",
+    )
     return queue
 
 
@@ -11650,6 +11706,7 @@ def _targeted_chain_context_closure_plan(
         for field in required
         if not _targeted_chain_context_field_present(output_hint, field)
     ]
+    context_blockers = _unique_strings(_string_list(output_hint.get("context_blockers")))
     runtime_binding = {}
     budget = work_order.get("targeted_correction_budget")
     if isinstance(budget, Mapping) and isinstance(
@@ -11674,6 +11731,7 @@ def _targeted_chain_context_closure_plan(
             if _targeted_chain_context_field_present(output_hint, field)
         ],
         "missing_context_fields": missing,
+        "context_blockers": context_blockers,
         "receiver_runtime_binding_context": runtime_binding,
         "receiver_proof_request": _targeted_chain_receiver_proof_request(
             target_kind=target_kind,
@@ -11681,15 +11739,119 @@ def _targeted_chain_context_closure_plan(
             output_hint=output_hint,
         ),
         "next_required_action": (
-            "fill_missing_context_fields_then_run_receiver_consumed_materializer"
+            "run_receiver_consumed_materializer"
+            if not missing and not context_blockers
+            else "fill_missing_context_fields_then_run_receiver_consumed_materializer"
         ),
-        "ready_for_materializer_execution": False,
+        "ready_for_materializer_execution": not missing and not context_blockers,
         "ready_for_budget_spend": False,
         "budget_spend_allowed": False,
         "allowed_use": "targeted_chain_materializer_context_closure_only",
         "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
         **FALSE_AUTHORITY,
     }
+
+
+def _bind_renderer_payload_dfl1_file_list_context(
+    output_hint: dict[str, Any],
+    *,
+    repo_root: Path,
+    full_frame_file_list: str | Path | None,
+) -> None:
+    if _targeted_chain_context_field_present(
+        output_hint,
+        "renderer_payload_dfl1_full_frame_file_list_or_entries",
+    ):
+        return
+    file_list_path = (
+        Path(full_frame_file_list)
+        if full_frame_file_list is not None
+        else DEFAULT_TARGETED_CHAIN_FULL_FRAME_FILE_LIST
+    )
+    resolved = _resolve_path(file_list_path, repo_root=repo_root)
+    if not resolved.is_file():
+        return
+    entries = _normalized_file_list_entries(resolved)
+    if not entries:
+        return
+    output_basenames = [Path(entry).stem + ".raw" for entry in entries]
+    if len(set(output_basenames)) != len(output_basenames):
+        return
+    rel_path = _repo_rel(resolved, repo_root)
+    output_hint.setdefault("renderer_payload_dfl1_full_frame_file_list", rel_path)
+    output_hint.setdefault("full_frame_file_list", rel_path)
+    output_hint.setdefault(
+        "renderer_payload_dfl1_expected_full_frame_file_list_sha256",
+        _normalized_file_list_sha256(entries),
+    )
+    output_hint.setdefault(
+        "expected_full_frame_file_list_sha256",
+        output_hint["renderer_payload_dfl1_expected_full_frame_file_list_sha256"],
+    )
+    output_hint.setdefault(
+        "renderer_payload_dfl1_expected_full_frame_entry_count",
+        len(entries),
+    )
+    output_hint.setdefault("expected_full_frame_entry_count", len(entries))
+    output_hint.setdefault(
+        "renderer_payload_dfl1_full_frame_file_list_source",
+        rel_path,
+    )
+    output_hint.setdefault("full_frame_file_list_source", rel_path)
+
+
+def _bind_renderer_payload_dfl1_archive_context(
+    output_hint: dict[str, Any],
+    *,
+    budget: Mapping[str, Any],
+    runtime_binding: Mapping[str, Any],
+    repo_root: Path,
+) -> None:
+    candidates = [
+        (
+            "candidate_archive_path",
+            budget.get("candidate_archive_path")
+            or runtime_binding.get("candidate_archive_path"),
+            budget.get("candidate_submission_dir")
+            or runtime_binding.get("candidate_submission_dir"),
+        ),
+        (
+            "source_archive_path",
+            budget.get("source_archive_path")
+            or runtime_binding.get("source_archive_path"),
+            budget.get("source_submission_dir")
+            or runtime_binding.get("source_submission_dir"),
+        ),
+        (
+            "bound_archive_path",
+            output_hint.get("archive_path") or output_hint.get("source_archive"),
+            output_hint.get("source_runtime_dir") or output_hint.get("inflate_runtime_dir"),
+        ),
+    ]
+    for role, archive_path, runtime_dir in candidates:
+        if not _zip_contains_all_members(
+            archive_path,
+            repo_root=repo_root,
+            member_names=RENDERER_PAYLOAD_DFL1_REQUIRED_MEMBERS,
+        ):
+            continue
+        output_hint["archive_path"] = archive_path
+        output_hint["source_archive"] = archive_path
+        if runtime_dir:
+            output_hint["source_runtime_dir"] = runtime_dir
+            output_hint["inflate_runtime_dir"] = runtime_dir
+            output_hint["renderer_payload_dfl1_source_runtime_dir"] = runtime_dir
+            output_hint["renderer_payload_dfl1_candidate_runtime_dir"] = runtime_dir
+            output_hint["candidate_runtime_dir"] = runtime_dir
+        output_hint["renderer_payload_dfl1_source_archive_role"] = role
+        output_hint["renderer_payload_dfl1_required_members"] = list(
+            RENDERER_PAYLOAD_DFL1_REQUIRED_MEMBERS
+        )
+        return
+    output_hint.setdefault("context_blockers", []).append(
+        "renderer_payload_dfl1_source_archive_missing_required_members:"
+        + ",".join(RENDERER_PAYLOAD_DFL1_REQUIRED_MEMBERS)
+    )
 
 
 def _targeted_chain_materializer_portfolio_row(
@@ -11699,6 +11861,8 @@ def _targeted_chain_materializer_portfolio_row(
     adapter: Mapping[str, Any],
     rank: int,
     default_output_root: str | Path | None,
+    repo_root: Path,
+    full_frame_file_list: str | Path | None,
 ) -> dict[str, Any]:
     source_operation_id = str(work_order.get("source_operation_id") or f"chain_{rank}")
     budget = (
@@ -11772,6 +11936,18 @@ def _targeted_chain_materializer_portfolio_row(
         output_hint["renderer_payload_dfl1_candidate_runtime_dir"] = (
             candidate_runtime
         )
+    if target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND:
+        _bind_renderer_payload_dfl1_archive_context(
+            output_hint,
+            budget=budget,
+            runtime_binding=runtime_binding,
+            repo_root=repo_root,
+        )
+        _bind_renderer_payload_dfl1_file_list_context(
+            output_hint,
+            repo_root=repo_root,
+            full_frame_file_list=full_frame_file_list,
+        )
     closure_plan = _targeted_chain_context_closure_plan(
         work_order=work_order,
         target_kind=target_kind,
@@ -11832,9 +12008,11 @@ def build_frontier_targeted_component_correction_chain_materializer_handoff(
     targeted_component_correction_chain_work_orders: Mapping[str, Any],
     default_output_root: str | Path | None = None,
     target_limit: int | None = None,
+    full_frame_file_list: str | Path | None = None,
 ) -> dict[str, Any]:
     """Bind targeted multi-op chains into typed materializer work surfaces."""
 
+    repo = Path(repo_root)
     if target_limit is not None and target_limit < 1:
         raise FrontierRateAttackFeedbackError("target_limit must be >= 1")
     if (
@@ -11877,6 +12055,8 @@ def build_frontier_targeted_component_correction_chain_materializer_handoff(
                 adapter=adapter,
                 rank=rank,
                 default_output_root=default_output_root,
+                repo_root=repo,
+                full_frame_file_list=full_frame_file_list,
             )
             backlog_rows.append(
                 _portfolio_materializer_backlog_row(

@@ -21,6 +21,7 @@ ensure_repo_imports(REPO_ROOT)
 from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
     DEFAULT_RESULTS_ROOT,
     FrontierRateAttackFeedbackError,
+    build_frontier_materializer_execution_queue_if_available,
     build_frontier_operation_chain_compiler_queue,
     build_frontier_targeted_component_correction_chain_materializer_handoff,
     build_frontier_targeted_component_correction_chain_work_orders,
@@ -64,9 +65,28 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--operation-chain-work-orders-output", type=Path, default=None)
     parser.add_argument("--operation-chain-queue-output", type=Path, default=None)
     parser.add_argument("--operation-chain-materializer-handoff-output", type=Path, default=None)
+    parser.add_argument("--operation-chain-materializer-work-queue-output", type=Path, default=None)
+    parser.add_argument(
+        "--operation-chain-materializer-execution-queue-output",
+        type=Path,
+        default=None,
+    )
     parser.add_argument(
         "--operation-chain-queue-id",
         default="frontier_targeted_component_correction_operation_chain_queue",
+    )
+    parser.add_argument(
+        "--operation-chain-materializer-execution-queue-id",
+        default="frontier_targeted_component_correction_chain_materializer_execution_queue",
+    )
+    parser.add_argument(
+        "--full-frame-file-list",
+        type=Path,
+        default=None,
+        help=(
+            "Contest inflate file list used to auto-bind renderer_payload_dfl1_v1 "
+            "full-frame parity context. Defaults to upstream/public_test_video_names.txt."
+        ),
     )
     parser.add_argument(
         "--materialization-queue-id",
@@ -79,6 +99,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--expected-existing-sha256", default=None)
     parser.add_argument("--repo-root", type=Path, default=Path("."))
     args = parser.parse_args(argv)
+    if (
+        args.operation_chain_materializer_execution_queue_output is not None
+        and args.operation_chain_materializer_work_queue_output is None
+    ):
+        parser.error(
+            "--operation-chain-materializer-execution-queue-output requires "
+            "--operation-chain-materializer-work-queue-output"
+        )
     if args.targeted_component_correction_queue is not None:
         if args.work_order is not None or args.local_cpu_advisory is not None:
             parser.error(
@@ -146,6 +174,8 @@ def main(argv: list[str] | None = None) -> int:
     operation_chain_work_orders: dict[str, Any] | None = None
     operation_chain_queue: dict[str, Any] | None = None
     operation_chain_materializer_handoff: dict[str, Any] | None = None
+    operation_chain_materializer_work_queue: dict[str, Any] | None = None
+    operation_chain_materializer_execution_queue: dict[str, Any] | None = None
     try:
         if args.targeted_component_correction_queue is not None:
             queue = _load_json(args.targeted_component_correction_queue)
@@ -306,7 +336,11 @@ def main(argv: list[str] | None = None) -> int:
                         operation_chain_queue,
                         allow_overwrite=args.overwrite,
                     )
-        if args.operation_chain_materializer_handoff_output is not None:
+        if (
+            args.operation_chain_materializer_handoff_output is not None
+            or args.operation_chain_materializer_work_queue_output is not None
+            or args.operation_chain_materializer_execution_queue_output is not None
+        ):
             if operation_chain_work_orders is None:
                 if materialization_requests is None:
                     materialization_requests = (
@@ -335,13 +369,57 @@ def main(argv: list[str] | None = None) -> int:
                     default_output_root=Path(args.results_root)
                     / "frontier_targeted_component_correction_chain_materializers",
                     target_limit=None,
+                    full_frame_file_list=args.full_frame_file_list,
                 )
             )
-            _write_json_with_overwrite_guard(
-                args.operation_chain_materializer_handoff_output,
-                operation_chain_materializer_handoff,
-                allow_overwrite=args.overwrite,
+            if args.operation_chain_materializer_handoff_output is not None:
+                _write_json_with_overwrite_guard(
+                    args.operation_chain_materializer_handoff_output,
+                    operation_chain_materializer_handoff,
+                    allow_overwrite=args.overwrite,
+                )
+            maybe_work_queue = operation_chain_materializer_handoff.get(
+                "materializer_work_queue"
             )
+            if isinstance(maybe_work_queue, dict):
+                operation_chain_materializer_work_queue = maybe_work_queue
+            if args.operation_chain_materializer_work_queue_output is not None:
+                if operation_chain_materializer_work_queue is None:
+                    raise FrontierRateAttackFeedbackError(
+                        "operation-chain materializer handoff did not emit a "
+                        "materializer_work_queue"
+                    )
+                _write_json_with_overwrite_guard(
+                    args.operation_chain_materializer_work_queue_output,
+                    operation_chain_materializer_work_queue,
+                    allow_overwrite=args.overwrite,
+                )
+            if (
+                args.operation_chain_materializer_execution_queue_output is not None
+                and operation_chain_materializer_work_queue is not None
+            ):
+                operation_chain_materializer_execution_queue = (
+                    build_frontier_materializer_execution_queue_if_available(
+                        repo_root=repo_root,
+                        materializer_work_queue=(
+                            operation_chain_materializer_work_queue
+                        ),
+                        materializer_work_queue_path=(
+                            args.operation_chain_materializer_work_queue_output
+                        ),
+                        results_root=args.results_root,
+                        queue_id=(
+                            args.operation_chain_materializer_execution_queue_id
+                        ),
+                        candidate_limit=args.materialization_candidate_limit,
+                    )
+                )
+                if operation_chain_materializer_execution_queue is not None:
+                    _write_json_with_overwrite_guard(
+                        args.operation_chain_materializer_execution_queue_output,
+                        operation_chain_materializer_execution_queue,
+                        allow_overwrite=args.overwrite,
+                    )
     except (
         ArtifactWriteError,
         FrontierRateAttackFeedbackError,
@@ -439,6 +517,44 @@ def main(argv: list[str] | None = None) -> int:
                     if operation_chain_materializer_handoff is None
                     else operation_chain_materializer_handoff.get(
                         "executable_work_row_count"
+                    )
+                ),
+                "operation_chain_materializer_work_queue_output": (
+                    None
+                    if args.operation_chain_materializer_work_queue_output is None
+                    else _display_path(
+                        args.operation_chain_materializer_work_queue_output,
+                        repo_root=repo_root,
+                    )
+                ),
+                "operation_chain_materializer_work_queue_rows": (
+                    None
+                    if operation_chain_materializer_work_queue is None
+                    else operation_chain_materializer_work_queue.get("row_count")
+                ),
+                "operation_chain_materializer_work_queue_executable_rows": (
+                    None
+                    if operation_chain_materializer_work_queue is None
+                    else operation_chain_materializer_work_queue.get(
+                        "executable_row_count"
+                    )
+                ),
+                "operation_chain_materializer_execution_queue_output": (
+                    None
+                    if args.operation_chain_materializer_execution_queue_output is None
+                    else _display_path(
+                        args.operation_chain_materializer_execution_queue_output,
+                        repo_root=repo_root,
+                    )
+                ),
+                "operation_chain_materializer_execution_queue_experiment_count": (
+                    None
+                    if operation_chain_materializer_execution_queue is None
+                    else len(
+                        operation_chain_materializer_execution_queue.get(
+                            "experiments"
+                        )
+                        or []
                     )
                 ),
                 "score_claim": False,

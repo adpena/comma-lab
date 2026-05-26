@@ -537,7 +537,7 @@ def _packet_member_context_row(
     default_output_root: Path | None,
 ) -> dict[str, Any]:
     context: dict[str, Any] = {}
-    blockers: list[str] = []
+    blockers: list[str] = _raw_string_list(hints.get("context_blockers"))
     archive_path = _first_text(hints, ("archive_path", "source_archive"))
     packet_member_manifest = _first_text(
         hints,

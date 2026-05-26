@@ -1370,8 +1370,17 @@ def test_harvest_attaches_dfl1_shell_parity_sidecar(
     assert sidecar["applied_candidate_count"] == 1
     row = harvest_result["source_queue"]["top_k"][0]
     assert row["full_frame_inflate_parity_proven"] is True
+    assert row["receiver_contract_satisfied"] is True
+    assert row["runtime_adapter_ready"] is False
+    assert row["runtime_consumption_proof_status"] == "sidecar_full_frame_parity_applied"
     assert row["renderer_payload_dfl1_inflate_parity_satisfied"] is True
     assert row["renderer_payload_dfl1_full_frame_inflate_parity_satisfied"] is True
+    assert "renderer_payload_dfl1_receiver_contract_not_satisfied" not in (
+        row["dispatch_blockers"]
+    )
+    assert "renderer_payload_dfl1_full_frame_inflate_parity_missing" not in (
+        row["dispatch_blockers"]
+    )
     assert row["renderer_payload_dfl1_inflate_parity_proof_path"].endswith(
         "full_frame_parity/shell_inflate_parity.json"
     )

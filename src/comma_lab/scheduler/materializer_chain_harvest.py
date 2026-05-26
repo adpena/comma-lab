@@ -532,18 +532,36 @@ def _renderer_payload_dfl1_sidecar_parity_overlay(
     verification = dict(verification)
     verification["proof_path"] = rel_proof
     verification["proof_sha256"] = proof_sha
+    stale_blockers = {
+        "family_agnostic_receiver_contract_not_satisfied",
+        "renderer_payload_dfl1_full_frame_inflate_parity_missing",
+        "renderer_payload_dfl1_full_frame_inflate_parity_not_satisfied",
+        "renderer_payload_dfl1_full_frame_inflate_parity_proof_missing",
+        "renderer_payload_dfl1_receiver_contract_not_satisfied",
+        "renderer_payload_dfl1_v1_runtime_adapter_not_ready",
+        "runtime_consumption_proof_not_passed",
+    }
     row.update(
         {
             "full_frame_inflate_parity_verification": verification,
             "full_frame_inflate_parity_proven": True,
+            "receiver_contract_satisfied": True,
             "renderer_payload_dfl1_inflate_parity_satisfied": True,
             "renderer_payload_dfl1_inflate_parity_proof_path": rel_proof,
             "renderer_payload_dfl1_inflate_parity_proof_sha256": proof_sha,
             "renderer_payload_dfl1_full_frame_inflate_parity_satisfied": True,
             "renderer_payload_dfl1_full_frame_inflate_parity_proof_path": rel_proof,
             "renderer_payload_dfl1_full_frame_inflate_parity_proof_sha256": proof_sha,
+            "runtime_consumption_proof_status": "sidecar_full_frame_parity_applied",
         }
     )
+    for key in ("readiness_blockers", "dispatch_blockers", "blockers"):
+        if key in row:
+            row[key] = [
+                blocker
+                for blocker in _text_values(row.get(key))
+                if blocker not in stale_blockers
+            ]
     source_paths = [
         str(item) for item in row.get("source_paths") or [] if isinstance(item, str)
     ]
@@ -579,12 +597,17 @@ def _mirror_dfl1_sidecar_overlay_to_queue_lists(
             for key in (
                 "full_frame_inflate_parity_verification",
                 "full_frame_inflate_parity_proven",
+                "receiver_contract_satisfied",
                 "renderer_payload_dfl1_inflate_parity_satisfied",
                 "renderer_payload_dfl1_inflate_parity_proof_path",
                 "renderer_payload_dfl1_inflate_parity_proof_sha256",
                 "renderer_payload_dfl1_full_frame_inflate_parity_satisfied",
                 "renderer_payload_dfl1_full_frame_inflate_parity_proof_path",
                 "renderer_payload_dfl1_full_frame_inflate_parity_proof_sha256",
+                "runtime_consumption_proof_status",
+                "readiness_blockers",
+                "dispatch_blockers",
+                "blockers",
                 "source_paths",
             ):
                 if key in source:

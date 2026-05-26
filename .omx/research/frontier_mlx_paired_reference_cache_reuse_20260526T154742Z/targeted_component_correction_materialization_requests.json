@@ -16,7 +16,7 @@
   "family_limit_per_candidate": 8,
   "field_selection_ready_for_exact_eval_dispatch": false,
   "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
-  "generated_at_utc": "2026-05-26T16:04:04Z",
+  "generated_at_utc": "2026-05-26T16:53:13Z",
   "gpu_launched": false,
   "promotable": false,
   "promotion_eligible": false,
@@ -109,7 +109,7 @@
       "exact_cuda_auth_eval": false,
       "field_selection_ready_for_exact_eval_dispatch": false,
       "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
-      "generated_at_utc": "2026-05-26T16:04:04Z",
+      "generated_at_utc": "2026-05-26T16:53:13Z",
       "gpu_launched": false,
       "materialization_request_id": "targeted_component_materialization_packet_member_merge_cbe7d79124ba_001",
       "materializer_chain_basis": [

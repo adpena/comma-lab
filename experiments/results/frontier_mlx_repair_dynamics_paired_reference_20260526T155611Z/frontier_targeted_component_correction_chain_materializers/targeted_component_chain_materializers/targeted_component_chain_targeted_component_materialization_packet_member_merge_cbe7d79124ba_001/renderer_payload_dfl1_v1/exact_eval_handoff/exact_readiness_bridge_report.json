@@ -1,0 +1,62 @@
+{
+  "blocked_candidate_count": 1,
+  "candidate_count": 1,
+  "charged_bits_changed": false,
+  "clearable_source_blockers": [
+    "materializer_chain_is_not_dispatch_authorization",
+    "materialized_archive_runtime_custody_required",
+    "materializer_chain_harvest_candidate_pending_exact_readiness",
+    "materializer_candidate_is_not_dispatch_authorization",
+    "family_agnostic_materializer_candidate_pending_exact_readiness",
+    "exact_readiness_promotion_required",
+    "exact_auth_eval_result_required_before_score_claim",
+    "byte_range_entropy_recode_chain_is_not_dispatch_authorization",
+    "inverse_scorer_cell_candidate_chain_is_not_dispatch_authorization"
+  ],
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "bridge_report_is_not_dispatch_authority",
+    "use_per_candidate_exact_ready_queue_only_when_present",
+    "lane_claim_required_before_gpu_or_remote_eval"
+  ],
+  "dispatch_claims_path": ".omx/state/active_lane_dispatch_claims.md",
+  "exact_cuda_auth_eval": false,
+  "exact_readiness_out_dir": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness",
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "2026-05-26T16:59:44Z",
+  "gpu_launched": false,
+  "operator_clearable_source_blockers": [],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_candidate_count": 0,
+  "ready_for_exact_eval_dispatch": false,
+  "rows": [
+    {
+      "blockers": [
+        "above_active_floor_archive_bytes_without_operator_override:345422>185578, active_score_frontier=0.206316386616; above rate-only byte floor"
+      ],
+      "candidate_id": "renderer_payload_dfl1_e20295f0a662",
+      "exact_readiness_report_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness/renderer_payload_dfl1_e20295f0a662.exact_readiness_report.json",
+      "exact_ready_queue_path": null,
+      "exact_ready_queue_written": false,
+      "readiness_verdict": "blocked"
+    }
+  ],
+  "schema": "materializer_chain_exact_readiness_bridge_report.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_queue_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/exact_eval_handoff/submission_closure/closed_source_queue.json",
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "tool": "comma_lab.scheduler.materializer_chain_harvest.exact_readiness_bridge"
+}

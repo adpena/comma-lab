@@ -1,0 +1,242 @@
+{
+  "artifact_write": {
+    "allow_overwrite": false,
+    "bytes_written": 345422,
+    "free_bytes_before": 631812460544,
+    "path": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/candidate.zip",
+    "sha256": "e20295f0a662101567f36afe8ce17142635f976cb2f2b8937b4cbc76455ee3c4"
+  },
+  "byte_closed_candidate_emitted": true,
+  "candidate_archive": {
+    "bytes": 345422,
+    "path": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/candidate.zip",
+    "sha256": "e20295f0a662101567f36afe8ce17142635f976cb2f2b8937b4cbc76455ee3c4"
+  },
+  "candidate_member": {
+    "bytes": 345322,
+    "name": "p",
+    "sha256": "a2db04866b0e5bf4f28ab0b10f8be26222a803e85c63842ee2622a6693675f01",
+    "zip_compressed_bytes": 345322,
+    "zip_compressed_payload_sha256": "a2db04866b0e5bf4f28ab0b10f8be26222a803e85c63842ee2622a6693675f01",
+    "zip_compressed_sha256": "a2db04866b0e5bf4f28ab0b10f8be26222a803e85c63842ee2622a6693675f01",
+    "zip_compression_method": "stored"
+  },
+  "candidate_trials": [
+    {
+      "archive_bytes": 345422,
+      "archive_sha256": "e20295f0a662101567f36afe8ce17142635f976cb2f2b8937b4cbc76455ee3c4",
+      "payload_bytes": 345322,
+      "payload_codec": "native_fixed_order_raw_deflate_sequence_v1",
+      "payload_member_name": "p",
+      "zip_compression_method": "stored",
+      "zip_compresslevel": null
+    },
+    {
+      "archive_bytes": 345532,
+      "archive_sha256": "91bc78d17516cc811ef99b101b140bd9bb8c5bfaf561158240fb7d7645afb13d",
+      "payload_bytes": 345322,
+      "payload_codec": "native_fixed_order_raw_deflate_sequence_v1",
+      "payload_member_name": "p",
+      "zip_compression_method": "deflated",
+      "zip_compresslevel": 9
+    }
+  ],
+  "dispatch_attempted": false,
+  "full_frame_inflate_parity_proven": false,
+  "full_frame_inflate_parity_verification": {
+    "blockers": [
+      "renderer_payload_dfl1_full_frame_inflate_parity_proof_missing"
+    ],
+    "dispatch_attempted": false,
+    "full_frame_inflate_parity_satisfied": false,
+    "gpu_launched": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "proof_path": null,
+    "proof_present": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "renderer_payload_dfl1_full_frame_parity_verification.v1",
+    "score_claim": false,
+    "score_claim_valid": false
+  },
+  "gpu_launched": false,
+  "materializer_id": "renderer_payload_dfl1_adapter",
+  "payload_member_name": "p",
+  "portability_contract": {
+    "deterministic_surface": "source_runtime_native_renderer_payload_fixed_deflate_sequence",
+    "implementation_language": "python",
+    "materializer_id": "renderer_payload_dfl1_adapter",
+    "notes": "Uses the robust renderer payload unpacker directly; no generated receiver wrapper is needed, but full-frame parity and auth eval remain separate gates.",
+    "portability_class": "portable_python_reference",
+    "promotion_authority": false,
+    "rank_or_kill_authority": false,
+    "required_python_modules": [
+      "zipfile",
+      "zlib"
+    ],
+    "requires_cuda": false,
+    "requires_gpu": false,
+    "requires_metal": false,
+    "requires_mlx": false,
+    "requires_mps": false,
+    "schema": "family_agnostic_materializer_portability_contract.v1",
+    "score_authority": false,
+    "target_kind": "renderer_payload_dfl1_v1",
+    "unsupported_features": []
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "readiness_blockers": [
+    "renderer_payload_dfl1_full_frame_inflate_parity_missing",
+    "renderer_payload_dfl1_full_frame_inflate_parity_proof_missing",
+    "runtime_consumption_proof_not_passed",
+    "renderer_payload_dfl1_v1_runtime_adapter_not_ready",
+    "renderer_payload_dfl1_full_frame_inflate_parity_not_satisfied",
+    "renderer_payload_dfl1_receiver_contract_not_satisfied"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_contract_id": "renderer_payload_dfl1_v1.receiver.v1",
+  "receiver_contract_kind": "source_runtime_native_renderer_payload_dfl1",
+  "receiver_contract_satisfied": false,
+  "receiver_verification": {
+    "blockers": [
+      "runtime_consumption_proof_not_passed",
+      "renderer_payload_dfl1_v1_runtime_adapter_not_ready",
+      "renderer_payload_dfl1_full_frame_inflate_parity_not_satisfied"
+    ],
+    "candidate_archive_sha256": "e20295f0a662101567f36afe8ce17142635f976cb2f2b8937b4cbc76455ee3c4",
+    "candidate_member_sha256": "a2db04866b0e5bf4f28ab0b10f8be26222a803e85c63842ee2622a6693675f01",
+    "candidate_member_sha256s": {
+      "p": "a2db04866b0e5bf4f28ab0b10f8be26222a803e85c63842ee2622a6693675f01"
+    },
+    "materializer_id": "renderer_payload_dfl1_adapter",
+    "proof_kind": "renderer_payload_dfl1_native_unpacker_reconstruction_smoke.v1",
+    "proof_path": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/runtime_consumption_proof.json",
+    "proof_present": true,
+    "proof_schema": "family_agnostic_runtime_consumption_proof_v1",
+    "receiver_contract_kind": "source_runtime_native_renderer_payload_dfl1",
+    "receiver_contract_satisfied": false,
+    "runtime_adapter_ready": false,
+    "runtime_adapter_sha256": "87061bc1ceb8f835ee59beaf4d7879be3c380447c09eb1df82b55a82e3c11caf",
+    "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+    "target_kind": "renderer_payload_dfl1_v1"
+  },
+  "reconstruction_proof_satisfied": false,
+  "renderer_payload_dfl1_inflate_parity_proof_path": null,
+  "renderer_payload_dfl1_inflate_parity_proof_sha256": null,
+  "renderer_payload_dfl1_inflate_parity_satisfied": false,
+  "runtime_adapter_ready": false,
+  "runtime_consumption_proof_path": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/runtime_consumption_proof.json",
+  "runtime_consumption_proof_write": {
+    "allow_overwrite": false,
+    "bytes_written": 8088,
+    "free_bytes_before": 631812112384,
+    "path": "/Users/adpena/Projects/pact/experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/runtime_consumption_proof.json",
+    "sha256": "c70280c4c34c369fb079619736848ae96b5f3f314cc5bce8189937ab967d6432"
+  },
+  "schema": "renderer_payload_dfl1_candidate.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "selected_member_names": [
+    "renderer.bin",
+    "masks.mkv",
+    "optimized_poses.pt"
+  ],
+  "selected_payload": {
+    "candidate_archive_bytes": 345422,
+    "payload_bytes": 345322,
+    "payload_codec": "native_fixed_order_raw_deflate_sequence_v1",
+    "payload_member_name": "p",
+    "saved_bytes": 380,
+    "source_archive_bytes": 345802,
+    "zip_compression_method": "stored",
+    "zip_compresslevel": null
+  },
+  "serialized_archive_delta": {
+    "archive_delta_bytes": -380,
+    "blockers": [],
+    "candidate_archive_bytes": 345422,
+    "dispatch_attempted": false,
+    "gpu_launched": false,
+    "modeled_cost_bytes": null,
+    "modeled_saved_bytes": 380,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "rate_only_control": false,
+    "ready_for_exact_eval_dispatch": false,
+    "realized_saved_bytes": 380,
+    "require_realized_saving": false,
+    "savings_realized": true,
+    "schema": "serialized_archive_delta_contract.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "source_archive_bytes": 345802,
+    "status": "realized_saving"
+  },
+  "source_archive": {
+    "bytes": 345802,
+    "path": "/Users/adpena/Projects/pact/submissions/robust_current/archive_correct.zip",
+    "sha256": "4dd46fed78ed064bc97c9b3205088e82838c03667394f7936c8ae8d20f9837ab"
+  },
+  "source_members": [
+    {
+      "bytes": 296776,
+      "name": "renderer.bin",
+      "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+      "zip_compressed_bytes": 266831,
+      "zip_compressed_payload_sha256": "748bbdcb43ad66b70431c13c3d0b31d8a5bbde7fe06a17b0872d916155b44075",
+      "zip_compressed_sha256": "748bbdcb43ad66b70431c13c3d0b31d8a5bbde7fe06a17b0872d916155b44075",
+      "zip_compression_method": "deflated"
+    },
+    {
+      "bytes": 79071,
+      "name": "masks.mkv",
+      "sha256": "16c95d40ec2ff4db9e0ae21dfafe04b3c322668290e9f7e545b9c151914c11dd",
+      "zip_compressed_bytes": 64526,
+      "zip_compressed_payload_sha256": "e8c678d418bb7bc481b56b909922fa90a6e7602098e7facdd940edc7a16c7d11",
+      "zip_compressed_sha256": "e8c678d418bb7bc481b56b909922fa90a6e7602098e7facdd940edc7a16c7d11",
+      "zip_compression_method": "deflated"
+    },
+    {
+      "bytes": 15645,
+      "name": "optimized_poses.pt",
+      "sha256": "9624b96c7304ecac9aa7c06703413893a5c467350b86b8e9c2b37449288ff3af",
+      "zip_compressed_bytes": 13961,
+      "zip_compressed_payload_sha256": "2270f266ff4344cfe7c180d081e8bf2a17dbdd4be5021ad5428232906b0c48eb",
+      "zip_compressed_sha256": "2270f266ff4344cfe7c180d081e8bf2a17dbdd4be5021ad5428232906b0c48eb",
+      "zip_compression_method": "deflated"
+    }
+  ],
+  "target_kind": "renderer_payload_dfl1_v1",
+  "tool_run_manifest": {
+    "argv": [
+      "--target-kind",
+      "renderer_payload_dfl1_v1",
+      "--archive-path",
+      "submissions/robust_current/archive_correct.zip",
+      "--output-archive",
+      "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/candidate.zip",
+      "--output-manifest",
+      "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/manifest.json",
+      "--runtime-consumption-proof-out",
+      "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/runtime_consumption_proof.json"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "dd5a219e3d922db3d0dcd56d525a812c4a27cb46cb4ee8c11a7e8171c6686009",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 345802,
+        "path": "submissions/robust_current/archive_correct.zip",
+        "sha256": "4dd46fed78ed064bc97c9b3205088e82838c03667394f7936c8ae8d20f9837ab"
+      }
+    ],
+    "output_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/manifest.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/run_family_agnostic_materializer.py"
+  }
+}

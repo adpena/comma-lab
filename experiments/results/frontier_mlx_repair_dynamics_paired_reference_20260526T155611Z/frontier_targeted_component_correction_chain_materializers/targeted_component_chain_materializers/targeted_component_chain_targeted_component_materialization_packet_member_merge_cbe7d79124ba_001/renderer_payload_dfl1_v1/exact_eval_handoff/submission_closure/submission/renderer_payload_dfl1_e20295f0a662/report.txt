@@ -1,0 +1,12 @@
+Materializer submission runtime closure
+
+candidate_id: renderer_payload_dfl1_e20295f0a662
+archive_sha256: e20295f0a662101567f36afe8ce17142635f976cb2f2b8937b4cbc76455ee3c4
+archive_bytes: 345422
+score_claim: false
+promotion_eligible: false
+rank_or_kill_eligible: false
+ready_for_exact_eval_dispatch: false
+
+This packet is a local exact-readiness closure artifact. It is not a score,
+rank, promotion, or dispatch authority until the canonical exact-eval gates pass.

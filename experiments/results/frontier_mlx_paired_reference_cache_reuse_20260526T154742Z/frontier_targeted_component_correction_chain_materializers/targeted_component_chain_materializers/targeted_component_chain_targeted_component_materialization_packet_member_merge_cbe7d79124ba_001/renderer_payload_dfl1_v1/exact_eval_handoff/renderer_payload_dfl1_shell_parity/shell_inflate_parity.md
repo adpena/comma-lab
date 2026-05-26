@@ -1,0 +1,37 @@
+# Shell Inflate Parity Proof
+
+- Generated UTC: 2026-05-26T16:56:34Z
+- File list entries: 1
+- File list SHA-256: `7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8`
+- Full-frame file-list source: `upstream/public_test_video_names.txt`
+- Expected full-frame file-list SHA-256: `7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8`
+- Expected full-frame entry count: 1
+- Full-frame file-list SHA-256 match: true
+- Full-frame entry count match: true
+- Parity scope kind: `declared_file_list`
+- Contest full-sample claim: false
+- Contest full-sample parity claim: false
+- Full-frame file-list claim: true
+- Full-frame inflate parity claim: true
+- Output count: 1
+- Single output raw basename: `0.raw`
+- Python bin: `/Users/adpena/Projects/pact/.venv/bin/python`
+- Left archive: `submissions/robust_current/archive_correct.zip`
+- Right archive: `experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_chain_materializers/targeted_component_chain_materializers/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/renderer_payload_dfl1_v1/candidate.zip`
+- Left archive SHA-256: `4dd46fed78ed064bc97c9b3205088e82838c03667394f7936c8ae8d20f9837ab`
+- Right archive SHA-256: `e20295f0a662101567f36afe8ce17142635f976cb2f2b8937b4cbc76455ee3c4`
+- Left output bytes: 3662409600
+- Right output bytes: 3662409600
+- Left output manifest SHA-256: `2f7145d85c612daabeb1c0cfc71773fd783612d2da4bf40df521a1f722052e0b`
+- Right output manifest SHA-256: `2f7145d85c612daabeb1c0cfc71773fd783612d2da4bf40df521a1f722052e0b`
+- Output bytes match: true
+- Output SHA-256 match: true
+- Output manifest SHA-256 match: true
+- cmp equal: true
+- Blockers: none
+- Scratch retained: false
+- Score claim: false
+- Promotion eligible: false
+- Rank/kill eligible: false
+- Ready for exact eval dispatch: false
+- Promotable: false
