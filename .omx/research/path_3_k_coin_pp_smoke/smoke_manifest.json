@@ -1,0 +1,34 @@
+{
+  "axis_tag": "[macOS-MLX research-signal]",
+  "config": {
+    "eval_h": 384,
+    "eval_w": 512,
+    "hidden_dim": 64,
+    "mod_dim": 64,
+    "modulation_quant_bits": 8,
+    "num_hidden_layers": 3,
+    "num_pairs": 4,
+    "pos_dim": 32
+  },
+  "estimated_archive_bytes": 30369,
+  "evidence_grade": "macOS-MLX-research-signal",
+  "l0_scaffold_status": "smoke_stub_only_full_training_pending_phase_2",
+  "lane_id": "lane_path_3_k_coin_pp_implicit_neural_representation_20260526",
+  "operator_routable_next_steps": [
+    "Catalog #1265 MLX-first contest-equivalence gate invocation",
+    "Catalog #325 per-substrate symposium (6-step contract)",
+    "MOD_DIM sweep {16, 32, 64, 128, 256} empirical paired comparison",
+    "int8 vs int16 modulation quantization paired sweep + Catalog #324 Tier-C re-measurement"
+  ],
+  "predicted_delta_adjustment": 0.0,
+  "promotable": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": "coin_pp_smoke_manifest_v1_20260526",
+  "score_claim": false,
+  "smoke_bounds": {
+    "num_epochs": 2,
+    "num_pairs": 4
+  },
+  "substrate_id": "coin_pp_implicit_neural_representation"
+}
