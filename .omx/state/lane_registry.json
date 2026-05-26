@@ -57331,6 +57331,47 @@
         }
       },
       "notes": "research_only=true; lane_class=substrate_engineering; MLX-local iteration vehicle for Z6 substrate's previously-paid-Modal-blocked cascade per #768 / Phase 2 sextet #766 / Phase 3 sextet #839 / Wave 2 BUILD #837 + #847 / driver fix #849. Enabled by 2026-05-26 MLX-contest-grade cascade: #1251 MLX\u2192PyTorch bridge + #1257 inflate parity closure + #1258 corrected |S_MLX \u2212 S_PyTorch|=0.000011 + #1265 canonical PASS/FAIL gate. Sister Path 3 subagents: DreamerV3 RSSM / Z7-Mamba-2 / NSCS06 v8 chroma_lut (disjoint scope per Catalog #230). horizon_class=asymptotic_pursuit; predicted_band=[0.13,0.16] per design memo Sec 18 (planning prior only; non-promotable per CLAUDE.md 'Apples-to-apples evidence discipline'). Catalog #311 ego-motion conditioning honored: FiLM predictor modulates on ego_motion buffer."
+    },
+    {
+      "id": "lane_path_3_e_boost_nerv_against_pr110_20260526",
+      "name": "Path 3 candidate E: BoostNeRV against PR110 fec6 residual (L0 SCAFFOLD)",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "L0 SCAFFOLD package at boost_nerv_pr110_residual with __init__.py + architecture.py + boosting_curriculum.py + archive.py + residual_extraction.py + tests/test_l0_scaffold.py \u2014 25 tests pass; _full_main_stub_raises NotImplementedError per Catalog #240; BPR1 sidecar archive grammar with sha256 binding to PR110 base; MLX residual head NHWC; Catalog #91 ENCODE_INFLATE_ROUNDTRIP + Catalog #139 byte-mutation no_op_proof tests pass."
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/path_3_e_boost_nerv_against_pr110_substrate_design_20260526.md + .omx/research/path_3_e_boost_nerv_against_pr110_L0_scaffold_landed_20260526.md (landing memo pending in same commit batch)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -57340,5 +57381,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T07:11:38Z"
+  "updated_at": "2026-05-26T07:14:22Z"
 }
