@@ -42,12 +42,15 @@ canary_status: independent_substrate
 dispatch_enabled: true
 research_only: false
 
-# Note: dispatch_blockers preserved as HISTORICAL_PROVENANCE per Catalog #110/#113;
-# updated to reflect post-trainer-wrapper-landing status. The 5 prior blockers are
-# now SATISFIED (trainer wrapper landed + lane script landed + symposium PROCEED).
-# Remaining blocker: canonical equation #344 anchor lands AFTER this paired-CUDA dispatch.
-dispatch_blockers:
-  - canonical_equation_344_anchor_promotion_pending_paired_cuda_modal_smoke_results
+# Note: dispatch_blockers cleared per Catalog #240: trainer wrapper landed
+# commit 21d516e13; recipe-vs-trainer-state consistent. The canonical equation
+# #344 anchor lands AFTER this dispatch as a POST-dispatch outcome (NOT a
+# pre-dispatch blocker); per Catalog #344 FORMALIZATION_PENDING until empirical.
+dispatch_blockers: []
+
+post_dispatch_outcomes:
+  - canonical_equation_344_anchor_promotion_attempt_after_paired_cuda_smoke_results
+  - tier_c_density_post_training_validation_per_catalog_324_after_archive_lands
 
 reactivation_criteria:
   - canonical_equation_344_anchor_lands_at_canonical_equations_registry_jsonl_after_paired_cuda_validation
