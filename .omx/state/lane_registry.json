@@ -57165,6 +57165,172 @@
         }
       },
       "notes": "Codex: response-harvest negative local Lagrangian rows now compile into grouped receiver-consumed materialization request queue under false authority."
+    },
+    {
+      "id": "lane_dreamer_v3_rssm_mlx_scaffold_20260526",
+      "name": "DreamerV3 RSSM MLX-local L0 SCAFFOLD",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "L0 MLX scaffold + 11/11 tests + smoke loss 5431\u21925425 + 515KB archive sha 3dbaf76e43a970ff; research_only=true; lane_class=substrate_engineering; T3 symposium PROCEED_WITH_REVISIONS 2026-05-19; canonical equations categorical_posterior_capacity_vs_continuous_gaussian_v1 + categorical_blahut_arimoto_rate_distortion_v1; axis_tag=[macOS-MLX research-signal]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true,
+      "lane_class": "substrate_engineering"
+    },
+    {
+      "id": "lane_nscs06_v8_chroma_lut_mlx_iteration_20260526",
+      "name": "NSCS06 v8 chroma_lut MLX-local iteration EXTENSION",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z7_mamba2_mlx_scaffold_extension_20260526",
+      "name": "Z7-Mamba-2 MLX-local L0 SCAFFOLD EXTENSION (research_only)",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z6_predictive_coding_mlx_scaffold_20260526",
+      "name": "Z6 predictive-coding MLX-local L0 SCAFFOLD (Path 3 candidate #D)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/time_traveler_l5_z6/mlx_renderer.py (Z6PredictiveCodingMLXRenderer with PyTorch-parity state_dict export); src/tac/substrates/time_traveler_l5_z6/mlx_export_bridge.py (build_z6_pytorch_pt + build_z6pcwm1_archive); experiments/train_substrate_z6_predictive_coding_mlx.py (smoke trainer); empirical anchor: smoke trainer runs end-to-end at 0.6s/3epochs/4pairs, loss decreases monotonically, MLX-trained Z6PCWM1 archive inflates via canonical PyTorch sister to 8 frames \u00d7 874\u00d71164\u00d73 = 24,416,064 raw bytes (exact contest camera resolution)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; lane_class=substrate_engineering; MLX-local iteration vehicle for Z6 substrate's previously-paid-Modal-blocked cascade per #768 / Phase 2 sextet #766 / Phase 3 sextet #839 / Wave 2 BUILD #837 + #847 / driver fix #849. Enabled by 2026-05-26 MLX-contest-grade cascade: #1251 MLX\u2192PyTorch bridge + #1257 inflate parity closure + #1258 corrected |S_MLX \u2212 S_PyTorch|=0.000011 + #1265 canonical PASS/FAIL gate. Sister Path 3 subagents: DreamerV3 RSSM / Z7-Mamba-2 / NSCS06 v8 chroma_lut (disjoint scope per Catalog #230). horizon_class=asymptotic_pursuit; predicted_band=[0.13,0.16] per design memo Sec 18 (planning prior only; non-promotable per CLAUDE.md 'Apples-to-apples evidence discipline'). Catalog #311 ego-motion conditioning honored: FiLM predictor modulates on ego_motion buffer."
     }
   ],
   "level_rules": {
@@ -57174,5 +57340,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T05:29:42Z"
+  "updated_at": "2026-05-26T07:11:38Z"
 }
