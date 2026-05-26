@@ -1789,9 +1789,19 @@ def _frontier_feedback_refresh_row(path: Path) -> dict[str, object]:
         and row["pairset_acquisition_profile"].get("active") is True
     ]
     if autonomous_chain_queue_path and repair_waterfill_queue_path:
-        status = "AUTONOMOUS_CHAIN_QUEUE_READY"
+        if (
+            repair_waterfill_health["status"] == "READY_LOCAL_QUEUE"
+            and autonomous_chain_queue_health["status"] == "READY_LOCAL_QUEUE"
+        ):
+            status = "AUTONOMOUS_CHAIN_QUEUE_READY"
+        else:
+            status = "AUTONOMOUS_CHAIN_QUEUE_BLOCKED"
     elif autonomous_chain_queue_path:
-        status = "AUTONOMOUS_CHAIN_QUEUE_PARTIAL"
+        status = (
+            "AUTONOMOUS_CHAIN_QUEUE_PARTIAL"
+            if autonomous_chain_queue_health["status"] == "READY_LOCAL_QUEUE"
+            else "AUTONOMOUS_CHAIN_QUEUE_BLOCKED"
+        )
     elif autonomous_chain_path:
         status = "ACTION_FUNCTIONAL_BUILT_QUEUE_PENDING"
     elif queue_path:

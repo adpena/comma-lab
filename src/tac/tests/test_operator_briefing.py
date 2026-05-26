@@ -3517,6 +3517,7 @@ def test_operator_briefing_surfaces_repair_waterfill_action_functional_queue(
     assert latest["rate_budget_preservation_candidate_count"] == 17
     assert latest["rate_budget_preservation_saved_bytes_total"] == 160
     assert latest["concrete_repair_waterfill_action_count"] == 1
+    assert latest["status"] == "AUTONOMOUS_CHAIN_QUEUE_BLOCKED"
     assert latest["repair_budget_waterfill_queue_status"] == "FROZEN"
     assert latest["autonomous_chain_optimization_queue_status"] == "FROZEN"
     assert latest["score_claim"] is False
