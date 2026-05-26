@@ -38,7 +38,7 @@ until the receiver runtime/parity work order clears runtime consumption.
 
 Canonical explicit-input artifact regenerated:
 
-`.omx/research/frontier_operation_portfolio_explicit_receiver_repair_20260526T003426Z/`
+`.omx/research/frontier_operation_portfolio_20260526T003445Z/`
 
 Key outputs:
 
@@ -50,13 +50,6 @@ Key outputs:
   steps, valid. The selected sources are the DFL1/merge/header-elide chain,
   standalone DFL1, packet-member merge, and ZIP header elide.
 - `dqs1_followup_queue.json`: 4 DQS1 experiments, 28 steps, valid.
-
-An adjacent auto-refresh artifact also exists at
-`.omx/research/frontier_operation_portfolio_20260526T003445Z/`. It is valid,
-but was generated without the explicit materializer feedback paths, so it is a
-fallback/no-materializer-budget view: 36 receiver-repair rows, 30
-queue-actionable rows, `materializer_rate_positive_saved_bytes_total=0`, and
-`local_drop_saved_bytes_total=28`.
 
 Top repair families:
 
@@ -99,15 +92,13 @@ targeted corrections before runtime consumption and component guards pass.
 - `pytest src/tac/tests/test_frontier_rate_attack_feedback.py -q`: 16 passed.
 - `git diff --check` passed.
 - `tools/experiment_queue.py validate` passed for:
-  - `.omx/research/frontier_operation_portfolio_explicit_receiver_repair_20260526T003426Z/dqs1_followup_queue.json`
-  - `.omx/research/frontier_operation_portfolio_explicit_receiver_repair_20260526T003426Z/receiver_repair_queue.json`
+  - `.omx/research/frontier_operation_portfolio_20260526T003445Z/dqs1_followup_queue.json`
+  - `.omx/research/frontier_operation_portfolio_20260526T003445Z/receiver_repair_queue.json`
 - Executed all four receiver repair queue work-order commands successfully; the
   four current outputs wrote 5050, 4988, 12329, and 11593 bytes respectively.
 - Re-ran the first explicit-input work-order command against the existing
   output; it returned `bytes_written=0` and
   `skipped_identical_existing_artifact=true`, proving queue retry idempotence.
-- Captured the queue execution proof in
-  `.omx/research/frontier_operation_portfolio_explicit_receiver_repair_20260526T003426Z/receiver_repair_queue_execution_smoke.json`.
 
 ## Next Engineering Move
 
