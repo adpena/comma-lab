@@ -558,6 +558,16 @@ class HintonMlxCustomLossFnConfig:
     teacher_provider: TeacherLogitsProvider | None = None
     real_teacher_cache: RealSegNetTeacherLogitsCache | None = None
     evidence_grade: str = EVIDENCE_GRADE_MLX
+    # CASCADE B 2026-05-26 Path A extension per sister Hinton-MLX bundle
+    # `lane_hinton_mlx_first_local_pivot_20260526` Path A reactivation
+    # criterion. When None (default), the canonical loss falls through to
+    # the sister deterministic-projection back-compat path. When set, the
+    # learnable 1x1-conv student head is invoked at every loss step (Path A);
+    # the head's ~20 trainable params are managed by a sibling MLX optimizer
+    # external to this dataclass (see canonical training loop extension at
+    # `tools/run_hinton_mlx_long_training_smoke.py`'s
+    # ``--learnable-student-head`` branch and the CASCADE B landing memo).
+    learnable_student_head: "LearnableConv1x1StudentHead | None" = None
 
     def __post_init__(self) -> None:
         if self.real_teacher_cache is not None and self.real_teacher_cache.num_classes != self.student_head_out_channels:
@@ -578,6 +588,14 @@ class HintonMlxCustomLossFnConfig:
             raise ValueError(
                 f"student_head_out_channels must be >= 2; got {self.student_head_out_channels}"
             )
+        if (
+            self.learnable_student_head is not None
+            and self.learnable_student_head.num_classes != self.student_head_out_channels
+        ):
+            raise ValueError(
+                f"learnable_student_head.num_classes ({self.learnable_student_head.num_classes}) "
+                f"must match student_head_out_channels ({self.student_head_out_channels})"
+            )
         if self.evidence_grade != EVIDENCE_GRADE_MLX:
             # CLAUDE.md "MLX portable-local-substrate authority" non-negotiable:
             # MLX evidence MUST be tagged macOS-MLX research-signal. This
@@ -590,30 +608,224 @@ class HintonMlxCustomLossFnConfig:
             )
 
 
+# ---------------------------------------------------------------------------
+# Path A learnable 1x1-conv student head (CASCADE B HINTON KL-DISTILL CATALYST
+# DISTORTION-ATTACK 2026-05-26 self-protection per the sister Path A
+# reactivation criterion enumerated in
+# `lane_hinton_mlx_first_local_pivot_20260526` commit `dfc1d11de`).
+#
+# Sister predecessor's empirical anchor: the deterministic-projection student
+# head saturated KL T=2.0 loss at ~3.03 across 1000ep on the real upstream
+# SegNet teacher cache. Per Catalog #307: IMPLEMENTATION-LEVEL falsification;
+# Hinton paradigm INTACT. Path A canonical reactivation = learnable 1x1-conv
+# student head with ~20 trainable params (3 input RGB channels x 5 SegNet
+# classes + 5 bias = 20).
+#
+# This is the canonical APPEND-ONLY extension per Catalog #110/#113. The
+# sister deterministic projection at `_student_logits_from_decoded` remains
+# the back-compat default; Path A is opt-in via
+# `HintonMlxCustomLossFnConfig.learnable_student_head is not None`.
+#
+# The learnable head holds its own MLX trainable parameters (an ``mx.array``
+# weight + bias) and computes ``logits = decoded_bhwc @ W + b`` as the
+# canonical 1x1-conv equivalent in NHWC. Gradients flow into both the
+# decoder (via the standard ``nn.value_and_grad(self._bundle, loss_fn)`` path)
+# AND the learnable head's weights (via a sibling ``mx.value_and_grad`` on
+# the head; see the canonical training loop extension at
+# `tools/run_hinton_mlx_long_training_smoke.py`'s ``--learnable-student-head``
+# branch and the runtime composition documented in the landing memo).
+#
+# Per CLAUDE.md "MLX portable-local-substrate authority" non-negotiable +
+# Catalog #192: the learnable head is part of the [macOS-MLX research-signal]
+# axis evidence inherited from `EVIDENCE_GRADE_MLX` via the existing
+# `HintonMlxCustomLossFnConfig.__post_init__` invariant; the field carries no
+# contest-score authority on its own.
+#
+# Per CLAUDE.md "MLX portable-local-substrate authority" + the sister
+# `numpy_pytorch_parity_proof.json` BYTE_STABLE_BY_DEFAULT proof: the head's
+# ~20 float32 parameters export via the canonical
+# `tac.local_acceleration.mlx_to_pytorch_export.export_mlx_state_dict_to_torch_pt`
+# bridge with the same byte-level invariants.
+# ---------------------------------------------------------------------------
+
+
+@dataclasses.dataclass
+class LearnableConv1x1StudentHead:
+    """Canonical Path A learnable 1x1-conv student head.
+
+    A minimal MLX-native learnable mapping ``(R, G, B) -> K-class logits``
+    that extends the canonical Hinton-distilled scorer surrogate's student
+    side to break the deterministic-projection saturation point empirically
+    confirmed at KL T=2.0 ~3.03 in sister `lane_hinton_mlx_first_local_pivot_20260526`
+    (commit `dfc1d11de`).
+
+    Parameters:
+      * ``weight`` (mx.array, shape ``(in_channels, num_classes)``): 1x1
+        convolution weight; ``in_channels`` is always 3 (RGB) per the
+        canonical Slot 1 normalization.
+      * ``bias`` (mx.array, shape ``(num_classes,)``): per-class bias.
+
+    Total trainable parameter count: ``in_channels * num_classes + num_classes``
+    = ``3 * 5 + 5`` = 20 for the canonical SegNet 5-class config.
+
+    Note: this dataclass is NOT frozen because MLX arrays are mutable
+    references; the canonical training loop extension uses
+    ``mx.value_and_grad`` on the head's ``__call__`` method to compute
+    gradients and updates the params in-place via the sibling optimizer.
+
+    Sister back-compat: when ``HintonMlxCustomLossFnConfig.learnable_student_head``
+    is ``None``, ``_student_logits_from_decoded`` falls through to the
+    canonical deterministic projection (sister 1000ep run is reproducible
+    bit-for-bit when this field is unset).
+    """
+
+    weight: Any  # mx.array of shape (in_channels=3, num_classes)
+    bias: Any  # mx.array of shape (num_classes,)
+    num_classes: int = DEFAULT_SEGNET_CLASSES
+
+    def __post_init__(self) -> None:
+        _require_mlx()
+        if self.num_classes < 2:
+            raise ValueError(
+                f"num_classes must be >= 2 for KL distillation; got {self.num_classes}"
+            )
+        # Validate weight + bias shapes vs num_classes (defense-in-depth so
+        # a misconfigured head cannot silently produce shape-mismatched KL).
+        if self.weight.shape[-1] != self.num_classes:
+            raise ValueError(
+                f"weight last dim must equal num_classes={self.num_classes}; "
+                f"got weight.shape={self.weight.shape!r}"
+            )
+        if self.bias.shape[-1] != self.num_classes:
+            raise ValueError(
+                f"bias last dim must equal num_classes={self.num_classes}; "
+                f"got bias.shape={self.bias.shape!r}"
+            )
+
+    def __call__(self, decoded_bhwc: Any) -> Any:
+        """Apply the canonical 1x1-conv: logits[b,h,w,k] = sum_c decoded[b,h,w,c] * W[c,k] + b[k].
+
+        Args:
+            decoded_bhwc: MLX float32 array of shape ``(B, H, W, 3)`` in
+                ``[0, 1]`` per the Slot 1 canonical normalization.
+
+        Returns:
+            MLX float32 array of shape ``(B, H, W, num_classes)``.
+        """
+        _require_mlx()
+        # Canonical 1x1-conv in NHWC: einsum-equivalent matmul on the
+        # channel axis. mx supports this via a simple matmul because the
+        # last axis of decoded_bhwc and the first axis of weight align.
+        logits = mx.einsum("bhwc,ck->bhwk", decoded_bhwc, self.weight) + self.bias
+        return logits
+
+    def parameters_dict(self) -> dict[str, Any]:
+        """Return the canonical parameter dict for optimizer + parity proof.
+
+        Keys match the canonical MLX state-dict layout consumed by
+        :func:`tac.local_acceleration.mlx_to_pytorch_export.export_mlx_state_dict_to_torch_pt`:
+        ``{"learnable_student_head.weight": ..., "learnable_student_head.bias": ...}``.
+
+        This is the surface the sister numpy<->PyTorch parity proof
+        extends to cover the new head's ~20 params alongside the canonical
+        decoder's 228,958 params.
+        """
+        return {
+            "learnable_student_head.weight": self.weight,
+            "learnable_student_head.bias": self.bias,
+        }
+
+
+def build_learnable_student_head(
+    *,
+    num_classes: int = DEFAULT_SEGNET_CLASSES,
+    in_channels: int = 3,
+    seed: int = 0,
+    init_scale: float = 0.1,
+) -> LearnableConv1x1StudentHead:
+    """Construct a canonical :class:`LearnableConv1x1StudentHead` with
+    deterministic initialization.
+
+    Args:
+        num_classes: Number of SegNet output classes. Default 5 per the
+            canonical contest SegNet.
+        in_channels: Number of input channels (3 for RGB; the canonical
+            Slot 1 pipeline normalizes targets to NHWC RGB float32 in [0, 1]).
+        seed: Deterministic seed for weight initialization per CLAUDE.md
+            "Beauty, simplicity, and developer experience" + Catalog #305
+            observability "diff-able across runs".
+        init_scale: Standard deviation of the per-weight Gaussian
+            initialization. Default 0.1 (small enough that initial logits
+            land near the linear regime of softmax-with-T=2.0).
+
+    Returns:
+        :class:`LearnableConv1x1StudentHead` with weight + bias initialized
+        from a deterministic Gaussian. The 20-param head is small enough that
+        the deterministic init is itself the canonical fixture.
+    """
+    _require_mlx()
+    if num_classes < 2:
+        raise ValueError(
+            f"num_classes must be >= 2 for KL distillation; got {num_classes}"
+        )
+    if in_channels < 1:
+        raise ValueError(f"in_channels must be >= 1; got {in_channels}")
+    if init_scale <= 0.0:
+        raise ValueError(f"init_scale must be > 0; got {init_scale}")
+    # Deterministic init via mx.random.key + mx.random.normal so the head
+    # is reproducible bit-for-bit across runs with the same seed.
+    rng_key = mx.random.key(seed)
+    key_w, key_b = mx.random.split(rng_key)
+    weight = mx.random.normal(
+        shape=(in_channels, num_classes), key=key_w
+    ) * init_scale
+    # Bias initialized small + offset per class so initial logits are not
+    # all-zero (which would produce a uniform softmax and zero KL gradient
+    # on a uniform teacher).
+    bias = mx.random.normal(
+        shape=(num_classes,), key=key_b
+    ) * (init_scale * 0.5)
+    return LearnableConv1x1StudentHead(
+        weight=weight,
+        bias=bias,
+        num_classes=num_classes,
+    )
+
+
 def _student_logits_from_decoded(
     decoded_bhwc: Any,
     config: HintonMlxCustomLossFnConfig,
 ) -> Any:
-    """Project decoded RGB frames into student logits via a fixed linear head.
+    """Project decoded RGB frames into student logits.
 
-    For the foundation MLX smoke we do NOT add a learnable student head;
-    instead the student "logits" are produced by a deterministic per-pixel
-    projection that depends ONLY on the decoded RGB (so gradients flow
-    through the decoder weights but not through any new trainable params).
-    This keeps the foundation smoke surface minimal while still exercising
-    the canonical Hinton KL T=2.0 contract end-to-end.
+    Two canonical paths (selected by ``config.learnable_student_head``):
 
-    The projection reuses the teacher provider on the decoded frame path
-    while the stopped teacher target in :func:`make_hinton_custom_loss_fn`
-    is computed from the target frame path. A future sister wave can swap
-    this for a learnable student head (additional trainable parameters) to
-    extend the paradigm; for now the canonical contract surface is the loss
-    function itself, not the student head architecture.
+    1. **Path A learnable 1x1-conv** (default when
+       ``config.learnable_student_head is not None``): applies the canonical
+       :class:`LearnableConv1x1StudentHead` to ``decoded_bhwc``. Gradients
+       flow through both the decoder weights AND the learnable head's
+       weights via the sister sibling-optimizer pattern documented in the
+       canonical training loop extension.
 
-    Returns student logits of shape
-    ``(B, H // teacher_downsample, W // teacher_downsample, num_classes)``.
+    2. **Deterministic projection** (default when
+       ``config.learnable_student_head is None``): falls through to the
+       canonical ``teacher_provider.teacher_logits(decoded_bhwc)`` deterministic
+       cosine projection. This is the sister back-compat path that preserves
+       bit-for-bit reproducibility of the sister 1000ep run.
+
+    The choice between paths is determined ENTIRELY by
+    ``config.learnable_student_head``; the runtime never blends.
+
+    Returns student logits of shape ``(B, H, W, num_classes)`` for Path A
+    (1x1-conv preserves spatial dims) OR
+    ``(B, H // teacher_downsample, W // teacher_downsample, num_classes)``
+    for the deterministic projection path (sister behavior preserved).
     """
     _require_mlx()
+    # Path A learnable 1x1-conv (CASCADE B 2026-05-26 extension)
+    if config.learnable_student_head is not None:
+        return config.learnable_student_head(decoded_bhwc)
+    # Sister back-compat deterministic projection
     provider = config.teacher_provider
     assert provider is not None, "teacher_provider required (resolved by factory)"
     # Use the provider's projection on the DECODED frames so the gradient
