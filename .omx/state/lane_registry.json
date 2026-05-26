@@ -57536,6 +57536,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_path_3_recursive_adversarial_review_r1_prime_3_axis_landings_b_c_f_g_20260526",
+      "name": "Path 3 R1' recursive adversarial review 3-axis aggregate B'+C'+F+G",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "5 review memos landed: per-substrate B'+C'+F+G + aggregate; B' CLEAN; C' CLEAN; F NOT CLEAN (2 CRITICAL MLX drift bugs empirically measured); G NOT CLEAN (3 doc-overstatement findings); aggregate counter 0/3 per protocol; FIX-WAVE-R1' required before R2'"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "5 review memos at .omx/research/path_3_{b,c,f,g}_recursive_adversarial_review_r1_prime_3_axis_20260526.md + .omx/research/path_3_recursive_adversarial_review_r1_prime_aggregate_3_axis_landings_b_c_f_g_20260526.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_path_3_d_z6_l1_promotion_20260526",
+      "name": "Path 3 D=Z6 predictive-coding MLX-local L1 PROMOTION (real video + EMA)",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/train_substrate_z6_predictive_coding_mlx.py L1 PROMOTION (real contest video via tac.data.decode_video + MLX-native EMA decay=0.997 + EMA shadow as canonical inference checkpoint per Catalog #2); empirical anchor: 50 pairs x 30 epochs at 48x64 wall-clock 0.3s on M-series; loss 0.339 -> 0.176 (48% reduction monotonic); Z6PCWM1 archive 64244 bytes built from EMA shadow inflates byte-stably via canonical PyTorch sister inflate runtime to 100 frames * 874 * 1164 * 3 = 305,200,800 raw bytes (exact contest camera resolution); PyTorch sister loads MLX EMA shadow state_dict with 0 unexpected keys; 19 PyTorch parity tests still PASS; predicted_band_validation_status=post_training_mlx_50_100ep_local per Catalog #324; per-substrate symposium PROCEED_WITH_REVISIONS per Catalog #325 anchor at .omx/research/path_3_d_z6_per_substrate_symposium_l1_promotion_20260526.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -57545,5 +57627,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T07:45:41Z"
+  "updated_at": "2026-05-26T08:18:38Z"
 }
