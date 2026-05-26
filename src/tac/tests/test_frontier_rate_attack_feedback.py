@@ -23,6 +23,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     RECEIVER_REPAIR_ROW_SCHEMA,
     RECEIVER_REPAIR_WORK_ORDER_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
+    TARGETED_COMPONENT_CORRECTION_CHAIN_MATERIALIZER_HANDOFF_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUEST_ROW_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUESTS_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA,
@@ -34,6 +35,8 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     build_frontier_rate_attack_feedback_refresh,
     build_frontier_receiver_repair_work_order,
     build_frontier_targeted_component_correction_acquisition,
+    build_frontier_targeted_component_correction_chain_materializer_handoff,
+    build_frontier_targeted_component_correction_chain_work_orders,
     build_frontier_targeted_component_correction_materialization_queue,
     build_frontier_targeted_component_correction_materialization_request,
     build_frontier_targeted_component_correction_materialization_requests,
@@ -1847,6 +1850,9 @@ def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
     output = tmp_path / "component_correction_response_harvest.json"
     materialization_requests = tmp_path / "materialization_requests.json"
     materialization_queue = tmp_path / "materialization_queue.json"
+    operation_chain_work_orders = tmp_path / "operation_chain_work_orders.json"
+    operation_chain_queue = tmp_path / "operation_chain_queue.json"
+    operation_chain_handoff = tmp_path / "operation_chain_handoff.json"
 
     result = subprocess.run(
         [
@@ -1866,6 +1872,14 @@ def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
             str(materialization_queue),
             "--materialization-queue-id",
             "targeted_component_materialization_cli_unit",
+            "--operation-chain-work-orders-output",
+            str(operation_chain_work_orders),
+            "--operation-chain-queue-output",
+            str(operation_chain_queue),
+            "--operation-chain-queue-id",
+            "targeted_component_operation_chain_cli_unit",
+            "--operation-chain-materializer-handoff-output",
+            str(operation_chain_handoff),
             "--results-root",
             str(tmp_path / "results"),
             "--repo-root",
@@ -1881,6 +1895,9 @@ def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
     stdout = json.loads(result.stdout)
     assert stdout["materialization_request_count"] == 1
     assert stdout["materialization_queue_experiment_count"] == 1
+    assert stdout["operation_chain_work_order_count"] == 1
+    assert stdout["operation_chain_queue_experiment_count"] == 1
+    assert stdout["operation_chain_materializer_handoff_work_rows"] >= 1
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert payload["schema"] == TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA
     _assert_false_authority(payload)
@@ -1910,6 +1927,23 @@ def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
     assert len(queue["experiments"]) == 1
     assert queue["experiments"][0]["metadata"]["ready_for_budget_spend"] is False
     assert queue["materialization_request_summary"]["score_claim"] is False
+    chain_work_orders = json.loads(
+        operation_chain_work_orders.read_text(encoding="utf-8")
+    )
+    assert chain_work_orders["schema"] == OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA
+    assert chain_work_orders["work_order_count"] == 1
+    _assert_false_authority(chain_work_orders)
+    chain_queue = json.loads(operation_chain_queue.read_text(encoding="utf-8"))
+    assert len(chain_queue["experiments"]) == 1
+    assert chain_queue["experiments"][0]["metadata"]["execution_ready"] is False
+    assert chain_queue["experiments"][0]["metadata"]["budget_spend_allowed"] is False
+    handoff = json.loads(operation_chain_handoff.read_text(encoding="utf-8"))
+    assert (
+        handoff["schema"]
+        == TARGETED_COMPONENT_CORRECTION_CHAIN_MATERIALIZER_HANDOFF_SCHEMA
+    )
+    _assert_false_authority(handoff)
+    assert "packet_member_merge_v1" in handoff["registered_chain_targets"]
 
 
 def test_targeted_component_response_harvest_expands_grouped_request_metadata(
@@ -2130,6 +2164,128 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         == TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUEST_ROW_SCHEMA
     )
     _assert_false_authority(materialized_request)
+
+    chain_work_orders = (
+        build_frontier_targeted_component_correction_chain_work_orders(
+            targeted_component_correction_materialization_requests=requests,
+            request_limit=1,
+        )
+    )
+    assert chain_work_orders["schema"] == OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA
+    _assert_false_authority(chain_work_orders)
+    assert chain_work_orders["work_order_count"] == 1
+    chain_work_order = chain_work_orders["work_orders"][0]
+    _assert_false_authority(chain_work_order)
+    assert chain_work_order["source_materialization_request_id"] == request[
+        "materialization_request_id"
+    ]
+    runtime_binding = chain_work_order["targeted_correction_budget"][
+        "receiver_runtime_binding_context"
+    ]
+    assert runtime_binding["binding_complete_for_component_eval"] is True
+    assert runtime_binding["candidate_archive_path"]
+    assert chain_work_order["targeted_correction_budget"]["candidate_archive_path"]
+    assert "byte_range_entropy_recode_v1" in chain_work_order["chain_targets"]
+    assert "packet_member_merge_v1" in chain_work_order["chain_targets"]
+    assert "segnet_component_response" in chain_work_order["chain_targets"]
+    assert {
+        stage["stage"] for stage in chain_work_order["stage_plan"]
+    } == {
+        "scorer_sensitive_operation_selection",
+        "receiver_consumed_correction_synthesis",
+        "payload_grammar_and_entropy",
+        "component_guarded_budget_replay",
+    }
+    assert (
+        "single_composed_receiver_runtime_consumption_proof"
+        in chain_work_order["required_before_execution"]
+    )
+
+    chain_work_orders_path = tmp_path / "component_chain_work_orders.json"
+    chain_work_orders_path.write_text(json.dumps(chain_work_orders), encoding="utf-8")
+    chain_queue = build_frontier_operation_chain_compiler_queue(
+        repo_root=REPO_ROOT,
+        operation_chain_compiler_work_orders=chain_work_orders,
+        operation_chain_compiler_work_orders_path=chain_work_orders_path,
+        results_root=tmp_path / "results",
+        queue_id="frontier_feedback_targeted_component_chain_unit",
+        candidate_limit=1,
+    )
+    assert chain_queue is not None
+    _assert_false_authority(chain_queue["experiments"][0]["metadata"])
+    assert len(chain_queue["experiments"]) == 1
+    assert chain_queue["experiments"][0]["steps"][0]["command"][1] == (
+        "tools/build_frontier_operation_chain_stage_plan.py"
+    )
+    assert isinstance(
+        chain_queue["experiments"][0]["metadata"][
+            "byte_range_local_chain_queueable"
+        ],
+        bool,
+    )
+    assert chain_queue["experiments"][0]["metadata"][
+        "byte_range_local_chain_queueable"
+    ] is False
+    assert chain_queue["experiments"][0]["metadata"]["chain_target_count"] >= 6
+    chain_stage_plan = build_frontier_operation_chain_compiler_stage_plan(
+        operation_chain_compiler_work_orders=chain_work_orders,
+        source_operation_id=chain_work_order["source_operation_id"],
+    )
+    byte_range_inputs = build_frontier_byte_range_stage_inputs(
+        repo_root=REPO_ROOT,
+        operation_chain_stage_plan=chain_stage_plan,
+        chain_output_dir=tmp_path / "targeted_byte_range_chain",
+    )
+    assert byte_range_inputs["local_chain_queueable"] is False
+    assert byte_range_inputs["materializer_context"][
+        "default_pr103_context_disabled"
+    ] is True
+    assert (
+        "byte_range_stage_default_pr103_context_disabled_for_target_bound_chain"
+        in byte_range_inputs["materializer_context"]["context_blockers"]
+    )
+    assert "public_pr103_intake" not in byte_range_inputs["materializer_context"][
+        "source_archive"
+    ]
+    assert len(chain_queue["experiments"][0]["steps"]) == 2
+    assert {
+        step["id"] for step in chain_queue["experiments"][0]["steps"]
+    } == {
+        "emit_operation_chain_stage_plan",
+        "emit_byte_range_stage_inputs",
+    }
+    handoff = build_frontier_targeted_component_correction_chain_materializer_handoff(
+        repo_root=REPO_ROOT,
+        targeted_component_correction_chain_work_orders=chain_work_orders,
+        default_output_root=tmp_path / "chain_materializers",
+    )
+    assert (
+        handoff["schema"]
+        == TARGETED_COMPONENT_CORRECTION_CHAIN_MATERIALIZER_HANDOFF_SCHEMA
+    )
+    _assert_false_authority(handoff)
+    assert "packet_member_merge_v1" in handoff["registered_chain_targets"]
+    assert "packet_member_zip_header_elide_v1" in handoff[
+        "registered_chain_targets"
+    ]
+    assert "tensor_quantize_v1" not in handoff["registered_chain_targets"]
+    assert "segnet_component_response" in handoff["unregistered_chain_targets"]
+    assert handoff["work_queue_row_count"] == handoff[
+        "registered_chain_target_count"
+    ]
+    assert handoff["materializer_work_queue"]["schema"] == (
+        "byte_shaving_materializer_work_queue.v1"
+    )
+    assert handoff["materializer_work_queue"]["blocked_row_count"] >= 1
+    packet_merge_rows = [
+        row
+        for row in handoff["materializer_work_queue"]["rows"]
+        if row["target_kind"] == "packet_member_merge_v1"
+    ]
+    assert packet_merge_rows
+    assert "materializer_context_missing:merge_contract" in packet_merge_rows[0][
+        "materialization_blockers"
+    ]
 
 
 def test_frontier_feedback_discovers_dqs1_observation_jsonls_from_artifact_roots(
@@ -3081,6 +3237,12 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert payload[
         "targeted_component_correction_materialization_request_summary"
     ]["ready_for_budget_spend_count"] == 0
+    assert payload[
+        "targeted_component_correction_operation_chain_summary"
+    ]["work_order_count"] == 0
+    assert payload[
+        "targeted_component_correction_chain_materializer_handoff_summary"
+    ]["work_queue_row_count"] == 0
     queue_path = output_dir / "dqs1_followup_queue.json"
     bridge_path = output_dir / "materializer_feedback_bridge.json"
     receiver_repair_backlog_path = output_dir / "receiver_repair_backlog.json"
@@ -3098,6 +3260,12 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     targeted_component_materialization_requests_path = (
         output_dir / "targeted_component_correction_materialization_requests.json"
     )
+    targeted_component_operation_chain_work_orders_path = (
+        output_dir / "targeted_component_correction_operation_chain_work_orders.json"
+    )
+    targeted_component_chain_materializer_handoff_path = (
+        output_dir / "targeted_component_correction_chain_materializer_handoff.json"
+    )
     report_path = output_dir / "feedback_refresh_report.json"
     assert queue_path.exists()
     assert bridge_path.exists()
@@ -3108,6 +3276,8 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert targeted_component_queue_path.exists()
     assert targeted_component_response_harvest_path.exists()
     assert targeted_component_materialization_requests_path.exists()
+    assert targeted_component_operation_chain_work_orders_path.exists()
+    assert targeted_component_chain_materializer_handoff_path.exists()
     assert report_path.exists()
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["artifacts"]["dqs1_followup_queue"].endswith("dqs1_followup_queue.json")
@@ -3132,6 +3302,12 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert report["artifacts"][
         "targeted_component_correction_materialization_requests"
     ].endswith("targeted_component_correction_materialization_requests.json")
+    assert report["artifacts"][
+        "targeted_component_correction_operation_chain_work_orders"
+    ].endswith("targeted_component_correction_operation_chain_work_orders.json")
+    assert report["artifacts"][
+        "targeted_component_correction_chain_materializer_handoff"
+    ].endswith("targeted_component_correction_chain_materializer_handoff.json")
     assert report["artifacts"]["operation_materializer_bridge"].endswith(
         "operation_materializer_bridge.json"
     )
@@ -3250,6 +3426,18 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert (
         report["operator_commands"][
             "inspect_targeted_component_correction_materialization_requests"
+        ][0]
+        == ".venv/bin/python"
+    )
+    assert (
+        report["operator_commands"][
+            "inspect_targeted_component_correction_operation_chain_work_orders"
+        ][0]
+        == ".venv/bin/python"
+    )
+    assert (
+        report["operator_commands"][
+            "inspect_targeted_component_correction_chain_materializer_handoff"
         ][0]
         == ".venv/bin/python"
     )

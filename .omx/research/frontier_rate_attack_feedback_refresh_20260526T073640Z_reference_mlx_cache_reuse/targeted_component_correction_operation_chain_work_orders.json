@@ -1,0 +1,279 @@
+{
+  "active": true,
+  "allowed_use": "targeted_component_correction_chain_work_orders_for_queue_only",
+  "blockers": [
+    "exact_auth_eval_required_before_score_or_promotion_claim",
+    "receiver_consumed_correction_materializer_missing",
+    "single_composed_runtime_consumption_proof_required",
+    "exact_axis_component_response_required_before_budget_spend"
+  ],
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+  "generated_at_utc": "2026-05-26T07:49:24Z",
+  "gpu_launched": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "request_count": 1,
+  "request_limit": 6,
+  "schema": "frontier_rate_attack_operation_chain_compiler_work_orders.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_family": "targeted_component_correction_materialization_requests",
+  "source_schema": "frontier_rate_attack_targeted_component_correction_materialization_requests.v1",
+  "top_materialization_request_ids": [
+    "targeted_component_materialization_packet_member_merge_cbe7d79124ba_001"
+  ],
+  "top_source_operation_ids": [
+    "targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001"
+  ],
+  "work_order_count": 1,
+  "work_orders": [
+    {
+      "allowed_use": "targeted_component_correction_operation_chain_work_order_planning_only",
+      "chain_targets": [
+        "drop_within_selected_set_masked_boundary",
+        "full_video_batch_residual_budget_reallocation",
+        "inverse_scorer_cell_basis_expansion",
+        "pose_stable_pair_frame_motion_correction",
+        "segnet_posenet_waterfill_region_repair",
+        "packet_member_merge_v1",
+        "packet_member_zip_header_elide_v1",
+        "byte_range_entropy_recode_v1",
+        "tensor_quantize_v1",
+        "tensor_prune_v1",
+        "tensor_shared_codebook_v1",
+        "segnet_component_response",
+        "posenet_component_response",
+        "full_video_lagrangian_response"
+      ],
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "dispatch_attempted": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+      "gpu_launched": false,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_before_execution": [
+        "per_stage_materializer_contexts",
+        "single_composed_receiver_runtime_consumption_proof",
+        "full_frame_inflate_parity",
+        "segnet_posenet_component_eval",
+        "chain_exact_readiness_bridge",
+        "targeted_component_budget_spend_gate"
+      ],
+      "schema": "frontier_rate_attack_operation_chain_compiler_work_order.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "source_bridge_blockers": [
+        "targeted_component_chain_requires_receiver_runtime_materializer",
+        "targeted_component_chain_requires_composed_inflate_parity",
+        "targeted_component_chain_requires_exact_axis_component_response",
+        "targeted_component_chain_requires_budget_spend_gate",
+        "receiver_consumed_correction_materializer_missing",
+        "full_frame_inflate_parity_required_before_budget_spend",
+        "exact_axis_component_response_required_before_budget_spend",
+        "exact_auth_eval_required_before_score_or_promotion_claim",
+        "generated_request_is_local_materialization_only",
+        "component_response_harvest_is_local_acquisition_signal_only",
+        "receiver_runtime_materialization_required_before_budget_spend"
+      ],
+      "source_materialization_request_id": "targeted_component_materialization_packet_member_merge_cbe7d79124ba_001",
+      "source_operation_family": "targeted_component_correction_receiver_consumed_multi_op_chain",
+      "source_operation_id": "targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001",
+      "stage_plan": [
+        {
+          "required_before_execution": [
+            "paired_cpu_mlx_delta_model",
+            "master_gradient_or_component_marginal_model",
+            "chain_synergy_antagonism_model"
+          ],
+          "stage": "scorer_sensitive_operation_selection",
+          "targets": [
+            "drop_within_selected_set_masked_boundary",
+            "full_video_batch_residual_budget_reallocation",
+            "inverse_scorer_cell_basis_expansion",
+            "pose_stable_pair_frame_motion_correction",
+            "segnet_posenet_waterfill_region_repair"
+          ]
+        },
+        {
+          "required_before_execution": [
+            "source_runtime_adapter_per_operation",
+            "single_composed_receiver_runtime_consumption_proof",
+            "parser_only_proof_rejected"
+          ],
+          "stage": "receiver_consumed_correction_synthesis",
+          "targets": [
+            "drop_within_selected_set_masked_boundary",
+            "full_video_batch_residual_budget_reallocation",
+            "inverse_scorer_cell_basis_expansion",
+            "pose_stable_pair_frame_motion_correction",
+            "segnet_posenet_waterfill_region_repair"
+          ]
+        },
+        {
+          "required_before_execution": [
+            "rate_payload_pack_and_materialize",
+            "materializer_context_binding",
+            "byte_closed_archive_export",
+            "full_frame_inflate_parity"
+          ],
+          "stage": "payload_grammar_and_entropy",
+          "targets": [
+            "packet_member_merge_v1",
+            "packet_member_zip_header_elide_v1",
+            "byte_range_entropy_recode_v1",
+            "tensor_quantize_v1",
+            "tensor_prune_v1",
+            "tensor_shared_codebook_v1"
+          ]
+        },
+        {
+          "required_before_execution": [
+            "segnet_posenet_component_eval",
+            "total_lagrangian_improvement",
+            "exact_readiness_bridge",
+            "budget_spend_gate"
+          ],
+          "stage": "component_guarded_budget_replay",
+          "targets": [
+            "segnet_component_response",
+            "posenet_component_response",
+            "full_video_lagrangian_response"
+          ]
+        }
+      ],
+      "targeted_correction_budget": {
+        "accepted_correction_families": [
+          "drop_within_selected_set_masked_boundary",
+          "full_video_batch_residual_budget_reallocation",
+          "inverse_scorer_cell_basis_expansion",
+          "pose_stable_pair_frame_motion_correction",
+          "segnet_posenet_waterfill_region_repair"
+        ],
+        "accepted_response_count": 5,
+        "allowed_use": "targeted_component_chain_budget_for_local_planning_only",
+        "best_measured_lagrangian_delta_score_units": -0.0001717916099055202,
+        "budget_spend_allowed": false,
+        "candidate_archive_path": "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/archive.zip",
+        "candidate_id": "packet_member_merge_cbe7d79124ba",
+        "candidate_inflate_sh_path": "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/inflate.sh",
+        "candidate_submission_dir": "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission",
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "estimated_receiver_closed_rate_credit_score_units": 0.0001717916099055202,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
+        "gpu_launched": false,
+        "materialization_request_id": "targeted_component_materialization_packet_member_merge_cbe7d79124ba_001",
+        "measured_lagrangian_delta_score_units_sum": -0.000858958049527601,
+        "operation_levels": [
+          "pixel",
+          "region",
+          "boundary",
+          "frame",
+          "pair",
+          "batch",
+          "scorer_axis",
+          "tensor_channel",
+          "full_video",
+          "training_substrate",
+          "bit",
+          "byte"
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_runtime_binding_context": {
+          "allowed_use": "targeted_component_correction_runtime_binding_for_queue_planning_only",
+          "binding_complete_for_component_eval": true,
+          "binding_complete_for_reference_eval": true,
+          "candidate_archive_path": "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/archive.zip",
+          "candidate_inflate_sh_path": "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/inflate.sh",
+          "candidate_submission_dir": "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission",
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "response_artifact_paths": [
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_correction/packet_member_merge_cbe7d79124ba/targeted_component_correction_packet_member_merge_cbe7d79124ba_drop_within_selected_set_masked_boundary/component_correction_response_harvest.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_correction/packet_member_merge_cbe7d79124ba/targeted_component_correction_packet_member_merge_cbe7d79124ba_full_video_batch_residual_budget_reallocation/component_correction_response_harvest.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_correction/packet_member_merge_cbe7d79124ba/targeted_component_correction_packet_member_merge_cbe7d79124ba_inverse_scorer_cell_basis_expansion/component_correction_response_harvest.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_correction/packet_member_merge_cbe7d79124ba/targeted_component_correction_packet_member_merge_cbe7d79124ba_pose_stable_pair_frame_motion_correction/component_correction_response_harvest.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_correction/packet_member_merge_cbe7d79124ba/targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair/component_correction_response_harvest.json"
+          ],
+          "schema": "frontier_rate_attack_targeted_component_receiver_runtime_binding.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "source_archive_bytes": 345802,
+          "source_archive_path": "submissions/robust_current/archive_correct.zip",
+          "source_archive_sha256": "4dd46fed78ed064bc97c9b3205088e82838c03667394f7936c8ae8d20f9837ab",
+          "source_inflate_sh_path": "submissions/robust_current/inflate.sh",
+          "source_queue_path": "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/closed_source_queue.json",
+          "source_submission_dir": "submissions/robust_current",
+          "work_order_paths": [
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_correction/packet_member_merge_cbe7d79124ba/targeted_component_correction_packet_member_merge_cbe7d79124ba_drop_within_selected_set_masked_boundary/work_order.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_correction/packet_member_merge_cbe7d79124ba/targeted_component_correction_packet_member_merge_cbe7d79124ba_full_video_batch_residual_budget_reallocation/work_order.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_correction/packet_member_merge_cbe7d79124ba/targeted_component_correction_packet_member_merge_cbe7d79124ba_inverse_scorer_cell_basis_expansion/work_order.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_correction/packet_member_merge_cbe7d79124ba/targeted_component_correction_packet_member_merge_cbe7d79124ba_pose_stable_pair_frame_motion_correction/work_order.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_targeted_component_correction/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_correction/packet_member_merge_cbe7d79124ba/targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair/work_order.json"
+          ]
+        },
+        "saved_bytes_budget": 258,
+        "schema": "frontier_rate_attack_targeted_chain_budget.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_acquisition_ids": [
+          "targeted_component_correction_packet_member_merge_cbe7d79124ba_drop_within_selected_set_masked_boundary",
+          "targeted_component_correction_packet_member_merge_cbe7d79124ba_full_video_batch_residual_budget_reallocation",
+          "targeted_component_correction_packet_member_merge_cbe7d79124ba_inverse_scorer_cell_basis_expansion",
+          "targeted_component_correction_packet_member_merge_cbe7d79124ba_pose_stable_pair_frame_motion_correction",
+          "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair"
+        ],
+        "source_archive_path": "submissions/robust_current/archive_correct.zip",
+        "source_inflate_sh_path": "submissions/robust_current/inflate.sh",
+        "source_submission_dir": "submissions/robust_current",
+        "targeted_dimensions": [
+          "pair",
+          "frame",
+          "region",
+          "boundary",
+          "batch",
+          "tensor_channel",
+          "pixel",
+          "full_video",
+          "bit",
+          "byte"
+        ]
+      }
+    }
+  ]
+}

@@ -162,6 +162,9 @@ TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUESTS_SCHEMA = (
 TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_QUEUE_METADATA_SCHEMA = (
     "frontier_rate_attack_targeted_component_correction_materialization_queue_metadata.v1"
 )
+TARGETED_COMPONENT_CORRECTION_CHAIN_MATERIALIZER_HANDOFF_SCHEMA = (
+    "frontier_rate_attack_targeted_component_correction_chain_materializer_handoff.v1"
+)
 QUEUE_FALSE_AUTHORITY_FALSE_OR_MISSING_FIELDS = tuple(
     field
     for field in DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS
@@ -5255,6 +5258,23 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
         "reference_local_mlx_score_axis": reference_mlx_axis,
         "saved_bytes_budget": saved_bytes,
         "estimated_receiver_closed_rate_credit_score_units": rate_credit,
+        "candidate_archive_path": work_order.get("archive_path"),
+        "candidate_inflate_sh_path": work_order.get("inflate_sh_path"),
+        "candidate_submission_dir": work_order.get("submission_dir"),
+        "source_archive_path": work_order.get("source_archive_path"),
+        "source_archive_sha256": work_order.get("source_archive_sha256"),
+        "source_archive_bytes": work_order.get("source_archive_bytes"),
+        "source_inflate_sh_path": work_order.get("source_inflate_sh_path"),
+        "source_submission_dir": work_order.get("source_submission_dir"),
+        "reference_component_eval_context": dict(
+            work_order.get("reference_component_eval_context")
+            if isinstance(work_order.get("reference_component_eval_context"), Mapping)
+            else {}
+        ),
+        "closure_report_path": work_order.get("closure_report_path"),
+        "paired_exact_readiness_bridge_report_path": work_order.get(
+            "paired_exact_readiness_bridge_report_path"
+        ),
         "operation_levels": list(work_order.get("operation_levels") or []),
         "targeted_dimensions": list(work_order.get("targeted_dimensions") or []),
         "sibling_correction_families": list(
@@ -5735,6 +5755,19 @@ def _targeted_component_materializer_basis_entry(
 ) -> dict[str, Any]:
     family = str(row.get("correction_family") or "unknown_correction_family")
     seed = _targeted_component_family_seed(family)
+    command_hints = row.get("command_hints")
+    normalized_command_hints: list[dict[str, Any]] | dict[str, Any]
+    if isinstance(command_hints, Sequence) and not isinstance(
+        command_hints,
+        (str, bytes, bytearray),
+    ):
+        normalized_command_hints = [
+            dict(hint) for hint in command_hints if isinstance(hint, Mapping)
+        ]
+    elif isinstance(command_hints, Mapping):
+        normalized_command_hints = dict(command_hints)
+    else:
+        normalized_command_hints = []
     return {
         "schema": (
             "frontier_rate_attack_targeted_component_correction_materializer_"
@@ -5762,11 +5795,24 @@ def _targeted_component_materializer_basis_entry(
         "local_cpu_advisory_path": row.get("local_cpu_advisory_path"),
         "local_mlx_response_path": row.get("local_mlx_response_path"),
         "response_artifact_path": row.get("response_artifact_path"),
-        "command_hints": dict(
-            row.get("command_hints")
-            if isinstance(row.get("command_hints"), Mapping)
+        "candidate_archive_path": row.get("candidate_archive_path"),
+        "candidate_inflate_sh_path": row.get("candidate_inflate_sh_path"),
+        "candidate_submission_dir": row.get("candidate_submission_dir"),
+        "source_archive_path": row.get("source_archive_path"),
+        "source_archive_sha256": row.get("source_archive_sha256"),
+        "source_archive_bytes": row.get("source_archive_bytes"),
+        "source_inflate_sh_path": row.get("source_inflate_sh_path"),
+        "source_submission_dir": row.get("source_submission_dir"),
+        "reference_component_eval_context": dict(
+            row.get("reference_component_eval_context")
+            if isinstance(row.get("reference_component_eval_context"), Mapping)
             else {}
         ),
+        "closure_report_path": row.get("closure_report_path"),
+        "paired_exact_readiness_bridge_report_path": row.get(
+            "paired_exact_readiness_bridge_report_path"
+        ),
+        "command_hints": normalized_command_hints,
         "wire_in_hooks": dict(
             row.get("wire_in_hooks")
             if isinstance(row.get("wire_in_hooks"), Mapping)
@@ -5782,6 +5828,104 @@ def _targeted_component_materializer_basis_entry(
     }
 
 
+def _first_basis_value(
+    basis: Sequence[Mapping[str, Any]],
+    keys: Sequence[str],
+) -> Any:
+    for entry in basis:
+        for key in keys:
+            value = entry.get(key)
+            if value not in (None, ""):
+                return value
+    return None
+
+
+def _unique_basis_strings(
+    basis: Sequence[Mapping[str, Any]],
+    keys: Sequence[str],
+) -> list[str]:
+    return _unique_strings(
+        value
+        for entry in basis
+        for key in keys
+        for value in (entry.get(key),)
+        if value not in (None, "")
+    )
+
+
+def _targeted_component_receiver_runtime_binding_context(
+    basis: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    reference_context = _first_basis_value(
+        basis,
+        ("reference_component_eval_context",),
+    )
+    if not isinstance(reference_context, Mapping):
+        reference_context = {}
+    candidate_archive_path = _first_basis_value(
+        basis,
+        ("candidate_archive_path", "archive_path"),
+    )
+    candidate_inflate_sh_path = _first_basis_value(
+        basis,
+        ("candidate_inflate_sh_path", "inflate_sh_path"),
+    )
+    candidate_submission_dir = _first_basis_value(
+        basis,
+        ("candidate_submission_dir", "submission_dir"),
+    )
+    source_archive_path = _first_basis_value(
+        basis,
+        ("source_archive_path",),
+    ) or reference_context.get("source_archive_path")
+    source_inflate_sh_path = _first_basis_value(
+        basis,
+        ("source_inflate_sh_path",),
+    ) or reference_context.get("source_inflate_sh_path")
+    source_submission_dir = _first_basis_value(
+        basis,
+        ("source_submission_dir",),
+    ) or reference_context.get("source_submission_dir")
+    return {
+        "schema": (
+            "frontier_rate_attack_targeted_component_receiver_runtime_binding.v1"
+        ),
+        "candidate_archive_path": candidate_archive_path,
+        "candidate_inflate_sh_path": candidate_inflate_sh_path,
+        "candidate_submission_dir": candidate_submission_dir,
+        "source_archive_path": source_archive_path,
+        "source_archive_sha256": _first_basis_value(
+            basis,
+            ("source_archive_sha256",),
+        )
+        or reference_context.get("source_archive_sha256"),
+        "source_archive_bytes": _first_basis_value(
+            basis,
+            ("source_archive_bytes",),
+        )
+        or reference_context.get("source_archive_bytes"),
+        "source_inflate_sh_path": source_inflate_sh_path,
+        "source_submission_dir": source_submission_dir,
+        "source_queue_path": reference_context.get("source_queue_path"),
+        "work_order_paths": _unique_basis_strings(basis, ("work_order_path",)),
+        "response_artifact_paths": _unique_basis_strings(
+            basis,
+            ("response_artifact_path",),
+        ),
+        "binding_complete_for_component_eval": bool(
+            candidate_archive_path and candidate_inflate_sh_path
+        ),
+        "binding_complete_for_reference_eval": bool(
+            source_archive_path and source_inflate_sh_path
+        ),
+        "allowed_use": (
+            "targeted_component_correction_runtime_binding_for_queue_planning_only"
+        ),
+        "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def _build_targeted_component_materialization_request_row(
     *,
     candidate_id: str,
@@ -5790,6 +5934,9 @@ def _build_targeted_component_materialization_request_row(
 ) -> dict[str, Any]:
     rows = sorted(candidate_rows, key=_targeted_component_response_sort_key)
     basis = [_targeted_component_materializer_basis_entry(row) for row in rows]
+    runtime_binding_context = (
+        _targeted_component_receiver_runtime_binding_context(basis)
+    )
     request_id = (
         "targeted_component_materialization_"
         f"{_slug_token(candidate_id)}_{request_rank:03d}"
@@ -5855,6 +6002,7 @@ def _build_targeted_component_materialization_request_row(
             for row in rows
         ),
         "materializer_chain_basis": basis,
+        "receiver_runtime_binding_context": runtime_binding_context,
         "receiver_materialization_contract": {
             "schema": (
                 "frontier_rate_attack_receiver_consumed_targeted_correction_"
@@ -6192,6 +6340,502 @@ def build_frontier_targeted_component_correction_materialization_queue(
     return queue
 
 
+def _targeted_component_chain_rate_targets(row: Mapping[str, Any]) -> list[str]:
+    dimensions = set(_string_list(row.get("targeted_dimensions")))
+    targets: list[str] = []
+    if {"bit", "byte"} & dimensions or int(row.get("saved_bytes_budget") or 0) > 0:
+        targets.extend(
+            [
+                "packet_member_merge_v1",
+                "packet_member_zip_header_elide_v1",
+                "byte_range_entropy_recode_v1",
+            ]
+        )
+    if "tensor_channel" in dimensions:
+        targets.extend(
+            [
+                "tensor_quantize_v1",
+                "tensor_prune_v1",
+                "tensor_shared_codebook_v1",
+            ]
+        )
+    return _unique_strings(targets)
+
+
+def _targeted_component_chain_stage_plan(row: Mapping[str, Any]) -> list[dict[str, Any]]:
+    families = _unique_strings(row.get("accepted_correction_families") or [])
+    rate_targets = _targeted_component_chain_rate_targets(row)
+    component_response_targets = [
+        "segnet_component_response",
+        "posenet_component_response",
+        "full_video_lagrangian_response",
+    ]
+    return [
+        {
+            "stage": "scorer_sensitive_operation_selection",
+            "targets": families,
+            "required_before_execution": [
+                "paired_cpu_mlx_delta_model",
+                "master_gradient_or_component_marginal_model",
+                "chain_synergy_antagonism_model",
+            ],
+        },
+        {
+            "stage": "receiver_consumed_correction_synthesis",
+            "targets": families,
+            "required_before_execution": [
+                "source_runtime_adapter_per_operation",
+                "single_composed_receiver_runtime_consumption_proof",
+                "parser_only_proof_rejected",
+            ],
+        },
+        {
+            "stage": "payload_grammar_and_entropy",
+            "targets": rate_targets,
+            "required_before_execution": [
+                "rate_payload_pack_and_materialize",
+                "materializer_context_binding",
+                "byte_closed_archive_export",
+                "full_frame_inflate_parity",
+            ],
+        },
+        {
+            "stage": "component_guarded_budget_replay",
+            "targets": component_response_targets,
+            "required_before_execution": [
+                "segnet_posenet_component_eval",
+                "total_lagrangian_improvement",
+                "exact_readiness_bridge",
+                "budget_spend_gate",
+            ],
+        },
+    ]
+
+
+def _targeted_component_chain_targets(row: Mapping[str, Any]) -> list[str]:
+    targets: list[str] = []
+    for stage in _targeted_component_chain_stage_plan(row):
+        targets.extend(_string_list(stage.get("targets")))
+    return _unique_strings(targets)
+
+
+def _targeted_component_chain_work_order(
+    row: Mapping[str, Any],
+    *,
+    rank: int,
+) -> dict[str, Any]:
+    request_id = str(row.get("materialization_request_id") or f"request_{rank}")
+    source_operation_id = f"targeted_component_chain_{_slug_token(request_id)}"
+    runtime_binding_context = dict(
+        row.get("receiver_runtime_binding_context")
+        if isinstance(row.get("receiver_runtime_binding_context"), Mapping)
+        else {}
+    )
+    source_blockers = _unique_strings(
+        [
+            "targeted_component_chain_requires_receiver_runtime_materializer",
+            "targeted_component_chain_requires_composed_inflate_parity",
+            "targeted_component_chain_requires_exact_axis_component_response",
+            "targeted_component_chain_requires_budget_spend_gate",
+            *_string_list(row.get("budget_spend_blockers")),
+        ]
+    )
+    work_order = {
+        "schema": OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA,
+        "source_operation_id": source_operation_id,
+        "source_operation_family": (
+            "targeted_component_correction_receiver_consumed_multi_op_chain"
+        ),
+        "source_materialization_request_id": request_id,
+        "chain_targets": _targeted_component_chain_targets(row),
+        "required_before_execution": [
+            "per_stage_materializer_contexts",
+            "single_composed_receiver_runtime_consumption_proof",
+            "full_frame_inflate_parity",
+            "segnet_posenet_component_eval",
+            "chain_exact_readiness_bridge",
+            "targeted_component_budget_spend_gate",
+        ],
+        "targeted_correction_budget": {
+            "schema": "frontier_rate_attack_targeted_chain_budget.v1",
+            "materialization_request_id": request_id,
+            "candidate_id": row.get("candidate_id"),
+            "source_acquisition_ids": list(row.get("source_acquisition_ids") or []),
+            "accepted_correction_families": list(
+                row.get("accepted_correction_families") or []
+            ),
+            "accepted_response_count": row.get("accepted_response_count"),
+            "operation_levels": list(row.get("operation_levels") or []),
+            "targeted_dimensions": list(row.get("targeted_dimensions") or []),
+            "saved_bytes_budget": row.get("saved_bytes_budget"),
+            "estimated_receiver_closed_rate_credit_score_units": row.get(
+                "estimated_receiver_closed_rate_credit_score_units"
+            ),
+            "measured_lagrangian_delta_score_units_sum": row.get(
+                "measured_lagrangian_delta_score_units_sum"
+            ),
+            "best_measured_lagrangian_delta_score_units": row.get(
+                "best_measured_lagrangian_delta_score_units"
+            ),
+            "receiver_runtime_binding_context": runtime_binding_context,
+            "candidate_archive_path": runtime_binding_context.get(
+                "candidate_archive_path"
+            ),
+            "candidate_inflate_sh_path": runtime_binding_context.get(
+                "candidate_inflate_sh_path"
+            ),
+            "candidate_submission_dir": runtime_binding_context.get(
+                "candidate_submission_dir"
+            ),
+            "source_archive_path": runtime_binding_context.get(
+                "source_archive_path"
+            ),
+            "source_inflate_sh_path": runtime_binding_context.get(
+                "source_inflate_sh_path"
+            ),
+            "source_submission_dir": runtime_binding_context.get(
+                "source_submission_dir"
+            ),
+            "budget_spend_allowed": False,
+            "allowed_use": (
+                "targeted_component_chain_budget_for_local_planning_only"
+            ),
+            "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
+            **FALSE_AUTHORITY,
+        },
+        "stage_plan": _targeted_component_chain_stage_plan(row),
+        "source_bridge_blockers": source_blockers,
+        "allowed_use": (
+            "targeted_component_correction_operation_chain_work_order_planning_only"
+        ),
+        "forbidden_use": (
+            "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+        ),
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        work_order,
+        context=f"targeted_component_chain_work_order:{source_operation_id}",
+    )
+    return work_order
+
+
+def build_frontier_targeted_component_correction_chain_work_orders(
+    *,
+    targeted_component_correction_materialization_requests: Mapping[str, Any],
+    request_limit: int = 4,
+) -> dict[str, Any]:
+    """Compile grouped correction requests into operation-chain work orders."""
+
+    if request_limit < 1:
+        raise FrontierRateAttackFeedbackError("request_limit must be >= 1")
+    if (
+        targeted_component_correction_materialization_requests.get("schema")
+        != TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUESTS_SCHEMA
+    ):
+        raise FrontierRateAttackFeedbackError(
+            "targeted component correction materialization requests schema mismatch"
+        )
+    require_no_truthy_authority_fields(
+        targeted_component_correction_materialization_requests,
+        context="targeted_component_correction_chain_work_order_requests",
+    )
+    request_rows = [
+        row
+        for row in targeted_component_correction_materialization_requests.get("rows")
+        or []
+        if isinstance(row, Mapping)
+    ][:request_limit]
+    work_orders: list[dict[str, Any]] = []
+    for rank, row in enumerate(request_rows, start=1):
+        require_no_truthy_authority_fields(
+            row,
+            context=f"targeted_component_chain_request_row:{rank}",
+        )
+        work_orders.append(_targeted_component_chain_work_order(row, rank=rank))
+    blockers = ["exact_auth_eval_required_before_score_or_promotion_claim"]
+    if not work_orders:
+        blockers.append("no_targeted_component_materialization_request_rows")
+    else:
+        blockers.extend(
+            [
+                "receiver_consumed_correction_materializer_missing",
+                "single_composed_runtime_consumption_proof_required",
+                "exact_axis_component_response_required_before_budget_spend",
+            ]
+        )
+    payload = {
+        "schema": OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "source_schema": (
+            targeted_component_correction_materialization_requests.get("schema")
+        ),
+        "source_family": "targeted_component_correction_materialization_requests",
+        "active": bool(work_orders),
+        "work_order_count": len(work_orders),
+        "request_count": len(request_rows),
+        "request_limit": request_limit,
+        "top_source_operation_ids": [
+            str(row.get("source_operation_id") or "") for row in work_orders[:8]
+        ],
+        "top_materialization_request_ids": [
+            str(row.get("source_materialization_request_id") or "")
+            for row in work_orders[:8]
+        ],
+        "blockers": _unique_strings(blockers),
+        "work_orders": work_orders,
+        "allowed_use": (
+            "targeted_component_correction_chain_work_orders_for_queue_only"
+        ),
+        "forbidden_use": (
+            "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+        ),
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        payload,
+        context="targeted_component_correction_chain_work_orders",
+    )
+    return payload
+
+
+def _targeted_chain_materializer_portfolio_row(
+    *,
+    work_order: Mapping[str, Any],
+    target_kind: str,
+    rank: int,
+    default_output_root: str | Path | None,
+) -> dict[str, Any]:
+    source_operation_id = str(work_order.get("source_operation_id") or f"chain_{rank}")
+    budget = (
+        work_order.get("targeted_correction_budget")
+        if isinstance(work_order.get("targeted_correction_budget"), Mapping)
+        else {}
+    )
+    saved_bytes = _finite_int_or_none(budget.get("saved_bytes_budget")) or 0
+    lagrangian = _finite_float_or_none(
+        budget.get("measured_lagrangian_delta_score_units_sum")
+    )
+    priority = abs(float(lagrangian or 0.0)) + float(max(saved_bytes, 0)) * 1e-6
+    output_hint: dict[str, Any] = {}
+    if default_output_root is not None:
+        output_hint["output_dir"] = str(
+            Path(default_output_root)
+            / "targeted_component_chain_materializers"
+            / _slug_token(source_operation_id)
+            / _slug_token(target_kind)
+        )
+    runtime_binding = (
+        budget.get("receiver_runtime_binding_context")
+        if isinstance(budget.get("receiver_runtime_binding_context"), Mapping)
+        else {}
+    )
+    archive_path = (
+        budget.get("candidate_archive_path")
+        or runtime_binding.get("candidate_archive_path")
+        or budget.get("source_archive_path")
+        or runtime_binding.get("source_archive_path")
+    )
+    runtime_dir = (
+        budget.get("candidate_submission_dir")
+        or runtime_binding.get("candidate_submission_dir")
+        or budget.get("source_submission_dir")
+        or runtime_binding.get("source_submission_dir")
+    )
+    if archive_path:
+        output_hint["archive_path"] = archive_path
+        output_hint["source_archive"] = archive_path
+    if runtime_dir:
+        output_hint["source_runtime_dir"] = runtime_dir
+        output_hint["inflate_runtime_dir"] = runtime_dir
+    return {
+        "operation_id": (
+            f"{source_operation_id}:{_slug_token(target_kind)}:{rank:03d}"
+        ),
+        "operation_family": (
+            "targeted_component_correction_receiver_consumed_multi_op_chain"
+        ),
+        "operation_levels": list(budget.get("operation_levels") or []),
+        "queue_consumer": "byte_shaving_campaign_queue",
+        "recommended_next_action": (
+            "bind_targeted_chain_materializer_context_and_receiver_proof"
+        ),
+        "priority_score": priority,
+        "evidence_sources": [source_operation_id],
+        "evidence_summary": {
+            "schema": "targeted_component_chain_materializer_handoff_evidence.v1",
+            "target_kind": target_kind,
+            "source_operation_id": source_operation_id,
+            "source_materialization_request_id": work_order.get(
+                "source_materialization_request_id"
+            ),
+            "targeted_correction_budget": dict(budget),
+            "chain_targets": list(work_order.get("chain_targets") or []),
+            "best_context_hint": output_hint,
+            "candidate_saved_bytes": saved_bytes,
+            **FALSE_AUTHORITY,
+        },
+        "blockers": _unique_strings(
+            [
+                "targeted_chain_materializer_context_binding_required",
+                "targeted_chain_single_runtime_consumption_proof_required",
+                "targeted_chain_component_replay_required_before_budget_spend",
+                "targeted_chain_exact_readiness_bridge_required",
+                *_string_list(work_order.get("source_bridge_blockers")),
+            ]
+        ),
+        "queue_executable": False,
+        "source_kind": "targeted_component_operation_chain",
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_frontier_targeted_component_correction_chain_materializer_handoff(
+    *,
+    repo_root: str | Path,
+    targeted_component_correction_chain_work_orders: Mapping[str, Any],
+    default_output_root: str | Path | None = None,
+    target_limit: int | None = None,
+) -> dict[str, Any]:
+    """Bind targeted multi-op chains into typed materializer work surfaces."""
+
+    if target_limit is not None and target_limit < 1:
+        raise FrontierRateAttackFeedbackError("target_limit must be >= 1")
+    if (
+        targeted_component_correction_chain_work_orders.get("schema")
+        != OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA
+    ):
+        raise FrontierRateAttackFeedbackError(
+            "targeted component correction chain work orders schema mismatch"
+        )
+    require_no_truthy_authority_fields(
+        targeted_component_correction_chain_work_orders,
+        context="targeted_component_chain_materializer_handoff_work_orders",
+    )
+    adapters_by_target = _materializer_registry_adapters_by_target()
+    backlog_rows: list[dict[str, Any]] = []
+    registered_targets: list[str] = []
+    unregistered_targets: list[str] = []
+    source_operation_ids: list[str] = []
+    rank = 1
+    for work_order in targeted_component_correction_chain_work_orders.get(
+        "work_orders"
+    ) or []:
+        if not isinstance(work_order, Mapping):
+            continue
+        require_no_truthy_authority_fields(
+            work_order,
+            context=f"targeted_component_chain_materializer_handoff.row:{rank}",
+        )
+        source_operation_ids.append(str(work_order.get("source_operation_id") or ""))
+        for target in _string_list(work_order.get("chain_targets")):
+            adapter = adapters_by_target.get(target)
+            if adapter is None:
+                unregistered_targets.append(target)
+                continue
+            if target_limit is not None and len(backlog_rows) >= target_limit:
+                continue
+            portfolio_row = _targeted_chain_materializer_portfolio_row(
+                work_order=work_order,
+                target_kind=target,
+                rank=rank,
+                default_output_root=default_output_root,
+            )
+            backlog_rows.append(
+                _portfolio_materializer_backlog_row(
+                    row=portfolio_row,
+                    adapter=adapter,
+                    rank=rank,
+                )
+            )
+            registered_targets.append(target)
+            rank += 1
+    materializer_backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "tool": "comma_lab.scheduler.frontier_rate_attack_feedback",
+        "generated_at_utc": _utc_now(),
+        "source_schema": targeted_component_correction_chain_work_orders.get(
+            "schema"
+        ),
+        "backlog_row_count": len(backlog_rows),
+        "registered_chain_target_count": len(_unique_strings(registered_targets)),
+        "unregistered_chain_target_count": len(_unique_strings(unregistered_targets)),
+        "rows": backlog_rows,
+        "allowed_use": (
+            "targeted_component_chain_to_materializer_backlog_only"
+        ),
+        "forbidden_use": (
+            "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+        ),
+        **FALSE_AUTHORITY,
+    }
+    materializer_contexts = build_final_byte_operation_contexts(
+        materializer_backlog,
+        artifact_map=None,
+        repo_root=repo_root,
+        default_output_root=default_output_root,
+    )
+    materializer_work_queue = build_materializer_work_queue(
+        materializer_backlog,
+        repo_root=repo_root,
+        contexts=(
+            materializer_contexts_from_payload(materializer_contexts)
+            if backlog_rows
+            else {}
+        ),
+        source_plan_path=None,
+        limit=target_limit,
+    )
+    payload = {
+        "schema": TARGETED_COMPONENT_CORRECTION_CHAIN_MATERIALIZER_HANDOFF_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "source_schema": targeted_component_correction_chain_work_orders.get(
+            "schema"
+        ),
+        "source_operation_ids": _unique_strings(source_operation_ids),
+        "registered_chain_targets": _unique_strings(registered_targets),
+        "unregistered_chain_targets": _unique_strings(unregistered_targets),
+        "registered_chain_target_count": len(_unique_strings(registered_targets)),
+        "unregistered_chain_target_count": len(_unique_strings(unregistered_targets)),
+        "materializer_backlog_row_count": materializer_backlog.get(
+            "backlog_row_count"
+        ),
+        "context_row_count": materializer_contexts.get("row_count"),
+        "blocked_context_count": materializer_contexts.get("blocked_context_count"),
+        "work_queue_row_count": materializer_work_queue.get("row_count"),
+        "executable_work_row_count": materializer_work_queue.get(
+            "executable_row_count"
+        ),
+        "blocked_work_row_count": materializer_work_queue.get("blocked_row_count"),
+        "materializer_backlog": materializer_backlog,
+        "materializer_contexts": materializer_contexts,
+        "materializer_work_queue": materializer_work_queue,
+        "blockers": _unique_strings(
+            [
+                "targeted_chain_materializer_contexts_require_receiver_custody",
+                "targeted_chain_component_replay_required_before_budget_spend",
+                "exact_auth_eval_required_before_score_or_promotion_claim",
+                *[
+                    f"unregistered_chain_target:{target}"
+                    for target in _unique_strings(unregistered_targets)
+                ],
+            ]
+        ),
+        "allowed_use": (
+            "targeted_component_chain_materializer_handoff_for_queue_only"
+        ),
+        "forbidden_use": (
+            "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+        ),
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        payload,
+        context="targeted_component_chain_materializer_handoff",
+    )
+    return payload
+
+
 def _operation_chain_work_order_by_id(
     operation_chain_compiler_work_orders: Mapping[str, Any],
     source_operation_id: str,
@@ -6462,6 +7106,51 @@ def _byte_range_stage_command(
     return command
 
 
+def _targeted_component_byte_range_binding(
+    operation_chain_stage_plan: Mapping[str, Any],
+) -> dict[str, Any]:
+    budget = (
+        operation_chain_stage_plan.get("targeted_correction_budget")
+        if isinstance(operation_chain_stage_plan.get("targeted_correction_budget"), Mapping)
+        else {}
+    )
+    runtime_binding = (
+        budget.get("receiver_runtime_binding_context")
+        if isinstance(budget.get("receiver_runtime_binding_context"), Mapping)
+        else {}
+    )
+    if not isinstance(runtime_binding, Mapping):
+        runtime_binding = {}
+    return {
+        "source_operation_family": operation_chain_stage_plan.get(
+            "source_operation_family"
+        ),
+        "candidate_archive_path": runtime_binding.get("candidate_archive_path")
+        or budget.get("candidate_archive_path"),
+        "candidate_inflate_sh_path": runtime_binding.get("candidate_inflate_sh_path")
+        or budget.get("candidate_inflate_sh_path"),
+        "candidate_submission_dir": runtime_binding.get("candidate_submission_dir")
+        or budget.get("candidate_submission_dir"),
+        "source_archive_path": runtime_binding.get("source_archive_path")
+        or budget.get("source_archive_path"),
+        "source_inflate_sh_path": runtime_binding.get("source_inflate_sh_path")
+        or budget.get("source_inflate_sh_path"),
+        "source_submission_dir": runtime_binding.get("source_submission_dir")
+        or budget.get("source_submission_dir"),
+        "receiver_runtime_binding_context": dict(runtime_binding),
+    }
+
+
+def _bound_path_or_none(
+    value: Any,
+    *,
+    repo_root: Path,
+) -> Path | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    return _resolve_path(value, repo_root=repo_root)
+
+
 def build_frontier_byte_range_stage_inputs(
     *,
     repo_root: str | Path,
@@ -6489,23 +7178,68 @@ def build_frontier_byte_range_stage_inputs(
     stage_row = _stage_row_by_id(operation_chain_stage_plan, stage_id)
     stage_targets = _string_list(stage_row.get("targets")) if stage_row else []
     target_present = "byte_range_entropy_recode_v1" in stage_targets
+    targeted_binding = _targeted_component_byte_range_binding(
+        operation_chain_stage_plan
+    )
+    source_operation_family = str(
+        targeted_binding.get("source_operation_family") or ""
+    )
+    target_bound_chain = (
+        source_operation_family
+        == "targeted_component_correction_receiver_consumed_multi_op_chain"
+    )
+    bound_archive_path = _bound_path_or_none(
+        targeted_binding.get("candidate_archive_path")
+        or targeted_binding.get("source_archive_path"),
+        repo_root=repo,
+    )
+    bound_runtime_dir = _bound_path_or_none(
+        targeted_binding.get("candidate_submission_dir")
+        or targeted_binding.get("source_submission_dir"),
+        repo_root=repo,
+    )
+    if bound_runtime_dir is None:
+        bound_inflate = _bound_path_or_none(
+            targeted_binding.get("candidate_inflate_sh_path")
+            or targeted_binding.get("source_inflate_sh_path"),
+            repo_root=repo,
+        )
+        if bound_inflate is not None:
+            bound_runtime_dir = bound_inflate.parent
+    disable_default_byte_range_context = target_bound_chain
 
     schema_path = (
         _resolve_path(schema_manifest, repo_root=repo)
         if schema_manifest is not None
-        else _first_existing_repo_file(repo, _DEFAULT_BYTE_RANGE_SCHEMA_MANIFEST_PATHS)
+        else (
+            None
+            if disable_default_byte_range_context
+            else _first_existing_repo_file(repo, _DEFAULT_BYTE_RANGE_SCHEMA_MANIFEST_PATHS)
+        )
     )
     beam_paths = (
         [_resolve_path(path, repo_root=repo) for path in beam_probe_reports]
         if beam_probe_reports
-        else _existing_repo_files(repo, _DEFAULT_BYTE_RANGE_BEAM_PROBE_REPORT_PATHS)
+        else (
+            []
+            if disable_default_byte_range_context
+            else _existing_repo_files(repo, _DEFAULT_BYTE_RANGE_BEAM_PROBE_REPORT_PATHS)
+        )
     )
     runtime_path = (
         _resolve_path(source_runtime_dir, repo_root=repo)
         if source_runtime_dir is not None
-        else _first_existing_byte_range_runtime_dir(
-            repo,
-            _DEFAULT_BYTE_RANGE_SOURCE_RUNTIME_DIR_PATHS,
+        else (
+            bound_runtime_dir
+            if bound_runtime_dir is not None
+            else (
+                None
+                if disable_default_byte_range_context
+                else _first_existing_byte_range_runtime_dir(
+                    repo,
+                    _DEFAULT_BYTE_RANGE_SOURCE_RUNTIME_DIR_PATHS,
+                )
+            )
         )
     )
     default_source_archive, default_member_name = _byte_range_source_from_schema_manifest(
@@ -6515,12 +7249,24 @@ def build_frontier_byte_range_stage_inputs(
     source_archive_path = (
         _resolve_path(source_archive, repo_root=repo)
         if source_archive is not None
-        else default_source_archive
+        else (
+            bound_archive_path
+            if bound_archive_path is not None
+            else (
+                None
+                if disable_default_byte_range_context
+                else default_source_archive
+            )
+        )
     )
     combo_path = (
         _resolve_path(global_combo_report, repo_root=repo)
         if global_combo_report is not None
-        else _first_existing_repo_file(repo, _DEFAULT_BYTE_RANGE_GLOBAL_COMBO_REPORT_PATHS)
+        else (
+            None
+            if disable_default_byte_range_context
+            else _first_existing_repo_file(repo, _DEFAULT_BYTE_RANGE_GLOBAL_COMBO_REPORT_PATHS)
+        )
     )
     output_dir = (
         _resolve_path(chain_output_dir, repo_root=repo)
@@ -6531,20 +7277,36 @@ def build_frontier_byte_range_stage_inputs(
             repo_root=repo,
         )
     )
-    selected_member_name = str(member_name or default_member_name or "")
+    selected_member_name = str(
+        member_name
+        or ("" if disable_default_byte_range_context else default_member_name)
+        or ""
+    )
 
     context_blockers: list[str] = []
     if stage_row is None:
         context_blockers.append(f"operation_chain_stage_missing:{stage_id}")
     if not target_present:
         context_blockers.append("byte_range_entropy_recode_target_missing_from_stage")
+    if disable_default_byte_range_context:
+        context_blockers.append(
+            "byte_range_stage_default_pr103_context_disabled_for_target_bound_chain"
+        )
     if schema_path is None or not schema_path.is_file():
         context_blockers.append("byte_range_stage_missing:schema_manifest")
     if not beam_paths or any(not path.is_file() for path in beam_paths):
         context_blockers.append("byte_range_stage_missing:beam_probe_reports")
     if runtime_path is None or not runtime_path.is_dir():
         context_blockers.append("byte_range_stage_missing:source_runtime_dir")
-    elif not (runtime_path / "inflate.py").is_file() or not (runtime_path / "inflate.sh").is_file():
+    elif disable_default_byte_range_context:
+        if not (runtime_path / "inflate.sh").is_file():
+            context_blockers.append(
+                "byte_range_stage_target_runtime_missing_inflate_sh"
+            )
+    elif (
+        not (runtime_path / "inflate.py").is_file()
+        or not (runtime_path / "inflate.sh").is_file()
+    ):
         context_blockers.append("byte_range_stage_runtime_missing_inflate_entrypoint")
     if source_archive_path is None or not source_archive_path.is_file():
         context_blockers.append("byte_range_stage_missing:source_archive")
@@ -6582,6 +7344,8 @@ def build_frontier_byte_range_stage_inputs(
         "chain_output_dir": _repo_rel(output_dir, repo),
         "fail_if_receiver_blocked": False,
         "context_blockers": _unique_strings(context_blockers),
+        "default_pr103_context_disabled": disable_default_byte_range_context,
+        "targeted_component_runtime_binding": targeted_binding,
         **FALSE_AUTHORITY,
     }
     payload = {
@@ -9663,6 +10427,7 @@ __all__ = [
     "RECEIVER_REPAIR_ROW_SCHEMA",
     "RECEIVER_REPAIR_WORK_ORDER_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA",
+    "TARGETED_COMPONENT_CORRECTION_CHAIN_MATERIALIZER_HANDOFF_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_QUEUE_METADATA_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUESTS_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUEST_ROW_SCHEMA",
@@ -9679,6 +10444,8 @@ __all__ = [
     "build_frontier_receiver_repair_queue",
     "build_frontier_receiver_repair_work_order",
     "build_frontier_targeted_component_correction_acquisition",
+    "build_frontier_targeted_component_correction_chain_materializer_handoff",
+    "build_frontier_targeted_component_correction_chain_work_orders",
     "build_frontier_targeted_component_correction_materialization_queue",
     "build_frontier_targeted_component_correction_materialization_request",
     "build_frontier_targeted_component_correction_materialization_requests",

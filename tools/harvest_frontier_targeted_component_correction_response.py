@@ -21,6 +21,9 @@ ensure_repo_imports(REPO_ROOT)
 from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
     DEFAULT_RESULTS_ROOT,
     FrontierRateAttackFeedbackError,
+    build_frontier_operation_chain_compiler_queue,
+    build_frontier_targeted_component_correction_chain_materializer_handoff,
+    build_frontier_targeted_component_correction_chain_work_orders,
     build_frontier_targeted_component_correction_materialization_queue,
     build_frontier_targeted_component_correction_materialization_requests,
     build_frontier_targeted_component_correction_response_harvest,
@@ -58,6 +61,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--materialization-requests-output", type=Path, default=None)
     parser.add_argument("--materialization-queue-output", type=Path, default=None)
+    parser.add_argument("--operation-chain-work-orders-output", type=Path, default=None)
+    parser.add_argument("--operation-chain-queue-output", type=Path, default=None)
+    parser.add_argument("--operation-chain-materializer-handoff-output", type=Path, default=None)
+    parser.add_argument(
+        "--operation-chain-queue-id",
+        default="frontier_targeted_component_correction_operation_chain_queue",
+    )
     parser.add_argument(
         "--materialization-queue-id",
         default="frontier_targeted_component_correction_materialization_queue",
@@ -133,6 +143,9 @@ def main(argv: list[str] | None = None) -> int:
     repo_root = args.repo_root.resolve(strict=False)
     materialization_requests: dict[str, Any] | None = None
     materialization_queue: dict[str, Any] | None = None
+    operation_chain_work_orders: dict[str, Any] | None = None
+    operation_chain_queue: dict[str, Any] | None = None
+    operation_chain_materializer_handoff: dict[str, Any] | None = None
     try:
         if args.targeted_component_correction_queue is not None:
             queue = _load_json(args.targeted_component_correction_queue)
@@ -243,6 +256,92 @@ def main(argv: list[str] | None = None) -> int:
                     materialization_queue,
                     allow_overwrite=args.overwrite,
                 )
+        if (
+            args.operation_chain_work_orders_output is not None
+            or args.operation_chain_queue_output is not None
+        ):
+            if materialization_requests is None:
+                materialization_requests = (
+                    build_frontier_targeted_component_correction_materialization_requests(
+                        targeted_component_correction_response_harvest=harvest,
+                        candidate_limit=args.materialization_candidate_limit,
+                        family_limit_per_candidate=(
+                            args.materialization_family_limit_per_candidate
+                        ),
+                    )
+                )
+            operation_chain_work_orders = (
+                build_frontier_targeted_component_correction_chain_work_orders(
+                    targeted_component_correction_materialization_requests=(
+                        materialization_requests
+                    ),
+                    request_limit=args.materialization_candidate_limit,
+                )
+            )
+            if args.operation_chain_work_orders_output is not None:
+                _write_json_with_overwrite_guard(
+                    args.operation_chain_work_orders_output,
+                    operation_chain_work_orders,
+                    allow_overwrite=args.overwrite,
+                )
+            if args.operation_chain_queue_output is not None:
+                if args.operation_chain_work_orders_output is None:
+                    raise FrontierRateAttackFeedbackError(
+                        "--operation-chain-queue-output requires "
+                        "--operation-chain-work-orders-output"
+                    )
+                operation_chain_queue = build_frontier_operation_chain_compiler_queue(
+                    repo_root=repo_root,
+                    operation_chain_compiler_work_orders=operation_chain_work_orders,
+                    operation_chain_compiler_work_orders_path=(
+                        args.operation_chain_work_orders_output
+                    ),
+                    results_root=args.results_root,
+                    queue_id=args.operation_chain_queue_id,
+                    candidate_limit=args.materialization_candidate_limit,
+                )
+                if operation_chain_queue is not None:
+                    _write_json_with_overwrite_guard(
+                        args.operation_chain_queue_output,
+                        operation_chain_queue,
+                        allow_overwrite=args.overwrite,
+                    )
+        if args.operation_chain_materializer_handoff_output is not None:
+            if operation_chain_work_orders is None:
+                if materialization_requests is None:
+                    materialization_requests = (
+                        build_frontier_targeted_component_correction_materialization_requests(
+                            targeted_component_correction_response_harvest=harvest,
+                            candidate_limit=args.materialization_candidate_limit,
+                            family_limit_per_candidate=(
+                                args.materialization_family_limit_per_candidate
+                            ),
+                        )
+                    )
+                operation_chain_work_orders = (
+                    build_frontier_targeted_component_correction_chain_work_orders(
+                        targeted_component_correction_materialization_requests=(
+                            materialization_requests
+                        ),
+                        request_limit=args.materialization_candidate_limit,
+                    )
+                )
+            operation_chain_materializer_handoff = (
+                build_frontier_targeted_component_correction_chain_materializer_handoff(
+                    repo_root=repo_root,
+                    targeted_component_correction_chain_work_orders=(
+                        operation_chain_work_orders
+                    ),
+                    default_output_root=Path(args.results_root)
+                    / "frontier_targeted_component_correction_chain_materializers",
+                    target_limit=None,
+                )
+            )
+            _write_json_with_overwrite_guard(
+                args.operation_chain_materializer_handoff_output,
+                operation_chain_materializer_handoff,
+                allow_overwrite=args.overwrite,
+            )
     except (
         ArtifactWriteError,
         FrontierRateAttackFeedbackError,
@@ -293,6 +392,54 @@ def main(argv: list[str] | None = None) -> int:
                     None
                     if materialization_queue is None
                     else len(materialization_queue.get("experiments") or [])
+                ),
+                "operation_chain_work_orders_output": (
+                    None
+                    if args.operation_chain_work_orders_output is None
+                    else _display_path(
+                        args.operation_chain_work_orders_output,
+                        repo_root=repo_root,
+                    )
+                ),
+                "operation_chain_work_order_count": (
+                    None
+                    if operation_chain_work_orders is None
+                    else operation_chain_work_orders.get("work_order_count")
+                ),
+                "operation_chain_queue_output": (
+                    None
+                    if args.operation_chain_queue_output is None
+                    else _display_path(
+                        args.operation_chain_queue_output,
+                        repo_root=repo_root,
+                    )
+                ),
+                "operation_chain_queue_experiment_count": (
+                    None
+                    if operation_chain_queue is None
+                    else len(operation_chain_queue.get("experiments") or [])
+                ),
+                "operation_chain_materializer_handoff_output": (
+                    None
+                    if args.operation_chain_materializer_handoff_output is None
+                    else _display_path(
+                        args.operation_chain_materializer_handoff_output,
+                        repo_root=repo_root,
+                    )
+                ),
+                "operation_chain_materializer_handoff_work_rows": (
+                    None
+                    if operation_chain_materializer_handoff is None
+                    else operation_chain_materializer_handoff.get(
+                        "work_queue_row_count"
+                    )
+                ),
+                "operation_chain_materializer_handoff_executable_rows": (
+                    None
+                    if operation_chain_materializer_handoff is None
+                    else operation_chain_materializer_handoff.get(
+                        "executable_work_row_count"
+                    )
                 ),
                 "score_claim": False,
                 "promotion_eligible": False,

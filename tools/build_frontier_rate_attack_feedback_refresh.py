@@ -37,6 +37,8 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
     build_frontier_operation_chain_compiler_queue,
     build_frontier_rate_attack_feedback_refresh,
     build_frontier_receiver_repair_queue,
+    build_frontier_targeted_component_correction_chain_materializer_handoff,
+    build_frontier_targeted_component_correction_chain_work_orders,
     build_frontier_targeted_component_correction_materialization_queue,
     build_frontier_targeted_component_correction_materialization_requests,
     build_frontier_targeted_component_correction_queue,
@@ -532,6 +534,75 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
                 artifacts[
                     "targeted_component_correction_materialization_queue"
                 ] = _display_path(materialization_queue_path)
+            targeted_chain_work_orders = (
+                build_frontier_targeted_component_correction_chain_work_orders(
+                    targeted_component_correction_materialization_requests=(
+                        materialization_requests
+                    ),
+                    request_limit=int(report.get("candidate_limit") or 4),
+                )
+            )
+            report[
+                "targeted_component_correction_operation_chain_work_orders"
+            ] = targeted_chain_work_orders
+            targeted_chain_work_orders_path = (
+                output_dir
+                / "targeted_component_correction_operation_chain_work_orders.json"
+            )
+            write_json_artifact(
+                targeted_chain_work_orders_path,
+                targeted_chain_work_orders,
+            )
+            artifacts[
+                "targeted_component_correction_operation_chain_work_orders"
+            ] = _display_path(targeted_chain_work_orders_path)
+            targeted_chain_queue = build_frontier_operation_chain_compiler_queue(
+                repo_root=REPO_ROOT,
+                operation_chain_compiler_work_orders=targeted_chain_work_orders,
+                operation_chain_compiler_work_orders_path=(
+                    targeted_chain_work_orders_path
+                ),
+                results_root=str(report.get("results_root") or DEFAULT_RESULTS_ROOT),
+                queue_id=(
+                    f"{report.get('queue_id') or 'frontier_feedback'}_"
+                    "component_operation_chain"
+                ),
+                candidate_limit=int(report.get("candidate_limit") or 4),
+            )
+            if isinstance(targeted_chain_queue, dict):
+                targeted_chain_queue_path = (
+                    output_dir / "targeted_component_correction_operation_chain_queue.json"
+                )
+                write_json_artifact(targeted_chain_queue_path, targeted_chain_queue)
+                artifacts[
+                    "targeted_component_correction_operation_chain_queue"
+                ] = _display_path(targeted_chain_queue_path)
+            targeted_chain_materializer_handoff = (
+                build_frontier_targeted_component_correction_chain_materializer_handoff(
+                    repo_root=REPO_ROOT,
+                    targeted_component_correction_chain_work_orders=(
+                        targeted_chain_work_orders
+                    ),
+                    default_output_root=(
+                        Path(str(report.get("results_root") or DEFAULT_RESULTS_ROOT))
+                        / "frontier_targeted_component_correction_chain_materializers"
+                    ),
+                )
+            )
+            report[
+                "targeted_component_correction_chain_materializer_handoff"
+            ] = targeted_chain_materializer_handoff
+            targeted_chain_materializer_handoff_path = (
+                output_dir
+                / "targeted_component_correction_chain_materializer_handoff.json"
+            )
+            write_json_artifact(
+                targeted_chain_materializer_handoff_path,
+                targeted_chain_materializer_handoff,
+            )
+            artifacts[
+                "targeted_component_correction_chain_materializer_handoff"
+            ] = _display_path(targeted_chain_materializer_handoff_path)
     bridge = report.get("materializer_feedback_bridge")
     if isinstance(bridge, dict):
         path = output_dir / "materializer_feedback_bridge.json"
@@ -741,6 +812,59 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             "2",
             "--max-parallel",
             "2",
+        ]
+    if "targeted_component_correction_operation_chain_work_orders" in artifacts:
+        operator_commands[
+            "inspect_targeted_component_correction_operation_chain_work_orders"
+        ] = [
+            ".venv/bin/python",
+            "-m",
+            "json.tool",
+            artifacts["targeted_component_correction_operation_chain_work_orders"],
+        ]
+    if "targeted_component_correction_operation_chain_queue" in artifacts:
+        operator_commands[
+            "validate_targeted_component_correction_operation_chain_queue"
+        ] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["targeted_component_correction_operation_chain_queue"],
+            "validate",
+        ]
+        operator_commands[
+            "init_targeted_component_correction_operation_chain_queue"
+        ] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["targeted_component_correction_operation_chain_queue"],
+            "init",
+        ]
+        operator_commands[
+            "run_targeted_component_correction_operation_chain_queue_bounded_local"
+        ] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["targeted_component_correction_operation_chain_queue"],
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "16",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "2",
+        ]
+    if "targeted_component_correction_chain_materializer_handoff" in artifacts:
+        operator_commands[
+            "inspect_targeted_component_correction_chain_materializer_handoff"
+        ] = [
+            ".venv/bin/python",
+            "-m",
+            "json.tool",
+            artifacts["targeted_component_correction_chain_materializer_handoff"],
         ]
     if operator_commands:
         report_to_write["operator_commands"] = operator_commands
@@ -1071,6 +1195,88 @@ def main(argv: list[str] | None = None) -> int:
                         if isinstance(
                             report.get(
                                 "targeted_component_correction_materialization_requests"
+                            ),
+                            dict,
+                        )
+                        else None
+                    ),
+                },
+                "targeted_component_correction_operation_chain_summary": {
+                    "active": (
+                        report.get(
+                            "targeted_component_correction_operation_chain_work_orders",
+                            {},
+                        ).get("active")
+                        if isinstance(
+                            report.get(
+                                "targeted_component_correction_operation_chain_work_orders"
+                            ),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "work_order_count": (
+                        report.get(
+                            "targeted_component_correction_operation_chain_work_orders",
+                            {},
+                        ).get("work_order_count")
+                        if isinstance(
+                            report.get(
+                                "targeted_component_correction_operation_chain_work_orders"
+                            ),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "request_count": (
+                        report.get(
+                            "targeted_component_correction_operation_chain_work_orders",
+                            {},
+                        ).get("request_count")
+                        if isinstance(
+                            report.get(
+                                "targeted_component_correction_operation_chain_work_orders"
+                            ),
+                            dict,
+                        )
+                        else None
+                    ),
+                },
+                "targeted_component_correction_chain_materializer_handoff_summary": {
+                    "work_queue_row_count": (
+                        report.get(
+                            "targeted_component_correction_chain_materializer_handoff",
+                            {},
+                        ).get("work_queue_row_count")
+                        if isinstance(
+                            report.get(
+                                "targeted_component_correction_chain_materializer_handoff"
+                            ),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "executable_work_row_count": (
+                        report.get(
+                            "targeted_component_correction_chain_materializer_handoff",
+                            {},
+                        ).get("executable_work_row_count")
+                        if isinstance(
+                            report.get(
+                                "targeted_component_correction_chain_materializer_handoff"
+                            ),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "unregistered_chain_target_count": (
+                        report.get(
+                            "targeted_component_correction_chain_materializer_handoff",
+                            {},
+                        ).get("unregistered_chain_target_count")
+                        if isinstance(
+                            report.get(
+                                "targeted_component_correction_chain_materializer_handoff"
                             ),
                             dict,
                         )
