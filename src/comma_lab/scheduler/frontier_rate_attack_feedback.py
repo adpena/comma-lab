@@ -2143,6 +2143,152 @@ def _operation_portfolio_taxonomy() -> dict[str, Any]:
     }
 
 
+def _first_row_text(row: Mapping[str, Any], keys: Sequence[str]) -> str | None:
+    for key in keys:
+        value = row.get(key)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return None
+
+
+def _looks_like_section_manifest_path(value: str) -> bool:
+    name = Path(value).name.lower()
+    if name in {"sections.json", "section_manifest.json", "section_manifest.jsonl"}:
+        return True
+    if not name.endswith(".json"):
+        return False
+    if any(token in name for token in ("runtime", "proof", "candidate", "output")):
+        return False
+    return "section_manifest" in name or "sections" in name
+
+
+def _section_manifest_from_feedback(row: Mapping[str, Any]) -> str | None:
+    explicit = _first_row_text(
+        row,
+        (
+            "section_manifest",
+            "section_manifest_path",
+            "parser_section_manifest",
+            "packet_ir_manifest",
+        ),
+    )
+    if explicit is not None:
+        return explicit
+    for path in _string_list(row.get("expected_artifact_paths")):
+        if _looks_like_section_manifest_path(path):
+            return path
+    return None
+
+
+def _passed_receiver_or_runtime_proof(row: Mapping[str, Any]) -> bool:
+    if row.get("receiver_contract_satisfied") is True:
+        return True
+    if row.get("inflate_parity_satisfied") is True:
+        return True
+    status = str(row.get("runtime_consumption_proof_status") or "").strip().lower()
+    return status in {"passed", "satisfied", "verified", "present_and_passed"}
+
+
+def _materializer_feedback_context_hint(row: Mapping[str, Any]) -> dict[str, Any]:
+    hint: dict[str, Any] = {}
+    archive_path = _first_row_text(
+        row,
+        ("source_archive_path", "archive_path", "source_archive"),
+    )
+    if archive_path is not None:
+        hint["archive_path"] = archive_path
+        hint["source_archive"] = archive_path
+
+    section_manifest = _section_manifest_from_feedback(row)
+    if section_manifest is not None:
+        hint["section_manifest"] = section_manifest
+
+    packet_member_manifest = _first_row_text(
+        row,
+        ("packet_member_manifest", "member_manifest", "source_manifest_path"),
+    )
+    if packet_member_manifest is not None:
+        hint["packet_member_manifest"] = packet_member_manifest
+
+    tensor_manifest = _first_row_text(row, ("tensor_manifest", "tensor_manifest_path"))
+    if tensor_manifest is not None:
+        hint["tensor_manifest"] = tensor_manifest
+
+    for out_key, in_keys in (
+        ("candidate_id", ("candidate_id", "observation_id")),
+        ("target_kind", ("target_kind",)),
+        ("source_materializer_feedback_path", ("source_path",)),
+        ("observed_candidate_archive_path", ("candidate_archive_path",)),
+        ("observed_materializer_manifest_path", ("manifest_path",)),
+    ):
+        value = _first_row_text(row, in_keys)
+        if value is not None:
+            hint[out_key] = value
+
+    runtime_proof = _first_row_text(
+        row,
+        ("runtime_consumption_proof", "runtime_consumption_proof_path"),
+    )
+    if runtime_proof is not None:
+        if _passed_receiver_or_runtime_proof(row):
+            hint["runtime_consumption_proof"] = runtime_proof
+        else:
+            hint["observed_runtime_consumption_proof_path"] = runtime_proof
+
+    expected_paths = _string_list(row.get("expected_artifact_paths"))
+    if expected_paths:
+        hint["feedback_expected_artifact_paths"] = expected_paths[:12]
+    blockers = _unique_strings(
+        [
+            *_string_list(row.get("readiness_blockers")),
+            *_string_list(row.get("receiver_verification_blockers")),
+        ]
+    )
+    if blockers:
+        hint["feedback_readiness_blockers"] = blockers
+    saved = _finite_int_or_none(row.get("saved_bytes"))
+    if saved is not None:
+        hint["feedback_saved_bytes"] = saved
+    if row.get("rate_positive") is not None:
+        hint["feedback_rate_positive"] = row.get("rate_positive") is True
+    if row.get("receiver_contract_satisfied") is not None:
+        hint["feedback_receiver_contract_satisfied"] = (
+            row.get("receiver_contract_satisfied") is True
+        )
+    return hint
+
+
+def _materializer_context_hint_score(hint: Mapping[str, Any]) -> tuple[int, int, int, int]:
+    completeness = sum(
+        1
+        for key in (
+            "archive_path",
+            "section_manifest",
+            "packet_member_manifest",
+            "tensor_manifest",
+            "runtime_consumption_proof",
+        )
+        if hint.get(key)
+    )
+    receiver_ok = 1 if hint.get("feedback_receiver_contract_satisfied") is True else 0
+    rate_ok = 1 if hint.get("feedback_rate_positive") is True else 0
+    saved = _finite_int_or_none(hint.get("feedback_saved_bytes")) or 0
+    return (completeness, receiver_ok, rate_ok, saved)
+
+
+def _portfolio_materializer_context_hint(row: Mapping[str, Any]) -> dict[str, Any]:
+    evidence = row.get("evidence_summary")
+    if not isinstance(evidence, Mapping):
+        return {}
+    hint = evidence.get("best_context_hint")
+    if isinstance(hint, Mapping):
+        return dict(hint)
+    return {}
+
+
 def _materializer_operation_rows(
     payloads: Sequence[Mapping[str, Any]],
     source_paths: Sequence[str],
@@ -2197,6 +2343,16 @@ def _materializer_operation_rows(
         rows = [row for row in group["rows"] if isinstance(row, Mapping)]
         saved_values = [int(value) for value in group["saved_bytes"]]
         positive_rows = [row for row in rows if row.get("rate_positive") is True]
+        context_hints = [
+            hint
+            for hint in (_materializer_feedback_context_hint(row) for row in rows)
+            if hint
+        ]
+        context_hints = sorted(
+            context_hints,
+            key=_materializer_context_hint_score,
+            reverse=True,
+        )
         receiver_positive = [
             row
             for row in positive_rows
@@ -2278,6 +2434,9 @@ def _materializer_operation_rows(
                         value for value in saved_values if value > 0
                     ),
                     "exact_readiness_bridge": exact_readiness_bridge,
+                    "context_hint_count": len(context_hints),
+                    "best_context_hint": context_hints[0] if context_hints else {},
+                    "context_hint_samples": context_hints[:5],
                 },
                 blockers=blockers,
                 queue_executable=queue_executable,
@@ -3261,6 +3420,13 @@ def _portfolio_materializer_backlog_row(
     saved_bytes = _portfolio_row_candidate_saved_bytes(row)
     priority = _finite_float_or_none(row.get("priority_score")) or 0.0
     suggested = _portfolio_materializer_suggested_row(adapter)
+    context_hint = _portfolio_materializer_context_hint(row)
+    operation_params = {
+        "frontier_operation_id": operation_id,
+        "frontier_operation_family": row.get("operation_family"),
+        "frontier_queue_consumer": row.get("queue_consumer"),
+        **context_hint,
+    }
     return {
         "schema": "byte_shaving_materializer_backlog_row.v1",
         "backlog_key": backlog_key,
@@ -3306,17 +3472,9 @@ def _portfolio_materializer_backlog_row(
         ],
         "source_packet_ir_operation_indices": [],
         "source_packet_ir_operation_indices_by_unit": {},
-        "operation_params": {
-            "frontier_operation_id": operation_id,
-            "frontier_operation_family": row.get("operation_family"),
-            "frontier_queue_consumer": row.get("queue_consumer"),
-        },
+        "operation_params": operation_params,
         "source_operation_params_by_unit": {
-            operation_id: {
-                "frontier_operation_id": operation_id,
-                "frontier_operation_family": row.get("operation_family"),
-                "frontier_queue_consumer": row.get("queue_consumer"),
-            }
+            operation_id: dict(operation_params)
         },
         "frontier_operation_portfolio_row": {
             "operation_id": operation_id,

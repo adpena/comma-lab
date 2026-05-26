@@ -615,6 +615,113 @@ def test_materializer_feedback_default_discovery_scans_research_candidates_only(
     _assert_false_authority(discovery)
 
 
+def test_frontier_feedback_binds_materializer_context_hints_into_work_queue(
+    tmp_path: Path,
+) -> None:
+    artifact_root = tmp_path / "frontier_artifacts"
+    source_archive = tmp_path / "source.zip"
+    source_archive.write_bytes(b"PK\x05\x06" + b"\x00" * 18)
+    section_manifest = _write_json(tmp_path / "sections.json", {"sections": []})
+    candidate_archive = artifact_root / "outputs" / "candidate.zip"
+    candidate_manifest = artifact_root / "outputs" / "candidate.json"
+    runtime_proof = _write_json(
+        artifact_root / "outputs" / "candidate.runtime_consumption_proof.json",
+        {
+            "schema": "archive_section_entropy_recode_runtime_consumption_proof.v1",
+            **_false_authority(),
+            "receiver_contract_satisfied": False,
+            "proof_status": "failed",
+            "blockers": ["section_length_changed_requires_runtime_consumption_proof"],
+        },
+    )
+    _write_json(
+        artifact_root / "receiver_negative" / "sweep.json",
+        {
+            "schema": "family_agnostic_materializer_empirical_sweep.v1",
+            **_false_authority(),
+            "observations": [
+                {
+                    "schema": "family_agnostic_materializer_empirical_observation.v1",
+                    **_false_authority(),
+                    "observation_id": "archive_section_recode_context_hint",
+                    "candidate_id": "archive_section_recode_context_hint",
+                    "target_kind": "archive_section_entropy_recode_v1",
+                    "materializer_id": "archive_section_entropy_recode_adapter",
+                    "source_archive_path": source_archive.as_posix(),
+                    "expected_artifact_paths": [
+                        candidate_manifest.as_posix(),
+                        candidate_archive.as_posix(),
+                        runtime_proof.as_posix(),
+                        source_archive.as_posix(),
+                        section_manifest.as_posix(),
+                    ],
+                    "candidate_archive_path": candidate_archive.as_posix(),
+                    "manifest_path": candidate_manifest.as_posix(),
+                    "runtime_consumption_proof_path": runtime_proof.as_posix(),
+                    "saved_bytes": 66,
+                    "rate_positive": False,
+                    "savings_realized": False,
+                    "receiver_contract_satisfied": False,
+                    "inflate_parity_satisfied": False,
+                    "readiness_blockers": [
+                        "section_length_changed_requires_runtime_consumption_proof",
+                        "runtime_consumption_proof_not_passed",
+                    ],
+                }
+            ],
+        },
+    )
+
+    report = build_frontier_rate_attack_feedback_refresh(
+        repo_root=tmp_path,
+        frontier_artifact_roots=(artifact_root,),
+        action_summary_path=None,
+        results_root=str(tmp_path / "results"),
+        queue_id="frontier_feedback_context_hints_unit",
+        candidate_limit=1,
+    )
+
+    bridge = report["operation_materializer_bridge"]
+    backlog_row = bridge["materializer_backlog"]["rows"][0]
+    assert backlog_row["target_kind"] == "archive_section_entropy_recode_v1"
+    params = backlog_row["operation_params"]
+    assert params["archive_path"] == source_archive.as_posix()
+    assert params["source_archive"] == source_archive.as_posix()
+    assert params["section_manifest"] == section_manifest.as_posix()
+    assert "runtime_consumption_proof" not in params
+    assert params["observed_runtime_consumption_proof_path"] == runtime_proof.as_posix()
+    assert params["feedback_readiness_blockers"] == [
+        "section_length_changed_requires_runtime_consumption_proof",
+        "runtime_consumption_proof_not_passed",
+    ]
+
+    context_row = bridge["materializer_contexts"]["rows"][0]
+    context = context_row["context"]
+    assert context["archive_path"] == source_archive.as_posix()
+    assert context["section_manifest"] == section_manifest.as_posix()
+    assert "materializer_context_missing:archive_path" not in (
+        context_row["context_blockers"]
+    )
+    assert "materializer_context_missing:section_manifest" not in (
+        context_row["context_blockers"]
+    )
+    assert "runtime_consumption_proof" not in context
+    assert "runtime_consumption_proof_missing_hint_ignored" not in context
+
+    work_row = bridge["materializer_work_queue"]["rows"][0]
+    assert work_row["executable"] is True
+    assert work_row["score_claim"] is False
+    assert work_row["ready_for_exact_eval_dispatch"] is False
+    assert "materializer_context_missing:archive_path" not in (
+        work_row["materialization_blockers"]
+    )
+    assert "materializer_context_missing:section_manifest" not in (
+        work_row["materialization_blockers"]
+    )
+    assert "--archive-path" in work_row["command"]
+    assert "--section-manifest" in work_row["command"]
+
+
 def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_queue(
     tmp_path: Path,
 ) -> None:

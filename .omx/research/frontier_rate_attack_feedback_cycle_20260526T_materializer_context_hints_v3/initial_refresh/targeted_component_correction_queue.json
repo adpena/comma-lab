@@ -1,0 +1,619 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1,
+      "local_io_heavy": 1,
+      "local_mlx": 1,
+      "modal_cpu": 0,
+      "modal_gpu": 0
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+      "lane_id": "lane_frontier_targeted_component_correction_20260526",
+      "metadata": {
+        "acquisition_id": "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+        "allowed_use": "targeted_component_correction_queue_metadata_only",
+        "budget_spend_gate": {
+          "acceptance_rule": "accept_only_if_measured_delta_segnet_plus_delta_posenet_plus_delta_rate_is_negative_under_same_axis",
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "max_extra_archive_bytes_before_rate_credit_exhausted": 258,
+          "max_rate_credit_score_units": 0.0001717916099055202,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_budget_spend": false,
+          "ready_for_exact_eval_dispatch": false,
+          "required_before_spend": [
+            "candidate_specific_local_cpu_component_eval_required_before_budget_spend",
+            "candidate_specific_mlx_or_exact_axis_component_response_required_before_spend",
+            "exact_auth_eval_required_before_score_or_promotion_claim",
+            "active_rate_floor_override_required_before_exact_dispatch",
+            "segnet_posenet_component_behavior_rows_required_before_allocation",
+            "requires_component_marginal_rows",
+            "requires_segnet_boundary_marginals"
+          ],
+          "schema": "frontier_rate_attack_targeted_component_correction_budget_spend_gate.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        "budget_spend_ready": false,
+        "candidate_id": "packet_member_merge_cbe7d79124ba",
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "correction_family": "segnet_posenet_waterfill_region_repair",
+        "dispatch_attempted": false,
+        "estimated_rate_credit_score_units": 0.0001717916099055202,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        "gpu_launched": false,
+        "local_cpu_advisory_path": "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/local_cpu_advisory.json",
+        "local_mlx_response_enabled": true,
+        "mlx_device": "gpu",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "saved_bytes_budget": 258,
+        "schema": "frontier_rate_attack_targeted_component_correction_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "submission_dir": "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission",
+        "target_kind": "packet_member_merge_v1"
+      },
+      "priority": 1,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_targeted_component_correction_work_order.py",
+            "--targeted-component-correction-acquisition",
+            ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_materializer_context_hints_v3/initial_refresh/targeted_component_correction_acquisition.json",
+            "--acquisition-id",
+            "targeted_component_correction_packet_member_merge_cbe7d79124ba_segnet_posenet_waterfill_region_repair",
+            "--work-order-out",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/work_order.json",
+            "--overwrite"
+          ],
+          "id": "emit_targeted_component_correction_work_order",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_targeted_component_correction_work_order.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/work_order.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_gate.ready_for_budget_spend",
+              "path": "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/work_order.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/work_order.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_materializer_context_hints_v3/initial_refresh/targeted_component_correction_acquisition.json",
+              "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission_closure_report.json",
+              "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/exact_readiness_bridge/exact_readiness_bridge_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "experiments/contest_auth_eval.py",
+            "--archive",
+            "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/archive.zip",
+            "--inflate-sh",
+            "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/inflate.sh",
+            "--upstream-dir",
+            "upstream",
+            "--video-names-file",
+            "upstream/public_test_video_names.txt",
+            "--device",
+            "cpu",
+            "--work-dir",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/local_cpu_advisory_work",
+            "--json-out",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/local_cpu_advisory.json",
+            "--inflate-timeout",
+            "1800",
+            "--evaluate-timeout",
+            "1800",
+            "--keep-work-dir",
+            "--scorer-input-cache-hashes-out",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/scorer_input_cache_hashes.json"
+          ],
+          "id": "local_cpu_component_advisory",
+          "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "cpu_advisory",
+              "axis_key": "score_axis",
+              "path": "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/local_cpu_advisory.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "emit_targeted_component_correction_work_order"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/local_cpu_advisory.json",
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/local_cpu_advisory_work",
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/scorer_input_cache_hashes.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/archive.zip",
+              "experiments/results/frontier_final_rate_attack/frontier_packet_merge_receiver_closed_20260526T015551Z/packet_member_merge_v1/submission_closure/submission/inflate.sh",
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 3900
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_mlx_scorer_input_cache_from_local_advisory.py",
+            "--local-cpu-advisory",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/local_cpu_advisory.json",
+            "--output-cache-dir",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/mlx_scorer_input_cache",
+            "--audit-output",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/mlx_scorer_input_cache_audit.json",
+            "--expected-pair-count",
+            "600",
+            "--batch-pairs",
+            "1",
+            "--allow-large-tensor-cache",
+            "--stamp-cache-manifest-on-pass"
+          ],
+          "id": "build_mlx_component_cache",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": true,
+              "key": "passed",
+              "path": "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/mlx_scorer_input_cache_audit.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/mlx_scorer_input_cache_audit.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/mlx_scorer_input_cache/manifest.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_component_advisory"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/mlx_scorer_input_cache",
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/mlx_scorer_input_cache_audit.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/local_cpu_advisory.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 1800
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_mlx_scorer_response_from_local_advisory.py",
+            "--local-cpu-advisory",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/local_cpu_advisory.json",
+            "--reference-cache-dir",
+            "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+            "--candidate-cache-dir",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/mlx_scorer_input_cache",
+            "--output",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/mlx_scorer_response.json",
+            "--repo-root",
+            ".",
+            "--batch-pairs",
+            "1",
+            "--device",
+            "gpu",
+            "--allow-local-cpu-advisory-cache-identity",
+            "--components-dir",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/mlx_components",
+            "--response-family",
+            "targeted_component_correction_receiver_closed_budget",
+            "--allow-gpu-research-signal"
+          ],
+          "id": "local_mlx_component_response",
+          "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "[macOS-MLX research-signal]",
+              "axis_key": "score_axis",
+              "path": "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/mlx_scorer_response.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "build_mlx_component_cache"
+          ],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/mlx_scorer_response.json",
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/mlx_components"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/local_cpu_advisory.json",
+              "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_merge_cbe7d79124ba/mlx_scorer_input_cache"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 900
+        }
+      ],
+      "tags": [
+        "targeted_component_correction",
+        "segnet_posenet_waterfill_region_repair",
+        "packet_member_merge_v1",
+        "receiver_closed_budget"
+      ]
+    },
+    {
+      "id": "targeted_component_correction_packet_member_zip_header_elide_544c5f580ec2_segnet_posenet_waterfill_region_repair",
+      "lane_id": "lane_frontier_targeted_component_correction_20260526",
+      "metadata": {
+        "acquisition_id": "targeted_component_correction_packet_member_zip_header_elide_544c5f580ec2_segnet_posenet_waterfill_region_repair",
+        "allowed_use": "targeted_component_correction_queue_metadata_only",
+        "budget_spend_gate": {
+          "acceptance_rule": "accept_only_if_measured_delta_segnet_plus_delta_posenet_plus_delta_rate_is_negative_under_same_axis",
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "max_extra_archive_bytes_before_rate_credit_exhausted": 156,
+          "max_rate_credit_score_units": 0.00010387399668705873,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_budget_spend": false,
+          "ready_for_exact_eval_dispatch": false,
+          "required_before_spend": [
+            "candidate_specific_local_cpu_component_eval_required_before_budget_spend",
+            "candidate_specific_mlx_or_exact_axis_component_response_required_before_spend",
+            "exact_auth_eval_required_before_score_or_promotion_claim",
+            "active_rate_floor_override_required_before_exact_dispatch",
+            "segnet_posenet_component_behavior_rows_required_before_allocation",
+            "requires_component_marginal_rows",
+            "requires_segnet_boundary_marginals"
+          ],
+          "schema": "frontier_rate_attack_targeted_component_correction_budget_spend_gate.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false
+        },
+        "budget_spend_ready": false,
+        "candidate_id": "packet_member_zip_header_elide_544c5f580ec2",
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "correction_family": "segnet_posenet_waterfill_region_repair",
+        "dispatch_attempted": false,
+        "estimated_rate_credit_score_units": 0.00010387399668705873,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        "gpu_launched": false,
+        "local_cpu_advisory_path": "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/local_cpu_advisory.json",
+        "local_mlx_response_enabled": true,
+        "mlx_device": "gpu",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "saved_bytes_budget": 156,
+        "schema": "frontier_rate_attack_targeted_component_correction_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "submission_dir": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t0132z_receiver_repair_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/submission",
+        "target_kind": "packet_member_zip_header_elide_v1"
+      },
+      "priority": 2,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_targeted_component_correction_work_order.py",
+            "--targeted-component-correction-acquisition",
+            ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_materializer_context_hints_v3/initial_refresh/targeted_component_correction_acquisition.json",
+            "--acquisition-id",
+            "targeted_component_correction_packet_member_zip_header_elide_544c5f580ec2_segnet_posenet_waterfill_region_repair",
+            "--work-order-out",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/work_order.json",
+            "--overwrite"
+          ],
+          "id": "emit_targeted_component_correction_work_order",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_targeted_component_correction_work_order.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/work_order.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_gate.ready_for_budget_spend",
+              "path": "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/work_order.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/work_order.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_rate_attack_feedback_cycle_20260526T_materializer_context_hints_v3/initial_refresh/targeted_component_correction_acquisition.json",
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t0132z_receiver_repair_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/submission_closure_report.json",
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t0132z_receiver_repair_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge/exact_readiness_bridge_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "experiments/contest_auth_eval.py",
+            "--archive",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t0132z_receiver_repair_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/submission/archive.zip",
+            "--inflate-sh",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t0132z_receiver_repair_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/submission/inflate.sh",
+            "--upstream-dir",
+            "upstream",
+            "--video-names-file",
+            "upstream/public_test_video_names.txt",
+            "--device",
+            "cpu",
+            "--work-dir",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/local_cpu_advisory_work",
+            "--json-out",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/local_cpu_advisory.json",
+            "--inflate-timeout",
+            "1800",
+            "--evaluate-timeout",
+            "1800",
+            "--keep-work-dir",
+            "--scorer-input-cache-hashes-out",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/scorer_input_cache_hashes.json"
+          ],
+          "id": "local_cpu_component_advisory",
+          "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "cpu_advisory",
+              "axis_key": "score_axis",
+              "path": "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/local_cpu_advisory.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "emit_targeted_component_correction_work_order"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/local_cpu_advisory.json",
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/local_cpu_advisory_work",
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/scorer_input_cache_hashes.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t0132z_receiver_repair_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/submission/archive.zip",
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t0132z_receiver_repair_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/submission/inflate.sh",
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 3900
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_mlx_scorer_input_cache_from_local_advisory.py",
+            "--local-cpu-advisory",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/local_cpu_advisory.json",
+            "--output-cache-dir",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/mlx_scorer_input_cache",
+            "--audit-output",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/mlx_scorer_input_cache_audit.json",
+            "--expected-pair-count",
+            "600",
+            "--batch-pairs",
+            "1",
+            "--allow-large-tensor-cache",
+            "--stamp-cache-manifest-on-pass"
+          ],
+          "id": "build_mlx_component_cache",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": true,
+              "key": "passed",
+              "path": "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/mlx_scorer_input_cache_audit.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/mlx_scorer_input_cache_audit.json",
+              "type": "json_false_authority"
+            },
+            {
+              "path": "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/mlx_scorer_input_cache/manifest.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_component_advisory"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/mlx_scorer_input_cache",
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/mlx_scorer_input_cache_audit.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/local_cpu_advisory.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 1800
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_mlx_scorer_response_from_local_advisory.py",
+            "--local-cpu-advisory",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/local_cpu_advisory.json",
+            "--reference-cache-dir",
+            "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+            "--candidate-cache-dir",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/mlx_scorer_input_cache",
+            "--output",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/mlx_scorer_response.json",
+            "--repo-root",
+            ".",
+            "--batch-pairs",
+            "1",
+            "--device",
+            "gpu",
+            "--allow-local-cpu-advisory-cache-identity",
+            "--components-dir",
+            "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/mlx_components",
+            "--response-family",
+            "targeted_component_correction_receiver_closed_budget",
+            "--allow-gpu-research-signal"
+          ],
+          "id": "local_mlx_component_response",
+          "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "[macOS-MLX research-signal]",
+              "axis_key": "score_axis",
+              "path": "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/mlx_scorer_response.json",
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "build_mlx_component_cache"
+          ],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/mlx_scorer_response.json",
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/mlx_components"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/local_cpu_advisory.json",
+              "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+              "experiments/results/frontier_targeted_component_correction/frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction/packet_member_zip_header_elide_544c5f580ec2/mlx_scorer_input_cache"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 900
+        }
+      ],
+      "tags": [
+        "targeted_component_correction",
+        "segnet_posenet_waterfill_region_repair",
+        "packet_member_zip_header_elide_v1",
+        "receiver_closed_budget"
+      ]
+    }
+  ],
+  "queue_id": "frontier_rate_attack_feedback_cycle_materializer_context_hints_20260526_v3_component_correction",
+  "schema": "experiment_queue.v1"
+}
