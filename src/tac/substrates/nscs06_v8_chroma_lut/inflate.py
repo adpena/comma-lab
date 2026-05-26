@@ -45,6 +45,7 @@ from .architecture import lookup_rgb_via_chroma_lut
 from .archive import (
     CH08_SCHEMA_VERSION_INLINE_LUT,
     CH08_SCHEMA_VERSION_PROCEDURAL_SEED,
+    CH08_SCHEMA_VERSION_PROCEDURAL_SEED_WITH_CLS_STREAM,
     POSE_DIMS,
     Nscs06V8Archive,
     parse_archive,
@@ -74,14 +75,19 @@ def select_inflate_device(env_var: str = "PACT_INFLATE_DEVICE") -> str:
 
 
 def _resolve_chroma_lut(arc: Nscs06V8Archive) -> np.ndarray:
-    """Resolve the chroma LUT from a parsed CH08 archive (v1 inline or v2 seed)."""
+    """Resolve the chroma LUT from a parsed CH08 archive (v1 inline, v2 seed, or v3 seed+cls)."""
     if arc.schema_version == CH08_SCHEMA_VERSION_INLINE_LUT:
         if arc.chroma_lut is None:
             raise ValueError("v1 archive missing inline chroma_lut")
         return arc.chroma_lut
-    if arc.schema_version == CH08_SCHEMA_VERSION_PROCEDURAL_SEED:
+    if arc.schema_version in (
+        CH08_SCHEMA_VERSION_PROCEDURAL_SEED,
+        CH08_SCHEMA_VERSION_PROCEDURAL_SEED_WITH_CLS_STREAM,
+    ):
         if arc.chroma_seed is None:
-            raise ValueError("v2 archive missing chroma_seed")
+            raise ValueError(
+                f"v{arc.schema_version} archive missing chroma_seed"
+            )
         # Re-derive the LUT bytes deterministically via the canonical helper.
         from tac.procedural_codebook_generator import derive_codebook_from_seed
         flat = derive_codebook_from_seed(
@@ -180,9 +186,23 @@ def inflate_one_video(archive_bytes: bytes, output_stem: Path) -> Path:
                     (arc.output_width, arc.output_height), Image.BILINEAR
                 )
             )
-            # v8 L0 SCAFFOLD: class=0 uniformly (sister to v7 SCAFFOLD pattern;
-            # L1 promotion couples to a v7-style CLS_STREAM).
-            cls_full = np.zeros_like(gray_full, dtype=np.uint8)
+            # v8 cls_stream consumption (Catalog #233 L1→L2 promotion canonical
+            # 4-gate unblocker per T3 council #1335 REVISION #2 Yousfi BLOCKER).
+            # v3 archives carry per-cell uint8 class labels at low-res; upsample
+            # NEAREST so the LUT lookup uses the canonical formula
+            # ``RGB = chroma_lut[gray_full[y,x], cls_full[y,x], :]`` with
+            # non-uniform cls_full. v1/v2 (legacy) fall back to cls=0 uniform
+            # which is the cargo-cult #5 L0 SCAFFOLD behavior preserved for
+            # backward compat.
+            if arc.cls_lowres is not None:
+                cls_full = np.array(
+                    Image.fromarray(arc.cls_lowres[p]).resize(
+                        (arc.output_width, arc.output_height), Image.NEAREST
+                    ),
+                    dtype=np.uint8,
+                )
+            else:
+                cls_full = np.zeros_like(gray_full, dtype=np.uint8)
             frame_0 = lookup_rgb_via_chroma_lut(gray_full, cls_full, chroma_lut)
             frame_1 = _affine_warp_frame1_from_frame0(frame_0, pose[p])
             for frame in (frame_0, frame_1):

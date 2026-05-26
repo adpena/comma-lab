@@ -77,6 +77,7 @@ __all__ = [
     "CH08_MAGIC",
     "CH08_SCHEMA_VERSION_INLINE_LUT",
     "CH08_SCHEMA_VERSION_PROCEDURAL_SEED",
+    "CH08_SCHEMA_VERSION_PROCEDURAL_SEED_WITH_CLS_STREAM",
     "GENERATOR_KIND_TAG",
     "GENERATOR_KIND_TAG_INVERSE",
     "Nscs06V8Archive",
@@ -91,7 +92,8 @@ CH08_MAGIC: bytes = b"CH08"
 """nscs06 V8 chroma-LUT substrate magic. Matches the ``nscs06_v8_*`` suffix."""
 
 CH08_SCHEMA_VERSION_INLINE_LUT: int = 1
-"""v1: full 4096-byte LUT inline (NO procedural seed)."""
+"""v1: full 4096-byte LUT inline (NO procedural seed). cls_stream NOT carried;
+inflate uses cls=0 uniform per L0 SCAFFOLD legacy behavior."""
 
 CH08_SCHEMA_VERSION_PROCEDURAL_SEED: int = 2
 """v2: 32-byte PCG64 seed replaces the 4096-byte LUT slot.
@@ -99,7 +101,35 @@ CH08_SCHEMA_VERSION_PROCEDURAL_SEED: int = 2
 The inflate runtime re-derives the LUT bytes deterministically via
 ``tac.procedural_codebook_generator.derive_codebook_from_seed``. Per canonical
 equation #26 ``_INCLUDED_CONTEXTS['nscs06_v8_chroma_lut']`` closed-form
-``ΔS = -25 * (4096 - 32) / 37_545_489 ≈ -0.002706``.
+``ΔS = -25 * (4096 - 32) / 37_545_489 ≈ -0.002706``. cls_stream NOT carried;
+inflate uses cls=0 uniform per L0 SCAFFOLD legacy behavior.
+"""
+
+CH08_SCHEMA_VERSION_PROCEDURAL_SEED_WITH_CLS_STREAM: int = 3
+"""v3: 32-byte PCG64 seed + per-cell uint8 class-label stream (CLS_STREAM).
+
+Per T3 council #1335 PROCEED_WITH_REVISIONS REVISION #2 (Yousfi BLOCKER):
+the cls_stream wire-in at L0 inflate is the L1→L2 promotion canonical 4-gate
+unblocker per Catalog #233. Cargo-cult #5 unwinding (`distinguishing_feature_smoke`
+verdict transitions FAIL_AT_CLASS_1 → PASS_PER_CLASS): the per-cell class
+labels at low-res are stored AS-IS (raw uint8, one byte per cell) AFTER the
+GRAYSCALE_STREAM. Inflate re-binds ``cls_full`` from upsample(cls_lowres,
+NEAREST) instead of np.zeros_like(gray_full).
+
+Sister of NSCS06 strip_everything CH06 v2 (commit 4292c8ce2 symposium) but
+without arith-coding (raw uint8 minimum-LOC wire-in scope per pre-execution
+gate report 2026-05-26; arith-coded variant is a downstream bytes-saving
+optimization DEFERRED-pending-bytes-budget-analysis).
+
+cls_stream rate-axis cost: ``num_pairs * grayscale_h * grayscale_w`` bytes
+(ADDITIVE to canonical equation #26 REPLACEMENT savings). The total stacked
+rate-axis ΔS = -0.002706 (canonical equation #26 LUT replacement, unchanged)
++ 25 * (num_pairs * gh * gw) / 37_545_489 (cls_stream ADDITIVE byte cost).
+At realistic shapes (num_pairs=600, gh=96, gw=128) this is ~+0.0049 rate-axis
+cost which would dominate; the EXPECTATION is that seg+pose-axis IMPROVEMENT
+from correct per-class chroma reconstruction more than offsets the cls_stream
+rate cost. The full-axis trade-off is the empirical question per the paired
+Modal T4 dispatch decision per Catalog #246.
 """
 
 POSE_DIMS: int = 6
@@ -113,12 +143,25 @@ GENERATOR_KIND_TAG: dict[str, int] = {"xorshift": 0, "lcg": 1, "pcg64": 2}
 
 GENERATOR_KIND_TAG_INVERSE: dict[int, str] = {v: k for k, v in GENERATOR_KIND_TAG.items()}
 
-# Header layout per docstring. Format string:
+# Header layout per docstring. Format string (v1/v2):
 #   < 4s B H H H H H B B H H I I I B B  ->  4+1+2+2+2+2+2+1+1+2+2+4+4+4+1+1 = 35 bytes
 CH08_HEADER_FMT: str = "<4sBHHHHHBBHHIIIBB"
 CH08_HEADER_SIZE: int = struct.calcsize(CH08_HEADER_FMT)
 assert CH08_HEADER_SIZE == 35, (
     f"CH08 header size invariant violated: {CH08_HEADER_SIZE} != 35"
+)
+
+# v3 (procedural seed + cls_stream) header layout — appends a CLS_LEN u32 to
+# the canonical v1/v2 header so v1/v2 byte stability is PRESERVED (parsers
+# dispatch on the version byte at struct position 4).
+#
+#   v1/v2 35-byte header || CLS_LEN(4) u32
+#
+# Total: 35 + 4 = 39 bytes.
+CH08_HEADER_FMT_V3: str = CH08_HEADER_FMT + "I"
+CH08_HEADER_SIZE_V3: int = struct.calcsize(CH08_HEADER_FMT_V3)
+assert CH08_HEADER_SIZE_V3 == 39, (
+    f"CH08 v3 header size invariant violated: {CH08_HEADER_SIZE_V3} != 39"
 )
 
 
@@ -150,9 +193,19 @@ class Nscs06V8Archive:
     chroma_lut: np.ndarray | None
     """v1: dense (grayscale_levels, num_segnet_classes, 3) uint8 LUT. v2: None."""
     chroma_seed: bytes | None
-    """v2: PROCEDURAL_SEED_SIZE_BYTES PCG64 seed. v1: None."""
+    """v2/v3: PROCEDURAL_SEED_SIZE_BYTES PCG64 seed. v1: None."""
     generator_kind: str | None
-    """v2: 'xorshift' / 'lcg' / 'pcg64'. v1: None."""
+    """v2/v3: 'xorshift' / 'lcg' / 'pcg64'. v1: None."""
+    cls_lowres: np.ndarray | None = None
+    """v3: per-cell uint8 SegNet class labels at low-res, shape
+    ``(num_pairs, grayscale_h, grayscale_w)``. v1/v2: None (inflate falls back
+    to cls=0 uniform per L0 SCAFFOLD legacy behavior).
+
+    Per T3 council #1335 PROCEED_WITH_REVISIONS REVISION #2 (Yousfi BLOCKER):
+    the cls_stream wire-in unblocks Catalog #233 L1→L2 promotion canonical
+    4-gate by transitioning the `distinguishing_feature_smoke` verdict from
+    FAIL_AT_CLASS_1 to PASS_PER_CLASS at the cargo-cult #5 inflate site.
+    """
 
 
 def _validate_header_extents(
@@ -197,10 +250,14 @@ def pack_archive(
     chroma_lut: np.ndarray | None = None,
     chroma_seed: bytes | None = None,
     generator_kind: str = "pcg64",
+    cls_bytes: bytes | None = None,
 ) -> bytes:
-    """Serialize CH08 v1 (inline LUT) or v2 (procedural seed) archive into 0.bin.
+    """Serialize CH08 v1 (inline LUT) / v2 (procedural seed) / v3 (procedural
+    seed + cls_stream) archive into 0.bin.
 
-    Exactly one of ``chroma_lut`` (v1) or ``chroma_seed`` (v2) MUST be supplied.
+    Exactly one of ``chroma_lut`` (v1) or ``chroma_seed`` (v2/v3) MUST be supplied.
+    If ``cls_bytes`` is supplied AND ``chroma_seed`` is supplied, schema_version
+    is v3; otherwise v1 (if chroma_lut) or v2 (if chroma_seed only).
 
     Args:
         num_pairs: Number of (frame_0, frame_1) pairs in the contest video.
@@ -271,7 +328,7 @@ def pack_archive(
         schema_version = CH08_SCHEMA_VERSION_INLINE_LUT
         generator_kind_tag = 0  # unused in v1
     else:
-        # v2: pack the seed.
+        # v2/v3: pack the seed. v3 is selected when cls_bytes is supplied.
         seed_view = bytes(chroma_seed)  # type: ignore[arg-type]
         if len(seed_view) != PROCEDURAL_SEED_SIZE_BYTES:
             raise ValueError(
@@ -283,8 +340,36 @@ def pack_archive(
                 f"generator_kind={generator_kind!r} not in {sorted(GENERATOR_KIND_TAG)}"
             )
         lut_payload = seed_view
-        schema_version = CH08_SCHEMA_VERSION_PROCEDURAL_SEED
         generator_kind_tag = GENERATOR_KIND_TAG[generator_kind]
+        if cls_bytes is None:
+            schema_version = CH08_SCHEMA_VERSION_PROCEDURAL_SEED
+        else:
+            schema_version = CH08_SCHEMA_VERSION_PROCEDURAL_SEED_WITH_CLS_STREAM
+
+    # v3 cls_stream validation (length must match the low-res grayscale shape;
+    # one uint8 class label per cell per pair). cls_bytes is only consumed in
+    # v3; v1/v2 reject it with an explicit error so caller mistakes surface
+    # at compress time rather than silently dropped.
+    if cls_bytes is not None and schema_version != CH08_SCHEMA_VERSION_PROCEDURAL_SEED_WITH_CLS_STREAM:
+        raise ValueError(
+            "cls_bytes supplied but schema_version resolved to v1/v2 "
+            "(only v3 carries CLS_STREAM); supply chroma_seed for v3 dispatch"
+        )
+    expected_cls = num_pairs * grayscale_h * grayscale_w
+    cls_len = 0
+    if schema_version == CH08_SCHEMA_VERSION_PROCEDURAL_SEED_WITH_CLS_STREAM:
+        if cls_bytes is None:
+            raise ValueError(
+                "v3 archive requires cls_bytes (per-cell uint8 class labels)"
+            )
+        if len(cls_bytes) != expected_cls:
+            raise ValueError(
+                f"cls_bytes length {len(cls_bytes)} != expected {expected_cls} "
+                f"(num_pairs * grayscale_h * grayscale_w)"
+            )
+        cls_len = len(cls_bytes)
+        if cls_len > 0xFFFFFFFF:
+            raise ValueError(f"cls_bytes too large: {cls_len}")
 
     # Quantize pose_quant_scale to micro-precision uint32 for byte-stable header.
     pose_quant_scale_micro = int(round(pose_quant_scale * 1_000_000))
@@ -299,6 +384,28 @@ def pack_archive(
     if len(grayscale_bytes) > 0xFFFFFFFF:
         raise ValueError(f"grayscale_bytes too large: {len(grayscale_bytes)}")
 
+    if schema_version == CH08_SCHEMA_VERSION_PROCEDURAL_SEED_WITH_CLS_STREAM:
+        header = struct.pack(
+            CH08_HEADER_FMT_V3,
+            CH08_MAGIC,
+            schema_version,
+            num_pairs,
+            grayscale_h,
+            grayscale_w,
+            output_height,
+            output_width,
+            grayscale_levels,
+            num_segnet_classes,
+            chroma_lut_bytes,
+            len(lut_payload),
+            pose_quant_scale_micro,
+            len(pose_bytes),
+            len(grayscale_bytes),
+            generator_kind_tag,
+            0,  # RESERVED
+            cls_len,
+        )
+        return header + lut_payload + pose_bytes + grayscale_bytes + bytes(cls_bytes)
     header = struct.pack(
         CH08_HEADER_FMT,
         CH08_MAGIC,
@@ -322,34 +429,72 @@ def pack_archive(
 
 
 def parse_archive(blob: bytes) -> Nscs06V8Archive:
-    """Parse 0.bin bytes back into a typed Nscs06V8Archive."""
+    """Parse 0.bin bytes back into a typed Nscs06V8Archive.
+
+    Dispatches on the version byte at struct position 4 (single u8 right after
+    the 4-byte magic): v1/v2 use the 35-byte canonical header; v3 uses the
+    39-byte extended header with appended CLS_LEN u32 + trailing CLS_STREAM
+    section.
+    """
     if len(blob) < CH08_HEADER_SIZE:
         raise ValueError(
             f"archive too short ({len(blob)} bytes; need >= {CH08_HEADER_SIZE})"
         )
-    (
-        magic,
-        version,
-        num_pairs,
-        grayscale_h,
-        grayscale_w,
-        output_height,
-        output_width,
-        grayscale_levels,
-        num_segnet_classes,
-        chroma_lut_bytes,
-        lut_payload_len,
-        pose_quant_scale_micro,
-        pose_len,
-        grayscale_len,
-        generator_kind_tag,
-        _reserved,
-    ) = struct.unpack(CH08_HEADER_FMT, blob[:CH08_HEADER_SIZE])
+    # Peek the version byte (struct position 4: right after b"CH08" magic).
+    version_peek = int(blob[4])
+    is_v3 = version_peek == CH08_SCHEMA_VERSION_PROCEDURAL_SEED_WITH_CLS_STREAM
+    if is_v3:
+        if len(blob) < CH08_HEADER_SIZE_V3:
+            raise ValueError(
+                f"v3 archive too short ({len(blob)} bytes; need >= {CH08_HEADER_SIZE_V3})"
+            )
+        (
+            magic,
+            version,
+            num_pairs,
+            grayscale_h,
+            grayscale_w,
+            output_height,
+            output_width,
+            grayscale_levels,
+            num_segnet_classes,
+            chroma_lut_bytes,
+            lut_payload_len,
+            pose_quant_scale_micro,
+            pose_len,
+            grayscale_len,
+            generator_kind_tag,
+            _reserved,
+            cls_len,
+        ) = struct.unpack(CH08_HEADER_FMT_V3, blob[:CH08_HEADER_SIZE_V3])
+        header_size_local = CH08_HEADER_SIZE_V3
+    else:
+        (
+            magic,
+            version,
+            num_pairs,
+            grayscale_h,
+            grayscale_w,
+            output_height,
+            output_width,
+            grayscale_levels,
+            num_segnet_classes,
+            chroma_lut_bytes,
+            lut_payload_len,
+            pose_quant_scale_micro,
+            pose_len,
+            grayscale_len,
+            generator_kind_tag,
+            _reserved,
+        ) = struct.unpack(CH08_HEADER_FMT, blob[:CH08_HEADER_SIZE])
+        cls_len = 0
+        header_size_local = CH08_HEADER_SIZE
     if magic != CH08_MAGIC:
         raise ValueError(f"bad magic: {magic!r} (expected {CH08_MAGIC!r})")
     if version not in (
         CH08_SCHEMA_VERSION_INLINE_LUT,
         CH08_SCHEMA_VERSION_PROCEDURAL_SEED,
+        CH08_SCHEMA_VERSION_PROCEDURAL_SEED_WITH_CLS_STREAM,
     ):
         raise ValueError(f"unsupported schema version: {version}")
 
@@ -362,13 +507,23 @@ def parse_archive(blob: bytes) -> Nscs06V8Archive:
             f"grayscale_len {grayscale_len} != expected {expected_grayscale}"
         )
 
-    pos = CH08_HEADER_SIZE
+    pos = header_size_local
     lut_payload = blob[pos : pos + lut_payload_len]
     pos += lut_payload_len
     pose_bytes = blob[pos : pos + pose_len]
     pos += pose_len
     grayscale_bytes = blob[pos : pos + grayscale_len]
     pos += grayscale_len
+    cls_stream_bytes: bytes | None = None
+    if version == CH08_SCHEMA_VERSION_PROCEDURAL_SEED_WITH_CLS_STREAM:
+        expected_cls = num_pairs * grayscale_h * grayscale_w
+        if cls_len != expected_cls:
+            raise ValueError(
+                f"v3 cls_len {cls_len} != expected {expected_cls} "
+                f"(num_pairs * grayscale_h * grayscale_w)"
+            )
+        cls_stream_bytes = blob[pos : pos + cls_len]
+        pos += cls_len
     if pos != len(blob):
         raise ValueError(f"archive size {len(blob)} != expected {pos} from header")
 
@@ -388,9 +543,10 @@ def parse_archive(blob: bytes) -> Nscs06V8Archive:
         chroma_seed: bytes | None = None
         generator_kind: str | None = None
     else:
+        # v2 or v3: both carry procedural seed in lut_payload.
         if lut_payload_len != PROCEDURAL_SEED_SIZE_BYTES:
             raise ValueError(
-                f"v2 procedural-seed: lut_payload_len {lut_payload_len} != "
+                f"v2/v3 procedural-seed: lut_payload_len {lut_payload_len} != "
                 f"PROCEDURAL_SEED_SIZE_BYTES {PROCEDURAL_SEED_SIZE_BYTES}"
             )
         chroma_lut = None
@@ -398,6 +554,19 @@ def parse_archive(blob: bytes) -> Nscs06V8Archive:
         if generator_kind_tag not in GENERATOR_KIND_TAG_INVERSE:
             raise ValueError(f"unknown generator_kind_tag {generator_kind_tag}")
         generator_kind = GENERATOR_KIND_TAG_INVERSE[generator_kind_tag]
+
+    cls_lowres: np.ndarray | None = None
+    if cls_stream_bytes is not None:
+        cls_lowres = (
+            np.frombuffer(cls_stream_bytes, dtype=np.uint8)
+            .copy()
+            .reshape(num_pairs, grayscale_h, grayscale_w)
+        )
+        if int(cls_lowres.max(initial=0)) >= num_segnet_classes:
+            raise ValueError(
+                f"cls_stream label {int(cls_lowres.max())} >= num_segnet_classes "
+                f"{num_segnet_classes}"
+            )
 
     return Nscs06V8Archive(
         schema_version=int(version),
@@ -415,4 +584,5 @@ def parse_archive(blob: bytes) -> Nscs06V8Archive:
         chroma_lut=chroma_lut,
         chroma_seed=chroma_seed,
         generator_kind=generator_kind,
+        cls_lowres=cls_lowres,
     )
