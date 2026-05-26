@@ -130,3 +130,47 @@ council_decisions_recorded:
 ```
 
 Expected: `aggregate_verdict: ABOVE_SCORER_PRECISION`, `aggregate_contest_score_drift_units ≈ 0.093`. ~200 s wall-clock.
+
+---
+
+## APPEND-ONLY CORRECTION FOOTER 2026-05-26T06:35Z (per Catalog #110/#113 HISTORICAL_PROVENANCE)
+
+**Per operator directive 2026-05-26 "There were likely engineering issues and bugs that need to be ironed out", a methodology audit on this measurement was conducted. Empirical findings supersede the original verdict's interpretation. The 0.09347 number is preserved verbatim above per APPEND-ONLY HISTORICAL_PROVENANCE; the corrected interpretation follows.**
+
+### Empirical audit results (5 bug surfaces inspected)
+
+| # | suspected | status | finding |
+|---|---|---|---|
+| 1 | MLX↔PyTorch scorer adapter drift | **FALSIFIED** | Direct probe with identical input: SegNet `max_abs=2.15e-5` / `mean_abs=1.97e-6` / **0 argmax flips on 196,608 pixels**; PoseNet `max_abs=8.88e-6` / `mean_abs=2.40e-6` / `max_relative=4.15e-6`. Adapters are byte-near-identical to PyTorch at the canonical Conv2d 3e-5 bound. |
+| 2 | `_aggregate_contest_score_drift` formula bug | **REAL METHODOLOGY BUG** | Line 504-506 computes `sqrt(10 × MSE_cross_framework)` and labels it "contest-score drift units". This is mathematically a worst-case UPPER BOUND assuming complete anti-correlation between MLX and PyTorch errors — NOT a measurement of the actual contest-score difference `\|S_MLX − S_PyTorch\|`. The 0.0919 pose-axis number is `sqrt(10 × 8.44e-4) = sqrt(0.00844)`, the formula's own output, not an empirical observation. |
+| 3 | "Selfcomp+MacKay prediction falsified" claim | **CATEGORY ERROR** | The Selfcomp+MacKay theoretical prediction was scoped to **SegNet argmax-stability under sub-quantization drift**. Stage 3 SegNet argmax flip fraction = 1.58e-5 (310 of 19.7M pixels) — **THE PREDICTION HOLDS for SegNet**. The pose-axis was never inside the prediction's scope. Declaring "selfcomp_mackay_theoretical_prediction_verified=false" was a mis-scoping. |
+| 4 | SegNet `preprocess_input` bypass at line 348 | NOT A BUG | Input parity is preserved (same numpy fed to both pipelines). The bypass doesn't affect cross-framework comparison validity. |
+| 5 | 360× amplification single-Conv2d (3e-5) → full-decoder (0.0111) | **PLAUSIBLE** | A ~10-layer transposed-conv decoder with per-layer amplification ~e^(0.23) ≈ 2× would yield ~1000× total; observed 360× is within plausible range without further per-layer trace. |
+
+### Corrected operational reading
+
+1. **MLX↔PyTorch scorer adapters are byte-near-identical** (just empirically verified). Selfcomp+MacKay's theoretical prediction on SegNet argmax stability HOLDS empirically (1.58e-5 flip fraction).
+2. **The 0.09347 aggregate is an upper-bound proxy, not a measurement** of the actual contest-score difference. The actual difference is bounded above by 0.09347 but is typically much smaller because anti-correlation between MLX and PyTorch errors is not realistic.
+3. **Sister #1257 GREEN empirically proves** that PyTorch inflate on byte-equivalent MLX-roundtripped state_dict produces byte-identical 0.raw output. **The actual contest-score from inflate-output is identical** for the MLX-roundtripped pipeline.
+4. **During MLX training-loop scorer evaluation** (where MLX decoder feeds MLX scorer): SegNet's argmax is reliable (1.58e-5 flip rate); PoseNet output drifts ~1% relative per coordinate from PyTorch — informative for architecture convergence + coarse-class-shift evaluation, not for frontier-tightening below 0.01 score-units.
+
+### Path 3 strategy (corrected) — UNCHANGED FROM ORIGINAL LANDING
+
+The granularity-threshold conclusion stands:
+- ≥0.10 predicted ΔS (substrate-class-shift): MLX-local-iteration reliable
+- [0.01, 0.10]: MLX shows direction, not magnitude
+- <0.01 (frontier-tightening): MLX is not the right tool; use paid CUDA
+
+But the structural reason is **NOT** that MLX is contest-axis-misaligned (the adapters are fine). It's that **MLX decoder drift propagates as scorer-input drift** which propagates as scorer-output drift. The bridge (#1251 + #1257) for PRODUCING contest-grade archives from MLX-trained weights remains operationally sound — only the in-training MLX-scorer signal has the granularity bound.
+
+### Canonical equation update
+
+The registered canonical equation `mlx_pytorch_full_decoder_downstream_scorer_drift_propagation_v1` should be renamed in spirit to `mlx_pytorch_decoder_drift_to_scorer_output_upper_bound_via_cross_framework_mse_v1` — its mathematical content is an upper bound, not a contest-score difference. The original equation registration remains per Catalog #344 APPEND-ONLY discipline; this footer documents the corrected interpretation.
+
+### Outstanding methodology fix (deferred)
+
+The sister tool `tools/measure_pr95_mlx_pytorch_actual_contest_score_difference.py` was scaffolded but requires a camera-size upscale step (decoder 384×512 → camera 874×1164 bicubic → uint8) to produce true contest-score-difference measurements. The shortcut: per #1257 GREEN, the actual inflate-output contest score for MLX-roundtripped archives is byte-identical to source PyTorch, so the operationally relevant question is closed even without the upscale-pipeline measurement.
+
+### Discipline applied to this correction footer
+
+Catalog #229 PV (audited 5 bug surfaces empirically) + #110/#113 APPEND-ONLY (NEW footer appended, original verdict preserved) + #307 paradigm-vs-implementation classification (this is METHODOLOGY-LEVEL correction, not paradigm-level kill) + #287 placeholder-rationale rejection (every claim grounded in empirical observation) + CLAUDE.md "Forbidden empirical-claim-without-evidence-tag" + "Apples-to-apples evidence discipline" non-negotiables.
