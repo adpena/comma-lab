@@ -3149,6 +3149,19 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         "cascade_c_posenet_null_segnet_region_selector_codec"
     )
     assert cascade_rows[0]["source_relation"] == "PR110-OPT-5+7+10+12_UNTOUCHED"
+    assert cascade_rows[0]["estimate_status"] == (
+        "per_region_selector_codec_variant_empirically_falsified_"
+        "scorer_repair_hypothesis_survives"
+    )
+    assert cascade_rows[0]["empirical_feedback"]["variant_verdict"] == (
+        "implementation_level_falsification"
+    )
+    assert cascade_rows[0]["empirical_feedback"][
+        "best_observed_delta_vs_fec6_wire_bytes"
+    ] == 83
+    assert "fold_posenet_null_signal_into_fec8_markov_transition_matrix" in (
+        cascade_rows[0]["empirical_feedback"]["surviving_hypotheses"]
+    )
     cascade_mechanisms = {
         item["mechanism_id"]
         for item in cascade_rows[0]["cascade_opportunity"]["canonical_mechanisms"]

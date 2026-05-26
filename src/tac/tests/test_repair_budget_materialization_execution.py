@@ -390,7 +390,19 @@ def test_receiver_closed_rate_credit_materializes_rate_only_parent_locally(
                     "segnet_class_region_mask_ids",
                 ],
                 "optimization_implication": "stack_scorer_repair_with_selector_codec",
-                "estimate_status": "unestimated_structurally_novel",
+                "estimate_status": (
+                    "per_region_selector_codec_variant_empirically_falsified_"
+                    "scorer_repair_hypothesis_survives"
+                ),
+                "empirical_feedback": {
+                    "schema": "frontier_rate_attack_repair_cascade_empirical_feedback.v1",
+                    "variant_verdict": "implementation_level_falsification",
+                    "best_observed_delta_vs_fec6_wire_bytes": 83,
+                    "surviving_hypotheses": [
+                        "fold_posenet_null_signal_into_fec8_markov_transition_matrix",
+                    ],
+                    **FALSE_AUTHORITY,
+                },
                 "required_empirical_landing": "mlx_local_probe",
                 "next_queue_action": "build_cascade_c_mlx_local_probe_queue",
                 "blockers": [
@@ -433,6 +445,14 @@ def test_receiver_closed_rate_credit_materializes_rate_only_parent_locally(
     assert "segnet_class_region_mask_ids" in cascade["cascade_opportunity"][
         "required_probe_measurements"
     ]
+    assert cascade["estimate_status"] == (
+        "per_region_selector_codec_variant_empirically_falsified_"
+        "scorer_repair_hypothesis_survives"
+    )
+    assert cascade["empirical_feedback"]["variant_verdict"] == (
+        "implementation_level_falsification"
+    )
+    assert cascade["empirical_feedback"]["best_observed_delta_vs_fec6_wire_bytes"] == 83
     assert cascade["parent_candidate_chain_id"] == parent["candidate_chain_id"]
     assert "cascade_c_empirical_component_response_missing" in cascade["blockers"]
 

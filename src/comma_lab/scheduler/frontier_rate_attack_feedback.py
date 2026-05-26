@@ -6187,7 +6187,41 @@ def _repair_cascade_opportunity_rows() -> list[dict[str, Any]]:
             "source_relation": "PR110-OPT-5+7+10+12_UNTOUCHED",
             "estimated_score_delta_score_units": None,
             "estimated_archive_bytes_delta": None,
-            "estimate_status": "unestimated_structurally_novel",
+            "estimate_status": (
+                "per_region_selector_codec_variant_empirically_falsified_"
+                "scorer_repair_hypothesis_survives"
+            ),
+            "empirical_feedback": {
+                "schema": "frontier_rate_attack_repair_cascade_empirical_feedback.v1",
+                "source_artifact_paths": [
+                    ".omx/research/cascade_c_artifacts_20260526/"
+                    "cascade_c_per_region_codec_empirical.json",
+                    ".omx/research/cascade_c_artifacts_20260526/"
+                    "cascade_c_alternative_reducers_empirical.json",
+                ],
+                "axis_tag": "[macOS-CPU advisory]",
+                "evidence_grade": "compress_time_encoding_statistics_only",
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+                "tested_variant": "per_region_selector_codec",
+                "variant_verdict": "implementation_level_falsification",
+                "best_observed_delta_vs_fec6_wire_bytes": 83,
+                "best_observed_total_wire_bytes": 332,
+                "baseline_fec6_wire_bytes": 249,
+                "root_cause": (
+                    "per_region_partition_preserves_joint_entropy_as_"
+                    "H_region_plus_H_mode_given_region_and_adds_region_index_overhead"
+                ),
+                "surviving_hypotheses": [
+                    "fold_posenet_null_signal_into_fec8_markov_transition_matrix",
+                    "segnet_class_region_waterfill_as_future_frame1_selector_axis",
+                    "posenet_bottom_decile_signal_for_trainer_curriculum_design",
+                ],
+                "blocked_variant_reuse": (
+                    "do_not_rank_plain_per_region_selector_codec_as_unestimated_win"
+                ),
+                **FALSE_AUTHORITY,
+            },
             "targeted_positions": [
                 {
                     "position_id": "P19",
@@ -6887,6 +6921,11 @@ def _repair_budget_structural_cascade_child_rows(
                 "pipeline_position": cascade.get("pipeline_position"),
                 "optimization_implication": cascade.get("optimization_implication"),
                 "estimate_status": cascade.get("estimate_status"),
+                "empirical_feedback": dict(
+                    cascade.get("empirical_feedback")
+                    if isinstance(cascade.get("empirical_feedback"), Mapping)
+                    else {}
+                ),
                 "required_empirical_landing": cascade.get("required_empirical_landing"),
                 "next_queue_action": cascade.get("next_queue_action"),
                 "requested_repair_bytes": None,

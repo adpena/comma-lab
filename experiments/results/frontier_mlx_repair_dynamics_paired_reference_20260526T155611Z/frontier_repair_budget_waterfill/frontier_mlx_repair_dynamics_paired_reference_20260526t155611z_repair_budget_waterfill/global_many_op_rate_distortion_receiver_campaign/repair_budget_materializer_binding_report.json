@@ -308,7 +308,7 @@
   "exact_cuda_auth_eval": false,
   "field_selection_ready_for_exact_eval_dispatch": false,
   "forbidden_use": "score_claim_or_budget_spend_or_promotion_or_dispatch_authority",
-  "generated_at_utc": "2026-05-26T19:12:42Z",
+  "generated_at_utc": "2026-05-26T19:23:51Z",
   "gpu_launched": false,
   "materializer_execution_queue_path": "",
   "materializer_execution_queue_summary": {
