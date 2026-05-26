@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -535,6 +536,12 @@ def _write_rate_packet_manifest(
     packet_dir = root / name
     runtime_dir = packet_dir / "submission_dir"
     archive_path = packet_dir / "archive.zip"
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    (runtime_dir / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    archive_payload = bytes([len(name) % 251]) * archive_bytes
+    archive_path.parent.mkdir(parents=True, exist_ok=True)
+    archive_path.write_bytes(archive_payload)
+    archive_sha256 = hashlib.sha256(archive_payload).hexdigest()
     return _write_json(
         packet_dir / "packet_manifest.json",
         {
