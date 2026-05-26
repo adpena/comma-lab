@@ -57741,6 +57741,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_path_3_d_z6_l2_long_training_first_canonical_run_20260526",
+      "name": "D=Z6 L2 long-training first canonical run",
+      "phase": 3.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "300-epoch L2 long-training via canonical helper; artifact at experiments/results/z6_l2_canonical_LONGTRAIN_20260526T123600Z/training_artifact.json; sha=dabdcf94c44092c1ce075639c53391973c67abbad8e59fa12c4b4ebe8fc447ad; sister #1265 gate PASS max_abs_drift=0.000253"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[macOS-MLX research-signal] 300ep loss 0.338->0.114 (66% reduction) on real upstream/videos/0.mkv 100 frames; archive 64642 bytes; experiments/results/z6_l2_canonical_LONGTRAIN_20260526T123600Z/"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/path_3_d_z6_l2_long_training_first_canonical_run_landed_20260526T123709Z.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -57750,5 +57791,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T12:35:46Z"
+  "updated_at": "2026-05-26T12:39:26Z"
 }
