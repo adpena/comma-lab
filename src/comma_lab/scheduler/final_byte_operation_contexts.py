@@ -29,6 +29,7 @@ from .byte_shaving_campaign_queue import (
 )
 from .byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
     INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
     INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
     INVERSE_SCORER_CELL_TARGET_KIND,
@@ -263,6 +264,21 @@ def _output_paths(
     return output_path.as_posix(), manifest_path.as_posix()
 
 
+def _default_output_dir(
+    *,
+    row: Mapping[str, Any],
+    repo_root: Path,
+    default_output_root: Path | None,
+) -> str | None:
+    if default_output_root is None:
+        return None
+    root = default_output_root
+    if not root.is_absolute():
+        root = repo_root / root
+    work_id = _safe_work_id(str(row.get("backlog_key") or "materializer"))
+    return (root / work_id).as_posix()
+
+
 def _copy_common_materializer_controls(
     context: dict[str, Any],
     hints: Mapping[str, Any],
@@ -304,6 +320,110 @@ def _copy_common_materializer_controls(
     for key in ("allow_size_regression", "allow_rate_regression", "allow_overwrite"):
         if hints.get(key) is True:
             context[key] = True
+
+
+def _byte_range_entropy_recode_context_row(
+    row: Mapping[str, Any],
+    *,
+    hints: Mapping[str, Any],
+    repo_root: Path,
+    default_output_root: Path | None,
+) -> dict[str, Any]:
+    context: dict[str, Any] = {}
+    blockers: list[str] = []
+    schema_manifest = _first_text(
+        hints,
+        (
+            "schema_manifest",
+            "byte_range_schema_manifest",
+            "payload_schema_manifest",
+        ),
+    )
+    beam_probe_reports = ordered_unique(
+        [
+            *_string_list(hints.get("beam_probe_reports")),
+            *_string_list(hints.get("beam_probe_report")),
+            *_string_list(hints.get("beam_probe_report_paths")),
+            *_string_list(hints.get("beam_probe_report_path")),
+        ]
+    )
+    source_runtime_dir = _first_text(
+        hints,
+        (
+            "source_runtime_dir",
+            "inflate_runtime_dir",
+            "runtime_dir",
+        ),
+    )
+    output_dir = _first_text(
+        hints,
+        (
+            "output_dir",
+            "chain_output_dir",
+            "byte_range_chain_output_dir",
+        ),
+    ) or _default_output_dir(
+        row=row,
+        repo_root=repo_root,
+        default_output_root=default_output_root,
+    )
+    if schema_manifest is None:
+        blockers.append("materializer_context_missing:schema_manifest")
+    if not beam_probe_reports:
+        blockers.append("materializer_context_missing:beam_probe_reports")
+    if source_runtime_dir is None:
+        blockers.append("materializer_context_missing:source_runtime_dir")
+    if output_dir is None:
+        blockers.append("materializer_context_missing:output_dir")
+    context.update(
+        {
+            "context_blockers": blockers,
+            **_packetir_operation_set_contract_context(),
+            **FALSE_AUTHORITY,
+        }
+    )
+    if schema_manifest is not None:
+        context["schema_manifest"] = schema_manifest
+    if beam_probe_reports:
+        context["beam_probe_reports"] = beam_probe_reports
+    if source_runtime_dir is not None:
+        context["source_runtime_dir"] = source_runtime_dir
+    if output_dir is not None:
+        context["output_dir"] = output_dir
+        context["chain_output_dir"] = output_dir
+    for key, value in (
+        ("source_archive", _first_text(hints, ("source_archive", "archive_path"))),
+        ("global_combo_report", _first_text(hints, ("global_combo_report",))),
+        (
+            "member_name",
+            _first_text(
+                hints,
+                (
+                    "member_name",
+                    "archive_member_name",
+                    "packet_member_name",
+                ),
+            ),
+        ),
+        (
+            "retune_brotli_section",
+            _first_text(
+                hints,
+                (
+                    "retune_brotli_section",
+                    "brotli_section",
+                    "target_section",
+                    "section_name",
+                ),
+            ),
+        ),
+    ):
+        if value is not None:
+            context[key] = value
+    if hints.get("fail_if_receiver_blocked") is True:
+        context["fail_if_receiver_blocked"] = True
+    _copy_common_materializer_controls(context, hints, repo_root=repo_root)
+    return _context_row_payload(row, context=context, blockers=blockers)
 
 
 def _archive_section_context_row(
@@ -948,6 +1068,17 @@ def _known_materializer_context_row(
     repo_root: Path,
     default_output_root: Path | None,
 ) -> dict[str, Any] | None:
+    if (
+        row.get("unit_kind") == "byte_range"
+        and row.get("operation_family") == "entropy_recode"
+        and row.get("target_kind") == BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND
+    ):
+        return _byte_range_entropy_recode_context_row(
+            row,
+            hints=hints,
+            repo_root=repo_root,
+            default_output_root=default_output_root,
+        )
     if (
         row.get("unit_kind") == "archive_section"
         and row.get("operation_family") == "section_entropy_recode"

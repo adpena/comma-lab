@@ -41,8 +41,10 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import hashlib
 import json
 import math
+import subprocess
 import sys
 import time
 from collections.abc import Sequence
@@ -104,6 +106,11 @@ HINTON_LOCAL_QUEUE_READY = "LOCAL_MLX_QUEUE_READY"
 HINTON_PAID_DISPATCH_BLOCKED = (
     "PAID_DISPATCH_BLOCKED_REQUIRES_CONTEST_TEACHER_AND_CPU_CUDA_AUTH_EVAL"
 )
+PROVENANCE_FILE_PATHS = (
+    "tools/run_hinton_mlx_long_training_smoke.py",
+    "src/tac/substrates/hinton_distilled_scorer_surrogate/mlx_loss.py",
+    "src/tac/local_acceleration/pr95_hnerv_mlx_long_training.py",
+)
 
 
 CONVERGENCE_VERDICT_CONVERGES = "CONVERGES_CONSISTENTLY"
@@ -120,6 +127,51 @@ VALID_CONVERGENCE_VERDICTS = (
 
 def _utc_now_iso() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _file_sha256(path: Path) -> str | None:
+    if not path.is_file():
+        return None
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _git_output(args: Sequence[str]) -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=REPO_ROOT,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return result.stdout.strip()
+
+
+def _repo_provenance(command: Sequence[str]) -> dict[str, Any]:
+    status = _git_output(["status", "--short"])
+    file_hashes: dict[str, str | None] = {}
+    for rel_path in PROVENANCE_FILE_PATHS:
+        file_hashes[rel_path] = _file_sha256(REPO_ROOT / rel_path)
+    return {
+        "schema": "hinton_mlx_smoke_repo_provenance.v1",
+        "git_sha": _git_output(["rev-parse", "HEAD"]),
+        "git_branch": _git_output(["branch", "--show-current"]),
+        "git_status_short": status,
+        "git_dirty": bool(status),
+        "command_sha256": _sha256_text("\0".join(command)),
+        "file_sha256": file_hashes,
+        **PR95_MLX_LONG_TRAINING_FALSE_AUTHORITY,
+    }
 
 
 class HintonMlxLongTrainingPipeline(MLXLongTrainingPipeline):
@@ -566,6 +618,11 @@ def main(argv: list[str] | None = None) -> int:
         "distillation_weight": args.distillation_weight,
         "num_classes": args.num_classes,
         "spatial_downsample_factor": args.spatial_downsample_factor,
+        "effective_spatial_downsample_factor": student_downsample,
+        "effective_student_head_spatial_downsample_factor": student_downsample,
+        "effective_teacher_spatial_downsample_factor": 1
+        if args.teacher_provider == TEACHER_PROVIDER_REAL_SEGNET
+        else args.spatial_downsample_factor,
         "teacher_provider": args.teacher_provider,
         "teacher_cache_device": args.teacher_cache_device,
         "latent_dim": config.latent_dim,
@@ -574,6 +631,9 @@ def main(argv: list[str] | None = None) -> int:
         "random_seed": config.random_seed,
         "mode": "plan_only",
         "command": [".venv/bin/python", "tools/run_hinton_mlx_long_training_smoke.py", *raw_argv],
+        "repo_provenance": _repo_provenance(
+            [".venv/bin/python", "tools/run_hinton_mlx_long_training_smoke.py", *raw_argv]
+        ),
         "recommended_execution": {
             "schema": "local_training_recommended_execution.v1",
             "tool": "tools/run_hinton_mlx_long_training_smoke.py",

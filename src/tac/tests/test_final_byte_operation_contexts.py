@@ -17,6 +17,8 @@ from comma_lab.scheduler.byte_shaving_campaign_queue import (
 from comma_lab.scheduler.byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER,
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER,
+    BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
     INVERSE_ACTION_HIGH_LEVEL_MATERIALIZER,
     INVERSE_ACTION_HIGH_LEVEL_OPERATION_FAMILY,
     INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
@@ -275,6 +277,63 @@ def _artifact_map(tmp_path: Path) -> dict[str, object]:
                 "min_free_bytes": 512,
                 "allow_size_regression": True,
                 "jobs": 4,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _byte_range_backlog() -> dict[str, object]:
+    return {
+        "schema": "byte_shaving_materializer_backlog.v1",
+        "rows": [
+            {
+                "schema": "byte_shaving_materializer_backlog_row.v1",
+                "backlog_key": "byte_range_entropy_fixture",
+                "backlog_rank": 1,
+                "unit_kind": "byte_range",
+                "operation_family": "entropy_recode",
+                "target_kind": BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
+                "materializer_id": BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER,
+                "source_unit_ids": ["payload_member_range"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _byte_range_artifact_map(tmp_path: Path) -> dict[str, object]:
+    return {
+        "schema": "final_byte_artifact_map.fixture.v1",
+        "artifacts": {
+            BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND: {
+                "schema_manifest": str(tmp_path / "schema.json"),
+                "beam_probe_reports": [
+                    str(tmp_path / "beam_a.json"),
+                    str(tmp_path / "beam_b.json"),
+                ],
+                "source_runtime_dir": str(tmp_path / "runtime"),
+                "output_dir": str(tmp_path / "chain_out"),
+                "source_archive": str(tmp_path / "source.zip"),
+                "global_combo_report": str(tmp_path / "global_combo.json"),
+                "member_name": "0.bin",
+                "retune_brotli_section": "payload",
+                "min_free_bytes": 17,
+                "fail_if_receiver_blocked": True,
                 "score_claim": False,
                 "promotion_eligible": False,
                 "rank_or_kill_eligible": False,
@@ -1142,6 +1201,163 @@ def test_final_byte_context_compiler_carries_missing_artifact_blockers(
     assert "materializer_context_missing:section_manifest" in row["context_blockers"]
     assert row["context"]["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_final_byte_context_compiler_wires_byte_range_entropy_recode_chain(
+    tmp_path: Path,
+) -> None:
+    payload = build_final_byte_operation_contexts(
+        _byte_range_backlog(),
+        artifact_map=_byte_range_artifact_map(tmp_path),
+        repo_root=tmp_path,
+        default_output_root=tmp_path / "out",
+    )
+
+    assert payload["blocked_context_count"] == 0
+    assert payload["unsupported_backlog_keys"] == []
+    row = payload["rows"][0]
+    assert "unsupported" not in row
+    context = row["context"]
+    assert context["schema_manifest"] == str(tmp_path / "schema.json")
+    assert context["beam_probe_reports"] == [
+        str(tmp_path / "beam_a.json"),
+        str(tmp_path / "beam_b.json"),
+    ]
+    assert context["source_runtime_dir"] == str(tmp_path / "runtime")
+    assert context["output_dir"] == str(tmp_path / "chain_out")
+    assert context["member_name"] == "0.bin"
+    assert context["fail_if_receiver_blocked"] is True
+    assert context["score_claim"] is False
+    assert context["ready_for_exact_eval_dispatch"] is False
+
+    work_queue = build_materializer_work_queue(
+        _byte_range_backlog(),
+        repo_root=tmp_path,
+        contexts=materializer_contexts_from_payload(payload),
+        source_plan_path="plan.json",
+    )
+
+    assert work_queue["executable_row_count"] == 1
+    work = work_queue["rows"][0]
+    assert work["executable"] is True
+    assert work["tool"] == "tools/run_byte_range_entropy_recode_chain.py"
+    assert work["command"][:4] == [
+        ".venv/bin/python",
+        "tools/run_byte_range_entropy_recode_chain.py",
+        "--schema-manifest",
+        str(tmp_path / "schema.json"),
+    ]
+    assert work["command"].count("--beam-probe-report") == 2
+    assert "--fail-if-receiver-blocked" in work["command"]
+    assert work["score_claim"] is False
+    assert work["ready_for_exact_eval_dispatch"] is False
+
+
+def test_final_byte_context_compiler_blocks_incomplete_byte_range_context(
+    tmp_path: Path,
+) -> None:
+    artifact_map = {
+        "schema": "final_byte_artifact_map.fixture.v1",
+        "artifacts": {
+            BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND: {
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    payload = build_final_byte_operation_contexts(
+        _byte_range_backlog(),
+        artifact_map=artifact_map,
+        repo_root=tmp_path,
+        default_output_root=None,
+    )
+
+    assert payload["blocked_context_count"] == 1
+    blockers = payload["rows"][0]["context_blockers"]
+    assert blockers == [
+        "materializer_context_missing:schema_manifest",
+        "materializer_context_missing:beam_probe_reports",
+        "materializer_context_missing:source_runtime_dir",
+        "materializer_context_missing:output_dir",
+    ]
+    work_queue = build_materializer_work_queue(
+        _byte_range_backlog(),
+        repo_root=tmp_path,
+        contexts=materializer_contexts_from_payload(payload),
+        source_plan_path="plan.json",
+    )
+    assert work_queue["executable_row_count"] == 0
+    assert set(blockers).issubset(set(work_queue["rows"][0]["materialization_blockers"]))
+
+
+def test_final_byte_context_compiler_accepts_byte_range_context_aliases(
+    tmp_path: Path,
+) -> None:
+    artifact_map = {
+        "schema": "final_byte_artifact_map.fixture.v1",
+        "artifacts": {
+            BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND: {
+                "byte_range_schema_manifest": "schema.json",
+                "beam_probe_report": "beam.json",
+                "runtime_dir": "runtime",
+                "chain_output_dir": "chain",
+                "archive_path": "source.zip",
+                "archive_member_name": "payload.bin",
+                "target_section": "packed_payload",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    payload = build_final_byte_operation_contexts(
+        _byte_range_backlog(),
+        artifact_map=artifact_map,
+        repo_root=tmp_path,
+        default_output_root=tmp_path / "out",
+    )
+
+    assert payload["blocked_context_count"] == 0
+    context = payload["rows"][0]["context"]
+    assert context["schema_manifest"] == "schema.json"
+    assert context["beam_probe_reports"] == ["beam.json"]
+    assert context["source_runtime_dir"] == "runtime"
+    assert context["output_dir"] == "chain"
+    assert context["source_archive"] == "source.zip"
+    assert context["member_name"] == "payload.bin"
+    assert context["retune_brotli_section"] == "packed_payload"
+
+
+def test_final_byte_context_compiler_rejects_truthy_byte_range_authority(
+    tmp_path: Path,
+) -> None:
+    artifact_map = _byte_range_artifact_map(tmp_path)
+    artifacts = artifact_map["artifacts"]
+    assert isinstance(artifacts, dict)
+    byte_range_context = artifacts[BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND]
+    assert isinstance(byte_range_context, dict)
+    byte_range_context["score_claim"] = True
+
+    with pytest.raises(ValueError, match="score_claim"):
+        build_final_byte_operation_contexts(
+            _byte_range_backlog(),
+            artifact_map=artifact_map,
+            repo_root=tmp_path,
+            default_output_root=tmp_path / "out",
+        )
 
 
 def test_final_byte_context_compiler_blocks_high_level_inverse_action_without_compiler_hint(

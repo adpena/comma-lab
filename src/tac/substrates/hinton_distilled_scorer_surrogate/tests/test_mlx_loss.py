@@ -12,6 +12,11 @@ machines.
 
 from __future__ import annotations
 
+import json
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
 
 mx = pytest.importorskip("mlx.core")
@@ -31,6 +36,8 @@ from tac.substrates.hinton_distilled_scorer_surrogate import (  # noqa: E402
 from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (  # noqa: E402
     custom_loss_fn_canonical_signature_hash,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[5]
 
 
 def test_default_temperature_matches_quantizr_canonical_anchor() -> None:
@@ -322,6 +329,50 @@ def test_real_segnet_teacher_cache_uses_upstream_rgb_scale(monkeypatch: pytest.M
     assert cache.height == 2
     assert cache.width == 2
     assert cache.num_classes == 5
+
+
+def test_hinton_smoke_plan_records_real_segnet_effective_downsample_and_provenance(
+    tmp_path: Path,
+) -> None:
+    output_report = tmp_path / "plan.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "run_hinton_mlx_long_training_smoke.py"),
+            "--output-report",
+            str(output_report),
+            "--teacher-provider",
+            "real_segnet",
+            "--teacher-cache-device",
+            "cpu",
+            "--max-frames",
+            "4",
+            "--smoke-epochs",
+            "1",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    stdout = json.loads(result.stdout)
+    report = json.loads(output_report.read_text(encoding="utf-8"))
+
+    assert stdout["mode"] == "plan_only"
+    assert report["teacher_provider"] == "real_segnet"
+    assert report["teacher_cache_device"] == "cpu"
+    assert report["spatial_downsample_factor"] == 4
+    assert report["effective_spatial_downsample_factor"] == 1
+    assert report["effective_student_head_spatial_downsample_factor"] == 1
+    assert report["effective_teacher_spatial_downsample_factor"] == 1
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["score_claim"] is False
+    provenance = report["repo_provenance"]
+    assert provenance["schema"] == "hinton_mlx_smoke_repo_provenance.v1"
+    assert len(provenance["command_sha256"]) == 64
+    assert provenance["score_claim"] is False
+    assert "tools/run_hinton_mlx_long_training_smoke.py" in provenance["file_sha256"]
 
 
 def test_custom_loss_fn_canonical_signature_hash_stable() -> None:
