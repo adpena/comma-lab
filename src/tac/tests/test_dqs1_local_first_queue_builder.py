@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from src.comma_lab.scheduler import dqs1_local_first_queue as dqs1_queue
 from src.comma_lab.scheduler.dqs1_local_first_harvest import (
     EXACT_AUTH_ANCHOR_REQUEST_SCHEMA,
     HARVEST_SCHEMA,
@@ -330,16 +331,19 @@ def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: P
     assert steps_by_id["plan_packet"]["requires"] == ["build_bridge_plan"]
     locality = steps_by_id["locality_controls"]
     assert locality["resources"]["kind"] == "local_io_heavy"
-    assert locality["timeout_seconds"] == 960
+    assert locality["timeout_seconds"] == dqs1_queue.DEFAULT_LOCALITY_STEP_TIMEOUT_SECONDS
     locality_command = locality["command"]
-    assert locality_command[locality_command.index("--timeout-seconds") + 1] == "540"
+    assert (
+        locality_command[locality_command.index("--timeout-seconds") + 1]
+        == str(dqs1_queue.DEFAULT_LOCALITY_INFLATE_TIMEOUT_SECONDS)
+    )
     assert (
         locality_command[locality_command.index("--global-timeout-seconds") + 1]
-        == "840"
+        == str(dqs1_queue.DEFAULT_LOCALITY_GLOBAL_INFLATE_TIMEOUT_SECONDS)
     )
     assert (
         locality_command[locality_command.index("--max-inflate-parallelism") + 1]
-        == "3"
+        == str(dqs1_queue.DEFAULT_LOCALITY_MAX_INFLATE_PARALLELISM)
     )
     assert "--reuse-existing-inflates" in locality_command
     advisory = steps_by_id["local_cpu_advisory"]
@@ -2122,9 +2126,21 @@ def test_checked_in_dqs1_queue_keeps_eureka_append_only_contract() -> None:
         steps = {step["id"]: step for step in experiment["steps"]}
         locality = steps["locality_controls"]
         assert locality["resources"]["kind"] == "local_io_heavy"
-        assert locality["timeout_seconds"] == 960
+        assert locality["timeout_seconds"] == dqs1_queue.DEFAULT_LOCALITY_STEP_TIMEOUT_SECONDS
         assert "--global-timeout-seconds" in locality["command"]
+        assert (
+            locality["command"][locality["command"].index("--timeout-seconds") + 1]
+            == str(dqs1_queue.DEFAULT_LOCALITY_INFLATE_TIMEOUT_SECONDS)
+        )
+        assert (
+            locality["command"][locality["command"].index("--global-timeout-seconds") + 1]
+            == str(dqs1_queue.DEFAULT_LOCALITY_GLOBAL_INFLATE_TIMEOUT_SECONDS)
+        )
         assert "--max-inflate-parallelism" in locality["command"]
+        assert (
+            locality["command"][locality["command"].index("--max-inflate-parallelism") + 1]
+            == str(dqs1_queue.DEFAULT_LOCALITY_MAX_INFLATE_PARALLELISM)
+        )
         assert "--reuse-existing-inflates" in locality["command"]
         raw_retention = steps["plan_raw_artifact_retention"]
         assert raw_retention["resources"]["kind"] == "local_io_heavy"

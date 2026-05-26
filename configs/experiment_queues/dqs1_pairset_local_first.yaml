@@ -265,11 +265,11 @@
             "--frame-policy",
             "pair_all_frames",
             "--timeout-seconds",
-            "540",
+            "1200",
             "--global-timeout-seconds",
-            "840",
+            "1800",
             "--max-inflate-parallelism",
-            "3",
+            "2",
             "--reuse-existing-inflates",
             "--work-dir",
             "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_rank023_pair0440/locality_work",
@@ -308,7 +308,7 @@
           "resources": {
             "kind": "local_io_heavy"
           },
-          "timeout_seconds": 960
+          "timeout_seconds": 2400
         },
         {
           "command": [
@@ -609,11 +609,11 @@
             "--frame-policy",
             "pair_all_frames",
             "--timeout-seconds",
-            "540",
+            "1200",
             "--global-timeout-seconds",
-            "840",
+            "1800",
             "--max-inflate-parallelism",
-            "3",
+            "2",
             "--reuse-existing-inflates",
             "--work-dir",
             "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_rank024_pair0112/locality_work",
@@ -652,7 +652,7 @@
           "resources": {
             "kind": "local_io_heavy"
           },
-          "timeout_seconds": 960
+          "timeout_seconds": 2400
         },
         {
           "command": [

@@ -62,6 +62,10 @@ DEFAULT_DRIFT_CALIBRATION_JSON = (
 )
 DEFAULT_EUREKA_OUTPUT_DIR = ".omx/research"
 DEFAULT_MLX_REFERENCE_CACHE_DIR = "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600"
+DEFAULT_LOCALITY_STEP_TIMEOUT_SECONDS = 2400
+DEFAULT_LOCALITY_INFLATE_TIMEOUT_SECONDS = 1200
+DEFAULT_LOCALITY_GLOBAL_INFLATE_TIMEOUT_SECONDS = 1800
+DEFAULT_LOCALITY_MAX_INFLATE_PARALLELISM = 2
 DEFAULT_SCHEDULER_PREFLIGHT_EXPERIMENT_ID = "dqs1_scheduler_preflight"
 SAFE_OPERATOR_ACTION = "materialize_pairset_archive_and_run_local_controls"
 LOCAL_CPU_CONTEST_DRIFT_EUREKA_SCHEMA = EUREKA_SIGNAL_SCHEMA
@@ -1546,7 +1550,7 @@ def build_dqs1_local_first_queue(
         {
             "id": "locality_controls",
             "requires": ["materialize"],
-            "timeout_seconds": 960,
+            "timeout_seconds": DEFAULT_LOCALITY_STEP_TIMEOUT_SECONDS,
             "command": [
                 ".venv/bin/python",
                 "tools/run_decoder_q_selective_runtime_locality_controls.py",
@@ -1561,11 +1565,11 @@ def build_dqs1_local_first_queue(
                 "--frame-policy",
                 frame_policy,
                 "--timeout-seconds",
-                "540",
+                str(DEFAULT_LOCALITY_INFLATE_TIMEOUT_SECONDS),
                 "--global-timeout-seconds",
-                "840",
+                str(DEFAULT_LOCALITY_GLOBAL_INFLATE_TIMEOUT_SECONDS),
                 "--max-inflate-parallelism",
-                "3",
+                str(DEFAULT_LOCALITY_MAX_INFLATE_PARALLELISM),
                 "--reuse-existing-inflates",
                 "--work-dir",
                 f"{materialized_root}/locality_work",

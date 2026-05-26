@@ -974,45 +974,6 @@ def run_inflate_target(
                 )
             return cached
 
-    if reuse_existing_inflates and all(
-        path.is_file() and path.stat().st_size > 0
-        for path in _expected_output_paths(output_dir, video_names)
-    ) and _archive_dir_matches_target(target, archive_dir):
-        raw_sizes = _raw_output_sizes(output_dir, video_names)
-        cached = {
-            **identity,
-            "archive_member_count": 1,
-            "command": None,
-            "returncode": 0,
-            "elapsed_seconds": 0.0,
-            "stdout_sha256": None,
-            "stderr_sha256": None,
-            "stdout_tail": "",
-            "stderr_tail": "",
-            "output_dir": str(output_dir),
-            "reused_existing_inflate": True,
-            "reuse_mode": "legacy_archive_member_verified",
-            "raw_output_bytes": raw_sizes,
-        }
-        manifest = {
-            "schema": "decoder_q_selective_runtime_locality_inflate_manifest.v1",
-            "target_identity": identity,
-            "run": cached,
-            "raw_output_bytes": raw_sizes,
-            "legacy_reuse_without_prior_manifest": True,
-            **FALSE_AUTHORITY,
-        }
-        write_json(manifest_path, manifest)
-        if recorder is not None:
-            recorder.append_event(
-                {
-                    "event": "inflate_reused",
-                    "target": target.label,
-                    "reuse_mode": "legacy_archive_member_verified",
-                }
-            )
-        return {**cached, "manifest_path": str(manifest_path.resolve())}
-
     if deadline is not None:
         deadline.check(f"inflate:{target.label}")
 

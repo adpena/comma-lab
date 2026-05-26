@@ -204,6 +204,54 @@ out.mkdir(parents=True, exist_ok=True)
     assert counter.read_text() == "1"
 
 
+def test_run_inflate_target_reruns_unmanifested_partial_outputs(
+    tmp_path: Path,
+) -> None:
+    runtime = tmp_path / "runtime"
+    counter = runtime / "counter.txt"
+    _write_runtime(
+        runtime,
+        f"""
+from pathlib import Path
+import sys
+counter = Path({str(counter)!r})
+counter.write_text(str(int(counter.read_text() or "0") + 1) if counter.exists() else "1")
+out = Path(sys.argv[2])
+out.mkdir(parents=True, exist_ok=True)
+(out / "0.raw").write_bytes(b"complete-output")
+""",
+    )
+    archive = tmp_path / "archive.zip"
+    _write_stored_zip(archive, b"payload")
+    names = tmp_path / "names.txt"
+    names.write_text("0\n", encoding="utf-8")
+    work = tmp_path / "work"
+    partial = work / "parent" / "inflated" / "0.raw"
+    partial.parent.mkdir(parents=True)
+    partial.write_bytes(b"partial")
+    target = InflateTarget(
+        label="parent",
+        runtime_dir=runtime,
+        archive_zip=archive,
+        archive_source="test",
+    )
+
+    result = run_inflate_target(
+        target,
+        work_root=work,
+        video_names_file=names,
+        video_names=["0"],
+        timeout_seconds=5,
+        reuse_existing_inflates=True,
+        recorder=PhaseRecorder(tmp_path / "progress.jsonl"),
+    )
+
+    assert result["reused_existing_inflate"] is False
+    assert result["reuse_mode"] == "fresh"
+    assert counter.read_text() == "1"
+    assert partial.read_bytes() == b"complete-output"
+
+
 def test_run_inflate_target_honors_global_deadline(tmp_path: Path) -> None:
     runtime = tmp_path / "runtime"
     _write_runtime(
