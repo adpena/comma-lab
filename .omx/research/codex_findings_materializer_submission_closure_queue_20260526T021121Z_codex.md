@@ -40,7 +40,10 @@ before a runnable `archive.zip` + `inflate.sh` submission packet existed.
   - `src/tac/tests/test_materializer_submission_closure.py`
   - `src/tac/tests/test_optimizer_candidate_queue.py`
 
-Combined result: 266 passed in 12.81s.
+- Focused receiver/materializer closure slice: 40 passed.
+- Broader queue/candidate/submission regression slice: 214 passed.
+- Full touched materializer/queue regression slice: 266 passed in 13.01s.
+- Lane registry validation: 1372 lanes validated cleanly.
 
 ## Authority Boundary
 
