@@ -114,6 +114,7 @@ required_input_files:
     default_path: upstream/videos/0.mkv
 
 env_overrides:
+  CASCADE_C_PRIME_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
   CASCADE_C_PRIME_TRAINER_MODE: "full"
   CASCADE_C_PRIME_DEVICE: "cuda"
   CASCADE_C_PRIME_EPOCHS: "1"
