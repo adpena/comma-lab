@@ -2058,9 +2058,19 @@ def promoted_row(
         "inflate_sh_path": repo_rel(inflate_sh, repo_root),
         "archive_manifest_path": repo_rel(manifest_path, repo_root),
         "runtime_tree_sha256": runtime_manifest["runtime_tree_sha256"],
+        "submission_runtime_tree_sha256": runtime_manifest["runtime_tree_sha256"],
         "runtime_content_tree_sha256": runtime_manifest[
             "runtime_content_tree_sha256"
         ],
+        "submission_runtime_content_tree_sha256": runtime_manifest[
+            "runtime_content_tree_sha256"
+        ],
+        "runtime_consumption_proof_runtime_tree_sha256": facts.get(
+            "runtime_consumption_proof_runtime_tree_sha256"
+        ),
+        "candidate_row_adapter_runtime_tree_sha256": facts.get(
+            "candidate_row_adapter_runtime_tree_sha256"
+        ),
         "runtime_manifest": runtime_manifest,
         "runtime_consumption_proof_required": facts.get(
             "runtime_consumption_proof_required"
@@ -2229,6 +2239,27 @@ def promote_candidate_for_exact_eval(
             ).get("runtime_tree_sha256")
             if isinstance(facts.get("runtime_manifest"), dict)
             else None,
+            "submission_runtime_tree_sha256": (
+                facts.get("runtime_manifest") or {}
+            ).get("runtime_tree_sha256")
+            if isinstance(facts.get("runtime_manifest"), dict)
+            else None,
+            "runtime_content_tree_sha256": (
+                facts.get("runtime_manifest") or {}
+            ).get("runtime_content_tree_sha256")
+            if isinstance(facts.get("runtime_manifest"), dict)
+            else None,
+            "submission_runtime_content_tree_sha256": (
+                facts.get("runtime_manifest") or {}
+            ).get("runtime_content_tree_sha256")
+            if isinstance(facts.get("runtime_manifest"), dict)
+            else None,
+            "runtime_consumption_proof_runtime_tree_sha256": facts.get(
+                "runtime_consumption_proof_runtime_tree_sha256"
+            ),
+            "candidate_row_adapter_runtime_tree_sha256": facts.get(
+                "candidate_row_adapter_runtime_tree_sha256"
+            ),
             "runtime_consumption_proof_required": facts.get(
                 "runtime_consumption_proof_required"
             ),

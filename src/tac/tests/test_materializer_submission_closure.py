@@ -9,6 +9,7 @@ from pathlib import Path
 from comma_lab.scheduler.materializer_chain_harvest import (
     run_exact_readiness_bridge_for_harvested_queue,
 )
+from tac.optimizer.exact_readiness import runtime_dependency_manifest
 from tac.optimizer.materializer_submission_closure import (
     SUBMISSION_CLOSURE_REPORT_SCHEMA,
     build_materializer_submission_runtime_closure,
@@ -347,6 +348,10 @@ def test_materializer_submission_closure_uses_proof_backed_runtime_adapter(
     assert closed_row["runtime_source_dir"] == "artifacts/adapter_runtime"
     assert closed_row["candidate_runtime_dir"] == "artifacts/adapter_runtime"
     assert closed_row["candidate_runtime_tree_sha256"] == adapter_runtime_sha
+    assert closed_row["adapter_runtime_tree_sha256"] == adapter_runtime_sha
+    assert closed_row["submission_runtime_tree_sha256"] == closed_row[
+        "runtime_tree_sha256"
+    ]
     assert closed_row["packet_member_merge_receiver_runtime"]["runtime_dir"] == (
         "artifacts/adapter_runtime"
     )
@@ -357,6 +362,27 @@ def test_materializer_submission_closure_uses_proof_backed_runtime_adapter(
     assert closed_row["runtime_tree_sha256"] == report["runtime_manifest"][
         "runtime_tree_sha256"
     ]
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=repo / "closure" / "closed_source_queue.json",
+        exact_readiness_out_dir=repo / "closure" / "exact_readiness",
+        active_floor_archive_bytes=None,
+        active_floor_score=None,
+    )
+    readiness_report_path = repo / bridge["rows"][0]["exact_readiness_report_path"]
+    readiness_report = json.loads(readiness_report_path.read_text(encoding="utf-8"))
+    readiness_facts = readiness_report["facts"]
+    assert readiness_facts["runtime_tree_sha256"] == closed_row["runtime_tree_sha256"]
+    assert readiness_facts["submission_runtime_tree_sha256"] == closed_row[
+        "runtime_tree_sha256"
+    ]
+    assert (
+        readiness_facts["runtime_consumption_proof_runtime_tree_sha256"]
+        == adapter_runtime_sha
+    )
+    assert readiness_facts["candidate_row_adapter_runtime_tree_sha256"] == (
+        adapter_runtime_sha
+    )
 
 
 def test_materializer_submission_closure_closes_all_source_queue_rows(
@@ -480,10 +506,22 @@ def test_materializer_submission_closure_closes_all_source_queue_rows(
         submission_dir = repo / row["submission_dir"]
         assert (submission_dir / "archive.zip").is_file()
         assert (submission_dir / "inflate.sh").is_file()
+        assert not (submission_dir / "closed_source_queue.json").exists()
+        assert not (submission_dir / "submission_closure_report.json").exists()
         assert row["candidate_archive_path"].endswith("/archive.zip")
         assert row["runtime_consumption_proof_path"].endswith(
             "/runtime_consumption_proof.json"
         )
+        assert row["runtime_tree_sha256"] == runtime_dependency_manifest(
+            submission_dir,
+            repo,
+        )["runtime_tree_sha256"]
+        assert row["submission_runtime_tree_sha256"] == row["runtime_tree_sha256"]
+    sidecar_root = repo / "closure" / "candidate_closure_sidecars"
+    assert (sidecar_root / "zip_header_fixture_1" / "closed_source_queue.json").is_file()
+    assert (
+        sidecar_root / "zip_header_fixture_1" / "submission_closure_report.json"
+    ).is_file()
 
     bridge = run_exact_readiness_bridge_for_harvested_queue(
         repo_root=repo,

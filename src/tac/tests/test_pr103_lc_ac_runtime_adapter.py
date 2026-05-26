@@ -19,7 +19,7 @@ from tac.pr103_lc_ac_runtime_adapter import (
     build_pr103_lc_ac_runtime_adapter,
     probe_pr103_lc_ac_frame_parity,
 )
-from tac.repo_io import sha256_file, write_json
+from tac.repo_io import sha256_file, tree_sha256, write_json
 
 REPO = Path(__file__).resolve().parents[3]
 SCRIPT = REPO / "tools/build_pr103_lc_ac_runtime_adapter.py"
@@ -55,6 +55,8 @@ def test_pr103_runtime_adapter_patches_constants_and_proves_consumption(
     assert "full_frame_render_output_parity_missing" in report["readiness_blockers"]
     assert "shell_inflate_output_parity_missing" in report["readiness_blockers"]
     assert len(report["runtime_tree_sha256"]) == 64
+    assert report["runtime_tree_sha256"] == tree_sha256(tmp_path / "adapted")
+    assert len(report["runtime_file_records_sha256"]) == 64
     adapted_inflate = (tmp_path / "adapted/inflate.py").read_text(encoding="utf-8")
     adapted_shell = (tmp_path / "adapted/inflate.sh").read_text(encoding="utf-8")
     assert "HIST_LEN = 2" in adapted_inflate

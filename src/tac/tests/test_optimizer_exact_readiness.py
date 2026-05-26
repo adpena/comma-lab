@@ -170,6 +170,7 @@ def test_byte_range_runtime_proof_clears_receiver_schema_blocker(
             "decoder_state_parity_proof": {"passed": True},
             "candidate_archive_sha256": "a" * 64,
             "candidate_member_sha256": "b" * 64,
+            "runtime_tree_sha256": "c" * 64,
             "archive_byte_ranges": [
                 {
                     "archive_member_name": "x",
@@ -193,6 +194,8 @@ def test_byte_range_runtime_proof_clears_receiver_schema_blocker(
             "receiver_contract_id": BYTE_RANGE_RECEIVER_CONTRACT_ID,
             "receiver_contract_kind": BYTE_RANGE_RECEIVER_CONTRACT_KIND,
             "candidate_member_sha256": "b" * 64,
+            "runtime_adapter_ready": True,
+            "candidate_runtime_tree_sha256": "c" * 64,
             "runtime_consumption_proof_required": True,
             "runtime_consumption_proof_status": "present",
             "runtime_consumption_proof_path": str(proof),
@@ -205,6 +208,8 @@ def test_byte_range_runtime_proof_clears_receiver_schema_blocker(
 
     assert facts["runtime_consumption_proof_schema"] == BYTE_RANGE_RECEIVER_PROOF_SCHEMA
     assert facts["runtime_consumption_proof_archive_sha256"] == "a" * 64
+    assert facts["runtime_consumption_proof_runtime_tree_sha256"] == "c" * 64
+    assert facts["candidate_row_adapter_runtime_tree_sha256"] == "c" * 64
     assert "runtime_consumption_proof_schema_unsupported" not in blockers
     assert blockers == []
 

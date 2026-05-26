@@ -20,7 +20,15 @@ import numpy as np
 
 from tac.hnerv_lowlevel_packer import read_strict_single_member_zip
 from tac.pr103_arithmetic_transform_plan import CANDIDATE_SCHEMA
-from tac.repo_io import json_text, read_json, repo_relative, sha256_bytes, sha256_file, write_json
+from tac.repo_io import (
+    json_text,
+    read_json,
+    repo_relative,
+    sha256_bytes,
+    sha256_file,
+    tree_sha256,
+    write_json,
+)
 
 ADAPTER_SCHEMA = "pr103_lc_ac_runtime_adapter_v1"
 PACKET_SCHEMA = "pr103_lc_ac_histogram_candidate_packet_v1"
@@ -118,7 +126,8 @@ def build_pr103_lc_ac_runtime_adapter(
         "decoder_state_parity_proof": parity,
         "semantic_stream_parity": _mapping(manifest.get("semantic_stream_parity")),
         "runtime_files": runtime_files,
-        "runtime_tree_sha256": _runtime_tree_sha256(runtime_files),
+        "runtime_file_records_sha256": _runtime_tree_sha256(runtime_files),
+        "runtime_tree_sha256": tree_sha256(output_dir),
         "readiness_blockers": blockers,
         "dispatch_blockers": [
             "pr103_runtime_adapter_is_not_dispatch_authorization",
@@ -226,7 +235,8 @@ def build_pr103_lc_ac_candidate_packet(
         },
         "runtime_files_copied": runtime_files,
         "runtime_files": packet_runtime_files,
-        "runtime_tree_sha256": _runtime_tree_sha256(packet_runtime_files),
+        "runtime_file_records_sha256": _runtime_tree_sha256(packet_runtime_files),
+        "runtime_tree_sha256": tree_sha256(output_dir),
         "adapter_runtime_tree_sha256": manifest.get("runtime_tree_sha256"),
         "decoder_state_parity_proof": _mapping(manifest.get("decoder_state_parity_proof")),
         "frame_output_parity_proof": _frame_parity_summary(frame_parity, shell_parity),

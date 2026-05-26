@@ -33,6 +33,7 @@ from tac.optimization.serialized_archive_economics import (
     build_serialized_archive_delta_contract,
 )
 from tac.optimizer.exact_readiness import validate_serialized_archive_delta_contract
+from tac.repo_io import tree_sha256
 
 SUPPORTED_CHAIN_SCHEMAS = frozenset(
     {
@@ -172,7 +173,7 @@ def adapt_materializer_chain_manifest_to_candidate(
         "chain_artifact_count": len(chain.get("artifacts") or {}),
         "chain_step_count": len(chain.get("chain_steps") or []),
         **_runtime_consumption_proof_fields(chain),
-        **_chain_runtime_context_fields(chain),
+        **_chain_runtime_context_fields(chain, repo_root=repo_root),
         "local_advisory_axes": _local_advisory_axes(chain),
         "local_advisory_axes_semantics": (
             "non_authoritative_planning_signal_only_not_score_claim"
@@ -648,7 +649,11 @@ def _runtime_consumption_proof_fields(chain: Mapping[str, Any]) -> dict[str, Any
     return out
 
 
-def _chain_runtime_context_fields(chain: Mapping[str, Any]) -> dict[str, Any]:
+def _chain_runtime_context_fields(
+    chain: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for key in (
         "source_runtime_dir",
@@ -661,12 +666,32 @@ def _chain_runtime_context_fields(chain: Mapping[str, Any]) -> dict[str, Any]:
         value = _nonempty_string(chain.get(key))
         if value is not None:
             out[key] = value
-    runtime_tree_sha = _chain_runtime_tree_sha256(chain)
+    runtime_tree_sha = _chain_runtime_dir_tree_sha256(
+        chain,
+        repo_root=repo_root,
+    ) or _chain_runtime_tree_sha256(chain)
     if runtime_tree_sha is not None:
         out["candidate_runtime_tree_sha256"] = runtime_tree_sha
         if chain.get("schema") == "byte_range_entropy_recode_chain_v1":
             out["byte_range_entropy_recode_runtime_tree_sha256"] = runtime_tree_sha
     return out
+
+
+def _chain_runtime_dir_tree_sha256(
+    chain: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> str | None:
+    for key in ("candidate_runtime_dir", "runtime_dir", "inflate_runtime_dir"):
+        value = _nonempty_string(chain.get(key))
+        if value is None:
+            continue
+        candidate = Path(value)
+        if not candidate.is_absolute():
+            candidate = repo_root / candidate
+        if candidate.is_dir() and (candidate / "inflate.sh").is_file():
+            return tree_sha256(candidate).lower()
+    return None
 
 
 def _chain_runtime_tree_sha256(chain: Mapping[str, Any]) -> str | None:

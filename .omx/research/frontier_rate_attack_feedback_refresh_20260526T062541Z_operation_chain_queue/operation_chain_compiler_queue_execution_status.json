@@ -1,0 +1,471 @@
+{
+  "mode": "running",
+  "orphaned_step_count": 0,
+  "orphaned_steps": [],
+  "queue_id": "frontier_rate_attack_operation_chain_queue_20260526T062541Z_chain_compiler",
+  "ready_steps": [],
+  "schema": "experiment_queue_summary.v1",
+  "state": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_frontier_rate_attack_operation_chain_queue_20260526T062541Z_chain_compiler.sqlite",
+  "status_counts": {
+    "succeeded": 8
+  },
+  "step_count": 8,
+  "steps": [
+    {
+      "attempts": 1,
+      "experiment_id": "chain_dfl1_merge_header_elide_minimal_envelope",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_frontier_byte_range_stage_inputs.py",
+          "--operation-chain-stage-plan",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/stage_plan.json",
+          "--stage-inputs-out",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/byte_range_stage_inputs.json",
+          "--chain-output-dir",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/byte_range_entropy_recode_chain",
+          "--overwrite"
+        ],
+        "elapsed_seconds": 0.6101496249902993,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_rate_attack_operation_chain_queue_20260526T062541Z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/emit_byte_range_stage_inputs/20260526T062615Z_41109fd182b07843.log",
+        "pid": 81045,
+        "postcondition_errors": [],
+        "resource_kind": "local_io_heavy",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 1,
+          "artifact_records": [
+            {
+              "bytes": 12424,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T06:26:15Z",
+              "path": "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/byte_range_stage_inputs.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 873,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "41109fd182b07843"
+      },
+      "status": "succeeded",
+      "step_id": "emit_byte_range_stage_inputs",
+      "updated_at_utc": "2026-05-26T06:26:15Z"
+    },
+    {
+      "attempts": 1,
+      "experiment_id": "chain_dfl1_merge_header_elide_minimal_envelope",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_frontier_operation_chain_stage_plan.py",
+          "--operation-chain-compiler-work-orders",
+          ".omx/research/frontier_rate_attack_feedback_refresh_20260526T062541Z_operation_chain_queue/operation_chain_compiler_work_orders.json",
+          "--source-operation-id",
+          "chain_dfl1_merge_header_elide_minimal_envelope",
+          "--stage-plan-out",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/stage_plan.json",
+          "--overwrite"
+        ],
+        "elapsed_seconds": 0.8419984999345616,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_rate_attack_operation_chain_queue_20260526T062541Z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/emit_operation_chain_stage_plan/20260526T062614Z_bb2e0a42d37d69ef.log",
+        "pid": 81044,
+        "postcondition_errors": [],
+        "resource_kind": "local_io_heavy",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 1,
+          "artifact_records": [
+            {
+              "bytes": 6200,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T06:26:14Z",
+              "path": "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_dfl1_merge_header_elide_minimal_envelope/stage_plan.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 574,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "bb2e0a42d37d69ef"
+      },
+      "status": "succeeded",
+      "step_id": "emit_operation_chain_stage_plan",
+      "updated_at_utc": "2026-05-26T06:26:15Z"
+    },
+    {
+      "attempts": 4,
+      "experiment_id": "chain_registered_multisurface_materializer_program",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_materializer_submission_closure.py",
+          "--source-queue",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/source_queue.json",
+          "--submission-dir-out",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/submission",
+          "--closed-source-queue-out",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/closed_source_queue.json",
+          "--closure-report-out",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/submission_closure_report.json",
+          "--overwrite"
+        ],
+        "elapsed_seconds": 0.21517558302730322,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_rate_attack_operation_chain_queue_20260526T062541Z_chain_compiler/chain_registered_multisurface_materializer_program/build_byte_range_submission_closure/20260526T065418Z_a9c05f5409cde83a.log",
+        "pid": 15300,
+        "postcondition_errors": [],
+        "resource_kind": "local_io_heavy",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 3,
+          "artifact_records": [
+            {
+              "bytes": 96,
+              "exists": true,
+              "is_dir": true,
+              "is_file": false,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T06:54:19Z",
+              "path": "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/submission",
+              "recursive_bytes": 203659,
+              "recursive_entry_count": 7,
+              "recursive_entry_limit": 256,
+              "recursive_truncated": false,
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 32564,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T06:54:19Z",
+              "path": "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/closed_source_queue.json",
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 11945,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T06:54:19Z",
+              "path": "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/submission_closure_report.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 1171,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "a9c05f5409cde83a"
+      },
+      "status": "succeeded",
+      "step_id": "build_byte_range_submission_closure",
+      "updated_at_utc": "2026-05-26T06:54:19Z"
+    },
+    {
+      "attempts": 1,
+      "experiment_id": "chain_registered_multisurface_materializer_program",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_frontier_byte_range_stage_inputs.py",
+          "--operation-chain-stage-plan",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+          "--stage-inputs-out",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_stage_inputs.json",
+          "--chain-output-dir",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain",
+          "--overwrite"
+        ],
+        "elapsed_seconds": 0.8455278750043362,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_rate_attack_operation_chain_queue_20260526T062541Z_chain_compiler/chain_registered_multisurface_materializer_program/emit_byte_range_stage_inputs/20260526T062616Z_f96283fa72e4ae59.log",
+        "pid": 81061,
+        "postcondition_errors": [],
+        "resource_kind": "local_io_heavy",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 1,
+          "artifact_records": [
+            {
+              "bytes": 15013,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T06:26:17Z",
+              "path": "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_stage_inputs.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 880,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "f96283fa72e4ae59"
+      },
+      "status": "succeeded",
+      "step_id": "emit_byte_range_stage_inputs",
+      "updated_at_utc": "2026-05-26T06:26:17Z"
+    },
+    {
+      "attempts": 1,
+      "experiment_id": "chain_registered_multisurface_materializer_program",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/build_frontier_operation_chain_stage_plan.py",
+          "--operation-chain-compiler-work-orders",
+          ".omx/research/frontier_rate_attack_feedback_refresh_20260526T062541Z_operation_chain_queue/operation_chain_compiler_work_orders.json",
+          "--source-operation-id",
+          "chain_registered_multisurface_materializer_program",
+          "--stage-plan-out",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+          "--overwrite"
+        ],
+        "elapsed_seconds": 0.8355806249892339,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_rate_attack_operation_chain_queue_20260526T062541Z_chain_compiler/chain_registered_multisurface_materializer_program/emit_operation_chain_stage_plan/20260526T062615Z_108cc2094cb32b34.log",
+        "pid": 81046,
+        "postcondition_errors": [],
+        "resource_kind": "local_io_heavy",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 1,
+          "artifact_records": [
+            {
+              "bytes": 13042,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T06:26:16Z",
+              "path": "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/stage_plan.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 583,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "108cc2094cb32b34"
+      },
+      "status": "succeeded",
+      "step_id": "emit_operation_chain_stage_plan",
+      "updated_at_utc": "2026-05-26T06:26:16Z"
+    },
+    {
+      "attempts": 1,
+      "experiment_id": "chain_registered_multisurface_materializer_program",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/harvest_materializer_chain_candidates.py",
+          "--repo-root",
+          "/Users/adpena/Projects/pact",
+          "--chain-manifest",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_entropy_recode_chain_manifest.json",
+          "--source-queue-out",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/source_queue.json",
+          "--report-out",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/harvest_report.json",
+          "--require-accepted",
+          "--overwrite"
+        ],
+        "elapsed_seconds": 0.6361429169774055,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_rate_attack_operation_chain_queue_20260526T062541Z_chain_compiler/chain_registered_multisurface_materializer_program/harvest_byte_range_entropy_recode_chain/20260526T063042Z_a7fa9abebdda8b9b.log",
+        "pid": 86006,
+        "postcondition_errors": [],
+        "resource_kind": "local_io_heavy",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 2,
+          "artifact_records": [
+            {
+              "bytes": 18446,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T06:30:42Z",
+              "path": "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/source_queue.json",
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 2550,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T06:30:42Z",
+              "path": "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/harvest_report.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 585,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "a7fa9abebdda8b9b"
+      },
+      "status": "succeeded",
+      "step_id": "harvest_byte_range_entropy_recode_chain",
+      "updated_at_utc": "2026-05-26T06:30:42Z"
+    },
+    {
+      "attempts": 1,
+      "experiment_id": "chain_registered_multisurface_materializer_program",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/run_byte_range_entropy_recode_chain.py",
+          "--schema-manifest",
+          "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json",
+          "--source-runtime-dir",
+          "submissions/hnerv_lc_ac",
+          "--output-dir",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain",
+          "--overwrite",
+          "--beam-probe-report",
+          ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_beam_probe_mid32.json",
+          "--beam-probe-report",
+          ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_0_weight_beam_probe_mid32.json",
+          "--beam-probe-report",
+          ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_1_weight_beam_probe_mid32.json",
+          "--beam-probe-report",
+          ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_2_weight_beam_probe_mid32.json",
+          "--beam-probe-report",
+          ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_3_weight_beam_probe_mid32.json",
+          "--beam-probe-report",
+          ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/latent_hi_bytes_beam_probe.json",
+          "--source-archive",
+          "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/archive.zip",
+          "--global-combo-report",
+          ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_mid32_plus_latent_hi_probe.json",
+          "--member-name",
+          "x"
+        ],
+        "elapsed_seconds": 0.8456832090159878,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_rate_attack_operation_chain_queue_20260526T062541Z_chain_compiler/chain_registered_multisurface_materializer_program/run_byte_range_entropy_recode_chain/20260526T063018Z_9be7ca0a61d35522.log",
+        "pid": 85756,
+        "postcondition_errors": [],
+        "resource_kind": "local_io_heavy",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 1,
+          "artifact_records": [
+            {
+              "bytes": 15366,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T06:30:19Z",
+              "path": "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/byte_range_entropy_recode_chain_manifest.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 15366,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "9be7ca0a61d35522"
+      },
+      "status": "succeeded",
+      "step_id": "run_byte_range_entropy_recode_chain",
+      "updated_at_utc": "2026-05-26T06:30:19Z"
+    },
+    {
+      "attempts": 4,
+      "experiment_id": "chain_registered_multisurface_materializer_program",
+      "last_event": {
+        "command": [
+          ".venv/bin/python",
+          "tools/run_materializer_exact_readiness_bridge.py",
+          "--source-queue",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/submission_closure/closed_source_queue.json",
+          "--exact-readiness-out-dir",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/exact_readiness",
+          "--bridge-report-out",
+          "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/exact_readiness_bridge_report.json",
+          "--overwrite",
+          "--force-recompute"
+        ],
+        "elapsed_seconds": 0.8441712079802528,
+        "execution_error": null,
+        "failed_postconditions": [],
+        "log_path": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_logs/frontier_rate_attack_operation_chain_queue_20260526T062541Z_chain_compiler/chain_registered_multisurface_materializer_program/run_byte_range_exact_readiness_bridge/20260526T065419Z_5492f963f74225f0.log",
+        "pid": 15302,
+        "postcondition_errors": [],
+        "resource_kind": "local_cpu",
+        "returncode": 0,
+        "telemetry": {
+          "artifact_record_count": 2,
+          "artifact_records": [
+            {
+              "bytes": 96,
+              "exists": true,
+              "is_dir": true,
+              "is_file": false,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T06:39:32Z",
+              "path": "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/exact_readiness",
+              "recursive_bytes": 5556,
+              "recursive_entry_count": 1,
+              "recursive_entry_limit": 256,
+              "recursive_truncated": false,
+              "source": "step.telemetry.artifact_paths"
+            },
+            {
+              "bytes": 3593,
+              "exists": true,
+              "is_dir": false,
+              "is_file": true,
+              "is_symlink": false,
+              "mtime_utc": "2026-05-26T06:54:19Z",
+              "path": "experiments/results/frontier_operation_chain_compiler/frontier_rate_attack_operation_chain_queue_20260526t062541z_chain_compiler/chain_registered_multisurface_materializer_program/byte_range_entropy_recode_chain/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "source": "step.telemetry.artifact_paths"
+            }
+          ],
+          "log_bytes": 620,
+          "recursive_truncated": false,
+          "schema": "experiment_queue_step_telemetry.v1"
+        },
+        "timed_out": false,
+        "worker_run_id": "5492f963f74225f0"
+      },
+      "status": "succeeded",
+      "step_id": "run_byte_range_exact_readiness_bridge",
+      "updated_at_utc": "2026-05-26T06:54:19Z"
+    }
+  ]
+}

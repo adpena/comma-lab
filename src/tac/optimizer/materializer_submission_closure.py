@@ -777,7 +777,11 @@ def build_materializer_submission_runtime_closure(
             "archive_manifest_path": _repo_rel(archive_manifest_path, repo),
             "runtime_source_dir": _repo_rel(runtime_source, repo),
             "runtime_tree_sha256": runtime_manifest["runtime_tree_sha256"],
+            "submission_runtime_tree_sha256": runtime_manifest["runtime_tree_sha256"],
             "runtime_content_tree_sha256": runtime_manifest[
+                "runtime_content_tree_sha256"
+            ],
+            "submission_runtime_content_tree_sha256": runtime_manifest[
                 "runtime_content_tree_sha256"
             ],
             "runtime_consumption_proof_path": _repo_rel(proof_out, repo),
@@ -803,6 +807,7 @@ def build_materializer_submission_runtime_closure(
             {
                 "candidate_runtime_dir": _repo_rel(runtime_source, repo),
                 "candidate_runtime_tree_sha256": adapter_runtime_tree_sha,
+                "adapter_runtime_tree_sha256": adapter_runtime_tree_sha,
                 "runtime_adapter_manifest": dict(adapter_manifest),
             }
         )
@@ -912,14 +917,17 @@ def build_materializer_submission_runtime_closures(
 
     per_candidate_reports: list[dict[str, Any]] = []
     closed_rows: list[Mapping[str, Any]] = []
+    candidate_sidecar_root = closure_report_path.parent / "candidate_closure_sidecars"
     for row in source_rows:
         candidate_id = str(row.get("candidate_id") or "")
         if not candidate_id:
             raise MaterializerSubmissionClosureError(
                 "candidate_id_missing_for_submission_closure"
             )
-        candidate_dir = submission_root / _safe_slug(candidate_id)
-        candidate_closed_queue_path = candidate_dir / "closed_source_queue.json"
+        candidate_slug = _safe_slug(candidate_id)
+        candidate_dir = submission_root / candidate_slug
+        candidate_sidecar_dir = candidate_sidecar_root / candidate_slug
+        candidate_closed_queue_path = candidate_sidecar_dir / "closed_source_queue.json"
         candidate_report = build_materializer_submission_runtime_closure(
             repo_root=repo,
             source_queue_path=source_queue,
@@ -927,7 +935,7 @@ def build_materializer_submission_runtime_closures(
             source_runtime_dir=source_runtime_dir,
             submission_dir_out=candidate_dir,
             closed_source_queue_out=candidate_closed_queue_path,
-            closure_report_out=candidate_dir / "submission_closure_report.json",
+            closure_report_out=candidate_sidecar_dir / "submission_closure_report.json",
             overwrite=True,
         )
         per_candidate_reports.append(candidate_report)

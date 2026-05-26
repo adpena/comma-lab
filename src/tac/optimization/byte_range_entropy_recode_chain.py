@@ -221,6 +221,8 @@ def _chain_manifest(
         "receiver_contract_id": RECEIVER_CONTRACT_ID,
         "receiver_contract_kind": RECEIVER_CONTRACT_KIND,
         "candidate_runtime_dir": repo_relative(runtime_adapter_dir, repo),
+        "candidate_runtime_tree_sha256": adapter.get("runtime_tree_sha256") or "",
+        "runtime_file_records_sha256": adapter.get("runtime_file_records_sha256") or "",
         "runtime_consumption_proof_required": True,
         "runtime_consumption_proof_status": (
             "present" if receiver_contract_satisfied and receiver_proof_ready else "missing"
@@ -294,6 +296,9 @@ def _chain_manifest(
                 "schema": adapter.get("schema"),
                 "artifact": _file_record(runtime_adapter_manifest_path, repo=repo),
                 "runtime_tree_sha256": adapter.get("runtime_tree_sha256") or "",
+                "runtime_file_records_sha256": (
+                    adapter.get("runtime_file_records_sha256") or ""
+                ),
                 "readiness_blockers": adapter_blockers,
             },
             {

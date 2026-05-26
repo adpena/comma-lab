@@ -62,6 +62,7 @@ from tac.optimization.tensor_factorize_receiver import (
     build_tensor_factorize_receiver_runtime,
     build_tensor_factorize_runtime_consumption_proof,
 )
+from tac.repo_io import tree_sha256
 from tools.run_family_agnostic_materializer_sweep import (
     build_materializer_empirical_sweep,
 )
@@ -574,6 +575,30 @@ def test_harvest_work_queue_chain_manifest_into_source_queue(
     assert row["ready_for_exact_eval_dispatch"] is False
     assert row["score_claim"] is False
     assert str(external) in row["candidate_archive_path"]
+
+
+def test_harvest_chain_manifest_prefers_live_runtime_dir_tree_sha(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    external = tmp_path / "VertigoDataTier"
+    chain = _chain_manifest(external)
+    runtime_dir = _write_simple_shell_runtime(external / "candidate_runtime")
+    actual_runtime_sha = tree_sha256(runtime_dir)
+
+    result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+
+    row = result["source_queue"]["top_k"][0]
+    assert result["report"]["accepted_manifest_count"] == 1
+    assert row["candidate_runtime_dir"] == str(runtime_dir)
+    assert row["candidate_runtime_tree_sha256"] == actual_runtime_sha
+    assert row["byte_range_entropy_recode_runtime_tree_sha256"] == actual_runtime_sha
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
 
 
 def test_harvest_work_queue_family_agnostic_candidate_manifest(

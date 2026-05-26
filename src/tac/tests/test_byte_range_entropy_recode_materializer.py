@@ -199,6 +199,8 @@ def test_byte_range_entropy_receiver_proof_transcodes_pr103_runtime_adapter(
     assert proof["ready_for_exact_eval_runtime"] is True
     assert proof["candidate_archive_sha256"] == sha256_file(fixture["candidate_archive"])
     assert proof["candidate_member_sha256"] == "b" * 64
+    assert proof["runtime_tree_sha256"] == "e" * 64
+    assert proof["runtime_file_records_sha256"] == "f" * 64
     assert proof["archive_byte_ranges"] == [_expected_receiver_range()]
     verification = verify_byte_range_entropy_recode_receiver_contract(
         runtime_consumption_proof=proof,
@@ -358,6 +360,7 @@ def _receiver_proof_fixture(tmp_path: Path) -> dict[str, Path]:
         "runtime_consumption_probe": {"passed": True},
         "decoder_state_parity_proof": {"passed": True},
         "runtime_tree_sha256": "e" * 64,
+        "runtime_file_records_sha256": "f" * 64,
         "readiness_blockers": ["full_frame_render_output_parity_missing"],
     }
     runtime_adapter_manifest_path = tmp_path / "runtime_adapter_manifest.json"

@@ -281,6 +281,9 @@ def build_byte_range_entropy_recode_receiver_proof(
         "candidate_archive_sha256": _clean_str(candidate_archive.get("sha256")),
         "candidate_member_sha256": _clean_str(candidate_archive.get("member_sha256")),
         "runtime_tree_sha256": _clean_str(adapter.get("runtime_tree_sha256")),
+        "runtime_file_records_sha256": _clean_str(
+            adapter.get("runtime_file_records_sha256")
+        ),
         "runtime_consumption_probe": runtime_probe,
         "decoder_state_parity_proof": decoder_parity,
         "blockers": blockers,
