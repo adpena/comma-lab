@@ -339,6 +339,18 @@ def test_pairset_acquisition_eureka_expands_into_bounded_drop_many() -> None:
     assert drop_many
     assert all(row["acquisition_id"].startswith("pairset_drop_many_") for row in drop_many)
     assert all(row["acquisition_operation"]["op"] == "drop_many" for row in drop_many)
+    assert all(
+        row["acquisition_operation"]["generation_policy"]
+        == "beam_search_pairwise_interaction_dykstra_waterfill"
+        for row in drop_many
+    )
+    beam_context = drop_many[0]["acquisition_operation"]["beam_search_context"]
+    assert beam_context["schema"] == "dqs1_drop_many_beam_candidate.v1"
+    assert beam_context["dykstra_feasible"] is True
+    assert beam_context["score_claim"] is False
+    assert beam_context["axis_decomposition"]["component_response_status"] == (
+        "not_measured_component_replay_required_before_budget_spend"
+    )
     assert any(
         row["distortion_repair_budget_from_rate_savings"]["active"] is True
         for row in drop_many

@@ -4159,11 +4159,26 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     assert initial_artifacts["targeted_component_correction_queue"].endswith(
         "targeted_component_correction_queue.json"
     )
+    assert initial_artifacts[
+        "targeted_component_correction_response_harvest"
+    ].endswith("targeted_component_correction_response_harvest.json")
+    assert initial_artifacts[
+        "targeted_component_correction_materialization_requests"
+    ].endswith("targeted_component_correction_materialization_requests.json")
+    assert initial_artifacts[
+        "targeted_component_correction_operation_chain_work_orders"
+    ].endswith("targeted_component_correction_operation_chain_work_orders.json")
     initial_feedback_report = json.loads(
         (REPO_ROOT / initial_artifacts["feedback_refresh_report"]).read_text(
             encoding="utf-8"
         )
     )
+    initial_dqs1_queue = json.loads(
+        (REPO_ROOT / initial_feedback_report["artifacts"]["dqs1_followup_queue"]).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert initial_dqs1_queue["controls"]["max_concurrency"]["local_io_heavy"] <= 1
     assert (
         initial_feedback_report["operator_commands"][
             "run_targeted_component_correction_queue_bounded_local"
@@ -4265,6 +4280,40 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     assert targeted_queue["experiments"][0]["steps"][0]["command"][1] == (
         "tools/build_frontier_targeted_component_correction_work_order.py"
     )
+    targeted_response_harvest = json.loads(
+        (
+            REPO_ROOT
+            / initial_artifacts["targeted_component_correction_response_harvest"]
+        ).read_text(encoding="utf-8")
+    )
+    assert targeted_response_harvest["schema"] == (
+        "frontier_rate_attack_targeted_component_correction_response_harvest.v1"
+    )
+    _assert_false_authority(targeted_response_harvest)
+    targeted_materialization_requests = json.loads(
+        (
+            REPO_ROOT
+            / initial_artifacts[
+                "targeted_component_correction_materialization_requests"
+            ]
+        ).read_text(encoding="utf-8")
+    )
+    assert targeted_materialization_requests["schema"] == (
+        "frontier_rate_attack_targeted_component_correction_materialization_requests.v1"
+    )
+    _assert_false_authority(targeted_materialization_requests)
+    targeted_operation_chain_work_orders = json.loads(
+        (
+            REPO_ROOT
+            / initial_artifacts[
+                "targeted_component_correction_operation_chain_work_orders"
+            ]
+        ).read_text(encoding="utf-8")
+    )
+    assert targeted_operation_chain_work_orders["schema"] == (
+        "frontier_rate_attack_operation_chain_compiler_work_orders.v1"
+    )
+    _assert_false_authority(targeted_operation_chain_work_orders)
     component = cycle_report["post_harvest_refresh"]["pairset_component_marginal"]
     assert component["schema"] == "frontier_rate_attack_pairset_component_marginal_bundle.v1"
     assert component["active"] is True
@@ -4295,6 +4344,14 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     )
     assert (
         "receiver_closed_correction_acquisition_to_local_component_correction_queue"
+        in cycle_report["integration_edges"]
+    )
+    assert (
+        "targeted_component_correction_queue_to_response_harvest_and_materialization_requests"
+        in cycle_report["integration_edges"]
+    )
+    assert (
+        "targeted_component_materialization_requests_to_operation_chain_queue"
         in cycle_report["integration_edges"]
     )
     assert (

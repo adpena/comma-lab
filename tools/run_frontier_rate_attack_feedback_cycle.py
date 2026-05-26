@@ -420,7 +420,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--include-observed-dqs1-candidate", action="store_true")
     parser.add_argument("--candidate-limit", type=int, default=4)
     parser.add_argument("--local-cpu-concurrency", type=int, default=2)
-    parser.add_argument("--local-io-concurrency", type=int, default=2)
+    parser.add_argument("--local-io-concurrency", type=int, default=1)
     parser.add_argument("--skip-raw-retention-plan", action="store_true")
     parser.add_argument(
         "--execute-raw-retention",
@@ -952,6 +952,8 @@ def main(argv: list[str] | None = None) -> int:
                 "exact_readiness_bridge_to_receiver_repair_backlog_and_correction_budget",
                 "receiver_closed_rate_budget_to_targeted_segnet_posenet_correction_planning",
                 "receiver_closed_correction_acquisition_to_local_component_correction_queue",
+                "targeted_component_correction_queue_to_response_harvest_and_materialization_requests",
+                "targeted_component_materialization_requests_to_operation_chain_queue",
             ],
             "allowed_use": "local_queue_owned_frontier_feedback_iteration_only",
             "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",

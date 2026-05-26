@@ -56,6 +56,16 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.optimization import dqs1_drop_many_beam as beam_core  # noqa: E402
+
 __all__ = [
     "BeamCandidate",
     "BeamSearchConfig",
@@ -69,7 +79,6 @@ __all__ = [
 ]
 
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_FP64_LEDGER_PATH = REPO_ROOT / ".omx" / "state" / "master_gradient_anchors.jsonl"
 DEFAULT_ACQUISITION_PLAN_PATH = (
     REPO_ROOT
@@ -181,6 +190,67 @@ class BeamCandidate:
     canonical_provenance: Mapping[str, Any]  # per Catalog #323
 
 
+def _to_core_pair_candidate(candidate: PairCandidate) -> beam_core.PairCandidate:
+    return beam_core.PairCandidate(
+        pair_index=candidate.pair_index,
+        rate_score_delta_vs_source_selector=(
+            candidate.rate_score_delta_vs_source_selector
+        ),
+        predicted_score_mean=candidate.predicted_score_mean,
+        payload_bytes_delta_vs_source_selector=(
+            candidate.payload_bytes_delta_vs_source_selector
+        ),
+        distortion_repair_budget_score=candidate.distortion_repair_budget_score,
+    )
+
+
+def _to_core_pair_candidates(
+    candidates: Sequence[PairCandidate],
+) -> list[beam_core.PairCandidate]:
+    return [_to_core_pair_candidate(candidate) for candidate in candidates]
+
+
+def _to_core_beam_config(config: BeamSearchConfig) -> beam_core.BeamSearchConfig:
+    return beam_core.BeamSearchConfig(
+        width_k=config.width_k,
+        depth_d=config.depth_d,
+        early_stop_when_no_negative_delta=config.early_stop_when_no_negative_delta,
+        random_seed=config.random_seed,
+    )
+
+
+def _to_core_dykstra_config(
+    config: DykstraFeasibilityConfig,
+) -> beam_core.DykstraFeasibilityConfig:
+    return beam_core.DykstraFeasibilityConfig(
+        rate_min_bytes_saved=config.rate_min_bytes_saved,
+        segnet_max_score_units=config.segnet_max_score_units,
+        posenet_max_score_units=config.posenet_max_score_units,
+        max_iterations=config.max_iterations,
+        convergence_eps=config.convergence_eps,
+    )
+
+
+def _to_core_waterfill_config(config: WaterfillConfig) -> beam_core.WaterfillConfig:
+    return beam_core.WaterfillConfig(
+        segnet_repair_fraction=config.segnet_repair_fraction,
+        posenet_repair_fraction=config.posenet_repair_fraction,
+    )
+
+
+def _from_core_beam_candidate(row: beam_core.BeamCandidate) -> BeamCandidate:
+    return BeamCandidate(
+        drop_tuple=row.drop_tuple,
+        depth=row.depth,
+        delta_s_independent=row.delta_s_independent,
+        delta_s_interaction=row.delta_s_interaction,
+        delta_s_waterfill_budget_consumed=row.delta_s_waterfill_budget_consumed,
+        delta_s_total=row.delta_s_total,
+        dykstra_feasible=row.dykstra_feasible,
+        canonical_provenance=row.canonical_provenance,
+    )
+
+
 def build_pairwise_interaction_matrix(
     candidates: Sequence[PairCandidate],
     *,
@@ -202,42 +272,28 @@ def build_pairwise_interaction_matrix(
       for design-time skeleton; BUILD-1 will emit dense np.ndarray
     - ``matrix_metadata``: canonical Provenance + sha of source fp64 ledger
     """
-    if not candidates:
-        raise ValueError("candidates must be non-empty")
-
-    pair_indices = sorted({c.pair_index for c in candidates})
-    p_max = max(pair_indices) + 1
-
-    if synthetic_design_time_only:
-        # Skeleton: sparse all-zero matrix; BUILD-1 populates empirically
-        matrix_data: dict[str, float] = {}  # (i, j) -> Δ_ij with i < j
-        canonical_provenance = {
-            **CANONICAL_NON_PROMOTABLE_MARKERS,
-            "kind": "synthetic_design_time_skeleton",
-            "captured_at_utc": "2026-05-25T15:30:00Z",
-            "canonical_helper_invocation": (
-                "tools/probe_dqs1_drop_many_beam_pairwise_interaction_disambiguator.py::"
-                "build_pairwise_interaction_matrix(synthetic_design_time_only=True)"
-            ),
-            "source_url": str(fp64_ledger_path) if fp64_ledger_path.exists() else "PENDING_BUILD_1",
-            "next_action": "BUILD-1 populates empirical I[P,P] from fp64 ledger",
-            "design_memo_ref": (
-                ".omx/research/dqs1_drop_many_beam_pairwise_interaction_waterfill_"
-                "design_memo_20260525.md"
-            ),
-        }
-        return {
-            "p_max": p_max,
-            "pair_indices": pair_indices,
-            "interaction_matrix_sparse_lower_triangle": matrix_data,
-            "matrix_metadata": canonical_provenance,
-        }
-
-    # BUILD-1 entry-point: empirical Δ_ij measurement
-    raise NotImplementedError(
-        "Empirical I[P,P] population is BUILD-1; "
-        "design memo §4-BUILD operator-routable enumeration"
-    )
+    if not synthetic_design_time_only:
+        raise NotImplementedError(
+            "Empirical I[P,P] population is BUILD-1; "
+            "design memo §4-BUILD operator-routable enumeration"
+        )
+    payload = beam_core.build_pairwise_interaction_matrix(_to_core_pair_candidates(candidates))
+    payload["matrix_metadata"] = {
+        **dict(payload["matrix_metadata"]),
+        **CANONICAL_NON_PROMOTABLE_MARKERS,
+        "kind": "zero_interaction_executable_planning_baseline",
+        "captured_at_utc": "2026-05-26T00:00:00Z",
+        "canonical_helper_invocation": (
+            "tac.optimization.dqs1_drop_many_beam.build_pairwise_interaction_matrix"
+        ),
+        "source_url": str(fp64_ledger_path) if fp64_ledger_path.exists() else "PENDING_BUILD_1",
+        "next_action": "BUILD-1 populates empirical I[P,P] from fp64 ledger",
+        "design_memo_ref": (
+            ".omx/research/dqs1_drop_many_beam_pairwise_interaction_waterfill_"
+            "design_memo_20260525.md"
+        ),
+    }
+    return payload
 
 
 def dykstra_alternating_projection_feasibility(
@@ -256,12 +312,10 @@ def dykstra_alternating_projection_feasibility(
     rate savings (R polytope satisfied by construction for codex's
     34 candidates per design memo's empirical verification).
     """
-    if not drop_tuple:
-        return False
-
-    raise NotImplementedError(
-        "Dykstra alternating-projection feasibility check is BUILD-2; "
-        "design memo §4-BUILD operator-routable enumeration"
+    return beam_core.dykstra_alternating_projection_feasibility(
+        drop_tuple,
+        _to_core_pair_candidates(candidates),
+        config=_to_core_dykstra_config(config),
     )
 
 
@@ -279,12 +333,10 @@ def waterfill_budget_consumed(
     and ``posenet_repair_fraction`` (default half-and-half until BUILD-2
     lands empirical calibration).
     """
-    if not drop_tuple:
-        return 0.0
-
-    raise NotImplementedError(
-        "Waterfill budget redistribution is BUILD-2; "
-        "design memo §4-BUILD operator-routable enumeration"
+    return beam_core.waterfill_budget_consumed(
+        drop_tuple,
+        _to_core_pair_candidates(candidates),
+        config=_to_core_waterfill_config(config),
     )
 
 
@@ -310,17 +362,16 @@ def beam_search_drop_many(
 
     BUILD-2 implements the full algorithm.
     """
-    if not candidates:
-        raise ValueError("candidates must be non-empty")
-    if config.width_k <= 0 or config.depth_d <= 0:
-        raise ValueError(f"width_k + depth_d must be positive: got {config!r}")
-    if interaction_matrix.get("p_max", 0) <= 0:
-        raise ValueError("interaction_matrix must carry p_max")
-
-    raise NotImplementedError(
-        "Full beam_search_drop_many is BUILD-2; "
-        "design memo §4-BUILD operator-routable enumeration"
-    )
+    return [
+        _from_core_beam_candidate(row)
+        for row in beam_core.beam_search_drop_many(
+            _to_core_pair_candidates(candidates),
+            interaction_matrix,
+            config=_to_core_beam_config(config),
+            dykstra_config=_to_core_dykstra_config(dykstra_config),
+            waterfill_config=_to_core_waterfill_config(waterfill_config),
+        )
+    ]
 
 
 def _load_acquisition_candidates(
@@ -470,25 +521,50 @@ def main(argv: Sequence[str] | None = None) -> int:
         fp64_ledger_path=args.fp64_ledger,
         synthetic_design_time_only=args.design_time_skeleton,
     )
+    beam_config = BeamSearchConfig(width_k=args.width_k, depth_d=args.depth_d)
+    beam_results = beam_search_drop_many(
+        sample_candidates,
+        matrix_payload,
+        config=beam_config,
+    )
 
     skeleton_verdict = {
-        "schema": "dqs1_drop_many_beam_pairwise_interaction_waterfill_skeleton.v1",
+        "schema": "dqs1_drop_many_beam_pairwise_interaction_waterfill_probe.v1",
         "design_memo_path": (
             ".omx/research/dqs1_drop_many_beam_pairwise_interaction_waterfill_"
             "design_memo_20260525.md"
         ),
-        "build_status": "SKELETON_ONLY_BUILD_1_TO_4_OPERATOR_ROUTABLE",
+        "build_status": (
+            "EXECUTABLE_ZERO_INTERACTION_BEAM_BASELINE_BUILD_1_EMPIRICAL_MATRIX_PENDING"
+        ),
         "num_candidates_loaded": len(sample_candidates),
         "p_max": matrix_payload["p_max"],
         "interaction_matrix_metadata": matrix_payload["matrix_metadata"],
-        "beam_config": dataclasses.asdict(BeamSearchConfig(width_k=args.width_k, depth_d=args.depth_d)),
+        "beam_config": dataclasses.asdict(beam_config),
         "dykstra_config": dataclasses.asdict(DykstraFeasibilityConfig()),
         "waterfill_config": dataclasses.asdict(WaterfillConfig()),
+        "beam_result_count": len(beam_results),
+        "top_beam_candidates": [
+            {
+                "schema": "dqs1_drop_many_beam_candidate.v1",
+                "drop_tuple": list(row.drop_tuple),
+                "depth": row.depth,
+                "delta_s_independent": row.delta_s_independent,
+                "delta_s_interaction": row.delta_s_interaction,
+                "delta_s_waterfill_budget_consumed": (
+                    row.delta_s_waterfill_budget_consumed
+                ),
+                "delta_s_total": row.delta_s_total,
+                "dykstra_feasible": row.dykstra_feasible,
+                "canonical_provenance": dict(row.canonical_provenance),
+                **CANONICAL_NON_PROMOTABLE_MARKERS,
+            }
+            for row in beam_results[: args.width_k]
+        ],
         "canonical_provenance": CANONICAL_NON_PROMOTABLE_MARKERS,
         "canonical_equation_candidate_id": "dqs1_drop_many_pairwise_interaction_beam_search_v1",
         "operator_routable_next_cascade_priority": [
             "BUILD-1: populate empirical I[P,P] (~2-4h, $0)",
-            "BUILD-2: full beam_search_drop_many executable (~4-6h, $0)",
             "BUILD-3: Catalog #356 AxisDecomposition wire-in (~1-2h, $0)",
             "BUILD-4: Catalog #357 Tier B canonical consumer (~2-3h, $0)",
             "DISPATCH: paired CPU+CUDA Modal exact-eval top-K=8 (~$2.40-4)",
@@ -499,10 +575,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         json.dump(skeleton_verdict, sys.stdout, indent=2, sort_keys=True)
         sys.stdout.write("\n")
     else:
-        print("DQS1 drop-many beam pairwise-interaction waterfill — skeleton verdict")
+        print("DQS1 drop-many beam pairwise-interaction waterfill — executable planning verdict")
         print(f"  build_status: {skeleton_verdict['build_status']}")
         print(f"  num_candidates_loaded: {skeleton_verdict['num_candidates_loaded']}")
         print(f"  p_max: {skeleton_verdict['p_max']}")
+        print(f"  beam_result_count: {skeleton_verdict['beam_result_count']}")
+        if beam_results:
+            print(f"  best_delta_s_total: {beam_results[0].delta_s_total:.12g}")
+            print(f"  best_drop_tuple: {beam_results[0].drop_tuple}")
         print(f"  beam_config: {skeleton_verdict['beam_config']}")
         print("  operator_routable_next_cascade_priority:")
         for action in skeleton_verdict["operator_routable_next_cascade_priority"]:

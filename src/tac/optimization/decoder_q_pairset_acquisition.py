@@ -19,6 +19,15 @@ from tac.optimization.decoder_q_selective_runtime_packet import (
     affected_frames_for_pairs,
     choose_dqs1_pair_encoding,
 )
+from tac.optimization.dqs1_drop_many_beam import (
+    BeamSearchConfig,
+    DykstraFeasibilityConfig,
+    PairCandidate,
+    WaterfillConfig,
+    beam_candidate_to_json,
+    beam_search_drop_many,
+    build_pairwise_interaction_matrix,
+)
 from tac.optimization.dqs1_materializer_feedback_bridge import (
     DQS1_OBSERVATION_SOURCE_SCHEMA,
     DQS1_OBSERVATION_SWEEP_CONFIG_ID,
@@ -333,7 +342,10 @@ def _candidate_row(
     predicted_score_mean = source_selector.get("predicted_score_mean")
     predicted = float(predicted_score_mean) if predicted_score_mean is not None else None
     diversity = _diversity_score(stats["pair_indices"])
-    source_payload_bytes = source_selector.get("source_payload_bytes")
+    source_payload_bytes = source_selector.get(
+        "source_payload_bytes",
+        source_selector.get("payload_bytes"),
+    )
     source_payload = (
         int(source_payload_bytes)
         if isinstance(source_payload_bytes, int) and not isinstance(source_payload_bytes, bool)
@@ -540,6 +552,97 @@ def _bounded_drop_many_sets(
             add(tail_first[start : start + drop_count])
             if len(out) >= limit:
                 break
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _drop_many_pair_candidate_pool(
+    rank_order_pairs: Sequence[int],
+    *,
+    source_selector: Mapping[str, Any],
+    frame_policy: str,
+) -> list[PairCandidate]:
+    source_payload_bytes = source_selector.get("source_payload_bytes")
+    source_payload = (
+        int(source_payload_bytes)
+        if isinstance(source_payload_bytes, int)
+        and not isinstance(source_payload_bytes, bool)
+        else None
+    )
+    if source_payload is None:
+        source_stats = _payload_stats(rank_order_pairs, frame_policy=frame_policy)
+        source_payload = int(source_stats["payload_bytes"])
+    predicted_score_mean = source_selector.get("predicted_score_mean")
+    predicted = float(predicted_score_mean) if predicted_score_mean is not None else 0.0
+    out: list[PairCandidate] = []
+    pair_count = max(1, len(rank_order_pairs))
+    for rank, pair in enumerate(rank_order_pairs, start=1):
+        selected = [candidate for candidate in rank_order_pairs if candidate != pair]
+        stats = _payload_stats(selected, frame_policy=frame_policy)
+        actual_payload_delta = int(stats["payload_bytes"]) - int(source_payload)
+        planning_saved_bytes = 1 + (rank - 1) // max(1, pair_count // 4)
+        planning_payload_delta = (
+            actual_payload_delta
+            if actual_payload_delta < 0
+            else -planning_saved_bytes
+        )
+        rate_score_delta = (
+            25.0 * planning_payload_delta / CONTEST_RATE_DENOMINATOR_BYTES
+        )
+        out.append(
+            PairCandidate(
+                pair_index=int(pair),
+                rate_score_delta_vs_source_selector=rate_score_delta,
+                predicted_score_mean=predicted,
+                payload_bytes_delta_vs_source_selector=planning_payload_delta,
+                distortion_repair_budget_score=max(0.0, -rate_score_delta),
+            )
+        )
+    return out
+
+
+def _beam_drop_many_sets(
+    rank_order_pairs: Sequence[int],
+    *,
+    source_selector: Mapping[str, Any],
+    frame_policy: str,
+    drop_counts: Sequence[int],
+    limit: int,
+) -> list[tuple[tuple[int, ...], dict[str, Any]]]:
+    if limit <= 0 or not drop_counts:
+        return []
+    target_depths = tuple(sorted({int(count) for count in drop_counts if int(count) > 2}))
+    if not target_depths:
+        return []
+    pair_candidates = _drop_many_pair_candidate_pool(
+        rank_order_pairs,
+        source_selector=source_selector,
+        frame_policy=frame_policy,
+    )
+    if not pair_candidates:
+        return []
+    interaction_matrix = build_pairwise_interaction_matrix(pair_candidates)
+    beams = beam_search_drop_many(
+        pair_candidates,
+        interaction_matrix,
+        config=BeamSearchConfig(
+            width_k=max(limit, 8),
+            depth_d=max(target_depths),
+            target_depths=target_depths,
+            early_stop_when_no_negative_delta=False,
+        ),
+        dykstra_config=DykstraFeasibilityConfig(),
+        waterfill_config=WaterfillConfig(),
+    )
+    out: list[tuple[tuple[int, ...], dict[str, Any]]] = []
+    seen: set[tuple[int, ...]] = set()
+    for beam in beams:
+        dropped = tuple(sorted(int(pair) for pair in beam.drop_tuple))
+        if dropped in seen:
+            continue
+        seen.add(dropped)
+        out.append((dropped, beam_candidate_to_json(beam)))
         if len(out) >= limit:
             break
     return out
@@ -943,14 +1046,31 @@ def build_decoder_q_pairset_acquisition_plan(
                 },
             )
 
-        for dropped in _bounded_drop_many_sets(
+        drop_many_sets_with_context = _beam_drop_many_sets(
             best_order,
+            source_selector=best,
+            frame_policy=frame_policy,
             drop_counts=effective_drop_many_counts,
             limit=effective_max_drop_many,
-        ):
+        )
+        if not drop_many_sets_with_context:
+            drop_many_sets_with_context = [
+                (dropped, {})
+                for dropped in _bounded_drop_many_sets(
+                    best_order,
+                    drop_counts=effective_drop_many_counts,
+                    limit=effective_max_drop_many,
+                )
+            ]
+        for dropped, beam_context in drop_many_sets_with_context:
             drop_set = set(dropped)
             selected = [candidate for candidate in best_order if candidate not in drop_set]
             dropped_ranks = sorted(rank_by_pair[pair] for pair in dropped)
+            generation_policy = (
+                "beam_search_pairwise_interaction_dykstra_waterfill"
+                if beam_context
+                else "bounded_tail_beam_plus_spaced_tail_waterfill"
+            )
             add_row(
                 _drop_many_id(dropped_pairs=dropped, rank_by_pair=rank_by_pair),
                 "drop_many_beam_pairwise_interaction_waterfill",
@@ -961,16 +1081,17 @@ def build_decoder_q_pairset_acquisition_plan(
                     "drop_count": len(dropped),
                     "dropped_pair_indices": sorted(dropped),
                     "dropped_pair_ranks": dropped_ranks,
-                    "generation_policy": (
-                        "bounded_tail_beam_plus_spaced_tail_waterfill"
-                    ),
+                    "generation_policy": generation_policy,
+                    "beam_search_context": beam_context,
                     "eureka_planner_hint_ids": hint_ids,
                     "eureka_planner_hint_context": eureka_hint_context,
                     "rate_distortion_policy": (
                         "rate_gain_probe_with_distortion_authority_false"
                     ),
                     "master_gradient_status": (
-                        "rank_order_proxy_until_pair_gradient_binding_lands"
+                        "beam_uses_rate_budget_proxy_until_pair_gradient_binding_lands"
+                        if beam_context
+                        else "rank_order_proxy_until_pair_gradient_binding_lands"
                     ),
                     "inverse_scorer_status": (
                         "planner_consumer_requested_not_score_authority"
