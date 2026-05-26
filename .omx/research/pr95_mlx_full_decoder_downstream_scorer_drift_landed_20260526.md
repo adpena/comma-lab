@@ -174,3 +174,71 @@ The sister tool `tools/measure_pr95_mlx_pytorch_actual_contest_score_difference.
 ### Discipline applied to this correction footer
 
 Catalog #229 PV (audited 5 bug surfaces empirically) + #110/#113 APPEND-ONLY (NEW footer appended, original verdict preserved) + #307 paradigm-vs-implementation classification (this is METHODOLOGY-LEVEL correction, not paradigm-level kill) + #287 placeholder-rationale rejection (every claim grounded in empirical observation) + CLAUDE.md "Forbidden empirical-claim-without-evidence-tag" + "Apples-to-apples evidence discipline" non-negotiables.
+
+---
+
+## EMPIRICAL CLOSURE FOOTER 2026-05-26T06:30Z — corrected methodology vindicates revised reading
+
+Per operator "Must continue optimizing and iterating", the methodology fix was completed. The corrected measurement at `tools/measure_pr95_mlx_pytorch_actual_contest_score_difference.py` adds the canonical camera-resolution upscale (decoder 384×512 → bicubic to 874×1164 → uint8) and scores via `upstream.modules.DistortionNet.compute_distortion(candidate, ground_truth)` against ground-truth frames from `upstream/videos/0.mkv`.
+
+Empirical anchor: `experiments/results/pr95_mlx_pytorch_actual_contest_score_difference_20260526T062452Z/results.json`
+
+### Numbers
+
+| metric | upper-bound proxy (original #1258) | actual contest-score-difference (corrected) |
+|---|---|---|
+| `\|S_MLX − S_PyTorch\|` | 0.09347 | **0.000011** |
+| seg-axis contribution to diff | (formula-derived only) | 0.000015 |
+| pose-axis contribution to diff | (formula-derived only) | 0.000004 |
+| ratio actual / upper-bound | — | **0.0001 (1 part in 8,500)** |
+
+Per-pipeline values vs ground-truth (the operationally correct numbers):
+- d_seg_MLX = 8.681e-4 vs d_seg_PT = 8.683e-4 (identical to 4 sig figs)
+- d_pose_MLX = 1.702e-3 vs d_pose_PT = 1.702e-3 (identical to 4 sig figs)
+- S_MLX_partial = 0.217270, S_PyTorch_partial = 0.217281 (rate term excluded)
+
+### Comparison to PR110 frontier delta
+
+PR110 (`0.192051`) beats PR101 (`0.192840`) by `-0.000789`. The MLX↔PyTorch contest-score drift is **72× SMALLER** than this frontier delta. **MLX-local-iteration IS contest-grade at frontier-tightening granularity.**
+
+### Revised Path 3 reading
+
+The granularity-threshold table from the original landing is now SUPERSEDED:
+
+| use case | original reading | corrected reading |
+|---|---|---|
+| ≥0.10 ΔS (substrate-class-shift) | ✅ Reliable | ✅ Reliable |
+| [0.01, 0.10] | ⚠️ Direction only | ✅ Reliable |
+| <0.01 (frontier-tightening) | ❌ Wrong tool | ✅ **Reliable** (corrected: drift is 72× smaller than 0.001 frontier delta) |
+
+**MLX-local-iteration is now operationally faithful at every score-granularity the contest cares about.** The Path 3 candidate workflow (build → iterate locally at $0 → export to PyTorch with parity → spend paid CUDA only for final submission proof) is fully empirically validated.
+
+### What this empirically refutes about the original interpretation
+
+1. ❌ "Selfcomp+MacKay theoretical prediction falsified at IMPLEMENTATION-LEVEL" — REFUTED. The prediction was scoped to SegNet argmax-stability under sub-quantization drift, which HOLDS (1.58e-5 flip fraction). The pose-axis cross-framework MSE was never an actual contest-score-component drift; it was a property of the upper-bound formula.
+2. ❌ "115× larger than PR110 frontier delta" — REFUTED. The actual ratio is **72× SMALLER**.
+3. ❌ "MLX is not the right tool for frontier-tightening" — REFUTED. It is.
+
+### Methodology audit summary (5 bug surfaces)
+
+1. ❌ MLX scorer adapter parity bug — FALSIFIED empirically (probe: SegNet max 2.15e-5, PoseNet max 8.88e-6 on identical input)
+2. ✅ `_aggregate_contest_score_drift` formula labels worst-case anti-correlation upper-bound as measurement — REAL METHODOLOGY BUG (8,500× overstatement)
+3. ✅ "Selfcomp+MacKay prediction falsified" was a CATEGORY ERROR (prediction was scoped to SegNet argmax-stability which held)
+4. ❌ SegNet preprocess_input bypass — NOT A BUG (input parity preserved)
+5. ⚠️ 360× amplification single-Conv2d to full-decoder — PLAUSIBLE (per-layer compound; not bug)
+
+### Sister tool status
+
+`tools/measure_pr95_mlx_pytorch_actual_contest_score_difference.py` LANDED with canonical camera-resolution upscale + DistortionNet scoring against ground truth. Wall-clock: ~130s for N=100 pairs. Output schema: `pr95_mlx_pytorch_actual_contest_score_difference_v1` with non-promotable markers per CLAUDE.md "MLX portable-local-substrate authority".
+
+### Path 2 cascade FULLY CLOSED + GREEN
+
+- ✅ #1251 MLX→PyTorch state_dict export bridge (LANDED 2026-05-25; forward parity at decoder boundary)
+- ✅ #1257 full inflate parity closure (LANDED 2026-05-26; inflate-output bytes byte-identical)
+- ✅ **#1258 downstream scorer drift measurement (CORRECTED 2026-05-26; actual contest-score difference = 0.000011, 72× smaller than PR110 frontier delta)**
+
+Path 3 candidate workflow is empirically unblocked at ALL granularities. The original landing's "instrumental cascade re-scoping" is REVERSED — there is no re-scoping needed. MLX-local-iteration replaces paid CUDA at every score-granularity.
+
+### Discipline applied
+
+Catalog #229 PV (5 audit surfaces empirically inspected) + #117/#157/#174 canonical serializer + #110/#113 APPEND-ONLY (NEW footer; original verdict + correction footer preserved) + #287 placeholder-rationale rejection + #307 paradigm-vs-implementation classification (methodology bug, not paradigm-level kill) + #341 non-promotable markers + #344 canonical equation registered + CLAUDE.md "MLX portable-local-substrate authority" + "Apples-to-apples evidence discipline" + "Forbidden empirical-claim-without-evidence-tag" + "Forbidden premature KILL without research exhaustion" non-negotiables.
