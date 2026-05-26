@@ -4725,99 +4725,133 @@ def _targeted_component_response_rows_from_queue(
         metadata = experiment.get("metadata")
         if not isinstance(metadata, Mapping):
             continue
-        work_order_path_text = str(metadata.get("work_order_path") or "")
-        local_cpu_path_text = str(metadata.get("local_cpu_advisory_path") or "")
-        response_path_text = str(
-            metadata.get("component_correction_response_harvest_path") or ""
+        raw_requests = metadata.get("correction_requests")
+        request_metadata = (
+            [request for request in raw_requests if isinstance(request, Mapping)]
+            if isinstance(raw_requests, list)
+            else [metadata]
         )
-        local_mlx_path_text = str(metadata.get("local_mlx_response_path") or "")
-        if not work_order_path_text:
-            continue
-        work_order_path = _resolve_path(work_order_path_text, repo_root=repo_root)
-        local_cpu_path = (
-            _resolve_path(local_cpu_path_text, repo_root=repo_root)
-            if local_cpu_path_text
-            else None
-        )
-        local_mlx_path = (
-            _resolve_path(local_mlx_path_text, repo_root=repo_root)
-            if local_mlx_path_text
-            else None
-        )
-        response_path = (
-            _resolve_path(response_path_text, repo_root=repo_root)
-            if response_path_text
-            else None
-        )
-        missing = [
-            _repo_rel(path, repo_root)
-            for path in (work_order_path, local_cpu_path)
-            if path is not None and not path.exists()
-        ]
-        if missing:
-            row = {
-                "schema": TARGETED_COMPONENT_CORRECTION_RESPONSE_ROW_SCHEMA,
-                "generated_at_utc": _utc_now(),
-                "acquisition_id": metadata.get("acquisition_id"),
-                "candidate_id": metadata.get("candidate_id"),
-                "correction_family": metadata.get("correction_family"),
-                "work_order_path": work_order_path_text or None,
-                "local_cpu_advisory_path": local_cpu_path_text or None,
-                "local_mlx_response_path": local_mlx_path_text or None,
-                "response_artifact_path": response_path_text or None,
-                "saved_bytes_budget": metadata.get("saved_bytes_budget"),
-                "estimated_receiver_closed_rate_credit_score_units": metadata.get(
-                    "estimated_rate_credit_score_units"
-                ),
-                "measured_component_delta_score_units": None,
-                "measured_lagrangian_delta_score_units": None,
-                "budget_credit_remaining_score_units": None,
-                "negative_measured_lagrangian_delta": False,
-                "local_acquisition_recommended": False,
-                "ready_for_budget_spend": False,
-                "budget_spend_allowed": False,
-                "budget_spend_blockers": _unique_strings(
-                    [
-                        "targeted_component_correction_response_artifacts_missing",
-                        *(f"missing:{path}" for path in missing),
-                        "exact_axis_component_response_required_before_budget_spend",
-                    ]
-                ),
-                "verdict": "blocked_missing_component_response_artifact",
-                "allowed_use": (
-                    "targeted_component_correction_response_harvest_local_acquisition_only"
-                ),
-                "forbidden_use": (
-                    "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
-                ),
-                **FALSE_AUTHORITY,
-            }
-            rows.append(row)
-            continue
-        work_order = _load_json(work_order_path)
-        local_cpu = _load_json(local_cpu_path) if local_cpu_path is not None else None
-        local_mlx = (
-            _load_json(local_mlx_path)
-            if local_mlx_path is not None and local_mlx_path.exists()
-            else None
-        )
-        rows.append(
-            build_frontier_targeted_component_correction_response_harvest_from_artifacts(
-                work_order=work_order,
-                local_cpu_advisory=local_cpu,
-                local_mlx_response=local_mlx,
-                work_order_path=_repo_rel(work_order_path, repo_root),
-                local_cpu_advisory_path=(
-                    None if local_cpu_path is None else _repo_rel(local_cpu_path, repo_root)
-                ),
-                local_mlx_response_path=(
-                    None if local_mlx_path is None else _repo_rel(local_mlx_path, repo_root)
-                ),
-                response_artifact_path=(
-                    None if response_path is None else _repo_rel(response_path, repo_root)
-                ),
+        for request in request_metadata:
+            work_order_path_text = str(
+                request.get("work_order_path") or metadata.get("work_order_path") or ""
             )
-        )
+            local_cpu_path_text = str(
+                request.get("local_cpu_advisory_path")
+                or metadata.get("local_cpu_advisory_path")
+                or ""
+            )
+            response_path_text = str(
+                request.get("component_correction_response_harvest_path")
+                or metadata.get("component_correction_response_harvest_path")
+                or ""
+            )
+            local_mlx_path_text = str(
+                request.get("local_mlx_response_path")
+                or metadata.get("local_mlx_response_path")
+                or ""
+            )
+            if not work_order_path_text:
+                continue
+            work_order_path = _resolve_path(work_order_path_text, repo_root=repo_root)
+            local_cpu_path = (
+                _resolve_path(local_cpu_path_text, repo_root=repo_root)
+                if local_cpu_path_text
+                else None
+            )
+            local_mlx_path = (
+                _resolve_path(local_mlx_path_text, repo_root=repo_root)
+                if local_mlx_path_text
+                else None
+            )
+            response_path = (
+                _resolve_path(response_path_text, repo_root=repo_root)
+                if response_path_text
+                else None
+            )
+            missing = [
+                _repo_rel(path, repo_root)
+                for path in (work_order_path, local_cpu_path)
+                if path is not None and not path.exists()
+            ]
+            if missing:
+                row = {
+                    "schema": TARGETED_COMPONENT_CORRECTION_RESPONSE_ROW_SCHEMA,
+                    "generated_at_utc": _utc_now(),
+                    "acquisition_id": request.get("acquisition_id"),
+                    "candidate_id": request.get("candidate_id")
+                    or metadata.get("candidate_id"),
+                    "correction_family": request.get("correction_family"),
+                    "operation_levels": list(request.get("operation_levels") or []),
+                    "targeted_dimensions": list(
+                        request.get("targeted_dimensions") or []
+                    ),
+                    "work_order_path": work_order_path_text or None,
+                    "local_cpu_advisory_path": local_cpu_path_text or None,
+                    "local_mlx_response_path": local_mlx_path_text or None,
+                    "response_artifact_path": response_path_text or None,
+                    "saved_bytes_budget": request.get("saved_bytes_budget")
+                    or metadata.get("saved_bytes_budget"),
+                    "estimated_receiver_closed_rate_credit_score_units": request.get(
+                        "estimated_rate_credit_score_units"
+                    )
+                    or metadata.get("estimated_rate_credit_score_units"),
+                    "measured_component_delta_score_units": None,
+                    "measured_lagrangian_delta_score_units": None,
+                    "budget_credit_remaining_score_units": None,
+                    "negative_measured_lagrangian_delta": False,
+                    "local_acquisition_recommended": False,
+                    "ready_for_budget_spend": False,
+                    "budget_spend_allowed": False,
+                    "budget_spend_blockers": _unique_strings(
+                        [
+                            "targeted_component_correction_response_artifacts_missing",
+                            *(f"missing:{path}" for path in missing),
+                            "exact_axis_component_response_required_before_budget_spend",
+                        ]
+                    ),
+                    "verdict": "blocked_missing_component_response_artifact",
+                    "allowed_use": (
+                        "targeted_component_correction_response_harvest_local_acquisition_only"
+                    ),
+                    "forbidden_use": (
+                        "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+                    ),
+                    **FALSE_AUTHORITY,
+                }
+                rows.append(row)
+                continue
+            work_order = _load_json(work_order_path)
+            local_cpu = (
+                _load_json(local_cpu_path) if local_cpu_path is not None else None
+            )
+            local_mlx = (
+                _load_json(local_mlx_path)
+                if local_mlx_path is not None and local_mlx_path.exists()
+                else None
+            )
+            rows.append(
+                build_frontier_targeted_component_correction_response_harvest_from_artifacts(
+                    work_order=work_order,
+                    local_cpu_advisory=local_cpu,
+                    local_mlx_response=local_mlx,
+                    work_order_path=_repo_rel(work_order_path, repo_root),
+                    local_cpu_advisory_path=(
+                        None
+                        if local_cpu_path is None
+                        else _repo_rel(local_cpu_path, repo_root)
+                    ),
+                    local_mlx_response_path=(
+                        None
+                        if local_mlx_path is None
+                        else _repo_rel(local_mlx_path, repo_root)
+                    ),
+                    response_artifact_path=(
+                        None
+                        if response_path is None
+                        else _repo_rel(response_path, repo_root)
+                    ),
+                )
+            )
     return rows
 
 
@@ -6558,65 +6592,155 @@ def build_frontier_targeted_component_correction_queue(
     queue_root = results_base / "frontier_targeted_component_correction" / _slug_token(
         queue_id
     )
+    rows_by_candidate: dict[str, list[Mapping[str, Any]]] = {}
+    for row in selected_rows:
+        candidate_id = str(row.get("candidate_id") or row.get("acquisition_id") or "")
+        rows_by_candidate.setdefault(candidate_id, []).append(row)
+    candidate_order = _unique_strings(
+        row.get("candidate_id") or row.get("acquisition_id") for row in selected_rows
+    )
     experiments: list[dict[str, Any]] = []
-    for priority, row in enumerate(selected_rows, start=1):
-        acquisition_id = str(row.get("acquisition_id") or f"targeted_correction_{priority}")
-        candidate_id = str(row.get("candidate_id") or acquisition_id)
-        work_dir = queue_root / _slug_token(candidate_id) / _slug_token(acquisition_id)
-        work_order_path = work_dir / "work_order.json"
-        local_cpu_advisory = work_dir / "local_cpu_advisory.json"
-        local_cpu_work_dir = work_dir / "local_cpu_advisory_work"
-        scorer_hashes = work_dir / "scorer_input_cache_hashes.json"
-        response_harvest_path = work_dir / "component_correction_response_harvest.json"
-        submission_dir = str(row.get("submission_dir") or "")
-        archive_path = str(row.get("archive_path") or f"{submission_dir}/archive.zip")
-        inflate_sh_path = str(row.get("inflate_sh_path") or f"{submission_dir}/inflate.sh")
+    for priority, candidate_id in enumerate(candidate_order, start=1):
+        candidate_rows = rows_by_candidate[candidate_id]
+        primary_row = candidate_rows[0]
+        candidate_dir = queue_root / _slug_token(candidate_id)
+        shared_dir = candidate_dir / "shared_component_response"
+        local_cpu_advisory = shared_dir / "local_cpu_advisory.json"
+        local_cpu_work_dir = shared_dir / "local_cpu_advisory_work"
+        scorer_hashes = shared_dir / "scorer_input_cache_hashes.json"
+        submission_dir = str(primary_row.get("submission_dir") or "")
+        archive_path = str(
+            primary_row.get("archive_path") or f"{submission_dir}/archive.zip"
+        )
+        inflate_sh_path = str(
+            primary_row.get("inflate_sh_path") or f"{submission_dir}/inflate.sh"
+        )
         local_mlx_response: Path | None = None
-        steps: list[dict[str, Any]] = [
+        request_metadata: list[dict[str, Any]] = []
+        steps: list[dict[str, Any]] = []
+        work_order_step_ids: list[str] = []
+        for row_index, row in enumerate(candidate_rows, start=1):
+            acquisition_id = str(
+                row.get("acquisition_id")
+                or f"targeted_correction_{priority}_{row_index}"
+            )
+            request_dir = candidate_dir / _slug_token(acquisition_id)
+            work_order_path = request_dir / "work_order.json"
+            response_harvest_path = (
+                request_dir / "component_correction_response_harvest.json"
+            )
+            work_order_step_id = f"emit_targeted_component_correction_work_order_{row_index:02d}"
+            work_order_step_ids.append(work_order_step_id)
+            request_metadata.append(
+                {
+                    "schema": (
+                        "frontier_rate_attack_targeted_component_correction_"
+                        "queue_request_metadata.v1"
+                    ),
+                    "acquisition_id": acquisition_id,
+                    "candidate_id": candidate_id,
+                    "target_kind": row.get("target_kind"),
+                    "correction_family": row.get("correction_family"),
+                    "operation_levels": list(row.get("operation_levels") or []),
+                    "targeted_dimensions": list(row.get("targeted_dimensions") or []),
+                    "saved_bytes_budget": row.get("saved_bytes_budget"),
+                    "estimated_rate_credit_score_units": row.get(
+                        "estimated_rate_credit_score_units"
+                    ),
+                    "work_dir": _repo_rel(request_dir, repo),
+                    "work_order_path": _repo_rel(work_order_path, repo),
+                    "component_correction_response_harvest_path": _repo_rel(
+                        response_harvest_path,
+                        repo,
+                    ),
+                    "local_cpu_advisory_path": _repo_rel(local_cpu_advisory, repo),
+                    "local_mlx_response_path": (
+                        None
+                        if not include_mlx_response
+                        else _repo_rel(shared_dir / "mlx_scorer_response.json", repo)
+                    ),
+                    "budget_spend_ready": False,
+                    "budget_spend_gate": dict(
+                        row.get("budget_spend_gate")
+                        if isinstance(row.get("budget_spend_gate"), Mapping)
+                        else {}
+                    ),
+                    "allowed_use": (
+                        "targeted_component_correction_queue_request_metadata_only"
+                    ),
+                    "forbidden_use": "score_claim_or_dispatch_authority",
+                    **FALSE_AUTHORITY,
+                }
+            )
+            steps.append(
+                {
+                    "id": work_order_step_id,
+                    "kind": "command",
+                    "command": [
+                        ".venv/bin/python",
+                        "tools/build_frontier_targeted_component_correction_work_order.py",
+                        "--targeted-component-correction-acquisition",
+                        _repo_rel(acquisition_path, repo),
+                        "--acquisition-id",
+                        acquisition_id,
+                        "--work-order-out",
+                        _repo_rel(work_order_path, repo),
+                        "--overwrite",
+                    ],
+                    "resources": {"kind": "local_io_heavy"},
+                    "timeout_seconds": 120,
+                    "postconditions": [
+                        {
+                            "type": "json_equals",
+                            "path": _repo_rel(work_order_path, repo),
+                            "key": "schema",
+                            "equals": TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA,
+                        },
+                        {
+                            "type": "json_false_authority",
+                            "path": _repo_rel(work_order_path, repo),
+                        },
+                        {
+                            "type": "json_equals",
+                            "path": _repo_rel(work_order_path, repo),
+                            "key": "budget_spend_gate.ready_for_budget_spend",
+                            "equals": False,
+                        },
+                    ],
+                    "telemetry": {
+                        "artifact_paths": [_repo_rel(work_order_path, repo)],
+                        "input_artifact_paths": [
+                            _repo_rel(acquisition_path, repo),
+                            str(row.get("closure_report_path") or ""),
+                            str(row.get("paired_exact_readiness_bridge_report_path") or ""),
+                        ],
+                        "include_postcondition_paths": True,
+                    },
+                }
+            )
+        steps.append(
             {
                 "id": "emit_targeted_component_correction_work_order",
                 "kind": "command",
+                "requires": work_order_step_ids,
                 "command": [
                     ".venv/bin/python",
-                    "tools/build_frontier_targeted_component_correction_work_order.py",
-                    "--targeted-component-correction-acquisition",
-                    _repo_rel(acquisition_path, repo),
-                    "--acquisition-id",
-                    acquisition_id,
-                    "--work-order-out",
-                    _repo_rel(work_order_path, repo),
-                    "--overwrite",
+                    "-c",
+                    (
+                        "import json; "
+                        "print(json.dumps({'schema': "
+                        "'frontier_rate_attack_targeted_component_correction_"
+                        "grouped_work_order_barrier.v1', 'ok': True, "
+                        "'score_claim': False, 'promotion_eligible': False, "
+                        "'rank_or_kill_eligible': False, "
+                        "'ready_for_exact_eval_dispatch': False}))"
+                    ),
                 ],
                 "resources": {"kind": "local_io_heavy"},
                 "timeout_seconds": 120,
-                "postconditions": [
-                    {
-                        "type": "json_equals",
-                        "path": _repo_rel(work_order_path, repo),
-                        "key": "schema",
-                        "equals": TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA,
-                    },
-                    {
-                        "type": "json_false_authority",
-                        "path": _repo_rel(work_order_path, repo),
-                    },
-                    {
-                        "type": "json_equals",
-                        "path": _repo_rel(work_order_path, repo),
-                        "key": "budget_spend_gate.ready_for_budget_spend",
-                        "equals": False,
-                    },
-                ],
-                "telemetry": {
-                    "artifact_paths": [_repo_rel(work_order_path, repo)],
-                    "input_artifact_paths": [
-                        _repo_rel(acquisition_path, repo),
-                        str(row.get("closure_report_path") or ""),
-                        str(row.get("paired_exact_readiness_bridge_report_path") or ""),
-                    ],
-                    "include_postcondition_paths": True,
-                },
             },
+        )
+        steps.append(
             {
                 "id": "local_cpu_component_advisory",
                 "kind": "command",
@@ -6665,19 +6789,24 @@ def build_frontier_targeted_component_correction_queue(
                     "input_artifact_paths": [
                         archive_path,
                         inflate_sh_path,
-                        _repo_rel(work_order_path, repo),
+                        *[
+                            str(request.get("work_order_path") or "")
+                            for request in request_metadata
+                        ],
                     ],
                     "recursive": True,
                     "include_postcondition_paths": True,
                 },
             },
-        ]
+        )
         if include_mlx_response:
-            mlx_cache_dir = work_dir / "mlx_scorer_input_cache"
-            mlx_cache_audit = work_dir / "mlx_scorer_input_cache_audit.json"
-            mlx_response = work_dir / "mlx_scorer_response.json"
+            mlx_cache_dir = shared_dir / "mlx_scorer_input_cache"
+            mlx_cache_audit = shared_dir / "mlx_scorer_input_cache_audit.json"
+            mlx_response = shared_dir / "mlx_scorer_response.json"
             local_mlx_response = mlx_response
-            mlx_components_dir = work_dir / "mlx_components"
+            for request in request_metadata:
+                request["local_mlx_response_path"] = _repo_rel(mlx_response, repo)
+            mlx_components_dir = shared_dir / "mlx_components"
             build_cache_command = [
                 ".venv/bin/python",
                 "tools/build_mlx_scorer_input_cache_from_local_advisory.py",
@@ -6787,106 +6916,114 @@ def build_frontier_targeted_component_correction_queue(
                     },
                 ]
             )
-        harvest_command = [
-            ".venv/bin/python",
-            "tools/harvest_frontier_targeted_component_correction_response.py",
-            "--work-order",
-            _repo_rel(work_order_path, repo),
-            "--local-cpu-advisory",
-            _repo_rel(local_cpu_advisory, repo),
-            "--output",
-            _repo_rel(response_harvest_path, repo),
-            "--repo-root",
-            ".",
-        ]
-        harvest_requires = ["local_cpu_component_advisory"]
-        harvest_input_paths = [
-            _repo_rel(work_order_path, repo),
-            _repo_rel(local_cpu_advisory, repo),
-        ]
-        if local_mlx_response is not None:
-            harvest_command.extend(
-                ["--local-mlx-response", _repo_rel(local_mlx_response, repo)]
+        for row_index, request in enumerate(request_metadata, start=1):
+            work_order_path_text = str(request.get("work_order_path") or "")
+            response_harvest_path_text = str(
+                request.get("component_correction_response_harvest_path") or ""
             )
-            harvest_requires = ["local_mlx_component_response"]
-            harvest_input_paths.append(_repo_rel(local_mlx_response, repo))
-        steps.append(
-            {
-                "id": "harvest_targeted_component_correction_response",
-                "kind": "command",
-                "requires": harvest_requires,
-                "command": harvest_command,
-                "resources": {"kind": "local_io_heavy"},
-                "timeout_seconds": 120,
-                "postconditions": [
-                    {
-                        "type": "json_equals",
-                        "path": _repo_rel(response_harvest_path, repo),
-                        "key": "schema",
-                        "equals": TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA,
+            harvest_command = [
+                ".venv/bin/python",
+                "tools/harvest_frontier_targeted_component_correction_response.py",
+                "--work-order",
+                work_order_path_text,
+                "--local-cpu-advisory",
+                _repo_rel(local_cpu_advisory, repo),
+                "--output",
+                response_harvest_path_text,
+                "--repo-root",
+                ".",
+            ]
+            harvest_requires = ["local_cpu_component_advisory"]
+            harvest_input_paths = [
+                work_order_path_text,
+                _repo_rel(local_cpu_advisory, repo),
+            ]
+            if local_mlx_response is not None:
+                harvest_command.extend(
+                    ["--local-mlx-response", _repo_rel(local_mlx_response, repo)]
+                )
+                harvest_requires = ["local_mlx_component_response"]
+                harvest_input_paths.append(_repo_rel(local_mlx_response, repo))
+            steps.append(
+                {
+                    "id": f"harvest_targeted_component_correction_response_{row_index:02d}",
+                    "kind": "command",
+                    "requires": [
+                        f"emit_targeted_component_correction_work_order_{row_index:02d}",
+                        *harvest_requires,
+                    ],
+                    "command": harvest_command,
+                    "resources": {"kind": "local_io_heavy"},
+                    "timeout_seconds": 120,
+                    "postconditions": [
+                        {
+                            "type": "json_equals",
+                            "path": response_harvest_path_text,
+                            "key": "schema",
+                            "equals": TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA,
+                        },
+                        {
+                            "type": "json_false_authority",
+                            "path": response_harvest_path_text,
+                        },
+                        {
+                            "type": "json_equals",
+                            "path": response_harvest_path_text,
+                            "key": "ready_for_budget_spend_count",
+                            "equals": 0,
+                        },
+                    ],
+                    "telemetry": {
+                        "artifact_paths": [response_harvest_path_text],
+                        "input_artifact_paths": harvest_input_paths,
+                        "include_postcondition_paths": True,
                     },
-                    {
-                        "type": "json_false_authority",
-                        "path": _repo_rel(response_harvest_path, repo),
-                    },
-                    {
-                        "type": "json_equals",
-                        "path": _repo_rel(response_harvest_path, repo),
-                        "key": "ready_for_budget_spend_count",
-                        "equals": 0,
-                    },
-                ],
-                "telemetry": {
-                    "artifact_paths": [_repo_rel(response_harvest_path, repo)],
-                    "input_artifact_paths": harvest_input_paths,
-                    "include_postcondition_paths": True,
-                },
-            }
-        )
+                }
+            )
         experiments.append(
             {
-                "id": _slug_token(acquisition_id),
+                "id": _slug_token(candidate_id),
                 "status": "queued",
                 "priority": priority,
                 "lane_id": "lane_frontier_targeted_component_correction_20260526",
                 "tags": [
                     "targeted_component_correction",
-                    str(row.get("correction_family") or "unknown_family"),
-                    str(row.get("target_kind") or "unknown_target"),
+                    "candidate_shared_component_response",
+                    *[
+                        str(row.get("correction_family") or "unknown_family")
+                        for row in candidate_rows
+                    ],
+                    *[
+                        str(row.get("target_kind") or "unknown_target")
+                        for row in candidate_rows
+                    ],
                     "receiver_closed_budget",
                 ],
                 "metadata": {
                     "schema": TARGETED_COMPONENT_CORRECTION_QUEUE_METADATA_SCHEMA,
-                    "acquisition_id": acquisition_id,
                     "candidate_id": candidate_id,
-                    "target_kind": row.get("target_kind"),
-                    "correction_family": row.get("correction_family"),
-                    "saved_bytes_budget": row.get("saved_bytes_budget"),
-                    "estimated_rate_credit_score_units": row.get(
-                        "estimated_rate_credit_score_units"
+                    "selected_acquisition_count": len(candidate_rows),
+                    "selected_correction_families": _unique_strings(
+                        row.get("correction_family") for row in candidate_rows
                     ),
-                    "submission_dir": row.get("submission_dir"),
-                    "work_dir": _repo_rel(work_dir, repo),
-                    "work_order_path": _repo_rel(work_order_path, repo),
+                    "selected_target_kinds": _unique_strings(
+                        row.get("target_kind") for row in candidate_rows
+                    ),
+                    "correction_requests": request_metadata,
+                    "submission_dir": primary_row.get("submission_dir"),
+                    "work_dir": _repo_rel(candidate_dir, repo),
                     "local_cpu_advisory_path": _repo_rel(local_cpu_advisory, repo),
                     "local_mlx_response_path": (
                         None
                         if local_mlx_response is None
                         else _repo_rel(local_mlx_response, repo)
                     ),
-                    "component_correction_response_harvest_path": _repo_rel(
-                        response_harvest_path,
-                        repo,
-                    ),
                     "local_mlx_response_enabled": include_mlx_response,
                     "mlx_device": mlx_device,
+                    "shared_component_response_reuse": True,
+                    "deduped_full_local_cpu_eval_count": max(0, len(candidate_rows) - 1),
                     "budget_spend_ready": False,
                     "selection_policy": dict(selection_policy),
-                    "budget_spend_gate": dict(
-                        row.get("budget_spend_gate")
-                        if isinstance(row.get("budget_spend_gate"), Mapping)
-                        else {}
-                    ),
                     "allowed_use": (
                         "targeted_component_correction_queue_metadata_only"
                     ),

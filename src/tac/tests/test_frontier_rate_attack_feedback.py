@@ -1114,9 +1114,19 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     assert targeted_queue["selection_policy"][
         "selected_correction_family_count"
     ] >= 4
+    assert len(targeted_queue["experiments"]) == 1
+    assert (
+        targeted_queue["experiments"][0]["metadata"]["selected_acquisition_count"]
+        == 4
+    )
+    assert (
+        targeted_queue["experiments"][0]["metadata"]["shared_component_response_reuse"]
+        is True
+    )
     assert {
-        experiment["metadata"]["correction_family"]
+        request["correction_family"]
         for experiment in targeted_queue["experiments"]
+        for request in experiment["metadata"]["correction_requests"]
     } >= {
         "segnet_posenet_waterfill_region_repair",
         "drop_within_selected_set_masked_boundary",
@@ -1587,6 +1597,93 @@ def test_targeted_component_correction_response_harvest_measures_lagrangian(
     assert "exact_axis_component_response_required_before_budget_spend" in row[
         "budget_spend_blockers"
     ]
+
+
+def test_targeted_component_response_harvest_expands_grouped_request_metadata(
+    tmp_path: Path,
+) -> None:
+    queue = {
+        "schema": "unit_targeted_component_correction_queue.v1",
+        "experiments": [
+            {
+                "metadata": {
+                    "candidate_id": "candidate_grouped",
+                    "saved_bytes_budget": 258,
+                    "estimated_rate_credit_score_units": 0.00000258,
+                    "correction_requests": [
+                        {
+                            "acquisition_id": "request_region",
+                            "candidate_id": "candidate_grouped",
+                            "correction_family": (
+                                "segnet_posenet_waterfill_region_repair"
+                            ),
+                            "operation_levels": [
+                                "pixel",
+                                "region",
+                                "boundary",
+                                "frame",
+                            ],
+                            "targeted_dimensions": ["region", "boundary"],
+                            "work_order_path": "missing/request_region_work_order.json",
+                            "local_cpu_advisory_path": (
+                                "missing/request_region_local_cpu.json"
+                            ),
+                            "component_correction_response_harvest_path": (
+                                "missing/request_region_response.json"
+                            ),
+                        },
+                        {
+                            "acquisition_id": "request_batch",
+                            "candidate_id": "candidate_grouped",
+                            "correction_family": (
+                                "full_video_batch_residual_budget_reallocation"
+                            ),
+                            "operation_levels": ["pair", "batch", "full_video"],
+                            "targeted_dimensions": ["pair", "batch", "full_video"],
+                            "work_order_path": "missing/request_batch_work_order.json",
+                            "local_cpu_advisory_path": (
+                                "missing/request_batch_local_cpu.json"
+                            ),
+                            "component_correction_response_harvest_path": (
+                                "missing/request_batch_response.json"
+                            ),
+                        },
+                    ],
+                    **_false_authority(),
+                },
+            }
+        ],
+        **_false_authority(),
+    }
+
+    harvest = build_frontier_targeted_component_correction_response_harvest(
+        repo_root=tmp_path,
+        targeted_component_correction_queue=queue,
+    )
+
+    assert harvest["schema"] == TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA
+    _assert_false_authority(harvest)
+    assert harvest["row_count"] == 2
+    assert harvest["ready_for_budget_spend_count"] == 0
+    assert {row["acquisition_id"] for row in harvest["rows"]} == {
+        "request_region",
+        "request_batch",
+    }
+    assert {row["correction_family"] for row in harvest["rows"]} == {
+        "segnet_posenet_waterfill_region_repair",
+        "full_video_batch_residual_budget_reallocation",
+    }
+    assert all(
+        "targeted_component_correction_response_artifacts_missing"
+        in row["budget_spend_blockers"]
+        for row in harvest["rows"]
+    )
+    grouped_levels = {
+        level for row in harvest["rows"] for level in row["operation_levels"]
+    }
+    assert {"pixel", "region", "boundary", "pair", "batch", "full_video"}.issubset(
+        grouped_levels
+    )
 
 
 def test_targeted_component_correction_materialization_requests_group_responses(
@@ -2604,14 +2701,27 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert targeted_component_materialization_requests[
         "ready_for_budget_spend_count"
     ] == 0
-    assert len(targeted_component_queue["experiments"]) == 2
+    assert len(targeted_component_queue["experiments"]) == 1
     assert targeted_component_queue["selection_policy"]["policy"] == (
         "bounded_candidate_family_round_robin"
     )
     assert targeted_component_queue["selection_policy"]["selected_row_count"] == 2
+    assert (
+        targeted_component_queue["experiments"][0]["metadata"][
+            "selected_acquisition_count"
+        ]
+        == 2
+    )
+    assert (
+        targeted_component_queue["experiments"][0]["metadata"][
+            "shared_component_response_reuse"
+        ]
+        is True
+    )
     assert {
-        experiment["metadata"]["correction_family"]
+        request["correction_family"]
         for experiment in targeted_component_queue["experiments"]
+        for request in experiment["metadata"]["correction_requests"]
     } == {
         "segnet_posenet_waterfill_region_repair",
         "drop_within_selected_set_masked_boundary",
@@ -2658,12 +2768,15 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     step_ids = [
         step["id"] for step in targeted_component_queue["experiments"][0]["steps"]
     ]
-    assert step_ids[-1] == "harvest_targeted_component_correction_response"
+    assert step_ids[-1].startswith("harvest_targeted_component_correction_response_")
     work_order_paths = {
-        experiment["metadata"]["work_order_path"]
+        request["work_order_path"]
         for experiment in targeted_component_queue["experiments"]
+        for request in experiment["metadata"]["correction_requests"]
     }
-    assert len(work_order_paths) == len(targeted_component_queue["experiments"])
+    assert len(work_order_paths) == targeted_component_queue["selection_policy"][
+        "selected_row_count"
+    ]
     assert len(correction_work_order["candidate_family_rows"]) >= 5
     correction_work_order_retry = subprocess.run(
         correction_work_order_command,

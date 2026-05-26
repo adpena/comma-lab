@@ -57137,7 +57137,7 @@
         },
         "real_archive_empirical": {
           "status": true,
-          "evidence": ".omx/research/frontier_rate_attack_feedback_refresh_20260526T_materialization_requests_v2/feedback_refresh_report.json"
+          "evidence": ".omx/research/frontier_rate_attack_feedback_refresh_20260526T_grouped_component_requests/feedback_refresh_report.json"
         },
         "contest_cuda": {
           "status": false,
@@ -57157,7 +57157,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_targeted_component_materialization_requests_20260526T052208Z_codex.md"
+          "evidence": ".omx/research/codex_findings_grouped_targeted_correction_request_metadata_20260526T052705Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -57174,5 +57174,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T05:24:26Z"
+  "updated_at": "2026-05-26T05:29:42Z"
 }
