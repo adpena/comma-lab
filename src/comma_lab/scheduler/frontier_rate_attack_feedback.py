@@ -134,6 +134,7 @@ BYTE_RANGE_STAGE_INPUTS_TOOL = "tools/build_frontier_byte_range_stage_inputs.py"
 TARGETED_DROP_MANY_STAGE_INPUTS_TOOL = (
     "tools/build_frontier_targeted_drop_many_stage_inputs.py"
 )
+DQS1_LOCAL_FIRST_QUEUE_TOOL = "tools/build_dqs1_local_first_queue.py"
 BYTE_RANGE_CHAIN_TOOL = "tools/run_byte_range_entropy_recode_chain.py"
 MATERIALIZER_CHAIN_HARVEST_REPORT_SCHEMA = "materializer_chain_harvest_report.v1"
 MATERIALIZER_SUBMISSION_CLOSURE_REPORT_SCHEMA = (
@@ -7773,6 +7774,7 @@ def build_frontier_operation_chain_compiler_queue(
     results_root: str | Path = DEFAULT_RESULTS_ROOT,
     queue_id: str = "frontier_operation_chain_compiler_queue",
     candidate_limit: int = 4,
+    dqs1_observation_source_paths: Sequence[str | Path] = (),
 ) -> dict[str, Any] | None:
     """Compile multisurface chain work orders into local staged-plan queue rows."""
 
@@ -7810,6 +7812,18 @@ def build_frontier_operation_chain_compiler_queue(
         targeted_drop_many_output_dir = work_dir / "targeted_drop_many_pairset"
         targeted_drop_many_pairset_path = (
             targeted_drop_many_output_dir / "targeted_drop_many_pairset_acquisition.json"
+        )
+        targeted_drop_many_dqs1_queue_path = (
+            targeted_drop_many_output_dir / "targeted_drop_many_dqs1_followup_queue.json"
+        )
+        targeted_drop_many_dqs1_selected_pairset_path = (
+            targeted_drop_many_output_dir / "dqs1_selected_pairset_acquisition.json"
+        )
+        targeted_drop_many_dqs1_feedback_bridge_path = (
+            targeted_drop_many_output_dir / "dqs1_materializer_feedback_bridge.json"
+        )
+        targeted_drop_many_dqs1_results_root = (
+            targeted_drop_many_output_dir / "dqs1_local_first_results"
         )
         byte_range_chain_output_dir = work_dir / "byte_range_entropy_recode_chain"
         byte_range_handoff_dir = byte_range_chain_output_dir / "exact_eval_handoff"
@@ -8025,6 +8039,144 @@ def build_frontier_operation_chain_compiler_queue(
                         "include_postcondition_paths": True,
                     },
                 }
+            )
+            steps.extend(
+                [
+                    {
+                        "id": "build_targeted_drop_many_dqs1_followup_queue",
+                        "kind": "command",
+                        "command": [
+                            ".venv/bin/python",
+                            DQS1_LOCAL_FIRST_QUEUE_TOOL,
+                            "--pairset-acquisition",
+                            _repo_rel(targeted_drop_many_pairset_path, repo),
+                            "--selector-kind",
+                            "drop_many_beam_pairwise_interaction_waterfill",
+                            "--selector-kind",
+                            "pair_frame_geometry_low_impact_drop_many",
+                            "--output",
+                            _repo_rel(targeted_drop_many_dqs1_queue_path, repo),
+                            "--queue-id",
+                            (
+                                f"{_slug_token(source_operation_id)}_"
+                                "targeted_drop_many_dqs1_followup"
+                            ),
+                            "--eureka-run-id",
+                            (
+                                f"{_slug_token(source_operation_id)}_"
+                                "targeted_drop_many_dqs1_followup"
+                            ),
+                            "--results-root",
+                            _repo_rel(targeted_drop_many_dqs1_results_root, repo),
+                            "--candidate-limit",
+                            str(candidate_limit),
+                            "--selected-pairset-acquisition-out",
+                            _repo_rel(
+                                targeted_drop_many_dqs1_selected_pairset_path,
+                                repo,
+                            ),
+                            "--materializer-feedback-bridge-out",
+                            _repo_rel(
+                                targeted_drop_many_dqs1_feedback_bridge_path,
+                                repo,
+                            ),
+                            *[
+                                item
+                                for observation_path in dqs1_observation_source_paths
+                                for item in (
+                                    "--dqs1-observation-jsonl",
+                                    _repo_rel(
+                                        _resolve_path(observation_path, repo_root=repo),
+                                        repo,
+                                    ),
+                                )
+                            ],
+                            "--write",
+                        ],
+                        "requires": ["run_targeted_drop_many_pairset_acquisition"],
+                        "resources": {"kind": "local_io_heavy"},
+                        "timeout_seconds": 180,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(
+                                    targeted_drop_many_dqs1_queue_path,
+                                    repo,
+                                ),
+                                "key": "schema",
+                                "equals": QUEUE_SCHEMA,
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(
+                                    targeted_drop_many_dqs1_queue_path,
+                                    repo,
+                                ),
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(
+                                    targeted_drop_many_dqs1_selected_pairset_path,
+                                    repo,
+                                ),
+                                "key": "schema",
+                                "equals": "dqs1_selected_pairset_acquisition.v1",
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(
+                                    targeted_drop_many_dqs1_selected_pairset_path,
+                                    repo,
+                                ),
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(
+                                    targeted_drop_many_dqs1_feedback_bridge_path,
+                                    repo,
+                                ),
+                            },
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [
+                                _repo_rel(targeted_drop_many_dqs1_queue_path, repo),
+                                _repo_rel(
+                                    targeted_drop_many_dqs1_selected_pairset_path,
+                                    repo,
+                                ),
+                                _repo_rel(
+                                    targeted_drop_many_dqs1_feedback_bridge_path,
+                                    repo,
+                                ),
+                            ],
+                            "input_artifact_paths": [
+                                _repo_rel(targeted_drop_many_pairset_path, repo),
+                            ],
+                            "include_postcondition_paths": True,
+                        },
+                    },
+                    {
+                        "id": "validate_targeted_drop_many_dqs1_followup_queue",
+                        "kind": "command",
+                        "command": [
+                            ".venv/bin/python",
+                            "tools/experiment_queue.py",
+                            "--queue",
+                            _repo_rel(targeted_drop_many_dqs1_queue_path, repo),
+                            "validate",
+                        ],
+                        "requires": [
+                            "build_targeted_drop_many_dqs1_followup_queue"
+                        ],
+                        "resources": {"kind": "local_io_heavy"},
+                        "timeout_seconds": 120,
+                        "telemetry": {
+                            "input_artifact_paths": [
+                                _repo_rel(targeted_drop_many_dqs1_queue_path, repo)
+                            ],
+                        },
+                    },
+                ]
             )
         if byte_range_inputs_preview.get("local_chain_queueable") is True:
             chain_manifest_path = str(byte_range_inputs_preview["chain_manifest_path"])
@@ -8312,6 +8464,33 @@ def build_frontier_operation_chain_compiler_queue(
                         targeted_drop_many_pairset_path,
                         repo,
                     ),
+                    "targeted_drop_many_dqs1_followup_queue_path": _repo_rel(
+                        targeted_drop_many_dqs1_queue_path,
+                        repo,
+                    ),
+                    "targeted_drop_many_dqs1_selected_pairset_acquisition_path": (
+                        _repo_rel(targeted_drop_many_dqs1_selected_pairset_path, repo)
+                    ),
+                    "targeted_drop_many_dqs1_materializer_feedback_bridge_path": (
+                        _repo_rel(targeted_drop_many_dqs1_feedback_bridge_path, repo)
+                    ),
+                    "targeted_drop_many_dqs1_followup_queue_enabled": (
+                        targeted_drop_many_inputs_preview.get("local_plan_queueable")
+                        is True
+                    ),
+                    "targeted_drop_many_dqs1_results_root": _repo_rel(
+                        targeted_drop_many_dqs1_results_root,
+                        repo,
+                    ),
+                    "targeted_drop_many_dqs1_selector_kind_allowlist": [
+                        "drop_many_beam_pairwise_interaction_waterfill",
+                        "pair_frame_geometry_low_impact_drop_many",
+                    ],
+                    "targeted_drop_many_dqs1_observation_source_paths": [
+                        _repo_rel(_resolve_path(path, repo_root=repo), repo)
+                        for path in dqs1_observation_source_paths
+                    ],
+                    "targeted_drop_many_dqs1_candidate_limit": candidate_limit,
                     "targeted_drop_many_local_plan_queueable": (
                         targeted_drop_many_inputs_preview.get("local_plan_queueable")
                         is True

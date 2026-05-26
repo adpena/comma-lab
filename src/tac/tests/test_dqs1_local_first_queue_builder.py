@@ -17,6 +17,7 @@ from src.comma_lab.scheduler.dqs1_local_first_harvest import (
 )
 from src.comma_lab.scheduler.dqs1_local_first_queue import (
     build_queue_from_action_summary,
+    build_queue_from_pairset_acquisition,
     candidate_slug,
     find_latest_cross_family_action_summary,
 )
@@ -652,6 +653,14 @@ def test_dqs1_queue_builder_stamps_harvest_observations_into_feedback_bridge(
         ),
         "observed_at_utc": "2026-05-25T12:31:00Z",
     }
+    stale_partial_observation = {
+        **dqs1_observation,
+        "candidate_id": "pairset_drop_one_rank024_pair0112",
+        "sweep_config_id": "stale_partial_observation",
+        "observed_score_or_delta": 0.1,
+        "score_delta_vs_baseline": -0.09,
+        "raw_output_or_cache_sha256": "e" * 64,
+    }
 
     result = build_queue_from_action_summary(
         summary,
@@ -660,7 +669,11 @@ def test_dqs1_queue_builder_stamps_harvest_observations_into_feedback_bridge(
         candidate_limit=2,
         materializer_feedback_payloads=(materializer_feedback,),
         materializer_feedback_source_paths=("materializer_feedback.json",),
-        dqs1_observations=(worse_duplicate_observation, dqs1_observation),
+        dqs1_observations=(
+            worse_duplicate_observation,
+            dqs1_observation,
+            stale_partial_observation,
+        ),
         dqs1_observation_source_paths=("dqs1_observations.jsonl",),
         skip_observed_dqs1_candidates=False,
     )
@@ -670,6 +683,7 @@ def test_dqs1_queue_builder_stamps_harvest_observations_into_feedback_bridge(
     assert bridge["dqs1_observation_source_paths"] == ["dqs1_observations.jsonl"]
     assert bridge["observed_dqs1_candidate_count"] == 1
     assert bridge["observed_dqs1_observation_count"] == 2
+    assert bridge["ignored_non_dqs1_observation_count"] == 1
     assert bridge["best_observed_dqs1_candidate"]["candidate_id"] == (
         "pairset_drop_one_rank023_pair0440"
     )
@@ -1592,6 +1606,363 @@ def test_dqs1_queue_builder_accepts_pair_frame_geometry_queue_requests(
     steps = {step["id"]: step["command"] for step in experiment["steps"]}
     assert steps["plan_packet"][-1] == "1,2,112,233,440"
     assert experiment["metadata"]["score_claim"] is False
+
+
+def test_dqs1_queue_builder_accepts_decoder_q_pairset_acquisition(
+    tmp_path: Path,
+) -> None:
+    acquisition = tmp_path / "pairset_acquisition.json"
+    acquisition.write_text(
+        json.dumps(
+            {
+                **_false_authority(),
+                "schema": "decoder_q_pairset_acquisition.v1",
+                "candidates": [
+                    {
+                        **_false_authority(),
+                        "schema": "decoder_q_pairset_acquisition_candidate.v1",
+                        "acquisition_id": "pairset_drop_many_k004_r001_002_003_004",
+                        "selector_id": "pairset_drop_many_k004_r001_002_003_004",
+                        "selector_kind": "drop_many_beam_pairwise_interaction_waterfill",
+                        "acquisition_rank": 2,
+                        "selected_pair_indices": [26, 112, 233, 440],
+                        "selected_pair_count": 4,
+                        "payload_bytes": 8,
+                        "rate_delta": -0.000012,
+                        "distortion_repair_budget_from_rate_savings": {
+                            "freed_bytes": 84,
+                            "budget_use": "segnet_boundary_repair",
+                        },
+                        "acquisition_operation": {
+                            "op": "drop_many",
+                            "dropped_pair_indices": [98, 109],
+                        },
+                    },
+                    {
+                        **_false_authority(),
+                        "schema": "decoder_q_pairset_acquisition_candidate.v1",
+                        "acquisition_id": "pairset_diversity_k002",
+                        "selector_id": "pairset_diversity_k002",
+                        "selector_kind": "diversity_spaced",
+                        "acquisition_rank": 1,
+                        "selected_pair_indices": [26, 588],
+                        "selected_pair_count": 2,
+                        "payload_bytes": 4,
+                        "rate_delta": -0.000006,
+                        "acquisition_operation": {"op": "diversity_spaced", "k": 2},
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = build_queue_from_pairset_acquisition(
+        acquisition,
+        repo_root=tmp_path,
+        results_root="results",
+        candidate_limit=2,
+        include_raw_retention_plan=False,
+        include_mlx_retention_plan=False,
+    )
+
+    assert [selection.candidate_id for selection in result.selections] == [
+        "pairset_diversity_k002",
+        "pairset_drop_many_k004_r001_002_003_004",
+    ]
+    assert result.selected_pairset_acquisition is not None
+    assert result.selected_pairset_acquisition["compatible_schema"] == (
+        "decoder_q_pairset_acquisition.v1"
+    )
+    assert result.selected_pairset_acquisition["candidate_count"] == 2
+    experiment = result.queue["experiments"][0]
+    assert experiment["metadata"]["source_metadata"]["queue_source_kind"] == (
+        "decoder_q_pairset_acquisition"
+    )
+    assert experiment["metadata"]["source_metadata"][
+        "pairset_acquisition_source_path"
+    ] == "pairset_acquisition.json"
+    drop_many_candidate = result.selected_pairset_acquisition["candidates"][1]
+    assert drop_many_candidate["source_metadata"][
+        "distortion_repair_budget_from_rate_savings"
+    ] == {
+        "freed_bytes": 84,
+        "budget_use": "segnet_boundary_repair",
+    }
+    steps = {step["id"]: step["command"] for step in experiment["steps"]}
+    assert steps["plan_packet"][-1] == "26,588"
+    assert experiment["metadata"]["score_claim"] is False
+
+    filtered = build_queue_from_pairset_acquisition(
+        acquisition,
+        repo_root=tmp_path,
+        results_root="results_filtered",
+        candidate_limit=1,
+        selector_kind_allowlist=("drop_many_beam_pairwise_interaction_waterfill",),
+        include_raw_retention_plan=False,
+        include_mlx_retention_plan=False,
+    )
+    assert filtered.selection.candidate_id == (
+        "pairset_drop_many_k004_r001_002_003_004"
+    )
+    assert filtered.selection.skipped_candidates[0] == {
+        "candidate_id": "pairset_diversity_k002",
+        "reason": "selector_kind_filtered",
+        "selector_kind": "diversity_spaced",
+    }
+
+    queue_out = tmp_path / "dqs1_from_pairset_queue.json"
+    selected_out = tmp_path / "selected_pairset_acquisition.json"
+    cli = subprocess.run(
+        [
+            sys.executable,
+            "tools/build_dqs1_local_first_queue.py",
+            "--pairset-acquisition",
+            str(acquisition),
+            "--output",
+            str(queue_out),
+            "--results-root",
+            str(tmp_path / "results"),
+            "--selector-kind",
+            "drop_many_beam_pairwise_interaction_waterfill",
+            "--eureka-run-id",
+            "unit_pairset_retry",
+            "--candidate-limit",
+            "1",
+            "--selected-pairset-acquisition-out",
+            str(selected_out),
+            "--skip-raw-retention-plan",
+            "--skip-mlx-retention-plan",
+            "--write",
+        ],
+        cwd=Path(__file__).resolve().parents[3],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert cli.returncode == 0, cli.stderr
+    payload = json.loads(cli.stdout)
+    assert payload["selected_candidate_ids"] == [
+        "pairset_drop_many_k004_r001_002_003_004",
+    ]
+    retry = subprocess.run(
+        [
+            sys.executable,
+            "tools/build_dqs1_local_first_queue.py",
+            "--pairset-acquisition",
+            str(acquisition),
+            "--output",
+            str(queue_out),
+            "--results-root",
+            str(tmp_path / "results"),
+            "--selector-kind",
+            "drop_many_beam_pairwise_interaction_waterfill",
+            "--eureka-run-id",
+            "unit_pairset_retry",
+            "--candidate-limit",
+            "1",
+            "--selected-pairset-acquisition-out",
+            str(selected_out),
+            "--skip-raw-retention-plan",
+            "--skip-mlx-retention-plan",
+            "--write",
+        ],
+        cwd=Path(__file__).resolve().parents[3],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert retry.returncode == 0, retry.stderr
+    queue = json.loads(queue_out.read_text(encoding="utf-8"))
+    assert queue["schema"] == "experiment_queue.v1"
+    selected = json.loads(selected_out.read_text(encoding="utf-8"))
+    assert selected["schema"] == "dqs1_selected_pairset_acquisition.v1"
+    assert selected["score_claim"] is False
+
+
+def test_dqs1_pairset_cli_skips_pair_frame_discovery_side_effect(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    acquisition = tmp_path / "pairset_acquisition.json"
+    acquisition.write_text(
+        json.dumps(
+            {
+                **_false_authority(),
+                "schema": "decoder_q_pairset_acquisition.v1",
+                "candidates": [
+                    {
+                        **_false_authority(),
+                        "schema": "decoder_q_pairset_acquisition_candidate.v1",
+                        "acquisition_id": "pairset_drop_many_k002_habcdef1234",
+                        "selector_kind": "drop_many_beam_pairwise_interaction_waterfill",
+                        "acquisition_rank": 1,
+                        "selected_pair_indices": [26, 112],
+                        "selected_pair_count": 2,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    def fail_discovery(**_: object) -> None:
+        raise AssertionError("pair-frame discovery should not run")
+
+    monkeypatch.setattr(
+        queue_cli,
+        "discover_pair_frame_geometry_queue_requests",
+        fail_discovery,
+    )
+
+    output = tmp_path / "queue.json"
+    rc = queue_cli.main(
+        [
+            "--pairset-acquisition",
+            str(acquisition),
+            "--output",
+            str(output),
+            "--results-root",
+            str(tmp_path / "results"),
+            "--candidate-limit",
+            "1",
+            "--skip-raw-retention-plan",
+            "--skip-mlx-retention-plan",
+            "--write",
+        ]
+    )
+
+    assert rc == 0
+    assert json.loads(output.read_text(encoding="utf-8"))["schema"] == (
+        "experiment_queue.v1"
+    )
+
+
+def test_dqs1_queue_builder_pairset_acquisition_rejects_bad_candidate_schema(
+    tmp_path: Path,
+) -> None:
+    acquisition = tmp_path / "pairset_acquisition.json"
+    acquisition.write_text(
+        json.dumps(
+            {
+                **_false_authority(),
+                "schema": "decoder_q_pairset_acquisition.v1",
+                "candidates": [
+                    {
+                        **_false_authority(),
+                        "schema": "bad_candidate_schema.v1",
+                        "acquisition_id": "pairset_drop_many_k002_habcdef1234",
+                        "selector_kind": "drop_many_beam_pairwise_interaction_waterfill",
+                        "selected_pair_indices": [26, 112],
+                        "selected_pair_count": 2,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ExperimentQueueError, match="schema mismatch"):
+        build_queue_from_pairset_acquisition(
+            acquisition,
+            repo_root=tmp_path,
+            results_root="results",
+        )
+
+
+def test_dqs1_queue_builder_pairset_acquisition_rejects_nested_authority(
+    tmp_path: Path,
+) -> None:
+    acquisition = tmp_path / "pairset_acquisition.json"
+    acquisition.write_text(
+        json.dumps(
+            {
+                **_false_authority(),
+                "schema": "decoder_q_pairset_acquisition.v1",
+                "candidates": [
+                    {
+                        **_false_authority(),
+                        "schema": "decoder_q_pairset_acquisition_candidate.v1",
+                        "acquisition_id": "pairset_drop_many_k002_habcdef1234",
+                        "selector_kind": "drop_many_beam_pairwise_interaction_waterfill",
+                        "selected_pair_indices": [26, 112],
+                        "selected_pair_count": 2,
+                        "distortion_repair_budget_from_rate_savings": {
+                            "schema": "decoder_q_pairset_rate_saved_distortion_repair_budget.v1",
+                            "score_claim": True,
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ExperimentQueueError, match="score_claim"):
+        build_queue_from_pairset_acquisition(
+            acquisition,
+            repo_root=tmp_path,
+            results_root="results",
+        )
+
+
+def test_dqs1_queue_builder_pairset_acquisition_skips_observed_candidates(
+    tmp_path: Path,
+) -> None:
+    acquisition = tmp_path / "pairset_acquisition.json"
+    acquisition.write_text(
+        json.dumps(
+            {
+                **_false_authority(),
+                "schema": "decoder_q_pairset_acquisition.v1",
+                "candidates": [
+                    {
+                        **_false_authority(),
+                        "schema": "decoder_q_pairset_acquisition_candidate.v1",
+                        "acquisition_id": "pairset_drop_many_k002_habcdef1234",
+                        "selector_kind": "drop_many_beam_pairwise_interaction_waterfill",
+                        "acquisition_rank": 1,
+                        "selected_pair_indices": [26, 112],
+                        "selected_pair_count": 2,
+                    },
+                    {
+                        **_false_authority(),
+                        "schema": "decoder_q_pairset_acquisition_candidate.v1",
+                        "acquisition_id": "pairset_drop_many_k003_h1234567890",
+                        "selector_kind": "drop_many_beam_pairwise_interaction_waterfill",
+                        "acquisition_rank": 2,
+                        "selected_pair_indices": [26, 112, 233],
+                        "selected_pair_count": 3,
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = build_queue_from_pairset_acquisition(
+        acquisition,
+        repo_root=tmp_path,
+        results_root="results",
+        dqs1_observations=(
+            _mlx_dqs1_observation_row(
+                candidate_id="pairset_drop_many_k002_habcdef1234"
+            ),
+        ),
+        include_raw_retention_plan=False,
+        include_mlx_retention_plan=False,
+    )
+
+    assert result.selection.candidate_id == "pairset_drop_many_k003_h1234567890"
+    assert result.selection.skipped_candidates[0]["candidate_id"] == (
+        "pairset_drop_many_k002_habcdef1234"
+    )
+    assert result.selection.skipped_candidates[0]["reason"] == (
+        "dqs1_harvest_observation_exists"
+    )
+    assert result.selection.source_metadata["dqs1_observation_acquisition_skip"][
+        "active"
+    ] is True
 
 
 def test_dqs1_queue_skips_greedy_deferred_independent_drop_many_action(

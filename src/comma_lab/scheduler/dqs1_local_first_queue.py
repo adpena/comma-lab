@@ -93,6 +93,7 @@ PAIR_FRAME_GEOMETRY_QUEUE_REQUEST_SCHEMA = (
     "pair_frame_geometry_queue_executable_drop_request.v1"
 )
 SELECTED_PAIRSET_ACQUISITION_SCHEMA = "dqs1_selected_pairset_acquisition.v1"
+PAIRSET_ACQUISITION_SCHEMA = "decoder_q_pairset_acquisition.v1"
 
 
 @dataclass(frozen=True)
@@ -438,6 +439,131 @@ def _repo_rel_path(path: Path, *, repo_root: Path) -> str:
     if _path_under_root(resolved, repo):
         return resolved.relative_to(repo).as_posix()
     return path.as_posix()
+
+
+def _candidate_id_from_pairset_acquisition_row(
+    row: Mapping[str, Any],
+    *,
+    row_index: int,
+) -> str:
+    for key in ("candidate_id", "acquisition_id", "selector_id"):
+        value = row.get(key)
+        if isinstance(value, str) and value.strip():
+            candidate_id_value = value.strip()
+            if not _PAIRSET_CANDIDATE_RE.match(candidate_id_value):
+                raise ExperimentQueueError(
+                    "pairset acquisition candidate "
+                    f"{row_index} has unsupported {key}={candidate_id_value!r}"
+                )
+            return candidate_id_value
+    raise ExperimentQueueError(
+        f"pairset acquisition candidate {row_index} is missing candidate/acquisition id"
+    )
+
+
+def _pairset_acquisition_selection_metadata(
+    row: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    source_path: Path,
+    row_index: int,
+) -> tuple[str, dict[str, Any], tuple[int, ...]]:
+    require_no_truthy_authority_fields(
+        row,
+        context=f"dqs1_pairset_acquisition_candidate[{row_index}]",
+    )
+    if row.get("schema") != "decoder_q_pairset_acquisition_candidate.v1":
+        raise ExperimentQueueError(
+            f"pairset acquisition candidate {row_index} schema mismatch: "
+            f"{row.get('schema')!r}"
+        )
+    candidate_id_value = _candidate_id_from_pairset_acquisition_row(
+        row,
+        row_index=row_index,
+    )
+    selected_pairs = _selected_pair_indices(
+        {
+            "source_metadata": {
+                "selected_pair_indices": row.get("selected_pair_indices"),
+                "selected_pair_count": row.get("selected_pair_count"),
+            }
+        },
+        candidate_id=candidate_id_value,
+    )
+    source_rel = _repo_rel_path(source_path, repo_root=repo_root)
+    acquisition_operation = row.get("acquisition_operation")
+    distortion_repair_budget = row.get("distortion_repair_budget_from_rate_savings")
+    metadata = {
+        "schema": "dqs1_pairset_acquisition_queue_selection_metadata.v1",
+        "queue_source_kind": "decoder_q_pairset_acquisition",
+        "pairset_acquisition_source_path": source_rel,
+        "pairset_acquisition_candidate_index": row_index,
+        "acquisition_id": str(row.get("acquisition_id") or candidate_id_value),
+        "selector_id": str(row.get("selector_id") or candidate_id_value),
+        "selector_kind": str(row.get("selector_kind") or ""),
+        "acquisition_rank": row.get("acquisition_rank"),
+        "rank_kind": row.get("rank_kind"),
+        "acquisition_score": row.get("acquisition_score"),
+        "acquisition_score_orientation": row.get("acquisition_score_orientation"),
+        "payload_bytes": row.get("payload_bytes"),
+        "payload_bytes_delta_vs_source_selector": row.get(
+            "payload_bytes_delta_vs_source_selector"
+        ),
+        "rate_score_delta_vs_source_selector": row.get(
+            "rate_score_delta_vs_source_selector"
+        ),
+        "distortion_repair_budget_from_rate_savings": (
+            dict(distortion_repair_budget)
+            if isinstance(distortion_repair_budget, Mapping)
+            else {}
+        ),
+        "source_selector_id": row.get("source_selector_id"),
+        "source_selector_kind": row.get("source_selector_kind"),
+        "selected_pair_count": len(selected_pairs),
+        "selected_pair_indices": list(selected_pairs),
+        "acquisition_operation": (
+            dict(acquisition_operation)
+            if isinstance(acquisition_operation, Mapping)
+            else {}
+        ),
+        "allowed_use": "local_first_queue_selection_only",
+        "forbidden_use": (
+            "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    require_no_truthy_authority_fields(
+        metadata,
+        context=f"dqs1_pairset_acquisition_selection_metadata[{candidate_id_value}]",
+    )
+    return candidate_id_value, metadata, selected_pairs
+
+
+def _pairset_acquisition_rank_key(row: Mapping[str, Any], row_index: int) -> tuple[int, float, int, str]:
+    rank = row.get("acquisition_rank")
+    normalized_rank = (
+        int(rank)
+        if isinstance(rank, int) and not isinstance(rank, bool) and rank > 0
+        else 10**9
+    )
+    score = row.get("acquisition_score")
+    try:
+        normalized_score = float(score)
+    except (TypeError, ValueError):
+        normalized_score = float("-inf")
+    payload_bytes = row.get("payload_bytes")
+    normalized_payload_bytes = (
+        int(payload_bytes)
+        if isinstance(payload_bytes, int)
+        and not isinstance(payload_bytes, bool)
+        and payload_bytes >= 0
+        else 10**9
+    )
+    identifier = str(row.get("acquisition_id") or row.get("selector_id") or row_index)
+    return (normalized_rank, -normalized_score, normalized_payload_bytes, identifier)
 
 
 def build_selected_pairset_acquisition(
@@ -912,6 +1038,142 @@ def _eureka_false_authority_postcondition(path: str) -> dict[str, Any]:
     }
 
 
+def select_dqs1_local_first_candidates_from_pairset_acquisition(
+    pairset_acquisition_path: str | Path,
+    *,
+    repo_root: str | Path,
+    results_root: str = DEFAULT_RESULTS_ROOT,
+    completed_results_roots: tuple[str, ...] = (),
+    exclude_candidate_ids: set[str] | None = None,
+    skip_completed_local_advisory: bool = True,
+    candidate_limit: int = 1,
+    dqs1_observations: tuple[dict[str, Any], ...] = (),
+    skip_observed_dqs1_candidates: bool = True,
+    selector_kind_allowlist: tuple[str, ...] = (),
+) -> tuple[Dqs1QueueSelection, ...]:
+    if isinstance(candidate_limit, bool) or not isinstance(candidate_limit, int) or candidate_limit <= 0:
+        raise ExperimentQueueError("candidate_limit must be a positive integer")
+    repo = Path(repo_root)
+    acquisition_path = Path(pairset_acquisition_path)
+    if not acquisition_path.is_absolute():
+        acquisition_path = repo / acquisition_path
+    payload = _json_load(acquisition_path)
+    if payload.get("schema") != PAIRSET_ACQUISITION_SCHEMA:
+        raise ExperimentQueueError(
+            f"{acquisition_path}: expected {PAIRSET_ACQUISITION_SCHEMA}, got "
+            f"{payload.get('schema')!r}"
+        )
+    require_no_truthy_authority_fields(
+        payload,
+        context=f"dqs1_pairset_acquisition:{acquisition_path}",
+    )
+    candidates = payload.get("candidates")
+    if not isinstance(candidates, list) or not candidates:
+        raise ExperimentQueueError(f"{acquisition_path}: candidates must be a non-empty list")
+
+    excluded = exclude_candidate_ids or set()
+    allowed_selector_kinds = {
+        str(kind).strip()
+        for kind in selector_kind_allowlist
+        if str(kind).strip()
+    }
+    completion_roots = _completion_roots(results_root, completed_results_roots)
+    observed_candidates = (
+        _observed_dqs1_candidate_skips(dqs1_observations)
+        if skip_observed_dqs1_candidates
+        else {}
+    )
+    skipped: list[dict[str, str]] = []
+    indexed_rows = [
+        (index, row)
+        for index, row in enumerate(candidates)
+        if isinstance(row, Mapping)
+    ]
+    sorted_rows = sorted(
+        indexed_rows,
+        key=lambda item: _pairset_acquisition_rank_key(item[1], item[0]),
+    )
+
+    selections: list[Dqs1QueueSelection] = []
+    for row_index, row in sorted_rows:
+        candidate_id_value = _candidate_id_from_pairset_acquisition_row(
+            row,
+            row_index=row_index,
+        )
+        selector_kind = str(row.get("selector_kind") or "").strip()
+        if allowed_selector_kinds and selector_kind not in allowed_selector_kinds:
+            skipped.append(
+                {
+                    "candidate_id": candidate_id_value,
+                    "reason": "selector_kind_filtered",
+                    "selector_kind": selector_kind,
+                }
+            )
+            continue
+        if candidate_id_value in excluded:
+            skipped.append({"candidate_id": candidate_id_value, "reason": "explicitly_excluded"})
+            continue
+        if candidate_id_value in observed_candidates:
+            skipped.append(dict(observed_candidates[candidate_id_value]))
+            continue
+        if skip_completed_local_advisory:
+            completed_root = _candidate_completed_in_roots(
+                repo_root=repo,
+                results_roots=completion_roots,
+                candidate_id=candidate_id_value,
+            )
+            if completed_root is not None:
+                skip_row = {"candidate_id": candidate_id_value, "reason": "local_advisory_exists"}
+                if len(completion_roots) > 1:
+                    skip_row["completed_results_root"] = completed_root
+                skipped.append(skip_row)
+                continue
+        current_candidate_id, selection_metadata, selected_pairs = (
+            _pairset_acquisition_selection_metadata(
+                row,
+                repo_root=repo,
+                source_path=acquisition_path,
+                row_index=row_index,
+            )
+        )
+        if observed_candidates:
+            selection_metadata["dqs1_observation_acquisition_skip"] = {
+                "schema": "dqs1_observation_acquisition_skip.v1",
+                "active": True,
+                "observed_candidate_count": len(observed_candidates),
+                "skip_reason": "dqs1_harvest_observation_exists",
+                "allowed_use": "local_first_queue_rerun_suppression_only",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        selections.append(
+            Dqs1QueueSelection(
+                candidate_id=current_candidate_id,
+                candidate_slug=candidate_slug(current_candidate_id),
+                selected_pair_indices=selected_pairs,
+                action_summary_path=acquisition_path,
+                portfolio_path=acquisition_path,
+                source_metadata=selection_metadata,
+                operator_action_rank=(
+                    int(row.get("acquisition_rank"))
+                    if isinstance(row.get("acquisition_rank"), int)
+                    and not isinstance(row.get("acquisition_rank"), bool)
+                    else None
+                ),
+                skipped_candidates=tuple(skipped),
+            )
+        )
+        if len(selections) >= candidate_limit:
+            return tuple(selections)
+
+    reasons = ", ".join(f"{item['candidate_id']}:{item['reason']}" for item in skipped)
+    raise ExperimentQueueError(
+        f"no safe DQS1 pairset-acquisition candidate found; skipped {reasons}"
+    )
+
+
 def select_dqs1_local_first_candidate(
     action_summary_path: str | Path,
     *,
@@ -1111,7 +1373,6 @@ def select_dqs1_local_first_candidates(
 
     reasons = ", ".join(f"{item['candidate_id']}:{item['reason']}" for item in skipped)
     raise ExperimentQueueError(f"no safe DQS1 local-first candidate found; skipped {reasons}")
-
 
 def build_dqs1_local_first_queue(
     selection: Dqs1QueueSelection,
@@ -1870,6 +2131,155 @@ def build_queue_from_action_summary(
             scheduler_proactive_cleanup_min_bytes=scheduler_proactive_cleanup_min_bytes,
             scheduler_proactive_cleanup_cold_store_roots=scheduler_proactive_cleanup_cold_store_roots,
             scheduler_proactive_cleanup_cold_store_reserve_gb=scheduler_proactive_cleanup_cold_store_reserve_gb,
+            materializer_feedback_bridge=materializer_feedback_bridge,
+        ),
+        selection=selections[0],
+        selections=selections,
+        materializer_feedback_bridge=materializer_feedback_bridge,
+        selected_pairset_acquisition=selected_pairset_acquisition,
+    )
+
+
+def build_queue_from_pairset_acquisition(
+    pairset_acquisition_path: str | Path,
+    *,
+    repo_root: str | Path,
+    results_root: str = DEFAULT_RESULTS_ROOT,
+    queue_id: str = DEFAULT_QUEUE_ID,
+    completed_results_roots: tuple[str, ...] = (),
+    mlx_effective_selection: str = DEFAULT_MLX_EFFECTIVE_SELECTION,
+    decoder_q_candidate_manifest: str = DEFAULT_DECODER_Q_CANDIDATE_MANIFEST,
+    base_submission_dir: str = DEFAULT_BASE_SUBMISSION_DIR,
+    global_mutated_archive: str = DEFAULT_GLOBAL_MUTATED_ARCHIVE,
+    upstream_dir: str = DEFAULT_UPSTREAM_DIR,
+    video_names_file: str = DEFAULT_VIDEO_NAMES_FILE,
+    frame_policy: str = DEFAULT_FRAME_POLICY,
+    drift_calibration_json: str = DEFAULT_DRIFT_CALIBRATION_JSON,
+    eureka_output_dir: str = DEFAULT_EUREKA_OUTPUT_DIR,
+    eureka_run_id: str | None = None,
+    exclude_candidate_ids: set[str] | None = None,
+    skip_completed_local_advisory: bool = True,
+    candidate_limit: int = 1,
+    local_cpu_concurrency: int = 1,
+    local_io_concurrency: int = 1,
+    include_mlx_local_advisory_debug: bool = False,
+    allow_large_mlx_cache: bool = False,
+    mlx_reference_cache_dir: str = DEFAULT_MLX_REFERENCE_CACHE_DIR,
+    mlx_device: str = "gpu",
+    mlx_batch_pairs: int = 1,
+    mlx_cache_batch_pairs: int = 8,
+    include_raw_retention_plan: bool = True,
+    raw_retention_execute: bool = False,
+    raw_retention_action: str = "move",
+    raw_retention_cold_store_roots: tuple[str, ...] = (),
+    raw_retention_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
+    include_mlx_retention_plan: bool = True,
+    mlx_retention_execute: bool = False,
+    mlx_retention_action: str = "move",
+    mlx_retention_cold_store_roots: tuple[str, ...] = (),
+    mlx_retention_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
+    include_scheduler_preflight: bool = False,
+    scheduler_storage_tiers: tuple[str, ...] = (),
+    scheduler_storage_workload_subdir: str | None = None,
+    scheduler_storage_expected_workload_root: str | None = None,
+    scheduler_storage_reserve_free_gb: float = DEFAULT_RESERVE_FREE_GB,
+    scheduler_storage_expected_bytes: int = 0,
+    scheduler_proactive_cleanup_roots: tuple[str, ...] = (),
+    scheduler_proactive_cleanup_execute: bool = False,
+    scheduler_proactive_cleanup_action: str = "move",
+    scheduler_proactive_cleanup_min_bytes: str = "1",
+    scheduler_proactive_cleanup_cold_store_roots: tuple[str, ...] = (),
+    scheduler_proactive_cleanup_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
+    materializer_feedback_payloads: tuple[dict[str, Any], ...] = (),
+    materializer_feedback_source_paths: tuple[str, ...] = (),
+    dqs1_observations: tuple[dict[str, Any], ...] = (),
+    dqs1_observation_source_paths: tuple[str, ...] = (),
+    skip_observed_dqs1_candidates: bool = True,
+    selector_kind_allowlist: tuple[str, ...] = (),
+) -> Dqs1QueueBuildResult:
+    try:
+        selections = select_dqs1_local_first_candidates_from_pairset_acquisition(
+            pairset_acquisition_path,
+            repo_root=repo_root,
+            results_root=results_root,
+            completed_results_roots=completed_results_roots,
+            exclude_candidate_ids=exclude_candidate_ids,
+            skip_completed_local_advisory=skip_completed_local_advisory,
+            candidate_limit=candidate_limit,
+            dqs1_observations=dqs1_observations,
+            skip_observed_dqs1_candidates=skip_observed_dqs1_candidates,
+            selector_kind_allowlist=selector_kind_allowlist,
+        )
+        materializer_feedback_bridge = build_dqs1_materializer_feedback_bridge(
+            materializer_feedback_payloads=materializer_feedback_payloads,
+            materializer_feedback_source_paths=materializer_feedback_source_paths,
+            planned_dqs1_candidate_ids=tuple(
+                selection.candidate_id for selection in selections
+            ),
+            candidate_limit=candidate_limit,
+            dqs1_observations=dqs1_observations,
+            dqs1_observation_source_paths=dqs1_observation_source_paths,
+            include_planned_candidates_without_feedback=True,
+        )
+    except ValueError as exc:
+        raise ExperimentQueueError(str(exc)) from exc
+    selected_pairset_acquisition = build_selected_pairset_acquisition(
+        selections,
+        repo_root=repo_root,
+        action_summary_path=pairset_acquisition_path,
+    )
+    return Dqs1QueueBuildResult(
+        queue=build_dqs1_local_first_queue_from_selections(
+            selections,
+            repo_root=repo_root,
+            queue_id=queue_id,
+            results_root=results_root,
+            mlx_effective_selection=mlx_effective_selection,
+            decoder_q_candidate_manifest=decoder_q_candidate_manifest,
+            base_submission_dir=base_submission_dir,
+            global_mutated_archive=global_mutated_archive,
+            upstream_dir=upstream_dir,
+            video_names_file=video_names_file,
+            frame_policy=frame_policy,
+            drift_calibration_json=drift_calibration_json,
+            eureka_output_dir=eureka_output_dir,
+            eureka_run_id=eureka_run_id,
+            local_cpu_concurrency=local_cpu_concurrency,
+            local_io_concurrency=local_io_concurrency,
+            include_mlx_local_advisory_debug=include_mlx_local_advisory_debug,
+            allow_large_mlx_cache=allow_large_mlx_cache,
+            mlx_reference_cache_dir=mlx_reference_cache_dir,
+            mlx_device=mlx_device,
+            mlx_batch_pairs=mlx_batch_pairs,
+            mlx_cache_batch_pairs=mlx_cache_batch_pairs,
+            include_raw_retention_plan=include_raw_retention_plan,
+            raw_retention_execute=raw_retention_execute,
+            raw_retention_action=raw_retention_action,
+            raw_retention_cold_store_roots=raw_retention_cold_store_roots,
+            raw_retention_cold_store_reserve_gb=raw_retention_cold_store_reserve_gb,
+            include_mlx_retention_plan=include_mlx_retention_plan,
+            mlx_retention_execute=mlx_retention_execute,
+            mlx_retention_action=mlx_retention_action,
+            mlx_retention_cold_store_roots=mlx_retention_cold_store_roots,
+            mlx_retention_cold_store_reserve_gb=mlx_retention_cold_store_reserve_gb,
+            include_scheduler_preflight=include_scheduler_preflight,
+            scheduler_storage_tiers=scheduler_storage_tiers,
+            scheduler_storage_workload_subdir=scheduler_storage_workload_subdir,
+            scheduler_storage_expected_workload_root=(
+                scheduler_storage_expected_workload_root
+            ),
+            scheduler_storage_reserve_free_gb=scheduler_storage_reserve_free_gb,
+            scheduler_storage_expected_bytes=scheduler_storage_expected_bytes,
+            scheduler_proactive_cleanup_roots=scheduler_proactive_cleanup_roots,
+            scheduler_proactive_cleanup_execute=scheduler_proactive_cleanup_execute,
+            scheduler_proactive_cleanup_action=scheduler_proactive_cleanup_action,
+            scheduler_proactive_cleanup_min_bytes=scheduler_proactive_cleanup_min_bytes,
+            scheduler_proactive_cleanup_cold_store_roots=(
+                scheduler_proactive_cleanup_cold_store_roots
+            ),
+            scheduler_proactive_cleanup_cold_store_reserve_gb=(
+                scheduler_proactive_cleanup_cold_store_reserve_gb
+            ),
             materializer_feedback_bridge=materializer_feedback_bridge,
         ),
         selection=selections[0],

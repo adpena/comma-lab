@@ -2372,6 +2372,10 @@ def test_targeted_component_correction_materialization_requests_group_responses(
 
     chain_work_orders_path = tmp_path / "component_chain_work_orders.json"
     chain_work_orders_path.write_text(json.dumps(chain_work_orders), encoding="utf-8")
+    dqs1_observations = _write_jsonl(
+        tmp_path / "dqs1_observations.jsonl",
+        [_dqs1_observation_row(candidate_id="pairset_drop_many_k012_h1ecc99d178")],
+    )
     chain_queue = build_frontier_operation_chain_compiler_queue(
         repo_root=REPO_ROOT,
         operation_chain_compiler_work_orders=chain_work_orders,
@@ -2379,6 +2383,7 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         results_root=tmp_path / "results",
         queue_id="frontier_feedback_targeted_component_chain_unit",
         candidate_limit=1,
+        dqs1_observation_source_paths=(dqs1_observations,),
     )
     assert chain_queue is not None
     _assert_false_authority(chain_queue["experiments"][0]["metadata"])
@@ -2416,7 +2421,7 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert "public_pr103_intake" not in byte_range_inputs["materializer_context"][
         "source_archive"
     ]
-    assert len(chain_queue["experiments"][0]["steps"]) == 4
+    assert len(chain_queue["experiments"][0]["steps"]) == 6
     assert {
         step["id"] for step in chain_queue["experiments"][0]["steps"]
     } == {
@@ -2424,6 +2429,8 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         "emit_byte_range_stage_inputs",
         "emit_targeted_drop_many_stage_inputs",
         "run_targeted_drop_many_pairset_acquisition",
+        "build_targeted_drop_many_dqs1_followup_queue",
+        "validate_targeted_drop_many_dqs1_followup_queue",
     }
     targeted_drop_many_step = next(
         step
@@ -2439,9 +2446,67 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert targeted_drop_many_run["requires"] == [
         "emit_targeted_drop_many_stage_inputs"
     ]
+    targeted_dqs1_build = next(
+        step
+        for step in chain_queue["experiments"][0]["steps"]
+        if step["id"] == "build_targeted_drop_many_dqs1_followup_queue"
+    )
+    assert targeted_dqs1_build["requires"] == [
+        "run_targeted_drop_many_pairset_acquisition"
+    ]
+    assert "--pairset-acquisition" in targeted_dqs1_build["command"]
+    selector_kind_indices = [
+        index
+        for index, value in enumerate(targeted_dqs1_build["command"])
+        if value == "--selector-kind"
+    ]
+    assert [
+        targeted_dqs1_build["command"][index + 1]
+        for index in selector_kind_indices
+    ] == [
+        "drop_many_beam_pairwise_interaction_waterfill",
+        "pair_frame_geometry_low_impact_drop_many",
+    ]
+    assert "--selected-pairset-acquisition-out" in targeted_dqs1_build["command"]
+    assert "--materializer-feedback-bridge-out" in targeted_dqs1_build["command"]
+    assert "--eureka-run-id" in targeted_dqs1_build["command"]
+    assert targeted_dqs1_build["command"][
+        targeted_dqs1_build["command"].index("--eureka-run-id") + 1
+    ].endswith("targeted_drop_many_dqs1_followup")
+    observation_indices = [
+        index
+        for index, value in enumerate(targeted_dqs1_build["command"])
+        if value == "--dqs1-observation-jsonl"
+    ]
+    assert [targeted_dqs1_build["command"][index + 1] for index in observation_indices] == [
+        dqs1_observations.as_posix()
+    ]
+    targeted_dqs1_validate = next(
+        step
+        for step in chain_queue["experiments"][0]["steps"]
+        if step["id"] == "validate_targeted_drop_many_dqs1_followup_queue"
+    )
+    assert targeted_dqs1_validate["requires"] == [
+        "build_targeted_drop_many_dqs1_followup_queue"
+    ]
     assert chain_queue["experiments"][0]["metadata"][
         "targeted_drop_many_local_plan_queueable"
     ] is True
+    assert chain_queue["experiments"][0]["metadata"][
+        "targeted_drop_many_dqs1_followup_queue_enabled"
+    ] is True
+    assert chain_queue["experiments"][0]["metadata"][
+        "targeted_drop_many_dqs1_followup_queue_path"
+    ].endswith("targeted_drop_many_dqs1_followup_queue.json")
+    assert chain_queue["experiments"][0]["metadata"][
+        "targeted_drop_many_dqs1_selector_kind_allowlist"
+    ] == [
+        "drop_many_beam_pairwise_interaction_waterfill",
+        "pair_frame_geometry_low_impact_drop_many",
+    ]
+    assert chain_queue["experiments"][0]["metadata"][
+        "targeted_drop_many_dqs1_observation_source_paths"
+    ] == [dqs1_observations.as_posix()]
     assert "drop_within_selected_set_masked_boundary" in chain_queue["experiments"][0][
         "metadata"
     ]["targeted_drop_many_selected_family_targets"]

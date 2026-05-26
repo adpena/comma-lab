@@ -72,7 +72,7 @@ def _target_kind(row: Mapping[str, Any]) -> str:
 def _is_dqs1_observation(row: Mapping[str, Any]) -> bool:
     return (
         row.get("source_schema") == DQS1_OBSERVATION_SOURCE_SCHEMA
-        or row.get("sweep_config_id") == DQS1_OBSERVATION_SWEEP_CONFIG_ID
+        and row.get("sweep_config_id") == DQS1_OBSERVATION_SWEEP_CONFIG_ID
     )
 
 
@@ -264,6 +264,7 @@ def build_dqs1_materializer_feedback_bridge(
     candidate_limit: int | None = None,
     dqs1_observations: Sequence[Mapping[str, Any]] = (),
     dqs1_observation_source_paths: Sequence[str] = (),
+    include_planned_candidates_without_feedback: bool = False,
 ) -> dict[str, Any] | None:
     """Return a false-authority bridge from materializer feedback to DQS1 planning.
 
@@ -291,7 +292,14 @@ def build_dqs1_materializer_feedback_bridge(
     observed_dqs1_candidates, ignored_dqs1_observation_count = _dqs1_observation_rows(
         dqs1_observations
     )
-    if not rows and not observed_dqs1_candidates:
+    if (
+        not rows
+        and not observed_dqs1_candidates
+        and not (
+            include_planned_candidates_without_feedback
+            and _string_list(planned_dqs1_candidate_ids)
+        )
+    ):
         return None
 
     target_groups = _target_group_rows(rows)

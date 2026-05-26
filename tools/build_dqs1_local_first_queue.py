@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -27,6 +28,7 @@ from comma_lab.scheduler.dqs1_local_first_queue import (  # noqa: E402
     DEFAULT_RESULTS_ROOT,
     ExperimentQueueError,
     build_queue_from_action_summary,
+    build_queue_from_pairset_acquisition,
     find_latest_cross_family_action_summary,
 )
 from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
@@ -41,11 +43,52 @@ from tac.optimization.mlx_dynamic_sweep_observations import (  # noqa: E402
     load_observation_rows,
     observation_duplicate_key,
 )
-from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
+from tac.repo_io import (  # noqa: E402
+    ArtifactWriteError,
+    ArtifactWriteResult,
+    json_text,
+    sha256_bytes,
+    write_json_artifact,
+)
 
 
 def _json_print(payload: object) -> None:
     print(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False))
+
+
+def _write_json_artifact_idempotent(
+    path: str | Path,
+    payload: object,
+    *,
+    allow_overwrite: bool = False,
+    expected_existing_sha256: str | None = None,
+    min_free_bytes: int = 0,
+) -> ArtifactWriteResult:
+    target = Path(path)
+    payload_bytes = json_text(payload).encode("utf-8")
+    payload_sha = sha256_bytes(payload_bytes)
+    if (
+        target.exists()
+        and not allow_overwrite
+        and expected_existing_sha256 is None
+        and target.is_file()
+        and target.read_bytes() == payload_bytes
+    ):
+        free_bytes_before = shutil.disk_usage(target.parent).free
+        return ArtifactWriteResult(
+            path=str(target),
+            bytes_written=len(payload_bytes),
+            sha256=payload_sha,
+            free_bytes_before=free_bytes_before,
+            allow_overwrite=False,
+        )
+    return write_json_artifact(
+        target,
+        payload,
+        allow_overwrite=allow_overwrite,
+        expected_existing_sha256=expected_existing_sha256,
+        min_free_bytes=min_free_bytes,
+    )
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -54,6 +97,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--action-summary",
         default="latest",
         help="action_summary.json path, or 'latest' to select the newest cross-family summary",
+    )
+    parser.add_argument(
+        "--pairset-acquisition",
+        default=None,
+        help=(
+            "decoder_q_pairset_acquisition.v1 path to consume directly as "
+            "bounded DQS1 local-first candidates"
+        ),
+    )
+    parser.add_argument(
+        "--selector-kind",
+        action="append",
+        default=[],
+        help=(
+            "when --pairset-acquisition is set, only queue acquisition rows "
+            "with this selector_kind. May repeat."
+        ),
     )
     parser.add_argument(
         "--output",
@@ -353,9 +413,13 @@ def _load_dqs1_observations(path_values: list[str]) -> tuple[dict[str, object], 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     action_summary = (
-        find_latest_cross_family_action_summary(REPO_ROOT)
-        if args.action_summary == "latest"
-        else Path(args.action_summary)
+        None
+        if args.pairset_acquisition is not None and args.action_summary == "latest"
+        else (
+            find_latest_cross_family_action_summary(REPO_ROOT)
+            if args.action_summary == "latest"
+            else Path(args.action_summary)
+        )
     )
     materializer_feedback_payloads = _load_materializer_feedback(
         args.materializer_feedback
@@ -366,74 +430,127 @@ def main(argv: list[str] | None = None) -> int:
             repo_root=REPO_ROOT,
             pair_frame_geometry_paths=tuple(args.pair_frame_geometry_lattice),
         )
+        if args.pairset_acquisition is None
+        else ((), (), {})
     )
-    result = build_queue_from_action_summary(
-        action_summary,
-        repo_root=REPO_ROOT,
-        results_root=args.results_root,
-        queue_id=args.queue_id,
-        completed_results_roots=tuple(args.completed_results_root),
-        **{
-            key: value
-            for key, value in {
-                "mlx_effective_selection": args.mlx_effective_selection,
-                "decoder_q_candidate_manifest": args.decoder_q_candidate_manifest,
-                "base_submission_dir": args.base_submission_dir,
-                "global_mutated_archive": args.global_mutated_archive,
-                "upstream_dir": args.upstream_dir,
-                "video_names_file": args.video_names_file,
-                "frame_policy": args.frame_policy,
-                "drift_calibration_json": args.drift_calibration_json,
-                "eureka_output_dir": args.eureka_output_dir,
-                "eureka_run_id": args.eureka_run_id
-                or (
-                    datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-                    if args.write
-                    else None
-                ),
-            }.items()
-            if value is not None
-        },
-        exclude_candidate_ids=set(args.exclude_candidate),
-        skip_completed_local_advisory=not args.include_completed_local_advisory,
-        candidate_limit=args.candidate_limit,
-        materializer_feedback_payloads=materializer_feedback_payloads,
-        materializer_feedback_source_paths=tuple(args.materializer_feedback),
-        dqs1_observations=dqs1_observations,
-        dqs1_observation_source_paths=tuple(args.dqs1_observation_jsonl),
-        skip_observed_dqs1_candidates=not args.include_observed_dqs1_candidate,
-        additional_queue_requests=pair_frame_requests,
-        additional_queue_request_source_paths=pair_frame_source_paths,
-        local_cpu_concurrency=args.local_cpu_concurrency,
-        local_io_concurrency=args.local_io_concurrency,
-        include_mlx_local_advisory_debug=args.include_mlx_local_advisory_debug,
-        allow_large_mlx_cache=args.allow_large_mlx_cache,
-        mlx_reference_cache_dir=args.mlx_reference_cache_dir,
-        mlx_device=args.mlx_device,
-        mlx_batch_pairs=args.mlx_batch_pairs,
-        mlx_cache_batch_pairs=args.mlx_cache_batch_pairs,
-        include_raw_retention_plan=not args.skip_raw_retention_plan,
-        raw_retention_execute=args.execute_raw_retention,
-        raw_retention_action=args.raw_retention_action,
-        raw_retention_cold_store_roots=tuple(args.raw_retention_cold_store_root),
-        raw_retention_cold_store_reserve_gb=args.raw_retention_cold_store_reserve_gb,
-        include_mlx_retention_plan=not args.skip_mlx_retention_plan,
-        mlx_retention_execute=args.execute_mlx_retention,
-        mlx_retention_action=args.mlx_retention_action,
-        mlx_retention_cold_store_roots=tuple(args.mlx_retention_cold_store_root),
-        mlx_retention_cold_store_reserve_gb=args.mlx_retention_cold_store_reserve_gb,
-        include_scheduler_preflight=args.include_scheduler_preflight,
-        scheduler_storage_tiers=tuple(args.scheduler_storage_tier),
-        scheduler_storage_workload_subdir=args.scheduler_storage_workload_subdir,
-        scheduler_storage_expected_workload_root=args.scheduler_storage_expected_workload_root,
-        scheduler_storage_reserve_free_gb=args.scheduler_storage_reserve_free_gb,
-        scheduler_storage_expected_bytes=args.scheduler_storage_expected_bytes,
-        scheduler_proactive_cleanup_roots=tuple(args.scheduler_proactive_cleanup_root),
-        scheduler_proactive_cleanup_execute=args.scheduler_proactive_cleanup_execute,
-        scheduler_proactive_cleanup_action=args.scheduler_proactive_cleanup_action,
-        scheduler_proactive_cleanup_min_bytes=args.scheduler_proactive_cleanup_min_bytes,
-        scheduler_proactive_cleanup_cold_store_roots=tuple(args.scheduler_proactive_cleanup_cold_store_root),
-        scheduler_proactive_cleanup_cold_store_reserve_gb=args.scheduler_proactive_cleanup_cold_store_reserve_gb,
+    common_options = {
+        key: value
+        for key, value in {
+            "mlx_effective_selection": args.mlx_effective_selection,
+            "decoder_q_candidate_manifest": args.decoder_q_candidate_manifest,
+            "base_submission_dir": args.base_submission_dir,
+            "global_mutated_archive": args.global_mutated_archive,
+            "upstream_dir": args.upstream_dir,
+            "video_names_file": args.video_names_file,
+            "frame_policy": args.frame_policy,
+            "drift_calibration_json": args.drift_calibration_json,
+            "eureka_output_dir": args.eureka_output_dir,
+            "eureka_run_id": args.eureka_run_id
+            or (
+                datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+                if args.write
+                else None
+            ),
+        }.items()
+        if value is not None
+    }
+    result = (
+        build_queue_from_pairset_acquisition(
+            Path(args.pairset_acquisition),
+            repo_root=REPO_ROOT,
+            results_root=args.results_root,
+            queue_id=args.queue_id,
+            completed_results_roots=tuple(args.completed_results_root),
+            **common_options,
+            exclude_candidate_ids=set(args.exclude_candidate),
+            skip_completed_local_advisory=not args.include_completed_local_advisory,
+            candidate_limit=args.candidate_limit,
+            materializer_feedback_payloads=materializer_feedback_payloads,
+            materializer_feedback_source_paths=tuple(args.materializer_feedback),
+            dqs1_observations=dqs1_observations,
+            dqs1_observation_source_paths=tuple(args.dqs1_observation_jsonl),
+            skip_observed_dqs1_candidates=not args.include_observed_dqs1_candidate,
+            selector_kind_allowlist=tuple(args.selector_kind),
+            local_cpu_concurrency=args.local_cpu_concurrency,
+            local_io_concurrency=args.local_io_concurrency,
+            include_mlx_local_advisory_debug=args.include_mlx_local_advisory_debug,
+            allow_large_mlx_cache=args.allow_large_mlx_cache,
+            mlx_reference_cache_dir=args.mlx_reference_cache_dir,
+            mlx_device=args.mlx_device,
+            mlx_batch_pairs=args.mlx_batch_pairs,
+            mlx_cache_batch_pairs=args.mlx_cache_batch_pairs,
+            include_raw_retention_plan=not args.skip_raw_retention_plan,
+            raw_retention_execute=args.execute_raw_retention,
+            raw_retention_action=args.raw_retention_action,
+            raw_retention_cold_store_roots=tuple(args.raw_retention_cold_store_root),
+            raw_retention_cold_store_reserve_gb=args.raw_retention_cold_store_reserve_gb,
+            include_mlx_retention_plan=not args.skip_mlx_retention_plan,
+            mlx_retention_execute=args.execute_mlx_retention,
+            mlx_retention_action=args.mlx_retention_action,
+            mlx_retention_cold_store_roots=tuple(args.mlx_retention_cold_store_root),
+            mlx_retention_cold_store_reserve_gb=args.mlx_retention_cold_store_reserve_gb,
+            include_scheduler_preflight=args.include_scheduler_preflight,
+            scheduler_storage_tiers=tuple(args.scheduler_storage_tier),
+            scheduler_storage_workload_subdir=args.scheduler_storage_workload_subdir,
+            scheduler_storage_expected_workload_root=args.scheduler_storage_expected_workload_root,
+            scheduler_storage_reserve_free_gb=args.scheduler_storage_reserve_free_gb,
+            scheduler_storage_expected_bytes=args.scheduler_storage_expected_bytes,
+            scheduler_proactive_cleanup_roots=tuple(args.scheduler_proactive_cleanup_root),
+            scheduler_proactive_cleanup_execute=args.scheduler_proactive_cleanup_execute,
+            scheduler_proactive_cleanup_action=args.scheduler_proactive_cleanup_action,
+            scheduler_proactive_cleanup_min_bytes=args.scheduler_proactive_cleanup_min_bytes,
+            scheduler_proactive_cleanup_cold_store_roots=tuple(args.scheduler_proactive_cleanup_cold_store_root),
+            scheduler_proactive_cleanup_cold_store_reserve_gb=args.scheduler_proactive_cleanup_cold_store_reserve_gb,
+        )
+        if args.pairset_acquisition is not None
+        else build_queue_from_action_summary(
+            action_summary,
+            repo_root=REPO_ROOT,
+            results_root=args.results_root,
+            queue_id=args.queue_id,
+            completed_results_roots=tuple(args.completed_results_root),
+            **common_options,
+            exclude_candidate_ids=set(args.exclude_candidate),
+            skip_completed_local_advisory=not args.include_completed_local_advisory,
+            candidate_limit=args.candidate_limit,
+            materializer_feedback_payloads=materializer_feedback_payloads,
+            materializer_feedback_source_paths=tuple(args.materializer_feedback),
+            dqs1_observations=dqs1_observations,
+            dqs1_observation_source_paths=tuple(args.dqs1_observation_jsonl),
+            skip_observed_dqs1_candidates=not args.include_observed_dqs1_candidate,
+            additional_queue_requests=pair_frame_requests,
+            additional_queue_request_source_paths=pair_frame_source_paths,
+            local_cpu_concurrency=args.local_cpu_concurrency,
+            local_io_concurrency=args.local_io_concurrency,
+            include_mlx_local_advisory_debug=args.include_mlx_local_advisory_debug,
+            allow_large_mlx_cache=args.allow_large_mlx_cache,
+            mlx_reference_cache_dir=args.mlx_reference_cache_dir,
+            mlx_device=args.mlx_device,
+            mlx_batch_pairs=args.mlx_batch_pairs,
+            mlx_cache_batch_pairs=args.mlx_cache_batch_pairs,
+            include_raw_retention_plan=not args.skip_raw_retention_plan,
+            raw_retention_execute=args.execute_raw_retention,
+            raw_retention_action=args.raw_retention_action,
+            raw_retention_cold_store_roots=tuple(args.raw_retention_cold_store_root),
+            raw_retention_cold_store_reserve_gb=args.raw_retention_cold_store_reserve_gb,
+            include_mlx_retention_plan=not args.skip_mlx_retention_plan,
+            mlx_retention_execute=args.execute_mlx_retention,
+            mlx_retention_action=args.mlx_retention_action,
+            mlx_retention_cold_store_roots=tuple(args.mlx_retention_cold_store_root),
+            mlx_retention_cold_store_reserve_gb=args.mlx_retention_cold_store_reserve_gb,
+            include_scheduler_preflight=args.include_scheduler_preflight,
+            scheduler_storage_tiers=tuple(args.scheduler_storage_tier),
+            scheduler_storage_workload_subdir=args.scheduler_storage_workload_subdir,
+            scheduler_storage_expected_workload_root=args.scheduler_storage_expected_workload_root,
+            scheduler_storage_reserve_free_gb=args.scheduler_storage_reserve_free_gb,
+            scheduler_storage_expected_bytes=args.scheduler_storage_expected_bytes,
+            scheduler_proactive_cleanup_roots=tuple(args.scheduler_proactive_cleanup_root),
+            scheduler_proactive_cleanup_execute=args.scheduler_proactive_cleanup_execute,
+            scheduler_proactive_cleanup_action=args.scheduler_proactive_cleanup_action,
+            scheduler_proactive_cleanup_min_bytes=args.scheduler_proactive_cleanup_min_bytes,
+            scheduler_proactive_cleanup_cold_store_roots=tuple(args.scheduler_proactive_cleanup_cold_store_root),
+            scheduler_proactive_cleanup_cold_store_reserve_gb=args.scheduler_proactive_cleanup_cold_store_reserve_gb,
+        )
     )
     output = Path(args.output)
     feedback_bridge_out = (
@@ -443,7 +560,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     if feedback_bridge_out is not None and result.materializer_feedback_bridge is not None:
         try:
-            write_json_artifact(
+            _write_json_artifact_idempotent(
                 feedback_bridge_out,
                 result.materializer_feedback_bridge,
                 allow_overwrite=bool(args.overwrite_materializer_feedback_bridge),
@@ -459,7 +576,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     if selected_acquisition_out is not None and result.selected_pairset_acquisition is not None:
         try:
-            write_json_artifact(
+            _write_json_artifact_idempotent(
                 selected_acquisition_out,
                 result.selected_pairset_acquisition,
                 allow_overwrite=bool(args.overwrite_selected_pairset_acquisition),
@@ -476,7 +593,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 2
         try:
-            artifact = write_json_artifact(
+            artifact = _write_json_artifact_idempotent(
                 output,
                 result.queue,
                 allow_overwrite=bool(args.overwrite_output),
