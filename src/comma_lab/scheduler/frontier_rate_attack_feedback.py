@@ -3350,6 +3350,139 @@ def _materializer_rate_preservation_rows(
     return rows
 
 
+def _rate_budget_operator_action_term(
+    row: Mapping[str, Any],
+    *,
+    rank: int,
+) -> dict[str, Any]:
+    saved_bytes = _finite_int_or_none(row.get("saved_bytes")) or 0
+    archive_byte_delta = _finite_int_or_none(row.get("archive_byte_delta_vs_baseline"))
+    if archive_byte_delta is None:
+        archive_byte_delta = -saved_bytes
+    segnet_delta = _finite_float_or_none(row.get("segnet_delta_score_units")) or 0.0
+    posenet_delta = _finite_float_or_none(row.get("posenet_delta_score_units")) or 0.0
+    rate_delta = rate_delta_for_archive_byte_delta(archive_byte_delta)
+    distortion_debt = (
+        _finite_float_or_none(row.get("distortion_debt_score_units")) or 0.0
+    )
+    objective_delta = segnet_delta + posenet_delta + rate_delta
+    operator_action_id = _bounded_content_key(
+        "operator_action_term",
+        (
+            row.get("preservation_id"),
+            row.get("candidate_id"),
+            row.get("target_kind"),
+            archive_byte_delta,
+            segnet_delta,
+            posenet_delta,
+            rank,
+        ),
+    )
+    return {
+        "schema": OPERATOR_ACTION_TERM_SCHEMA,
+        "rank": rank,
+        "operator_action_id": operator_action_id,
+        "preservation_id": row.get("preservation_id"),
+        "candidate_id": row.get("candidate_id"),
+        "source_kind": row.get("source_kind"),
+        "target_kind": row.get("target_kind"),
+        "T_i": {
+            "operator_id": row.get("candidate_id") or operator_action_id,
+            "family": row.get("family"),
+            "target_kind": row.get("target_kind"),
+            "archive_byte_delta_vs_baseline": archive_byte_delta,
+            "saved_bytes": saved_bytes,
+            "segnet_delta_score_units": segnet_delta,
+            "posenet_delta_score_units": posenet_delta,
+            "lambda_delta_bytes_score_units": rate_delta,
+            "objective_delta_score_units": objective_delta,
+            "distortion_debt_score_units": distortion_debt,
+            **FALSE_AUTHORITY,
+        },
+        "R_i": {
+            "receiver_proof_kind": "receiver_consumed_materialized_runtime_output",
+            "receiver_closed_saved_bytes": row.get("receiver_closed_saved_bytes"),
+            "parser_only_proof_rejected": True,
+            "deterministic_adapter_only": True,
+            "receiver_optimizes_or_inspects_scorer": False,
+            **FALSE_AUTHORITY,
+        },
+        "interaction_terms": {
+            "schema": "frontier_rate_attack_operator_interaction_terms.v1",
+            "status": "unmeasured_until_chain_materialization_and_component_replay",
+            "assumed_independent_for_planning_only": True,
+            "synergy_or_antagonism_score_units": None,
+            "must_remeasure_before_promotion": True,
+            **FALSE_AUTHORITY,
+        },
+        "legal_runtime_constraints": [
+            "preserve_rate_only_floor_archive_before_distortion_budget_spend",
+            "receiver_consumes_materialized_runtime_output",
+            "component_response_replayed_before_budget_spend",
+            "exact_auth_eval_required_before_score_or_promotion_claim",
+        ],
+        "rate_only_floor_hard_constraint": True,
+        "budget_spend_allowed": False,
+        "allowed_use": "typed_operator_action_functional_ledger_term_for_queue_planning",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _rate_budget_operator_action_ledger(
+    rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    terms = [
+        _rate_budget_operator_action_term(row, rank=rank)
+        for rank, row in enumerate(rows, start=1)
+    ]
+    archive_delta_total = sum(
+        int(term["T_i"].get("archive_byte_delta_vs_baseline") or 0)
+        for term in terms
+    )
+    segnet_delta_total = sum(
+        float(term["T_i"].get("segnet_delta_score_units") or 0.0)
+        for term in terms
+    )
+    posenet_delta_total = sum(
+        float(term["T_i"].get("posenet_delta_score_units") or 0.0)
+        for term in terms
+    )
+    rate_delta_total = rate_delta_for_archive_byte_delta(archive_delta_total)
+    objective_delta_total = segnet_delta_total + posenet_delta_total + rate_delta_total
+    return {
+        "schema": OPERATOR_ACTION_LEDGER_SCHEMA,
+        "term_schema": OPERATOR_ACTION_TERM_SCHEMA,
+        "objective": "minimize_delta_segnet_plus_delta_posenet_plus_lambda_delta_bytes",
+        "objective_equation": "delta_S = delta_SegNet + delta_PoseNet + lambda * delta_bytes",
+        "lambda_rate_score_per_byte": rate_delta_for_archive_byte_delta(1),
+        "term_count": len(terms),
+        "operator_action_ids": [
+            str(term.get("operator_action_id") or "") for term in terms
+        ],
+        "cumulative": {
+            "schema": "frontier_rate_attack_operator_action_cumulative_terms.v1",
+            "archive_byte_delta_vs_baseline_total": archive_delta_total,
+            "saved_bytes_total": max(0, -archive_delta_total),
+            "segnet_delta_score_units_total": segnet_delta_total,
+            "posenet_delta_score_units_total": posenet_delta_total,
+            "lambda_delta_bytes_score_units_total": rate_delta_total,
+            "objective_delta_score_units_total": objective_delta_total,
+            **FALSE_AUTHORITY,
+        },
+        "rate_only_floor_hard_constraints": [
+            "emit_cumulative_rate_only_archive_before_any_distortion_spend",
+            "preserve_each_parent_rate_only_candidate_even_if_child_regresses",
+            "budget_spend_child_must_reference_parent_rate_only_floor",
+        ],
+        "terms": terms,
+        "budget_spend_allowed": False,
+        "allowed_use": "canonical_action_functional_ledger_for_frontier_queue_planning",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def build_frontier_rate_budget_preservation_plan(
     *,
     component_summary: Mapping[str, Any],
@@ -3391,6 +3524,7 @@ def build_frontier_rate_budget_preservation_plan(
         target_totals[target] = target_totals.get(target, 0) + int(
             row.get("saved_bytes") or 0
         )
+    operator_action_ledger = _rate_budget_operator_action_ledger(rows)
     payload = {
         "schema": RATE_BUDGET_PRESERVATION_PLAN_SCHEMA,
         "generated_at_utc": _utc_now(),
@@ -3415,6 +3549,8 @@ def build_frontier_rate_budget_preservation_plan(
             ),
             "objective": "minimize_S_under_receiver_and_exact_readiness_constraints",
             "lambda_rate_score_per_byte": rate_delta_for_archive_byte_delta(1),
+            "operator_action_ledger_schema": OPERATOR_ACTION_LEDGER_SCHEMA,
+            "operator_action_term_schema": OPERATOR_ACTION_TERM_SCHEMA,
             "state_variables": [
                 "archive_bytes",
                 "decoded_video_frames",
@@ -3445,6 +3581,12 @@ def build_frontier_rate_budget_preservation_plan(
         "cumulative_rate_attack": {
             "schema": "frontier_rate_attack_cumulative_rate_attack_ledger.v1",
             "operator_count": len(rows),
+            "operator_action_ledger_schema": operator_action_ledger.get("schema"),
+            "operator_action_term_schema": OPERATOR_ACTION_TERM_SCHEMA,
+            "operator_action_term_count": operator_action_ledger.get("term_count"),
+            "operator_action_ids": list(
+                operator_action_ledger.get("operator_action_ids") or []
+            ),
             "saved_bytes_total": total_saved,
             "rate_credit_score_units_total": total_rate_credit,
             "targets_by_saved_bytes": [
@@ -3471,6 +3613,10 @@ def build_frontier_rate_budget_preservation_plan(
                 "while_preserving_each_rate_only_floor_candidate"
             ),
             "lambda_rate_score_per_byte": rate_delta_for_archive_byte_delta(1),
+            "input_operator_action_ledger_schema": operator_action_ledger.get("schema"),
+            "repair_allocation_action_term_schema": (
+                REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
+            ),
             "constraint": "0 <= spent_extra_bytes <= saved_bytes_for_candidate",
             "state_variables": [
                 "saved_bytes_by_rate_only_candidate",
@@ -3499,6 +3645,7 @@ def build_frontier_rate_budget_preservation_plan(
             "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
             **FALSE_AUTHORITY,
         },
+        "operator_action_ledger": operator_action_ledger,
         "rows": rows,
         "blockers": _unique_strings(
             [
@@ -4909,6 +5056,11 @@ def _autonomous_chain_repair_waterfill_plan(
         if isinstance(rate_budget_preservation_plan, Mapping)
         else {}
     )
+    operator_action_ledger = (
+        preservation.get("operator_action_ledger")
+        if isinstance(preservation.get("operator_action_ledger"), Mapping)
+        else {}
+    )
     repair_dimensions = [
         level
         for level in _OPERATION_LEVELS
@@ -4989,6 +5141,26 @@ def _autonomous_chain_repair_waterfill_plan(
             if isinstance(preservation.get("cumulative_rate_attack"), Mapping)
             else {}
         ),
+        "operator_action_ledger": dict(operator_action_ledger),
+        "waterfill_policy": {
+            "schema": "frontier_rate_attack_repair_budget_waterfill_policy.v1",
+            "objective": (
+                "allocate_receiver_closed_rate_credit_to_measured_segnet_posenet_"
+                "repair_terms_without_crossing_parent_rate_only_floor"
+            ),
+            "rate_operator_ledger_schema": operator_action_ledger.get("schema"),
+            "rate_operator_action_term_count": operator_action_ledger.get("term_count"),
+            "repair_allocation_action_term_schema": (
+                REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
+            ),
+            "hard_constraints": [
+                "rate_only_parent_archive_must_materialize_first",
+                "spent_budget_child_archive_cannot_replace_parent_without_exact_eval",
+                "receiver_decode_only_adapter_must_consume_final_packet",
+            ],
+            "budget_spend_allowed": False,
+            **FALSE_AUTHORITY,
+        },
         "required_measurements": [
             "component_response_replay_for_drop_many_candidate",
             "segnet_posenet_repair_probe_by_region_boundary_frame_pair_batch",
@@ -5691,6 +5863,100 @@ def _repair_waterfill_added_bytes(row: Mapping[str, Any]) -> int | None:
     return None
 
 
+def _repair_waterfill_allocation_action_term(
+    *,
+    row: Mapping[str, Any],
+    rank: int,
+    requested_bytes: int,
+    proposed_bytes: int,
+    remaining_after: int,
+    lagrangian_delta: float | None,
+    component_delta: float | None,
+) -> dict[str, Any]:
+    local_terms = (
+        row.get("local_cpu_component_terms")
+        if isinstance(row.get("local_cpu_component_terms"), Mapping)
+        else {}
+    )
+    segnet_delta = _finite_float_or_none(local_terms.get("segnet_delta_score_units"))
+    posenet_delta = _finite_float_or_none(local_terms.get("posenet_delta_score_units"))
+    correction_rate_delta = _finite_float_or_none(
+        local_terms.get("correction_rate_delta_score_units")
+    )
+    if correction_rate_delta is None:
+        correction_rate_delta = rate_delta_for_archive_byte_delta(proposed_bytes)
+    if component_delta is None and segnet_delta is not None and posenet_delta is not None:
+        component_delta = segnet_delta + posenet_delta
+    objective_delta = (
+        lagrangian_delta
+        if lagrangian_delta is not None
+        else (
+            (component_delta or 0.0) + correction_rate_delta
+            if component_delta is not None
+            else None
+        )
+    )
+    action_id = _bounded_content_key(
+        "repair_waterfill_allocation_action",
+        (
+            row.get("acquisition_id"),
+            row.get("candidate_id"),
+            row.get("correction_family"),
+            requested_bytes,
+            proposed_bytes,
+            rank,
+        ),
+    )
+    return {
+        "schema": REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA,
+        "rank": rank,
+        "operator_action_id": action_id,
+        "acquisition_id": row.get("acquisition_id"),
+        "candidate_id": row.get("candidate_id"),
+        "T_i": {
+            "operator_id": row.get("candidate_id") or action_id,
+            "correction_family": row.get("correction_family"),
+            "targeted_dimensions": list(row.get("targeted_dimensions") or []),
+            "operation_levels": list(row.get("operation_levels") or []),
+            "archive_byte_delta_vs_parent_rate_floor": proposed_bytes,
+            "requested_repair_bytes": requested_bytes,
+            "allocated_repair_bytes": proposed_bytes,
+            "segnet_delta_score_units": segnet_delta,
+            "posenet_delta_score_units": posenet_delta,
+            "component_delta_score_units": component_delta,
+            "lambda_delta_bytes_score_units": correction_rate_delta,
+            "objective_delta_score_units": objective_delta,
+            **FALSE_AUTHORITY,
+        },
+        "R_i": {
+            "receiver_proof_kind": "receiver_consumed_spent_budget_child_archive",
+            "parent_rate_only_floor_required": True,
+            "component_response_replay_required": True,
+            "parser_only_proof_rejected": True,
+            "deterministic_adapter_only": True,
+            **FALSE_AUTHORITY,
+        },
+        "interaction_terms": {
+            "schema": "frontier_rate_attack_repair_allocation_interaction_terms.v1",
+            "status": "unmeasured_until_spent_budget_child_materialization",
+            "remaining_receiver_closed_rate_credit_bytes_after": remaining_after,
+            "must_remeasure_parent_child_interaction_before_promotion": True,
+            "synergy_or_antagonism_score_units": None,
+            **FALSE_AUTHORITY,
+        },
+        "legal_runtime_constraints": [
+            "parent_rate_only_archive_materialized_before_child",
+            "receiver_consumes_materialized_runtime_output",
+            "component_response_replayed_before_budget_spend",
+            "exact_auth_eval_required_before_score_or_promotion_claim",
+        ],
+        "budget_spend_allowed": False,
+        "allowed_use": "typed_repair_waterfill_allocation_term_for_queue_planning",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def _repair_waterfill_allocation_rows(
     *,
     accepted_rows: Sequence[Mapping[str, Any]],
@@ -5709,6 +5975,16 @@ def _repair_waterfill_allocation_rows(
         requested_bytes = added_bytes if added_bytes is not None else 0
         proposed_bytes = min(remaining, requested_bytes) if requested_bytes > 0 else 0
         remaining -= proposed_bytes
+        allocation_action_term = _repair_waterfill_allocation_action_term(
+            row=row,
+            rank=rank,
+            requested_bytes=requested_bytes,
+            proposed_bytes=proposed_bytes,
+            remaining_after=remaining,
+            lagrangian_delta=lagrangian_delta,
+            component_delta=component_delta,
+        )
+        allocation_t = allocation_action_term.get("T_i", {})
         blockers = [
             "exact_axis_component_response_required_before_budget_spend",
             "receiver_runtime_materialization_required_before_budget_spend",
@@ -5726,8 +6002,24 @@ def _repair_waterfill_allocation_rows(
                 "correction_family": row.get("correction_family"),
                 "targeted_dimensions": list(row.get("targeted_dimensions") or []),
                 "operation_levels": list(row.get("operation_levels") or []),
+                "allocation_action_term": allocation_action_term,
                 "measured_component_delta_score_units": component_delta,
                 "measured_lagrangian_delta_score_units": lagrangian_delta,
+                "segnet_delta_score_units": (
+                    allocation_t.get("segnet_delta_score_units")
+                    if isinstance(allocation_t, Mapping)
+                    else None
+                ),
+                "posenet_delta_score_units": (
+                    allocation_t.get("posenet_delta_score_units")
+                    if isinstance(allocation_t, Mapping)
+                    else None
+                ),
+                "correction_rate_delta_score_units": (
+                    allocation_t.get("lambda_delta_bytes_score_units")
+                    if isinstance(allocation_t, Mapping)
+                    else None
+                ),
                 "local_lagrangian_improvement_score_units": (
                     -lagrangian_delta
                     if lagrangian_delta is not None and lagrangian_delta < 0.0
@@ -5796,6 +6088,16 @@ def build_frontier_repair_budget_waterfill_work_order(
         )
         or 0
     )
+    rate_budget_preservation_plan = (
+        row.get("rate_budget_preservation_plan")
+        if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
+        else {}
+    )
+    operator_action_ledger = (
+        rate_budget_preservation_plan.get("operator_action_ledger")
+        if isinstance(rate_budget_preservation_plan.get("operator_action_ledger"), Mapping)
+        else {}
+    )
     allocation_rows = _repair_waterfill_allocation_rows(
         accepted_rows=accepted_rows,
         available_rate_credit_bytes=available_bytes,
@@ -5847,40 +6149,30 @@ def build_frontier_repair_budget_waterfill_work_order(
             if isinstance(row.get("repair_budget_waterfill_plan"), Mapping)
             else {}
         ),
-        "rate_budget_preservation_plan": dict(
-            row.get("rate_budget_preservation_plan")
-            if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
-            else {}
-        ),
+        "rate_budget_preservation_plan": dict(rate_budget_preservation_plan),
+        "operator_action_ledger": dict(operator_action_ledger),
         "action_functional_lineage": {
             "schema": "frontier_rate_attack_repair_waterfill_action_functional_lineage.v1",
             "upstream_rate_budget_preservation_schema": (
-                row.get("rate_budget_preservation_plan", {}).get("schema")
-                if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
-                else None
+                rate_budget_preservation_plan.get("schema")
+            ),
+            "upstream_operator_action_ledger_schema": operator_action_ledger.get("schema"),
+            "upstream_operator_action_term_schema": OPERATOR_ACTION_TERM_SCHEMA,
+            "repair_allocation_action_term_schema": (
+                REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
             ),
             "upstream_waterfill_solver_schema": (
-                row.get("rate_budget_preservation_plan", {})
-                .get("waterfill_solver", {})
-                .get("schema")
-                if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
-                and isinstance(
-                    row.get("rate_budget_preservation_plan", {}).get(
-                        "waterfill_solver"
-                    ),
+                rate_budget_preservation_plan.get("waterfill_solver", {}).get("schema")
+                if isinstance(
+                    rate_budget_preservation_plan.get("waterfill_solver"),
                     Mapping,
                 )
                 else None
             ),
             "upstream_action_functional_schema": (
-                row.get("rate_budget_preservation_plan", {})
-                .get("action_functional", {})
-                .get("schema")
-                if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
-                and isinstance(
-                    row.get("rate_budget_preservation_plan", {}).get(
-                        "action_functional"
-                    ),
+                rate_budget_preservation_plan.get("action_functional", {}).get("schema")
+                if isinstance(
+                    rate_budget_preservation_plan.get("action_functional"),
                     Mapping,
                 )
                 else None
@@ -5975,6 +6267,11 @@ def _repair_budget_rate_only_parent_row(
         if isinstance(rate_budget_preservation_plan.get("cumulative_rate_attack"), Mapping)
         else {}
     )
+    operator_action_ledger = (
+        rate_budget_preservation_plan.get("operator_action_ledger")
+        if isinstance(rate_budget_preservation_plan.get("operator_action_ledger"), Mapping)
+        else {}
+    )
     saved_bytes_total = _finite_int_or_none(
         cumulative.get("saved_bytes_total")
     ) or sum(int(row.get("saved_bytes") or 0) for row in rate_rows)
@@ -6012,6 +6309,11 @@ def _repair_budget_rate_only_parent_row(
         "preservation_ids": preservation_ids,
         "source_candidate_ids": source_candidate_ids,
         "target_kinds": target_kinds,
+        "operator_action_ledger_schema": operator_action_ledger.get("schema"),
+        "operator_action_term_schema": operator_action_ledger.get("term_schema"),
+        "operator_action_term_count": operator_action_ledger.get("term_count"),
+        "operator_action_terms": list(operator_action_ledger.get("terms") or []),
+        "action_functional_objective": operator_action_ledger.get("objective"),
         "saved_bytes_total": saved_bytes_total,
         "rate_credit_score_units_total": rate_credit_total,
         "distortion_debt_score_units_total": distortion_debt_total,
@@ -6095,6 +6397,11 @@ def _repair_budget_spent_child_rows(
                 "correction_family": allocation.get("correction_family"),
                 "targeted_dimensions": list(allocation.get("targeted_dimensions") or []),
                 "operation_levels": list(allocation.get("operation_levels") or []),
+                "allocation_action_term": dict(
+                    allocation.get("allocation_action_term")
+                    if isinstance(allocation.get("allocation_action_term"), Mapping)
+                    else {}
+                ),
                 "requested_repair_bytes": requested_bytes,
                 "proposed_encoder_repair_bytes": proposed_bytes,
                 "remaining_receiver_closed_rate_credit_bytes_after": (
@@ -6163,6 +6470,11 @@ def build_frontier_repair_budget_materialization_plan(
         )
         else {}
     )
+    operator_action_ledger = (
+        repair_budget_waterfill_work_order.get("operator_action_ledger")
+        if isinstance(repair_budget_waterfill_work_order.get("operator_action_ledger"), Mapping)
+        else {}
+    )
     parent_row = _repair_budget_rate_only_parent_row(
         chain_id=chain_id,
         rate_budget_preservation_plan=rate_budget_preservation_plan,
@@ -6198,6 +6510,11 @@ def build_frontier_repair_budget_materialization_plan(
         "rate_only_parent_candidate_count": 1,
         "spent_budget_child_candidate_count": len(child_rows),
         "parent_candidate_chain_id": parent_row.get("candidate_chain_id"),
+        "operator_action_ledger_schema": operator_action_ledger.get("schema"),
+        "operator_action_term_count": operator_action_ledger.get("term_count"),
+        "repair_allocation_action_term_schema": (
+            REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
+        ),
         "rate_only_floor_preserved_before_repair_spend": True,
         "spent_budget_candidates_are_children_of_rate_only_floor": True,
         "rate_only_candidate_remains_valid_even_if_child_regresses": True,
@@ -6534,6 +6851,16 @@ def build_frontier_repair_budget_waterfill_queue(
         experiments: list[dict[str, Any]] = []
         for priority, row in enumerate(rows, start=1):
             chain_id = str(row.get("chain_id") or f"chain_{priority}")
+            rate_plan = (
+                row.get("rate_budget_preservation_plan")
+                if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
+                else {}
+            )
+            operator_action_ledger = (
+                rate_plan.get("operator_action_ledger")
+                if isinstance(rate_plan.get("operator_action_ledger"), Mapping)
+                else {}
+            )
             metadata = {
                 "schema": REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA,
                 "chain_id": chain_id,
@@ -6542,18 +6869,15 @@ def build_frontier_repair_budget_waterfill_queue(
                 "accepted_response_count": 0,
                 "receiver_closed_saved_bytes_total": 0,
                 "rate_only_candidate_count": (
-                    row.get("rate_budget_preservation_plan", {}).get(
-                        "rate_only_candidate_count"
-                    )
-                    if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
-                    else None
+                    rate_plan.get("rate_only_candidate_count")
                 ),
                 "rate_only_saved_bytes_total": (
-                    row.get("rate_budget_preservation_plan", {}).get(
-                        "rate_only_saved_bytes_total"
-                    )
-                    if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
-                    else None
+                    rate_plan.get("rate_only_saved_bytes_total")
+                ),
+                "operator_action_ledger_schema": operator_action_ledger.get("schema"),
+                "operator_action_term_count": operator_action_ledger.get("term_count"),
+                "repair_allocation_action_term_schema": (
+                    REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
                 ),
                 "missing_prerequisite_artifact_keys": _unique_strings(
                     missing_prerequisite_keys
@@ -6662,6 +6986,16 @@ def build_frontier_repair_budget_waterfill_queue(
     experiments: list[dict[str, Any]] = []
     for priority, row in enumerate(rows, start=1):
         chain_id = str(row.get("chain_id") or f"chain_{priority}")
+        rate_plan = (
+            row.get("rate_budget_preservation_plan")
+            if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
+            else {}
+        )
+        operator_action_ledger = (
+            rate_plan.get("operator_action_ledger")
+            if isinstance(rate_plan.get("operator_action_ledger"), Mapping)
+            else {}
+        )
         work_order_path = (
             queue_root / _slug_token(chain_id) / "repair_budget_waterfill_work_order.json"
         )
@@ -6686,31 +7020,20 @@ def build_frontier_repair_budget_waterfill_queue(
             "accepted_response_count": accepted_count,
             "receiver_closed_saved_bytes_total": available_bytes,
             "rate_only_candidate_count": (
-                row.get("rate_budget_preservation_plan", {}).get(
-                    "rate_only_candidate_count"
-                )
-                if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
-                else None
+                rate_plan.get("rate_only_candidate_count")
             ),
             "rate_only_saved_bytes_total": (
-                row.get("rate_budget_preservation_plan", {}).get(
-                    "rate_only_saved_bytes_total"
-                )
-                if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
-                else None
+                rate_plan.get("rate_only_saved_bytes_total")
             ),
             "cumulative_rate_attack": dict(
-                row.get("rate_budget_preservation_plan", {}).get(
-                    "cumulative_rate_attack"
-                )
-                if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
-                and isinstance(
-                    row.get("rate_budget_preservation_plan", {}).get(
-                        "cumulative_rate_attack"
-                    ),
-                    Mapping,
-                )
+                rate_plan.get("cumulative_rate_attack")
+                if isinstance(rate_plan.get("cumulative_rate_attack"), Mapping)
                 else {}
+            ),
+            "operator_action_ledger_schema": operator_action_ledger.get("schema"),
+            "operator_action_term_count": operator_action_ledger.get("term_count"),
+            "repair_allocation_action_term_schema": (
+                REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
             ),
             "preserve_rate_only_archive_before_budget_spend": True,
             "candidate_chain_materialization_plan_path": materialization_plan_ref,
@@ -14468,6 +14791,8 @@ __all__ = [
     "OPERATION_MATERIALIZER_BRIDGE_SCHEMA",
     "OPERATION_PORTFOLIO_SCHEMA",
     "OPERATION_PORTFOLIO_TAXONOMY_SCHEMA",
+    "OPERATOR_ACTION_LEDGER_SCHEMA",
+    "OPERATOR_ACTION_TERM_SCHEMA",
     "PAIR_FRAME_GEOMETRY_DISCOVERY_SCHEMA",
     "RATE_BUDGET_PRESERVATION_PLAN_SCHEMA",
     "RATE_BUDGET_PRESERVATION_ROW_SCHEMA",
@@ -14480,6 +14805,7 @@ __all__ = [
     "REPAIR_BUDGET_MATERIALIZATION_EXECUTION_ROW_SCHEMA",
     "REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA",
     "REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA",
+    "REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA",
     "REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA",
     "REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA",

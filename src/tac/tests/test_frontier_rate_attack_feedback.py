@@ -22,14 +22,19 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     OPERATION_MATERIALIZER_BRIDGE_SCHEMA,
     OPERATION_PORTFOLIO_SCHEMA,
     OPERATION_PORTFOLIO_TAXONOMY_SCHEMA,
+    OPERATOR_ACTION_LEDGER_SCHEMA,
+    OPERATOR_ACTION_TERM_SCHEMA,
     RATE_BUDGET_PRESERVATION_PLAN_SCHEMA,
     RATE_BUDGET_PRESERVATION_ROW_SCHEMA,
     RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA,
     RECEIVER_REPAIR_BACKLOG_SCHEMA,
     RECEIVER_REPAIR_ROW_SCHEMA,
     RECEIVER_REPAIR_WORK_ORDER_SCHEMA,
+    REPAIR_BUDGET_MATERIALIZATION_EXECUTION_REPORT_SCHEMA,
+    REPAIR_BUDGET_MATERIALIZATION_EXECUTION_ROW_SCHEMA,
     REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA,
     REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA,
+    REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA,
     REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_CHAIN_MATERIALIZER_HANDOFF_SCHEMA,
@@ -47,6 +52,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     build_frontier_operation_chain_compiler_stage_plan,
     build_frontier_rate_attack_feedback_refresh,
     build_frontier_receiver_repair_work_order,
+    build_frontier_repair_budget_materialization_execution_report,
     build_frontier_repair_budget_materialization_plan,
     build_frontier_repair_budget_waterfill_queue,
     build_frontier_repair_budget_waterfill_work_order,
@@ -587,7 +593,7 @@ def _drop_many_greedy_negative_verdict() -> dict[str, object]:
         "schema": "dqs1_drop_many_build_1c_greedy_independent_heuristic_verdict.v1",
         **_false_authority(),
         "captured_at_utc": "2026-05-25T15:30:00Z",
-        "lane_id": "lane_dqs1_drop_many_build_1c_fixture",
+        "lane_id": "lane_dqs1_drop_many_build_1c_fixture",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_dqs1_drop_many_build_1c_fixture_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260526
         "build_1c_final_verdict": (
             "NEGATIVE_COLLAPSE_TO_K1_EMPIRICAL_DROP_MANY_REGRESSES"
         ),
@@ -1304,9 +1310,26 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
         "action_functional"
     ]["state_variables"]
     assert "lagrangian_waterfill" in rate_plan["action_functional"]["discrete_solver"]
+    assert rate_plan["action_functional"]["operator_action_ledger_schema"] == (
+        OPERATOR_ACTION_LEDGER_SCHEMA
+    )
+    assert rate_plan["operator_action_ledger"]["schema"] == OPERATOR_ACTION_LEDGER_SCHEMA
+    assert (
+        rate_plan["operator_action_ledger"]["term_schema"]
+        == OPERATOR_ACTION_TERM_SCHEMA
+    )
+    first_action_term = rate_plan["operator_action_ledger"]["terms"][0]
+    assert first_action_term["schema"] == OPERATOR_ACTION_TERM_SCHEMA
+    assert first_action_term["T_i"]["archive_byte_delta_vs_baseline"] < 0
+    assert "receiver_consumes_materialized_runtime_output" in (
+        first_action_term["legal_runtime_constraints"]
+    )
     assert rate_plan["cumulative_rate_attack"][
         "preserve_cumulative_rate_only_archive"
     ] is True
+    assert rate_plan["cumulative_rate_attack"]["operator_action_term_count"] == (
+        rate_plan["operator_action_ledger"]["term_count"]
+    )
     assert rate_plan["cumulative_rate_attack"][
         "emit_cumulative_rate_only_before_any_distortion_spend"
     ] is True
@@ -1817,6 +1840,10 @@ def test_rate_budget_preservation_keeps_rate_only_floor_for_distortion_regressio
     ] is True
     assert rate_plan["action_functional"]["objective"] == (
         "minimize_S_under_receiver_and_exact_readiness_constraints"
+    )
+    assert rate_plan["operator_action_ledger"]["schema"] == OPERATOR_ACTION_LEDGER_SCHEMA
+    assert rate_plan["operator_action_ledger"]["terms"][0]["schema"] == (
+        OPERATOR_ACTION_TERM_SCHEMA
     )
     assert rate_plan["waterfill_solver"]["acceptance_rule"].startswith(
         "emit_rate_only_archive_first"
@@ -2764,6 +2791,12 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         "segnet",
         "posenet",
     ]
+    assert first_chain["repair_budget_waterfill_plan"]["operator_action_ledger"][
+        "schema"
+    ] == OPERATOR_ACTION_LEDGER_SCHEMA
+    assert first_chain["repair_budget_waterfill_plan"]["waterfill_policy"][
+        "repair_allocation_action_term_schema"
+    ] == REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
     assert "fit_segnet_posenet_repair_waterfill_policy" in {
         action["id"] for action in first_chain["scheduler_actions"]
     }
@@ -2842,9 +2875,18 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert repair_waterfill_work_order["rate_budget_preservation_plan"]["schema"] == (
         RATE_BUDGET_PRESERVATION_PLAN_SCHEMA
     )
+    assert repair_waterfill_work_order["operator_action_ledger"]["schema"] == (
+        OPERATOR_ACTION_LEDGER_SCHEMA
+    )
     assert repair_waterfill_work_order["action_functional_lineage"][
         "upstream_rate_budget_preservation_schema"
     ] == RATE_BUDGET_PRESERVATION_PLAN_SCHEMA
+    assert repair_waterfill_work_order["action_functional_lineage"][
+        "upstream_operator_action_ledger_schema"
+    ] == OPERATOR_ACTION_LEDGER_SCHEMA
+    assert repair_waterfill_work_order["action_functional_lineage"][
+        "repair_allocation_action_term_schema"
+    ] == REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
     assert repair_waterfill_work_order["action_functional_lineage"][
         "upstream_action_functional_schema"
     ] == "frontier_rate_attack_operator_action_functional.v1"
@@ -2856,6 +2898,13 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     ] is True
     assert repair_waterfill_work_order["accepted_response_count"] == 2
     assert repair_waterfill_work_order["allocation_row_count"] == 2
+    first_allocation = repair_waterfill_work_order["allocation_rows"][0]
+    assert first_allocation["allocation_action_term"]["schema"] == (
+        REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
+    )
+    assert first_allocation["allocation_action_term"]["T_i"][
+        "allocated_repair_bytes"
+    ] == first_allocation["proposed_encoder_repair_bytes"]
     assert repair_waterfill_work_order["budget_spend_allowed"] is False
     assert repair_waterfill_work_order["ready_for_exact_eval_dispatch"] is False
     assert "exact_axis_component_response_required_before_budget_spend" in (
@@ -2874,6 +2923,8 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     parent_row = materialization_plan["candidate_chain_rows"][0]
     assert parent_row["schema"] == REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA
     assert parent_row["candidate_kind"] == "rate_only_floor_parent"
+    assert parent_row["operator_action_ledger_schema"] == OPERATOR_ACTION_LEDGER_SCHEMA
+    assert parent_row["operator_action_terms"][0]["schema"] == OPERATOR_ACTION_TERM_SCHEMA
     assert parent_row["candidate_archive_materialized"] is False
     child_rows = materialization_plan["candidate_chain_rows"][1:]
     assert len(child_rows) == repair_waterfill_work_order["allocation_row_count"]
@@ -2883,6 +2934,21 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     )
     assert all(row["candidate_kind"] == "spent_budget_repair_child" for row in child_rows)
     assert all(row["budget_spend_allowed"] is False for row in child_rows)
+    assert child_rows[0]["allocation_action_term"]["schema"] == (
+        REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
+    )
+    execution_report = build_frontier_repair_budget_materialization_execution_report(
+        repair_budget_materialization_plan=materialization_plan,
+        repair_budget_materialization_plan_path=tmp_path
+        / "repair_budget_materialization_plan.json",
+    )
+    assert execution_report["schema"] == (
+        REPAIR_BUDGET_MATERIALIZATION_EXECUTION_REPORT_SCHEMA
+    )
+    assert execution_report["execution_rows"][0]["schema"] == (
+        REPAIR_BUDGET_MATERIALIZATION_EXECUTION_ROW_SCHEMA
+    )
+    assert execution_report["ready_for_exact_eval_dispatch"] is False
     repair_waterfill_queue = build_frontier_repair_budget_waterfill_queue(
         repo_root=REPO_ROOT,
         autonomous_chain_optimization=autonomous,
@@ -2906,6 +2972,12 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         repair_waterfill_experiment["metadata"]["candidate_archive_materialized"]
         is False
     )
+    assert repair_waterfill_experiment["metadata"]["operator_action_ledger_schema"] == (
+        OPERATOR_ACTION_LEDGER_SCHEMA
+    )
+    assert repair_waterfill_experiment["metadata"][
+        "repair_allocation_action_term_schema"
+    ] == REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA
     _assert_false_authority(repair_waterfill_experiment["metadata"])
     repair_step = repair_waterfill_experiment["steps"][0]
     assert repair_step["command"][1] == (
@@ -2960,6 +3032,34 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     )
     assert materialization_materialized["candidate_archive_materialized"] is False
     _assert_false_authority(materialization_materialized)
+    execution_step = repair_waterfill_experiment["steps"][2]
+    assert execution_step["command"][1] == (
+        "tools/build_frontier_repair_budget_materialization_execution_report.py"
+    )
+    result = subprocess.run(
+        [sys.executable, *execution_step["command"][1:]],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    execution_payload = json.loads(result.stdout)
+    assert execution_payload["ready_for_exact_eval_dispatch"] is False
+    execution_report_path = Path(
+        execution_step["command"][
+            execution_step["command"].index("--execution-report-out") + 1
+        ]
+    )
+    execution_materialized = json.loads(
+        (REPO_ROOT / execution_report_path).read_text(encoding="utf-8")
+    )
+    assert (
+        execution_materialized["schema"]
+        == REPAIR_BUDGET_MATERIALIZATION_EXECUTION_REPORT_SCHEMA
+    )
+    assert execution_materialized["candidate_archive_materialized"] is False
+    _assert_false_authority(execution_materialized)
     chain_queue_path = _write_json(
         tmp_path / "targeted_component_correction_operation_chain_queue.json",
         chain_queue,
