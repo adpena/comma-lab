@@ -56755,6 +56755,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_frontier_receiver_repair_backlog_20260526",
+      "name": "Frontier receiver repair backlog",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/comma_lab/scheduler/frontier_rate_attack_feedback.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": ".omx/research/frontier_operation_portfolio_20260526T000226Z/receiver_repair_backlog.json"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_receiver_repair_backlog_20260526T000226Z_codex.md"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_receiver_repair_backlog_20260526T000226Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Codex tranche: wire exact-readiness blockers and freed-byte correction budget into queue-visible receiver repair backlog."
     }
   ],
   "level_rules": {
@@ -56764,5 +56805,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-25T23:55:28Z"
+  "updated_at": "2026-05-26T00:08:02Z"
 }

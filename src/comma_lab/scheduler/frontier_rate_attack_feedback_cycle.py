@@ -475,6 +475,11 @@ def write_frontier_refresh_artifacts(
         path = out / "operation_portfolio.json"
         write_json_artifact(path, dict(operation_portfolio))
         artifacts["operation_portfolio"] = repo_rel(path, repo_root)
+    receiver_repair_backlog = report.get("receiver_repair_backlog")
+    if isinstance(receiver_repair_backlog, Mapping):
+        path = out / "receiver_repair_backlog.json"
+        write_json_artifact(path, dict(receiver_repair_backlog))
+        artifacts["receiver_repair_backlog"] = repo_rel(path, repo_root)
     selected_acquisition = report.get("selected_pairset_acquisition")
     if isinstance(selected_acquisition, Mapping):
         path = out / "dqs1_selected_pairset_acquisition.json"

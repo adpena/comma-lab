@@ -210,6 +210,11 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
         path = output_dir / "operation_portfolio.json"
         write_json_artifact(path, operation_portfolio)
         artifacts["operation_portfolio"] = _display_path(path)
+    receiver_repair_backlog = report.get("receiver_repair_backlog")
+    if isinstance(receiver_repair_backlog, dict):
+        path = output_dir / "receiver_repair_backlog.json"
+        write_json_artifact(path, receiver_repair_backlog)
+        artifacts["receiver_repair_backlog"] = _display_path(path)
     bridge = report.get("materializer_feedback_bridge")
     if isinstance(bridge, dict):
         path = output_dir / "materializer_feedback_bridge.json"
@@ -348,6 +353,34 @@ def main(argv: list[str] | None = None) -> int:
                             "top_queue_executable_operation_ids"
                         )
                         if isinstance(report.get("operation_portfolio"), dict)
+                        else None
+                    ),
+                },
+                "receiver_repair_backlog_summary": {
+                    "row_count": (
+                        report.get("receiver_repair_backlog", {}).get("row_count")
+                        if isinstance(report.get("receiver_repair_backlog"), dict)
+                        else None
+                    ),
+                    "queue_actionable_repair_count": (
+                        report.get("receiver_repair_backlog", {}).get(
+                            "queue_actionable_repair_count"
+                        )
+                        if isinstance(report.get("receiver_repair_backlog"), dict)
+                        else None
+                    ),
+                    "top_repair_ids": (
+                        report.get("receiver_repair_backlog", {}).get(
+                            "top_repair_ids"
+                        )
+                        if isinstance(report.get("receiver_repair_backlog"), dict)
+                        else None
+                    ),
+                    "top_repair_families": (
+                        report.get("receiver_repair_backlog", {}).get(
+                            "top_repair_families"
+                        )
+                        if isinstance(report.get("receiver_repair_backlog"), dict)
                         else None
                     ),
                 },

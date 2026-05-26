@@ -888,6 +888,9 @@ def main(argv: list[str] | None = None) -> int:
                     "local_cpu_eureka_planning"
                 ),
                 "operation_portfolio": initial_report.get("operation_portfolio"),
+                "receiver_repair_backlog": initial_report.get(
+                    "receiver_repair_backlog"
+                ),
                 "pairset_component_marginal": initial_component_marginal,
                 "queue_validate": initial_validate,
                 **FALSE_AUTHORITY,
@@ -915,6 +918,7 @@ def main(argv: list[str] | None = None) -> int:
                     "local_cpu_eureka_planning"
                 ),
                 "operation_portfolio": post_report.get("operation_portfolio"),
+                "receiver_repair_backlog": post_report.get("receiver_repair_backlog"),
                 "pairset_component_marginal": post_component_marginal,
                 "queue_validate": post_validate,
                 **FALSE_AUTHORITY,
@@ -938,6 +942,7 @@ def main(argv: list[str] | None = None) -> int:
                 "post_followup_eureka_signal_to_next_acquisition_hint",
                 "materializer_eureka_component_signals_to_many_operation_portfolio",
                 "operation_portfolio_to_chained_materializer_and_receiver_backlog",
+                "exact_readiness_bridge_to_receiver_repair_backlog_and_correction_budget",
             ],
             "allowed_use": "local_queue_owned_frontier_feedback_iteration_only",
             "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",

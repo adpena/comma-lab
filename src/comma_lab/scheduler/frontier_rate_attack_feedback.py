@@ -71,6 +71,8 @@ OPERATION_PORTFOLIO_TAXONOMY_SCHEMA = (
 MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA = (
     "materializer_chain_exact_readiness_bridge_report.v1"
 )
+RECEIVER_REPAIR_BACKLOG_SCHEMA = "frontier_rate_attack_receiver_repair_backlog.v1"
+RECEIVER_REPAIR_ROW_SCHEMA = "frontier_rate_attack_receiver_repair_row.v1"
 
 _OPERATION_LEVELS = (
     "bit",
@@ -2353,6 +2355,349 @@ def _operation_portfolio_queue_metadata(portfolio: Mapping[str, Any]) -> dict[st
     }
 
 
+def _slug_token(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    out = "".join(ch if ch.isalnum() else "_" for ch in text)
+    return "_".join(part for part in out.split("_") if part) or "unknown"
+
+
+def _receiver_repair_classification(blocker: str) -> dict[str, Any]:
+    text = str(blocker or "")
+    lowered = text.lower()
+    if any(
+        token in lowered
+        for token in (
+            "full_frame_inflate_parity",
+            "inflate_output_parity",
+            "strict_full_frame",
+        )
+    ):
+        family = "full_frame_inflate_parity_repair"
+        action = "run_source_and_candidate_inflate_then_compare_full_frame_outputs"
+        consumer = "frontier_exact_readiness_handoff"
+        queue_actionable = True
+        priority_base = 95.0
+    elif any(
+        token in lowered
+        for token in (
+            "runtime_consumption_proof",
+            "consumed_by_runtime",
+            "no_op_detector",
+        )
+    ):
+        family = "runtime_consumption_proof_repair"
+        action = "replace_parser_only_signal_with_runtime_adapter_consumption_proof"
+        consumer = "frontier_final_rate_attack_materializer_queue"
+        queue_actionable = True
+        priority_base = 90.0
+    elif any(
+        token in lowered
+        for token in (
+            "receiver_contract",
+            "runtime_adapter",
+            "native_unpacker",
+            "shadow_archive_reconstruction",
+            "receiver_runtime",
+        )
+    ):
+        family = "receiver_runtime_contract_repair"
+        action = "generate_or_harden_receiver_runtime_adapter_contract"
+        consumer = "frontier_final_rate_attack_materializer_queue"
+        queue_actionable = True
+        priority_base = 88.0
+    elif any(
+        token in lowered
+        for token in (
+            "inflate_sh_missing",
+            "report_txt_missing",
+            "archive_manifest_missing",
+            "runtime_tree_sha256_missing",
+            "runtime_content_tree_sha256_missing",
+            "runtime_manifest",
+        )
+    ):
+        family = "submission_runtime_manifest_closure"
+        action = "materialize_submission_runtime_manifest_and_runtime_tree_hashes"
+        consumer = "frontier_exact_readiness_handoff"
+        queue_actionable = True
+        priority_base = 82.0
+    elif "above_active_floor_archive_bytes" in lowered:
+        family = "rate_floor_scope_control"
+        action = "recompute_active_floor_byte_delta_or_require_operator_override"
+        consumer = "frontier_rate_attack_feedback_refresh"
+        queue_actionable = False
+        priority_base = 35.0
+    elif any(
+        token in lowered
+        for token in (
+            "dispatch_authority",
+            "exact_eval_readiness_gate",
+            "lane_dispatch_claim",
+            "non_proxy_score_evidence",
+            "optimizer_candidate_queue_is_planning_only",
+            "planning_only",
+            "promotion",
+        )
+    ):
+        family = "authority_gate"
+        action = "preserve_false_authority_and_wait_for_exact_readiness_payload"
+        consumer = "false_authority_guard"
+        queue_actionable = False
+        priority_base = 10.0
+    else:
+        family = "unclassified_receiver_exact_readiness_repair"
+        action = "classify_blocker_then_bind_to_receiver_runtime_or_exact_readiness_step"
+        consumer = "frontier_rate_attack_feedback_refresh"
+        queue_actionable = False
+        priority_base = 45.0
+    return {
+        "repair_family": family,
+        "recommended_next_action": action,
+        "queue_consumer": consumer,
+        "queue_actionable": queue_actionable,
+        "priority_base": priority_base,
+    }
+
+
+def _bridge_blocker_counts(summary: Mapping[str, Any]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    raw_counts = summary.get("blocker_counts")
+    if isinstance(raw_counts, Mapping):
+        for blocker, count in raw_counts.items():
+            text = str(blocker or "").strip()
+            if not text:
+                continue
+            counts[text] = counts.get(text, 0) + (_finite_int_or_none(count) or 1)
+    for blocker in _string_list(summary.get("top_blockers")):
+        counts.setdefault(blocker, 1)
+    for report in summary.get("reports") or []:
+        if not isinstance(report, Mapping):
+            continue
+        for blocker in _string_list(report.get("row_blockers_sample")):
+            counts.setdefault(blocker, 1)
+    return counts
+
+
+def _bridge_summaries_from_operation_row(row: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    evidence = row.get("evidence_summary")
+    if not isinstance(evidence, Mapping):
+        return []
+    summaries: list[Mapping[str, Any]] = []
+    for key in ("exact_readiness_bridge", "exact_readiness_bridge_summary"):
+        value = evidence.get(key)
+        if isinstance(value, Mapping):
+            summaries.append(value)
+    return summaries
+
+
+def _saved_bytes_at_risk(row: Mapping[str, Any]) -> int:
+    evidence = row.get("evidence_summary")
+    if not isinstance(evidence, Mapping):
+        return 0
+    for key in (
+        "total_positive_saved_bytes_from_observed_parts",
+        "total_positive_saved_bytes",
+        "max_saved_bytes",
+    ):
+        saved = _finite_int_or_none(evidence.get(key))
+        if saved is not None and saved > 0:
+            return saved
+    return 0
+
+
+def _receiver_repair_priority(
+    *,
+    priority_base: float,
+    blocker_count: int,
+    saved_bytes_at_risk: int,
+    source_priority: float | None,
+) -> float:
+    priority = priority_base + float(max(blocker_count, 1)) * 3.0
+    priority += float(max(saved_bytes_at_risk, 0)) / 16.0
+    if source_priority is not None and source_priority > 0:
+        priority += min(float(source_priority), 100.0) / 10.0
+    return priority
+
+
+def build_frontier_receiver_repair_backlog(
+    operation_portfolio: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Compile exact-readiness blockers into receiver-runtime repair work orders."""
+
+    rows: list[dict[str, Any]] = []
+    family_counts: dict[str, int] = {}
+    queue_actionable_count = 0
+    targeted_budget = (
+        operation_portfolio.get("targeted_correction_budget_summary")
+        if isinstance(
+            operation_portfolio.get("targeted_correction_budget_summary"),
+            Mapping,
+        )
+        else {}
+    )
+    materializer_budget_total = _finite_int_or_none(
+        targeted_budget.get("materializer_rate_positive_saved_bytes_total")
+        if isinstance(targeted_budget, Mapping)
+        else None
+    ) or 0
+    local_budget_total = _finite_int_or_none(
+        targeted_budget.get("local_drop_saved_bytes_total")
+        if isinstance(targeted_budget, Mapping)
+        else None
+    ) or 0
+    for source_row in operation_portfolio.get("rows") or []:
+        if not isinstance(source_row, Mapping):
+            continue
+        source_operation_id = str(source_row.get("operation_id") or "unknown_operation")
+        bridge_summaries = _bridge_summaries_from_operation_row(source_row)
+        if not bridge_summaries:
+            continue
+        source_priority = _finite_float_or_none(source_row.get("priority_score"))
+        saved_bytes = _saved_bytes_at_risk(source_row)
+        source_queue_consumer = str(
+            source_row.get("queue_consumer")
+            or "frontier_final_rate_attack_materializer_queue"
+        )
+        evidence = source_row.get("evidence_summary")
+        target_kind = (
+            str(evidence.get("target_kind") or source_operation_id)
+            if isinstance(evidence, Mapping)
+            else source_operation_id
+        )
+        for summary_index, bridge_summary in enumerate(bridge_summaries):
+            candidate_count = _finite_int_or_none(
+                bridge_summary.get("candidate_count")
+            ) or 0
+            ready_count = _finite_int_or_none(
+                bridge_summary.get("ready_candidate_count")
+            ) or 0
+            blocked_count = _finite_int_or_none(
+                bridge_summary.get("blocked_candidate_count")
+            ) or 0
+            for blocker, count in sorted(_bridge_blocker_counts(bridge_summary).items()):
+                classification = _receiver_repair_classification(blocker)
+                family = str(classification["repair_family"])
+                family_counts[family] = family_counts.get(family, 0) + 1
+                queue_actionable = bool(classification["queue_actionable"])
+                if queue_actionable:
+                    queue_actionable_count += 1
+                blocker_count = int(count)
+                repair_id = (
+                    "receiver_repair_"
+                    f"{_slug_token(source_operation_id)}_"
+                    f"{_slug_token(family)}_"
+                    f"{_slug_token(blocker)}"
+                )
+                if len(bridge_summaries) > 1:
+                    repair_id = f"{repair_id}_bridge{summary_index}"
+                rows.append(
+                    {
+                        "schema": RECEIVER_REPAIR_ROW_SCHEMA,
+                        "repair_id": repair_id,
+                        "source_operation_id": source_operation_id,
+                        "target_kind": target_kind,
+                        "repair_family": family,
+                        "blocker": blocker,
+                        "blocker_count": blocker_count,
+                        "candidate_count": candidate_count,
+                        "ready_candidate_count": ready_count,
+                        "blocked_candidate_count": blocked_count,
+                        "saved_bytes_at_risk": saved_bytes,
+                        "priority_score": _receiver_repair_priority(
+                            priority_base=float(classification["priority_base"]),
+                            blocker_count=blocker_count,
+                            saved_bytes_at_risk=saved_bytes,
+                            source_priority=source_priority,
+                        ),
+                        "queue_consumer": classification["queue_consumer"],
+                        "source_queue_consumer": source_queue_consumer,
+                        "queue_actionable": queue_actionable,
+                        "recommended_next_action": classification[
+                            "recommended_next_action"
+                        ],
+                        "correction_budget_context": {
+                            "materializer_rate_positive_saved_bytes_total": (
+                                materializer_budget_total
+                            ),
+                            "local_drop_saved_bytes_total": local_budget_total,
+                            "saved_bytes_at_risk_from_source_operation": saved_bytes,
+                            "spend_policy": (
+                                "receiver_repair_must_prove_runtime_consumption_before_"
+                                "freed_rate_budget_can_fund_segnet_posenet_corrections"
+                            ),
+                            **FALSE_AUTHORITY,
+                        },
+                        "allowed_use": "receiver_runtime_repair_planning_only",
+                        "forbidden_use": (
+                            "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+                        ),
+                        **FALSE_AUTHORITY,
+                    }
+                )
+    rows = sorted(
+        rows,
+        key=lambda row: (
+            -float(row.get("priority_score") or 0.0),
+            str(row.get("repair_id") or ""),
+        ),
+    )
+    top_rows = rows[:8]
+    return {
+        "schema": RECEIVER_REPAIR_BACKLOG_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "operation_portfolio_schema": operation_portfolio.get("schema"),
+        "row_count": len(rows),
+        "queue_actionable_repair_count": queue_actionable_count,
+        "authority_gate_repair_count": family_counts.get("authority_gate", 0),
+        "repair_family_counts": dict(sorted(family_counts.items())),
+        "top_repair_ids": [str(row.get("repair_id") or "") for row in top_rows],
+        "top_repair_families": _unique_strings(
+            [row.get("repair_family") for row in top_rows]
+        ),
+        "top_source_operation_ids": _unique_strings(
+            [row.get("source_operation_id") for row in top_rows]
+        ),
+        "materializer_rate_positive_saved_bytes_total": materializer_budget_total,
+        "local_drop_saved_bytes_total": local_budget_total,
+        "targeted_correction_budget_active": (
+            targeted_budget.get("active") is True
+            if isinstance(targeted_budget, Mapping)
+            else False
+        ),
+        "recommended_next_action": (
+            "repair_top_receiver_runtime_and_exact_readiness_blockers_before_spending_"
+            "freed_rate_budget_on_segnet_posenet_targeted_corrections"
+        ),
+        "rows": rows,
+        "allowed_use": "queue_owned_receiver_repair_planning_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _receiver_repair_backlog_queue_metadata(backlog: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "schema": "frontier_rate_attack_receiver_repair_backlog_queue_metadata.v1",
+        "receiver_repair_backlog_schema": backlog.get("schema"),
+        "row_count": backlog.get("row_count"),
+        "queue_actionable_repair_count": backlog.get("queue_actionable_repair_count"),
+        "authority_gate_repair_count": backlog.get("authority_gate_repair_count"),
+        "top_repair_ids": list(backlog.get("top_repair_ids") or []),
+        "top_repair_families": list(backlog.get("top_repair_families") or []),
+        "top_source_operation_ids": list(backlog.get("top_source_operation_ids") or []),
+        "materializer_rate_positive_saved_bytes_total": backlog.get(
+            "materializer_rate_positive_saved_bytes_total"
+        ),
+        "local_drop_saved_bytes_total": backlog.get("local_drop_saved_bytes_total"),
+        "targeted_correction_budget_active": (
+            backlog.get("targeted_correction_budget_active") is True
+        ),
+        "allowed_use": "queue_metadata_pointer_to_receiver_repair_backlog_artifact",
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def _queue_summary(queue: Mapping[str, Any]) -> dict[str, Any]:
     experiments = queue.get("experiments")
     experiment_rows = experiments if isinstance(experiments, list) else []
@@ -2457,6 +2802,9 @@ def build_frontier_rate_attack_feedback_refresh(
         pair_frame_requests=pair_frame_requests,
         pair_frame_source_paths=pair_frame_source_paths,
     )
+    receiver_repair_backlog = build_frontier_receiver_repair_backlog(
+        operation_portfolio
+    )
     queue_payload: dict[str, Any] | None = None
     bridge: dict[str, Any] | None = None
     selected_pairset_acquisition: dict[str, Any] | None = None
@@ -2500,12 +2848,18 @@ def build_frontier_rate_attack_feedback_refresh(
             portfolio_metadata = _operation_portfolio_queue_metadata(
                 operation_portfolio
             )
+            receiver_repair_metadata = _receiver_repair_backlog_queue_metadata(
+                receiver_repair_backlog
+            )
             for experiment in queue_payload.get("experiments", []):
                 if not isinstance(experiment, dict):
                     continue
                 metadata = experiment.setdefault("metadata", {})
                 if isinstance(metadata, dict):
                     metadata["frontier_operation_portfolio"] = portfolio_metadata
+                    metadata["frontier_receiver_repair_backlog"] = (
+                        receiver_repair_metadata
+                    )
         bridge = result.materializer_feedback_bridge
         selected_pairset_acquisition = result.selected_pairset_acquisition
         selected_candidate_ids = [selection.candidate_id for selection in result.selections]
@@ -2535,6 +2889,7 @@ def build_frontier_rate_attack_feedback_refresh(
         ],
         "dqs1_observation_discovery": dqs1_observation_discovery,
         "operation_portfolio": operation_portfolio,
+        "receiver_repair_backlog": receiver_repair_backlog,
         "materializer_feedback_source_paths": list(source_paths),
         "materializer_feedback_payload_count": len(payloads),
         "dqs1_observation_source_paths": list(dqs1_source_paths),
@@ -2583,9 +2938,12 @@ __all__ = [
     "OPERATION_PORTFOLIO_SCHEMA",
     "OPERATION_PORTFOLIO_TAXONOMY_SCHEMA",
     "PAIR_FRAME_GEOMETRY_DISCOVERY_SCHEMA",
+    "RECEIVER_REPAIR_BACKLOG_SCHEMA",
+    "RECEIVER_REPAIR_ROW_SCHEMA",
     "FrontierRateAttackFeedbackError",
     "build_frontier_operation_portfolio",
     "build_frontier_rate_attack_feedback_refresh",
+    "build_frontier_receiver_repair_backlog",
     "discover_dqs1_observation_jsonl_paths",
     "discover_local_cpu_eureka_planning_signals",
     "discover_materializer_feedback_payloads",

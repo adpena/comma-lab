@@ -13,6 +13,8 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA,
     OPERATION_PORTFOLIO_SCHEMA,
     OPERATION_PORTFOLIO_TAXONOMY_SCHEMA,
+    RECEIVER_REPAIR_BACKLOG_SCHEMA,
+    RECEIVER_REPAIR_ROW_SCHEMA,
     FrontierRateAttackFeedbackError,
     build_frontier_rate_attack_feedback_refresh,
     discover_local_cpu_eureka_planning_signals,
@@ -545,6 +547,32 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     merge_bridge = merge_row["evidence_summary"]["exact_readiness_bridge"]
     assert merge_bridge["bridge_report_count"] == 1
     assert "exact_readiness_bridge:inflate_sh_missing" in merge_row["blockers"]
+    receiver_repair_backlog = report["receiver_repair_backlog"]
+    assert receiver_repair_backlog["schema"] == RECEIVER_REPAIR_BACKLOG_SCHEMA
+    _assert_false_authority(receiver_repair_backlog)
+    assert receiver_repair_backlog["row_count"] >= 4
+    assert receiver_repair_backlog["queue_actionable_repair_count"] >= 2
+    assert receiver_repair_backlog["materializer_rate_positive_saved_bytes_total"] > 0
+    assert receiver_repair_backlog["targeted_correction_budget_active"] is True
+    assert "submission_runtime_manifest_closure" in receiver_repair_backlog[
+        "repair_family_counts"
+    ]
+    assert "authority_gate" in receiver_repair_backlog["repair_family_counts"]
+    assert "submission_runtime_manifest_closure" in receiver_repair_backlog[
+        "top_repair_families"
+    ]
+    first_repair = receiver_repair_backlog["rows"][0]
+    assert first_repair["schema"] == RECEIVER_REPAIR_ROW_SCHEMA
+    _assert_false_authority(first_repair)
+    assert first_repair["source_operation_id"] in {
+        "chain_dfl1_merge_header_elide_minimal_envelope",
+        "materializer_packet_member_merge_v1",
+        "materializer_packet_member_zip_header_elide_v1",
+        "materializer_renderer_payload_dfl1_v1",
+    }
+    assert first_repair["correction_budget_context"][
+        "materializer_rate_positive_saved_bytes_total"
+    ] == receiver_repair_backlog["materializer_rate_positive_saved_bytes_total"]
     recompress_row = next(
         row
         for row in operation_portfolio["rows"]
@@ -600,6 +628,18 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     )
     assert all(
         experiment["metadata"]["frontier_operation_portfolio"][
+            "targeted_correction_budget_active"
+        ]
+        is True
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        experiment["metadata"]["frontier_receiver_repair_backlog"]["row_count"]
+        == receiver_repair_backlog["row_count"]
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        experiment["metadata"]["frontier_receiver_repair_backlog"][
             "targeted_correction_budget_active"
         ]
         is True
@@ -712,6 +752,9 @@ def test_frontier_feedback_compiler_turns_eureka_near_misses_into_beyond_drop_tw
         "local_cpu_eureka_planning.json"
     )
     assert artifacts["operation_portfolio"].endswith("operation_portfolio.json")
+    assert artifacts["receiver_repair_backlog"].endswith(
+        "receiver_repair_backlog.json"
+    )
     artifact_payload = json.loads(
         (tmp_path / artifacts["local_cpu_eureka_planning"]).read_text(
             encoding="utf-8"
@@ -1167,14 +1210,23 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         "pairset_drop_one_rank024_pair0112",
         "pairset_drop_one_rank025_pair0233",
     ]
+    assert payload["receiver_repair_backlog_summary"]["row_count"] >= 4
+    assert payload["receiver_repair_backlog_summary"][
+        "queue_actionable_repair_count"
+    ] >= 2
     queue_path = output_dir / "dqs1_followup_queue.json"
     bridge_path = output_dir / "materializer_feedback_bridge.json"
+    receiver_repair_backlog_path = output_dir / "receiver_repair_backlog.json"
     report_path = output_dir / "feedback_refresh_report.json"
     assert queue_path.exists()
     assert bridge_path.exists()
+    assert receiver_repair_backlog_path.exists()
     assert report_path.exists()
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["artifacts"]["dqs1_followup_queue"].endswith("dqs1_followup_queue.json")
+    assert report["artifacts"]["receiver_repair_backlog"].endswith(
+        "receiver_repair_backlog.json"
+    )
     assert report["operator_commands"]["validate_followup_queue"][0] == ".venv/bin/python"
 
     validate = subprocess.run(
@@ -1408,6 +1460,10 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     assert "dynamic_observation_jsonl_to_pairset_component_marginal_model" in cycle_report[
         "integration_edges"
     ]
+    assert (
+        "exact_readiness_bridge_to_receiver_repair_backlog_and_correction_budget"
+        in cycle_report["integration_edges"]
+    )
 
 
 def test_frontier_feedback_cycle_refuses_truthy_autopilot_authority(
