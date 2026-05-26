@@ -7189,6 +7189,7 @@ def build_frontier_targeted_component_correction_queue(
                         "--keep-work-dir",
                         "--scorer-input-cache-hashes-out",
                         _repo_rel(reference_scorer_hashes, repo),
+                        "--allow-scorer-input-cache-artifact-output-outside-work-dir",
                     ],
                     "resources": {"kind": "local_cpu"},
                     "timeout_seconds": 3900,
@@ -7198,6 +7199,16 @@ def build_frontier_targeted_component_correction_queue(
                             "path": _repo_rel(reference_local_cpu_advisory, repo),
                             "axis_key": "score_axis",
                             "axis_equals": "cpu_advisory",
+                        },
+                        {
+                            "type": "json_equals",
+                            "path": _repo_rel(reference_scorer_hashes, repo),
+                            "key": "schema_version",
+                            "equals": "mlx_scorer_input_cache_hashes.v1",
+                        },
+                        {
+                            "type": "json_false_authority",
+                            "path": _repo_rel(reference_scorer_hashes, repo),
                         }
                     ],
                     "telemetry": {
@@ -7244,6 +7255,7 @@ def build_frontier_targeted_component_correction_queue(
                     "--keep-work-dir",
                     "--scorer-input-cache-hashes-out",
                     _repo_rel(scorer_hashes, repo),
+                    "--allow-scorer-input-cache-artifact-output-outside-work-dir",
                 ],
                 "resources": {"kind": "local_cpu"},
                 "timeout_seconds": 3900,
@@ -7253,6 +7265,16 @@ def build_frontier_targeted_component_correction_queue(
                         "path": _repo_rel(local_cpu_advisory, repo),
                         "axis_key": "score_axis",
                         "axis_equals": "cpu_advisory",
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(scorer_hashes, repo),
+                        "key": "schema_version",
+                        "equals": "mlx_scorer_input_cache_hashes.v1",
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": _repo_rel(scorer_hashes, repo),
                     }
                 ],
                 "telemetry": {
@@ -7426,7 +7448,14 @@ def build_frontier_targeted_component_correction_queue(
                 harvest_command.extend(
                     ["--local-mlx-response", _repo_rel(local_mlx_response, repo)]
                 )
-                harvest_requires = ["local_mlx_component_response"]
+                harvest_requires = [
+                    "local_mlx_component_response",
+                    *(
+                        ["local_cpu_reference_advisory"]
+                        if reference_eval_available
+                        else []
+                    ),
+                ]
                 harvest_input_paths.append(_repo_rel(local_mlx_response, repo))
             steps.append(
                 {

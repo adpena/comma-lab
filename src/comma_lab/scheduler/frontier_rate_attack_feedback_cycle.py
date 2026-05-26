@@ -651,6 +651,34 @@ def write_frontier_refresh_artifacts(
             artifacts["receiver_repair_queue"],
             "validate",
         ]
+        operator_commands["init_receiver_repair_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["receiver_repair_queue"],
+            "init",
+        ]
+        operator_commands["status_receiver_repair_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["receiver_repair_queue"],
+            "status",
+        ]
+        operator_commands["run_receiver_repair_queue_bounded_local"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["receiver_repair_queue"],
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "12",
+            "--max-experiments",
+            "4",
+            "--max-parallel",
+            "2",
+        ]
     if "operation_chain_compiler_queue" in artifacts:
         operator_commands["validate_operation_chain_compiler_queue"] = [
             ".venv/bin/python",
@@ -666,6 +694,36 @@ def write_frontier_refresh_artifacts(
             "--queue",
             artifacts["targeted_component_correction_queue"],
             "validate",
+        ]
+        operator_commands["init_targeted_component_correction_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["targeted_component_correction_queue"],
+            "init",
+        ]
+        operator_commands["status_targeted_component_correction_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["targeted_component_correction_queue"],
+            "status",
+        ]
+        operator_commands[
+            "run_targeted_component_correction_queue_bounded_local"
+        ] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["targeted_component_correction_queue"],
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "21",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "3",
         ]
     if operator_commands:
         report_to_write["operator_commands"] = operator_commands

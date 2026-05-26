@@ -1124,6 +1124,16 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
         targeted_queue["experiments"][0]["metadata"]["shared_component_response_reuse"]
         is True
     )
+    local_cpu_step = next(
+        step
+        for step in targeted_queue["experiments"][0]["steps"]
+        if step["id"] == "local_cpu_component_advisory"
+    )
+    assert "--scorer-input-cache-hashes-out" in local_cpu_step["command"]
+    assert (
+        "--allow-scorer-input-cache-artifact-output-outside-work-dir"
+        in local_cpu_step["command"]
+    )
     assert {
         request["correction_family"]
         for experiment in targeted_queue["experiments"]
@@ -2275,6 +2285,27 @@ def test_targeted_component_queue_carries_receiver_closed_reference_eval(
     experiment = queue["experiments"][0]
     step_ids = [step["id"] for step in experiment["steps"]]
     assert "local_cpu_reference_advisory" in step_ids
+    steps_by_id = {step["id"]: step for step in experiment["steps"]}
+    reference_step = steps_by_id["local_cpu_reference_advisory"]
+    assert (
+        "--allow-scorer-input-cache-artifact-output-outside-work-dir"
+        in reference_step["command"]
+    )
+    assert any(
+        condition.get("path", "").endswith("reference_scorer_input_cache_hashes.json")
+        and condition.get("key") == "schema_version"
+        for condition in reference_step["postconditions"]
+    )
+    component_step = steps_by_id["local_cpu_component_advisory"]
+    assert (
+        "--allow-scorer-input-cache-artifact-output-outside-work-dir"
+        in component_step["command"]
+    )
+    assert any(
+        condition.get("path", "").endswith("scorer_input_cache_hashes.json")
+        and condition.get("key") == "schema_version"
+        for condition in component_step["postconditions"]
+    )
     assert experiment["metadata"]["reference_component_eval_available"] is True
     assert experiment["metadata"]["reference_archive_path"] == (
         "source_submission/archive_correct.zip"
@@ -2286,6 +2317,7 @@ def test_targeted_component_queue_carries_receiver_closed_reference_eval(
     ]
     assert harvest_steps
     assert "--reference-local-cpu-advisory" in harvest_steps[0]["command"]
+    assert "local_cpu_reference_advisory" in harvest_steps[0]["requires"]
     request = experiment["metadata"]["correction_requests"][0]
     assert request["reference_local_cpu_advisory_path"].endswith(
         "reference_local_cpu_advisory.json"
@@ -2932,12 +2964,69 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         report["operator_commands"]["validate_receiver_repair_queue"][0]
         == ".venv/bin/python"
     )
+    assert report["operator_commands"]["init_receiver_repair_queue"] == [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        report["artifacts"]["receiver_repair_queue"],
+        "init",
+    ]
+    assert report["operator_commands"]["status_receiver_repair_queue"][-1] == "status"
+    bounded_receiver_run = report["operator_commands"][
+        "run_receiver_repair_queue_bounded_local"
+    ]
+    assert bounded_receiver_run[:4] == [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        report["artifacts"]["receiver_repair_queue"],
+    ]
+    assert bounded_receiver_run[4:] == [
+        "run-worker",
+        "--execute",
+        "--max-steps",
+        "12",
+        "--max-experiments",
+        "4",
+        "--max-parallel",
+        "2",
+    ]
     assert (
         report["operator_commands"][
             "validate_targeted_component_correction_queue"
         ][0]
         == ".venv/bin/python"
     )
+    assert report["operator_commands"]["init_targeted_component_correction_queue"] == [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        report["artifacts"]["targeted_component_correction_queue"],
+        "init",
+    ]
+    assert (
+        report["operator_commands"]["status_targeted_component_correction_queue"][-1]
+        == "status"
+    )
+    bounded_targeted_run = report["operator_commands"][
+        "run_targeted_component_correction_queue_bounded_local"
+    ]
+    assert bounded_targeted_run[:4] == [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        report["artifacts"]["targeted_component_correction_queue"],
+    ]
+    assert bounded_targeted_run[4:] == [
+        "run-worker",
+        "--execute",
+        "--max-steps",
+        "21",
+        "--max-experiments",
+        "2",
+        "--max-parallel",
+        "3",
+    ]
     assert (
         report["operator_commands"][
             "inspect_targeted_component_correction_response_harvest"
@@ -3411,6 +3500,32 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     )
     assert initial_artifacts["targeted_component_correction_queue"].endswith(
         "targeted_component_correction_queue.json"
+    )
+    initial_feedback_report = json.loads(
+        (REPO_ROOT / initial_artifacts["feedback_refresh_report"]).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert (
+        initial_feedback_report["operator_commands"][
+            "run_targeted_component_correction_queue_bounded_local"
+        ][4]
+        == "run-worker"
+    )
+    assert (
+        initial_feedback_report["operator_commands"][
+            "run_receiver_repair_queue_bounded_local"
+        ][4:]
+        == [
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "12",
+            "--max-experiments",
+            "4",
+            "--max-parallel",
+            "2",
+        ]
     )
     assert initial_artifacts["operation_materializer_bridge"].endswith(
         "operation_materializer_bridge.json"

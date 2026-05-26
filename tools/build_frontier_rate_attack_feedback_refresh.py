@@ -368,6 +368,34 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             artifacts["receiver_repair_queue"],
             "validate",
         ]
+        operator_commands["init_receiver_repair_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["receiver_repair_queue"],
+            "init",
+        ]
+        operator_commands["status_receiver_repair_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["receiver_repair_queue"],
+            "status",
+        ]
+        operator_commands["run_receiver_repair_queue_bounded_local"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["receiver_repair_queue"],
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "12",
+            "--max-experiments",
+            "4",
+            "--max-parallel",
+            "2",
+        ]
     if "targeted_component_correction_queue" in artifacts:
         operator_commands["validate_targeted_component_correction_queue"] = [
             ".venv/bin/python",
@@ -375,6 +403,36 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             "--queue",
             artifacts["targeted_component_correction_queue"],
             "validate",
+        ]
+        operator_commands["init_targeted_component_correction_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["targeted_component_correction_queue"],
+            "init",
+        ]
+        operator_commands["status_targeted_component_correction_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["targeted_component_correction_queue"],
+            "status",
+        ]
+        operator_commands[
+            "run_targeted_component_correction_queue_bounded_local"
+        ] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["targeted_component_correction_queue"],
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "21",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "3",
         ]
     if "targeted_component_correction_response_harvest" in artifacts:
         operator_commands["inspect_targeted_component_correction_response_harvest"] = [
