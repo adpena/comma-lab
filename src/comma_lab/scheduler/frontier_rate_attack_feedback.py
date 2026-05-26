@@ -145,6 +145,12 @@ TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA = (
 TARGETED_COMPONENT_CORRECTION_QUEUE_METADATA_SCHEMA = (
     "frontier_rate_attack_targeted_component_correction_queue_metadata.v1"
 )
+TARGETED_COMPONENT_CORRECTION_RESPONSE_ROW_SCHEMA = (
+    "frontier_rate_attack_targeted_component_correction_response_row.v1"
+)
+TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA = (
+    "frontier_rate_attack_targeted_component_correction_response_harvest.v1"
+)
 QUEUE_FALSE_AUTHORITY_FALSE_OR_MISSING_FIELDS = tuple(
     field
     for field in DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS
@@ -4374,6 +4380,28 @@ def build_frontier_targeted_component_correction_work_order(
             ),
             **FALSE_AUTHORITY,
         },
+        "response_harvest_contract": {
+            "schema": (
+                "frontier_rate_attack_targeted_component_correction_response_"
+                "contract.v1"
+            ),
+            "required_delta_fields": [
+                "segnet_delta",
+                "posenet_delta",
+                (
+                    "archive_byte_delta_vs_receiver_closed_candidate "
+                    "or rate_delta_vs_receiver_closed_candidate"
+                ),
+            ],
+            "objective": (
+                "measured_delta_segnet_plus_delta_posenet_plus_correction_rate_"
+                "spend_minus_receiver_closed_rate_credit"
+            ),
+            "negative_delta_is_local_acquisition_candidate": True,
+            "budget_spend_allowed": False,
+            "exact_auth_eval_required_before_score_claim": True,
+            **FALSE_AUTHORITY,
+        },
         "candidate_family_rows": [
             {
                 "acquisition_id": sibling.get("acquisition_id"),
@@ -4395,6 +4423,493 @@ def build_frontier_targeted_component_correction_work_order(
         context=f"targeted_component_correction_work_order:{acquisition_id}",
     )
     return work_order
+
+
+def _first_finite_float(
+    payload: Mapping[str, Any],
+    keys: Sequence[str],
+) -> float | None:
+    for key in keys:
+        value = _finite_float_or_none(payload.get(key))
+        if value is not None:
+            return value
+    return None
+
+
+def _first_finite_int(
+    payload: Mapping[str, Any],
+    keys: Sequence[str],
+) -> int | None:
+    for key in keys:
+        value = _finite_int_or_none(payload.get(key))
+        if value is not None:
+            return value
+    return None
+
+
+def _targeted_component_response_delta_source(
+    payload: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    for key in (
+        "targeted_component_correction_response",
+        "component_correction_response",
+        "component_deltas",
+        "component_axis_deltas",
+        "measured_component_deltas",
+        "lagrangian_response",
+    ):
+        value = payload.get(key)
+        if isinstance(value, Mapping):
+            return value
+    return payload
+
+
+def _targeted_component_response_delta_terms(
+    payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    source = _targeted_component_response_delta_source(payload)
+    segnet_delta = _first_finite_float(
+        source,
+        (
+            "segnet_delta",
+            "segnet_score_delta",
+            "score_seg_delta",
+            "delta_segnet",
+            "delta_segnet_score_units",
+        ),
+    )
+    posenet_delta = _first_finite_float(
+        source,
+        (
+            "posenet_delta",
+            "posenet_score_delta",
+            "score_pose_delta",
+            "delta_posenet",
+            "delta_posenet_score_units",
+        ),
+    )
+    correction_rate_delta = _first_finite_float(
+        source,
+        (
+            "rate_delta_vs_receiver_closed_candidate",
+            "correction_rate_spend_score_units",
+            "rate_delta_score_units",
+            "rate_delta",
+            "score_rate_delta",
+        ),
+    )
+    added_bytes = _first_finite_int(
+        source,
+        (
+            "archive_byte_delta_vs_receiver_closed_candidate",
+            "correction_added_archive_bytes",
+            "added_archive_bytes",
+            "archive_byte_delta",
+        ),
+    )
+    if correction_rate_delta is None and added_bytes is not None:
+        correction_rate_delta = rate_delta_for_archive_byte_delta(added_bytes)
+    return {
+        "segnet_delta_score_units": segnet_delta,
+        "posenet_delta_score_units": posenet_delta,
+        "correction_rate_delta_score_units": correction_rate_delta,
+        "correction_added_archive_bytes": added_bytes,
+        "delta_source_keys": sorted(str(key) for key in source),
+    }
+
+
+def build_frontier_targeted_component_correction_response_harvest_from_artifacts(
+    *,
+    work_order: Mapping[str, Any],
+    local_cpu_advisory: Mapping[str, Any] | None = None,
+    local_mlx_response: Mapping[str, Any] | None = None,
+    work_order_path: str | Path | None = None,
+    local_cpu_advisory_path: str | Path | None = None,
+    local_mlx_response_path: str | Path | None = None,
+    response_artifact_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Harvest one component-correction response into a false-authority row."""
+
+    require_no_truthy_authority_fields(
+        work_order,
+        context="targeted_component_correction_response_work_order",
+    )
+    if local_cpu_advisory is not None:
+        require_no_truthy_authority_fields(
+            local_cpu_advisory,
+            context="targeted_component_correction_local_cpu_advisory",
+        )
+    if local_mlx_response is not None:
+        require_no_truthy_authority_fields(
+            local_mlx_response,
+            context="targeted_component_correction_local_mlx_response",
+        )
+
+    acquisition_id = str(work_order.get("acquisition_id") or "unknown_acquisition")
+    candidate_id = str(work_order.get("candidate_id") or "unknown_candidate")
+    correction_family = str(
+        work_order.get("correction_family") or "unknown_correction_family"
+    )
+    saved_bytes = _finite_int_or_none(work_order.get("saved_bytes_budget")) or 0
+    rate_credit = _finite_float_or_none(
+        work_order.get("estimated_rate_credit_score_units")
+    )
+    if rate_credit is None:
+        rate_credit = _rate_credit_score_units_for_saved_bytes(saved_bytes)
+
+    blockers = [
+        "exact_auth_eval_required_before_score_or_promotion_claim",
+        "component_response_harvest_is_local_acquisition_signal_only",
+    ]
+    local_axis = None
+    local_terms: dict[str, Any] = {
+        "segnet_delta_score_units": None,
+        "posenet_delta_score_units": None,
+        "correction_rate_delta_score_units": None,
+        "correction_added_archive_bytes": None,
+        "delta_source_keys": [],
+    }
+    if local_cpu_advisory is None:
+        blockers.append("local_cpu_component_advisory_missing")
+    else:
+        local_axis = str(local_cpu_advisory.get("score_axis") or "")
+        if local_axis != "cpu_advisory":
+            blockers.append("local_cpu_component_advisory_axis_not_cpu_advisory")
+        local_terms = _targeted_component_response_delta_terms(local_cpu_advisory)
+
+    if local_terms["segnet_delta_score_units"] is None:
+        blockers.append("local_cpu_segnet_delta_missing")
+    if local_terms["posenet_delta_score_units"] is None:
+        blockers.append("local_cpu_posenet_delta_missing")
+    if local_terms["correction_rate_delta_score_units"] is None:
+        blockers.append(
+            "correction_added_byte_delta_missing_assumed_zero_for_acquisition"
+        )
+        local_terms["correction_rate_delta_score_units"] = 0.0
+
+    mlx_axis = None
+    mlx_terms: dict[str, Any] | None = None
+    if local_mlx_response is None:
+        blockers.append("local_mlx_component_response_missing_for_spend_filter")
+    else:
+        mlx_axis = str(local_mlx_response.get("score_axis") or "")
+        if mlx_axis != "[macOS-MLX research-signal]":
+            blockers.append("local_mlx_component_response_axis_not_research_signal")
+        mlx_terms = _targeted_component_response_delta_terms(local_mlx_response)
+        if (
+            mlx_terms["segnet_delta_score_units"] is None
+            or mlx_terms["posenet_delta_score_units"] is None
+        ):
+            blockers.append("local_mlx_component_delta_missing")
+
+    measured_component_delta = None
+    measured_lagrangian_delta = None
+    budget_credit_remaining = None
+    local_acquisition_recommended = False
+    component_delta_available = (
+        local_terms["segnet_delta_score_units"] is not None
+        and local_terms["posenet_delta_score_units"] is not None
+    )
+    if component_delta_available:
+        correction_rate_delta = float(
+            local_terms["correction_rate_delta_score_units"] or 0.0
+        )
+        measured_component_delta = float(local_terms["segnet_delta_score_units"]) + float(
+            local_terms["posenet_delta_score_units"]
+        )
+        budget_credit_remaining = float(rate_credit) - correction_rate_delta
+        measured_lagrangian_delta = (
+            measured_component_delta + correction_rate_delta - float(rate_credit)
+        )
+        local_acquisition_recommended = measured_lagrangian_delta < 0.0
+    else:
+        blockers.append("measured_component_delta_missing")
+
+    verdict = "blocked_missing_component_response"
+    if component_delta_available:
+        verdict = (
+            "local_acquisition_negative_lagrangian_candidate"
+            if local_acquisition_recommended
+            else "local_acquisition_reject_nonnegative_lagrangian"
+        )
+
+    row = {
+        "schema": TARGETED_COMPONENT_CORRECTION_RESPONSE_ROW_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "acquisition_id": acquisition_id,
+        "candidate_id": candidate_id,
+        "correction_family": correction_family,
+        "work_order_path": None if work_order_path is None else str(work_order_path),
+        "local_cpu_advisory_path": (
+            None if local_cpu_advisory_path is None else str(local_cpu_advisory_path)
+        ),
+        "local_mlx_response_path": (
+            None if local_mlx_response_path is None else str(local_mlx_response_path)
+        ),
+        "response_artifact_path": (
+            None if response_artifact_path is None else str(response_artifact_path)
+        ),
+        "local_cpu_score_axis": local_axis,
+        "local_mlx_score_axis": mlx_axis,
+        "saved_bytes_budget": saved_bytes,
+        "estimated_receiver_closed_rate_credit_score_units": rate_credit,
+        "local_cpu_component_terms": local_terms,
+        "local_mlx_component_terms": mlx_terms,
+        "measured_component_delta_score_units": measured_component_delta,
+        "measured_lagrangian_delta_score_units": measured_lagrangian_delta,
+        "budget_credit_remaining_score_units": budget_credit_remaining,
+        "negative_measured_lagrangian_delta": (
+            measured_lagrangian_delta is not None and measured_lagrangian_delta < 0.0
+        ),
+        "local_acquisition_recommended": local_acquisition_recommended,
+        "ready_for_budget_spend": False,
+        "budget_spend_allowed": False,
+        "budget_spend_blockers": _unique_strings(
+            [
+                *blockers,
+                "exact_axis_component_response_required_before_budget_spend",
+                "receiver_runtime_materialization_required_before_budget_spend",
+            ]
+        ),
+        "verdict": verdict,
+        "allowed_use": (
+            "targeted_component_correction_response_harvest_local_acquisition_only"
+        ),
+        "forbidden_use": (
+            "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+        ),
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        row,
+        context=f"targeted_component_correction_response_row:{acquisition_id}",
+    )
+    return row
+
+
+def _targeted_component_response_rows_from_queue(
+    *,
+    repo_root: Path,
+    queue: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for experiment in queue.get("experiments") or []:
+        if not isinstance(experiment, Mapping):
+            continue
+        metadata = experiment.get("metadata")
+        if not isinstance(metadata, Mapping):
+            continue
+        work_order_path_text = str(metadata.get("work_order_path") or "")
+        local_cpu_path_text = str(metadata.get("local_cpu_advisory_path") or "")
+        response_path_text = str(
+            metadata.get("component_correction_response_harvest_path") or ""
+        )
+        local_mlx_path_text = str(metadata.get("local_mlx_response_path") or "")
+        if not work_order_path_text:
+            continue
+        work_order_path = _resolve_path(work_order_path_text, repo_root=repo_root)
+        local_cpu_path = (
+            _resolve_path(local_cpu_path_text, repo_root=repo_root)
+            if local_cpu_path_text
+            else None
+        )
+        local_mlx_path = (
+            _resolve_path(local_mlx_path_text, repo_root=repo_root)
+            if local_mlx_path_text
+            else None
+        )
+        response_path = (
+            _resolve_path(response_path_text, repo_root=repo_root)
+            if response_path_text
+            else None
+        )
+        missing = [
+            _repo_rel(path, repo_root)
+            for path in (work_order_path, local_cpu_path)
+            if path is not None and not path.exists()
+        ]
+        if missing:
+            row = {
+                "schema": TARGETED_COMPONENT_CORRECTION_RESPONSE_ROW_SCHEMA,
+                "generated_at_utc": _utc_now(),
+                "acquisition_id": metadata.get("acquisition_id"),
+                "candidate_id": metadata.get("candidate_id"),
+                "correction_family": metadata.get("correction_family"),
+                "work_order_path": work_order_path_text or None,
+                "local_cpu_advisory_path": local_cpu_path_text or None,
+                "local_mlx_response_path": local_mlx_path_text or None,
+                "response_artifact_path": response_path_text or None,
+                "saved_bytes_budget": metadata.get("saved_bytes_budget"),
+                "estimated_receiver_closed_rate_credit_score_units": metadata.get(
+                    "estimated_rate_credit_score_units"
+                ),
+                "measured_component_delta_score_units": None,
+                "measured_lagrangian_delta_score_units": None,
+                "budget_credit_remaining_score_units": None,
+                "negative_measured_lagrangian_delta": False,
+                "local_acquisition_recommended": False,
+                "ready_for_budget_spend": False,
+                "budget_spend_allowed": False,
+                "budget_spend_blockers": _unique_strings(
+                    [
+                        "targeted_component_correction_response_artifacts_missing",
+                        *(f"missing:{path}" for path in missing),
+                        "exact_axis_component_response_required_before_budget_spend",
+                    ]
+                ),
+                "verdict": "blocked_missing_component_response_artifact",
+                "allowed_use": (
+                    "targeted_component_correction_response_harvest_local_acquisition_only"
+                ),
+                "forbidden_use": (
+                    "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+                ),
+                **FALSE_AUTHORITY,
+            }
+            rows.append(row)
+            continue
+        work_order = _load_json(work_order_path)
+        local_cpu = _load_json(local_cpu_path) if local_cpu_path is not None else None
+        local_mlx = (
+            _load_json(local_mlx_path)
+            if local_mlx_path is not None and local_mlx_path.exists()
+            else None
+        )
+        rows.append(
+            build_frontier_targeted_component_correction_response_harvest_from_artifacts(
+                work_order=work_order,
+                local_cpu_advisory=local_cpu,
+                local_mlx_response=local_mlx,
+                work_order_path=_repo_rel(work_order_path, repo_root),
+                local_cpu_advisory_path=(
+                    None if local_cpu_path is None else _repo_rel(local_cpu_path, repo_root)
+                ),
+                local_mlx_response_path=(
+                    None if local_mlx_path is None else _repo_rel(local_mlx_path, repo_root)
+                ),
+                response_artifact_path=(
+                    None if response_path is None else _repo_rel(response_path, repo_root)
+                ),
+            )
+        )
+    return rows
+
+
+def _targeted_component_response_rows_from_existing_harvests(
+    *,
+    repo_root: Path,
+    results_root: str | Path,
+) -> list[dict[str, Any]]:
+    resolved = _resolve_path(results_root, repo_root=repo_root)
+    if not resolved.exists():
+        return []
+    rows: list[dict[str, Any]] = []
+    for path in sorted(resolved.rglob("component_correction_response_harvest.json")):
+        try:
+            payload = _load_json(path)
+        except FrontierRateAttackFeedbackError:
+            continue
+        if payload.get("schema") != TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA:
+            continue
+        for row in payload.get("rows") or []:
+            if isinstance(row, dict):
+                copied = dict(row)
+                copied.setdefault("source_harvest_path", _repo_rel(path, repo_root))
+                rows.append(copied)
+    return rows
+
+
+def build_frontier_targeted_component_correction_response_harvest(
+    *,
+    repo_root: str | Path,
+    targeted_component_correction_queue: Mapping[str, Any] | None = None,
+    response_rows: Sequence[Mapping[str, Any]] = (),
+    results_root: str | Path = DEFAULT_RESULTS_ROOT,
+) -> dict[str, Any]:
+    """Aggregate measured correction responses without granting budget authority."""
+
+    repo = Path(repo_root)
+    rows: list[dict[str, Any]] = [dict(row) for row in response_rows]
+    if targeted_component_correction_queue is not None:
+        require_no_truthy_authority_fields(
+            targeted_component_correction_queue,
+            context="targeted_component_correction_response_queue_input",
+        )
+        rows.extend(
+            _targeted_component_response_rows_from_queue(
+                repo_root=repo,
+                queue=targeted_component_correction_queue,
+            )
+        )
+    if not rows:
+        rows.extend(
+            _targeted_component_response_rows_from_existing_harvests(
+                repo_root=repo,
+                results_root=results_root,
+            )
+        )
+    for index, row in enumerate(rows):
+        require_no_truthy_authority_fields(
+            row,
+            context=f"targeted_component_correction_response_harvest_row:{index}",
+        )
+    accepted = [
+        row
+        for row in rows
+        if row.get("negative_measured_lagrangian_delta") is True
+        and row.get("local_acquisition_recommended") is True
+    ]
+    blocked = [
+        row
+        for row in rows
+        if row.get("measured_lagrangian_delta_score_units") is None
+        or row.get("budget_spend_blockers")
+    ]
+    candidate_ids = _unique_strings(row.get("candidate_id") for row in rows)
+    families = _unique_strings(row.get("correction_family") for row in rows)
+    blockers = ["exact_auth_eval_required_before_score_or_promotion_claim"]
+    if not rows:
+        blockers.append("no_targeted_component_correction_response_rows")
+    if blocked:
+        blockers.append("response_rows_blocked_before_budget_spend")
+    return {
+        "schema": TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "active": bool(rows),
+        "row_count": len(rows),
+        "candidate_count": len(candidate_ids),
+        "correction_family_count": len(families),
+        "negative_measured_lagrangian_delta_count": len(accepted),
+        "local_acquisition_recommended_count": len(accepted),
+        "blocked_response_count": len(blocked),
+        "ready_for_budget_spend_count": 0,
+        "candidate_ids": candidate_ids,
+        "correction_families": families,
+        "top_local_acquisition_ids": [
+            str(row.get("acquisition_id") or "")
+            for row in sorted(
+                accepted,
+                key=lambda item: float(
+                    item.get("measured_lagrangian_delta_score_units") or 0.0
+                ),
+            )[:8]
+        ],
+        "blockers": _unique_strings(blockers),
+        "recommended_next_action": (
+            "materialize_exact_axis_receiver_consumed_correction_candidates_for_"
+            "negative_local_lagrangian_rows"
+            if accepted
+            else "run_targeted_component_correction_queue_until_response_rows_exist"
+        ),
+        "rows": rows,
+        "allowed_use": (
+            "queue_owned_targeted_component_correction_response_harvest_only"
+        ),
+        "forbidden_use": (
+            "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+        ),
+        **FALSE_AUTHORITY,
+    }
 
 
 def _operation_chain_work_order_by_id(
@@ -5491,14 +6006,16 @@ def build_frontier_targeted_component_correction_queue(
     for priority, row in enumerate(selected_rows, start=1):
         acquisition_id = str(row.get("acquisition_id") or f"targeted_correction_{priority}")
         candidate_id = str(row.get("candidate_id") or acquisition_id)
-        work_dir = queue_root / _slug_token(candidate_id)
+        work_dir = queue_root / _slug_token(candidate_id) / _slug_token(acquisition_id)
         work_order_path = work_dir / "work_order.json"
         local_cpu_advisory = work_dir / "local_cpu_advisory.json"
         local_cpu_work_dir = work_dir / "local_cpu_advisory_work"
         scorer_hashes = work_dir / "scorer_input_cache_hashes.json"
+        response_harvest_path = work_dir / "component_correction_response_harvest.json"
         submission_dir = str(row.get("submission_dir") or "")
         archive_path = str(row.get("archive_path") or f"{submission_dir}/archive.zip")
         inflate_sh_path = str(row.get("inflate_sh_path") or f"{submission_dir}/inflate.sh")
+        local_mlx_response: Path | None = None
         steps: list[dict[str, Any]] = [
             {
                 "id": "emit_targeted_component_correction_work_order",
@@ -5603,6 +6120,7 @@ def build_frontier_targeted_component_correction_queue(
             mlx_cache_dir = work_dir / "mlx_scorer_input_cache"
             mlx_cache_audit = work_dir / "mlx_scorer_input_cache_audit.json"
             mlx_response = work_dir / "mlx_scorer_response.json"
+            local_mlx_response = mlx_response
             mlx_components_dir = work_dir / "mlx_components"
             build_cache_command = [
                 ".venv/bin/python",
@@ -5713,6 +6231,62 @@ def build_frontier_targeted_component_correction_queue(
                     },
                 ]
             )
+        harvest_command = [
+            ".venv/bin/python",
+            "tools/harvest_frontier_targeted_component_correction_response.py",
+            "--work-order",
+            _repo_rel(work_order_path, repo),
+            "--local-cpu-advisory",
+            _repo_rel(local_cpu_advisory, repo),
+            "--output",
+            _repo_rel(response_harvest_path, repo),
+            "--repo-root",
+            ".",
+        ]
+        harvest_requires = ["local_cpu_component_advisory"]
+        harvest_input_paths = [
+            _repo_rel(work_order_path, repo),
+            _repo_rel(local_cpu_advisory, repo),
+        ]
+        if local_mlx_response is not None:
+            harvest_command.extend(
+                ["--local-mlx-response", _repo_rel(local_mlx_response, repo)]
+            )
+            harvest_requires = ["local_mlx_component_response"]
+            harvest_input_paths.append(_repo_rel(local_mlx_response, repo))
+        steps.append(
+            {
+                "id": "harvest_targeted_component_correction_response",
+                "kind": "command",
+                "requires": harvest_requires,
+                "command": harvest_command,
+                "resources": {"kind": "local_io_heavy"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(response_harvest_path, repo),
+                        "key": "schema",
+                        "equals": TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": _repo_rel(response_harvest_path, repo),
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(response_harvest_path, repo),
+                        "key": "ready_for_budget_spend_count",
+                        "equals": 0,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [_repo_rel(response_harvest_path, repo)],
+                    "input_artifact_paths": harvest_input_paths,
+                    "include_postcondition_paths": True,
+                },
+            }
+        )
         experiments.append(
             {
                 "id": _slug_token(acquisition_id),
@@ -5736,7 +6310,18 @@ def build_frontier_targeted_component_correction_queue(
                         "estimated_rate_credit_score_units"
                     ),
                     "submission_dir": row.get("submission_dir"),
+                    "work_dir": _repo_rel(work_dir, repo),
+                    "work_order_path": _repo_rel(work_order_path, repo),
                     "local_cpu_advisory_path": _repo_rel(local_cpu_advisory, repo),
+                    "local_mlx_response_path": (
+                        None
+                        if local_mlx_response is None
+                        else _repo_rel(local_mlx_response, repo)
+                    ),
+                    "component_correction_response_harvest_path": _repo_rel(
+                        response_harvest_path,
+                        repo,
+                    ),
                     "local_mlx_response_enabled": include_mlx_response,
                     "mlx_device": mlx_device,
                     "budget_spend_ready": False,
@@ -7344,6 +7929,8 @@ __all__ = [
     "RECEIVER_REPAIR_WORK_ORDER_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_QUEUE_METADATA_SCHEMA",
+    "TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA",
+    "TARGETED_COMPONENT_CORRECTION_RESPONSE_ROW_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA",
     "FrontierRateAttackFeedbackError",
     "build_frontier_byte_range_stage_inputs",
@@ -7355,6 +7942,8 @@ __all__ = [
     "build_frontier_receiver_repair_work_order",
     "build_frontier_targeted_component_correction_acquisition",
     "build_frontier_targeted_component_correction_queue",
+    "build_frontier_targeted_component_correction_response_harvest",
+    "build_frontier_targeted_component_correction_response_harvest_from_artifacts",
     "build_frontier_targeted_component_correction_work_order",
     "build_receiver_closed_correction_budget",
     "discover_dqs1_observation_jsonl_paths",

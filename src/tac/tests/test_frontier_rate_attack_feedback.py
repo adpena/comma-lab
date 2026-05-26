@@ -23,6 +23,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     RECEIVER_REPAIR_ROW_SCHEMA,
     RECEIVER_REPAIR_WORK_ORDER_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
+    TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA,
     FrontierRateAttackFeedbackError,
     build_frontier_byte_range_stage_inputs,
@@ -31,6 +32,8 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     build_frontier_rate_attack_feedback_refresh,
     build_frontier_receiver_repair_work_order,
     build_frontier_targeted_component_correction_queue,
+    build_frontier_targeted_component_correction_response_harvest,
+    build_frontier_targeted_component_correction_response_harvest_from_artifacts,
     build_frontier_targeted_component_correction_work_order,
     build_receiver_closed_correction_budget,
     discover_local_cpu_eureka_planning_signals,
@@ -1500,6 +1503,87 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     assert report["queue_summary"]["score_claim"] is False
 
 
+def test_targeted_component_correction_response_harvest_measures_lagrangian(
+    tmp_path: Path,
+) -> None:
+    action_summary = _write_action_summary(tmp_path)
+    artifact_root = tmp_path / "frontier_artifacts"
+    _write_materializer_feedback(artifact_root)
+    results_root = tmp_path / "results"
+    _write_receiver_closed_budget_signal(tmp_path, results_root=results_root)
+
+    report = build_frontier_rate_attack_feedback_refresh(
+        repo_root=tmp_path,
+        frontier_artifact_roots=(artifact_root,),
+        action_summary_path=action_summary,
+        results_root=str(results_root),
+        queue_id="frontier_feedback_response_harvest_unit",
+        candidate_limit=2,
+    )
+    targeted_component = report["targeted_component_correction_acquisition"]
+    work_order = build_frontier_targeted_component_correction_work_order(
+        targeted_component_correction_acquisition=targeted_component,
+        acquisition_id=targeted_component["top_acquisition_ids"][0],
+    )
+    local_cpu_advisory = {
+        "schema_version": "contest_auth_eval_result.v1",
+        **_false_authority(),
+        "score_axis": "cpu_advisory",
+        "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+        "canonical_score": 0.2,
+        "archive_size_bytes": 345658,
+        "avg_posenet_dist": 0.001,
+        "avg_segnet_dist": 0.001,
+        "component_deltas": {
+            "segnet_delta": -0.00012,
+            "posenet_delta": 0.00001,
+            "archive_byte_delta_vs_receiver_closed_candidate": 12,
+        },
+    }
+    mlx_response = {
+        "schema_version": "mlx_scorer_response.v1",
+        **_false_authority(),
+        "score_axis": "[macOS-MLX research-signal]",
+        "response_family": "targeted_component_correction_receiver_closed_budget",
+        "canonical_score": 0.2,
+        "archive_size_bytes": 345658,
+        "avg_posenet_dist": 0.001,
+        "avg_segnet_dist": 0.001,
+        "component_deltas": {
+            "segnet_delta": -0.00010,
+            "posenet_delta": 0.00001,
+            "archive_byte_delta_vs_receiver_closed_candidate": 12,
+        },
+    }
+
+    row = build_frontier_targeted_component_correction_response_harvest_from_artifacts(
+        work_order=work_order,
+        local_cpu_advisory=local_cpu_advisory,
+        local_mlx_response=mlx_response,
+        work_order_path="work_order.json",
+        local_cpu_advisory_path="local_cpu_advisory.json",
+        local_mlx_response_path="mlx_scorer_response.json",
+        response_artifact_path="component_correction_response_harvest.json",
+    )
+    harvest = build_frontier_targeted_component_correction_response_harvest(
+        repo_root=tmp_path,
+        response_rows=(row,),
+    )
+
+    assert harvest["schema"] == TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA
+    _assert_false_authority(harvest)
+    assert harvest["row_count"] == 1
+    assert harvest["local_acquisition_recommended_count"] == 1
+    assert harvest["ready_for_budget_spend_count"] == 0
+    assert row["negative_measured_lagrangian_delta"] is True
+    assert row["local_acquisition_recommended"] is True
+    assert row["budget_spend_allowed"] is False
+    assert row["measured_lagrangian_delta_score_units"] < 0.0
+    assert "exact_axis_component_response_required_before_budget_spend" in row[
+        "budget_spend_blockers"
+    ]
+
+
 def test_frontier_feedback_discovers_dqs1_observation_jsonls_from_artifact_roots(
     tmp_path: Path,
 ) -> None:
@@ -2249,6 +2333,9 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     targeted_component_queue_path = (
         output_dir / "targeted_component_correction_queue.json"
     )
+    targeted_component_response_harvest_path = (
+        output_dir / "targeted_component_correction_response_harvest.json"
+    )
     report_path = output_dir / "feedback_refresh_report.json"
     assert queue_path.exists()
     assert bridge_path.exists()
@@ -2257,6 +2344,7 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert receiver_repair_queue_path.exists()
     assert targeted_component_acquisition_path.exists()
     assert targeted_component_queue_path.exists()
+    assert targeted_component_response_harvest_path.exists()
     assert report_path.exists()
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["artifacts"]["dqs1_followup_queue"].endswith("dqs1_followup_queue.json")
@@ -2275,6 +2363,9 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert report["artifacts"]["targeted_component_correction_queue"].endswith(
         "targeted_component_correction_queue.json"
     )
+    assert report["artifacts"][
+        "targeted_component_correction_response_harvest"
+    ].endswith("targeted_component_correction_response_harvest.json")
     assert report["operator_commands"]["validate_followup_queue"][0] == ".venv/bin/python"
     assert (
         report["operator_commands"]["validate_receiver_repair_queue"][0]
@@ -2283,6 +2374,12 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert (
         report["operator_commands"][
             "validate_targeted_component_correction_queue"
+        ][0]
+        == ".venv/bin/python"
+    )
+    assert (
+        report["operator_commands"][
+            "inspect_targeted_component_correction_response_harvest"
         ][0]
         == ".venv/bin/python"
     )
@@ -2332,6 +2429,14 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     targeted_component_queue = json.loads(
         targeted_component_queue_path.read_text(encoding="utf-8")
     )
+    targeted_component_response_harvest = json.loads(
+        targeted_component_response_harvest_path.read_text(encoding="utf-8")
+    )
+    assert targeted_component_response_harvest["schema"] == (
+        TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA
+    )
+    assert targeted_component_response_harvest["row_count"] == 2
+    assert targeted_component_response_harvest["ready_for_budget_spend_count"] == 0
     assert len(targeted_component_queue["experiments"]) == 2
     assert targeted_component_queue["selection_policy"]["policy"] == (
         "bounded_candidate_family_round_robin"
@@ -2383,6 +2488,15 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     )
     _assert_false_authority(correction_work_order)
     assert correction_work_order["budget_spend_gate"]["budget_spend_allowed"] is False
+    step_ids = [
+        step["id"] for step in targeted_component_queue["experiments"][0]["steps"]
+    ]
+    assert step_ids[-1] == "harvest_targeted_component_correction_response"
+    work_order_paths = {
+        experiment["metadata"]["work_order_path"]
+        for experiment in targeted_component_queue["experiments"]
+    }
+    assert len(work_order_paths) == len(targeted_component_queue["experiments"])
     assert len(correction_work_order["candidate_family_rows"]) >= 5
     correction_work_order_retry = subprocess.run(
         correction_work_order_command,

@@ -35,6 +35,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
     build_frontier_rate_attack_feedback_refresh,
     build_frontier_receiver_repair_queue,
     build_frontier_targeted_component_correction_queue,
+    build_frontier_targeted_component_correction_response_harvest,
 )
 from tac.repo_io import ArtifactWriteError, json_text, write_json_artifact  # noqa: E402
 
@@ -257,6 +258,21 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             artifacts["targeted_component_correction_queue"] = _display_path(
                 queue_path
             )
+            response_harvest = (
+                build_frontier_targeted_component_correction_response_harvest(
+                    repo_root=REPO_ROOT,
+                    targeted_component_correction_queue=correction_queue,
+                    results_root=str(report.get("results_root") or DEFAULT_RESULTS_ROOT),
+                )
+            )
+            report["targeted_component_correction_response_harvest"] = response_harvest
+            response_harvest_path = (
+                output_dir / "targeted_component_correction_response_harvest.json"
+            )
+            write_json_artifact(response_harvest_path, response_harvest)
+            artifacts["targeted_component_correction_response_harvest"] = (
+                _display_path(response_harvest_path)
+            )
     bridge = report.get("materializer_feedback_bridge")
     if isinstance(bridge, dict):
         path = output_dir / "materializer_feedback_bridge.json"
@@ -316,6 +332,13 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             "--queue",
             artifacts["targeted_component_correction_queue"],
             "validate",
+        ]
+    if "targeted_component_correction_response_harvest" in artifacts:
+        operator_commands["inspect_targeted_component_correction_response_harvest"] = [
+            ".venv/bin/python",
+            "-m",
+            "json.tool",
+            artifacts["targeted_component_correction_response_harvest"],
         ]
     if operator_commands:
         report_to_write["operator_commands"] = operator_commands
@@ -521,6 +544,48 @@ def main(argv: list[str] | None = None) -> int:
                         ).get("top_acquisition_ids")
                         if isinstance(
                             report.get("targeted_component_correction_acquisition"),
+                            dict,
+                        )
+                        else None
+                    ),
+                },
+                "targeted_component_correction_response_harvest_summary": {
+                    "active": (
+                        report.get(
+                            "targeted_component_correction_response_harvest", {}
+                        ).get("active")
+                        if isinstance(
+                            report.get("targeted_component_correction_response_harvest"),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "row_count": (
+                        report.get(
+                            "targeted_component_correction_response_harvest", {}
+                        ).get("row_count")
+                        if isinstance(
+                            report.get("targeted_component_correction_response_harvest"),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "local_acquisition_recommended_count": (
+                        report.get(
+                            "targeted_component_correction_response_harvest", {}
+                        ).get("local_acquisition_recommended_count")
+                        if isinstance(
+                            report.get("targeted_component_correction_response_harvest"),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "blocked_response_count": (
+                        report.get(
+                            "targeted_component_correction_response_harvest", {}
+                        ).get("blocked_response_count")
+                        if isinstance(
+                            report.get("targeted_component_correction_response_harvest"),
                             dict,
                         )
                         else None
