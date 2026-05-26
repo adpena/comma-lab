@@ -9779,6 +9779,11 @@ def _targeted_component_response_score_delta_summary(
         ),
         "paired_reference_role": paired_payload.get("paired_reference_role")
         or term_payload.get("paired_reference_role"),
+        "allowed_use": "targeted_component_score_delta_summary_local_signal_only",
+        "forbidden_use": (
+            "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+        ),
+        **FALSE_AUTHORITY,
     }
 
 
@@ -11281,6 +11286,44 @@ def _targeted_component_chain_work_order(
         if isinstance(row.get("receiver_runtime_binding_context"), Mapping)
         else {}
     )
+    materializer_chain_basis = [
+        dict(entry)
+        for entry in row.get("materializer_chain_basis") or []
+        if isinstance(entry, Mapping)
+    ]
+    paired_delta_basis = [
+        {
+            "schema": "targeted_component_chain_paired_delta_basis.v1",
+            "source_acquisition_id": entry.get("source_acquisition_id"),
+            "correction_family": entry.get("correction_family"),
+            "measured_lagrangian_delta_score_units": entry.get(
+                "measured_lagrangian_delta_score_units"
+            ),
+            "measured_component_delta_score_units": entry.get(
+                "measured_component_delta_score_units"
+            ),
+            "budget_credit_remaining_score_units": entry.get(
+                "budget_credit_remaining_score_units"
+            ),
+            "saved_bytes_budget": entry.get("saved_bytes_budget"),
+            "local_cpu_score_delta_summary": dict(
+                entry.get("local_cpu_score_delta_summary")
+                if isinstance(entry.get("local_cpu_score_delta_summary"), Mapping)
+                else {}
+            ),
+            "local_mlx_score_delta_summary": dict(
+                entry.get("local_mlx_score_delta_summary")
+                if isinstance(entry.get("local_mlx_score_delta_summary"), Mapping)
+                else {}
+            ),
+            "allowed_use": "targeted_component_chain_paired_delta_basis_only",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+            **FALSE_AUTHORITY,
+        }
+        for entry in materializer_chain_basis
+    ]
     source_blockers = _unique_strings(
         [
             "targeted_component_chain_requires_receiver_runtime_materializer",
@@ -11327,6 +11370,17 @@ def _targeted_component_chain_work_order(
             "best_measured_lagrangian_delta_score_units": row.get(
                 "best_measured_lagrangian_delta_score_units"
             ),
+            "best_local_cpu_score_delta_summary": dict(
+                row.get("best_local_cpu_score_delta_summary")
+                if isinstance(row.get("best_local_cpu_score_delta_summary"), Mapping)
+                else {}
+            ),
+            "best_local_mlx_score_delta_summary": dict(
+                row.get("best_local_mlx_score_delta_summary")
+                if isinstance(row.get("best_local_mlx_score_delta_summary"), Mapping)
+                else {}
+            ),
+            "paired_delta_basis": paired_delta_basis,
             "receiver_runtime_binding_context": runtime_binding_context,
             "candidate_archive_path": runtime_binding_context.get(
                 "candidate_archive_path"
@@ -11692,6 +11746,7 @@ def _targeted_chain_materializer_portfolio_row(
     if archive_path:
         output_hint["archive_path"] = archive_path
         output_hint["source_archive"] = archive_path
+    output_hint["targeted_correction_budget"] = dict(budget)
     output_hint["target_kind"] = target_kind
     output_hint["materializer_id"] = adapter.get("materializer_id")
     output_hint["receiver_contract_id"] = adapter.get("receiver_contract_id")

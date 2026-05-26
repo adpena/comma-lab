@@ -62,6 +62,19 @@ These are false-authority summaries. They make the rate-vs-distortion delta
 machine-readable for downstream receiver/materializer work without changing any
 promotion, dispatch, or score-claim gate.
 
+Follow-up adversarial audit found that request-level propagation was not enough:
+operation-chain budgets and materializer handoff operation params also need the
+same paired-delta basis. The summaries are now self-marking false-authority
+objects, and the chain budget carries:
+
+- `best_local_cpu_score_delta_summary`
+- `best_local_mlx_score_delta_summary`
+- `paired_delta_basis`
+
+The materializer handoff preserves those fields in both portfolio evidence and
+operation params so receiver-runtime materializers consume the same
+rate-vs-distortion budget signal.
+
 ## Verification
 
 Commands:

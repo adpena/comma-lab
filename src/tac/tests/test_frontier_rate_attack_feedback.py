@@ -2006,6 +2006,7 @@ def test_targeted_component_response_harvest_derives_paired_local_cpu_deltas(
     assert row["local_cpu_score_delta_summary"][
         "component_delta_score_units"
     ] == pytest.approx(-0.02)
+    _assert_false_authority(row["local_cpu_score_delta_summary"])
     assert row["local_cpu_score_delta_summary"][
         "receiver_closed_rate_delta_score_units"
     ] == pytest.approx(-0.0001717916099055202)
@@ -2113,6 +2114,7 @@ def test_targeted_component_response_harvest_derives_paired_local_mlx_deltas(
     assert row["local_mlx_score_delta_summary"][
         "component_delta_score_units"
     ] == pytest.approx(-0.03)
+    _assert_false_authority(row["local_mlx_score_delta_summary"])
     assert row["local_mlx_score_delta_summary"][
         "receiver_closed_rate_delta_score_units"
     ] == pytest.approx(-0.0001717916099055202)
@@ -2149,9 +2151,13 @@ def test_targeted_component_response_harvest_derives_paired_local_mlx_deltas(
     assert request["best_local_mlx_score_delta_summary"][
         "receiver_closed_total_delta_score_units"
     ] == pytest.approx(-0.03017179160990552)
+    _assert_false_authority(request["best_local_mlx_score_delta_summary"])
     assert request["materializer_chain_basis"][0]["local_mlx_score_delta_summary"][
         "receiver_closed_rate_delta_score_units"
     ] == pytest.approx(-0.0001717916099055202)
+    _assert_false_authority(
+        request["materializer_chain_basis"][0]["local_mlx_score_delta_summary"]
+    )
 
 
 def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
@@ -2289,6 +2295,18 @@ def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
     assert chain_work_orders["schema"] == OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA
     assert chain_work_orders["work_order_count"] == 1
     _assert_false_authority(chain_work_orders)
+    chain_budget = chain_work_orders["work_orders"][0]["targeted_correction_budget"]
+    _assert_false_authority(chain_budget)
+    assert chain_budget["best_local_cpu_score_delta_summary"][
+        "receiver_closed_rate_delta_score_units"
+    ] == pytest.approx(-0.0001717916099055202)
+    _assert_false_authority(chain_budget["best_local_cpu_score_delta_summary"])
+    assert chain_budget["paired_delta_basis"][0]["local_cpu_score_delta_summary"][
+        "receiver_closed_total_delta_score_units"
+    ] == pytest.approx(-0.020171791609905523)
+    _assert_false_authority(
+        chain_budget["paired_delta_basis"][0]["local_cpu_score_delta_summary"]
+    )
     chain_queue = json.loads(operation_chain_queue.read_text(encoding="utf-8"))
     assert len(chain_queue["experiments"]) == 1
     assert chain_queue["experiments"][0]["metadata"]["execution_ready"] is False
@@ -2300,6 +2318,19 @@ def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
     )
     _assert_false_authority(handoff)
     assert "packet_member_merge_v1" in handoff["registered_chain_targets"]
+    handoff_budget = handoff["materializer_backlog"]["rows"][0][
+        "frontier_operation_portfolio_row"
+    ]["evidence_summary"]["targeted_correction_budget"]
+    assert handoff_budget["best_local_cpu_score_delta_summary"][
+        "receiver_closed_rate_delta_score_units"
+    ] == pytest.approx(-0.0001717916099055202)
+    _assert_false_authority(handoff_budget["best_local_cpu_score_delta_summary"])
+    params_budget = handoff["materializer_backlog"]["rows"][0]["operation_params"][
+        "targeted_correction_budget"
+    ]
+    assert params_budget["paired_delta_basis"][0]["local_cpu_score_delta_summary"][
+        "receiver_closed_archive_byte_delta_vs_reference"
+    ] == -258
 
 
 def test_targeted_component_response_harvest_expands_grouped_request_metadata(
