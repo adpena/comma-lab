@@ -148,10 +148,15 @@ CODEC_PACKAGE_SOURCE = (
     REPO_ROOT / "src" / "tac" / "substrates" / "nscs06_v8_chroma_lut"
 )
 # The procedural_codebook_generator is the cross-substrate canonical helper
-# (sister grayscale_lut + DP1 + VQ-VAE pattern). Vendor it under the codec
-# subdir as well so the inflate runtime is fully self-contained.
+# (sister grayscale_lut + DP1 + VQ-VAE pattern). The canonical surface is a
+# PACKAGE (directory with __init__.py + 8 submodules) per the 2026-05-26
+# canonical refactor; vendor it as a tree under the codec subdir so the
+# inflate runtime's relative import `from .procedural_codebook_generator
+# import derive_codebook_from_seed` resolves against the package's __init__.py
+# re-export. Per Catalog #295 the submission tree is self-contained (no
+# tac.* imports from the judge's runtime).
 PROCEDURAL_CODEBOOK_GENERATOR_SOURCE = (
-    REPO_ROOT / "src" / "tac" / "procedural_codebook_generator.py"
+    REPO_ROOT / "src" / "tac" / "procedural_codebook_generator"
 )
 VENDORED_CODEC_FILES = ("architecture.py", "archive.py", "inflate.py", "procedural_variant.py")
 VENDORED_CODEC_SUBDIR = "_nscs06_v8_codec"
@@ -397,14 +402,20 @@ def _write_runtime(submission_dir: Path) -> None:
         "from .procedural_codebook_generator import derive_codebook_from_seed",
     )
     vendored_inflate.write_text(text, encoding="utf-8")
-    # Vendor procedural_codebook_generator.py alongside.
-    if not PROCEDURAL_CODEBOOK_GENERATOR_SOURCE.is_file():
+    # Vendor procedural_codebook_generator/ PACKAGE alongside (canonical
+    # surface is a directory with __init__.py + 8 submodules per 2026-05-26
+    # refactor; the prior shutil.copy2 single-file invocation triggered
+    # FileNotFoundError on Modal worker — sister to commit d4ac491fa
+    # PARTIAL_SUCCESS verdict).
+    if not PROCEDURAL_CODEBOOK_GENERATOR_SOURCE.is_dir():
         raise FileNotFoundError(
-            f"NSCS06 v8 vendoring failed: procedural codebook generator missing: "
+            f"NSCS06 v8 vendoring failed: procedural codebook generator package missing: "
             f"{PROCEDURAL_CODEBOOK_GENERATOR_SOURCE}"
         )
-    shutil.copy2(
-        PROCEDURAL_CODEBOOK_GENERATOR_SOURCE, vendored_dir / "procedural_codebook_generator.py"
+    shutil.copytree(
+        PROCEDURAL_CODEBOOK_GENERATOR_SOURCE,
+        vendored_dir / "procedural_codebook_generator",
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "tests"),
     )
 
     inflate_py = (
