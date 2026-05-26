@@ -73,6 +73,23 @@ def _display_path(path: str | Path) -> str:
         return value.as_posix()
 
 
+def _targeted_dqs1_child_queue_paths(queue: dict[str, Any]) -> list[str]:
+    paths: list[str] = []
+    seen: set[str] = set()
+    for experiment in queue.get("experiments") or []:
+        if not isinstance(experiment, dict):
+            continue
+        metadata = experiment.get("metadata")
+        if not isinstance(metadata, dict):
+            continue
+        value = metadata.get("targeted_drop_many_dqs1_followup_queue_path")
+        if not isinstance(value, str) or not value.strip() or value in seen:
+            continue
+        seen.add(value)
+        paths.append(value)
+    return paths
+
+
 def _parse_csv_ints(text: str | None) -> list[int] | None:
     if text is None:
         return None
@@ -415,6 +432,9 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
                 operation_chain_compiler_work_orders_path=chain_path,
                 results_root=str(report.get("results_root") or DEFAULT_RESULTS_ROOT),
                 queue_id=f"{report.get('queue_id') or 'frontier_feedback'}_chain_compiler",
+                dqs1_observation_source_paths=tuple(
+                    report.get("dqs1_observation_source_paths") or ()
+                ),
             )
             if isinstance(chain_queue, dict):
                 chain_queue_path = output_dir / "operation_chain_compiler_queue.json"
@@ -568,6 +588,9 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
                     "component_operation_chain"
                 ),
                 candidate_limit=int(report.get("candidate_limit") or 4),
+                dqs1_observation_source_paths=tuple(
+                    report.get("dqs1_observation_source_paths") or ()
+                ),
             )
             if isinstance(targeted_chain_queue, dict):
                 targeted_chain_queue_path = (
@@ -577,6 +600,9 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
                 artifacts[
                     "targeted_component_correction_operation_chain_queue"
                 ] = _display_path(targeted_chain_queue_path)
+                report["targeted_drop_many_dqs1_child_queue_paths"] = (
+                    _targeted_dqs1_child_queue_paths(targeted_chain_queue)
+                )
             targeted_chain_materializer_handoff = (
                 build_frontier_targeted_component_correction_chain_materializer_handoff(
                     repo_root=REPO_ROOT,
@@ -857,6 +883,38 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             "--max-parallel",
             "2",
         ]
+        child_queue_paths = [
+            str(path)
+            for path in report_to_write.get("targeted_drop_many_dqs1_child_queue_paths")
+            or []
+        ]
+        if child_queue_paths:
+            first_child_queue = child_queue_paths[0]
+            operator_commands[
+                "validate_targeted_drop_many_dqs1_child_queue_after_chain_run"
+            ] = [
+                ".venv/bin/python",
+                "tools/experiment_queue.py",
+                "--queue",
+                first_child_queue,
+                "validate",
+            ]
+            operator_commands[
+                "run_targeted_drop_many_dqs1_child_queue_bounded_local_after_chain_run"
+            ] = [
+                ".venv/bin/python",
+                "tools/experiment_queue.py",
+                "--queue",
+                first_child_queue,
+                "run-worker",
+                "--execute",
+                "--max-steps",
+                "8",
+                "--max-experiments",
+                "2",
+                "--max-parallel",
+                "2",
+            ]
     if "targeted_component_correction_chain_materializer_handoff" in artifacts:
         operator_commands[
             "inspect_targeted_component_correction_chain_materializer_handoff"
