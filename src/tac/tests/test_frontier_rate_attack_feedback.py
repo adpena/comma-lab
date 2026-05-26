@@ -450,6 +450,12 @@ def _write_receiver_closed_budget_signal(
         / f"receiver_repair_{target_kind}_unit"
     )
     closure_dir = repair_dir / "submission_closure"
+    candidate_archive = closure_dir / "archive.zip"
+    candidate_inflate = closure_dir / "submission" / "inflate.sh"
+    candidate_archive.parent.mkdir(parents=True, exist_ok=True)
+    candidate_archive.write_bytes(b"PK\x05\x06" + b"\0" * 18)
+    candidate_inflate.parent.mkdir(parents=True, exist_ok=True)
+    candidate_inflate.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
     closure_report = _write_json(
         closure_dir / "submission_closure_report.json",
         {
@@ -457,8 +463,12 @@ def _write_receiver_closed_budget_signal(
             **_false_authority(),
             "candidate_id": candidate_id,
             "target_kind": target_kind,
+            "archive_path": candidate_archive.relative_to(repo).as_posix(),
             "archive_sha256": "5" * 64,
             "archive_bytes": 345646,
+            "candidate_inflate_sh_path": candidate_inflate.relative_to(
+                repo
+            ).as_posix(),
             "closed_source_queue_path": (
                 closure_dir / "closed_source_queue.json"
             ).relative_to(repo).as_posix(),
@@ -4315,6 +4325,9 @@ def test_targeted_component_queue_carries_receiver_closed_reference_eval(
     )
     source_queue = closure_dir / "closed_source_queue.json"
     closure_report = closure_dir / "submission_closure_report.json"
+    candidate_archive = closure_dir / "archive.zip"
+    candidate_archive.parent.mkdir(parents=True, exist_ok=True)
+    candidate_archive.write_bytes(b"PK\x05\x06" + b"\0" * 18)
     _write_json(
         source_queue,
         {
@@ -4342,6 +4355,7 @@ def test_targeted_component_queue_carries_receiver_closed_reference_eval(
             **_false_authority(),
             "candidate_id": candidate_id,
             "target_kind": "packet_member_merge_v1",
+            "archive_path": candidate_archive.relative_to(tmp_path).as_posix(),
             "archive_sha256": "8" * 64,
             "archive_bytes": 345_544,
             "closed_source_queue_path": source_queue.relative_to(tmp_path).as_posix(),
@@ -4388,6 +4402,10 @@ def test_targeted_component_queue_carries_receiver_closed_reference_eval(
     )
     budget_row = next(row for row in budget["rows"] if row["candidate_id"] == candidate_id)
     assert budget_row["receiver_closed"] is True
+    assert budget_row["candidate_archive_path"] == (
+        "results/frontier_final_rate_attack/reference_eval_unit/"
+        "submission_closure/archive.zip"
+    )
     assert budget_row["source_archive_path"] == "source_submission/archive_correct.zip"
     assert budget_row["source_inflate_sh_path"] == "source_submission/inflate.sh"
 
@@ -4975,6 +4993,132 @@ def test_targeted_component_acquisition_does_not_default_to_pr110_palette() -> N
         str(row["correction_family"]).startswith("repair_dynamics_")
         for row in acquisition["rows"]
     )
+
+
+def test_targeted_component_acquisition_preserves_explicit_archive_path() -> None:
+    acquisition = build_frontier_targeted_component_correction_acquisition(
+        operation_portfolio={
+            "schema": OPERATION_PORTFOLIO_SCHEMA,
+            **_false_authority(),
+            "component_behavior_summary": {
+                "schema": "frontier_rate_attack_component_behavior_summary.v1",
+                **_false_authority(),
+                "active": True,
+            },
+        },
+        receiver_closed_correction_budget={
+            "schema": RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA,
+            **_false_authority(),
+            "active": True,
+            "rows": [
+                {
+                    **_false_authority(),
+                    "candidate_id": "fec8_rate_packet",
+                    "target_kind": "packet_member_merge_v1",
+                    "receiver_closed": True,
+                    "saved_bytes_at_risk": 128,
+                    "submission_dir": "submissions/fec8_rate_packet/runtime",
+                    "archive_path": "submissions/fec8_rate_packet/archive.zip",
+                    "archive_sha256": "abc123",
+                    "archive_bytes": 178507,
+                }
+            ],
+        },
+    )
+
+    row = acquisition["rows"][0]
+    assert row["archive_path"] == "submissions/fec8_rate_packet/archive.zip"
+    assert row["archive_sha256"] == "abc123"
+    assert row["archive_bytes"] == 178507
+    assert row["candidate_archive_path"] == "submissions/fec8_rate_packet/archive.zip"
+    assert row["candidate_archive_sha256"] == "abc123"
+    assert row["candidate_archive_bytes"] == 178507
+    assert row["inflate_sh_path"] == "submissions/fec8_rate_packet/runtime/inflate.sh"
+    assert row["queue_actionable"] is True
+    assert "candidate_archive_path_missing_for_component_eval" not in row["blockers"]
+
+    work_order = build_frontier_targeted_component_correction_work_order(
+        targeted_component_correction_acquisition=acquisition,
+        acquisition_id=row["acquisition_id"],
+    )
+    assert work_order["archive_path"] == "submissions/fec8_rate_packet/archive.zip"
+    assert work_order["inflate_sh_path"] == "submissions/fec8_rate_packet/runtime/inflate.sh"
+
+
+def test_targeted_component_acquisition_refuses_synthesized_archive_path() -> None:
+    acquisition = build_frontier_targeted_component_correction_acquisition(
+        operation_portfolio={
+            "schema": OPERATION_PORTFOLIO_SCHEMA,
+            **_false_authority(),
+            "component_behavior_summary": {
+                "schema": "frontier_rate_attack_component_behavior_summary.v1",
+                **_false_authority(),
+                "active": True,
+            },
+        },
+        receiver_closed_correction_budget={
+            "schema": RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA,
+            **_false_authority(),
+            "active": True,
+            "rows": [
+                {
+                    **_false_authority(),
+                    "candidate_id": "runtime_only_candidate",
+                    "target_kind": "packet_member_merge_v1",
+                    "receiver_closed": True,
+                    "saved_bytes_at_risk": 128,
+                    "submission_dir": "submissions/runtime_only_candidate",
+                }
+            ],
+        },
+    )
+
+    assert acquisition["queue_actionable_row_count"] == 0
+    assert "no_component_eval_queue_actionable_submission_dirs" in acquisition["blockers"]
+    row = acquisition["rows"][0]
+    assert row["archive_path"] is None
+    assert row["queue_actionable"] is False
+    assert "candidate_archive_path_missing_for_component_eval" in row["blockers"]
+
+
+def test_targeted_component_queue_refuses_stale_actionable_row_without_archive(
+    tmp_path: Path,
+) -> None:
+    acquisition = {
+        "schema": TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
+        **_false_authority(),
+        "rows": [
+            {
+                "schema": "frontier_rate_attack_targeted_component_correction_acquisition_row.v1",
+                **_false_authority(),
+                "acquisition_id": "stale_synthetic_archive_row",
+                "candidate_id": "stale_rate_packet",
+                "correction_family": "segnet_posenet_waterfill_region_repair",
+                "target_kind": "packet_member_merge_v1",
+                "operation_levels": ["region"],
+                "targeted_dimensions": ["segnet", "posenet"],
+                "saved_bytes_budget": 128,
+                "estimated_rate_credit_score_units": 0.0000858958049527601,
+                "submission_dir": "submissions/stale_rate_packet",
+                "inflate_sh_path": "submissions/stale_rate_packet/inflate.sh",
+                "queue_actionable": True,
+                "priority_score": 1.0,
+            }
+        ],
+    }
+    acquisition_path = _write_json(tmp_path / "targeted_acquisition.json", acquisition)
+
+    with pytest.raises(
+        FrontierRateAttackFeedbackError,
+        match="candidate_archive_path_missing_for_component_queue",
+    ):
+        build_frontier_targeted_component_correction_queue(
+            repo_root=tmp_path,
+            targeted_component_correction_acquisition=acquisition,
+            targeted_component_correction_acquisition_path=acquisition_path,
+            results_root=tmp_path / "queue_results",
+            queue_id="stale_component_archive_refusal",
+        )
 
 
 def test_targeted_component_acquisition_keeps_mixed_frame_palette_open() -> None:

@@ -2347,6 +2347,30 @@ def _submission_closure_budget_row(
     if saved <= 0:
         critical_blockers.append("saved_bytes_at_risk_missing_or_non_positive")
     receiver_closed = not critical_blockers
+    candidate_archive_text = _path_text_from_value(
+        closure.get("candidate_archive_path") or closure.get("archive_path")
+    )
+    candidate_archive_path = (
+        _resolve_path(candidate_archive_text, repo_root=repo_root)
+        if candidate_archive_text
+        else None
+    )
+    candidate_submission_text = _path_text_from_value(closure.get("submission_dir"))
+    candidate_submission_dir = (
+        _resolve_path(candidate_submission_text, repo_root=repo_root)
+        if candidate_submission_text
+        else None
+    )
+    candidate_inflate_text = _path_text_from_value(
+        closure.get("candidate_inflate_sh_path") or closure.get("inflate_sh_path")
+    )
+    candidate_inflate_sh = (
+        _resolve_path(candidate_inflate_text, repo_root=repo_root)
+        if candidate_inflate_text
+        else None
+    )
+    if candidate_inflate_sh is None and candidate_submission_dir is not None:
+        candidate_inflate_sh = candidate_submission_dir / "inflate.sh"
     reference_eval_context = _submission_closure_reference_eval_context(
         closure,
         closure_report_path,
@@ -2357,8 +2381,24 @@ def _submission_closure_budget_row(
         "schema": "frontier_rate_attack_receiver_closed_correction_budget_row.v1",
         "candidate_id": candidate_id,
         "target_kind": target_kind,
+        "archive_path": (
+            None
+            if candidate_archive_path is None
+            else _repo_rel(candidate_archive_path, repo_root)
+        ),
         "archive_sha256": closure.get("archive_sha256"),
         "archive_bytes": closure.get("archive_bytes"),
+        "candidate_archive_path": (
+            None
+            if candidate_archive_path is None
+            else _repo_rel(candidate_archive_path, repo_root)
+        ),
+        "candidate_archive_sha256": closure.get(
+            "candidate_archive_sha256", closure.get("archive_sha256")
+        ),
+        "candidate_archive_bytes": _finite_int_or_none(
+            closure.get("candidate_archive_bytes") or closure.get("archive_bytes")
+        ),
         "generated_at_utc": closure.get("generated_at_utc"),
         "saved_bytes_at_risk": saved,
         "receiver_closed": receiver_closed,
@@ -2373,6 +2413,11 @@ def _submission_closure_budget_row(
         "paired_exact_readiness_bridge_report_path": _repo_rel(bridge_path, repo_root),
         "closed_source_queue_path": closure.get("closed_source_queue_path"),
         "submission_dir": closure.get("submission_dir"),
+        "candidate_inflate_sh_path": (
+            None
+            if candidate_inflate_sh is None
+            else _repo_rel(candidate_inflate_sh, repo_root)
+        ),
         "source_archive_path": reference_eval_context.get("source_archive_path"),
         "source_archive_sha256": reference_eval_context.get("source_archive_sha256"),
         "source_archive_bytes": reference_eval_context.get("source_archive_bytes"),
@@ -9987,6 +10032,16 @@ def build_frontier_targeted_component_correction_acquisition(
         candidate_id = str(budget_row.get("candidate_id") or "unknown_candidate")
         target_kind = str(budget_row.get("target_kind") or "unknown_target")
         submission_dir = str(budget_row.get("submission_dir") or "")
+        candidate_archive_path = str(
+            budget_row.get("candidate_archive_path")
+            or budget_row.get("archive_path")
+            or ""
+        )
+        candidate_inflate_sh_path = str(
+            budget_row.get("candidate_inflate_sh_path")
+            or budget_row.get("inflate_sh_path")
+            or (f"{submission_dir}/inflate.sh" if submission_dir else "")
+        )
         source_archive_path = str(budget_row.get("source_archive_path") or "")
         source_submission_dir = str(budget_row.get("source_submission_dir") or "")
         source_inflate_sh_path = str(budget_row.get("source_inflate_sh_path") or "")
@@ -10010,6 +10065,14 @@ def build_frontier_targeted_component_correction_acquisition(
             ]
             if not submission_dir:
                 budget_spend_blockers.append("submission_dir_missing_for_component_eval")
+            if not candidate_archive_path:
+                budget_spend_blockers.append(
+                    "candidate_archive_path_missing_for_component_eval"
+                )
+            if not candidate_inflate_sh_path:
+                budget_spend_blockers.append(
+                    "candidate_inflate_sh_path_missing_for_component_eval"
+                )
             if budget_row.get("active_rate_floor_blocked") is True:
                 budget_spend_blockers.append(
                     "active_rate_floor_override_required_before_exact_dispatch"
@@ -10086,8 +10149,25 @@ def build_frontier_targeted_component_correction_acquisition(
                     "ready_for_budget_spend": False,
                     "budget_spend_allowed": False,
                     "submission_dir": submission_dir or None,
-                    "archive_path": f"{submission_dir}/archive.zip" if submission_dir else None,
-                    "inflate_sh_path": f"{submission_dir}/inflate.sh" if submission_dir else None,
+                    "archive_path": candidate_archive_path or None,
+                    "archive_sha256": (
+                        budget_row.get("archive_sha256")
+                        or budget_row.get("candidate_archive_sha256")
+                    ),
+                    "archive_bytes": (
+                        budget_row.get("archive_bytes")
+                        or budget_row.get("candidate_archive_bytes")
+                    ),
+                    "candidate_archive_path": candidate_archive_path or None,
+                    "candidate_archive_sha256": (
+                        budget_row.get("candidate_archive_sha256")
+                        or budget_row.get("archive_sha256")
+                    ),
+                    "candidate_archive_bytes": (
+                        budget_row.get("candidate_archive_bytes")
+                        or budget_row.get("archive_bytes")
+                    ),
+                    "inflate_sh_path": candidate_inflate_sh_path or None,
                     "source_archive_path": source_archive_path or None,
                     "source_archive_sha256": budget_row.get("source_archive_sha256"),
                     "source_archive_bytes": budget_row.get("source_archive_bytes"),
@@ -10174,7 +10254,11 @@ def build_frontier_targeted_component_correction_acquisition(
                         "budget_spend_allowed": False,
                         **FALSE_AUTHORITY,
                     },
-                    "queue_actionable": bool(submission_dir),
+                    "queue_actionable": bool(
+                        submission_dir
+                        and candidate_archive_path
+                        and candidate_inflate_sh_path
+                    ),
                     "queue_consumer": "frontier_targeted_component_correction_queue",
                     "recommended_next_action": seed.get("recommended_next_action"),
                     "wire_in_hooks": _targeted_component_correction_wire_hooks(family),
@@ -15366,13 +15450,24 @@ def build_frontier_targeted_component_correction_queue(
         candidate_rows = rows_by_candidate[candidate_id]
         primary_row = candidate_rows[0]
         candidate_dir = queue_root / _slug_token(candidate_id)
-        submission_dir = str(primary_row.get("submission_dir") or "")
         archive_path = str(
-            primary_row.get("archive_path") or f"{submission_dir}/archive.zip"
+            primary_row.get("archive_path")
+            or primary_row.get("candidate_archive_path")
+            or ""
         )
         inflate_sh_path = str(
-            primary_row.get("inflate_sh_path") or f"{submission_dir}/inflate.sh"
+            primary_row.get("inflate_sh_path")
+            or primary_row.get("candidate_inflate_sh_path")
+            or ""
         )
+        if not archive_path:
+            raise FrontierRateAttackFeedbackError(
+                f"{candidate_id}: candidate_archive_path_missing_for_component_queue"
+            )
+        if not inflate_sh_path:
+            raise FrontierRateAttackFeedbackError(
+                f"{candidate_id}: candidate_inflate_sh_path_missing_for_component_queue"
+            )
         candidate_cache_key = _bounded_content_key(
             "candidate_component_response",
             (
