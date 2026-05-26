@@ -1,0 +1,27 @@
+{
+  "allow_cloud": false,
+  "claim_refused_count": 0,
+  "execute": true,
+  "failure_count": 0,
+  "idle_cycles": 1,
+  "max_experiments": 2,
+  "max_parallel": 1,
+  "noncanonical_state_rationale": null,
+  "orphaned_state_rationale": null,
+  "planned_steps": [],
+  "queue_id": "frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_repair_budget_waterfill",
+  "requested_max_parallel": 1,
+  "resource_limits": {
+    "local_io_heavy": 1
+  },
+  "schema": "experiment_queue_worker_result.v1",
+  "stale_running_reconciliations": [],
+  "started_at_utc": "2026-05-26T18:54:02Z",
+  "started_experiment_ids": [],
+  "state": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_repair_budget_waterfill.sqlite",
+  "step_results": [],
+  "steps_started": 0,
+  "stop_reason": "idle_limit_reached",
+  "stop_signals": [],
+  "success_count": 0
+}
