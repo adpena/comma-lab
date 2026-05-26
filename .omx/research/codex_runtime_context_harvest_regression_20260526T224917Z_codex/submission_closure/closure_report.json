@@ -18,7 +18,7 @@
   "exact_cuda_auth_eval": false,
   "field_selection_ready_for_exact_eval_dispatch": false,
   "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
-  "generated_at_utc": "2026-05-26T22:51:48Z",
+  "generated_at_utc": "2026-05-26T22:57:11Z",
   "gpu_launched": false,
   "promotable": false,
   "promotion_eligible": false,
@@ -89,9 +89,9 @@
       "exact_cuda_auth_eval": false,
       "field_selection_ready_for_exact_eval_dispatch": false,
       "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
-      "generated_at_utc": "2026-05-26T22:51:48Z",
+      "generated_at_utc": "2026-05-26T22:57:11Z",
       "gpu_launched": false,
-      "materializer_submission_closure_kind": "runtime_adapter_closure_with_candidate_archive",
+      "materializer_submission_closure_kind": "source_runtime_static_closure_with_candidate_archive",
       "promotable": false,
       "promotion_eligible": false,
       "rank_or_kill_eligible": false,
@@ -104,7 +104,7 @@
             "bytes": 3180,
             "relative_path": "archive_manifest.json",
             "repo_relative_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34/archive_manifest.json",
-            "sha256": "96b5a5ed727915e03f613c2c974d577ac55252ae019e359d5ae528adb6f77146"
+            "sha256": "ff1af67af453cead392cf74bdea2b6db163b572611fe2236657d712229d5fe1e"
           },
           {
             "bytes": 30120,
@@ -173,10 +173,10 @@
           "tac_root_relative_path": "src/tac",
           "unresolved_modules": []
         },
-        "runtime_content_tree_sha256": "75e951ee2d83cc1003f8fc726c4ad568c1d2982a5c2dc638e66710fa2c1d4c5a",
+        "runtime_content_tree_sha256": "c32e6050a7fa9a547199b484d73a3e51848018369b34112971d48d02b7f267ff",
         "runtime_file_count": 10,
         "runtime_root": "/Users/adpena/Projects/pact/.omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34",
-        "runtime_tree_sha256": "aa1a44aa6786a3c71d36842933ba6cd38eec0ca85bbcafeed10a371617360ada",
+        "runtime_tree_sha256": "85774e922ea8e71c99c26c162064137359730dd01179d41a591b0b459be6f298",
         "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
         "upstream_evaluate_py": {
           "bytes": 6005,
@@ -192,7 +192,7 @@
       "score_claim_eligible": false,
       "score_claim_valid": false,
       "source_queue_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/source_queue.json",
-      "source_runtime_adapter_ready": true,
+      "source_runtime_adapter_ready": false,
       "source_runtime_dir": "experiments/results/pr101_frame_exploit_selector_fec8_static_second_order_k16_clean_20260526_codex/submission_dir",
       "submission_dir": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/submission_closure/submission_dir/packet_member_zip_header_elide_b44da5d54d34",
       "target_kind": "packet_member_zip_header_elide_v1",

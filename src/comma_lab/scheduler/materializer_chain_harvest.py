@@ -94,7 +94,6 @@ RUNTIME_CONTEXT_PATH_FIELDS = (
     "source_runtime_dir",
     "source_submission_dir",
     "source_inflate_sh_path",
-    "candidate_runtime_dir",
     "candidate_submission_dir",
     "candidate_inflate_sh_path",
     "candidate_archive_path",

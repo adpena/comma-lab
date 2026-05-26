@@ -77,9 +77,13 @@ Exact-readiness remained fail-closed for this candidate with:
 
 - `unknown_uncleared_source_dispatch_blocker:candidate_not_rate_positive`
 - `score_affecting_change_proof_missing`
-- `runtime_consumption_proof_runtime_tree_sha_missing`
 
 No source-runtime-missing closure blocker remained.
+The follow-up narrowing pass also removed a false runtime-adapter blocker by
+not copying work-row `candidate_runtime_dir` into static family-agnostic ZIP
+transforms. The closure now classifies this live candidate as
+`source_runtime_static_closure_with_candidate_archive`; no
+`runtime_consumption_proof_runtime_tree_sha_missing` blocker remains.
 
 ## Regression Coverage
 

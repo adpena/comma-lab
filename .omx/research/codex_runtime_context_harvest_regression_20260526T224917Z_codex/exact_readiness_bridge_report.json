@@ -29,7 +29,7 @@
   "exact_cuda_auth_eval": false,
   "exact_readiness_out_dir": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/exact_readiness",
   "field_selection_ready_for_exact_eval_dispatch": false,
-  "generated_at_utc": "2026-05-26T22:49:52Z",
+  "generated_at_utc": "2026-05-26T22:57:12Z",
   "gpu_launched": false,
   "operator_clearable_source_blockers": [],
   "promotable": false,
@@ -41,8 +41,7 @@
     {
       "blockers": [
         "unknown_uncleared_source_dispatch_blocker:candidate_not_rate_positive",
-        "score_affecting_change_proof_missing",
-        "runtime_consumption_proof_runtime_tree_sha_missing"
+        "score_affecting_change_proof_missing"
       ],
       "candidate_id": "packet_member_zip_header_elide_b44da5d54d34",
       "exact_readiness_report_path": ".omx/research/codex_runtime_context_harvest_regression_20260526T224917Z_codex/exact_readiness/packet_member_zip_header_elide_b44da5d54d34.exact_readiness_report.json",
