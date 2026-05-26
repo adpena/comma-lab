@@ -1,0 +1,1135 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1,
+      "local_io_heavy": 1,
+      "local_mlx": 0,
+      "modal_cpu": 0,
+      "modal_gpu": 0
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing",
+      "lane_id": "lane_frontier_receiver_repair_queue_20260526",
+      "metadata": {
+        "allowed_use": "receiver_repair_queue_metadata_only",
+        "bridge_report_paths": [
+          "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+          "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+          "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json"
+        ],
+        "candidate_ids": [
+          "renderer_payload_dfl1_e20295f0a662",
+          "packet_member_merge_cbe7d79124ba",
+          "packet_member_zip_header_elide_544c5f580ec2"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "correction_budget_context": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "local_drop_saved_bytes_total": 28,
+          "materializer_rate_positive_saved_bytes_total": 794,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "saved_bytes_at_risk_from_source_operation": 794,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "spend_policy": "receiver_repair_must_prove_runtime_consumption_before_freed_rate_budget_can_fund_segnet_posenet_corrections"
+        },
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "exact_readiness_bridge_step_count": 3,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_consumer": "frontier_exact_readiness_handoff",
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_repair_required_before_budget_spend": true,
+        "repair_family": "submission_runtime_manifest_closure",
+        "repair_id": "receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing",
+        "saved_bytes_at_risk": 794,
+        "schema": "frontier_rate_attack_receiver_repair_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_operation_id": "chain_dfl1_merge_header_elide_minimal_envelope",
+        "source_queue_consumer": "frontier_final_rate_attack_materializer_queue",
+        "source_queue_paths": [
+          "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/exact_eval_handoff/source_queue.json",
+          "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/exact_eval_handoff/source_queue.json",
+          "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/source_queue.json"
+        ],
+        "submission_closure_step_count": 3,
+        "target_kind": "chain_dfl1_merge_header_elide_minimal_envelope"
+      },
+      "priority": 1,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_receiver_repair_work_order.py",
+            "--receiver-repair-backlog",
+            ".omx/research/frontier_operation_portfolio_20260526T012046Z/receiver_repair_backlog.json",
+            "--repair-id",
+            "receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing",
+            "--work-order-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/work_order.json",
+            "--overwrite"
+          ],
+          "id": "emit_receiver_repair_work_order",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_receiver_repair_work_order.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/work_order.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_gate.ready_for_targeted_correction_budget_spend",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/work_order.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/work_order.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_operation_portfolio_20260526T012046Z/receiver_repair_backlog.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_materializer_submission_closure.py",
+            "--source-queue",
+            "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/exact_eval_handoff/source_queue.json",
+            "--submission-dir-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_1/submission",
+            "--closed-source-queue-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_1/closed_source_queue.json",
+            "--closure-report-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_1/submission_closure_report.json",
+            "--overwrite"
+          ],
+          "id": "build_submission_runtime_closure_1",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "materializer_submission_runtime_closure_report.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_1/submission_closure_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_1/submission_closure_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "optimizer_candidate_queue_v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_1/closed_source_queue.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_1/closed_source_queue.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_1/submission_closure_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_receiver_repair_work_order"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_1/submission_closure_report.json",
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_1/closed_source_queue.json",
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_1/submission"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/exact_eval_handoff/source_queue.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 180
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_materializer_exact_readiness_bridge.py",
+            "--source-queue",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_1/closed_source_queue.json",
+            "--exact-readiness-out-dir",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_1/exact_readiness",
+            "--bridge-report-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_1/exact_readiness_bridge_report.json",
+            "--overwrite",
+            "--force-recompute"
+          ],
+          "id": "run_exact_readiness_bridge_1",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "materializer_chain_exact_readiness_bridge_report.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_1/exact_readiness_bridge_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_1/exact_readiness_bridge_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_1/exact_readiness_bridge_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_receiver_repair_work_order",
+            "build_submission_runtime_closure_1"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_1/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_1/exact_readiness"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_1/closed_source_queue.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_materializer_submission_closure.py",
+            "--source-queue",
+            "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/exact_eval_handoff/source_queue.json",
+            "--submission-dir-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_2/submission",
+            "--closed-source-queue-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_2/closed_source_queue.json",
+            "--closure-report-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_2/submission_closure_report.json",
+            "--overwrite"
+          ],
+          "id": "build_submission_runtime_closure_2",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "materializer_submission_runtime_closure_report.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_2/submission_closure_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_2/submission_closure_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "optimizer_candidate_queue_v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_2/closed_source_queue.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_2/closed_source_queue.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_2/submission_closure_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_receiver_repair_work_order"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_2/submission_closure_report.json",
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_2/closed_source_queue.json",
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_2/submission"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/exact_eval_handoff/source_queue.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 180
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_materializer_exact_readiness_bridge.py",
+            "--source-queue",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_2/closed_source_queue.json",
+            "--exact-readiness-out-dir",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_2/exact_readiness",
+            "--bridge-report-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_2/exact_readiness_bridge_report.json",
+            "--overwrite",
+            "--force-recompute"
+          ],
+          "id": "run_exact_readiness_bridge_2",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "materializer_chain_exact_readiness_bridge_report.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_2/exact_readiness_bridge_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_2/exact_readiness_bridge_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_2/exact_readiness_bridge_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_receiver_repair_work_order",
+            "build_submission_runtime_closure_2"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_2/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_2/exact_readiness"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_2/closed_source_queue.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_materializer_submission_closure.py",
+            "--source-queue",
+            "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/source_queue.json",
+            "--submission-dir-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_3/submission",
+            "--closed-source-queue-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_3/closed_source_queue.json",
+            "--closure-report-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_3/submission_closure_report.json",
+            "--overwrite"
+          ],
+          "id": "build_submission_runtime_closure_3",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "materializer_submission_runtime_closure_report.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_3/submission_closure_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_3/submission_closure_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "optimizer_candidate_queue_v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_3/closed_source_queue.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_3/closed_source_queue.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_3/submission_closure_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_receiver_repair_work_order"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_3/submission_closure_report.json",
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_3/closed_source_queue.json",
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_3/submission"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/source_queue.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 180
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_materializer_exact_readiness_bridge.py",
+            "--source-queue",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_3/closed_source_queue.json",
+            "--exact-readiness-out-dir",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_3/exact_readiness",
+            "--bridge-report-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_3/exact_readiness_bridge_report.json",
+            "--overwrite",
+            "--force-recompute"
+          ],
+          "id": "run_exact_readiness_bridge_3",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "materializer_chain_exact_readiness_bridge_report.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_3/exact_readiness_bridge_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_3/exact_readiness_bridge_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_3/exact_readiness_bridge_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_receiver_repair_work_order",
+            "build_submission_runtime_closure_3"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_3/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge_3/exact_readiness"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_chain_dfl1_merge_header_elide_minimal_envelope_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure_3/closed_source_queue.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/exact_eval_handoff/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "receiver_repair",
+        "submission_runtime_manifest_closure",
+        "chain_dfl1_merge_header_elide_minimal_envelope"
+      ]
+    },
+    {
+      "id": "receiver_repair_materializer_renderer_payload_dfl1_v1_full_frame_inflate_parity_repair_renderer_payload_dfl1_strict_full_frame_inflate_parity_missing",
+      "lane_id": "lane_frontier_receiver_repair_queue_20260526",
+      "metadata": {
+        "allowed_use": "receiver_repair_queue_metadata_only",
+        "bridge_report_paths": [
+          "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json"
+        ],
+        "candidate_ids": [
+          "renderer_payload_dfl1_e20295f0a662"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "correction_budget_context": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "local_drop_saved_bytes_total": 28,
+          "materializer_rate_positive_saved_bytes_total": 794,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "saved_bytes_at_risk_from_source_operation": 380,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "spend_policy": "receiver_repair_must_prove_runtime_consumption_before_freed_rate_budget_can_fund_segnet_posenet_corrections"
+        },
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "exact_readiness_bridge_step_count": 1,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_consumer": "frontier_exact_readiness_handoff",
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_repair_required_before_budget_spend": true,
+        "repair_family": "full_frame_inflate_parity_repair",
+        "repair_id": "receiver_repair_materializer_renderer_payload_dfl1_v1_full_frame_inflate_parity_repair_renderer_payload_dfl1_strict_full_frame_inflate_parity_missing",
+        "saved_bytes_at_risk": 380,
+        "schema": "frontier_rate_attack_receiver_repair_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_operation_id": "materializer_renderer_payload_dfl1_v1",
+        "source_queue_consumer": "frontier_final_rate_attack_materializer_queue",
+        "source_queue_paths": [
+          "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/exact_eval_handoff/source_queue.json"
+        ],
+        "submission_closure_step_count": 0,
+        "target_kind": "renderer_payload_dfl1_v1"
+      },
+      "priority": 2,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_receiver_repair_work_order.py",
+            "--receiver-repair-backlog",
+            ".omx/research/frontier_operation_portfolio_20260526T012046Z/receiver_repair_backlog.json",
+            "--repair-id",
+            "receiver_repair_materializer_renderer_payload_dfl1_v1_full_frame_inflate_parity_repair_renderer_payload_dfl1_strict_full_frame_inflate_parity_missing",
+            "--work-order-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_renderer_payload_dfl1_v1_full_frame_inflate_parity_repair_renderer_payload_dfl1_strict_full_frame_inflate_parity_missing/work_order.json",
+            "--overwrite"
+          ],
+          "id": "emit_receiver_repair_work_order",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_receiver_repair_work_order.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_renderer_payload_dfl1_v1_full_frame_inflate_parity_repair_renderer_payload_dfl1_strict_full_frame_inflate_parity_missing/work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_renderer_payload_dfl1_v1_full_frame_inflate_parity_repair_renderer_payload_dfl1_strict_full_frame_inflate_parity_missing/work_order.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_gate.ready_for_targeted_correction_budget_spend",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_renderer_payload_dfl1_v1_full_frame_inflate_parity_repair_renderer_payload_dfl1_strict_full_frame_inflate_parity_missing/work_order.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_renderer_payload_dfl1_v1_full_frame_inflate_parity_repair_renderer_payload_dfl1_strict_full_frame_inflate_parity_missing/work_order.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_operation_portfolio_20260526T012046Z/receiver_repair_backlog.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_materializer_exact_readiness_bridge.py",
+            "--source-queue",
+            "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/exact_eval_handoff/source_queue.json",
+            "--exact-readiness-out-dir",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_renderer_payload_dfl1_v1_full_frame_inflate_parity_repair_renderer_payload_dfl1_strict_full_frame_inflate_parity_missing/exact_readiness_bridge/exact_readiness",
+            "--bridge-report-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_renderer_payload_dfl1_v1_full_frame_inflate_parity_repair_renderer_payload_dfl1_strict_full_frame_inflate_parity_missing/exact_readiness_bridge/exact_readiness_bridge_report.json",
+            "--overwrite",
+            "--force-recompute",
+            "--candidate-id",
+            "renderer_payload_dfl1_e20295f0a662"
+          ],
+          "id": "run_exact_readiness_bridge",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "materializer_chain_exact_readiness_bridge_report.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_renderer_payload_dfl1_v1_full_frame_inflate_parity_repair_renderer_payload_dfl1_strict_full_frame_inflate_parity_missing/exact_readiness_bridge/exact_readiness_bridge_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_renderer_payload_dfl1_v1_full_frame_inflate_parity_repair_renderer_payload_dfl1_strict_full_frame_inflate_parity_missing/exact_readiness_bridge/exact_readiness_bridge_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_renderer_payload_dfl1_v1_full_frame_inflate_parity_repair_renderer_payload_dfl1_strict_full_frame_inflate_parity_missing/exact_readiness_bridge/exact_readiness_bridge_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_receiver_repair_work_order"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_renderer_payload_dfl1_v1_full_frame_inflate_parity_repair_renderer_payload_dfl1_strict_full_frame_inflate_parity_missing/exact_readiness_bridge/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_renderer_payload_dfl1_v1_full_frame_inflate_parity_repair_renderer_payload_dfl1_strict_full_frame_inflate_parity_missing/exact_readiness_bridge/exact_readiness"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/exact_eval_handoff/source_queue.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/renderer_payload_dfl1_v1/exact_eval_handoff/exact_readiness_bridge_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "receiver_repair",
+        "full_frame_inflate_parity_repair",
+        "renderer_payload_dfl1_v1"
+      ]
+    },
+    {
+      "id": "receiver_repair_materializer_packet_member_merge_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_proven",
+      "lane_id": "lane_frontier_receiver_repair_queue_20260526",
+      "metadata": {
+        "allowed_use": "receiver_repair_queue_metadata_only",
+        "bridge_report_paths": [
+          "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/exact_eval_handoff/exact_readiness_bridge_report.json"
+        ],
+        "candidate_ids": [
+          "packet_member_merge_cbe7d79124ba"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "correction_budget_context": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "local_drop_saved_bytes_total": 28,
+          "materializer_rate_positive_saved_bytes_total": 794,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "saved_bytes_at_risk_from_source_operation": 258,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "spend_policy": "receiver_repair_must_prove_runtime_consumption_before_freed_rate_budget_can_fund_segnet_posenet_corrections"
+        },
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "exact_readiness_bridge_step_count": 1,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_consumer": "frontier_final_rate_attack_materializer_queue",
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_repair_required_before_budget_spend": true,
+        "repair_family": "runtime_consumption_proof_repair",
+        "repair_id": "receiver_repair_materializer_packet_member_merge_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_proven",
+        "saved_bytes_at_risk": 258,
+        "schema": "frontier_rate_attack_receiver_repair_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_operation_id": "materializer_packet_member_merge_v1",
+        "source_queue_consumer": "frontier_final_rate_attack_materializer_queue",
+        "source_queue_paths": [
+          "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/exact_eval_handoff/source_queue.json"
+        ],
+        "submission_closure_step_count": 0,
+        "target_kind": "packet_member_merge_v1"
+      },
+      "priority": 3,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_receiver_repair_work_order.py",
+            "--receiver-repair-backlog",
+            ".omx/research/frontier_operation_portfolio_20260526T012046Z/receiver_repair_backlog.json",
+            "--repair-id",
+            "receiver_repair_materializer_packet_member_merge_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_proven",
+            "--work-order-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_merge_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_proven/work_order.json",
+            "--overwrite"
+          ],
+          "id": "emit_receiver_repair_work_order",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_receiver_repair_work_order.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_merge_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_proven/work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_merge_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_proven/work_order.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_gate.ready_for_targeted_correction_budget_spend",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_merge_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_proven/work_order.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_merge_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_proven/work_order.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_operation_portfolio_20260526T012046Z/receiver_repair_backlog.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/exact_eval_handoff/exact_readiness_bridge_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_materializer_exact_readiness_bridge.py",
+            "--source-queue",
+            "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/exact_eval_handoff/source_queue.json",
+            "--exact-readiness-out-dir",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_merge_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_proven/exact_readiness_bridge/exact_readiness",
+            "--bridge-report-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_merge_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_proven/exact_readiness_bridge/exact_readiness_bridge_report.json",
+            "--overwrite",
+            "--force-recompute",
+            "--candidate-id",
+            "packet_member_merge_cbe7d79124ba"
+          ],
+          "id": "run_exact_readiness_bridge",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "materializer_chain_exact_readiness_bridge_report.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_merge_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_proven/exact_readiness_bridge/exact_readiness_bridge_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_merge_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_proven/exact_readiness_bridge/exact_readiness_bridge_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_merge_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_proven/exact_readiness_bridge/exact_readiness_bridge_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_receiver_repair_work_order"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_merge_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_proven/exact_readiness_bridge/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_merge_v1_runtime_consumption_proof_repair_runtime_consumption_proof_not_proven/exact_readiness_bridge/exact_readiness"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/exact_eval_handoff/source_queue.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/per_archive/robust_current_correct/packet_member_merge_v1/exact_eval_handoff/exact_readiness_bridge_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "receiver_repair",
+        "runtime_consumption_proof_repair",
+        "packet_member_merge_v1"
+      ]
+    },
+    {
+      "id": "receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing",
+      "lane_id": "lane_frontier_receiver_repair_queue_20260526",
+      "metadata": {
+        "allowed_use": "receiver_repair_queue_metadata_only",
+        "bridge_report_paths": [
+          "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json"
+        ],
+        "candidate_ids": [
+          "packet_member_zip_header_elide_544c5f580ec2"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "correction_budget_context": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "local_drop_saved_bytes_total": 28,
+          "materializer_rate_positive_saved_bytes_total": 794,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "saved_bytes_at_risk_from_source_operation": 156,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "spend_policy": "receiver_repair_must_prove_runtime_consumption_before_freed_rate_budget_can_fund_segnet_posenet_corrections"
+        },
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "exact_readiness_bridge_step_count": 1,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_consumer": "frontier_exact_readiness_handoff",
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_repair_required_before_budget_spend": true,
+        "repair_family": "submission_runtime_manifest_closure",
+        "repair_id": "receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing",
+        "saved_bytes_at_risk": 156,
+        "schema": "frontier_rate_attack_receiver_repair_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_operation_id": "materializer_packet_member_zip_header_elide_v1",
+        "source_queue_consumer": "frontier_final_rate_attack_materializer_queue",
+        "source_queue_paths": [
+          "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/source_queue.json"
+        ],
+        "submission_closure_step_count": 1,
+        "target_kind": "packet_member_zip_header_elide_v1"
+      },
+      "priority": 4,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_receiver_repair_work_order.py",
+            "--receiver-repair-backlog",
+            ".omx/research/frontier_operation_portfolio_20260526T012046Z/receiver_repair_backlog.json",
+            "--repair-id",
+            "receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing",
+            "--work-order-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/work_order.json",
+            "--overwrite"
+          ],
+          "id": "emit_receiver_repair_work_order",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_receiver_repair_work_order.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/work_order.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_gate.ready_for_targeted_correction_budget_spend",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/work_order.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/work_order.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_operation_portfolio_20260526T012046Z/receiver_repair_backlog.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_materializer_submission_closure.py",
+            "--source-queue",
+            "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/source_queue.json",
+            "--submission-dir-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/submission",
+            "--closed-source-queue-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/closed_source_queue.json",
+            "--closure-report-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/submission_closure_report.json",
+            "--overwrite",
+            "--candidate-id",
+            "packet_member_zip_header_elide_544c5f580ec2"
+          ],
+          "id": "build_submission_runtime_closure",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "materializer_submission_runtime_closure_report.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/submission_closure_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/submission_closure_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": "optimizer_candidate_queue_v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/closed_source_queue.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/closed_source_queue.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/submission_closure_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_receiver_repair_work_order"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/submission_closure_report.json",
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/closed_source_queue.json",
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/submission"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/source_queue.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 180
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_materializer_exact_readiness_bridge.py",
+            "--source-queue",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/closed_source_queue.json",
+            "--exact-readiness-out-dir",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge/exact_readiness",
+            "--bridge-report-out",
+            "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge/exact_readiness_bridge_report.json",
+            "--overwrite",
+            "--force-recompute",
+            "--candidate-id",
+            "packet_member_zip_header_elide_544c5f580ec2"
+          ],
+          "id": "run_exact_readiness_bridge",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "materializer_chain_exact_readiness_bridge_report.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge/exact_readiness_bridge_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge/exact_readiness_bridge_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge/exact_readiness_bridge_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_receiver_repair_work_order",
+            "build_submission_runtime_closure"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge/exact_readiness_bridge_report.json",
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge/exact_readiness"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/submission_closure/closed_source_queue.json",
+              "experiments/results/frontier_final_rate_attack/frontier_final_rate_attack_many_receiver_portfolio_20260525T231411Z/packet_member_zip_header_elide_v1/exact_eval_handoff/exact_readiness_bridge_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": true
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "receiver_repair",
+        "submission_runtime_manifest_closure",
+        "packet_member_zip_header_elide_v1"
+      ]
+    }
+  ],
+  "queue_id": "frontier_operation_portfolio_20260526T012046Z_receiver_repair",
+  "schema": "experiment_queue.v1"
+}

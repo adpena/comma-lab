@@ -2528,8 +2528,6 @@ def _nested_clean_str(mapping: Mapping[str, Any], path: Sequence[str]) -> str | 
 
 
 def _proof_passed(proof: Mapping[str, Any]) -> bool:
-    if proof.get("receiver_contract_satisfied") is True:
-        return True
     if proof.get("runtime_consumption_proof_passed") is True:
         return True
     if proof.get("passed") is True:

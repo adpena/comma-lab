@@ -548,6 +548,35 @@ def test_runtime_consumption_proof_rejects_runtime_adapter_ready_without_sha(
     assert "runtime_adapter_ready_requires_sha256" in verification["blockers"]
 
 
+def test_runtime_consumption_proof_rejects_receiver_only_proof(
+    tmp_path: Path,
+) -> None:
+    proof = {
+        "schema": "family_agnostic_runtime_consumption_proof_v1",
+        "proof_kind": "fixture_receiver_only_not_runtime_consumption.v1",
+        "receiver_contract_kind": "fixture_receiver",
+        "target_kind": "fixture_target",
+        "materializer_id": "fixture_materializer",
+        "receiver_contract_satisfied": True,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+
+    verification = verify_runtime_consumption_proof(
+        runtime_consumption_proof=proof,
+        repo_root=tmp_path,
+    )
+
+    assert verification["receiver_contract_satisfied"] is False
+    assert "runtime_consumption_proof_not_passed" in verification["blockers"]
+
+
 def test_runtime_consumption_proof_rejects_generic_pass_flags_for_semantic_rewrites(
     tmp_path: Path,
 ) -> None:

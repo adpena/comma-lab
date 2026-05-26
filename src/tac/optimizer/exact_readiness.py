@@ -1375,8 +1375,6 @@ def _runtime_consumption_pr101_binding_blockers(
 
 
 def _family_agnostic_runtime_proof_passed(proof: Mapping[str, Any]) -> bool:
-    if proof.get("receiver_contract_satisfied") is True:
-        return True
     if proof.get("runtime_consumption_proof_passed") is True:
         return True
     if proof.get("passed") is True:

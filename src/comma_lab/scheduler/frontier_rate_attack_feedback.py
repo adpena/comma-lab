@@ -40,7 +40,12 @@ from .dqs1_local_first_queue import (
     PAIR_FRAME_GEOMETRY_QUEUE_REQUEST_SCHEMA,
     build_queue_from_action_summary,
 )
-from .experiment_queue import QUEUE_SCHEMA, ExperimentQueueError, normalize_queue_definition
+from .experiment_queue import (
+    DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS,
+    QUEUE_SCHEMA,
+    ExperimentQueueError,
+    normalize_queue_definition,
+)
 
 FEEDBACK_REFRESH_SCHEMA = "frontier_rate_attack_feedback_refresh.v1"
 FRONTIER_RATE_ATTACK_FEEDBACK_REFRESH_SCHEMA = FEEDBACK_REFRESH_SCHEMA
@@ -81,6 +86,17 @@ RECEIVER_REPAIR_QUEUE_METADATA_SCHEMA = (
 )
 MATERIALIZER_EXACT_READINESS_BRIDGE_TOOL = (
     "tools/run_materializer_exact_readiness_bridge.py"
+)
+MATERIALIZER_SUBMISSION_CLOSURE_TOOL = (
+    "tools/build_materializer_submission_closure.py"
+)
+MATERIALIZER_SUBMISSION_CLOSURE_REPORT_SCHEMA = (
+    "materializer_submission_runtime_closure_report.v1"
+)
+QUEUE_FALSE_AUTHORITY_FALSE_OR_MISSING_FIELDS = tuple(
+    field
+    for field in DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS
+    if field != "dispatch_ready"
 )
 
 _OPERATION_LEVELS = (
@@ -3001,6 +3017,37 @@ def _receiver_repair_command_hints(
                 **FALSE_AUTHORITY,
             }
         )
+    if repair_family == "submission_runtime_manifest_closure":
+        hints.append(
+            {
+                "action_id": "build_materializer_submission_runtime_closure",
+                "target_kind": target_kind,
+                "queue_consumer": row.get("queue_consumer"),
+                "source_queue_paths": list(bridge_details.get("source_queue_paths") or []),
+                "candidate_ids": list(row.get("candidate_ids") or []),
+                "command_template": [
+                    ".venv/bin/python",
+                    MATERIALIZER_SUBMISSION_CLOSURE_TOOL,
+                    "--source-queue",
+                    "<source_queue_path>",
+                    "--candidate-id",
+                    "<candidate_id>",
+                    "--submission-dir-out",
+                    "<receiver_repair_dir>/submission_closure/submission",
+                    "--closed-source-queue-out",
+                    "<receiver_repair_dir>/submission_closure/closed_source_queue.json",
+                    "--closure-report-out",
+                    "<receiver_repair_dir>/submission_closure/submission_closure_report.json",
+                    "--overwrite",
+                ],
+                "blocked_until": [
+                    "receiver_contract_satisfied",
+                    "runtime_consumption_proof_present",
+                    "source_runtime_dir_with_inflate_sh",
+                ],
+                **FALSE_AUTHORITY,
+            }
+        )
     if repair_family in {
         "runtime_consumption_proof_repair",
         "receiver_runtime_contract_repair",
@@ -3178,7 +3225,27 @@ def _selected_receiver_repair_rows(
             )
         )
 
-    for row in actionable_rows:
+    bridge_backed_rows = [
+        row
+        for row in actionable_rows
+        if _string_list(row.get("bridge_report_paths"))
+        and _string_list(row.get("candidate_ids"))
+    ]
+    work_order_only_rows = [
+        row
+        for row in actionable_rows
+        if row not in bridge_backed_rows
+    ]
+
+    for row in bridge_backed_rows:
+        if str(row.get("repair_family") or "") != "submission_runtime_manifest_closure":
+            continue
+        add_row(row)
+        break
+    if len(selected) >= candidate_limit:
+        return selected
+
+    for row in bridge_backed_rows:
         source = str(row.get("source_operation_id") or "")
         if source in seen_sources:
             continue
@@ -3186,7 +3253,27 @@ def _selected_receiver_repair_rows(
         if len(selected) >= candidate_limit:
             return selected
 
-    for row in actionable_rows:
+    for row in bridge_backed_rows:
+        group = (
+            str(row.get("source_operation_id") or ""),
+            str(row.get("repair_family") or ""),
+            str(row.get("queue_consumer") or ""),
+        )
+        if group in seen_groups:
+            continue
+        add_row(row)
+        if len(selected) >= candidate_limit:
+            return selected
+
+    for row in work_order_only_rows:
+        source = str(row.get("source_operation_id") or "")
+        if source in seen_sources:
+            continue
+        add_row(row)
+        if len(selected) >= candidate_limit:
+            return selected
+
+    for row in work_order_only_rows:
         group = (
             str(row.get("source_operation_id") or ""),
             str(row.get("repair_family") or ""),
@@ -3240,11 +3327,21 @@ def build_frontier_receiver_repair_queue(
             candidate_ids=_string_list(row.get("candidate_ids")),
             repo_root=repo,
         )
-        exact_readiness_steps = _receiver_repair_exact_readiness_bridge_steps(
+        receiver_runtime_steps = _receiver_repair_exact_readiness_bridge_steps(
             row=row,
             bridge_details=bridge_details,
             repair_dir=repair_dir,
             repo_root=repo,
+        )
+        exact_readiness_bridge_step_count = sum(
+            1
+            for step in receiver_runtime_steps
+            if str(step.get("id") or "").startswith("run_exact_readiness_bridge")
+        )
+        submission_closure_step_count = sum(
+            1
+            for step in receiver_runtime_steps
+            if str(step.get("id") or "").startswith("build_submission_runtime_closure")
         )
         experiments.append(
             {
@@ -3270,7 +3367,10 @@ def build_frontier_receiver_repair_queue(
                     "source_queue_paths": list(
                         bridge_details.get("source_queue_paths") or []
                     ),
-                    "exact_readiness_bridge_step_count": len(exact_readiness_steps),
+                    "submission_closure_step_count": submission_closure_step_count,
+                    "exact_readiness_bridge_step_count": (
+                        exact_readiness_bridge_step_count
+                    ),
                     "saved_bytes_at_risk": row.get("saved_bytes_at_risk"),
                     "correction_budget_context": dict(
                         row.get("correction_budget_context")
@@ -3326,7 +3426,7 @@ def build_frontier_receiver_repair_queue(
                             "include_postcondition_paths": True,
                         },
                     },
-                    *exact_readiness_steps,
+                    *receiver_runtime_steps,
                 ],
             }
         )
@@ -3353,6 +3453,38 @@ def build_frontier_receiver_repair_queue(
     )
 
 
+def _submission_closure_candidate_ids_for_source_queue(
+    source_queue_path: str,
+    *,
+    candidate_ids: Sequence[str],
+    repo_root: Path,
+) -> list[str | None]:
+    """Return candidates that can be statically closed from a source queue."""
+
+    queue_path = _resolve_path(source_queue_path, repo_root=repo_root)
+    if not queue_path.is_file():
+        return []
+    payload = _load_json(queue_path)
+    allowed = {str(candidate_id) for candidate_id in candidate_ids if str(candidate_id)}
+    out: list[str | None] = []
+    seen: set[str] = set()
+    for key in ("top_k", "dispatch_ready"):
+        for row in payload.get(key) or []:
+            if not isinstance(row, Mapping):
+                continue
+            candidate_id = str(row.get("candidate_id") or "")
+            if allowed and candidate_id not in allowed:
+                continue
+            if row.get("receiver_contract_satisfied") is not True:
+                continue
+            stable = candidate_id or "<single-implicit-candidate>"
+            if stable in seen:
+                continue
+            seen.add(stable)
+            out.append(candidate_id or None)
+    return out
+
+
 def _receiver_repair_exact_readiness_bridge_steps(
     *,
     row: Mapping[str, Any],
@@ -3364,66 +3496,176 @@ def _receiver_repair_exact_readiness_bridge_steps(
     if not source_queue_paths:
         return []
     candidate_ids = _string_list(row.get("candidate_ids"))
+    requires_submission_closure = (
+        str(row.get("repair_family") or "") == "submission_runtime_manifest_closure"
+    )
     steps: list[dict[str, Any]] = []
     for index, source_queue_path in enumerate(source_queue_paths, start=1):
-        suffix = "" if len(source_queue_paths) == 1 else f"_{index}"
-        bridge_dir = repair_dir / f"exact_readiness_bridge{suffix}"
-        bridge_report_path = bridge_dir / "exact_readiness_bridge_report.json"
-        readiness_dir = bridge_dir / "exact_readiness"
-        command = [
-            ".venv/bin/python",
-            MATERIALIZER_EXACT_READINESS_BRIDGE_TOOL,
-            "--source-queue",
-            source_queue_path,
-            "--exact-readiness-out-dir",
-            _repo_rel(readiness_dir, repo_root),
-            "--bridge-report-out",
-            _repo_rel(bridge_report_path, repo_root),
-            "--overwrite",
-            "--force-recompute",
-        ]
-        for candidate_id in candidate_ids:
-            command.extend(["--candidate-id", candidate_id])
-        steps.append(
-            {
-                "id": f"run_exact_readiness_bridge{suffix}",
-                "kind": "command",
-                "command": command,
-                "requires": ["emit_receiver_repair_work_order"],
-                "resources": {"kind": "local_cpu"},
-                "timeout_seconds": 120,
-                "postconditions": [
+        if requires_submission_closure:
+            closure_candidate_ids = _submission_closure_candidate_ids_for_source_queue(
+                source_queue_path,
+                candidate_ids=candidate_ids,
+                repo_root=repo_root,
+            )
+            if not closure_candidate_ids:
+                continue
+        elif len(source_queue_paths) == 1 and len(candidate_ids) == 1:
+            closure_candidate_ids = [candidate_ids[0]]
+        else:
+            closure_candidate_ids = [None]
+        for candidate_index, closure_candidate_id in enumerate(
+            closure_candidate_ids,
+            start=1,
+        ):
+            multi_source_suffix = "" if len(source_queue_paths) == 1 else f"_{index}"
+            multi_candidate_suffix = (
+                ""
+                if len(closure_candidate_ids) == 1
+                else f"_{candidate_index}_{_slug_token(closure_candidate_id)}"
+            )
+            suffix = f"{multi_source_suffix}{multi_candidate_suffix}"
+            bridge_source_queue_path = source_queue_path
+            step_requires = ["emit_receiver_repair_work_order"]
+            if requires_submission_closure:
+                closure_dir = repair_dir / f"submission_closure{suffix}"
+                closure_submission_dir = closure_dir / "submission"
+                closed_source_queue_path = closure_dir / "closed_source_queue.json"
+                closure_report_path = closure_dir / "submission_closure_report.json"
+                closure_command = [
+                    ".venv/bin/python",
+                    MATERIALIZER_SUBMISSION_CLOSURE_TOOL,
+                    "--source-queue",
+                    source_queue_path,
+                    "--submission-dir-out",
+                    _repo_rel(closure_submission_dir, repo_root),
+                    "--closed-source-queue-out",
+                    _repo_rel(closed_source_queue_path, repo_root),
+                    "--closure-report-out",
+                    _repo_rel(closure_report_path, repo_root),
+                    "--overwrite",
+                ]
+                if closure_candidate_id:
+                    closure_command.extend(["--candidate-id", closure_candidate_id])
+                closure_step_id = f"build_submission_runtime_closure{suffix}"
+                steps.append(
                     {
-                        "type": "json_equals",
-                        "path": _repo_rel(bridge_report_path, repo_root),
-                        "key": "schema",
-                        "equals": MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA,
-                    },
-                    {
-                        "type": "json_false_authority",
-                        "path": _repo_rel(bridge_report_path, repo_root),
-                    },
-                    {
-                        "type": "json_equals",
-                        "path": _repo_rel(bridge_report_path, repo_root),
-                        "key": "ready_for_exact_eval_dispatch",
-                        "equals": False,
-                    },
-                ],
-                "telemetry": {
-                    "artifact_paths": [
-                        _repo_rel(bridge_report_path, repo_root),
-                        _repo_rel(readiness_dir, repo_root),
+                        "id": closure_step_id,
+                        "kind": "command",
+                        "command": closure_command,
+                        "requires": ["emit_receiver_repair_work_order"],
+                        "resources": {"kind": "local_io_heavy"},
+                        "timeout_seconds": 180,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(closure_report_path, repo_root),
+                                "key": "schema",
+                                "equals": MATERIALIZER_SUBMISSION_CLOSURE_REPORT_SCHEMA,
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(closure_report_path, repo_root),
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(closed_source_queue_path, repo_root),
+                                "key": "schema",
+                                "equals": "optimizer_candidate_queue_v1",
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(closed_source_queue_path, repo_root),
+                                "false_or_missing": list(
+                                    QUEUE_FALSE_AUTHORITY_FALSE_OR_MISSING_FIELDS
+                                ),
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(closure_report_path, repo_root),
+                                "key": "ready_for_exact_eval_dispatch",
+                                "equals": False,
+                            },
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [
+                                _repo_rel(closure_report_path, repo_root),
+                                _repo_rel(closed_source_queue_path, repo_root),
+                                _repo_rel(closure_submission_dir, repo_root),
+                            ],
+                            "input_artifact_paths": [
+                                source_queue_path,
+                                *list(row.get("bridge_report_paths") or []),
+                            ],
+                            "recursive": True,
+                            "include_postcondition_paths": True,
+                        },
+                    }
+                )
+                bridge_source_queue_path = _repo_rel(closed_source_queue_path, repo_root)
+                step_requires = ["emit_receiver_repair_work_order", closure_step_id]
+            bridge_dir = repair_dir / f"exact_readiness_bridge{suffix}"
+            bridge_report_path = bridge_dir / "exact_readiness_bridge_report.json"
+            readiness_dir = bridge_dir / "exact_readiness"
+            command = [
+                ".venv/bin/python",
+                MATERIALIZER_EXACT_READINESS_BRIDGE_TOOL,
+                "--source-queue",
+                bridge_source_queue_path,
+                "--exact-readiness-out-dir",
+                _repo_rel(readiness_dir, repo_root),
+                "--bridge-report-out",
+                _repo_rel(bridge_report_path, repo_root),
+                "--overwrite",
+                "--force-recompute",
+            ]
+            bridge_candidate_ids = (
+                [closure_candidate_id]
+                if requires_submission_closure and closure_candidate_id
+                else ([] if requires_submission_closure else candidate_ids)
+            )
+            for candidate_id in bridge_candidate_ids:
+                if candidate_id:
+                    command.extend(["--candidate-id", candidate_id])
+            steps.append(
+                {
+                    "id": f"run_exact_readiness_bridge{suffix}",
+                    "kind": "command",
+                    "command": command,
+                    "requires": step_requires,
+                    "resources": {"kind": "local_cpu"},
+                    "timeout_seconds": 120,
+                    "postconditions": [
+                        {
+                            "type": "json_equals",
+                            "path": _repo_rel(bridge_report_path, repo_root),
+                            "key": "schema",
+                            "equals": MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA,
+                        },
+                        {
+                            "type": "json_false_authority",
+                            "path": _repo_rel(bridge_report_path, repo_root),
+                        },
+                        {
+                            "type": "json_equals",
+                            "path": _repo_rel(bridge_report_path, repo_root),
+                            "key": "ready_for_exact_eval_dispatch",
+                            "equals": False,
+                        },
                     ],
-                    "input_artifact_paths": [
-                        source_queue_path,
-                        *list(row.get("bridge_report_paths") or []),
-                    ],
-                    "recursive": True,
-                    "include_postcondition_paths": True,
-                },
-            }
-        )
+                    "telemetry": {
+                        "artifact_paths": [
+                            _repo_rel(bridge_report_path, repo_root),
+                            _repo_rel(readiness_dir, repo_root),
+                        ],
+                        "input_artifact_paths": [
+                            bridge_source_queue_path,
+                            *list(row.get("bridge_report_paths") or []),
+                        ],
+                        "recursive": True,
+                        "include_postcondition_paths": True,
+                    },
+                }
+            )
     return steps
 
 

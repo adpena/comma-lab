@@ -282,7 +282,7 @@ def _write_materializer_feedback(root: Path) -> Path:
             "candidate_id": "receiver_smoke_candidate",
             "ready_for_exact_eval_dispatch": False,
             "blockers": [
-                "inflate_sh_missing",
+                "archive_manifest_missing",
                 "runtime_tree_sha256_missing",
             ],
         },
@@ -308,12 +308,15 @@ def _write_materializer_feedback(root: Path) -> Path:
                     "source_manifest_path": (
                         "experiments/results/receiver_smoke/source_manifest.json"
                     ),
-                    "runtime_consumption_proof_path": None,
+                    "runtime_consumption_proof_status": "present",
+                    "runtime_consumption_proof_path": (
+                        "experiments/results/receiver_smoke/runtime_consumption_proof.json"
+                    ),
                     "receiver_contract_kind": "packet_member_zip_header_elide_v1",
-                    "receiver_contract_satisfied": False,
-                    "runtime_adapter_ready": False,
+                    "receiver_contract_satisfied": True,
+                    "runtime_adapter_ready": True,
                     "readiness_blockers": [
-                        "inflate_sh_missing",
+                        "archive_manifest_missing",
                         "runtime_tree_sha256_missing",
                     ],
                 }
@@ -339,7 +342,7 @@ def _write_materializer_feedback(root: Path) -> Path:
                     **_false_authority(),
                     "candidate_id": "receiver_smoke_candidate",
                     "blockers": [
-                        "inflate_sh_missing",
+                        "archive_manifest_missing",
                         "runtime_tree_sha256_missing",
                     ],
                     "exact_readiness_report_path": exact_readiness_report.relative_to(
@@ -1369,14 +1372,43 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         for step in experiment["steps"]
         if str(step["id"]).startswith("run_exact_readiness_bridge")
     ]
+    closure_steps = [
+        step
+        for experiment in repair_queue["experiments"]
+        for step in experiment["steps"]
+        if str(step["id"]).startswith("build_submission_runtime_closure")
+    ]
+    assert closure_steps
+    closure_step = closure_steps[0]
+    assert closure_step["command"][1] == "tools/build_materializer_submission_closure.py"
+    assert "--closed-source-queue-out" in closure_step["command"]
+    assert "--submission-dir-out" in closure_step["command"]
+    assert "--closure-report-out" in closure_step["command"]
+    assert any(
+        postcondition["type"] == "json_false_authority"
+        for postcondition in closure_step["postconditions"]
+    )
+    closed_queue_false_authority = [
+        postcondition
+        for postcondition in closure_step["postconditions"]
+        if postcondition["type"] == "json_false_authority"
+        and str(postcondition["path"]).endswith("closed_source_queue.json")
+    ]
+    assert closed_queue_false_authority
+    assert "dispatch_ready" not in closed_queue_false_authority[0]["false_or_missing"]
     assert bridge_steps
     bridge_step = bridge_steps[0]
     assert bridge_step["command"][1] == "tools/run_materializer_exact_readiness_bridge.py"
     assert "--source-queue" in bridge_step["command"]
+    bridge_source_queue = bridge_step["command"][
+        bridge_step["command"].index("--source-queue") + 1
+    ]
+    assert bridge_source_queue.endswith("submission_closure/closed_source_queue.json")
     assert "--bridge-report-out" in bridge_step["command"]
     assert "--overwrite" in bridge_step["command"]
     assert "--force-recompute" in bridge_step["command"]
     assert "emit_receiver_repair_work_order" in bridge_step["requires"]
+    assert closure_step["id"] in bridge_step["requires"]
     assert any(
         postcondition["type"] == "json_false_authority"
         for postcondition in bridge_step["postconditions"]
@@ -1389,6 +1421,7 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     )
     assert any(
         experiment["metadata"]["exact_readiness_bridge_step_count"] > 0
+        and experiment["metadata"]["submission_closure_step_count"] > 0
         and experiment["metadata"]["source_queue_paths"]
         for experiment in repair_queue["experiments"]
     )

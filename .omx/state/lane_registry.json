@@ -56837,6 +56837,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_materializer_submission_runtime_closure_repair_20260526",
+      "name": "Materializer submission runtime closure repair",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_materializer_submission_runtime_closure_20260526T012338Z_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/frontier_operation_portfolio/frontier_receiver_repair/frontier_operation_portfolio_20260526t012046z_receiver_repair/receiver_repair_materializer_packet_member_zip_header_elide_v1_submission_runtime_manifest_closure_archive_manifest_missing/exact_readiness_bridge/exact_readiness_bridge_report.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "ruff+pytest+queue_validate+lane_validate+review_policy_20260526T0123Z"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_materializer_submission_runtime_closure_20260526T012338Z_codex.md"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -56846,5 +56887,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T00:17:04Z"
+  "updated_at": "2026-05-26T01:26:35Z"
 }

@@ -265,6 +265,11 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
     )
     proof_present = receiver_map.get("proof_present") is True
     receiver_satisfied = manifest.get("receiver_contract_satisfied") is True
+    # At this queue boundary the flag means "no runtime-adapter blocker remains",
+    # not necessarily "a separate adapter file exists".  Identity-style
+    # materializers can have no generated adapter while still being ready once
+    # the runtime-consumption proof is verified.
+    runtime_adapter_ready = receiver_satisfied
     raw_proof_path = (
         receiver_map.get("proof_path") or manifest.get("runtime_consumption_proof_path")
     )
@@ -335,9 +340,9 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
             byte_changed=byte_changed,
         ),
         "byte_closed_candidate_emitted": True,
-        "runtime_adapter_ready": receiver_satisfied,
+        "runtime_adapter_ready": runtime_adapter_ready,
         "receiver_contract_satisfied": receiver_satisfied,
-        "candidate_runtime_adapter_blocker_cleared": receiver_satisfied,
+        "candidate_runtime_adapter_blocker_cleared": runtime_adapter_ready,
         "readiness_blockers": _string_list(manifest.get("readiness_blockers")),
         "runtime_consumption_proof_required": True,
         "runtime_consumption_proof_status": "present" if proof_present else "missing",
@@ -375,9 +380,9 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
     )
     out["score_affecting_payload_changed"] = archive_changed
     out["charged_bits_changed"] = byte_changed
-    out["runtime_adapter_ready"] = receiver_satisfied
+    out["runtime_adapter_ready"] = runtime_adapter_ready
     out["receiver_contract_satisfied"] = receiver_satisfied
-    out["candidate_runtime_adapter_blocker_cleared"] = receiver_satisfied
+    out["candidate_runtime_adapter_blocker_cleared"] = runtime_adapter_ready
     return out
 
 

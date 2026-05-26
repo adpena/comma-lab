@@ -33,6 +33,7 @@ from tac.optimizer.exact_readiness import (
     ACTIVE_RATE_ONLY_FLOOR_SCORE,
     ACTIVE_SCORE_FRONTIER_SCORE,
     promote_candidate_for_exact_eval,
+    validate_runtime_consumption_proof,
 )
 from tac.optimizer.exact_ready_audit import audit_exact_ready_queue
 
@@ -49,6 +50,46 @@ def test_active_floor_score_tracks_score_frontier_not_rate_only_anchor() -> None
     )
     assert ACTIVE_SCORE_FRONTIER_SCORE == 0.2063163866158099
     assert ACTIVE_FLOOR_SCORE == ACTIVE_SCORE_FRONTIER_SCORE
+
+
+def test_family_agnostic_runtime_proof_requires_runtime_consumption_signal(
+    tmp_path: Path,
+) -> None:
+    proof = _write_json(
+        tmp_path / "receiver_only_proof.json",
+        {
+            "schema": "family_agnostic_runtime_consumption_proof_v1",
+            "target_kind": "packet_member_zip_header_elide_v1",
+            "materializer_id": "packet_member_zip_header_elide_adapter",
+            "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+            "receiver_contract_satisfied": True,
+            "candidate_archive_sha256": "a" * 64,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    blockers, facts = validate_runtime_consumption_proof(
+        {
+            "target_kind": "packet_member_zip_header_elide_v1",
+            "materializer_id": "packet_member_zip_header_elide_adapter",
+            "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+            "runtime_consumption_proof_required": True,
+            "runtime_consumption_proof_status": "present",
+            "runtime_consumption_proof_path": str(proof),
+        },
+        repo_root=tmp_path,
+        queue_dir=tmp_path,
+        submission_dir=None,
+        archive_sha256="a" * 64,
+    )
+
+    assert facts["runtime_consumption_proof_schema"] == (
+        "family_agnostic_runtime_consumption_proof_v1"
+    )
+    assert "runtime_consumption_proof_not_proven" in blockers
 
 
 def _load_parallel_dispatch_tool():
@@ -441,6 +482,7 @@ def _write_family_agnostic_runtime_proof(
         "materializer_id": "packet_member_recompress_adapter",
         "receiver_contract_kind": "family_agnostic_packet_member_recompress",
         "receiver_contract_satisfied": proven,
+        "runtime_consumption_proof_passed": proven,
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
         "dispatch_attempted": False,
