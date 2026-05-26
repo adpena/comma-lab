@@ -58925,6 +58925,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_meta_lagrangian_dual_solver_phase_2_20260526",
+      "name": "Meta-Lagrangian Dual Solver Phase 2",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/findings_lagrangian/dual_solver_phase_2.py + tests pass + 8-cand MLX-local smoke 100% converged"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #355 STRICT preflight gate Phase 2 invocation contract preservation; 50 unit tests pass"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/meta_lagrangian_dual_solver_phase_2_full_scorer_attack_landed_20260526.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -58934,5 +58975,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T20:09:50Z"
+  "updated_at": "2026-05-26T20:26:28Z"
 }

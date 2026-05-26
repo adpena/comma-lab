@@ -140,6 +140,21 @@ from tac.findings_lagrangian.unified import (
     ensemble_prediction_from_tracks,
     EnsembleError,
 )
+from tac.findings_lagrangian.dual_solver_phase_2 import (
+    PerAxisDualSolverResult,
+    Phase2SolverError,
+    compute_per_axis_dual_variables,
+    dykstra_alternating_projections_3_axis,
+    kkt_residuals_per_axis,
+    per_axis_adjustment_factors,
+    PHASE_2_DUAL_SOLVER_SCHEMA_VERSION,
+    PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MIN,
+    PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MAX,
+    DYKSTRA_DEFAULT_MAX_ITERATIONS,
+    DYKSTRA_DEFAULT_EPSILON,
+    AXIS_NAMES,
+    MLX_AVAILABLE,
+)
 
 
 __all__ = [
@@ -201,4 +216,18 @@ __all__ = [
     "UnifiedPrediction",
     "ensemble_prediction_from_tracks",
     "EnsembleError",
+    # dual_solver_phase_2
+    "PerAxisDualSolverResult",
+    "Phase2SolverError",
+    "compute_per_axis_dual_variables",
+    "dykstra_alternating_projections_3_axis",
+    "kkt_residuals_per_axis",
+    "per_axis_adjustment_factors",
+    "PHASE_2_DUAL_SOLVER_SCHEMA_VERSION",
+    "PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MIN",
+    "PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MAX",
+    "DYKSTRA_DEFAULT_MAX_ITERATIONS",
+    "DYKSTRA_DEFAULT_EPSILON",
+    "AXIS_NAMES",
+    "MLX_AVAILABLE",
 ]
