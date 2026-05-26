@@ -30,7 +30,14 @@ from comma_lab.scheduler.dqs1_local_first_queue import (  # noqa: E402
     DEFAULT_RESULTS_ROOT,
     find_latest_cross_family_action_summary,
 )
-from comma_lab.scheduler.experiment_queue import ExperimentQueueError  # noqa: E402
+from comma_lab.scheduler.experiment_queue import (  # noqa: E402
+    ExperimentQueueError,
+    default_state_path,
+    load_queue_definition,
+)
+from comma_lab.scheduler.experiment_queue_observer import (  # noqa: E402
+    observe_experiment_queue,
+)
 from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
     OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA,
     OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA,
@@ -200,6 +207,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Explicit family-agnostic materializer sweep/observation JSON or JSONL. May repeat.",
     )
     parser.add_argument(
+        "--materializer-execution-queue",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Completed experiment_queue.v1 materializer execution queue to observe "
+            "and fold back as materializer feedback. May repeat."
+        ),
+    )
+    parser.add_argument(
+        "--materializer-execution-state",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "SQLite state path for the corresponding --materializer-execution-queue. "
+            "If omitted, the queue's canonical default state path is used."
+        ),
+    )
+    parser.add_argument(
         "--pair-frame-geometry-lattice",
         action="append",
         default=[],
@@ -367,6 +394,41 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Free GiB to preserve on each cold-store tier for MLX cache moves.",
     )
     return parser.parse_args(argv)
+
+
+def _observe_materializer_execution_queues(
+    queue_paths: list[Path],
+    state_paths: list[Path],
+    *,
+    output_dir: Path,
+) -> list[str]:
+    if not queue_paths:
+        return []
+    if state_paths and len(state_paths) != len(queue_paths):
+        raise FrontierRateAttackFeedbackError(
+            "--materializer-execution-state must be supplied once per execution queue"
+        )
+    feedback_paths: list[str] = []
+    observation_dir = output_dir / "materializer_execution_queue_observations"
+    observation_dir.mkdir(parents=True, exist_ok=True)
+    for index, queue_path in enumerate(queue_paths):
+        queue = load_queue_definition(queue_path)
+        queue_id = str(queue.get("queue_id") or queue_path.stem)
+        state_path = (
+            state_paths[index]
+            if state_paths
+            else default_state_path(REPO_ROOT, queue_id)
+        )
+        observation = observe_experiment_queue(
+            queue,
+            state_path=state_path,
+            repo_root=REPO_ROOT,
+            tail_lines=0,
+        )
+        path = observation_dir / f"{index:02d}_{queue_id}_observation.json"
+        write_json_artifact(path, observation)
+        feedback_paths.append(_display_path(path))
+    return feedback_paths
 
 
 def _action_summary_path(value: str) -> Path | None:
@@ -1323,6 +1385,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     try:
         action_summary_path = _action_summary_path(args.action_summary)
+        materializer_feedback_paths = [
+            *args.materializer_feedback,
+            *_observe_materializer_execution_queues(
+                list(args.materializer_execution_queue),
+                list(args.materializer_execution_state),
+                output_dir=output_dir,
+            ),
+        ]
         generated_pair_frame_lattice, generated_pair_frame_lattice_summary = (
             _build_generated_pair_frame_lattice(
                 output_dir=output_dir,
@@ -1349,7 +1419,7 @@ def main(argv: list[str] | None = None) -> int:
             repo_root=REPO_ROOT,
             frontier_artifact_roots=tuple(args.frontier_artifact_root),
             local_cpu_eureka_roots=tuple(args.local_cpu_eureka_root),
-            materializer_feedback_paths=tuple(args.materializer_feedback),
+            materializer_feedback_paths=tuple(materializer_feedback_paths),
             pair_frame_geometry_paths=tuple(pair_frame_geometry_paths),
             dqs1_observation_paths=tuple(args.dqs1_observation_jsonl),
             max_files_per_root=args.max_files_per_root,

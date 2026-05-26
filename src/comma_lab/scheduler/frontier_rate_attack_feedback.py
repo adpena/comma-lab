@@ -32,6 +32,7 @@ from tac.optimization.materializer_feedback import (
     FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA,
     FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA,
     materializer_observation_feedback_rows,
+    materializer_observation_feedback_rows_from_queue_observation,
 )
 from tac.optimization.mlx_dynamic_sweep_observations import (
     MLXDynamicSweepObservationError,
@@ -775,6 +776,10 @@ def _finite_float_or_none(value: object) -> float | None:
 def _is_materializer_feedback_payload(payload: Mapping[str, Any]) -> bool:
     schema = str(payload.get("schema") or "")
     observation_kind = str(payload.get("observation_kind") or "")
+    if schema == "experiment_queue_observation.v1":
+        return bool(
+            materializer_observation_feedback_rows_from_queue_observation(payload)
+        )
     if schema in {
         FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA,
         FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA,

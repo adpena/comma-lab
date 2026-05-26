@@ -1141,6 +1141,8 @@ def test_materializer_feedback_discovery_accepts_queue_observation_top_k(
                                         "source_runtime_native_renderer_payload_dfl1"
                                     ),
                                     "receiver_contract_satisfied": True,
+                                    "score_affecting_payload_changed": True,
+                                    "charged_bits_changed": True,
                                     "candidate_archive": {
                                         "bytes": 345_422,
                                         "sha256": "e" * 64,

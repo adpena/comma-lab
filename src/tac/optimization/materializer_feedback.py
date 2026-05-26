@@ -37,6 +37,10 @@ MATERIALIZER_DELTA_KEYS: tuple[str, ...] = (
     "factorization",
 )
 SERIALIZED_ARCHIVE_DELTA_KEY = "serialized_archive_delta"
+FACTUAL_MATERIALIZER_EFFECT_FLAGS = (
+    "score_affecting_payload_changed",
+    "charged_bits_changed",
+)
 
 
 def _slug(value: Any, *, fallback: str = "materializer_feedback") -> str:
@@ -356,6 +360,143 @@ def _false_authority_observation(row: Mapping[str, Any], *, source_path: str | N
     return out
 
 
+def _planner_safe_materializer_row(row: Mapping[str, Any]) -> dict[str, Any]:
+    out = dict(row)
+    for key in FACTUAL_MATERIALIZER_EFFECT_FLAGS:
+        if key in out:
+            out[f"materializer_{key}"] = out[key] is True
+            out[key] = False
+    candidate_archive = dict(out.get("candidate_archive", {}))
+    for source_key, target_key in (
+        ("candidate_archive_path", "path"),
+        ("archive_path", "path"),
+        ("candidate_archive_bytes", "bytes"),
+        ("archive_bytes", "bytes"),
+        ("candidate_archive_sha256", "sha256"),
+        ("archive_sha256", "sha256"),
+    ):
+        if target_key not in candidate_archive and source_key in out:
+            candidate_archive[target_key] = out[source_key]
+    if candidate_archive:
+        out["candidate_archive"] = candidate_archive
+    source_archive = dict(out.get("source_archive", {}))
+    for source_key, target_key in (
+        ("source_archive_path", "path"),
+        ("source_archive_bytes", "bytes"),
+        ("source_archive_sha256", "sha256"),
+    ):
+        if target_key not in source_archive and source_key in out:
+            source_archive[target_key] = out[source_key]
+    if source_archive:
+        out["source_archive"] = source_archive
+    return out
+
+
+def _planner_safe_queue_observation(observation: Mapping[str, Any]) -> dict[str, Any]:
+    out = dict(observation)
+    steps: list[dict[str, Any]] = []
+    changed = False
+    for step in observation.get("succeeded_artifact_steps") or []:
+        if not isinstance(step, Mapping):
+            steps.append(step)
+            continue
+        step_out = dict(step)
+        artifacts: list[dict[str, Any]] = []
+        for artifact in step.get("expected_artifacts") or []:
+            if not isinstance(artifact, Mapping):
+                artifacts.append(artifact)
+                continue
+            artifact_out = dict(artifact)
+            materializer_rows = artifact.get("optimizer_candidate_queue_materializer_rows")
+            if isinstance(materializer_rows, list):
+                safe_rows = [
+                    _planner_safe_materializer_row(row)
+                    if isinstance(row, Mapping)
+                    else row
+                    for row in materializer_rows
+                ]
+                artifact_out["optimizer_candidate_queue_materializer_rows"] = safe_rows
+                changed = True
+            artifacts.append(artifact_out)
+        step_out["expected_artifacts"] = artifacts
+        steps.append(step_out)
+    if changed:
+        out["succeeded_artifact_steps"] = steps
+    return out
+
+
+def materializer_observation_feedback_rows_from_queue_observation(
+    observation: Mapping[str, Any],
+    *,
+    source_path: str | None = None,
+) -> list[dict[str, Any]]:
+    """Extract materializer feedback rows from an experiment queue observation.
+
+    Exact-handoff optimizer queues often carry the corrected receiver/runtime
+    proof in ``top_k`` rows after an earlier manifest was written. This bridge
+    makes those later rows first-class planner feedback without granting score
+    or dispatch authority.
+    """
+
+    safe_observation = _planner_safe_queue_observation(observation)
+    require_no_truthy_authority_fields(
+        safe_observation,
+        context="family_agnostic_materializer_feedback.queue_observation",
+    )
+    rows: list[dict[str, Any]] = []
+    for step in safe_observation.get("succeeded_artifact_steps") or []:
+        if not isinstance(step, Mapping):
+            continue
+        for artifact in step.get("expected_artifacts") or []:
+            if not isinstance(artifact, Mapping):
+                continue
+            artifact_path = str(artifact.get("path") or source_path or "").strip()
+            materializer_rows = artifact.get("optimizer_candidate_queue_materializer_rows")
+            if not isinstance(materializer_rows, list):
+                continue
+            for index, row in enumerate(materializer_rows):
+                if not isinstance(row, Mapping):
+                    continue
+                safe_row = _planner_safe_materializer_row(row)
+                require_no_truthy_authority_fields(
+                    safe_row,
+                    context=(
+                        "family_agnostic_materializer_feedback."
+                        f"queue_observation.top_k[{index}]"
+                    ),
+                )
+                normalized = materializer_observation_from_manifest(
+                    {
+                        **safe_row,
+                        "resource_kind": step.get("resource_kind") or "local_cpu",
+                        "source_unit_ids": (
+                            row.get("source_unit_ids") or step.get("source_unit_ids")
+                        ),
+                        "source_selection_ids": (
+                            row.get("source_selection_ids")
+                            or step.get("source_selection_ids")
+                        ),
+                        "work_ids": row.get("work_ids") or step.get("work_ids"),
+                        "backlog_keys": (
+                            row.get("backlog_keys") or step.get("backlog_keys")
+                        ),
+                    },
+                    row_slug=str(
+                        row.get("candidate_id")
+                        or f"{step.get('experiment_id')}_{step.get('step_id')}_{index}"
+                    ),
+                    manifest_path=artifact_path or source_path,
+                    axis=str(observation.get("axis") or DEFAULT_LOCAL_MATERIALIZER_AXIS),
+                )
+                if normalized is not None:
+                    normalized["queue_id"] = observation.get("queue_id")
+                    normalized["experiment_id"] = step.get("experiment_id")
+                    normalized["step_id"] = step.get("step_id")
+                    normalized["source_queue_observation_path"] = source_path
+                    rows.append(normalized)
+    return rows
+
+
 def materializer_observation_feedback_rows(
     payloads: Mapping[str, Any] | list[Mapping[str, Any]] | tuple[Mapping[str, Any], ...],
     *,
@@ -372,6 +513,14 @@ def materializer_observation_feedback_rows(
             continue
         schema = str(payload.get("schema") or "")
         observation_kind = str(payload.get("observation_kind") or "")
+        if schema == "experiment_queue_observation.v1":
+            rows.extend(
+                materializer_observation_feedback_rows_from_queue_observation(
+                    payload,
+                    source_path=source_path,
+                )
+            )
+            continue
         observations = payload.get("observations")
         if observations is None:
             observations = payload.get("rows")
@@ -429,6 +578,7 @@ __all__ = [
     "SERIALIZED_ARCHIVE_DELTA_KEY",
     "materializer_archive_delta",
     "materializer_observation_feedback_rows",
+    "materializer_observation_feedback_rows_from_queue_observation",
     "materializer_observation_from_manifest",
     "optional_int",
     "selected_materializer_delta",

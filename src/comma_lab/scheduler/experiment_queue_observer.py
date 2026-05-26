@@ -31,6 +31,7 @@ OBSERVATION_SCHEMA = "experiment_queue_observation.v1"
 LOCAL_TRAINING_SIGNAL_OBSERVATION_SCHEMA = "local_training_signal_observation.v1"
 FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_OBSERVATION_SCHEMA = "family_agnostic_materializer_empirical_observation.v1"
 FAMILY_AGNOSTIC_MATERIALIZER_EMPIRICAL_SWEEP_SCHEMA = "family_agnostic_materializer_empirical_sweep.v1"
+OPTIMIZER_CANDIDATE_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
 PR95_MLX_PACKAGE_SCHEMA = "pr95_mlx_pytorch_state_dict_to_contest_archive.v1"
 PR95_MLX_LONG_TRAINING_PLAN_SCHEMA = "pr95_mlx_long_training_plan.v1"
 HINTON_MLX_LONG_TRAINING_SMOKE_SCHEMA = "hinton_mlx_long_training_smoke_verdict.v1"
@@ -367,7 +368,162 @@ def _path_artifact_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
                     )
                     if key in score
                 }
+            if record.get("json_schema") == OPTIMIZER_CANDIDATE_QUEUE_SCHEMA:
+                materializer_rows = _optimizer_candidate_queue_materializer_rows(payload)
+                if materializer_rows:
+                    record["optimizer_candidate_queue_materializer_row_count"] = len(
+                        materializer_rows
+                    )
+                    record["optimizer_candidate_queue_materializer_rows"] = (
+                        materializer_rows
+                    )
     return record
+
+
+def _optimizer_candidate_queue_materializer_rows(
+    payload: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    top_k = payload.get("top_k")
+    if not isinstance(top_k, Sequence) or isinstance(
+        top_k,
+        (str, bytes, bytearray),
+    ):
+        return rows
+    for row_index, raw_row in enumerate(top_k):
+        if not isinstance(raw_row, Mapping):
+            continue
+        materializer_row = _optimizer_candidate_queue_materializer_row(
+            raw_row,
+            row_index=row_index,
+        )
+        if materializer_row is not None:
+            rows.append(materializer_row)
+    return rows
+
+
+def _optimizer_candidate_queue_materializer_row(
+    row: Mapping[str, Any],
+    *,
+    row_index: int,
+) -> dict[str, Any] | None:
+    if not _artifact_has_materializer_identity(row):
+        return None
+    delta = materializer_archive_delta(row)
+    serialized_delta = row.get("serialized_archive_delta")
+    if delta is None and not isinstance(serialized_delta, Mapping):
+        return None
+    out: dict[str, Any] = {
+        "optimizer_candidate_queue_row_index": row_index,
+        "candidate_id": row.get("candidate_id"),
+        "target_kind": row.get("target_kind"),
+        "materializer_id": row.get("materializer_id"),
+        "receiver_contract_kind": row.get("receiver_contract_kind"),
+        "receiver_contract_satisfied": row.get("receiver_contract_satisfied"),
+        "readiness_blockers": [
+            str(item) for item in row.get("readiness_blockers") or [] if str(item)
+        ],
+    }
+    for key in MATERIALIZER_FALSE_AUTHORITY:
+        if key in {"score_affecting_payload_changed", "charged_bits_changed"}:
+            continue
+        if key in row:
+            out[key] = row[key]
+    for key in ("score_affecting_payload_changed", "charged_bits_changed"):
+        if key in row:
+            out[f"materializer_{key}"] = row[key] is True
+    for key in REQUIRED_MATERIALIZER_FEEDBACK_FALSE_AUTHORITY_FIELDS:
+        if key in row:
+            out[key] = row[key]
+    receiver = row.get("receiver_verification")
+    if isinstance(receiver, Mapping):
+        out["receiver_verification"] = {
+            key: receiver.get(key)
+            for key in (
+                "schema",
+                "receiver_contract_kind",
+                "receiver_contract_satisfied",
+                "runtime_adapter_ready",
+                "proof_present",
+                "proof_schema",
+            )
+            if key in receiver
+        }
+        if isinstance(receiver.get("blockers"), list):
+            out["receiver_verification"]["blockers"] = [
+                str(item) for item in receiver["blockers"] if str(item)
+            ]
+    for source_key in (
+        "candidate_archive",
+        "source_archive",
+        "serialized_archive_delta",
+        "selected_payload",
+        "selected_elision",
+        "selected_merge",
+        "selected_compression",
+        "section_recode",
+        "factorization",
+    ):
+        value = row.get(source_key)
+        if isinstance(value, Mapping):
+            out[source_key] = dict(value)
+    candidate_archive = dict(out.get("candidate_archive", {}))
+    for source_key, target_key in (
+        ("candidate_archive_path", "path"),
+        ("archive_path", "path"),
+        ("candidate_archive_bytes", "bytes"),
+        ("archive_bytes", "bytes"),
+        ("candidate_archive_sha256", "sha256"),
+        ("archive_sha256", "sha256"),
+    ):
+        if target_key not in candidate_archive and source_key in row:
+            candidate_archive[target_key] = row[source_key]
+    if candidate_archive:
+        out["candidate_archive"] = candidate_archive
+    source_archive = dict(out.get("source_archive", {}))
+    for source_key, target_key in (
+        ("source_archive_path", "path"),
+        ("source_archive_bytes", "bytes"),
+        ("source_archive_sha256", "sha256"),
+    ):
+        if target_key not in source_archive and source_key in row:
+            source_archive[target_key] = row[source_key]
+    if source_archive:
+        out["source_archive"] = source_archive
+    if isinstance(delta, Mapping):
+        selected_key = delta.get("selected_materialization_key")
+        out["materializer_delta_source"] = selected_key
+        out["serialized_archive_delta_status"] = delta.get("status")
+        out["serialized_archive_delta_realized_saved_bytes"] = delta.get(
+            "realized_saved_bytes"
+        )
+        out["serialized_archive_delta_savings_realized"] = delta.get(
+            "savings_realized"
+        )
+        out["serialized_archive_delta_source_archive_bytes"] = delta.get(
+            "source_archive_bytes"
+        )
+        out["serialized_archive_delta_candidate_archive_bytes"] = delta.get(
+            "candidate_archive_bytes"
+        )
+        if selected_key:
+            prefix = str(selected_key)
+            out[f"{prefix}_saved_bytes"] = delta.get("realized_saved_bytes")
+            out[f"{prefix}_source_archive_bytes"] = delta.get(
+                "source_archive_bytes"
+            )
+            out[f"{prefix}_candidate_archive_bytes"] = delta.get(
+                "candidate_archive_bytes"
+            )
+    for key in (
+        "full_frame_inflate_parity_proven",
+        "renderer_payload_dfl1_full_frame_inflate_parity_satisfied",
+        "renderer_payload_dfl1_full_frame_inflate_parity_proof_path",
+        "renderer_payload_dfl1_full_frame_inflate_parity_proof_sha256",
+    ):
+        if key in row:
+            out[key] = row[key]
+    return {key: value for key, value in out.items() if value is not None}
 
 def _experiment_lookup(queue: Mapping[str, Any]) -> dict[tuple[str, str], Mapping[str, Any]]:
     out: dict[tuple[str, str], Mapping[str, Any]] = {}
@@ -649,6 +805,8 @@ def _step_has_materializer_feedback_artifact(
             continue
         if not _artifact_false_authority_satisfied(artifact):
             continue
+        if artifact.get("optimizer_candidate_queue_materializer_row_count"):
+            return True
         if (
             artifact.get("postcondition_type") == "jsonl_false_authority"
             and artifact.get("postcondition_schema_equals")

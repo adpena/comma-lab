@@ -2132,6 +2132,151 @@ def test_queue_materializer_delta_reads_family_local_archive_delta_fields() -> N
     assert row["score_claim"] is False
 
 
+def test_queue_observation_reads_optimizer_candidate_queue_top_k_overlay() -> None:
+    candidate_id = "renderer_payload_dfl1_e20295f0a662"
+    source_unit_id = "renderer_payload_unit"
+    observations = observations_from_queue_observation(
+        {
+            "schema": "experiment_queue_observation.v1",
+            "queue_id": "materializer_queue",
+            "healthy": True,
+            "succeeded_artifact_steps": [
+                {
+                    "experiment_id": "materializer_stale",
+                    "step_id": "materialize_local_proof_chain",
+                    "status": "succeeded",
+                    "resource_kind": "local_cpu",
+                    "source_unit_ids": [source_unit_id],
+                    "expected_artifacts": [
+                        {
+                            "path": "stale_manifest.json",
+                            "exists": True,
+                            "target_kind": "renderer_payload_dfl1_v1",
+                            "materializer_id": "renderer_payload_dfl1_adapter",
+                            "receiver_contract_kind": (
+                                "source_runtime_native_renderer_payload_dfl1"
+                            ),
+                            "receiver_contract_satisfied": False,
+                            "candidate_archive": {
+                                "bytes": 345_422,
+                                "sha256": "e" * 64,
+                            },
+                            "selected_payload_saved_bytes": 380,
+                            "selected_payload_source_archive_bytes": 345_802,
+                            "selected_payload_candidate_archive_bytes": 345_422,
+                            "serialized_archive_delta_status": "realized_saving",
+                            "serialized_archive_delta_savings_realized": True,
+                            "readiness_blockers": [
+                                "runtime_consumption_proof_not_passed",
+                            ],
+                            **_planning_false_authority(),
+                        }
+                    ],
+                },
+                {
+                    "experiment_id": "materializer_exp",
+                    "step_id": "harvest_materializer_chains",
+                    "status": "succeeded",
+                    "resource_kind": "local_cpu",
+                    "source_unit_ids": [source_unit_id],
+                    "source_selection_ids": ["renderer_payload_selection"],
+                    "expected_artifacts": [
+                        {
+                            "path": "source_queue.json",
+                            "exists": True,
+                            "json_schema": "optimizer_candidate_queue_v1",
+                            "postcondition_passed": True,
+                            "optimizer_candidate_queue_materializer_row_count": 1,
+                            "optimizer_candidate_queue_materializer_rows": [
+                                {
+                                    "candidate_id": candidate_id,
+                                    "target_kind": "renderer_payload_dfl1_v1",
+                                    "materializer_id": "renderer_payload_dfl1_adapter",
+                                    "receiver_contract_kind": (
+                                        "source_runtime_native_renderer_payload_dfl1"
+                                    ),
+                                    "receiver_contract_satisfied": True,
+                                    "score_affecting_payload_changed": True,
+                                    "charged_bits_changed": True,
+                                    "readiness_blockers": [],
+                                    "candidate_archive": {
+                                        "bytes": 345_422,
+                                        "sha256": "e" * 64,
+                                    },
+                                    "serialized_archive_delta_status": (
+                                        "realized_saving"
+                                    ),
+                                    "serialized_archive_delta_realized_saved_bytes": (
+                                        380
+                                    ),
+                                    "serialized_archive_delta_savings_realized": True,
+                                    "serialized_archive_delta_source_archive_bytes": (
+                                        345_802
+                                    ),
+                                    "serialized_archive_delta_candidate_archive_bytes": (
+                                        345_422
+                                    ),
+                                    **_planning_false_authority(),
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
+            **_planning_false_authority(),
+        },
+        runtime_identity={"runtime_tree_sha256": "d" * 64},
+        cache_identity={"cache_sha256": "e" * 64},
+        source_path="queue_observation.json",
+        candidate_id_by_experiment={
+            "materializer_stale": [candidate_id],
+            "materializer_exp": [candidate_id],
+        },
+    )
+    atom = _atom(
+        candidate_id,
+        atom_id="atom_renderer_payload_unit",
+        fragility_penalty=0.0,
+        uncertainty=0.0,
+        operation_set_compiler={
+            "schema": "inverse_action_operation_set_compiler_hint.v1",
+            "operation_set_id": "renderer_payload_selection",
+            "selected_operations": [
+                {
+                    "unit_id": source_unit_id,
+                    "target_kind": "renderer_payload_dfl1_v1",
+                    "materializer": "renderer_payload_dfl1_adapter",
+                    "receiver_contract_kind": (
+                        "source_runtime_native_renderer_payload_dfl1"
+                    ),
+                    "candidate_saved_bytes": 380,
+                }
+            ],
+        },
+    )
+
+    action = build_discrete_scorer_action_functional([atom], observations=observations)
+    materializer_observations = [
+        row
+        for row in observations
+        if row["observation_kind"] == MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND
+    ]
+    cell = action["cells"][0]
+
+    assert len(materializer_observations) == 1
+    row = materializer_observations[0]
+    assert row["candidate_id"] == candidate_id
+    assert row["saved_bytes"] == 380
+    assert row["rate_positive"] is True
+    assert row["receiver_contract_satisfied"] is True
+    assert row["readiness_blockers"] == []
+    assert row["source_unit_ids"] == [source_unit_id]
+    assert cell["materializer_archive_delta_blocked"] is False
+    assert cell["materializer_archive_delta_feedback"]["rate_positive_count"] == 1
+    assert cell["materializer_archive_delta_feedback"]["blocks_water_bucket"] is False
+    assert action["score_claim"] is False
+
+
 def test_queue_observation_reads_succeeded_materializer_observation_jsonl(
     tmp_path,
 ) -> None:

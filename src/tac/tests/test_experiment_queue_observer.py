@@ -1427,6 +1427,152 @@ def test_observer_surfaces_future_materializer_with_serialized_archive_delta(
     assert artifact["score_claim"] is False
 
 
+def test_observer_surfaces_optimizer_candidate_queue_materializer_top_k(
+    tmp_path: Path,
+) -> None:
+    source_queue = tmp_path / "source_queue.json"
+    source_queue.write_text(
+        json.dumps(
+            {
+                "schema": "optimizer_candidate_queue_v1",
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+                "top_k": [
+                    {
+                        "candidate_id": "renderer_payload_dfl1_e20295f0a662",
+                        "target_kind": "renderer_payload_dfl1_v1",
+                        "materializer_id": "renderer_payload_dfl1_adapter",
+                        "receiver_contract_kind": (
+                            "source_runtime_native_renderer_payload_dfl1"
+                        ),
+                        "receiver_contract_satisfied": True,
+                        "score_affecting_payload_changed": True,
+                        "charged_bits_changed": True,
+                        "full_frame_inflate_parity_proven": True,
+                        "renderer_payload_dfl1_full_frame_inflate_parity_satisfied": (
+                            True
+                        ),
+                        "candidate_archive": {
+                            "path": "candidate.zip",
+                            "bytes": 345_422,
+                            "sha256": "e" * 64,
+                        },
+                        "serialized_archive_delta": {
+                            "schema": "serialized_archive_delta_contract.v1",
+                            "status": "realized_saving",
+                            "realized_saved_bytes": 380,
+                            "source_archive_bytes": 345_802,
+                            "candidate_archive_bytes": 345_422,
+                            "savings_realized": True,
+                            "score_claim": False,
+                            "score_claim_valid": False,
+                            "promotion_eligible": False,
+                            "ready_for_exact_eval_dispatch": False,
+                            "rank_or_kill_eligible": False,
+                            "promotable": False,
+                            "dispatch_attempted": False,
+                            "gpu_launched": False,
+                        },
+                        "readiness_blockers": [],
+                        "score_claim": False,
+                        "score_claim_valid": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                        "rank_or_kill_eligible": False,
+                        "promotable": False,
+                        "dispatch_attempted": False,
+                        "gpu_launched": False,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = tmp_path / "queue.sqlite"
+    queue = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "observer_test",
+        "controls": {"mode": "running", "max_concurrency": {"local_cpu": 1}},
+        "experiments": [
+            {
+                "id": "harvest_materializer",
+                "status": "queued",
+                "priority": 1,
+                "metadata": {
+                    "candidate_ids": ["targeted_chain:renderer_payload_dfl1_v1:001"],
+                    "source_unit_ids": ["renderer_payload_unit"],
+                },
+                "steps": [
+                    {
+                        "id": "harvest",
+                        "kind": "command",
+                        "command": ["python", "tools/harvest_materializer_chain.py"],
+                        "resources": {"kind": "local_cpu"},
+                        "postconditions": [
+                            {
+                                "type": "json_false_authority",
+                                "path": source_queue.as_posix(),
+                                "required_false": [
+                                    "score_claim",
+                                    "promotion_eligible",
+                                    "rank_or_kill_eligible",
+                                    "ready_for_exact_eval_dispatch",
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded',
+                attempts = 1,
+                last_event_json = ?,
+                updated_at_utc = '2026-05-26T19:10:00Z'
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'harvest_materializer'
+              AND step_id = 'harvest'
+            """,
+            (json.dumps({"command": ["python", "tools/harvest_materializer_chain.py"]}),),
+        )
+        conn.commit()
+
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=0,
+    )
+
+    assert observation["healthy"] is True
+    assert len(observation["succeeded_artifact_steps"]) == 1
+    artifact = observation["succeeded_artifact_steps"][0]["expected_artifacts"][0]
+    rows = artifact["optimizer_candidate_queue_materializer_rows"]
+    assert artifact["json_schema"] == "optimizer_candidate_queue_v1"
+    assert artifact["optimizer_candidate_queue_materializer_row_count"] == 1
+    assert rows[0]["optimizer_candidate_queue_row_index"] == 0
+    assert rows[0]["target_kind"] == "renderer_payload_dfl1_v1"
+    assert rows[0]["receiver_contract_satisfied"] is True
+    assert rows[0]["materializer_score_affecting_payload_changed"] is True
+    assert rows[0]["materializer_charged_bits_changed"] is True
+    assert "score_affecting_payload_changed" not in rows[0]
+    assert "charged_bits_changed" not in rows[0]
+    assert rows[0]["serialized_archive_delta_realized_saved_bytes"] == 380
+    assert rows[0]["readiness_blockers"] == []
+
+
 def test_observer_health_marks_missing_state_fail_closed(tmp_path: Path) -> None:
     artifact = tmp_path / "artifact.json"
     state = tmp_path / "missing.sqlite"
