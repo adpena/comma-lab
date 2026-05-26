@@ -11,6 +11,7 @@ import pytest
 from comma_lab.scheduler.frontier_rate_attack_feedback import (
     FEEDBACK_REFRESH_SCHEMA,
     LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA,
+    OPERATION_CHAIN_COMPILER_STAGE_PLAN_SCHEMA,
     OPERATION_MATERIALIZER_BRIDGE_SCHEMA,
     OPERATION_PORTFOLIO_SCHEMA,
     OPERATION_PORTFOLIO_TAXONOMY_SCHEMA,
@@ -21,6 +22,8 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA,
     FrontierRateAttackFeedbackError,
+    build_frontier_operation_chain_compiler_queue,
+    build_frontier_operation_chain_compiler_stage_plan,
     build_frontier_rate_attack_feedback_refresh,
     build_frontier_receiver_repair_work_order,
     build_frontier_targeted_component_correction_work_order,
@@ -872,6 +875,45 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     )
     assert registered_chain_bridge["score_claim"] is False
     assert registered_chain_bridge["ready_for_exact_eval_dispatch"] is False
+    chain_work_orders_payload = {
+        "schema": "frontier_rate_attack_operation_chain_compiler_work_orders.v1",
+        "work_orders": [
+            {
+                **registered_chain_bridge["chain_compiler_work_order"],
+                "source_bridge_blockers": registered_chain_bridge["blockers"],
+            }
+        ],
+        **_false_authority(),
+    }
+    chain_stage_plan = build_frontier_operation_chain_compiler_stage_plan(
+        operation_chain_compiler_work_orders=chain_work_orders_payload,
+        source_operation_id="chain_registered_multisurface_materializer_program",
+    )
+    assert chain_stage_plan["schema"] == OPERATION_CHAIN_COMPILER_STAGE_PLAN_SCHEMA
+    assert chain_stage_plan["execution_ready"] is False
+    assert chain_stage_plan["stage_count"] == 4
+    assert "single_composed_receiver_runtime_consumption_proof" in (
+        chain_stage_plan["missing_contracts"]
+    )
+    assert "frontier_targeted_component_correction_queue" in {
+        handoff["queue_consumer"] for handoff in chain_stage_plan["queue_handoffs"]
+    }
+    chain_work_orders_path = tmp_path / "operation_chain_compiler_work_orders.json"
+    _write_json(chain_work_orders_path, chain_work_orders_payload)
+    chain_queue = build_frontier_operation_chain_compiler_queue(
+        repo_root=tmp_path,
+        operation_chain_compiler_work_orders=chain_work_orders_payload,
+        operation_chain_compiler_work_orders_path=chain_work_orders_path,
+        results_root=tmp_path / "results",
+        queue_id="chain_queue_unit",
+    )
+    assert chain_queue is not None
+    assert chain_queue["schema"] == "experiment_queue.v1"
+    assert chain_queue["experiments"][0]["metadata"]["execution_ready"] is False
+    _assert_false_authority(chain_queue["experiments"][0]["metadata"])
+    assert chain_queue["experiments"][0]["steps"][0]["postconditions"][0][
+        "equals"
+    ] == OPERATION_CHAIN_COMPILER_STAGE_PLAN_SCHEMA
     assert all(
         row["source_selection_samples"][0]["selection_kind"] == "materializer_feedback"
         for row in operation_materializer["materializer_backlog"]["rows"]
@@ -1288,6 +1330,9 @@ def test_frontier_feedback_compiler_turns_eureka_near_misses_into_beyond_drop_tw
     assert artifacts["operation_chain_compiler_work_orders"].endswith(
         "operation_chain_compiler_work_orders.json"
     )
+    assert artifacts["operation_chain_compiler_queue"].endswith(
+        "operation_chain_compiler_queue.json"
+    )
     assert artifacts["receiver_repair_backlog"].endswith(
         "receiver_repair_backlog.json"
     )
@@ -1309,6 +1354,16 @@ def test_frontier_feedback_compiler_turns_eureka_near_misses_into_beyond_drop_tw
         set(chain_work_orders["work_orders"][0]["required_before_execution"])
     )
     _assert_false_authority(chain_work_orders)
+    chain_queue_payload = json.loads(
+        (tmp_path / artifacts["operation_chain_compiler_queue"]).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert chain_queue_payload["schema"] == "experiment_queue.v1"
+    assert chain_queue_payload["experiments"][0]["steps"][0]["command"][1] == (
+        "tools/build_frontier_operation_chain_stage_plan.py"
+    )
+    _assert_false_authority(chain_queue_payload["experiments"][0]["metadata"])
     artifact_payload = json.loads(
         (tmp_path / artifacts["local_cpu_eureka_planning"]).read_text(
             encoding="utf-8"
@@ -2250,6 +2305,9 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     assert initial_artifacts["operation_chain_compiler_work_orders"].endswith(
         "operation_chain_compiler_work_orders.json"
     )
+    assert initial_artifacts["operation_chain_compiler_queue"].endswith(
+        "operation_chain_compiler_queue.json"
+    )
     operation_chain_orders = json.loads(
         (
             REPO_ROOT / initial_artifacts["operation_chain_compiler_work_orders"]
@@ -2259,6 +2317,13 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
         "frontier_rate_attack_operation_chain_compiler_work_orders.v1"
     )
     _assert_false_authority(operation_chain_orders)
+    operation_chain_queue = json.loads(
+        (
+            REPO_ROOT / initial_artifacts["operation_chain_compiler_queue"]
+        ).read_text(encoding="utf-8")
+    )
+    assert operation_chain_queue["schema"] == "experiment_queue.v1"
+    _assert_false_authority(operation_chain_queue["experiments"][0]["metadata"])
     operation_work_queue = json.loads(
         (
             REPO_ROOT / initial_artifacts["operation_materializer_work_queue"]

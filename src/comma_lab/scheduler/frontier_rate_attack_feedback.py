@@ -93,6 +93,15 @@ OPERATION_MATERIALIZER_BRIDGE_ROW_SCHEMA = (
 OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA = (
     "frontier_rate_attack_operation_chain_compiler_work_order.v1"
 )
+OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA = (
+    "frontier_rate_attack_operation_chain_compiler_work_orders.v1"
+)
+OPERATION_CHAIN_COMPILER_STAGE_PLAN_SCHEMA = (
+    "frontier_rate_attack_operation_chain_compiler_stage_plan.v1"
+)
+OPERATION_CHAIN_COMPILER_QUEUE_METADATA_SCHEMA = (
+    "frontier_rate_attack_operation_chain_compiler_queue_metadata.v1"
+)
 MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA = (
     "materializer_chain_exact_readiness_bridge_report.v1"
 )
@@ -4322,6 +4331,283 @@ def build_frontier_targeted_component_correction_work_order(
         context=f"targeted_component_correction_work_order:{acquisition_id}",
     )
     return work_order
+
+
+def _operation_chain_work_order_by_id(
+    operation_chain_compiler_work_orders: Mapping[str, Any],
+    source_operation_id: str,
+) -> Mapping[str, Any]:
+    for row in operation_chain_compiler_work_orders.get("work_orders") or []:
+        if not isinstance(row, Mapping):
+            continue
+        if str(row.get("source_operation_id") or "") == source_operation_id:
+            return row
+    raise FrontierRateAttackFeedbackError(
+        f"operation chain compiler work order not found: {source_operation_id}"
+    )
+
+
+def _operation_chain_stage_rows(work_order: Mapping[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for index, stage in enumerate(work_order.get("stage_plan") or [], start=1):
+        if not isinstance(stage, Mapping):
+            continue
+        stage_id = str(stage.get("stage") or f"stage_{index:02d}")
+        required = _string_list(stage.get("required_before_execution"))
+        blockers = [
+            f"{stage_id}_requires:{requirement}"
+            for requirement in required
+        ]
+        rows.append(
+            {
+                "schema": "frontier_rate_attack_operation_chain_stage_row.v1",
+                "stage_index": index,
+                "stage_id": stage_id,
+                "targets": _string_list(stage.get("targets")),
+                "required_before_execution": required,
+                "stage_ready_for_execution": False,
+                "blockers": blockers,
+                "allowed_use": "operation_chain_stage_planning_only",
+                "forbidden_use": "score_claim_or_dispatch_authority",
+                **FALSE_AUTHORITY,
+            }
+        )
+    return rows
+
+
+def build_frontier_operation_chain_compiler_stage_plan(
+    *,
+    operation_chain_compiler_work_orders: Mapping[str, Any],
+    source_operation_id: str,
+) -> dict[str, Any]:
+    """Build a staged queue-owned plan from one multisurface chain work order."""
+
+    require_no_truthy_authority_fields(
+        operation_chain_compiler_work_orders,
+        context="operation_chain_compiler_work_orders",
+    )
+    work_order = _operation_chain_work_order_by_id(
+        operation_chain_compiler_work_orders,
+        source_operation_id,
+    )
+    require_no_truthy_authority_fields(
+        work_order,
+        context=f"operation_chain_compiler_work_order:{source_operation_id}",
+    )
+    stage_rows = _operation_chain_stage_rows(work_order)
+    source_blockers = _string_list(work_order.get("source_bridge_blockers"))
+    missing_contracts = [
+        blocker.removeprefix("chain_missing_contract:")
+        for blocker in source_blockers
+        if blocker.startswith("chain_missing_contract:")
+    ]
+    target_kinds = _unique_strings(work_order.get("chain_targets") or [])
+    stage_target_counts: dict[str, int] = {}
+    for row in stage_rows:
+        for target in _string_list(row.get("targets")):
+            stage_target_counts[target] = stage_target_counts.get(target, 0) + 1
+    uncovered_targets = [
+        target for target in target_kinds if target not in stage_target_counts
+    ]
+    blockers = [
+        "operation_chain_stage_plan_requires_materializer_context_binding",
+        "operation_chain_stage_plan_requires_single_runtime_consumption_proof",
+        "operation_chain_stage_plan_requires_exact_readiness_bridge",
+        "operation_chain_stage_plan_requires_targeted_component_budget_spend_gate",
+        *source_blockers,
+    ]
+    if uncovered_targets:
+        blockers.extend(
+            f"operation_chain_target_missing_stage:{target}"
+            for target in uncovered_targets
+        )
+    plan = {
+        "schema": OPERATION_CHAIN_COMPILER_STAGE_PLAN_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "source_operation_id": source_operation_id,
+        "source_operation_family": work_order.get("source_operation_family"),
+        "chain_targets": target_kinds,
+        "stage_count": len(stage_rows),
+        "covered_target_count": len(stage_target_counts),
+        "uncovered_chain_targets": uncovered_targets,
+        "missing_contracts": _unique_strings(missing_contracts),
+        "required_before_execution": _string_list(
+            work_order.get("required_before_execution")
+        ),
+        "targeted_correction_budget": dict(
+            work_order.get("targeted_correction_budget")
+            if isinstance(work_order.get("targeted_correction_budget"), Mapping)
+            else {}
+        ),
+        "stage_rows": stage_rows,
+        "queue_handoffs": [
+            {
+                "queue_consumer": "byte_shaving_campaign_queue",
+                "handoff_reason": "bind_per_stage_materializer_contexts",
+                "target_kinds": target_kinds,
+                **FALSE_AUTHORITY,
+            },
+            {
+                "queue_consumer": "frontier_receiver_repair_queue",
+                "handoff_reason": "prove_single_runtime_consumption_after_composition",
+                "required_before_budget_spend": True,
+                **FALSE_AUTHORITY,
+            },
+            {
+                "queue_consumer": "frontier_targeted_component_correction_queue",
+                "handoff_reason": "spend_receiver_closed_rate_budget_only_after_component_eval",
+                "budget_spend_allowed": False,
+                **FALSE_AUTHORITY,
+            },
+        ],
+        "source_bridge_blockers": source_blockers,
+        "blockers": _unique_strings(blockers),
+        "execution_ready": False,
+        "allowed_use": "queue_owned_operation_chain_stage_plan_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        plan,
+        context=f"operation_chain_compiler_stage_plan:{source_operation_id}",
+    )
+    return plan
+
+
+def build_frontier_operation_chain_compiler_queue(
+    *,
+    repo_root: str | Path,
+    operation_chain_compiler_work_orders: Mapping[str, Any],
+    operation_chain_compiler_work_orders_path: str | Path,
+    results_root: str | Path = DEFAULT_RESULTS_ROOT,
+    queue_id: str = "frontier_operation_chain_compiler_queue",
+    candidate_limit: int = 4,
+) -> dict[str, Any] | None:
+    """Compile multisurface chain work orders into local staged-plan queue rows."""
+
+    repo = Path(repo_root)
+    if candidate_limit < 1:
+        raise FrontierRateAttackFeedbackError("candidate_limit must be >= 1")
+    require_no_truthy_authority_fields(
+        operation_chain_compiler_work_orders,
+        context="operation_chain_compiler_queue_input",
+    )
+    work_order_rows = [
+        row
+        for row in operation_chain_compiler_work_orders.get("work_orders") or []
+        if isinstance(row, Mapping)
+        and row.get("schema") == OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA
+    ]
+    if not work_order_rows:
+        return None
+    work_order_rows = work_order_rows[:candidate_limit]
+    work_orders_path = _resolve_path(
+        operation_chain_compiler_work_orders_path,
+        repo_root=repo,
+    )
+    results_base = _resolve_path(str(results_root), repo_root=repo)
+    queue_root = results_base / "frontier_operation_chain_compiler" / _slug_token(queue_id)
+    experiments: list[dict[str, Any]] = []
+    for priority, row in enumerate(work_order_rows, start=1):
+        source_operation_id = str(row.get("source_operation_id") or f"chain_{priority}")
+        work_dir = queue_root / _slug_token(source_operation_id)
+        stage_plan_path = work_dir / "stage_plan.json"
+        target_kinds = _unique_strings(row.get("chain_targets") or [])
+        experiments.append(
+            {
+                "id": _slug_token(source_operation_id),
+                "status": "queued",
+                "priority": priority,
+                "lane_id": "lane_frontier_operation_chain_compiler_20260526",
+                "tags": [
+                    "operation_chain_compiler",
+                    "multisurface_materializer_chain",
+                    "receiver_runtime",
+                    "targeted_correction_budget",
+                ],
+                "metadata": {
+                    "schema": OPERATION_CHAIN_COMPILER_QUEUE_METADATA_SCHEMA,
+                    "source_operation_id": source_operation_id,
+                    "source_operation_family": row.get("source_operation_family"),
+                    "chain_target_count": len(target_kinds),
+                    "chain_targets": target_kinds,
+                    "stage_plan_path": _repo_rel(stage_plan_path, repo),
+                    "targeted_correction_budget": dict(
+                        row.get("targeted_correction_budget")
+                        if isinstance(row.get("targeted_correction_budget"), Mapping)
+                        else {}
+                    ),
+                    "execution_ready": False,
+                    "budget_spend_allowed": False,
+                    "allowed_use": "operation_chain_compiler_queue_metadata_only",
+                    "forbidden_use": "score_claim_or_dispatch_authority",
+                    **FALSE_AUTHORITY,
+                },
+                "steps": [
+                    {
+                        "id": "emit_operation_chain_stage_plan",
+                        "kind": "command",
+                        "command": [
+                            ".venv/bin/python",
+                            "tools/build_frontier_operation_chain_stage_plan.py",
+                            "--operation-chain-compiler-work-orders",
+                            _repo_rel(work_orders_path, repo),
+                            "--source-operation-id",
+                            source_operation_id,
+                            "--stage-plan-out",
+                            _repo_rel(stage_plan_path, repo),
+                            "--overwrite",
+                        ],
+                        "resources": {"kind": "local_io_heavy"},
+                        "timeout_seconds": 120,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(stage_plan_path, repo),
+                                "key": "schema",
+                                "equals": OPERATION_CHAIN_COMPILER_STAGE_PLAN_SCHEMA,
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(stage_plan_path, repo),
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(stage_plan_path, repo),
+                                "key": "execution_ready",
+                                "equals": False,
+                            },
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [_repo_rel(stage_plan_path, repo)],
+                            "input_artifact_paths": [_repo_rel(work_orders_path, repo)],
+                            "include_postcondition_paths": True,
+                        },
+                    }
+                ],
+            }
+        )
+    return normalize_queue_definition(
+        {
+            "schema": QUEUE_SCHEMA,
+            "queue_id": queue_id,
+            "controls": {
+                "mode": "running",
+                "local_first": True,
+                "max_concurrency": {
+                    "local_cpu": 0,
+                    "local_io_heavy": 1,
+                    "local_mlx": 0,
+                    "modal_cpu": 0,
+                    "modal_gpu": 0,
+                },
+            },
+            "experiments": experiments,
+            "allowed_use": "queue_owned_operation_chain_compiler_stage_plans_only",
+            "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+            **FALSE_AUTHORITY,
+        }
+    )
 
 
 def _selected_targeted_component_correction_rows(

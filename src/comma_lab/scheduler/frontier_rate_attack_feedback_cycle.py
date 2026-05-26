@@ -49,14 +49,13 @@ from tac.repo_io import (
 from .experiment_queue import ExperimentQueueError
 from .frontier_rate_attack_feedback import (
     OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA,
+    OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA,
+    build_frontier_operation_chain_compiler_queue,
     build_frontier_receiver_repair_queue,
     build_frontier_targeted_component_correction_queue,
 )
 
 FRONTIER_RATE_ATTACK_FEEDBACK_CYCLE_SCHEMA = "frontier_rate_attack_feedback_cycle.v1"
-OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA = (
-    "frontier_rate_attack_operation_chain_compiler_work_orders.v1"
-)
 FRONTIER_RATE_ATTACK_DQS1_OBSERVATION_BUNDLE_SCHEMA = (
     "frontier_rate_attack_dqs1_observation_bundle.v1"
 )
@@ -529,6 +528,20 @@ def write_frontier_refresh_artifacts(
                 chain_path,
                 repo_root,
             )
+            chain_queue = build_frontier_operation_chain_compiler_queue(
+                repo_root=repo_root,
+                operation_chain_compiler_work_orders=payload,
+                operation_chain_compiler_work_orders_path=chain_path,
+                results_root=str(report.get("results_root") or "experiments/results"),
+                queue_id=f"{report.get('queue_id') or 'frontier_feedback'}_chain_compiler",
+            )
+            if isinstance(chain_queue, Mapping):
+                chain_queue_path = out / "operation_chain_compiler_queue.json"
+                write_json_artifact(chain_queue_path, dict(chain_queue))
+                artifacts["operation_chain_compiler_queue"] = repo_rel(
+                    chain_queue_path,
+                    repo_root,
+                )
         bridge_artifacts = (
             ("operation_materializer_backlog", "materializer_backlog"),
             ("operation_materializer_contexts", "materializer_contexts"),
@@ -636,6 +649,14 @@ def write_frontier_refresh_artifacts(
             "tools/experiment_queue.py",
             "--queue",
             artifacts["receiver_repair_queue"],
+            "validate",
+        ]
+    if "operation_chain_compiler_queue" in artifacts:
+        operator_commands["validate_operation_chain_compiler_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["operation_chain_compiler_queue"],
             "validate",
         ]
     if "targeted_component_correction_queue" in artifacts:
