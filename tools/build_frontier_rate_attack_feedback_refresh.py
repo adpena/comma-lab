@@ -40,6 +40,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
     build_frontier_operation_chain_compiler_queue,
     build_frontier_rate_attack_feedback_refresh,
     build_frontier_receiver_repair_queue,
+    build_frontier_repair_budget_waterfill_queue,
     build_frontier_targeted_component_correction_chain_materializer_handoff,
     build_frontier_targeted_component_correction_chain_work_orders,
     build_frontier_targeted_component_correction_materialization_queue,
@@ -384,6 +385,11 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
         path = output_dir / "operation_portfolio.json"
         write_json_artifact(path, operation_portfolio)
         artifacts["operation_portfolio"] = _display_path(path)
+    rate_budget_preservation_plan = report.get("rate_budget_preservation_plan")
+    if isinstance(rate_budget_preservation_plan, dict):
+        path = output_dir / "rate_budget_preservation_plan.json"
+        write_json_artifact(path, rate_budget_preservation_plan)
+        artifacts["rate_budget_preservation_plan"] = _display_path(path)
     operation_materializer_bridge = report.get("operation_materializer_bridge")
     if isinstance(operation_materializer_bridge, dict):
         path = output_dir / "operation_materializer_bridge.json"
@@ -715,6 +721,44 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
         path = output_dir / "autonomous_chain_optimization.json"
         write_json_artifact(path, autonomous_chain_optimization)
         artifacts["autonomous_chain_optimization"] = _display_path(path)
+        response_harvest = report.get("targeted_component_correction_response_harvest")
+        receiver_closed_budget = report.get("receiver_closed_correction_budget")
+        if (
+            isinstance(response_harvest, dict)
+            and isinstance(receiver_closed_budget, dict)
+            and "targeted_component_correction_response_harvest" in artifacts
+            and "receiver_closed_correction_budget" in artifacts
+        ):
+            repair_waterfill_queue = build_frontier_repair_budget_waterfill_queue(
+                repo_root=REPO_ROOT,
+                autonomous_chain_optimization=autonomous_chain_optimization,
+                autonomous_chain_optimization_path=path,
+                targeted_component_correction_response_harvest=response_harvest,
+                targeted_component_correction_response_harvest_path=(
+                    artifacts["targeted_component_correction_response_harvest"]
+                ),
+                receiver_closed_correction_budget=receiver_closed_budget,
+                receiver_closed_correction_budget_path=(
+                    artifacts["receiver_closed_correction_budget"]
+                ),
+                results_root=str(report.get("results_root") or DEFAULT_RESULTS_ROOT),
+                queue_id=(
+                    f"{report.get('queue_id') or 'frontier_feedback'}_"
+                    "repair_budget_waterfill"
+                ),
+                chain_limit=int(report.get("candidate_limit") or 4),
+            )
+            if isinstance(repair_waterfill_queue, dict):
+                repair_waterfill_queue_path = (
+                    output_dir / "repair_budget_waterfill_queue.json"
+                )
+                write_json_artifact(
+                    repair_waterfill_queue_path,
+                    repair_waterfill_queue,
+                )
+                artifacts["repair_budget_waterfill_queue"] = _display_path(
+                    repair_waterfill_queue_path
+                )
         autonomous_queue = build_frontier_autonomous_chain_optimization_queue(
             repo_root=REPO_ROOT,
             autonomous_chain_optimization=autonomous_chain_optimization,
@@ -1086,6 +1130,35 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             "-m",
             "json.tool",
             artifacts["autonomous_chain_optimization"],
+        ]
+    if "repair_budget_waterfill_queue" in artifacts:
+        operator_commands["validate_repair_budget_waterfill_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["repair_budget_waterfill_queue"],
+            "validate",
+        ]
+        operator_commands["init_repair_budget_waterfill_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["repair_budget_waterfill_queue"],
+            "init",
+        ]
+        operator_commands["run_repair_budget_waterfill_queue_bounded_local"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["repair_budget_waterfill_queue"],
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "8",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "1",
         ]
     if "autonomous_chain_optimization_queue" in artifacts:
         operator_commands["validate_autonomous_chain_optimization_queue"] = [

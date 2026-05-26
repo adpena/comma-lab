@@ -125,6 +125,12 @@ AUTONOMOUS_CHAIN_WORK_ORDER_SCHEMA = (
 AUTONOMOUS_CHAIN_QUEUE_METADATA_SCHEMA = (
     "frontier_rate_attack_autonomous_chain_optimization_queue_metadata.v1"
 )
+RATE_BUDGET_PRESERVATION_PLAN_SCHEMA = (
+    "frontier_rate_attack_rate_budget_preservation_plan.v1"
+)
+RATE_BUDGET_PRESERVATION_ROW_SCHEMA = (
+    "frontier_rate_attack_rate_budget_preservation_row.v1"
+)
 OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA = (
     "frontier_rate_attack_operation_chain_compiler_work_order.v1"
 )
@@ -174,6 +180,12 @@ RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA = (
 )
 RECEIVER_CLOSED_CORRECTION_BUDGET_QUEUE_METADATA_SCHEMA = (
     "frontier_rate_attack_receiver_closed_correction_budget_queue_metadata.v1"
+)
+REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA = (
+    "frontier_rate_attack_repair_budget_waterfill_work_order.v1"
+)
+REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA = (
+    "frontier_rate_attack_repair_budget_waterfill_queue_metadata.v1"
 )
 TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA = (
     "frontier_rate_attack_targeted_component_correction_acquisition.v1"
@@ -3184,6 +3196,322 @@ def _targeted_correction_budget_summary(
     }
 
 
+def _component_rate_preservation_rows(
+    component_summary: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in component_summary.get("local_video_behavior_rows") or []:
+        if not isinstance(row, Mapping):
+            continue
+        archive_delta = _finite_int_or_none(row.get("archive_byte_delta_vs_baseline"))
+        components = row.get("component_deltas")
+        if archive_delta is None or archive_delta >= 0 or not isinstance(components, Mapping):
+            continue
+        saved_bytes = abs(archive_delta)
+        rate_delta = _finite_float_or_none(components.get("rate_delta"))
+        if rate_delta is None or rate_delta >= 0.0:
+            rate_delta = -_rate_credit_score_units_for_saved_bytes(saved_bytes)
+        rate_credit = abs(rate_delta)
+        seg_delta = _finite_float_or_none(components.get("segnet_delta")) or 0.0
+        pose_delta = _finite_float_or_none(components.get("posenet_delta")) or 0.0
+        scorer_penalty = seg_delta + pose_delta
+        score_delta = _finite_float_or_none(row.get("score_delta_vs_baseline"))
+        if score_delta is None:
+            score_delta = scorer_penalty - rate_credit
+        candidate_id = str(row.get("candidate_id") or "unknown_candidate")
+        distortion_debt = max(0.0, scorer_penalty)
+        rows.append(
+            {
+                "schema": RATE_BUDGET_PRESERVATION_ROW_SCHEMA,
+                "preservation_id": _bounded_content_key(
+                    "rate_budget_preserve",
+                    (candidate_id, row.get("family"), archive_delta, score_delta),
+                ),
+                "source_kind": "dqs1_component_rate_budget",
+                "candidate_id": candidate_id,
+                "family": row.get("family"),
+                "target_kind": "dqs1_pairset_drop_pair_or_group",
+                "selected_pair_indices": row.get("selected_pair_indices"),
+                "saved_bytes": saved_bytes,
+                "archive_byte_delta_vs_baseline": archive_delta,
+                "rate_credit_score_units": rate_credit,
+                "segnet_delta_score_units": seg_delta,
+                "posenet_delta_score_units": pose_delta,
+                "distortion_debt_score_units": distortion_debt,
+                "net_score_delta_score_units": score_delta,
+                "rate_only_archive_preservation_required": True,
+                "preserve_as_rate_only_candidate": True,
+                "budget_reinvestment_candidate": distortion_debt > 0.0,
+                "budget_reinvestment_mode": (
+                    "waterfill_distortion_repair_after_preserving_rate_only_floor"
+                    if distortion_debt > 0.0
+                    else "optional_recheck_only_no_positive_distortion_debt"
+                ),
+                "minimum_repair_score_units_to_beat_rate_only_floor": max(
+                    0.0,
+                    score_delta,
+                ),
+                "recommended_next_action": (
+                    "preserve_rate_only_archive_then_waterfill_component_repair"
+                    if distortion_debt > 0.0
+                    else "preserve_rate_only_archive_as_floor_candidate"
+                ),
+                "allowed_use": "rate_only_floor_preservation_and_reinvestment_planning",
+                "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
+                **FALSE_AUTHORITY,
+            }
+        )
+    return rows
+
+
+def _materializer_rate_preservation_rows(
+    materializer_rows: Sequence[Mapping[str, Any]],
+    receiver_closed_correction_budget: Mapping[str, Any] | None,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    receiver_closed = (
+        receiver_closed_correction_budget
+        if isinstance(receiver_closed_correction_budget, Mapping)
+        else {}
+    )
+    closed_by_target: dict[str, int] = {}
+    for budget_row in receiver_closed.get("rows") or []:
+        if not isinstance(budget_row, Mapping) or budget_row.get("receiver_closed") is not True:
+            continue
+        target = str(budget_row.get("target_kind") or "")
+        saved = _finite_int_or_none(budget_row.get("saved_bytes_at_risk")) or 0
+        if target and saved > 0:
+            closed_by_target[target] = max(saved, closed_by_target.get(target, 0))
+    for row in materializer_rows:
+        evidence = row.get("evidence_summary")
+        if not isinstance(evidence, Mapping):
+            continue
+        target_kind = str(evidence.get("target_kind") or row.get("operation_id") or "")
+        saved = _finite_int_or_none(evidence.get("total_positive_saved_bytes")) or 0
+        if saved <= 0:
+            saved = closed_by_target.get(target_kind, 0)
+        if saved <= 0:
+            continue
+        rate_credit = _rate_credit_score_units_for_saved_bytes(saved)
+        candidate_id = str(row.get("operation_id") or target_kind or "materializer")
+        rows.append(
+            {
+                "schema": RATE_BUDGET_PRESERVATION_ROW_SCHEMA,
+                "preservation_id": _bounded_content_key(
+                    "rate_budget_preserve",
+                    (candidate_id, target_kind, saved),
+                ),
+                "source_kind": "receiver_closed_materializer_rate_budget",
+                "candidate_id": candidate_id,
+                "family": row.get("operation_family"),
+                "target_kind": target_kind,
+                "saved_bytes": saved,
+                "archive_byte_delta_vs_baseline": -saved,
+                "rate_credit_score_units": rate_credit,
+                "segnet_delta_score_units": 0.0,
+                "posenet_delta_score_units": 0.0,
+                "distortion_debt_score_units": 0.0,
+                "net_score_delta_score_units": -rate_credit,
+                "receiver_closed_saved_bytes": closed_by_target.get(target_kind, 0),
+                "rate_only_archive_preservation_required": True,
+                "preserve_as_rate_only_candidate": True,
+                "budget_reinvestment_candidate": True,
+                "budget_reinvestment_mode": (
+                    "preserve_lossless_rate_win_then_optionally_spend_credit_on_"
+                    "component_guarded_repair"
+                ),
+                "minimum_repair_score_units_to_beat_rate_only_floor": 0.0,
+                "recommended_next_action": (
+                    "preserve_receiver_closed_rate_only_archive_before_any_"
+                    "distortion_reinvestment"
+                ),
+                "allowed_use": "rate_only_floor_preservation_and_reinvestment_planning",
+                "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
+                **FALSE_AUTHORITY,
+            }
+        )
+    return rows
+
+
+def build_frontier_rate_budget_preservation_plan(
+    *,
+    component_summary: Mapping[str, Any],
+    materializer_rows: Sequence[Mapping[str, Any]],
+    receiver_closed_correction_budget: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Preserve rate-only floors before spending byte credit on distortion repair."""
+
+    rows = [
+        *_component_rate_preservation_rows(component_summary),
+        *_materializer_rate_preservation_rows(
+            materializer_rows,
+            receiver_closed_correction_budget,
+        ),
+    ]
+    rows = sorted(
+        rows,
+        key=lambda row: (
+            -int(row.get("saved_bytes") or 0),
+            float(row.get("net_score_delta_score_units") or 0.0),
+            str(row.get("preservation_id") or ""),
+        ),
+    )
+    rate_regression_rows = [
+        row
+        for row in rows
+        if float(row.get("distortion_debt_score_units") or 0.0) > 0.0
+        and float(row.get("net_score_delta_score_units") or 0.0) > 0.0
+    ]
+    total_saved = sum(int(row.get("saved_bytes") or 0) for row in rows)
+    max_saved = max([int(row.get("saved_bytes") or 0) for row in rows] or [0])
+    total_rate_credit = sum(float(row.get("rate_credit_score_units") or 0.0) for row in rows)
+    total_distortion_debt = sum(
+        float(row.get("distortion_debt_score_units") or 0.0) for row in rows
+    )
+    target_totals: dict[str, int] = {}
+    for row in rows:
+        target = str(row.get("target_kind") or "unknown_target")
+        target_totals[target] = target_totals.get(target, 0) + int(
+            row.get("saved_bytes") or 0
+        )
+    payload = {
+        "schema": RATE_BUDGET_PRESERVATION_PLAN_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "active": bool(rows),
+        "row_count": len(rows),
+        "rate_only_candidate_count": len(rows),
+        "rate_only_saved_bytes_total": total_saved,
+        "rate_only_saved_bytes_max": max_saved,
+        "rate_credit_score_units_total": total_rate_credit,
+        "distortion_debt_score_units_total": total_distortion_debt,
+        "rate_positive_distortion_regression_count": len(rate_regression_rows),
+        "rate_positive_distortion_regression_candidate_ids": [
+            str(row.get("candidate_id") or "") for row in rate_regression_rows[:16]
+        ],
+        "source_kinds": _unique_strings(row.get("source_kind") for row in rows),
+        "action_functional": {
+            "schema": "frontier_rate_attack_operator_action_functional.v1",
+            "operator_semantics": (
+                "each materializer is an operator T with receiver R_T; evaluate "
+                "S(T)=delta_segnet(R_T(T(a)))+delta_posenet(R_T(T(a)))+"
+                "lambda_rate*delta_archive_bytes(T(a))"
+            ),
+            "objective": "minimize_S_under_receiver_and_exact_readiness_constraints",
+            "lambda_rate_score_per_byte": rate_delta_for_archive_byte_delta(1),
+            "state_variables": [
+                "archive_bytes",
+                "decoded_video_frames",
+                "segnet_component_distance",
+                "posenet_component_distance",
+                "receiver_runtime_contract",
+                "operator_synergy_or_antagonism_terms",
+            ],
+            "constraints": [
+                "preserve_rate_only_floor_archive_before_distortion_budget_spend",
+                "receiver_consumes_materialized_runtime_output",
+                "component_response_replayed_before_budget_spend",
+                "exact_auth_eval_required_before_score_or_promotion_claim",
+            ],
+            "composition_law": (
+                "compose operators in packet_archive_tensor_frame_pair_region bases, "
+                "then remeasure interaction terms instead of assuming independent "
+                "delta additivity"
+            ),
+            "discrete_solver": (
+                "bounded_exact_knapsack_for_small_operator_sets; otherwise "
+                "lagrangian_waterfill_over_measured_marginal_score_per_byte"
+            ),
+            "allowed_use": "canonical_planning_model_for_local_queue_acquisition",
+            "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
+            **FALSE_AUTHORITY,
+        },
+        "cumulative_rate_attack": {
+            "schema": "frontier_rate_attack_cumulative_rate_attack_ledger.v1",
+            "operator_count": len(rows),
+            "saved_bytes_total": total_saved,
+            "rate_credit_score_units_total": total_rate_credit,
+            "targets_by_saved_bytes": [
+                {"target_kind": target, "saved_bytes": saved}
+                for target, saved in sorted(
+                    target_totals.items(),
+                    key=lambda item: (-item[1], item[0]),
+                )
+            ],
+            "composition_policy": (
+                "sum_receiver_consumed_rate_deltas_across_all_packet_archive_tensor_"
+                "frame_pair_runtime_ops_then_measure_synergy_or_antagonism_before_"
+                "promotion"
+            ),
+            "preserve_per_op_provenance": True,
+            "preserve_cumulative_rate_only_archive": True,
+            "emit_cumulative_rate_only_before_any_distortion_spend": True,
+            **FALSE_AUTHORITY,
+        },
+        "waterfill_solver": {
+            "schema": "frontier_rate_attack_budget_waterfill_solver.v1",
+            "objective": (
+                "minimize_delta_segnet_plus_delta_posenet_plus_lambda_delta_bytes_"
+                "while_preserving_each_rate_only_floor_candidate"
+            ),
+            "lambda_rate_score_per_byte": rate_delta_for_archive_byte_delta(1),
+            "constraint": "0 <= spent_extra_bytes <= saved_bytes_for_candidate",
+            "state_variables": [
+                "saved_bytes_by_rate_only_candidate",
+                "segnet_delta_by_repair_operator",
+                "posenet_delta_by_repair_operator",
+                "extra_bytes_by_repair_operator",
+                "operator_synergy_or_antagonism_terms",
+            ],
+            "solver_policy": (
+                "exact_integer_knapsack_for_bounded_candidate_sets_else_"
+                "lagrangian_waterfill_sorted_by_component_score_improvement_per_byte"
+            ),
+            "acceptance_rule": (
+                "emit_rate_only_archive_first; emit_spent_budget_archive_only_if_"
+                "component_repair_delta_plus_extra_rate_delta_is_negative_relative_"
+                "to_the_preserved_rate_only_floor"
+            ),
+            "rebrotli_default_after_rate_attack": True,
+            "rebrotli_policy": (
+                "after every receiver-consumed rate transform, enqueue packet_member_"
+                "recompress_v1 or section Brotli retune where the runtime proof keeps "
+                "payload semantics fixed"
+            ),
+            "budget_spend_allowed": False,
+            "allowed_use": "mathematical_planning_surface_for_local_queue_only",
+            "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
+            **FALSE_AUTHORITY,
+        },
+        "rows": rows,
+        "blockers": _unique_strings(
+            [
+                "rate_only_archive_runtime_preservation_required_before_budget_spend",
+                "component_replay_required_before_spent_budget_archive_promotion",
+                "exact_auth_eval_required_before_score_or_promotion_claim",
+                *(
+                    ["no_rate_positive_rows_to_preserve"]
+                    if not rows
+                    else []
+                ),
+            ]
+        ),
+        "recommended_next_action": (
+            "run_rate_attack_materializers_then_emit_rate_only_archive_and_budget_"
+            "spent_archive_as_separate_candidates"
+            if rows
+            else "discover_receiver_closed_or_drop_many_rate_positive_candidates"
+        ),
+        "allowed_use": "rate_attack_preservation_and_budget_reinvestment_planning_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        payload,
+        context="frontier_rate_budget_preservation_plan",
+    )
+    return payload
+
+
 def _dqs1_component_operation_rows(
     observations: Sequence[Mapping[str, Any]],
     component_summary: Mapping[str, Any],
@@ -3476,6 +3804,11 @@ def build_frontier_operation_portfolio(
         materializer_rows=materializer_rows,
         receiver_closed_correction_budget=receiver_closed_correction_budget,
     )
+    rate_budget_preservation_plan = build_frontier_rate_budget_preservation_plan(
+        component_summary=component_summary,
+        materializer_rows=materializer_rows,
+        receiver_closed_correction_budget=receiver_closed_correction_budget,
+    )
     backlog_rows = _backlog_operation_rows(
         component_summary=component_summary,
         master_gradient=master_gradient,
@@ -3537,6 +3870,7 @@ def build_frontier_operation_portfolio(
         ],
         "component_behavior_summary": component_summary,
         "targeted_correction_budget_summary": targeted_correction_budget,
+        "rate_budget_preservation_plan": rate_budget_preservation_plan,
         "receiver_closed_correction_budget": dict(receiver_closed_correction_budget or {}),
         "master_gradient_summary": master_gradient,
         "rows": rows,
@@ -3555,6 +3889,11 @@ def _operation_portfolio_queue_metadata(portfolio: Mapping[str, Any]) -> dict[st
     correction_budget = (
         portfolio.get("targeted_correction_budget_summary")
         if isinstance(portfolio.get("targeted_correction_budget_summary"), Mapping)
+        else {}
+    )
+    preservation_plan = (
+        portfolio.get("rate_budget_preservation_plan")
+        if isinstance(portfolio.get("rate_budget_preservation_plan"), Mapping)
         else {}
     )
     receiver_closed = (
@@ -3588,6 +3927,14 @@ def _operation_portfolio_queue_metadata(portfolio: Mapping[str, Any]) -> dict[st
         "targeted_correction_budget_active": correction_budget.get("active") is True,
         "targeted_correction_budget_saved_bytes_total": correction_budget.get(
             "materializer_rate_positive_saved_bytes_total"
+        ),
+        "rate_budget_preservation_active": preservation_plan.get("active") is True,
+        "rate_only_candidate_count": preservation_plan.get("rate_only_candidate_count"),
+        "rate_only_saved_bytes_total": preservation_plan.get(
+            "rate_only_saved_bytes_total"
+        ),
+        "rate_positive_distortion_regression_count": preservation_plan.get(
+            "rate_positive_distortion_regression_count"
         ),
         "receiver_closed_correction_budget_active": receiver_closed.get("active")
         is True,
@@ -4502,17 +4849,13 @@ def _autonomous_chain_scheduler_actions(
     actions.append(
         {
             "id": "fit_segnet_posenet_repair_waterfill_policy",
-            "source_artifact_key": "targeted_component_correction_response_harvest",
+            "queue_artifact_key": "repair_budget_waterfill_queue",
             "purpose": (
                 "estimate_where_drop_many_distortion_debt_should_be_repaired_"
                 "from_receiver_closed_rate_budget"
             ),
             "bounded_local_execution": True,
-            "advisory_only": True,
-            "advisory_reason": (
-                "policy-fit intent only until a concrete response-harvest queue "
-                "or worker artifact is emitted"
-            ),
+            "advisory_only": False,
             "requires_exact_auth_before_score_claim": True,
             **FALSE_AUTHORITY,
         }
@@ -4542,7 +4885,13 @@ def _autonomous_chain_repair_waterfill_plan(
     correction_families: Sequence[str],
     receiver_closure: Mapping[str, Any],
     bridge_summary: Mapping[str, Any],
+    rate_budget_preservation_plan: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    preservation = (
+        rate_budget_preservation_plan
+        if isinstance(rate_budget_preservation_plan, Mapping)
+        else {}
+    )
     repair_dimensions = [
         level
         for level in _OPERATION_LEVELS
@@ -4603,6 +4952,26 @@ def _autonomous_chain_repair_waterfill_plan(
             "marginal_repair_score_per_byte_by_dimension",
             "interaction_synergy_or_antagonism_by_chain_stage",
         ],
+        "rate_only_preservation": {
+            "schema": "frontier_rate_attack_rate_only_preservation_reference.v1",
+            "plan_schema": preservation.get("schema"),
+            "active": preservation.get("active") is True,
+            "rate_only_candidate_count": preservation.get("rate_only_candidate_count"),
+            "rate_only_saved_bytes_total": preservation.get(
+                "rate_only_saved_bytes_total"
+            ),
+            "rate_positive_distortion_regression_count": preservation.get(
+                "rate_positive_distortion_regression_count"
+            ),
+            "preserve_before_budget_spend": True,
+            "spent_budget_candidate_is_child_of_rate_only_floor": True,
+            **FALSE_AUTHORITY,
+        },
+        "cumulative_rate_attack": dict(
+            preservation.get("cumulative_rate_attack")
+            if isinstance(preservation.get("cumulative_rate_attack"), Mapping)
+            else {}
+        ),
         "required_measurements": [
             "component_response_replay_for_drop_many_candidate",
             "segnet_posenet_repair_probe_by_region_boundary_frame_pair_batch",
@@ -4640,6 +5009,7 @@ def _autonomous_chain_build_row(
     correction_families: Sequence[str],
     receiver_closure: Mapping[str, Any],
     bridge_summary: Mapping[str, Any],
+    rate_budget_preservation_plan: Mapping[str, Any] | None,
     priority_base: float,
     source_artifact_keys: Sequence[str],
     next_queue_edges: Sequence[str],
@@ -4690,6 +5060,7 @@ def _autonomous_chain_build_row(
         correction_families=correction_families,
         receiver_closure=receiver_closure,
         bridge_summary=bridge_summary,
+        rate_budget_preservation_plan=rate_budget_preservation_plan,
     )
     coverage_score = (
         float(len(_unique_strings(operation_levels))) * 4.0
@@ -4716,6 +5087,7 @@ def _autonomous_chain_build_row(
         "correction_family_count": len(_unique_strings(correction_families)),
         "receiver_closure": dict(receiver_closure),
         "bridge_summary": dict(bridge_summary),
+        "rate_budget_preservation_plan": dict(rate_budget_preservation_plan or {}),
         "repair_budget_waterfill_plan": repair_waterfill_plan,
         "scheduler_actions": scheduler_actions,
         "scheduler_action_count": len(scheduler_actions),
@@ -4776,9 +5148,15 @@ def build_frontier_autonomous_chain_optimization(
     correction_families = _autonomous_chain_correction_families(handoff)
     receiver_closure = _autonomous_chain_receiver_closure_summary(handoff)
     bridge_summary = _autonomous_chain_bridge_summary(bridge)
+    rate_budget_preservation_plan = (
+        operation_portfolio.get("rate_budget_preservation_plan")
+        if isinstance(operation_portfolio.get("rate_budget_preservation_plan"), Mapping)
+        else {}
+    )
     source_artifact_keys = [
         "operation_portfolio",
         "operation_materializer_bridge",
+        "rate_budget_preservation_plan",
     ]
     if handoff:
         source_artifact_keys.append(
@@ -4806,6 +5184,7 @@ def build_frontier_autonomous_chain_optimization(
             correction_families=correction_families,
             receiver_closure=receiver_closure,
             bridge_summary=bridge_summary,
+            rate_budget_preservation_plan=rate_budget_preservation_plan,
             priority_base=120.0,
             source_artifact_keys=source_artifact_keys,
             next_queue_edges=edges,
@@ -4827,6 +5206,7 @@ def build_frontier_autonomous_chain_optimization(
                 correction_families=correction_families,
                 receiver_closure=receiver_closure,
                 bridge_summary=bridge_summary,
+                rate_budget_preservation_plan=rate_budget_preservation_plan,
                 priority_base=96.0,
                 source_artifact_keys=source_artifact_keys,
                 next_queue_edges=edges,
@@ -4847,6 +5227,7 @@ def build_frontier_autonomous_chain_optimization(
                 correction_families=correction_families,
                 receiver_closure=receiver_closure,
                 bridge_summary=bridge_summary,
+                rate_budget_preservation_plan=rate_budget_preservation_plan,
                 priority_base=84.0,
                 source_artifact_keys=source_artifact_keys,
                 next_queue_edges=edges,
@@ -4894,6 +5275,7 @@ def build_frontier_autonomous_chain_optimization(
                 correction_families=correction_families,
                 receiver_closure=receiver_closure,
                 bridge_summary=bridge_summary,
+                rate_budget_preservation_plan=rate_budget_preservation_plan,
                 priority_base=80.0,
                 source_artifact_keys=source_artifact_keys,
                 next_queue_edges=edges,
@@ -4928,9 +5310,21 @@ def build_frontier_autonomous_chain_optimization(
         "operation_level_counts": dict(sorted(level_counts.items())),
         "registered_target_count": len(_unique_strings(registered_targets)),
         "unregistered_target_count": len(all_unregistered_targets),
+        "rate_only_candidate_count": rate_budget_preservation_plan.get(
+            "rate_only_candidate_count"
+        ),
+        "rate_only_saved_bytes_total": rate_budget_preservation_plan.get(
+            "rate_only_saved_bytes_total"
+        ),
+        "rate_positive_distortion_regression_count": (
+            rate_budget_preservation_plan.get(
+                "rate_positive_distortion_regression_count"
+            )
+        ),
         "correction_families": correction_families,
         "receiver_closure_summary": receiver_closure,
         "bridge_summary": bridge_summary,
+        "rate_budget_preservation_plan": dict(rate_budget_preservation_plan),
         "rows": rows,
         "allowed_use": "autonomous_many_operator_queue_planning_only",
         "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
@@ -4960,6 +5354,17 @@ def _autonomous_chain_optimization_queue_metadata(
         ),
         "unregistered_target_count": autonomous_chain_optimization.get(
             "unregistered_target_count"
+        ),
+        "rate_only_candidate_count": autonomous_chain_optimization.get(
+            "rate_only_candidate_count"
+        ),
+        "rate_only_saved_bytes_total": autonomous_chain_optimization.get(
+            "rate_only_saved_bytes_total"
+        ),
+        "rate_positive_distortion_regression_count": (
+            autonomous_chain_optimization.get(
+                "rate_positive_distortion_regression_count"
+            )
         ),
         "allowed_use": "queue_metadata_for_many_op_autonomous_planning_only",
         "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
@@ -5110,6 +5515,19 @@ def _autonomous_chain_pipeline_stages(row: Mapping[str, Any]) -> list[dict[str, 
             **FALSE_AUTHORITY,
         },
         {
+            "id": "preserve_rate_only_floor_archive",
+            "pipeline_side": "encoder_archive_builder",
+            "owner": "rate_budget_preservation_plan",
+            "purpose": (
+                "emit immutable rate-only checkpoint before any distortion-side "
+                "budget reinvestment"
+            ),
+            "source_chain_id": chain_id,
+            "writes_submission_runtime": True,
+            "budget_spend_allowed": False,
+            **FALSE_AUTHORITY,
+        },
+        {
             "id": "allocate_repair_budget",
             "pipeline_side": "encoder_repair_allocator",
             "owner": "component_marginal_waterfill_policy",
@@ -5240,6 +5658,475 @@ def build_frontier_autonomous_chain_work_order(
         context=f"frontier_autonomous_chain_work_order:{chain_id}",
     )
     return payload
+
+
+def _repair_waterfill_added_bytes(row: Mapping[str, Any]) -> int | None:
+    terms = row.get("local_cpu_component_terms")
+    if isinstance(terms, Mapping):
+        value = _finite_int_or_none(terms.get("correction_added_archive_bytes"))
+        if value is not None:
+            return max(0, value)
+    paired = row.get("local_cpu_paired_reference_terms")
+    if isinstance(paired, Mapping):
+        value = _finite_int_or_none(paired.get("correction_added_archive_bytes"))
+        if value is not None:
+            return max(0, value)
+    return None
+
+
+def _repair_waterfill_allocation_rows(
+    *,
+    accepted_rows: Sequence[Mapping[str, Any]],
+    available_rate_credit_bytes: int,
+) -> list[dict[str, Any]]:
+    remaining = max(0, int(available_rate_credit_bytes))
+    out: list[dict[str, Any]] = []
+    for rank, row in enumerate(sorted(accepted_rows, key=_targeted_component_response_sort_key), start=1):
+        lagrangian_delta = _finite_float_or_none(
+            row.get("measured_lagrangian_delta_score_units")
+        )
+        component_delta = _finite_float_or_none(
+            row.get("measured_component_delta_score_units")
+        )
+        added_bytes = _repair_waterfill_added_bytes(row)
+        requested_bytes = added_bytes if added_bytes is not None else 0
+        proposed_bytes = min(remaining, requested_bytes) if requested_bytes > 0 else 0
+        remaining -= proposed_bytes
+        blockers = [
+            "exact_axis_component_response_required_before_budget_spend",
+            "receiver_runtime_materialization_required_before_budget_spend",
+        ]
+        if added_bytes is None:
+            blockers.append("correction_added_archive_bytes_missing")
+        if proposed_bytes <= 0:
+            blockers.append("no_receiver_closed_rate_credit_bytes_allocated")
+        out.append(
+            {
+                "schema": "frontier_rate_attack_repair_budget_waterfill_allocation_row.v1",
+                "rank": rank,
+                "acquisition_id": row.get("acquisition_id"),
+                "candidate_id": row.get("candidate_id"),
+                "correction_family": row.get("correction_family"),
+                "targeted_dimensions": list(row.get("targeted_dimensions") or []),
+                "operation_levels": list(row.get("operation_levels") or []),
+                "measured_component_delta_score_units": component_delta,
+                "measured_lagrangian_delta_score_units": lagrangian_delta,
+                "local_lagrangian_improvement_score_units": (
+                    -lagrangian_delta
+                    if lagrangian_delta is not None and lagrangian_delta < 0.0
+                    else 0.0
+                ),
+                "estimated_receiver_closed_rate_credit_score_units": row.get(
+                    "estimated_receiver_closed_rate_credit_score_units"
+                ),
+                "requested_repair_bytes": requested_bytes,
+                "proposed_encoder_repair_bytes": proposed_bytes,
+                "remaining_receiver_closed_rate_credit_bytes_after": remaining,
+                "source_response_artifact_path": row.get("response_artifact_path")
+                or row.get("source_harvest_path"),
+                "budget_spend_allowed": False,
+                "ready_for_budget_spend": False,
+                "budget_spend_blockers": _unique_strings(blockers),
+                "allowed_use": "encoder_repair_allocator_local_waterfill_plan_only",
+                "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+                **FALSE_AUTHORITY,
+            }
+        )
+    return out
+
+
+def build_frontier_repair_budget_waterfill_work_order(
+    *,
+    autonomous_chain_optimization: Mapping[str, Any],
+    chain_id: str,
+    targeted_component_correction_response_harvest: Mapping[str, Any],
+    receiver_closed_correction_budget: Mapping[str, Any],
+    autonomous_chain_optimization_path: str | Path | None = None,
+    targeted_component_correction_response_harvest_path: str | Path | None = None,
+    receiver_closed_correction_budget_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Fit an encoder-side repair waterfill plan from measured local responses."""
+
+    row = _autonomous_chain_row_for_id(autonomous_chain_optimization, chain_id)
+    if (
+        targeted_component_correction_response_harvest.get("schema")
+        != TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA
+    ):
+        raise FrontierRateAttackFeedbackError(
+            "targeted component correction response harvest has unexpected schema"
+        )
+    if (
+        receiver_closed_correction_budget.get("schema")
+        != RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA
+    ):
+        raise FrontierRateAttackFeedbackError(
+            "receiver closed correction budget has unexpected schema"
+        )
+    require_no_truthy_authority_fields(
+        targeted_component_correction_response_harvest,
+        context="repair_waterfill_response_harvest",
+    )
+    require_no_truthy_authority_fields(
+        receiver_closed_correction_budget,
+        context="repair_waterfill_receiver_closed_budget",
+    )
+    accepted_rows = _accepted_targeted_component_response_rows(
+        targeted_component_correction_response_harvest
+    )
+    available_bytes = (
+        _finite_int_or_none(
+            receiver_closed_correction_budget.get("receiver_closed_saved_bytes_total")
+        )
+        or 0
+    )
+    allocation_rows = _repair_waterfill_allocation_rows(
+        accepted_rows=accepted_rows,
+        available_rate_credit_bytes=available_bytes,
+    )
+    proposed_bytes_total = sum(
+        int(item.get("proposed_encoder_repair_bytes") or 0)
+        for item in allocation_rows
+    )
+    local_improvement_total = sum(
+        float(item.get("local_lagrangian_improvement_score_units") or 0.0)
+        for item in allocation_rows
+    )
+    blockers = [
+        "exact_auth_eval_required_before_score_or_promotion_claim",
+        "exact_axis_component_response_required_before_budget_spend",
+        "receiver_runtime_materialization_required_before_budget_spend",
+        "local_cpu_mlx_waterfill_is_not_budget_spend_authority",
+    ]
+    if not accepted_rows:
+        blockers.append("no_negative_local_lagrangian_response_rows")
+    if available_bytes <= 0:
+        blockers.append("no_receiver_closed_rate_credit_bytes_available")
+    if proposed_bytes_total <= 0:
+        blockers.append("no_repair_bytes_allocated_by_local_waterfill")
+    payload = {
+        "schema": REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA,
+        "generated_at_utc": autonomous_chain_optimization.get("generated_at_utc"),
+        "chain_id": chain_id,
+        "chain_family": row.get("chain_family"),
+        "optimization_objective": row.get("optimization_objective"),
+        "pipeline_side": "encoder_repair_allocator",
+        "pipeline_placement": {
+            "owner": "encoder_repair_allocator_before_archive_packaging",
+            "rate_credit_source": "receiver_closed_materializer_saved_bytes",
+            "distortion_debt_source": "measured_segnet_posenet_component_response",
+            "receiver_role": "decode_only_consume_final_packet",
+            "exact_eval_role": "downstream_authority_gate_only",
+            **FALSE_AUTHORITY,
+        },
+        "source_artifact_paths": _unique_strings(
+            [
+                str(autonomous_chain_optimization_path or ""),
+                str(targeted_component_correction_response_harvest_path or ""),
+                str(receiver_closed_correction_budget_path or ""),
+            ]
+        ),
+        "repair_budget_waterfill_plan": dict(
+            row.get("repair_budget_waterfill_plan")
+            if isinstance(row.get("repair_budget_waterfill_plan"), Mapping)
+            else {}
+        ),
+        "rate_budget_preservation_plan": dict(
+            row.get("rate_budget_preservation_plan")
+            if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
+            else {}
+        ),
+        "action_functional_lineage": {
+            "schema": "frontier_rate_attack_repair_waterfill_action_functional_lineage.v1",
+            "upstream_rate_budget_preservation_schema": (
+                row.get("rate_budget_preservation_plan", {}).get("schema")
+                if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
+                else None
+            ),
+            "upstream_waterfill_solver_schema": (
+                row.get("rate_budget_preservation_plan", {})
+                .get("waterfill_solver", {})
+                .get("schema")
+                if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
+                and isinstance(
+                    row.get("rate_budget_preservation_plan", {}).get(
+                        "waterfill_solver"
+                    ),
+                    Mapping,
+                )
+                else None
+            ),
+            "upstream_action_functional_schema": (
+                row.get("rate_budget_preservation_plan", {})
+                .get("action_functional", {})
+                .get("schema")
+                if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
+                and isinstance(
+                    row.get("rate_budget_preservation_plan", {}).get(
+                        "action_functional"
+                    ),
+                    Mapping,
+                )
+                else None
+            ),
+            "component_response_harvest_schema": (
+                targeted_component_correction_response_harvest.get("schema")
+            ),
+            "receiver_closed_budget_schema": receiver_closed_correction_budget.get(
+                "schema"
+            ),
+            "objective": (
+                "minimize_delta_segnet_plus_delta_posenet_plus_lambda_delta_bytes"
+            ),
+            "implemented_as": (
+                "queue_child_of_existing_rate_budget_preservation_and_component_"
+                "response_action_functional_surfaces"
+            ),
+            "new_parallel_action_functional_created": False,
+            "budget_spend_allowed": False,
+            **FALSE_AUTHORITY,
+        },
+        "preservation_contract": {
+            "schema": "frontier_rate_attack_repair_waterfill_preservation_contract.v1",
+            "emit_rate_only_floor_archive_before_repair_archive": True,
+            "repair_archive_must_reference_parent_rate_only_preservation_id": True,
+            "rate_only_candidate_remains_valid_even_if_repair_candidate_regresses": True,
+            "rebrotli_default_after_rate_attack": True,
+            "budget_spend_allowed": False,
+            **FALSE_AUTHORITY,
+        },
+        "receiver_closed_rate_credit": {
+            "schema": "frontier_rate_attack_repair_waterfill_rate_credit.v1",
+            "receiver_closed_saved_bytes_total": available_bytes,
+            "receiver_closed_saved_bytes_max": receiver_closed_correction_budget.get(
+                "receiver_closed_saved_bytes_max"
+            ),
+            "receiver_closed_candidate_count": receiver_closed_correction_budget.get(
+                "receiver_closed_candidate_count"
+            ),
+            "source_targets": list(
+                receiver_closed_correction_budget.get(
+                    "receiver_closed_budget_source_targets"
+                )
+                or []
+            ),
+            **FALSE_AUTHORITY,
+        },
+        "accepted_response_count": len(accepted_rows),
+        "allocation_row_count": len(allocation_rows),
+        "proposed_encoder_repair_bytes_total": proposed_bytes_total,
+        "local_lagrangian_improvement_score_units_total": local_improvement_total,
+        "allocation_rows": allocation_rows,
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_materializer_execution": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": _unique_strings(blockers),
+        "recommended_next_action": (
+            "materialize_receiver_consumed_repair_candidates_for_exact_axis_component_replay"
+            if allocation_rows and proposed_bytes_total > 0
+            else "collect_component_response_rows_and_receiver_closed_rate_credit"
+        ),
+        "allowed_use": "queue_owned_encoder_repair_waterfill_planning_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_promotion_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        payload,
+        context=f"frontier_repair_budget_waterfill_work_order:{chain_id}",
+    )
+    return payload
+
+
+def build_frontier_repair_budget_waterfill_queue(
+    *,
+    repo_root: str | Path,
+    autonomous_chain_optimization: Mapping[str, Any],
+    autonomous_chain_optimization_path: str | Path,
+    targeted_component_correction_response_harvest: Mapping[str, Any],
+    targeted_component_correction_response_harvest_path: str | Path,
+    receiver_closed_correction_budget: Mapping[str, Any],
+    receiver_closed_correction_budget_path: str | Path,
+    results_root: str | Path = DEFAULT_RESULTS_ROOT,
+    queue_id: str = "frontier_repair_budget_waterfill_queue",
+    chain_limit: int = 4,
+) -> dict[str, Any] | None:
+    """Build a local queue that emits encoder-side repair allocation work orders."""
+
+    if chain_limit < 1:
+        raise FrontierRateAttackFeedbackError("chain_limit must be >= 1")
+    require_no_truthy_authority_fields(
+        autonomous_chain_optimization,
+        context="repair_budget_waterfill_queue_autonomous_chain",
+    )
+    rows = [
+        row
+        for row in autonomous_chain_optimization.get("rows") or []
+        if isinstance(row, Mapping)
+        and row.get("schema") == AUTONOMOUS_CHAIN_OPTIMIZATION_ROW_SCHEMA
+    ][:chain_limit]
+    if not rows:
+        return None
+
+    repo = Path(repo_root)
+    source_path = _resolve_path(autonomous_chain_optimization_path, repo_root=repo)
+    harvest_path = _resolve_path(
+        targeted_component_correction_response_harvest_path,
+        repo_root=repo,
+    )
+    budget_path = _resolve_path(receiver_closed_correction_budget_path, repo_root=repo)
+    results_base = _resolve_path(str(results_root), repo_root=repo)
+    queue_root = results_base / "frontier_repair_budget_waterfill" / _slug_token(queue_id)
+    accepted_count = len(
+        _accepted_targeted_component_response_rows(
+            targeted_component_correction_response_harvest
+        )
+    )
+    available_bytes = (
+        _finite_int_or_none(
+            receiver_closed_correction_budget.get("receiver_closed_saved_bytes_total")
+        )
+        or 0
+    )
+    experiments: list[dict[str, Any]] = []
+    for priority, row in enumerate(rows, start=1):
+        chain_id = str(row.get("chain_id") or f"chain_{priority}")
+        work_order_path = (
+            queue_root / _slug_token(chain_id) / "repair_budget_waterfill_work_order.json"
+        )
+        work_order_ref = _repo_rel(work_order_path, repo)
+        metadata = {
+            "schema": REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA,
+            "chain_id": chain_id,
+            "chain_family": row.get("chain_family"),
+            "pipeline_side": "encoder_repair_allocator",
+            "accepted_response_count": accepted_count,
+            "receiver_closed_saved_bytes_total": available_bytes,
+            "rate_only_candidate_count": (
+                row.get("rate_budget_preservation_plan", {}).get(
+                    "rate_only_candidate_count"
+                )
+                if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
+                else None
+            ),
+            "rate_only_saved_bytes_total": (
+                row.get("rate_budget_preservation_plan", {}).get(
+                    "rate_only_saved_bytes_total"
+                )
+                if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
+                else None
+            ),
+            "cumulative_rate_attack": dict(
+                row.get("rate_budget_preservation_plan", {}).get(
+                    "cumulative_rate_attack"
+                )
+                if isinstance(row.get("rate_budget_preservation_plan"), Mapping)
+                and isinstance(
+                    row.get("rate_budget_preservation_plan", {}).get(
+                        "cumulative_rate_attack"
+                    ),
+                    Mapping,
+                )
+                else {}
+            ),
+            "preserve_rate_only_archive_before_budget_spend": True,
+            "queue_actuation_ready": True,
+            "budget_spend_allowed": False,
+            "ready_for_exact_eval_dispatch": False,
+            "source_artifact_paths": [
+                _repo_rel(source_path, repo),
+                _repo_rel(harvest_path, repo),
+                _repo_rel(budget_path, repo),
+            ],
+            "allowed_use": "local_encoder_repair_waterfill_work_order_queue_only",
+            "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+            **FALSE_AUTHORITY,
+        }
+        require_no_truthy_authority_fields(
+            metadata,
+            context=f"repair_budget_waterfill_queue_metadata:{chain_id}",
+        )
+        experiments.append(
+            {
+                "id": f"repair_waterfill_{_slug_token(chain_id)}",
+                "priority": priority,
+                "status": "queued",
+                "tags": [
+                    "frontier-rate-attack",
+                    "encoder-repair-allocator",
+                    "segnet-posenet-waterfill",
+                    "no-score-authority",
+                ],
+                "metadata": metadata,
+                "steps": [
+                    {
+                        "id": "emit_repair_budget_waterfill_work_order",
+                        "kind": "command",
+                        "command": [
+                            ".venv/bin/python",
+                            "tools/build_frontier_repair_budget_waterfill_work_order.py",
+                            "--autonomous-chain-optimization",
+                            _repo_rel(source_path, repo),
+                            "--chain-id",
+                            chain_id,
+                            "--targeted-component-correction-response-harvest",
+                            _repo_rel(harvest_path, repo),
+                            "--receiver-closed-correction-budget",
+                            _repo_rel(budget_path, repo),
+                            "--work-order-out",
+                            work_order_ref,
+                            "--overwrite",
+                        ],
+                        "resources": {"kind": "local_io_heavy"},
+                        "timeout_seconds": 120,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": work_order_ref,
+                                "key": "schema",
+                                "equals": REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA,
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": work_order_ref,
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": work_order_ref,
+                                "key": "ready_for_exact_eval_dispatch",
+                                "equals": False,
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": work_order_ref,
+                                "key": "budget_spend_allowed",
+                                "equals": False,
+                            },
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [work_order_ref],
+                            "input_artifact_paths": [
+                                _repo_rel(source_path, repo),
+                                _repo_rel(harvest_path, repo),
+                                _repo_rel(budget_path, repo),
+                            ],
+                            "include_postcondition_paths": True,
+                        },
+                    }
+                ],
+            }
+        )
+    return normalize_queue_definition(
+        {
+            "schema": QUEUE_SCHEMA,
+            "queue_id": queue_id,
+            "controls": {
+                "mode": "running",
+                "local_first": True,
+                "max_concurrency": {"local_io_heavy": 1},
+            },
+            "experiments": experiments,
+        }
+    )
 
 
 def _autonomous_action_artifact_key(action: Mapping[str, Any]) -> str:
@@ -12653,6 +13540,9 @@ def build_frontier_rate_attack_feedback_refresh(
         ],
         "dqs1_observation_discovery": dqs1_observation_discovery,
         "operation_portfolio": operation_portfolio,
+        "rate_budget_preservation_plan": operation_portfolio.get(
+            "rate_budget_preservation_plan"
+        ),
         "operation_materializer_bridge": operation_materializer_bridge,
         "receiver_repair_backlog": receiver_repair_backlog,
         "receiver_closed_correction_budget": receiver_closed_correction_budget,
@@ -12714,11 +13604,15 @@ __all__ = [
     "OPERATION_PORTFOLIO_SCHEMA",
     "OPERATION_PORTFOLIO_TAXONOMY_SCHEMA",
     "PAIR_FRAME_GEOMETRY_DISCOVERY_SCHEMA",
+    "RATE_BUDGET_PRESERVATION_PLAN_SCHEMA",
+    "RATE_BUDGET_PRESERVATION_ROW_SCHEMA",
     "RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA",
     "RECEIVER_REPAIR_BACKLOG_SCHEMA",
     "RECEIVER_REPAIR_QUEUE_METADATA_SCHEMA",
     "RECEIVER_REPAIR_ROW_SCHEMA",
     "RECEIVER_REPAIR_WORK_ORDER_SCHEMA",
+    "REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA",
+    "REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_CHAIN_MATERIALIZER_HANDOFF_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_QUEUE_METADATA_SCHEMA",
@@ -12739,9 +13633,12 @@ __all__ = [
     "build_frontier_operation_materializer_bridge",
     "build_frontier_operation_portfolio",
     "build_frontier_rate_attack_feedback_refresh",
+    "build_frontier_rate_budget_preservation_plan",
     "build_frontier_receiver_repair_backlog",
     "build_frontier_receiver_repair_queue",
     "build_frontier_receiver_repair_work_order",
+    "build_frontier_repair_budget_waterfill_queue",
+    "build_frontier_repair_budget_waterfill_work_order",
     "build_frontier_targeted_component_correction_acquisition",
     "build_frontier_targeted_component_correction_chain_materializer_handoff",
     "build_frontier_targeted_component_correction_chain_work_orders",

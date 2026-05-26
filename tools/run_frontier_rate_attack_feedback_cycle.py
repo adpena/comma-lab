@@ -1150,6 +1150,7 @@ def main(argv: list[str] | None = None) -> int:
                 "targeted_component_operation_chain_to_materializer_handoff",
                 "targeted_operation_chain_queue_to_targeted_drop_many_child_queue",
                 "autonomous_chain_optimization_to_queue_owned_many_op_plan",
+                "receiver_closed_rate_budget_to_encoder_repair_waterfill_queue",
                 "autonomous_chain_optimization_to_local_child_queue_actuation",
                 "many_op_plan_to_component_replay_and_exact_readiness_bridge",
                 "bounded_auxiliary_queue_artifacts_to_local_execution_trace",

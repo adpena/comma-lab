@@ -22,10 +22,13 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     OPERATION_MATERIALIZER_BRIDGE_SCHEMA,
     OPERATION_PORTFOLIO_SCHEMA,
     OPERATION_PORTFOLIO_TAXONOMY_SCHEMA,
+    RATE_BUDGET_PRESERVATION_PLAN_SCHEMA,
+    RATE_BUDGET_PRESERVATION_ROW_SCHEMA,
     RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA,
     RECEIVER_REPAIR_BACKLOG_SCHEMA,
     RECEIVER_REPAIR_ROW_SCHEMA,
     RECEIVER_REPAIR_WORK_ORDER_SCHEMA,
+    REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_CHAIN_MATERIALIZER_HANDOFF_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUEST_ROW_SCHEMA,
@@ -42,6 +45,8 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     build_frontier_operation_chain_compiler_stage_plan,
     build_frontier_rate_attack_feedback_refresh,
     build_frontier_receiver_repair_work_order,
+    build_frontier_repair_budget_waterfill_queue,
+    build_frontier_repair_budget_waterfill_work_order,
     build_frontier_targeted_component_correction_acquisition,
     build_frontier_targeted_component_correction_chain_materializer_handoff,
     build_frontier_targeted_component_correction_chain_work_orders,
@@ -540,7 +545,15 @@ def _dqs1_observation_row(
     *,
     candidate_id: str = "pairset_drop_one_rank023_pair0440",
     raw_output_or_cache_sha256: str = "c" * 64,
+    family: str = "decoder_q_pairset_drop_one",
+    segnet_delta: float = -0.0001,
+    posenet_delta: float = 0.0,
+    rate_delta: float = -0.00002,
+    score_delta: float = -0.00012,
+    archive_byte_delta: int = -4,
+    selected_pair_indices: list[int] | None = None,
 ) -> dict[str, object]:
+    selected_pairs = selected_pair_indices or [1, 2, 440]
     return {
         "schema": "mlx_dynamic_sweep_observation.v1",
         **_false_authority(),
@@ -548,7 +561,7 @@ def _dqs1_observation_row(
         "source_schema": "dqs1_local_first_harvest.v1",
         "sweep_config_id": "dqs1_local_first_macos_cpu_advisory",
         "optimization_pass_id": "local_cpu_advisory_harvest",
-        "family": "decoder_q_pairset_drop_one",
+        "family": family,
         "observed_axis": "macos_cpu_advisory",
         "evidence_tag": "[macOS-CPU advisory only]",
         "observed_score_or_delta": 0.1919,
@@ -556,13 +569,13 @@ def _dqs1_observation_row(
         "runtime_sha256": "b" * 64,
         "raw_output_or_cache_sha256": raw_output_or_cache_sha256,
         "component_deltas": {
-            "segnet_delta": -0.0001,
-            "posenet_delta": 0.0,
-            "rate_delta": -0.00002,
+            "segnet_delta": segnet_delta,
+            "posenet_delta": posenet_delta,
+            "rate_delta": rate_delta,
         },
-        "score_delta_vs_baseline": -0.00012,
-        "archive_byte_delta_vs_baseline": -4,
-        "selected_pair_indices": [1, 2, 440],
+        "score_delta_vs_baseline": score_delta,
+        "archive_byte_delta_vs_baseline": archive_byte_delta,
+        "selected_pair_indices": selected_pairs,
     }
 
 
@@ -1275,6 +1288,37 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     )
     assert correction_budget["score_claim"] is False
     assert correction_budget["ready_for_exact_eval_dispatch"] is False
+    rate_plan = operation_portfolio["rate_budget_preservation_plan"]
+    assert rate_plan["schema"] == RATE_BUDGET_PRESERVATION_PLAN_SCHEMA
+    _assert_false_authority(rate_plan)
+    assert rate_plan["active"] is True
+    assert rate_plan["rate_only_candidate_count"] >= 1
+    assert rate_plan["rate_only_saved_bytes_total"] >= 156
+    assert rate_plan["action_functional"]["schema"] == (
+        "frontier_rate_attack_operator_action_functional.v1"
+    )
+    assert "operator_synergy_or_antagonism_terms" in rate_plan[
+        "action_functional"
+    ]["state_variables"]
+    assert "lagrangian_waterfill" in rate_plan["action_functional"]["discrete_solver"]
+    assert rate_plan["cumulative_rate_attack"][
+        "preserve_cumulative_rate_only_archive"
+    ] is True
+    assert rate_plan["cumulative_rate_attack"][
+        "emit_cumulative_rate_only_before_any_distortion_spend"
+    ] is True
+    assert rate_plan["waterfill_solver"]["rebrotli_default_after_rate_attack"] is True
+    assert rate_plan["waterfill_solver"]["budget_spend_allowed"] is False
+    assert {
+        "dqs1_component_rate_budget",
+        "receiver_closed_materializer_rate_budget",
+    }.issubset(set(rate_plan["source_kinds"]))
+    assert all(
+        row["schema"] == RATE_BUDGET_PRESERVATION_ROW_SCHEMA
+        and row["preserve_as_rate_only_candidate"] is True
+        and row["rate_only_archive_preservation_required"] is True
+        for row in rate_plan["rows"]
+    )
     targeted_queue = build_frontier_targeted_component_correction_queue(
         repo_root=tmp_path,
         targeted_component_correction_acquisition=report[
@@ -1708,6 +1752,76 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     )
     assert report["queue_summary"]["experiment_count"] == 2
     assert report["queue_summary"]["score_claim"] is False
+
+
+def test_rate_budget_preservation_keeps_rate_only_floor_for_distortion_regressions(
+    tmp_path: Path,
+) -> None:
+    action_summary = _write_action_summary(tmp_path)
+    artifact_root = tmp_path / "frontier_artifacts"
+    _write_materializer_feedback(artifact_root)
+    dqs1_observations = _write_jsonl(
+        tmp_path / "dqs1_observations.jsonl",
+        [
+            _dqs1_observation_row(
+                candidate_id="pairset_drop_many_rate_floor_regression",
+                family="decoder_q_pairset_drop_many",
+                segnet_delta=0.0002,
+                posenet_delta=0.0001,
+                rate_delta=-0.00002,
+                score_delta=0.00028,
+                archive_byte_delta=-4,
+                selected_pair_indices=[1, 2, 112, 233, 371],
+            )
+        ],
+    )
+
+    report = build_frontier_rate_attack_feedback_refresh(
+        repo_root=tmp_path,
+        frontier_artifact_roots=(artifact_root,),
+        dqs1_observation_paths=(dqs1_observations,),
+        action_summary_path=action_summary,
+        results_root=str(tmp_path / "results"),
+        queue_id="frontier_feedback_rate_preserve_unit",
+        candidate_limit=2,
+    )
+
+    rate_plan = report["operation_portfolio"]["rate_budget_preservation_plan"]
+    assert rate_plan["schema"] == RATE_BUDGET_PRESERVATION_PLAN_SCHEMA
+    _assert_false_authority(rate_plan)
+    assert rate_plan["active"] is True
+    assert rate_plan["rate_positive_distortion_regression_count"] == 1
+    assert rate_plan["rate_positive_distortion_regression_candidate_ids"] == [
+        "pairset_drop_many_rate_floor_regression"
+    ]
+    dqs1_row = next(
+        row
+        for row in rate_plan["rows"]
+        if row["candidate_id"] == "pairset_drop_many_rate_floor_regression"
+    )
+    assert dqs1_row["schema"] == RATE_BUDGET_PRESERVATION_ROW_SCHEMA
+    _assert_false_authority(dqs1_row)
+    assert dqs1_row["source_kind"] == "dqs1_component_rate_budget"
+    assert dqs1_row["saved_bytes"] == 4
+    assert dqs1_row["distortion_debt_score_units"] == pytest.approx(0.0003)
+    assert dqs1_row["budget_reinvestment_candidate"] is True
+    assert dqs1_row["preserve_as_rate_only_candidate"] is True
+    assert dqs1_row["minimum_repair_score_units_to_beat_rate_only_floor"] == (
+        pytest.approx(0.00028)
+    )
+    assert rate_plan["cumulative_rate_attack"][
+        "emit_cumulative_rate_only_before_any_distortion_spend"
+    ] is True
+    assert rate_plan["action_functional"]["objective"] == (
+        "minimize_S_under_receiver_and_exact_readiness_constraints"
+    )
+    assert rate_plan["waterfill_solver"]["acceptance_rule"].startswith(
+        "emit_rate_only_archive_first"
+    )
+    assert report["rate_budget_preservation_plan"] == rate_plan
+    assert report["queue"]["experiments"][0]["metadata"][
+        "frontier_operation_portfolio"
+    ]["rate_positive_distortion_regression_count"] == 1
 
 
 def test_targeted_component_correction_response_harvest_measures_lagrangian(
@@ -2663,6 +2777,7 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     )
     emitted_artifact_keys = {
         "operation_materializer_execution_queue",
+        "repair_budget_waterfill_queue",
         "receiver_repair_queue",
         "targeted_component_correction_chain_materializer_execution_queue",
         "targeted_component_correction_operation_chain_queue",
@@ -2670,7 +2785,6 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     emitted_source_keys = {
         "operation_materializer_work_queue",
         "targeted_component_correction_chain_materializer_work_queue",
-        "targeted_component_correction_response_harvest",
         "materializer_chain_exact_readiness_bridge",
     }
     for row in autonomous["rows"]:
@@ -2699,13 +2813,100 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         stage["pipeline_side"] for stage in work_order["pipeline_stages"]
     }
     assert work_order["local_queue_action_count"] >= 1
-    assert work_order["advisory_action_count"] >= 2
+    assert work_order["advisory_action_count"] >= 1
     assert work_order["repair_budget_waterfill_plan"]["budget_spend_allowed"] is False
 
     autonomous_path = _write_json(tmp_path / "autonomous_chain.json", autonomous)
+    receiver_budget_path = _write_json(
+        tmp_path / "receiver_closed_correction_budget.json",
+        report["receiver_closed_correction_budget"],
+    )
+    repair_waterfill_work_order = build_frontier_repair_budget_waterfill_work_order(
+        autonomous_chain_optimization=autonomous,
+        chain_id=first_chain["chain_id"],
+        targeted_component_correction_response_harvest=harvest,
+        receiver_closed_correction_budget=report["receiver_closed_correction_budget"],
+        autonomous_chain_optimization_path=autonomous_path,
+        targeted_component_correction_response_harvest_path=harvest_path,
+        receiver_closed_correction_budget_path=receiver_budget_path,
+    )
+    assert (
+        repair_waterfill_work_order["schema"]
+        == REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA
+    )
+    _assert_false_authority(repair_waterfill_work_order)
+    assert repair_waterfill_work_order["pipeline_side"] == "encoder_repair_allocator"
+    assert repair_waterfill_work_order["rate_budget_preservation_plan"]["schema"] == (
+        RATE_BUDGET_PRESERVATION_PLAN_SCHEMA
+    )
+    assert repair_waterfill_work_order["action_functional_lineage"][
+        "upstream_rate_budget_preservation_schema"
+    ] == RATE_BUDGET_PRESERVATION_PLAN_SCHEMA
+    assert repair_waterfill_work_order["action_functional_lineage"][
+        "upstream_action_functional_schema"
+    ] == "frontier_rate_attack_operator_action_functional.v1"
+    assert repair_waterfill_work_order["action_functional_lineage"][
+        "new_parallel_action_functional_created"
+    ] is False
+    assert repair_waterfill_work_order["preservation_contract"][
+        "emit_rate_only_floor_archive_before_repair_archive"
+    ] is True
+    assert repair_waterfill_work_order["accepted_response_count"] == 2
+    assert repair_waterfill_work_order["allocation_row_count"] == 2
+    assert repair_waterfill_work_order["budget_spend_allowed"] is False
+    assert repair_waterfill_work_order["ready_for_exact_eval_dispatch"] is False
+    assert "exact_axis_component_response_required_before_budget_spend" in (
+        repair_waterfill_work_order["blockers"]
+    )
+    repair_waterfill_queue = build_frontier_repair_budget_waterfill_queue(
+        repo_root=REPO_ROOT,
+        autonomous_chain_optimization=autonomous,
+        autonomous_chain_optimization_path=autonomous_path,
+        targeted_component_correction_response_harvest=harvest,
+        targeted_component_correction_response_harvest_path=harvest_path,
+        receiver_closed_correction_budget=report["receiver_closed_correction_budget"],
+        receiver_closed_correction_budget_path=receiver_budget_path,
+        results_root=tmp_path / "results",
+        queue_id="frontier_repair_waterfill_unit",
+        chain_limit=1,
+    )
+    assert repair_waterfill_queue is not None
+    assert repair_waterfill_queue["schema"] == "experiment_queue.v1"
+    repair_waterfill_experiment = repair_waterfill_queue["experiments"][0]
+    assert repair_waterfill_experiment["status"] == "queued"
+    assert repair_waterfill_experiment["metadata"]["pipeline_side"] == (
+        "encoder_repair_allocator"
+    )
+    _assert_false_authority(repair_waterfill_experiment["metadata"])
+    repair_step = repair_waterfill_experiment["steps"][0]
+    assert repair_step["command"][1] == (
+        "tools/build_frontier_repair_budget_waterfill_work_order.py"
+    )
+    result = subprocess.run(
+        [sys.executable, *repair_step["command"][1:]],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    repair_payload = json.loads(result.stdout)
+    assert repair_payload["budget_spend_allowed"] is False
+    repair_work_order_path = Path(
+        repair_step["command"][repair_step["command"].index("--work-order-out") + 1]
+    )
+    repair_materialized = json.loads(
+        (REPO_ROOT / repair_work_order_path).read_text(encoding="utf-8")
+    )
+    assert repair_materialized["schema"] == REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA
+    _assert_false_authority(repair_materialized)
     chain_queue_path = _write_json(
         tmp_path / "targeted_component_correction_operation_chain_queue.json",
         chain_queue,
+    )
+    repair_waterfill_queue_path = _write_json(
+        tmp_path / "repair_budget_waterfill_queue.json",
+        repair_waterfill_queue,
     )
     autonomous_queue = build_frontier_autonomous_chain_optimization_queue(
         repo_root=REPO_ROOT,
@@ -2713,6 +2914,7 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         autonomous_chain_optimization_path=autonomous_path,
         artifact_paths_by_key={
             "operation_materializer_execution_queue": chain_queue_path,
+            "repair_budget_waterfill_queue": repair_waterfill_queue_path,
             "receiver_repair_queue": chain_queue_path,
             "targeted_component_correction_operation_chain_queue": chain_queue_path,
             "targeted_component_correction_chain_materializer_execution_queue": (
@@ -3386,6 +3588,9 @@ def test_frontier_feedback_compiler_turns_eureka_near_misses_into_beyond_drop_tw
         "local_cpu_eureka_planning.json"
     )
     assert artifacts["operation_portfolio"].endswith("operation_portfolio.json")
+    assert artifacts["rate_budget_preservation_plan"].endswith(
+        "rate_budget_preservation_plan.json"
+    )
     assert artifacts["operation_chain_compiler_work_orders"].endswith(
         "operation_chain_compiler_work_orders.json"
     )
@@ -3429,6 +3634,13 @@ def test_frontier_feedback_compiler_turns_eureka_near_misses_into_beyond_drop_tw
         )
     )
     assert artifact_payload["planner_hint_count"] == 1
+    rate_plan_payload = json.loads(
+        (tmp_path / artifacts["rate_budget_preservation_plan"]).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert rate_plan_payload["schema"] == RATE_BUDGET_PRESERVATION_PLAN_SCHEMA
+    _assert_false_authority(rate_plan_payload)
 
 
 def test_frontier_feedback_eureka_default_discovers_research_root(
@@ -3936,6 +4148,7 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         output_dir / "targeted_component_correction_chain_materializer_work_queue.json"
     )
     autonomous_chain_optimization_path = output_dir / "autonomous_chain_optimization.json"
+    repair_budget_waterfill_queue_path = output_dir / "repair_budget_waterfill_queue.json"
     autonomous_chain_optimization_queue_path = (
         output_dir / "autonomous_chain_optimization_queue.json"
     )
@@ -3953,6 +4166,7 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert targeted_component_chain_materializer_handoff_path.exists()
     assert targeted_component_chain_materializer_work_queue_path.exists()
     assert autonomous_chain_optimization_path.exists()
+    assert repair_budget_waterfill_queue_path.exists()
     assert autonomous_chain_optimization_queue_path.exists()
     assert report_path.exists()
     report = json.loads(report_path.read_text(encoding="utf-8"))
@@ -3989,6 +4203,9 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     ].endswith("targeted_component_correction_chain_materializer_work_queue.json")
     assert report["artifacts"]["autonomous_chain_optimization"].endswith(
         "autonomous_chain_optimization.json"
+    )
+    assert report["artifacts"]["repair_budget_waterfill_queue"].endswith(
+        "repair_budget_waterfill_queue.json"
     )
     assert report["artifacts"]["autonomous_chain_optimization_queue"].endswith(
         "autonomous_chain_optimization_queue.json"
@@ -4078,6 +4295,22 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         "json.tool",
         report["artifacts"]["autonomous_chain_optimization"],
     ]
+    assert report["operator_commands"]["validate_repair_budget_waterfill_queue"] == [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        report["artifacts"]["repair_budget_waterfill_queue"],
+        "validate",
+    ]
+    repair_waterfill_run = report["operator_commands"][
+        "run_repair_budget_waterfill_queue_bounded_local"
+    ]
+    assert repair_waterfill_run[:4] == [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        report["artifacts"]["repair_budget_waterfill_queue"],
+    ]
     assert report["operator_commands"]["validate_autonomous_chain_optimization_queue"] == [
         ".venv/bin/python",
         "tools/experiment_queue.py",
@@ -4101,6 +4334,16 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     _assert_false_authority(autonomous_artifact)
     autonomous_queue_artifact = json.loads(
         autonomous_chain_optimization_queue_path.read_text(encoding="utf-8")
+    )
+    repair_waterfill_queue_artifact = json.loads(
+        repair_budget_waterfill_queue_path.read_text(encoding="utf-8")
+    )
+    assert repair_waterfill_queue_artifact["schema"] == "experiment_queue.v1"
+    assert repair_waterfill_queue_artifact["experiments"][0]["metadata"][
+        "pipeline_side"
+    ] == "encoder_repair_allocator"
+    _assert_false_authority(
+        repair_waterfill_queue_artifact["experiments"][0]["metadata"]
     )
     assert autonomous_queue_artifact["schema"] == "experiment_queue.v1"
     autonomous_queue_metadata = autonomous_queue_artifact["experiments"][0]["metadata"]
@@ -4711,6 +4954,9 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     assert initial_artifacts["autonomous_chain_optimization"].endswith(
         "autonomous_chain_optimization.json"
     )
+    assert initial_artifacts["repair_budget_waterfill_queue"].endswith(
+        "repair_budget_waterfill_queue.json"
+    )
     initial_feedback_report = json.loads(
         (REPO_ROOT / initial_artifacts["feedback_refresh_report"]).read_text(
             encoding="utf-8"
@@ -4809,6 +5055,9 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     assert initial_artifacts[
         "targeted_component_correction_chain_materializer_work_queue"
     ].endswith("targeted_component_correction_chain_materializer_work_queue.json")
+    assert initial_artifacts["repair_budget_waterfill_queue"].endswith(
+        "repair_budget_waterfill_queue.json"
+    )
     assert initial_artifacts["autonomous_chain_optimization_queue"].endswith(
         "autonomous_chain_optimization_queue.json"
     )
@@ -4906,6 +5155,18 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     )
     _assert_false_authority(targeted_chain_handoff)
     assert targeted_chain_handoff["work_queue_row_count"] == 0
+    initial_repair_waterfill_queue = json.loads(
+        (
+            REPO_ROOT / initial_artifacts["repair_budget_waterfill_queue"]
+        ).read_text(encoding="utf-8")
+    )
+    assert initial_repair_waterfill_queue["schema"] == "experiment_queue.v1"
+    assert initial_repair_waterfill_queue["experiments"][0]["metadata"][
+        "pipeline_side"
+    ] == "encoder_repair_allocator"
+    _assert_false_authority(
+        initial_repair_waterfill_queue["experiments"][0]["metadata"]
+    )
     initial_autonomous_chain = json.loads(
         (
             REPO_ROOT / initial_artifacts["autonomous_chain_optimization"]
@@ -4966,6 +5227,12 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     )
     assert (
         initial_feedback_report["operator_commands"][
+            "validate_repair_budget_waterfill_queue"
+        ][0]
+        == ".venv/bin/python"
+    )
+    assert (
+        initial_feedback_report["operator_commands"][
             "validate_autonomous_chain_optimization_queue"
         ][0]
         == ".venv/bin/python"
@@ -5020,6 +5287,10 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     )
     assert (
         "autonomous_chain_optimization_to_queue_owned_many_op_plan"
+        in cycle_report["integration_edges"]
+    )
+    assert (
+        "receiver_closed_rate_budget_to_encoder_repair_waterfill_queue"
         in cycle_report["integration_edges"]
     )
     assert (
