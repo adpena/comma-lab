@@ -34,6 +34,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
     FrontierRateAttackFeedbackError,
     build_frontier_rate_attack_feedback_refresh,
     build_frontier_receiver_repair_queue,
+    build_frontier_targeted_component_correction_queue,
 )
 from tac.repo_io import ArtifactWriteError, json_text, write_json_artifact  # noqa: E402
 
@@ -232,6 +233,29 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
         path = output_dir / "receiver_closed_correction_budget.json"
         write_json_artifact(path, receiver_closed_budget)
         artifacts["receiver_closed_correction_budget"] = _display_path(path)
+    targeted_component_correction = report.get(
+        "targeted_component_correction_acquisition"
+    )
+    if isinstance(targeted_component_correction, dict):
+        path = output_dir / "targeted_component_correction_acquisition.json"
+        write_json_artifact(path, targeted_component_correction)
+        artifacts["targeted_component_correction_acquisition"] = _display_path(path)
+        correction_queue = build_frontier_targeted_component_correction_queue(
+            repo_root=REPO_ROOT,
+            targeted_component_correction_acquisition=targeted_component_correction,
+            targeted_component_correction_acquisition_path=path,
+            results_root=str(report.get("results_root") or DEFAULT_RESULTS_ROOT),
+            queue_id=(
+                f"{report.get('queue_id') or 'frontier_feedback'}_"
+                "component_correction"
+            ),
+        )
+        if isinstance(correction_queue, dict):
+            queue_path = output_dir / "targeted_component_correction_queue.json"
+            write_json_artifact(queue_path, correction_queue)
+            artifacts["targeted_component_correction_queue"] = _display_path(
+                queue_path
+            )
     bridge = report.get("materializer_feedback_bridge")
     if isinstance(bridge, dict):
         path = output_dir / "materializer_feedback_bridge.json"
@@ -282,6 +306,14 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             "tools/experiment_queue.py",
             "--queue",
             artifacts["receiver_repair_queue"],
+            "validate",
+        ]
+    if "targeted_component_correction_queue" in artifacts:
+        operator_commands["validate_targeted_component_correction_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["targeted_component_correction_queue"],
             "validate",
         ]
     if operator_commands:
@@ -437,6 +469,58 @@ def main(argv: list[str] | None = None) -> int:
                         )
                         if isinstance(
                             report.get("receiver_closed_correction_budget"), dict
+                        )
+                        else None
+                    ),
+                },
+                "targeted_component_correction_acquisition_summary": {
+                    "active": (
+                        report.get(
+                            "targeted_component_correction_acquisition", {}
+                        ).get("active")
+                        if isinstance(
+                            report.get("targeted_component_correction_acquisition"),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "row_count": (
+                        report.get(
+                            "targeted_component_correction_acquisition", {}
+                        ).get("row_count")
+                        if isinstance(
+                            report.get("targeted_component_correction_acquisition"),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "queue_actionable_acquisition_count": (
+                        report.get(
+                            "targeted_component_correction_acquisition", {}
+                        ).get("queue_actionable_acquisition_count")
+                        if isinstance(
+                            report.get("targeted_component_correction_acquisition"),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "receiver_closed_saved_bytes_total": (
+                        report.get(
+                            "targeted_component_correction_acquisition", {}
+                        ).get("receiver_closed_saved_bytes_total")
+                        if isinstance(
+                            report.get("targeted_component_correction_acquisition"),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "top_acquisition_ids": (
+                        report.get(
+                            "targeted_component_correction_acquisition", {}
+                        ).get("top_acquisition_ids")
+                        if isinstance(
+                            report.get("targeted_component_correction_acquisition"),
+                            dict,
                         )
                         else None
                     ),

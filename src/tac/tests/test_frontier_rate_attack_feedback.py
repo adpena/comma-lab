@@ -17,9 +17,12 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     RECEIVER_REPAIR_BACKLOG_SCHEMA,
     RECEIVER_REPAIR_ROW_SCHEMA,
     RECEIVER_REPAIR_WORK_ORDER_SCHEMA,
+    TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
+    TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA,
     FrontierRateAttackFeedbackError,
     build_frontier_rate_attack_feedback_refresh,
     build_frontier_receiver_repair_work_order,
+    build_frontier_targeted_component_correction_work_order,
     discover_local_cpu_eureka_planning_signals,
 )
 from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (
@@ -680,6 +683,55 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
     assert "active_rate_floor_override_required_before_exact_dispatch" in (
         receiver_closed_budget["blockers"]
     )
+    targeted_component = report["targeted_component_correction_acquisition"]
+    assert (
+        targeted_component["schema"]
+        == TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA
+    )
+    _assert_false_authority(targeted_component)
+    assert targeted_component["active"] is True
+    assert targeted_component["receiver_closed_saved_bytes_total"] == 156
+    assert targeted_component["queue_actionable_acquisition_count"] >= 5
+    assert {
+        "pair",
+        "frame",
+        "region",
+        "boundary",
+        "batch",
+        "full_video",
+    }.issubset(set(targeted_component["targeted_dimensions"]))
+    assert targeted_component["best_component_behavior_candidate_id"] == (
+        "pairset_drop_one_rank023_pair0440"
+    )
+    assert "component_eval_required_before_budget_spend" in targeted_component[
+        "blockers"
+    ]
+    assert targeted_component["ready_for_exact_eval_dispatch"] is False
+    assert any(
+        row["correction_family"] == "drop_within_selected_set_masked_boundary"
+        and row["queue_actionable"] is True
+        and row["ready_for_budget_spend"] is False
+        and row["budget_spend_allowed"] is False
+        and "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+        in row["forbidden_use"]
+        for row in targeted_component["rows"]
+    )
+    first_acquisition_id = targeted_component["top_acquisition_ids"][0]
+    correction_work_order = build_frontier_targeted_component_correction_work_order(
+        targeted_component_correction_acquisition=targeted_component,
+        acquisition_id=first_acquisition_id,
+    )
+    assert (
+        correction_work_order["schema"]
+        == TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA
+    )
+    _assert_false_authority(correction_work_order)
+    assert correction_work_order["budget_spend_gate"]["ready_for_budget_spend"] is False
+    assert correction_work_order["budget_spend_gate"]["budget_spend_allowed"] is False
+    assert correction_work_order["command_hints"]
+    assert correction_work_order["lagrangian_acceptance_rule"][
+        "component_eval_required"
+    ] is True
     assert operation_portfolio["top_operation_ids"][0] == (
         "dqs1_component_coupled_pair_batch_expansion"
     )
@@ -837,6 +889,20 @@ def test_frontier_feedback_compiler_discovers_materializers_and_refreshes_dqs1_q
         experiment["metadata"]["frontier_receiver_closed_correction_budget"][
             "receiver_closed_saved_bytes_total"
         ]
+        == 156
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        experiment["metadata"][
+            "frontier_targeted_component_correction_acquisition"
+        ]["active"]
+        is True
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        experiment["metadata"][
+            "frontier_targeted_component_correction_acquisition"
+        ]["receiver_closed_saved_bytes_total"]
         == 156
         for experiment in queue["experiments"]
     )
@@ -1467,17 +1533,31 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert payload["receiver_closed_correction_budget_summary"][
         "receiver_closed_saved_bytes_total"
     ] == 156
+    assert payload["targeted_component_correction_acquisition_summary"][
+        "receiver_closed_saved_bytes_total"
+    ] == 156
+    assert payload["targeted_component_correction_acquisition_summary"][
+        "queue_actionable_acquisition_count"
+    ] >= 5
     queue_path = output_dir / "dqs1_followup_queue.json"
     bridge_path = output_dir / "materializer_feedback_bridge.json"
     receiver_repair_backlog_path = output_dir / "receiver_repair_backlog.json"
     receiver_closed_budget_path = output_dir / "receiver_closed_correction_budget.json"
     receiver_repair_queue_path = output_dir / "receiver_repair_queue.json"
+    targeted_component_acquisition_path = (
+        output_dir / "targeted_component_correction_acquisition.json"
+    )
+    targeted_component_queue_path = (
+        output_dir / "targeted_component_correction_queue.json"
+    )
     report_path = output_dir / "feedback_refresh_report.json"
     assert queue_path.exists()
     assert bridge_path.exists()
     assert receiver_repair_backlog_path.exists()
     assert receiver_closed_budget_path.exists()
     assert receiver_repair_queue_path.exists()
+    assert targeted_component_acquisition_path.exists()
+    assert targeted_component_queue_path.exists()
     assert report_path.exists()
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["artifacts"]["dqs1_followup_queue"].endswith("dqs1_followup_queue.json")
@@ -1490,9 +1570,21 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert report["artifacts"]["receiver_closed_correction_budget"].endswith(
         "receiver_closed_correction_budget.json"
     )
+    assert report["artifacts"]["targeted_component_correction_acquisition"].endswith(
+        "targeted_component_correction_acquisition.json"
+    )
+    assert report["artifacts"]["targeted_component_correction_queue"].endswith(
+        "targeted_component_correction_queue.json"
+    )
     assert report["operator_commands"]["validate_followup_queue"][0] == ".venv/bin/python"
     assert (
         report["operator_commands"]["validate_receiver_repair_queue"][0]
+        == ".venv/bin/python"
+    )
+    assert (
+        report["operator_commands"][
+            "validate_targeted_component_correction_queue"
+        ][0]
         == ".venv/bin/python"
     )
 
@@ -1524,6 +1616,78 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         check=False,
     )
     assert repair_validate.returncode == 0, repair_validate.stderr
+    correction_validate = subprocess.run(
+        [
+            sys.executable,
+            "tools/experiment_queue.py",
+            "--queue",
+            str(targeted_component_queue_path),
+            "validate",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert correction_validate.returncode == 0, correction_validate.stderr
+    targeted_component_queue = json.loads(
+        targeted_component_queue_path.read_text(encoding="utf-8")
+    )
+    assert len(targeted_component_queue["experiments"]) >= 1
+    first_correction_step = targeted_component_queue["experiments"][0]["steps"][0]
+    assert (
+        first_correction_step["command"][1]
+        == "tools/build_frontier_targeted_component_correction_work_order.py"
+    )
+    correction_work_order_command = [
+        sys.executable,
+        *first_correction_step["command"][1:],
+    ]
+    correction_work_order_first = subprocess.run(
+        correction_work_order_command,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert correction_work_order_first.returncode == 0, correction_work_order_first.stderr
+    correction_work_order_payload_first = json.loads(correction_work_order_first.stdout)
+    assert correction_work_order_payload_first["bytes_written"] > 0
+    assert (
+        correction_work_order_payload_first["skipped_identical_existing_artifact"]
+        is False
+    )
+    correction_work_order_path = Path(
+        first_correction_step["command"][
+            first_correction_step["command"].index("--work-order-out") + 1
+        ]
+    )
+    if not correction_work_order_path.is_absolute():
+        correction_work_order_path = REPO_ROOT / correction_work_order_path
+    correction_work_order = json.loads(
+        correction_work_order_path.read_text(encoding="utf-8")
+    )
+    assert (
+        correction_work_order["schema"]
+        == TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA
+    )
+    _assert_false_authority(correction_work_order)
+    assert correction_work_order["budget_spend_gate"]["budget_spend_allowed"] is False
+    assert len(correction_work_order["candidate_family_rows"]) >= 5
+    correction_work_order_retry = subprocess.run(
+        correction_work_order_command,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert correction_work_order_retry.returncode == 0, correction_work_order_retry.stderr
+    correction_work_order_payload_retry = json.loads(correction_work_order_retry.stdout)
+    assert correction_work_order_payload_retry["bytes_written"] == 0
+    assert (
+        correction_work_order_payload_retry["skipped_identical_existing_artifact"]
+        is True
+    )
     repair_queue = json.loads(receiver_repair_queue_path.read_text(encoding="utf-8"))
     selected_sources = [
         experiment["metadata"]["source_operation_id"]

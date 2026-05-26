@@ -31,10 +31,14 @@ from tac.optimization.mlx_dynamic_sweep_observations import (
     load_observation_rows,
     observation_duplicate_key,
 )
-from tac.optimization.pairset_component_marginal import component_marginal_status
+from tac.optimization.pairset_component_marginal import (
+    component_marginal_status,
+    rate_delta_for_archive_byte_delta,
+)
 from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
 
 from .dqs1_local_first_queue import (
+    DEFAULT_MLX_REFERENCE_CACHE_DIR,
     DEFAULT_QUEUE_ID,
     DEFAULT_RESULTS_ROOT,
     PAIR_FRAME_GEOMETRY_QUEUE_REQUEST_SCHEMA,
@@ -99,6 +103,18 @@ RECEIVER_CLOSED_CORRECTION_BUDGET_SCHEMA = (
 RECEIVER_CLOSED_CORRECTION_BUDGET_QUEUE_METADATA_SCHEMA = (
     "frontier_rate_attack_receiver_closed_correction_budget_queue_metadata.v1"
 )
+TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA = (
+    "frontier_rate_attack_targeted_component_correction_acquisition.v1"
+)
+TARGETED_COMPONENT_CORRECTION_ACQUISITION_ROW_SCHEMA = (
+    "frontier_rate_attack_targeted_component_correction_acquisition_row.v1"
+)
+TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA = (
+    "frontier_rate_attack_targeted_component_correction_work_order.v1"
+)
+TARGETED_COMPONENT_CORRECTION_QUEUE_METADATA_SCHEMA = (
+    "frontier_rate_attack_targeted_component_correction_queue_metadata.v1"
+)
 QUEUE_FALSE_AUTHORITY_FALSE_OR_MISSING_FIELDS = tuple(
     field
     for field in DEFAULT_FALSE_OR_MISSING_AUTHORITY_FIELDS
@@ -121,6 +137,155 @@ _OPERATION_LEVELS = (
     "scorer_axis",
     "receiver_runtime",
     "training_substrate",
+)
+
+_TARGETED_COMPONENT_CORRECTION_FAMILY_SEEDS: tuple[dict[str, Any], ...] = (
+    {
+        "correction_family": "drop_within_selected_set_masked_boundary",
+        "operation_levels": [
+            "pixel",
+            "region",
+            "boundary",
+            "frame",
+            "pair",
+            "batch",
+            "scorer_axis",
+        ],
+        "priority_base": 96.0,
+        "recommended_next_action": (
+            "probe_drop_many_within_component_safe_pair_set_under_mask_boundary_guard"
+        ),
+        "targeted_dimensions": [
+            "pair",
+            "frame",
+            "region",
+            "boundary",
+            "batch",
+        ],
+        "required_priors": [
+            "component_marginal_rows",
+            "pair_frame_geometry_lattice",
+            "segnet_boundary_marginals",
+        ],
+    },
+    {
+        "correction_family": "segnet_posenet_waterfill_region_repair",
+        "operation_levels": [
+            "pixel",
+            "region",
+            "boundary",
+            "frame",
+            "pair",
+            "full_video",
+            "scorer_axis",
+        ],
+        "priority_base": 93.0,
+        "recommended_next_action": (
+            "allocate_receiver_closed_rate_credit_to_geometry_safe_repair_atoms"
+        ),
+        "targeted_dimensions": [
+            "pixel",
+            "region",
+            "boundary",
+            "frame",
+            "full_video",
+        ],
+        "required_priors": [
+            "component_marginal_rows",
+            "master_gradient_or_inverse_scorer",
+            "segnet_boundary_marginals",
+        ],
+    },
+    {
+        "correction_family": "pose_stable_pair_frame_motion_correction",
+        "operation_levels": [
+            "region",
+            "frame",
+            "pair",
+            "batch",
+            "full_video",
+            "scorer_axis",
+        ],
+        "priority_base": 90.0,
+        "recommended_next_action": (
+            "fit_pose_stable_pair_frame_correction_atoms_under_component_guard"
+        ),
+        "targeted_dimensions": [
+            "region",
+            "frame",
+            "pair",
+            "batch",
+            "full_video",
+        ],
+        "required_priors": [
+            "component_marginal_rows",
+            "lapose_motion_records",
+            "master_gradient_or_inverse_scorer",
+        ],
+    },
+    {
+        "correction_family": "inverse_scorer_cell_basis_expansion",
+        "operation_levels": [
+            "bit",
+            "byte",
+            "pixel",
+            "region",
+            "boundary",
+            "frame",
+            "pair",
+            "batch",
+            "scorer_axis",
+        ],
+        "priority_base": 88.0,
+        "recommended_next_action": (
+            "compile_inverse_scorer_cells_into_component_guarded_correction_basis"
+        ),
+        "targeted_dimensions": [
+            "bit",
+            "byte",
+            "pixel",
+            "region",
+            "boundary",
+            "frame",
+            "pair",
+            "batch",
+        ],
+        "required_priors": [
+            "component_marginal_rows",
+            "master_gradient_or_inverse_scorer",
+            "byte_closed_materializer_context",
+        ],
+    },
+    {
+        "correction_family": "full_video_batch_residual_budget_reallocation",
+        "operation_levels": [
+            "tensor_channel",
+            "pixel",
+            "frame",
+            "pair",
+            "batch",
+            "full_video",
+            "training_substrate",
+            "scorer_axis",
+        ],
+        "priority_base": 84.0,
+        "recommended_next_action": (
+            "rebalance_full_video_residual_substrate_budget_after_rate_attack"
+        ),
+        "targeted_dimensions": [
+            "tensor_channel",
+            "pixel",
+            "frame",
+            "pair",
+            "batch",
+            "full_video",
+        ],
+        "required_priors": [
+            "component_marginal_rows",
+            "receiver_closed_rate_budget",
+            "local_mlx_or_exact_axis_component_probe",
+        ],
+    },
 )
 
 _TARGET_OPERATION_METADATA: dict[str, dict[str, Any]] = {
@@ -1655,6 +1820,7 @@ def _discover_submission_closure_report_paths(
     resolved_results = _resolve_path(results_root, repo_root=repo_root)
     roots.extend(
         [
+            resolved_results / "frontier_final_rate_attack",
             resolved_results / "frontier_operation_portfolio",
             resolved_results / "frontier_operation_portfolio" / "frontier_receiver_repair",
         ]
@@ -2783,10 +2949,1015 @@ def _operation_portfolio_queue_metadata(portfolio: Mapping[str, Any]) -> dict[st
     }
 
 
+def _targeted_component_correction_wire_hooks(
+    correction_family: str,
+) -> dict[str, Any]:
+    return {
+        "schema": "frontier_rate_attack_targeted_component_wire_hooks.v1",
+        "correction_family": correction_family,
+        "sensitivity_map": [
+            "component_deltas_by_pair_frame_axis",
+            "master_gradient_pair_region_boundary_prior",
+        ],
+        "pareto_constraint": [
+            "accept_only_if_delta_segnet_plus_delta_posenet_plus_lambda_delta_bytes_improves",
+            "preserve_receiver_closed_static_runtime_contract",
+        ],
+        "bit_allocator": [
+            "spend_receiver_closed_rate_credit_on_highest_component_repair_roi",
+            "reserve_exact_rate_floor_for_byte_closed_materializers",
+        ],
+        "cathedral_autopilot_dispatch": [
+            "frontier_targeted_component_correction_acquisition_queue",
+            "dqs1_local_first_component_guarded_followup_queue",
+        ],
+        "continual_learning": [
+            "append_component_eval_observation_rows_after_local_or_exact_probe",
+            "update_pairset_component_marginal_model_before_next_acquisition",
+        ],
+        "probe_disambiguator": [
+            "drop_within_set_vs_boundary_feather_masking",
+            "segnet_repair_vs_posenet_regression_tradeoff",
+        ],
+        "allowed_use": "wire_in_plan_for_queue_owned_component_correction_only",
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _targeted_component_correction_acquisition_queue_metadata(
+    acquisition: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "schema": TARGETED_COMPONENT_CORRECTION_QUEUE_METADATA_SCHEMA,
+        "targeted_component_correction_acquisition_schema": acquisition.get("schema"),
+        "active": acquisition.get("active") is True,
+        "row_count": acquisition.get("row_count"),
+        "queue_actionable_acquisition_count": acquisition.get(
+            "queue_actionable_acquisition_count"
+        ),
+        "receiver_closed_saved_bytes_total": acquisition.get(
+            "receiver_closed_saved_bytes_total"
+        ),
+        "receiver_closed_rate_credit_score_units_total": acquisition.get(
+            "receiver_closed_rate_credit_score_units_total"
+        ),
+        "best_component_behavior_candidate_id": acquisition.get(
+            "best_component_behavior_candidate_id"
+        ),
+        "top_acquisition_ids": list(acquisition.get("top_acquisition_ids") or []),
+        "top_correction_families": list(
+            acquisition.get("top_correction_families") or []
+        ),
+        "blockers": list(acquisition.get("blockers") or []),
+        "allowed_use": "queue_metadata_pointer_to_component_correction_acquisition",
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _targeted_component_correction_row_by_id(
+    acquisition: Mapping[str, Any],
+    acquisition_id: str,
+) -> Mapping[str, Any]:
+    for row in acquisition.get("rows") or []:
+        if isinstance(row, Mapping) and row.get("acquisition_id") == acquisition_id:
+            return row
+    raise FrontierRateAttackFeedbackError(
+        f"unknown targeted component correction acquisition id: {acquisition_id}"
+    )
+
+
+def _targeted_component_correction_command_hints(
+    row: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    family = str(row.get("correction_family") or "")
+    hints: list[dict[str, Any]] = [
+        {
+            "action_id": "build_pair_frame_geometry_lattice_for_component_guard",
+            "command_template": [
+                ".venv/bin/python",
+                "tools/build_pair_frame_scorer_geometry_lattice.py",
+                "--pairset-acquisition",
+                "<pairset_acquisition.json>",
+                "--pair-component-xray",
+                "<pair_component_xray.json>",
+                "--drop-counts",
+                "2,3,4,6,8,12,16",
+                "--max-requests",
+                "32",
+                "--json-out",
+                "<component_correction_dir>/pair_frame_geometry_lattice.json",
+            ],
+            "blocked_until": [
+                "pairset_acquisition_path",
+                "pair_component_or_component_marginal_xray",
+            ],
+            **FALSE_AUTHORITY,
+        },
+        {
+            "action_id": "run_feedback_cycle_after_component_probe",
+            "command_template": [
+                ".venv/bin/python",
+                "tools/run_frontier_rate_attack_feedback_cycle.py",
+                "--action-summary",
+                "latest",
+                "--dqs1-observation-jsonl",
+                "<component_probe_observations.jsonl>",
+                "--output-dir",
+                "<component_correction_dir>/post_probe_feedback_cycle",
+            ],
+            "blocked_until": [
+                "component_probe_observations_jsonl",
+                "false_authority_observation_rows",
+            ],
+            **FALSE_AUTHORITY,
+        },
+    ]
+    if "boundary" in _string_list(row.get("operation_levels")):
+        hints.append(
+            {
+                "action_id": "build_segnet_boundary_marginals",
+                "command_template": [
+                    ".venv/bin/python",
+                    "tools/build_segnet_boundary_marginals.py",
+                    "--json-out",
+                    "<component_correction_dir>/segnet_boundary_marginals.json",
+                    "--device",
+                    "cpu",
+                    "--max-pairs",
+                    "600",
+                ],
+                "blocked_until": ["upstream_video_and_segnet_runtime_available"],
+                **FALSE_AUTHORITY,
+            }
+        )
+    if family in {
+        "drop_within_selected_set_masked_boundary",
+        "inverse_scorer_cell_basis_expansion",
+    }:
+        hints.append(
+            {
+                "action_id": "plan_decoder_q_pairset_acquisition_drop_many",
+                "command_template": [
+                    ".venv/bin/python",
+                    "tools/plan_decoder_q_pairset_acquisition.py",
+                    "--selector-pareto",
+                    "<selector_pareto.json>",
+                    "--drop-many-counts",
+                    "2,3,4,6,8,12,16",
+                    "--max-drop-many",
+                    "64",
+                    "--pair-frame-geometry-lattice-json",
+                    "<component_correction_dir>/pair_frame_geometry_lattice.json",
+                    "--json-out",
+                    "<component_correction_dir>/pairset_acquisition.json",
+                ],
+                "blocked_until": ["selector_pareto", "pair_frame_geometry_lattice"],
+                **FALSE_AUTHORITY,
+            }
+        )
+    if family in {
+        "segnet_posenet_waterfill_region_repair",
+        "pose_stable_pair_frame_motion_correction",
+        "full_video_batch_residual_budget_reallocation",
+    }:
+        hints.append(
+            {
+                "action_id": "plan_component_repair_waterbucket",
+                "command_template": [
+                    ".venv/bin/python",
+                    "tools/plan_decoder_q_signed_waterbucket.py",
+                    "--feasibility-json",
+                    "<fixed_length_feasibility.json>",
+                    "--output-dir",
+                    "<component_correction_dir>/signed_waterbucket",
+                ],
+                "blocked_until": [
+                    "fixed_length_runtime_compatible_component_atoms",
+                    "signed_component_calibration",
+                ],
+                **FALSE_AUTHORITY,
+            }
+        )
+    return hints
+
+
 def _slug_token(value: Any) -> str:
     text = str(value or "").strip().lower()
     out = "".join(ch if ch.isalnum() else "_" for ch in text)
     return "_".join(part for part in out.split("_") if part) or "unknown"
+
+
+def _rate_credit_score_units_for_saved_bytes(saved_bytes: int) -> float:
+    return abs(rate_delta_for_archive_byte_delta(-int(saved_bytes)))
+
+
+def _targeted_component_prior_status(
+    *,
+    seed: Mapping[str, Any],
+    component_summary: Mapping[str, Any],
+    master_gradient: Mapping[str, Any],
+    receiver_closed_correction_budget: Mapping[str, Any],
+) -> dict[str, Any]:
+    available: list[str] = []
+    missing: list[str] = []
+    blockers: list[str] = []
+    for prior in _string_list(seed.get("required_priors")):
+        if prior == "component_marginal_rows":
+            present = component_summary.get("active") is True
+        elif prior in {
+            "receiver_closed_rate_budget",
+            "byte_closed_materializer_context",
+        }:
+            present = receiver_closed_correction_budget.get("active") is True
+        elif prior == "master_gradient_or_inverse_scorer":
+            present = master_gradient.get("active") is True
+        else:
+            present = False
+        if present:
+            available.append(prior)
+        else:
+            missing.append(prior)
+            blockers.append(f"requires_{prior}")
+    return {
+        "available_priors": _unique_strings(available),
+        "missing_priors": _unique_strings(missing),
+        "prior_blockers": _unique_strings(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_frontier_targeted_component_correction_acquisition(
+    *,
+    operation_portfolio: Mapping[str, Any],
+    receiver_closed_correction_budget: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Turn receiver-closed rate wins into component-guarded correction requests."""
+
+    require_no_truthy_authority_fields(
+        operation_portfolio,
+        context="targeted_component_correction_operation_portfolio",
+    )
+    require_no_truthy_authority_fields(
+        receiver_closed_correction_budget,
+        context="targeted_component_correction_receiver_closed_budget",
+    )
+    component_summary = (
+        operation_portfolio.get("component_behavior_summary")
+        if isinstance(operation_portfolio.get("component_behavior_summary"), Mapping)
+        else {}
+    )
+    master_gradient = (
+        operation_portfolio.get("master_gradient_summary")
+        if isinstance(operation_portfolio.get("master_gradient_summary"), Mapping)
+        else {}
+    )
+    targeted_budget = (
+        operation_portfolio.get("targeted_correction_budget_summary")
+        if isinstance(operation_portfolio.get("targeted_correction_budget_summary"), Mapping)
+        else {}
+    )
+    receiver_rows = [
+        row
+        for row in receiver_closed_correction_budget.get("rows") or []
+        if isinstance(row, Mapping) and row.get("receiver_closed") is True
+    ]
+    rows: list[dict[str, Any]] = []
+    for budget_row in receiver_rows:
+        saved_bytes = _finite_int_or_none(budget_row.get("saved_bytes_at_risk")) or 0
+        if saved_bytes <= 0:
+            continue
+        candidate_id = str(budget_row.get("candidate_id") or "unknown_candidate")
+        target_kind = str(budget_row.get("target_kind") or "unknown_target")
+        submission_dir = str(budget_row.get("submission_dir") or "")
+        closure_report_path = str(budget_row.get("closure_report_path") or "")
+        bridge_report_path = str(
+            budget_row.get("paired_exact_readiness_bridge_report_path") or ""
+        )
+        rate_credit = _rate_credit_score_units_for_saved_bytes(saved_bytes)
+        for seed in _TARGETED_COMPONENT_CORRECTION_FAMILY_SEEDS:
+            prior_status = _targeted_component_prior_status(
+                seed=seed,
+                component_summary=component_summary,
+                master_gradient=master_gradient,
+                receiver_closed_correction_budget=receiver_closed_correction_budget,
+            )
+            budget_spend_blockers = [
+                "candidate_specific_local_cpu_component_eval_required_before_budget_spend",
+                "candidate_specific_mlx_or_exact_axis_component_response_required_before_spend",
+                "exact_auth_eval_required_before_score_or_promotion_claim",
+            ]
+            if not submission_dir:
+                budget_spend_blockers.append("submission_dir_missing_for_component_eval")
+            if budget_row.get("active_rate_floor_blocked") is True:
+                budget_spend_blockers.append(
+                    "active_rate_floor_override_required_before_exact_dispatch"
+                )
+            if component_summary.get("active") is not True:
+                budget_spend_blockers.append(
+                    "segnet_posenet_component_behavior_rows_required_before_allocation"
+                )
+            family = str(seed.get("correction_family") or "unknown_correction_family")
+            acquisition_id = (
+                "targeted_component_correction_"
+                f"{_slug_token(candidate_id)}_{_slug_token(family)}"
+            )
+            rows.append(
+                {
+                    "schema": TARGETED_COMPONENT_CORRECTION_ACQUISITION_ROW_SCHEMA,
+                    "acquisition_id": acquisition_id,
+                    "candidate_id": candidate_id,
+                    "target_kind": target_kind,
+                    "correction_family": family,
+                    "operation_levels": list(seed.get("operation_levels") or []),
+                    "targeted_dimensions": list(seed.get("targeted_dimensions") or []),
+                    "saved_bytes_budget": saved_bytes,
+                    "estimated_rate_credit_score_units": rate_credit,
+                    "estimated_rate_credit_byte_delta": -saved_bytes,
+                    "receiver_closed_budget_gate": budget_row.get(
+                        "correction_budget_gate"
+                    ),
+                    "ready_for_budget_spend": False,
+                    "budget_spend_allowed": False,
+                    "submission_dir": submission_dir or None,
+                    "archive_path": f"{submission_dir}/archive.zip" if submission_dir else None,
+                    "inflate_sh_path": f"{submission_dir}/inflate.sh" if submission_dir else None,
+                    "closure_report_path": closure_report_path,
+                    "paired_exact_readiness_bridge_report_path": bridge_report_path,
+                    "component_behavior_active": component_summary.get("active") is True,
+                    "best_component_behavior_candidate_id": component_summary.get(
+                        "best_candidate_id"
+                    ),
+                    "best_component_deltas": component_summary.get(
+                        "best_component_deltas"
+                    ),
+                    "component_marginal_status_counts": component_summary.get(
+                        "component_marginal_status_counts"
+                    ),
+                    "component_behavior_context": {
+                        "component_summary_schema": component_summary.get("schema"),
+                        "best_candidate_id": component_summary.get(
+                            "best_candidate_id"
+                        ),
+                        "best_score_delta_vs_baseline": component_summary.get(
+                            "best_score_delta_vs_baseline"
+                        ),
+                        "best_component_deltas": component_summary.get(
+                            "best_component_deltas"
+                        ),
+                        "best_selected_pair_indices": component_summary.get(
+                            "best_selected_pair_indices"
+                        ),
+                        "component_marginal_status_counts": component_summary.get(
+                            "component_marginal_status_counts"
+                        ),
+                        **FALSE_AUTHORITY,
+                    },
+                    "receiver_closed_budget_context": {
+                        "receiver_closed_correction_budget_schema": (
+                            receiver_closed_correction_budget.get("schema")
+                        ),
+                        "receiver_closed_saved_bytes_total": saved_bytes,
+                        "receiver_closed_rate_credit_score_units_total": rate_credit,
+                        "source_candidate_id": candidate_id,
+                        "ready_for_budget_spend": False,
+                        "budget_spend_allowed": False,
+                        **FALSE_AUTHORITY,
+                    },
+                    "prior_status": prior_status,
+                    "budget_spend_gate": {
+                        "schema": (
+                            "frontier_rate_attack_targeted_component_correction_"
+                            "budget_spend_gate.v1"
+                        ),
+                        "ready_for_budget_spend": False,
+                        "required_before_spend": _unique_strings(
+                            [
+                                *budget_spend_blockers,
+                                *prior_status["prior_blockers"],
+                            ]
+                        ),
+                        "acceptance_rule": (
+                            "accept_only_if_measured_delta_segnet_plus_delta_posenet_"
+                            "plus_delta_rate_is_negative_under_same_axis"
+                        ),
+                        "max_rate_credit_score_units": rate_credit,
+                        "max_extra_archive_bytes_before_rate_credit_exhausted": (
+                            saved_bytes
+                        ),
+                        "budget_spend_allowed": False,
+                        **FALSE_AUTHORITY,
+                    },
+                    "queue_actionable": bool(submission_dir),
+                    "queue_consumer": "frontier_targeted_component_correction_queue",
+                    "recommended_next_action": seed.get("recommended_next_action"),
+                    "wire_in_hooks": _targeted_component_correction_wire_hooks(family),
+                    "blockers": _unique_strings(
+                        [*budget_spend_blockers, *prior_status["prior_blockers"]]
+                    ),
+                    "priority_score": (
+                        float(seed.get("priority_base") or 0.0)
+                        + float(saved_bytes) / 32.0
+                        + rate_credit * 1_000_000.0
+                        - float(len(prior_status["prior_blockers"])) * 4.0
+                    ),
+                    "allowed_use": (
+                        "receiver_closed_rate_budget_component_correction_acquisition_only"
+                    ),
+                    "forbidden_use": (
+                        "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+                    ),
+                    **FALSE_AUTHORITY,
+                }
+            )
+    rows = sorted(
+        rows,
+        key=lambda row: (
+            -float(row.get("priority_score") or 0.0),
+            str(row.get("acquisition_id") or ""),
+        ),
+    )
+    unique_budget_candidates = _unique_strings(row.get("candidate_id") for row in rows)
+    blockers: list[str] = []
+    if not receiver_rows:
+        blockers.append("no_receiver_closed_rate_budget_rows")
+    if not rows:
+        blockers.append("no_targeted_component_correction_rows")
+    if component_summary.get("active") is not True:
+        blockers.append("segnet_posenet_component_behavior_rows_required")
+    if not any(row.get("queue_actionable") is True for row in rows):
+        blockers.append("no_component_eval_queue_actionable_submission_dirs")
+    blockers.append("component_eval_required_before_budget_spend")
+    blockers.append("exact_auth_eval_required_before_score_or_promotion_claim")
+    saved_by_candidate: dict[str, int] = {}
+    for row in rows:
+        candidate_id = str(row.get("candidate_id") or "")
+        saved_by_candidate.setdefault(candidate_id, int(row.get("saved_bytes_budget") or 0))
+    total_saved_bytes = sum(saved_by_candidate.values())
+    return {
+        "schema": TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "active": bool(rows),
+        "operation_portfolio_schema": operation_portfolio.get("schema"),
+        "receiver_closed_correction_budget_schema": (
+            receiver_closed_correction_budget.get("schema")
+        ),
+        "targeted_correction_budget_summary_schema": targeted_budget.get("schema"),
+        "receiver_closed_candidate_count": len(unique_budget_candidates),
+        "component_correction_row_count": len(rows),
+        "row_count": len(rows),
+        "queue_actionable_row_count": sum(
+            1 for row in rows if row.get("queue_actionable") is True
+        ),
+        "queue_actionable_acquisition_count": sum(
+            1 for row in rows if row.get("queue_actionable") is True
+        ),
+        "ready_for_budget_spend_count": 0,
+        "receiver_closed_saved_bytes_total": total_saved_bytes,
+        "estimated_rate_credit_score_units_total": sum(
+            _rate_credit_score_units_for_saved_bytes(saved)
+            for saved in saved_by_candidate.values()
+        ),
+        "receiver_closed_rate_credit_score_units_total": sum(
+            _rate_credit_score_units_for_saved_bytes(saved)
+            for saved in saved_by_candidate.values()
+        ),
+        "component_behavior_active": component_summary.get("active") is True,
+        "best_component_behavior_candidate_id": component_summary.get(
+            "best_candidate_id"
+        ),
+        "best_component_behavior_score_delta_vs_baseline": component_summary.get(
+            "best_score_delta_vs_baseline"
+        ),
+        "master_gradient_active": master_gradient.get("active") is True,
+        "targeted_dimensions": _unique_strings(
+            [
+                dimension
+                for row in rows
+                for dimension in _string_list(row.get("targeted_dimensions"))
+            ]
+        ),
+        "top_acquisition_ids": [
+            str(row.get("acquisition_id") or "") for row in rows[:8]
+        ],
+        "top_correction_families": _unique_strings(
+            row.get("correction_family") for row in rows[:8]
+        ),
+        "blockers": _unique_strings(blockers),
+        "recommended_next_action": (
+            "run_component_eval_queue_for_receiver_closed_budget_candidates_then_"
+            "materialize_only_corrections_with_negative_measured_lagrangian_delta"
+            if rows
+            else "close_receiver_static_runtime_budget_before_component_correction_acquisition"
+        ),
+        "rows": rows,
+        "allowed_use": "queue_owned_targeted_component_correction_acquisition_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _targeted_component_correction_queue_metadata(
+    acquisition: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "schema": TARGETED_COMPONENT_CORRECTION_QUEUE_METADATA_SCHEMA,
+        "targeted_component_correction_acquisition_schema": acquisition.get("schema"),
+        "active": acquisition.get("active") is True,
+        "row_count": acquisition.get("row_count")
+        or acquisition.get("component_correction_row_count"),
+        "queue_actionable_acquisition_count": (
+            acquisition.get("queue_actionable_acquisition_count")
+            or acquisition.get("queue_actionable_row_count")
+        ),
+        "receiver_closed_candidate_count": acquisition.get(
+            "receiver_closed_candidate_count"
+        ),
+        "component_correction_row_count": acquisition.get(
+            "component_correction_row_count"
+        ),
+        "queue_actionable_row_count": acquisition.get("queue_actionable_row_count"),
+        "ready_for_budget_spend_count": acquisition.get("ready_for_budget_spend_count"),
+        "receiver_closed_saved_bytes_total": acquisition.get(
+            "receiver_closed_saved_bytes_total"
+        ),
+        "estimated_rate_credit_score_units_total": acquisition.get(
+            "estimated_rate_credit_score_units_total"
+        ),
+        "component_behavior_active": acquisition.get("component_behavior_active") is True,
+        "master_gradient_active": acquisition.get("master_gradient_active") is True,
+        "top_acquisition_ids": list(acquisition.get("top_acquisition_ids") or []),
+        "top_correction_families": list(acquisition.get("top_correction_families") or []),
+        "blockers": list(acquisition.get("blockers") or []),
+        "allowed_use": "queue_metadata_pointer_to_targeted_component_correction_acquisition",
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+def build_frontier_targeted_component_correction_work_order(
+    *,
+    targeted_component_correction_acquisition: Mapping[str, Any],
+    acquisition_id: str,
+) -> dict[str, Any]:
+    """Build a single receiver-budget component-correction work order."""
+
+    require_no_truthy_authority_fields(
+        targeted_component_correction_acquisition,
+        context="targeted_component_correction_acquisition",
+    )
+    row = _targeted_component_correction_row_by_id(
+        targeted_component_correction_acquisition,
+        acquisition_id,
+    )
+    require_no_truthy_authority_fields(
+        row,
+        context=f"targeted_component_correction_row:{acquisition_id}",
+    )
+    candidate_id = str(row.get("candidate_id") or "")
+    sibling_rows = [
+        sibling
+        for sibling in targeted_component_correction_acquisition.get("rows") or []
+        if isinstance(sibling, Mapping)
+        and str(sibling.get("candidate_id") or "") == candidate_id
+    ]
+    work_order = {
+        "schema": TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA,
+        "generated_at_utc": str(
+            targeted_component_correction_acquisition.get("generated_at_utc")
+            or _utc_now()
+        ),
+        "acquisition_id": acquisition_id,
+        "candidate_id": candidate_id,
+        "target_kind": row.get("target_kind"),
+        "correction_family": row.get("correction_family"),
+        "sibling_correction_families": _unique_strings(
+            sibling.get("correction_family") for sibling in sibling_rows
+        ),
+        "saved_bytes_budget": row.get("saved_bytes_budget"),
+        "estimated_rate_credit_score_units": row.get(
+            "estimated_rate_credit_score_units"
+        ),
+        "submission_dir": row.get("submission_dir"),
+        "archive_path": row.get("archive_path"),
+        "inflate_sh_path": row.get("inflate_sh_path"),
+        "closure_report_path": row.get("closure_report_path"),
+        "paired_exact_readiness_bridge_report_path": row.get(
+            "paired_exact_readiness_bridge_report_path"
+        ),
+        "budget_spend_gate": row.get("budget_spend_gate"),
+        "command_hints": _targeted_component_correction_command_hints(row),
+        "lagrangian_acceptance_rule": {
+            "schema": "frontier_rate_attack_component_correction_lagrangian_rule.v1",
+            "objective": "minimize_delta_segnet_plus_delta_posenet_plus_lambda_delta_bytes",
+            "negative_delta_is_better": True,
+            "receiver_closed_rate_budget_bytes": row.get("saved_bytes_budget"),
+            "component_eval_required": True,
+            "exact_auth_eval_required_before_score_claim": True,
+            **FALSE_AUTHORITY,
+        },
+        "wire_in_hooks": dict(
+            row.get("wire_in_hooks") if isinstance(row.get("wire_in_hooks"), Mapping) else {}
+        ),
+        "component_eval_plan": {
+            "schema": "frontier_rate_attack_targeted_component_eval_plan.v1",
+            "local_cpu_advisory_required": True,
+            "mlx_response_required_or_exact_axis_component_trace": True,
+            "acceptance_rule": (
+                "use local CPU/MLX as acquisition signal only; exact auth-axis "
+                "evaluation remains required before score or promotion claims"
+            ),
+            **FALSE_AUTHORITY,
+        },
+        "candidate_family_rows": [
+            {
+                "acquisition_id": sibling.get("acquisition_id"),
+                "correction_family": sibling.get("correction_family"),
+                "operation_levels": list(sibling.get("operation_levels") or []),
+                "targeted_dimensions": list(sibling.get("targeted_dimensions") or []),
+                "priority_score": sibling.get("priority_score"),
+                "blockers": list(sibling.get("blockers") or []),
+                **FALSE_AUTHORITY,
+            }
+            for sibling in sibling_rows
+        ],
+        "allowed_use": "targeted_component_correction_work_order_for_local_acquisition_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        work_order,
+        context=f"targeted_component_correction_work_order:{acquisition_id}",
+    )
+    return work_order
+
+
+def _selected_targeted_component_correction_rows(
+    acquisition: Mapping[str, Any],
+    *,
+    candidate_limit: int,
+) -> list[Mapping[str, Any]]:
+    rows = [
+        row
+        for row in acquisition.get("rows") or []
+        if isinstance(row, Mapping) and row.get("queue_actionable") is True
+    ]
+    selected: list[Mapping[str, Any]] = []
+    seen_candidates: set[str] = set()
+    for row in sorted(
+        rows,
+        key=lambda item: (
+            -float(item.get("priority_score") or 0.0),
+            str(item.get("acquisition_id") or ""),
+        ),
+    ):
+        candidate_key = str(row.get("candidate_id") or row.get("submission_dir") or "")
+        if candidate_key in seen_candidates:
+            continue
+        seen_candidates.add(candidate_key)
+        selected.append(row)
+        if len(selected) >= candidate_limit:
+            break
+    return selected
+
+
+def build_frontier_targeted_component_correction_queue(
+    *,
+    repo_root: str | Path,
+    targeted_component_correction_acquisition: Mapping[str, Any],
+    targeted_component_correction_acquisition_path: str | Path,
+    results_root: str | Path = DEFAULT_RESULTS_ROOT,
+    queue_id: str = "frontier_targeted_component_correction_queue",
+    candidate_limit: int = 4,
+    local_cpu_concurrency: int = 1,
+    local_mlx_concurrency: int = 1,
+    upstream_dir: str | Path = "upstream",
+    video_names_file: str | Path = "upstream/public_test_video_names.txt",
+    mlx_reference_cache_dir: str | Path = DEFAULT_MLX_REFERENCE_CACHE_DIR,
+    mlx_device: str = "gpu",
+    include_mlx_response: bool = True,
+) -> dict[str, Any] | None:
+    """Compile receiver-closed budget rows into local CPU/MLX component probes."""
+
+    repo = Path(repo_root)
+    if candidate_limit < 1:
+        raise FrontierRateAttackFeedbackError("candidate_limit must be >= 1")
+    if local_cpu_concurrency < 1:
+        raise FrontierRateAttackFeedbackError("local_cpu_concurrency must be >= 1")
+    if local_mlx_concurrency < 0:
+        raise FrontierRateAttackFeedbackError("local_mlx_concurrency must be >= 0")
+    if mlx_device not in {"cpu", "gpu"}:
+        raise FrontierRateAttackFeedbackError("mlx_device must be 'cpu' or 'gpu'")
+    require_no_truthy_authority_fields(
+        targeted_component_correction_acquisition,
+        context="targeted_component_correction_queue_input",
+    )
+    selected_rows = _selected_targeted_component_correction_rows(
+        targeted_component_correction_acquisition,
+        candidate_limit=candidate_limit,
+    )
+    if not selected_rows:
+        return None
+    acquisition_path = _resolve_path(
+        targeted_component_correction_acquisition_path,
+        repo_root=repo,
+    )
+    results_base = _resolve_path(str(results_root), repo_root=repo)
+    queue_root = results_base / "frontier_targeted_component_correction" / _slug_token(
+        queue_id
+    )
+    experiments: list[dict[str, Any]] = []
+    for priority, row in enumerate(selected_rows, start=1):
+        acquisition_id = str(row.get("acquisition_id") or f"targeted_correction_{priority}")
+        candidate_id = str(row.get("candidate_id") or acquisition_id)
+        work_dir = queue_root / _slug_token(candidate_id)
+        work_order_path = work_dir / "work_order.json"
+        local_cpu_advisory = work_dir / "local_cpu_advisory.json"
+        local_cpu_work_dir = work_dir / "local_cpu_advisory_work"
+        scorer_hashes = work_dir / "scorer_input_cache_hashes.json"
+        submission_dir = str(row.get("submission_dir") or "")
+        archive_path = str(row.get("archive_path") or f"{submission_dir}/archive.zip")
+        inflate_sh_path = str(row.get("inflate_sh_path") or f"{submission_dir}/inflate.sh")
+        steps: list[dict[str, Any]] = [
+            {
+                "id": "emit_targeted_component_correction_work_order",
+                "kind": "command",
+                "command": [
+                    ".venv/bin/python",
+                    "tools/build_frontier_targeted_component_correction_work_order.py",
+                    "--targeted-component-correction-acquisition",
+                    _repo_rel(acquisition_path, repo),
+                    "--acquisition-id",
+                    acquisition_id,
+                    "--work-order-out",
+                    _repo_rel(work_order_path, repo),
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_io_heavy"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(work_order_path, repo),
+                        "key": "schema",
+                        "equals": TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": _repo_rel(work_order_path, repo),
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(work_order_path, repo),
+                        "key": "budget_spend_gate.ready_for_budget_spend",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [_repo_rel(work_order_path, repo)],
+                    "input_artifact_paths": [
+                        _repo_rel(acquisition_path, repo),
+                        str(row.get("closure_report_path") or ""),
+                        str(row.get("paired_exact_readiness_bridge_report_path") or ""),
+                    ],
+                    "include_postcondition_paths": True,
+                },
+            },
+            {
+                "id": "local_cpu_component_advisory",
+                "kind": "command",
+                "requires": ["emit_targeted_component_correction_work_order"],
+                "command": [
+                    ".venv/bin/python",
+                    "experiments/contest_auth_eval.py",
+                    "--archive",
+                    archive_path,
+                    "--inflate-sh",
+                    inflate_sh_path,
+                    "--upstream-dir",
+                    str(upstream_dir),
+                    "--video-names-file",
+                    str(video_names_file),
+                    "--device",
+                    "cpu",
+                    "--work-dir",
+                    _repo_rel(local_cpu_work_dir, repo),
+                    "--json-out",
+                    _repo_rel(local_cpu_advisory, repo),
+                    "--inflate-timeout",
+                    "1800",
+                    "--evaluate-timeout",
+                    "1800",
+                    "--keep-work-dir",
+                    "--scorer-input-cache-hashes-out",
+                    _repo_rel(scorer_hashes, repo),
+                ],
+                "resources": {"kind": "local_cpu"},
+                "timeout_seconds": 3900,
+                "postconditions": [
+                    {
+                        "type": "json_false_authority",
+                        "path": _repo_rel(local_cpu_advisory, repo),
+                        "axis_key": "score_axis",
+                        "axis_equals": "cpu_advisory",
+                    }
+                ],
+                "telemetry": {
+                    "artifact_paths": [
+                        _repo_rel(local_cpu_advisory, repo),
+                        _repo_rel(local_cpu_work_dir, repo),
+                        _repo_rel(scorer_hashes, repo),
+                    ],
+                    "input_artifact_paths": [
+                        archive_path,
+                        inflate_sh_path,
+                        _repo_rel(work_order_path, repo),
+                    ],
+                    "recursive": True,
+                    "include_postcondition_paths": True,
+                },
+            },
+        ]
+        if include_mlx_response:
+            mlx_cache_dir = work_dir / "mlx_scorer_input_cache"
+            mlx_cache_audit = work_dir / "mlx_scorer_input_cache_audit.json"
+            mlx_response = work_dir / "mlx_scorer_response.json"
+            mlx_components_dir = work_dir / "mlx_components"
+            build_cache_command = [
+                ".venv/bin/python",
+                "tools/build_mlx_scorer_input_cache_from_local_advisory.py",
+                "--local-cpu-advisory",
+                _repo_rel(local_cpu_advisory, repo),
+                "--output-cache-dir",
+                _repo_rel(mlx_cache_dir, repo),
+                "--audit-output",
+                _repo_rel(mlx_cache_audit, repo),
+                "--expected-pair-count",
+                "600",
+                "--batch-pairs",
+                "1",
+                "--allow-large-tensor-cache",
+                "--stamp-cache-manifest-on-pass",
+            ]
+            mlx_response_command = [
+                ".venv/bin/python",
+                "tools/run_mlx_scorer_response_from_local_advisory.py",
+                "--local-cpu-advisory",
+                _repo_rel(local_cpu_advisory, repo),
+                "--reference-cache-dir",
+                str(mlx_reference_cache_dir),
+                "--candidate-cache-dir",
+                _repo_rel(mlx_cache_dir, repo),
+                "--output",
+                _repo_rel(mlx_response, repo),
+                "--repo-root",
+                ".",
+                "--batch-pairs",
+                "1",
+                "--device",
+                mlx_device,
+                "--allow-local-cpu-advisory-cache-identity",
+                "--components-dir",
+                _repo_rel(mlx_components_dir, repo),
+                "--response-family",
+                "targeted_component_correction_receiver_closed_budget",
+            ]
+            if mlx_device == "gpu":
+                mlx_response_command.append("--allow-gpu-research-signal")
+            steps.extend(
+                [
+                    {
+                        "id": "build_mlx_component_cache",
+                        "kind": "command",
+                        "requires": ["local_cpu_component_advisory"],
+                        "command": build_cache_command,
+                        "resources": {"kind": "local_cpu"},
+                        "timeout_seconds": 1800,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": _repo_rel(mlx_cache_audit, repo),
+                                "key": "passed",
+                                "equals": True,
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(mlx_cache_audit, repo),
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(mlx_cache_dir / "manifest.json", repo),
+                            },
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [
+                                _repo_rel(mlx_cache_dir, repo),
+                                _repo_rel(mlx_cache_audit, repo),
+                            ],
+                            "input_artifact_paths": [_repo_rel(local_cpu_advisory, repo)],
+                            "recursive": True,
+                            "include_postcondition_paths": True,
+                        },
+                    },
+                    {
+                        "id": "local_mlx_component_response",
+                        "kind": "command",
+                        "requires": ["build_mlx_component_cache"],
+                        "command": mlx_response_command,
+                        "resources": {
+                            "kind": "local_mlx" if mlx_device == "gpu" else "local_cpu"
+                        },
+                        "timeout_seconds": 900,
+                        "postconditions": [
+                            {
+                                "type": "json_false_authority",
+                                "path": _repo_rel(mlx_response, repo),
+                                "axis_key": "score_axis",
+                                "axis_equals": "[macOS-MLX research-signal]",
+                            }
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [
+                                _repo_rel(mlx_response, repo),
+                                _repo_rel(mlx_components_dir, repo),
+                            ],
+                            "input_artifact_paths": [
+                                _repo_rel(local_cpu_advisory, repo),
+                                str(mlx_reference_cache_dir),
+                                _repo_rel(mlx_cache_dir, repo),
+                            ],
+                            "recursive": True,
+                            "include_postcondition_paths": True,
+                        },
+                    },
+                ]
+            )
+        experiments.append(
+            {
+                "id": _slug_token(acquisition_id),
+                "status": "queued",
+                "priority": priority,
+                "lane_id": "lane_frontier_targeted_component_correction_20260526",
+                "tags": [
+                    "targeted_component_correction",
+                    str(row.get("correction_family") or "unknown_family"),
+                    str(row.get("target_kind") or "unknown_target"),
+                    "receiver_closed_budget",
+                ],
+                "metadata": {
+                    "schema": TARGETED_COMPONENT_CORRECTION_QUEUE_METADATA_SCHEMA,
+                    "acquisition_id": acquisition_id,
+                    "candidate_id": candidate_id,
+                    "target_kind": row.get("target_kind"),
+                    "correction_family": row.get("correction_family"),
+                    "saved_bytes_budget": row.get("saved_bytes_budget"),
+                    "estimated_rate_credit_score_units": row.get(
+                        "estimated_rate_credit_score_units"
+                    ),
+                    "submission_dir": row.get("submission_dir"),
+                    "local_cpu_advisory_path": _repo_rel(local_cpu_advisory, repo),
+                    "local_mlx_response_enabled": include_mlx_response,
+                    "mlx_device": mlx_device,
+                    "budget_spend_ready": False,
+                    "budget_spend_gate": dict(
+                        row.get("budget_spend_gate")
+                        if isinstance(row.get("budget_spend_gate"), Mapping)
+                        else {}
+                    ),
+                    "allowed_use": (
+                        "targeted_component_correction_queue_metadata_only"
+                    ),
+                    "forbidden_use": "score_claim_or_dispatch_authority",
+                    **FALSE_AUTHORITY,
+                },
+                "steps": steps,
+            }
+        )
+    return normalize_queue_definition(
+        {
+            "schema": QUEUE_SCHEMA,
+            "queue_id": queue_id,
+            "controls": {
+                "mode": "running",
+                "local_first": True,
+                "max_concurrency": {
+                    "local_cpu": local_cpu_concurrency,
+                    "local_io_heavy": 1,
+                    "local_mlx": local_mlx_concurrency if include_mlx_response else 0,
+                    "modal_cpu": 0,
+                    "modal_gpu": 0,
+                },
+            },
+            "experiments": experiments,
+            "allowed_use": (
+                "queue_owned_targeted_component_correction_local_acquisition_only"
+            ),
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+            **FALSE_AUTHORITY,
+        }
+    )
 
 
 def _receiver_repair_classification(blocker: str) -> dict[str, Any]:
@@ -4179,6 +5350,12 @@ def build_frontier_rate_attack_feedback_refresh(
     receiver_repair_backlog = build_frontier_receiver_repair_backlog(
         operation_portfolio
     )
+    targeted_component_correction_acquisition = (
+        build_frontier_targeted_component_correction_acquisition(
+            operation_portfolio=operation_portfolio,
+            receiver_closed_correction_budget=receiver_closed_correction_budget,
+        )
+    )
     queue_payload: dict[str, Any] | None = None
     bridge: dict[str, Any] | None = None
     selected_pairset_acquisition: dict[str, Any] | None = None
@@ -4228,6 +5405,11 @@ def build_frontier_rate_attack_feedback_refresh(
             receiver_closed_metadata = _receiver_closed_correction_budget_queue_metadata(
                 receiver_closed_correction_budget
             )
+            targeted_component_metadata = (
+                _targeted_component_correction_queue_metadata(
+                    targeted_component_correction_acquisition
+                )
+            )
             for experiment in queue_payload.get("experiments", []):
                 if not isinstance(experiment, dict):
                     continue
@@ -4239,6 +5421,9 @@ def build_frontier_rate_attack_feedback_refresh(
                     )
                     metadata["frontier_receiver_closed_correction_budget"] = (
                         receiver_closed_metadata
+                    )
+                    metadata["frontier_targeted_component_correction_acquisition"] = (
+                        targeted_component_metadata
                     )
         bridge = result.materializer_feedback_bridge
         selected_pairset_acquisition = result.selected_pairset_acquisition
@@ -4271,6 +5456,9 @@ def build_frontier_rate_attack_feedback_refresh(
         "operation_portfolio": operation_portfolio,
         "receiver_repair_backlog": receiver_repair_backlog,
         "receiver_closed_correction_budget": receiver_closed_correction_budget,
+        "targeted_component_correction_acquisition": (
+            targeted_component_correction_acquisition
+        ),
         "materializer_feedback_source_paths": list(source_paths),
         "materializer_feedback_payload_count": len(payloads),
         "dqs1_observation_source_paths": list(dqs1_source_paths),
@@ -4324,12 +5512,18 @@ __all__ = [
     "RECEIVER_REPAIR_QUEUE_METADATA_SCHEMA",
     "RECEIVER_REPAIR_ROW_SCHEMA",
     "RECEIVER_REPAIR_WORK_ORDER_SCHEMA",
+    "TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA",
+    "TARGETED_COMPONENT_CORRECTION_QUEUE_METADATA_SCHEMA",
+    "TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA",
     "FrontierRateAttackFeedbackError",
     "build_frontier_operation_portfolio",
     "build_frontier_rate_attack_feedback_refresh",
     "build_frontier_receiver_repair_backlog",
     "build_frontier_receiver_repair_queue",
     "build_frontier_receiver_repair_work_order",
+    "build_frontier_targeted_component_correction_acquisition",
+    "build_frontier_targeted_component_correction_queue",
+    "build_frontier_targeted_component_correction_work_order",
     "build_receiver_closed_correction_budget",
     "discover_dqs1_observation_jsonl_paths",
     "discover_local_cpu_eureka_planning_signals",
