@@ -111,6 +111,8 @@ INVERSE_ACTION_FUNCTIONAL_TOOL = "tools/build_inverse_steganalysis_action_functi
 INVERSE_SCORER_CELL_TOOL = "tools/materialize_inverse_scorer_cell_candidate.py"
 INVERSE_SCORER_CELL_CHAIN_TOOL = "tools/run_inverse_scorer_cell_candidate_chain.py"
 HARVEST_MATERIALIZER_TOOL = "tools/harvest_materializer_chain_candidates.py"
+MATERIALIZER_SUBMISSION_CLOSURE_TOOL = "tools/build_materializer_submission_closure.py"
+MATERIALIZER_EXACT_READINESS_BRIDGE_TOOL = "tools/run_materializer_exact_readiness_bridge.py"
 MATERIALIZER_DISPATCH_PLAN_TOOL = "tools/build_materializer_exact_eval_dispatch_plan.py"
 BYTE_RANGE_CHAIN_MANIFEST = CHAIN_MANIFEST_NAME
 INVERSE_ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
@@ -118,8 +120,11 @@ INVERSE_SCORER_CELL_CANDIDATE_SCHEMA = "inverse_scorer_cell_candidate_v1"
 MATERIALIZER_EXECUTION_STEP_ID = "materialize_local_proof_chain"
 MATERIALIZER_DFL1_PARITY_STEP_ID = "prove_renderer_payload_dfl1_shell_parity"
 MATERIALIZER_HARVEST_STEP_ID = "harvest_materializer_chains"
+MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID = "build_materializer_submission_closure"
+MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID = "run_materializer_exact_readiness_bridge"
 MATERIALIZER_DISPATCH_PLAN_STEP_ID = "build_exact_eval_dispatch_plan"
 MATERIALIZER_HARVEST_REPORT_SCHEMA = "materializer_chain_harvest_report.v1"
+MATERIALIZER_SUBMISSION_CLOSURE_REPORT_SCHEMA = "materializer_submission_runtime_closure_report.v1"
 MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA = "materializer_chain_exact_readiness_bridge_report.v1"
 MATERIALIZER_EXACT_EVAL_DISPATCH_PLAN_SCHEMA = "materializer_exact_eval_dispatch_plan.v1"
 FAMILY_AGNOSTIC_MATERIALIZER_SWEEP_SCHEMA = "family_agnostic_materializer_empirical_sweep.v1"
@@ -3851,6 +3856,10 @@ def _materializer_exact_readiness_followup_steps(
     manifest_path = _resolve_repo_path(manifest_ref_path, repo_root=repo_root)
     source_queue_path = handoff_dir / "source_queue.json"
     harvest_report_path = handoff_dir / "harvest_report.json"
+    submission_closure_dir = handoff_dir / "submission_closure"
+    submission_dir = submission_closure_dir / "submission"
+    closed_source_queue_path = submission_closure_dir / "closed_source_queue.json"
+    closure_report_path = submission_closure_dir / "submission_closure_report.json"
     readiness_dir = handoff_dir / "exact_readiness"
     bridge_report_path = handoff_dir / "exact_readiness_bridge_report.json"
     dispatch_plan_path = handoff_dir / "dispatch_plan.json"
@@ -3884,10 +3893,6 @@ def _materializer_exact_readiness_followup_steps(
         _repo_rel(source_queue_path, repo_root),
         "--report-out",
         _repo_rel(harvest_report_path, repo_root),
-        "--exact-readiness-out-dir",
-        _repo_rel(readiness_dir, repo_root),
-        "--exact-readiness-bridge-report-out",
-        _repo_rel(bridge_report_path, repo_root),
         "--require-accepted",
     ]
     if manifest_ref_kind == "sweep_manifest":
@@ -3919,8 +3924,34 @@ def _materializer_exact_readiness_followup_steps(
                 _repo_rel(dfl1_parity_proof_path.parent, repo_root),
             ]
         )
+    submission_closure_command = [
+        ".venv/bin/python",
+        MATERIALIZER_SUBMISSION_CLOSURE_TOOL,
+        "--source-queue",
+        _repo_rel(source_queue_path, repo_root),
+        "--submission-dir-out",
+        _repo_rel(submission_dir, repo_root),
+        "--closed-source-queue-out",
+        _repo_rel(closed_source_queue_path, repo_root),
+        "--closure-report-out",
+        _repo_rel(closure_report_path, repo_root),
+        "--overwrite",
+    ]
+
+    bridge_command = [
+        ".venv/bin/python",
+        MATERIALIZER_EXACT_READINESS_BRIDGE_TOOL,
+        "--source-queue",
+        _repo_rel(closed_source_queue_path, repo_root),
+        "--exact-readiness-out-dir",
+        _repo_rel(readiness_dir, repo_root),
+        "--bridge-report-out",
+        _repo_rel(bridge_report_path, repo_root),
+        "--overwrite",
+        "--force-recompute",
+    ]
     if require_ready:
-        harvest_command.append("--exact-readiness-require-ready")
+        bridge_command.append("--exact-readiness-require-ready")
 
     dispatch_plan_command = [
         ".venv/bin/python",
@@ -3972,6 +4003,53 @@ def _materializer_exact_readiness_followup_steps(
                     "key": "schema",
                     "equals": MATERIALIZER_HARVEST_REPORT_SCHEMA,
                 },
+            ],
+            "telemetry": {
+                "artifact_paths": [
+                    _repo_rel(source_queue_path, repo_root),
+                    _repo_rel(harvest_report_path, repo_root),
+                ],
+                "recursive": False,
+            },
+        },
+        {
+            "id": MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID,
+            "kind": "command",
+            "command": submission_closure_command,
+            "requires": [MATERIALIZER_HARVEST_STEP_ID],
+            "resources": {"kind": "local_cpu"},
+            "timeout_seconds": step_timeout_seconds,
+            "postconditions": [
+                {
+                    "type": "json_equals",
+                    "path": _repo_rel(closed_source_queue_path, repo_root),
+                    "key": "schema",
+                    "equals": OPTIMIZER_CANDIDATE_QUEUE_SCHEMA,
+                },
+                {
+                    "type": "json_equals",
+                    "path": _repo_rel(closure_report_path, repo_root),
+                    "key": "schema",
+                    "equals": MATERIALIZER_SUBMISSION_CLOSURE_REPORT_SCHEMA,
+                },
+            ],
+            "telemetry": {
+                "artifact_paths": [
+                    _repo_rel(submission_dir, repo_root),
+                    _repo_rel(closed_source_queue_path, repo_root),
+                    _repo_rel(closure_report_path, repo_root),
+                ],
+                "recursive": True,
+            },
+        },
+        {
+            "id": MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID,
+            "kind": "command",
+            "command": bridge_command,
+            "requires": [MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID],
+            "resources": {"kind": "local_cpu"},
+            "timeout_seconds": step_timeout_seconds,
+            "postconditions": [
                 {
                     "type": "json_equals",
                     "path": _repo_rel(bridge_report_path, repo_root),
@@ -3981,8 +4059,6 @@ def _materializer_exact_readiness_followup_steps(
             ],
             "telemetry": {
                 "artifact_paths": [
-                    _repo_rel(source_queue_path, repo_root),
-                    _repo_rel(harvest_report_path, repo_root),
                     _repo_rel(readiness_dir, repo_root),
                     _repo_rel(bridge_report_path, repo_root),
                 ],
@@ -3993,7 +4069,7 @@ def _materializer_exact_readiness_followup_steps(
             "id": MATERIALIZER_DISPATCH_PLAN_STEP_ID,
             "kind": "command",
             "command": dispatch_plan_command,
-            "requires": [MATERIALIZER_HARVEST_STEP_ID],
+            "requires": [MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID],
             "resources": {"kind": "local_cpu"},
             "timeout_seconds": step_timeout_seconds,
             "postconditions": [
@@ -5285,9 +5361,11 @@ __all__ = [
     "MATERIALIZER_BACKLOG_SCHEMA",
     "MATERIALIZER_CONTEXTS_SCHEMA",
     "MATERIALIZER_DISPATCH_PLAN_STEP_ID",
+    "MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID",
     "MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA",
     "MATERIALIZER_EXECUTION_STEP_ID",
     "MATERIALIZER_HARVEST_STEP_ID",
+    "MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID",
     "MATERIALIZER_WORK_QUEUE_SCHEMA",
     "PORTFOLIO_SCHEMA",
     "build_materializer_backlog",

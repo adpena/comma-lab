@@ -53,6 +53,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Re-run the bridge even when an existing report matches the source queue.",
     )
+    parser.add_argument(
+        "--require-ready",
+        "--exact-readiness-require-ready",
+        dest="require_ready",
+        action="store_true",
+        help="Exit nonzero when the bridge yields no ready rows.",
+    )
     return parser.parse_args(argv)
 
 
@@ -121,6 +128,10 @@ def main(argv: list[str] | None = None) -> int:
                 )
             ):
                 payload = read_json(bridge_report_out)
+                require_ready_failed = (
+                    args.require_ready
+                    and int(payload.get("ready_candidate_count") or 0) < 1
+                )
                 print(
                     json_text(
                         {
@@ -140,7 +151,7 @@ def main(argv: list[str] | None = None) -> int:
                     ),
                     end="",
                 )
-                return 0
+                return 3 if require_ready_failed else 0
         report = run_exact_readiness_bridge_for_harvested_queue(
             repo_root=REPO_ROOT,
             source_queue_path=source_queue,
@@ -192,6 +203,8 @@ def main(argv: list[str] | None = None) -> int:
         ),
         end="",
     )
+    if args.require_ready and int(report.get("ready_candidate_count") or 0) < 1:
+        return 3
     return 0
 
 

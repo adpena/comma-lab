@@ -26,10 +26,12 @@ from comma_lab.scheduler.byte_shaving_campaign_queue import (
     MATERIALIZER_CONTEXTS_SCHEMA,
     MATERIALIZER_DFL1_PARITY_STEP_ID,
     MATERIALIZER_DISPATCH_PLAN_STEP_ID,
+    MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID,
     MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA,
     MATERIALIZER_EXECUTION_STEP_ID,
     MATERIALIZER_HARVEST_STEP_ID,
     MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID,
+    MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID,
     MATERIALIZER_WORK_QUEUE_SCHEMA,
     _materializer_candidate_postconditions,
     build_materializer_execution_queue,
@@ -3121,6 +3123,8 @@ def test_materializer_work_queue_wraps_family_agnostic_empirical_sweep(
     assert [item["id"] for item in experiment["steps"]] == [
         MATERIALIZER_EXECUTION_STEP_ID,
         MATERIALIZER_HARVEST_STEP_ID,
+        MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID,
+        MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID,
         MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     ]
     assert experiment["metadata"]["exact_readiness_followup_requested"] is True
@@ -4763,11 +4767,15 @@ def test_materializer_execution_queue_can_append_exact_readiness_followups(
     assert [step["id"] for step in steps] == [
         MATERIALIZER_EXECUTION_STEP_ID,
         MATERIALIZER_HARVEST_STEP_ID,
+        MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID,
+        MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID,
         MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     ]
-    materializer_step, harvest_step, dispatch_step = steps
+    materializer_step, harvest_step, closure_step, bridge_step, dispatch_step = steps
     assert harvest_step["requires"] == [MATERIALIZER_EXECUTION_STEP_ID]
-    assert dispatch_step["requires"] == [MATERIALIZER_HARVEST_STEP_ID]
+    assert closure_step["requires"] == [MATERIALIZER_HARVEST_STEP_ID]
+    assert bridge_step["requires"] == [MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID]
+    assert dispatch_step["requires"] == [MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID]
     assert harvest_step["command"][:2] == [
         ".venv/bin/python",
         "tools/harvest_materializer_chain_candidates.py",
@@ -4795,6 +4803,28 @@ def test_materializer_execution_queue_can_append_exact_readiness_followups(
         ".venv/bin/python",
         "tools/build_materializer_exact_eval_dispatch_plan.py",
     ]
+    assert closure_step["command"][:2] == [
+        ".venv/bin/python",
+        "tools/build_materializer_submission_closure.py",
+    ]
+    assert bridge_step["command"][:2] == [
+        ".venv/bin/python",
+        "tools/run_materializer_exact_readiness_bridge.py",
+    ]
+    assert [
+        "--source-queue",
+        "chain_out/exact_eval_handoff/source_queue.json",
+    ] in [
+        closure_step["command"][index : index + 2]
+        for index in range(len(closure_step["command"]) - 1)
+    ]
+    assert [
+        "--source-queue",
+        "chain_out/exact_eval_handoff/submission_closure/closed_source_queue.json",
+    ] in [
+        bridge_step["command"][index : index + 2]
+        for index in range(len(bridge_step["command"]) - 1)
+    ]
     assert "--dispatch-mode" not in dispatch_step["command"]
     assert "--allow-paid-dispatch-queue" not in dispatch_step["command"]
     assert "chain_out/exact_eval_handoff/dispatch_queue.json" in (dispatch_step["command"])
@@ -4808,7 +4838,7 @@ def test_materializer_execution_queue_can_append_exact_readiness_followups(
         f"{experiment['id']}.{MATERIALIZER_EXECUTION_STEP_ID}"
     ]
     assert by_node_id[f"{experiment['id']}.{MATERIALIZER_DISPATCH_PLAN_STEP_ID}"]["dependencies"] == [
-        f"{experiment['id']}.{MATERIALIZER_HARVEST_STEP_ID}"
+        f"{experiment['id']}.{MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID}"
     ]
 
 
@@ -4902,9 +4932,11 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
         MATERIALIZER_EXECUTION_STEP_ID,
         MATERIALIZER_DFL1_PARITY_STEP_ID,
         MATERIALIZER_HARVEST_STEP_ID,
+        MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID,
+        MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID,
         MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     ]
-    materialize_step, parity_step, harvest_step, dispatch_step = steps
+    materialize_step, parity_step, harvest_step, closure_step, bridge_step, dispatch_step = steps
     proof_path = (
         "exact_eval_handoff/renderer_payload_dfl1_shell_parity/"
         "shell_inflate_parity.json"
@@ -4983,7 +5015,9 @@ def test_materializer_execution_queue_builds_dfl1_parity_followup(
         harvest_step["command"][index : index + 2]
         for index in range(len(harvest_step["command"]) - 1)
     ]
-    assert dispatch_step["requires"] == [MATERIALIZER_HARVEST_STEP_ID]
+    assert closure_step["requires"] == [MATERIALIZER_HARVEST_STEP_ID]
+    assert bridge_step["requires"] == [MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID]
+    assert dispatch_step["requires"] == [MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID]
     assert dispatch_step["timeout_seconds"] == 600
     assert materialize_step["id"] == MATERIALIZER_EXECUTION_STEP_ID
     materialize_contract = next(
@@ -5316,6 +5350,8 @@ def test_materializer_execution_queue_appends_exact_followup_for_archive_section
     assert [step["id"] for step in experiment["steps"]] == [
         MATERIALIZER_EXECUTION_STEP_ID,
         MATERIALIZER_HARVEST_STEP_ID,
+        MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID,
+        MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID,
         MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     ]
     assert experiment["metadata"]["exact_readiness_followup_requested"] is True
@@ -5958,6 +5994,8 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
     assert [step["id"] for step in experiment["steps"]] == [
         MATERIALIZER_EXECUTION_STEP_ID,
         MATERIALIZER_HARVEST_STEP_ID,
+        MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID,
+        MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID,
         MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     ]
 
@@ -6201,6 +6239,8 @@ def test_byte_shaving_campaign_queue_cli_wires_generated_dfl1_parity_followup(
         MATERIALIZER_EXECUTION_STEP_ID,
         MATERIALIZER_DFL1_PARITY_STEP_ID,
         MATERIALIZER_HARVEST_STEP_ID,
+        MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID,
+        MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID,
         MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     ]
     parity_step = steps[1]

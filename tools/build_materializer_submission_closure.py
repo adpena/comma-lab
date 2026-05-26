@@ -20,6 +20,7 @@ ensure_repo_imports(REPO_ROOT)
 from tac.optimizer.materializer_submission_closure import (  # noqa: E402
     MaterializerSubmissionClosureError,
     build_materializer_submission_runtime_closure,
+    build_materializer_submission_runtime_closures,
 )
 from tac.repo_io import json_text  # noqa: E402
 
@@ -39,16 +40,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
-        report = build_materializer_submission_runtime_closure(
-            repo_root=REPO_ROOT,
-            source_queue_path=args.source_queue,
-            candidate_id=args.candidate_id,
-            source_runtime_dir=args.source_runtime_dir,
-            submission_dir_out=args.submission_dir_out,
-            closed_source_queue_out=args.closed_source_queue_out,
-            closure_report_out=args.closure_report_out,
-            overwrite=args.overwrite,
-        )
+        if args.candidate_id:
+            report = build_materializer_submission_runtime_closure(
+                repo_root=REPO_ROOT,
+                source_queue_path=args.source_queue,
+                candidate_id=args.candidate_id,
+                source_runtime_dir=args.source_runtime_dir,
+                submission_dir_out=args.submission_dir_out,
+                closed_source_queue_out=args.closed_source_queue_out,
+                closure_report_out=args.closure_report_out,
+                overwrite=args.overwrite,
+            )
+        else:
+            report = build_materializer_submission_runtime_closures(
+                repo_root=REPO_ROOT,
+                source_queue_path=args.source_queue,
+                source_runtime_dir=args.source_runtime_dir,
+                submission_dir_out=args.submission_dir_out,
+                closed_source_queue_out=args.closed_source_queue_out,
+                closure_report_out=args.closure_report_out,
+                overwrite=args.overwrite,
+            )
     except (
         MaterializerSubmissionClosureError,
         OSError,
@@ -65,6 +77,7 @@ def main(argv: list[str] | None = None) -> int:
                 "closed_source_queue_out": str(args.closed_source_queue_out),
                 "submission_dir_out": str(args.submission_dir_out),
                 "candidate_id": report.get("candidate_id"),
+                "candidate_count": report.get("candidate_count"),
                 "archive_bytes": report.get("archive_bytes"),
                 "score_claim": False,
                 "promotion_eligible": False,

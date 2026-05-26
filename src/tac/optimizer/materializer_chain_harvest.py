@@ -171,6 +171,7 @@ def adapt_materializer_chain_manifest_to_candidate(
         "chain_artifact_count": len(chain.get("artifacts") or {}),
         "chain_step_count": len(chain.get("chain_steps") or []),
         **_runtime_consumption_proof_fields(chain),
+        **_chain_runtime_context_fields(chain),
         "local_advisory_axes": _local_advisory_axes(chain),
         "local_advisory_axes_semantics": (
             "non_authoritative_planning_signal_only_not_score_claim"
@@ -347,6 +348,8 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
         "runtime_consumption_proof_required": True,
         "runtime_consumption_proof_status": "present" if proof_present else "missing",
         "runtime_consumption_proof_path": proof_path,
+        **_submission_runtime_harvest_fields(manifest),
+        **_packet_member_merge_harvest_fields(manifest),
         **_renderer_payload_dfl1_harvest_fields(
             manifest,
             runtime_proof=_load_optional_runtime_proof(proof_path, repo_root=repo_root),
@@ -384,6 +387,50 @@ def adapt_family_agnostic_materializer_manifest_to_candidate(
     out["receiver_contract_satisfied"] = receiver_satisfied
     out["candidate_runtime_adapter_blocker_cleared"] = runtime_adapter_ready
     return out
+
+
+def _submission_runtime_harvest_fields(manifest: Mapping[str, Any]) -> dict[str, Any]:
+    fields: dict[str, Any] = {}
+    for key in (
+        "source_runtime_dir",
+        "source_submission_dir",
+        "submission_dir",
+        "candidate_runtime_dir",
+    ):
+        value = _nonempty_string(manifest.get(key))
+        if value is not None:
+            fields[key] = value
+    inflate_runtime_dir = _nonempty_string(manifest.get("inflate_runtime_dir"))
+    if inflate_runtime_dir is not None and "source_runtime_dir" not in fields:
+        fields["source_runtime_dir"] = inflate_runtime_dir
+    return fields
+
+
+def _packet_member_merge_harvest_fields(manifest: Mapping[str, Any]) -> dict[str, Any]:
+    if manifest.get("schema") != PACKET_MEMBER_MERGE_SCHEMA:
+        return {}
+    fields: dict[str, Any] = {
+        "selected_member_names": _string_list(manifest.get("selected_member_names")),
+    }
+    runtime = manifest.get("packet_member_merge_receiver_runtime")
+    if not isinstance(runtime, Mapping):
+        return fields
+    fields["packet_member_merge_receiver_runtime"] = dict(runtime)
+    runtime_dir = _nonempty_string(runtime.get("runtime_dir"))
+    if runtime_dir is not None:
+        fields["candidate_runtime_dir"] = runtime_dir
+        fields["packet_member_merge_runtime_dir"] = runtime_dir
+    runtime_manifest_path = _nonempty_string(runtime.get("runtime_manifest_path"))
+    if runtime_manifest_path is not None:
+        fields["packet_member_merge_runtime_manifest_path"] = runtime_manifest_path
+    source_runtime_dir = _nonempty_string(runtime.get("source_runtime_dir"))
+    if source_runtime_dir is not None:
+        fields["packet_member_merge_source_runtime_dir"] = source_runtime_dir
+    runtime_tree_sha = _string_or_none(runtime.get("runtime_tree_sha256"))
+    if runtime_tree_sha is not None:
+        fields["candidate_runtime_tree_sha256"] = runtime_tree_sha
+        fields["packet_member_merge_receiver_runtime_tree_sha256"] = runtime_tree_sha
+    return fields
 
 
 def _renderer_payload_dfl1_harvest_fields(
@@ -549,6 +596,38 @@ def _runtime_consumption_proof_fields(chain: Mapping[str, Any]) -> dict[str, Any
     ):
         if key in chain:
             out[key] = chain[key]
+    if "runtime_consumption_proof_path" not in out:
+        artifacts = chain.get("artifacts")
+        receiver = (
+            artifacts.get("receiver_proof")
+            if isinstance(artifacts, Mapping)
+            else None
+        )
+        proof_path = (
+            _nonempty_string(receiver.get("path"))
+            if isinstance(receiver, Mapping)
+            else None
+        )
+        if proof_path is not None:
+            out["runtime_consumption_proof_required"] = True
+            out["runtime_consumption_proof_status"] = "present"
+            out["runtime_consumption_proof_path"] = proof_path
+    return out
+
+
+def _chain_runtime_context_fields(chain: Mapping[str, Any]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key in (
+        "source_runtime_dir",
+        "inflate_runtime_dir",
+        "candidate_runtime_dir",
+        "runtime_dir",
+        "source_submission_dir",
+        "submission_dir",
+    ):
+        value = _nonempty_string(chain.get(key))
+        if value is not None:
+            out[key] = value
     return out
 
 

@@ -173,6 +173,7 @@ def build_inverse_scorer_cell_candidate_chain(
         receiver_proof=receiver_proof,
         inflate_parity_probe=inflate_parity_probe,
         verified=verified,
+        inflate_runtime_dir=inflate_runtime_dir,
     )
     _write_json(chain_manifest_path, chain, min_free_bytes=min_free_bytes)
     return chain
@@ -192,6 +193,7 @@ def _chain_manifest(
     receiver_proof: Mapping[str, Any],
     inflate_parity_probe: Mapping[str, Any] | None,
     verified: Mapping[str, Any],
+    inflate_runtime_dir: str | Path | None = None,
 ) -> dict[str, Any]:
     candidate_archive = _mapping(candidate.get("candidate_archive"))
     source_archive = _mapping(candidate.get("template_archive"))
@@ -284,6 +286,13 @@ def _chain_manifest(
         if rate_positive
         else "successful_quality_spend_not_byte_saving_progress"
     )
+    runtime_fields: dict[str, Any] = {}
+    if inflate_runtime_dir is not None:
+        runtime_path = _repo_path(Path(inflate_runtime_dir), repo)
+        runtime_fields = {
+            "source_runtime_dir": repo_relative(runtime_path, repo),
+            "inflate_runtime_dir": repo_relative(runtime_path, repo),
+        }
     return {
         "schema": CHAIN_SCHEMA,
         "output_dir": repo_relative(output_dir, repo),
@@ -306,6 +315,9 @@ def _chain_manifest(
         "receiver_proof_ready": receiver_proof.get("ready_for_receiver_verification") is True,
         "receiver_contract_satisfied": verified.get("receiver_contract_satisfied") is True,
         "inflate_parity_satisfied": verified.get("inflate_parity_satisfied") is True,
+        "runtime_consumption_proof_required": True,
+        "runtime_consumption_proof_status": "present",
+        "runtime_consumption_proof_path": repo_relative(receiver_proof_path, repo),
         "candidate_runtime_adapter_blocker_cleared": (
             "runtime_consumption_proof_missing" not in verified_blockers
             and "inverse_scorer_cell_receiver_contract_not_satisfied" not in verified_blockers
@@ -327,6 +339,7 @@ def _chain_manifest(
         "artifacts": artifacts,
         "chain_steps": chain_steps,
         "next_required_gates": _next_required_gates(readiness_blockers),
+        **runtime_fields,
         **FALSE_AUTHORITY,
     }
 

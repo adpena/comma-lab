@@ -3,11 +3,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import zipfile
 from pathlib import Path
 
 import pytest
 
 from tac.optimization.family_agnostic_materializers import (
+    PACKET_MEMBER_MERGE_SCHEMA,
     PACKET_MEMBER_RECOMPRESS_SCHEMA,
 )
 from tac.optimization.local_cpu_contest_drift import EUREKA_FALSE_AUTHORITY_FIELDS
@@ -52,6 +54,7 @@ def _materializer_chain_manifest(
     authority_overrides: dict[str, object] | None = None,
     delta_overrides: dict[str, object] | None = None,
     artifact_overrides: dict[str, object] | None = None,
+    payload_overrides: dict[str, object] | None = None,
 ) -> Path:
     source_archive = _write_bytes(
         repo, repo / "inputs/source.zip", b"source archive bytes"
@@ -116,6 +119,8 @@ def _materializer_chain_manifest(
             "score": 0.1928,
         },
     }
+    if payload_overrides:
+        payload.update(payload_overrides)
     if authority_overrides:
         payload.update(authority_overrides)
     return _write_json(repo / "outputs/chain_manifest.json", payload)
@@ -158,6 +163,101 @@ def _family_agnostic_materializer_manifest(repo: Path) -> Path:
         "gpu_launched": False,
     }
     return _write_json(repo / "outputs/family_materializer.json", payload)
+
+
+def _packet_member_merge_materializer_manifest(repo: Path) -> Path:
+    source_archive_path = repo / "inputs/source.zip"
+    source_archive_path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(source_archive_path, "w") as archive:
+        archive.writestr("renderer.bin", b"A" * 32)
+        archive.writestr("masks.mkv", b"B" * 24)
+        archive.writestr("optimized_poses.pt", b"C" * 16)
+    source_archive = _file_record(repo, source_archive_path)
+    candidate_archive_path = repo / "outputs/archive.zip"
+    candidate_archive_path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(candidate_archive_path, "w") as archive:
+        archive.writestr("__packet_member_merge_v1.bin", b"merged")
+    candidate_archive = _file_record(repo, candidate_archive_path)
+    proof = _write_json(
+        repo / "outputs/runtime_consumption_proof.json",
+        {
+            "schema": "family_agnostic_runtime_consumption_proof_v1",
+            "proof_kind": "packet_member_merge_runtime_adapter_consumption_proof.v1",
+            "target_kind": "packet_member_merge_v1",
+            "materializer_id": "packet_member_merge_adapter",
+            "receiver_contract_kind": "family_agnostic_packet_member_merge",
+            "receiver_contract_satisfied": True,
+            "runtime_consumption_proof_passed": True,
+            "passed": True,
+            "candidate_archive_sha256": candidate_archive["sha256"],
+            "runtime_adapter_ready": True,
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "promotable": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "gpu_launched": False,
+        },
+    )
+    runtime = repo / "outputs" / "candidate.runtime"
+    runtime.mkdir(parents=True)
+    (runtime / "inflate.sh").write_text(
+        "#!/usr/bin/env bash\nset -euo pipefail\n", encoding="utf-8"
+    )
+    payload = {
+        "schema": PACKET_MEMBER_MERGE_SCHEMA,
+        "candidate_id": "fixture_packet_member_merge_candidate",
+        "lane_id": "fixture_packet_member_merge_lane",
+        "source_archive": source_archive,
+        "candidate_archive": candidate_archive,
+        "candidate_member": {
+            "name": "__packet_member_merge_v1.bin",
+            "bytes": 6,
+            "sha256": hashlib.sha256(b"merged").hexdigest(),
+        },
+        "byte_closed_candidate_emitted": True,
+        "materializer_id": "packet_member_merge_adapter",
+        "target_kind": "packet_member_merge_v1",
+        "receiver_contract_kind": "family_agnostic_packet_member_merge",
+        "receiver_contract_satisfied": True,
+        "runtime_adapter_ready": True,
+        "runtime_consumption_proof_path": proof.relative_to(repo).as_posix(),
+        "receiver_verification": {
+            "schema": "family_agnostic_runtime_consumption_proof_verification.v1",
+            "receiver_contract_satisfied": True,
+            "proof_present": True,
+            "proof_path": proof.relative_to(repo).as_posix(),
+            "runtime_adapter_ready": True,
+            "runtime_adapter_sha256": "b" * 64,
+            "blockers": [],
+        },
+        "packet_member_merge_receiver_runtime": {
+            "schema": "packet_member_merge_receiver_runtime.v1",
+            "runtime_adapter_ready": True,
+            "runtime_dir": runtime.relative_to(repo).as_posix(),
+            "runtime_manifest_path": "outputs/candidate.runtime_adapter.json",
+            "runtime_tree_sha256": "b" * 64,
+            "source_runtime_dir": "submissions/robust_current",
+            "blockers": [],
+        },
+        "selected_member_names": [
+            "renderer.bin",
+            "masks.mkv",
+            "optimized_poses.pt",
+        ],
+        "readiness_blockers": [],
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+    return _write_json(repo / "outputs/packet_member_merge_materializer.json", payload)
 
 
 def test_a1_rollup_merges_m5_ranking_without_dispatch_overclaim(tmp_path: Path) -> None:
@@ -445,6 +545,71 @@ def test_family_agnostic_materializer_manifest_becomes_custody_checked_planning_
     assert "family_agnostic_receiver_contract_not_satisfied" in row[
         "dispatch_blockers"
     ]
+
+
+def test_packet_member_merge_materializer_harvest_preserves_receiver_runtime(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_member_merge_materializer_manifest(tmp_path)
+
+    queue = build_candidate_queue([manifest], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert queue["n_candidates"] == 1
+    assert row["candidate_id"] == "fixture_packet_member_merge_candidate"
+    assert row["candidate_family"] == "packet_member_merge"
+    assert row["receiver_contract_satisfied"] is True
+    assert row["runtime_adapter_ready"] is True
+    assert row["candidate_runtime_dir"] == "outputs/candidate.runtime"
+    assert row["candidate_runtime_tree_sha256"] == "b" * 64
+    assert row["packet_member_merge_runtime_dir"] == "outputs/candidate.runtime"
+    assert row["packet_member_merge_receiver_runtime_tree_sha256"] == "b" * 64
+    assert row["packet_member_merge_source_runtime_dir"] == (
+        "submissions/robust_current"
+    )
+    assert row["selected_member_names"] == [
+        "renderer.bin",
+        "masks.mkv",
+        "optimized_poses.pt",
+    ]
+    assert "family_agnostic_receiver_contract_not_satisfied" not in row[
+        "dispatch_blockers"
+    ]
+
+
+def test_materializer_chain_harvest_preserves_runtime_context(
+    tmp_path: Path,
+) -> None:
+    runtime_dir = tmp_path / "runtime"
+    runtime_dir.mkdir()
+    (runtime_dir / "inflate.sh").write_text(
+        "#!/usr/bin/env bash\nset -euo pipefail\n", encoding="utf-8"
+    )
+    receiver_proof = _write_json(
+        tmp_path / "outputs/receiver_proof.json",
+        {"schema": "fixture_receiver_proof_v1"},
+    )
+    manifest = _materializer_chain_manifest(
+        tmp_path,
+        artifact_overrides={
+            "receiver_proof": _file_record(tmp_path, receiver_proof),
+        },
+        payload_overrides={
+            "schema": "inverse_scorer_cell_candidate_chain_v1",
+            "source_runtime_dir": "runtime",
+            "inflate_runtime_dir": "runtime",
+        },
+    )
+
+    queue = build_candidate_queue([manifest], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert row["candidate_family"] == "inverse_scorer_cell"
+    assert row["source_runtime_dir"] == "runtime"
+    assert row["inflate_runtime_dir"] == "runtime"
+    assert row["runtime_consumption_proof_required"] is True
+    assert row["runtime_consumption_proof_status"] == "present"
+    assert row["runtime_consumption_proof_path"] == "outputs/receiver_proof.json"
 
 
 def test_materializer_chain_truthy_authority_fails_closed(tmp_path: Path) -> None:

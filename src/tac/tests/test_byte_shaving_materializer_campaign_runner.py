@@ -10,8 +10,11 @@ import pytest
 
 from comma_lab.scheduler.byte_shaving_campaign_queue import (
     MATERIALIZER_DFL1_PARITY_STEP_ID,
+    MATERIALIZER_DISPATCH_PLAN_STEP_ID,
+    MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID,
     MATERIALIZER_EXECUTION_STEP_ID,
     MATERIALIZER_HARVEST_STEP_ID,
+    MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID,
     build_materializer_execution_queue,
     build_materializer_work_queue,
     materializer_contexts_from_payload,
@@ -2174,7 +2177,7 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert summary["performance"]["source_run_path"] == str(run_dir / "materializer_campaign_run.json")
     assert summary["performance"]["worker_returncode"] == 0
     assert summary["worker"]["schema"] == "experiment_queue_worker_result.v1"
-    assert summary["worker"]["success_count"] == 3
+    assert summary["worker"]["success_count"] == 5
     assert summary["worker"]["failure_count"] == 0
 
     performance = json.loads(
@@ -3095,6 +3098,12 @@ def test_materializer_campaign_runner_executes_no_paid_packet_member_handoff(
 
     plan.write_text(json.dumps(_packet_member_recompress_plan()), encoding="utf-8")
     _write_packet_archive(source_archive)
+    inflate_sh = tmp_path / "inflate.sh"
+    inflate_sh.write_text(
+        "#!/usr/bin/env bash\nset -euo pipefail\nmkdir -p \"$2\"\n",
+        encoding="utf-8",
+    )
+    inflate_sh.chmod(0o755)
 
     subprocess_run = runner.subprocess.run
 
@@ -3165,7 +3174,7 @@ def test_materializer_campaign_runner_executes_no_paid_packet_member_handoff(
         str(run_dir / "queue_performance_summary.json"),
     ]
     assert summary["build"]["materializer_work_queue_executable_row_count"] == 1
-    assert summary["worker"]["success_count"] == 3
+    assert summary["worker"]["success_count"] == 5
     assert summary["worker"]["failure_count"] == 0
     worker_commands = [
         command["command"]
@@ -3184,9 +3193,11 @@ def test_materializer_campaign_runner_executes_no_paid_packet_member_handoff(
         experiment for experiment in execution_queue["experiments"] if experiment["id"].startswith("materializer_work_")
     )
     assert [step["id"] for step in materializer_experiment["steps"]] == [
-        "materialize_local_proof_chain",
-        "harvest_materializer_chains",
-        "build_exact_eval_dispatch_plan",
+        MATERIALIZER_EXECUTION_STEP_ID,
+        MATERIALIZER_HARVEST_STEP_ID,
+        MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID,
+        MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID,
+        MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     ]
     assert materializer_experiment["metadata"]["target_kind"] == (runner.PACKET_MEMBER_RECOMPRESS_TARGET_KIND)
     assert materializer_experiment["metadata"]["exact_readiness_followup_enabled"] is True

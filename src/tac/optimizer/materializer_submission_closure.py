@@ -179,6 +179,37 @@ def _find_candidate_row(
     )
 
 
+def _selected_candidate_rows(
+    queue_payload: Mapping[str, Any],
+    *,
+    candidate_ids: tuple[str, ...] = (),
+) -> list[Mapping[str, Any]]:
+    rows = _source_queue_rows(queue_payload)
+    unique_by_id: dict[str, Mapping[str, Any]] = {}
+    for row in rows:
+        row_id = str(row.get("candidate_id") or "")
+        if row_id and row_id not in unique_by_id:
+            unique_by_id[row_id] = row
+    if not unique_by_id:
+        raise MaterializerSubmissionClosureError("source_queue_has_no_candidate_rows")
+    requested = tuple(str(candidate_id) for candidate_id in candidate_ids if candidate_id)
+    if not requested:
+        return list(unique_by_id.values())
+    selected: list[Mapping[str, Any]] = []
+    missing: list[str] = []
+    for candidate_id in requested:
+        row = unique_by_id.get(candidate_id)
+        if row is None:
+            missing.append(candidate_id)
+        else:
+            selected.append(row)
+    if missing:
+        raise MaterializerSubmissionClosureError(
+            "candidate_id_missing_in_source_queue:" + ",".join(missing)
+        )
+    return selected
+
+
 def _candidate_archive_path(row: Mapping[str, Any]) -> Any:
     return row.get("candidate_archive_path") or row.get("archive_path")
 
@@ -459,6 +490,47 @@ def _closed_queue_payload(
     return payload
 
 
+def _closed_queue_payload_many(
+    *,
+    source_queue: Mapping[str, Any],
+    source_rows: list[Mapping[str, Any]],
+    closed_rows: list[Mapping[str, Any]],
+) -> dict[str, Any]:
+    source_schemas = list(source_queue.get("source_schemas") or [])
+    payload = {
+        key: value
+        for key, value in source_queue.items()
+        if key not in {"top_k", "top_k_forensic", "dispatch_ready"}
+    }
+    payload.update(
+        {
+            "schema": SUBMISSION_CLOSURE_QUEUE_SCHEMA,
+            "tool": "tac.optimizer.materializer_submission_closure",
+            "source_tool": source_queue.get("tool"),
+            "generated_at_utc": _utc_now(),
+            "n_candidates": len(closed_rows),
+            "top_k_count": len(closed_rows),
+            "dispatch_ready_count": 0,
+            "top_k": [dict(row) for row in closed_rows],
+            "top_k_forensic": [dict(row) for row in source_rows + closed_rows],
+            "dispatch_ready": [],
+            "source_schemas": source_schemas,
+            "evidence_boundary": {
+                "planning_only_by_default": True,
+                "closure_packet_is_static_custody_only": True,
+                "ready_for_exact_eval_dispatch_default": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+            },
+            "allowed_use": "materializer_submission_runtime_closure_source_queue",
+            "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+            **FALSE_AUTHORITY,
+        }
+    )
+    return payload
+
+
 def build_materializer_submission_runtime_closure(
     *,
     repo_root: str | Path,
@@ -658,6 +730,119 @@ def build_materializer_submission_runtime_closure(
     return report
 
 
+def build_materializer_submission_runtime_closures(
+    *,
+    repo_root: str | Path,
+    source_queue_path: str | Path,
+    submission_dir_out: str | Path,
+    closed_source_queue_out: str | Path,
+    closure_report_out: str | Path,
+    candidate_ids: tuple[str, ...] = (),
+    source_runtime_dir: str | Path | None = None,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Build submission/runtime closures for every selected source-queue row."""
+
+    repo = Path(repo_root).resolve(strict=False)
+    source_queue = _resolve_path(source_queue_path, repo_root=repo)
+    if source_queue is None or not source_queue.is_file():
+        raise MaterializerSubmissionClosureError("source_queue_missing")
+    queue_payload = read_json(source_queue)
+    if not isinstance(queue_payload, Mapping):
+        raise MaterializerSubmissionClosureError("source_queue_not_object")
+    if queue_payload.get("schema") != SUBMISSION_CLOSURE_QUEUE_SCHEMA:
+        raise MaterializerSubmissionClosureError(
+            f"source_queue_schema_unsupported:{queue_payload.get('schema')!r}"
+        )
+    require_no_truthy_authority_fields(
+        queue_payload,
+        context=f"materializer_submission_closure_source_queue:{source_queue}",
+    )
+    source_rows = _selected_candidate_rows(queue_payload, candidate_ids=candidate_ids)
+    submission_root = _resolve_path(submission_dir_out, repo_root=repo)
+    closed_queue_path = _resolve_path(closed_source_queue_out, repo_root=repo)
+    closure_report_path = _resolve_path(closure_report_out, repo_root=repo)
+    if submission_root is None or closed_queue_path is None or closure_report_path is None:
+        raise MaterializerSubmissionClosureError("closure_output_path_missing")
+    _prepare_submission_dir(submission_root, overwrite=overwrite, repo_root=repo)
+
+    per_candidate_reports: list[dict[str, Any]] = []
+    closed_rows: list[Mapping[str, Any]] = []
+    for row in source_rows:
+        candidate_id = str(row.get("candidate_id") or "")
+        if not candidate_id:
+            raise MaterializerSubmissionClosureError(
+                "candidate_id_missing_for_submission_closure"
+            )
+        candidate_dir = submission_root / _safe_slug(candidate_id)
+        candidate_closed_queue_path = candidate_dir / "closed_source_queue.json"
+        candidate_report = build_materializer_submission_runtime_closure(
+            repo_root=repo,
+            source_queue_path=source_queue,
+            candidate_id=candidate_id,
+            source_runtime_dir=source_runtime_dir,
+            submission_dir_out=candidate_dir,
+            closed_source_queue_out=candidate_closed_queue_path,
+            closure_report_out=candidate_dir / "submission_closure_report.json",
+            overwrite=True,
+        )
+        per_candidate_reports.append(candidate_report)
+        candidate_closed_queue = read_json(candidate_closed_queue_path)
+        if not isinstance(candidate_closed_queue, Mapping):
+            raise MaterializerSubmissionClosureError(
+                "candidate_closed_source_queue_not_object"
+            )
+        candidate_top_k = candidate_closed_queue.get("top_k")
+        if not isinstance(candidate_top_k, list) or len(candidate_top_k) != 1:
+            raise MaterializerSubmissionClosureError(
+                "candidate_closed_source_queue_expected_one_closed_row"
+            )
+        closed_row = candidate_top_k[0]
+        if not isinstance(closed_row, Mapping):
+            raise MaterializerSubmissionClosureError(
+                "candidate_closed_source_queue_closed_row_not_object"
+            )
+        closed_rows.append(closed_row)
+
+    closed_queue = _closed_queue_payload_many(
+        source_queue=queue_payload,
+        source_rows=[dict(row) for row in source_rows],
+        closed_rows=[dict(row) for row in closed_rows],
+    )
+    require_no_truthy_authority_fields(
+        closed_queue,
+        context="materializer_submission_closure_closed_queue_many",
+    )
+    _write_json(closed_queue_path, closed_queue)
+
+    report = apply_proxy_evidence_boundary(
+        {
+            "schema": SUBMISSION_CLOSURE_REPORT_SCHEMA,
+            "tool": "tac.optimizer.materializer_submission_closure",
+            "generated_at_utc": _utc_now(),
+            "source_queue_path": _repo_rel(source_queue, repo),
+            "closed_source_queue_path": _repo_rel(closed_queue_path, repo),
+            "submission_dir": _repo_rel(submission_root, repo),
+            "candidate_count": len(per_candidate_reports),
+            "candidate_ids": [
+                report.get("candidate_id") for report in per_candidate_reports
+            ],
+            "rows": per_candidate_reports,
+            "allowed_use": "multi_candidate_materializer_submission_closure_static_custody",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+            **FALSE_AUTHORITY,
+        }
+    )
+    require_no_truthy_authority_fields(
+        report,
+        context="materializer_submission_closure_report_many",
+    )
+    _write_json(closure_report_path, report)
+    return dict(report)
+
+
 __all__ = [
     "FALSE_AUTHORITY",
     "SUBMISSION_CLOSURE_ARCHIVE_MANIFEST_SCHEMA",
@@ -665,4 +850,5 @@ __all__ = [
     "SUBMISSION_CLOSURE_REPORT_SCHEMA",
     "MaterializerSubmissionClosureError",
     "build_materializer_submission_runtime_closure",
+    "build_materializer_submission_runtime_closures",
 ]

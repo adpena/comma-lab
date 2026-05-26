@@ -11,7 +11,11 @@ import brotli
 import pytest
 
 from comma_lab.scheduler.byte_shaving_campaign_queue import (
+    MATERIALIZER_DISPATCH_PLAN_STEP_ID,
+    MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID,
     MATERIALIZER_EXECUTION_STEP_ID,
+    MATERIALIZER_HARVEST_STEP_ID,
+    MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID,
 )
 from comma_lab.scheduler.byte_shaving_materializer_registry import (
     ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
@@ -324,17 +328,20 @@ def test_frontier_bootstrap_can_append_exact_readiness_followups(
     assert experiment["metadata"]["exact_readiness_followup_skipped_reason"] is None
     assert [step["id"] for step in experiment["steps"]] == [
         MATERIALIZER_EXECUTION_STEP_ID,
-        "harvest_materializer_chains",
-        "build_exact_eval_dispatch_plan",
+        MATERIALIZER_HARVEST_STEP_ID,
+        MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID,
+        MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID,
+        MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     ]
     harvest_step = experiment["steps"][1]
+    bridge_step = experiment["steps"][3]
     sweep_arg = harvest_step["command"][
         harvest_step["command"].index("--sweep-manifest") + 1
     ]
     assert sweep_arg.startswith(f"{experiment['id']}=")
     assert sweep_arg.endswith("packet_member_recompress_v1/sweep.json")
     assert "--work-queue" not in harvest_step["command"]
-    assert "--exact-readiness-require-ready" in harvest_step["command"]
+    assert "--exact-readiness-require-ready" in bridge_step["command"]
 
 
 def test_frontier_bootstrap_exact_followup_request_harvests_sweep_candidates(
@@ -366,8 +373,10 @@ def test_frontier_bootstrap_exact_followup_request_harvests_sweep_candidates(
     assert experiment["metadata"]["exact_readiness_followup_skipped_reason"] is None
     assert [step["id"] for step in experiment["steps"]] == [
         MATERIALIZER_EXECUTION_STEP_ID,
-        "harvest_materializer_chains",
-        "build_exact_eval_dispatch_plan",
+        MATERIALIZER_HARVEST_STEP_ID,
+        MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID,
+        MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID,
+        MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     ]
 
 
@@ -444,8 +453,10 @@ def test_frontier_bootstrap_cli_writes_valid_queue(tmp_path: Path) -> None:
     ] is None
     assert [step["id"] for step in queue["experiments"][0]["steps"]] == [
         MATERIALIZER_EXECUTION_STEP_ID,
-        "harvest_materializer_chains",
-        "build_exact_eval_dispatch_plan",
+        MATERIALIZER_HARVEST_STEP_ID,
+        MATERIALIZER_SUBMISSION_CLOSURE_STEP_ID,
+        MATERIALIZER_EXACT_READINESS_BRIDGE_STEP_ID,
+        MATERIALIZER_DISPATCH_PLAN_STEP_ID,
     ]
     harvest_step = queue["experiments"][0]["steps"][1]
     assert "--sweep-manifest" in harvest_step["command"]
