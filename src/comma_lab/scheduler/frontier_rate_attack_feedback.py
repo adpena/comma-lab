@@ -131,6 +131,8 @@ RATE_BUDGET_PRESERVATION_PLAN_SCHEMA = (
 RATE_BUDGET_PRESERVATION_ROW_SCHEMA = (
     "frontier_rate_attack_rate_budget_preservation_row.v1"
 )
+OPERATOR_ACTION_LEDGER_SCHEMA = "frontier_rate_attack_operator_action_ledger.v1"
+OPERATOR_ACTION_TERM_SCHEMA = "frontier_rate_attack_operator_action_term.v1"
 OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA = (
     "frontier_rate_attack_operation_chain_compiler_work_order.v1"
 )
@@ -187,11 +189,20 @@ REPAIR_BUDGET_WATERFILL_WORK_ORDER_SCHEMA = (
 REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA = (
     "frontier_rate_attack_repair_budget_waterfill_queue_metadata.v1"
 )
+REPAIR_BUDGET_WATERFILL_ALLOCATION_ACTION_TERM_SCHEMA = (
+    "frontier_rate_attack_repair_budget_waterfill_allocation_action_term.v1"
+)
 REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA = (
     "frontier_rate_attack_repair_budget_materialization_plan.v1"
 )
 REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA = (
     "frontier_rate_attack_repair_budget_materialization_plan_row.v1"
+)
+REPAIR_BUDGET_MATERIALIZATION_EXECUTION_REPORT_SCHEMA = (
+    "frontier_rate_attack_repair_budget_materialization_execution_report.v1"
+)
+REPAIR_BUDGET_MATERIALIZATION_EXECUTION_ROW_SCHEMA = (
+    "frontier_rate_attack_repair_budget_materialization_execution_row.v1"
 )
 TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA = (
     "frontier_rate_attack_targeted_component_correction_acquisition.v1"
@@ -6230,6 +6241,257 @@ def build_frontier_repair_budget_materialization_plan(
     return payload
 
 
+def _repair_budget_materialization_execution_row(
+    *,
+    row: Mapping[str, Any],
+    parent_candidate_chain_id: str,
+    materialized_parent_ids: set[str],
+    materialization_order_seen: list[int],
+) -> dict[str, Any]:
+    candidate_chain_id = str(row.get("candidate_chain_id") or "")
+    candidate_kind = str(row.get("candidate_kind") or "unknown_candidate_kind")
+    order = _finite_int_or_none(row.get("materialization_order")) or 0
+    materialization_order_seen.append(order)
+    blockers = _string_list(row.get("blockers"))
+    if not candidate_chain_id:
+        blockers.append("candidate_chain_id_missing")
+    if order <= 0:
+        blockers.append("materialization_order_missing")
+    if candidate_kind != "rate_only_floor_parent":
+        if str(row.get("parent_candidate_chain_id") or "") != parent_candidate_chain_id:
+            blockers.append("child_parent_candidate_chain_id_mismatch")
+        if parent_candidate_chain_id not in materialized_parent_ids:
+            blockers.append("parent_rate_only_archive_materialization_required")
+    archive_path = str(row.get("candidate_archive_path") or "").strip()
+    archive_materialized = row.get("candidate_archive_materialized") is True
+    runtime_proof_present = row.get("runtime_consumption_proof_present") is True
+    receiver_consumed = row.get("receiver_consumed") is True
+    component_replayed = row.get("component_response_replayed") is True
+    if archive_materialized and candidate_kind == "rate_only_floor_parent":
+        materialized_parent_ids.add(candidate_chain_id)
+    if not archive_materialized:
+        blockers.append("candidate_archive_materialized_false")
+    if archive_materialized and not archive_path:
+        blockers.append("candidate_archive_path_missing")
+    if not runtime_proof_present:
+        blockers.append("runtime_consumption_proof_present_false")
+    if not receiver_consumed:
+        blockers.append("receiver_consumed_false")
+    if candidate_kind == "spent_budget_repair_child" and not component_replayed:
+        blockers.append("component_response_replayed_false")
+    if row.get("budget_spend_allowed") is True:
+        blockers.append("budget_spend_authority_forbidden")
+    if row.get("ready_for_exact_eval_dispatch") is True:
+        blockers.append("exact_dispatch_authority_forbidden")
+    ready_for_local_materialization = (
+        archive_materialized
+        and runtime_proof_present
+        and receiver_consumed
+        and (
+            candidate_kind == "rate_only_floor_parent"
+            or component_replayed
+        )
+        and not blockers
+    )
+    return {
+        "schema": REPAIR_BUDGET_MATERIALIZATION_EXECUTION_ROW_SCHEMA,
+        "candidate_chain_id": candidate_chain_id,
+        "candidate_kind": candidate_kind,
+        "chain_id": row.get("chain_id"),
+        "materialization_order": order,
+        "parent_candidate_chain_id": row.get("parent_candidate_chain_id"),
+        "parent_must_be_preserved_before_child": (
+            row.get("parent_must_be_preserved_before_child") is True
+            or candidate_kind == "spent_budget_repair_child"
+        ),
+        "candidate_archive_path": archive_path or None,
+        "candidate_archive_materialized": archive_materialized,
+        "runtime_consumption_proof_present": runtime_proof_present,
+        "receiver_consumed": receiver_consumed,
+        "component_response_replayed": component_replayed,
+        "ready_for_local_materialization": ready_for_local_materialization,
+        "ready_for_materializer_execution": False,
+        "ready_for_budget_spend": False,
+        "budget_spend_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
+        "execution_status": (
+            "ready_for_receiver_closed_candidate_replay"
+            if ready_for_local_materialization
+            else "blocked_missing_receiver_consumed_candidate_archive"
+        ),
+        "exact_readiness_refusal": {
+            "schema": "exact_readiness_refusal.v1",
+            "ready": False,
+            "reason": (
+                "repair_budget_materialization_requires_receiver_consumed_archive_"
+                "proof_before_exact_axis_dispatch"
+            ),
+            "blockers": _unique_strings(blockers),
+            **FALSE_AUTHORITY,
+        },
+        "blockers": _unique_strings(blockers),
+        "allowed_use": "repair_budget_materialization_execution_readiness_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_promotion_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_frontier_repair_budget_materialization_execution_report(
+    *,
+    repair_budget_materialization_plan: Mapping[str, Any],
+    repair_budget_materialization_plan_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Audit repair-budget candidate-chain materialization readiness."""
+
+    if (
+        repair_budget_materialization_plan.get("schema")
+        != REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA
+    ):
+        raise FrontierRateAttackFeedbackError(
+            "repair budget materialization plan has unexpected schema"
+        )
+    require_no_truthy_authority_fields(
+        repair_budget_materialization_plan,
+        context="repair_budget_materialization_execution_plan",
+    )
+    plan_rows = [
+        row
+        for row in repair_budget_materialization_plan.get("candidate_chain_rows") or []
+        if isinstance(row, Mapping)
+        and row.get("schema") == REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA
+    ]
+    parent_candidate_chain_id = str(
+        repair_budget_materialization_plan.get("parent_candidate_chain_id") or ""
+    )
+    sorted_rows = sorted(
+        plan_rows,
+        key=lambda row: (
+            _finite_int_or_none(row.get("materialization_order")) or 10**9,
+            str(row.get("candidate_chain_id") or ""),
+        ),
+    )
+    materialized_parent_ids: set[str] = set()
+    materialization_order_seen: list[int] = []
+    execution_rows = [
+        _repair_budget_materialization_execution_row(
+            row=row,
+            parent_candidate_chain_id=parent_candidate_chain_id,
+            materialized_parent_ids=materialized_parent_ids,
+            materialization_order_seen=materialization_order_seen,
+        )
+        for row in sorted_rows
+    ]
+    blockers = [
+        "candidate_archives_not_materialized",
+        "receiver_runtime_consumption_proof_missing",
+        "exact_auth_eval_required_before_score_or_promotion_claim",
+    ]
+    if not plan_rows:
+        blockers.append("candidate_chain_rows_missing")
+    if not parent_candidate_chain_id:
+        blockers.append("parent_candidate_chain_id_missing")
+    if materialization_order_seen and materialization_order_seen != sorted(
+        materialization_order_seen
+    ):
+        blockers.append("candidate_chain_rows_not_sorted_by_materialization_order")
+    if not execution_rows or execution_rows[0].get("candidate_kind") != "rate_only_floor_parent":
+        blockers.append("rate_only_floor_parent_not_first")
+    blockers.extend(
+        blocker
+        for row in execution_rows
+        for blocker in row.get("blockers") or []
+    )
+    ready_count = sum(
+        1 for row in execution_rows if row.get("ready_for_local_materialization") is True
+    )
+    archive_materialized_count = sum(
+        1 for row in execution_rows if row.get("candidate_archive_materialized") is True
+    )
+    runtime_proof_count = sum(
+        1 for row in execution_rows if row.get("runtime_consumption_proof_present") is True
+    )
+    payload = {
+        "schema": REPAIR_BUDGET_MATERIALIZATION_EXECUTION_REPORT_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "chain_id": repair_budget_materialization_plan.get("chain_id"),
+        "source_materialization_plan_path": str(
+            repair_budget_materialization_plan_path or ""
+        ),
+        "source_materialization_plan_schema": repair_budget_materialization_plan.get(
+            "schema"
+        ),
+        "candidate_chain_row_count": len(execution_rows),
+        "parent_candidate_chain_id": parent_candidate_chain_id or None,
+        "rate_only_floor_parent_first": bool(
+            execution_rows
+            and execution_rows[0].get("candidate_kind") == "rate_only_floor_parent"
+        ),
+        "spent_budget_candidates_are_children_of_rate_only_floor": (
+            repair_budget_materialization_plan.get(
+                "spent_budget_candidates_are_children_of_rate_only_floor"
+            )
+            is True
+        ),
+        "rate_only_candidate_remains_valid_even_if_child_regresses": (
+            repair_budget_materialization_plan.get(
+                "rate_only_candidate_remains_valid_even_if_child_regresses"
+            )
+            is True
+        ),
+        "ready_for_local_materialization_count": ready_count,
+        "candidate_archive_materialized_count": archive_materialized_count,
+        "runtime_consumption_proof_present_count": runtime_proof_count,
+        "receiver_consumed_count": sum(
+            1 for row in execution_rows if row.get("receiver_consumed") is True
+        ),
+        "component_response_replayed_count": sum(
+            1 for row in execution_rows if row.get("component_response_replayed") is True
+        ),
+        "candidate_archive_materialized": archive_materialized_count == len(execution_rows)
+        and bool(execution_rows),
+        "runtime_consumption_proof_present": runtime_proof_count == len(execution_rows)
+        and bool(execution_rows),
+        "receiver_consumed": all(
+            row.get("receiver_consumed") is True for row in execution_rows
+        )
+        and bool(execution_rows),
+        "component_response_replayed": all(
+            row.get("component_response_replayed") is True
+            or row.get("candidate_kind") == "rate_only_floor_parent"
+            for row in execution_rows
+        )
+        and bool(execution_rows),
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_materializer_execution": False,
+        "ready_for_exact_eval_dispatch": False,
+        "execution_rows": execution_rows,
+        "exact_readiness_refusal": {
+            "schema": "exact_readiness_refusal.v1",
+            "ready": False,
+            "reason": (
+                "repair_budget_candidate_chain_is_local_materialization_readiness_"
+                "only_until_receiver_consumed_archives_and_exact_axis_payload_exist"
+            ),
+            "blockers": _unique_strings(blockers),
+            **FALSE_AUTHORITY,
+        },
+        "blockers": _unique_strings(blockers),
+        "recommended_next_action": (
+            "bind_receiver_runtime_materializers_to_rate_only_parent_then_child_"
+            "repair_candidates_and_rerun_this_execution_report"
+        ),
+        "allowed_use": "queue_owned_repair_budget_materialization_readiness_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_promotion_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        payload,
+        context="frontier_repair_budget_materialization_execution_report",
+    )
+    return payload
+
+
 def build_frontier_repair_budget_waterfill_queue(
     *,
     repo_root: str | Path,
@@ -6408,8 +6670,14 @@ def build_frontier_repair_budget_waterfill_queue(
             / _slug_token(chain_id)
             / "repair_budget_materialization_plan.json"
         )
+        execution_report_path = (
+            queue_root
+            / _slug_token(chain_id)
+            / "repair_budget_materialization_execution_report.json"
+        )
         work_order_ref = _repo_rel(work_order_path, repo)
         materialization_plan_ref = _repo_rel(materialization_plan_path, repo)
+        execution_report_ref = _repo_rel(execution_report_path, repo)
         metadata = {
             "schema": REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA,
             "chain_id": chain_id,
@@ -6446,6 +6714,7 @@ def build_frontier_repair_budget_waterfill_queue(
             ),
             "preserve_rate_only_archive_before_budget_spend": True,
             "candidate_chain_materialization_plan_path": materialization_plan_ref,
+            "candidate_chain_execution_report_path": execution_report_ref,
             "candidate_archive_materialized": False,
             "queue_actuation_ready": True,
             "budget_spend_allowed": False,
@@ -6577,6 +6846,59 @@ def build_frontier_repair_budget_waterfill_queue(
                         "telemetry": {
                             "artifact_paths": [materialization_plan_ref],
                             "input_artifact_paths": [work_order_ref],
+                            "include_postcondition_paths": True,
+                        },
+                    },
+                    {
+                        "id": "audit_repair_budget_materialization_execution",
+                        "kind": "command",
+                        "command": [
+                            ".venv/bin/python",
+                            "tools/build_frontier_repair_budget_materialization_execution_report.py",
+                            "--materialization-plan",
+                            materialization_plan_ref,
+                            "--execution-report-out",
+                            execution_report_ref,
+                            "--overwrite",
+                        ],
+                        "requires": ["emit_repair_budget_materialization_plan"],
+                        "resources": {"kind": "local_io_heavy"},
+                        "timeout_seconds": 120,
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": execution_report_ref,
+                                "key": "schema",
+                                "equals": (
+                                    REPAIR_BUDGET_MATERIALIZATION_EXECUTION_REPORT_SCHEMA
+                                ),
+                            },
+                            {
+                                "type": "json_false_authority",
+                                "path": execution_report_ref,
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": execution_report_ref,
+                                "key": "candidate_archive_materialized",
+                                "equals": False,
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": execution_report_ref,
+                                "key": "ready_for_exact_eval_dispatch",
+                                "equals": False,
+                            },
+                            {
+                                "type": "json_equals",
+                                "path": execution_report_ref,
+                                "key": "budget_spend_allowed",
+                                "equals": False,
+                            },
+                        ],
+                        "telemetry": {
+                            "artifact_paths": [execution_report_ref],
+                            "input_artifact_paths": [materialization_plan_ref],
                             "include_postcondition_paths": True,
                         },
                     },
@@ -14154,6 +14476,8 @@ __all__ = [
     "RECEIVER_REPAIR_QUEUE_METADATA_SCHEMA",
     "RECEIVER_REPAIR_ROW_SCHEMA",
     "RECEIVER_REPAIR_WORK_ORDER_SCHEMA",
+    "REPAIR_BUDGET_MATERIALIZATION_EXECUTION_REPORT_SCHEMA",
+    "REPAIR_BUDGET_MATERIALIZATION_EXECUTION_ROW_SCHEMA",
     "REPAIR_BUDGET_MATERIALIZATION_PLAN_ROW_SCHEMA",
     "REPAIR_BUDGET_MATERIALIZATION_PLAN_SCHEMA",
     "REPAIR_BUDGET_WATERFILL_QUEUE_METADATA_SCHEMA",
@@ -14182,6 +14506,7 @@ __all__ = [
     "build_frontier_receiver_repair_backlog",
     "build_frontier_receiver_repair_queue",
     "build_frontier_receiver_repair_work_order",
+    "build_frontier_repair_budget_materialization_execution_report",
     "build_frontier_repair_budget_materialization_plan",
     "build_frontier_repair_budget_waterfill_queue",
     "build_frontier_repair_budget_waterfill_work_order",
