@@ -57,6 +57,7 @@ def main(argv: list[str] | None = None) -> int:
         work_order = build_frontier_targeted_component_correction_work_order(
             targeted_component_correction_acquisition=acquisition,
             acquisition_id=args.acquisition_id,
+            repo_root=REPO_ROOT,
         )
         work_order_out = args.work_order_out
         if not work_order_out.is_absolute():

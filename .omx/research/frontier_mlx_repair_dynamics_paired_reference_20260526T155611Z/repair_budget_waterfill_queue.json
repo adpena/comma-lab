@@ -1,0 +1,1360 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_io_heavy": 1
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "repair_waterfill_global_many_op_rate_distortion_receiver_campaign",
+      "lane_id": null,
+      "metadata": {
+        "accepted_response_count": 0,
+        "allowed_use": "local_encoder_repair_waterfill_work_order_queue_only",
+        "budget_spend_allowed": false,
+        "candidate_archive_materialized": false,
+        "candidate_chain_execution_report_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_execution_report.json",
+        "candidate_chain_materialization_plan_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_plan.json",
+        "candidate_chain_materializer_binding_report_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materializer_binding_report.json",
+        "chain_family": "rate_distortion_receiver_closed_many_op_campaign",
+        "chain_id": "global_many_op_rate_distortion_receiver_campaign",
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "cumulative_rate_attack": {
+          "charged_bits_changed": false,
+          "composition_policy": "sum_receiver_consumed_rate_deltas_across_all_packet_archive_tensor_frame_pair_runtime_ops_then_measure_synergy_or_antagonism_before_promotion",
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "emit_cumulative_rate_only_before_any_distortion_spend": true,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "operator_action_ids": [
+            "operator_action_term_rate_budget_preserve_materializer_packet_member_a63655e5405434eb"
+          ],
+          "operator_action_ledger_schema": "frontier_rate_attack_operator_action_ledger.v1",
+          "operator_action_term_count": 1,
+          "operator_action_term_schema": "frontier_rate_attack_operator_action_term.v1",
+          "operator_count": 1,
+          "preserve_cumulative_rate_only_archive": true,
+          "preserve_per_op_provenance": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "rate_credit_score_units_total": 0.0001717916099055202,
+          "ready_for_exact_eval_dispatch": false,
+          "saved_bytes_total": 258,
+          "schema": "frontier_rate_attack_cumulative_rate_attack_ledger.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targets_by_saved_bytes": [
+            {
+              "saved_bytes": 258,
+              "target_kind": "packet_member_merge_v1"
+            }
+          ]
+        },
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        "gpu_launched": false,
+        "materializer_execution_queue_path": null,
+        "materializer_execution_queue_schema": null,
+        "materializer_work_queue_path": ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/operation_materializer_work_queue.json",
+        "materializer_work_queue_schema": "byte_shaving_materializer_work_queue.v1",
+        "operator_action_ledger_schema": "frontier_rate_attack_operator_action_ledger.v1",
+        "operator_action_term_count": 1,
+        "pipeline_side": "encoder_repair_allocator",
+        "preserve_rate_only_archive_before_budget_spend": true,
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_actuation_ready": true,
+        "rank_or_kill_eligible": false,
+        "rate_only_candidate_count": 1,
+        "rate_only_saved_bytes_total": 258,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_closed_saved_bytes_total": 258,
+        "repair_allocation_action_term_schema": "frontier_rate_attack_repair_budget_waterfill_allocation_action_term.v1",
+        "repair_dynamics_palette_prior": {
+          "action_functional_implications": [
+            "treat_frame0_palette_repairs_as_global_interaction_terms",
+            "remeasure_parent_child_synergy_before_budget_spend",
+            "do_not_rank_frame1_repairs_without_empirical_component_response"
+          ],
+          "allowed_use": "repair_dynamics_prior_for_local_waterfill_planning_only",
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "dominant_dynamics_interpretation": "frame0_global_color_geometry_calibration_prior",
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+          "frame0_mode_count": 15,
+          "frame0_mode_fraction": 0.9375,
+          "frame0_non_identity_fraction": 1.0,
+          "frame1_mode_count": 0,
+          "frame_mode_counts": {
+            "frame0": 15,
+            "no_frame": 1
+          },
+          "gpu_launched": false,
+          "identity_mode_count": 1,
+          "mode_count": 16,
+          "mode_family_counts": {
+            "blue_chroma": 2,
+            "geometry_roll": 1,
+            "identity": 1,
+            "luma_bias": 4,
+            "rgb_bias": 8
+          },
+          "non_identity_mode_count": 15,
+          "palette_modes": [
+            "none",
+            "frame0_blue_chroma_amp_1",
+            "frame0_blue_chroma_amp_3",
+            "frame0_luma_bias_+1",
+            "frame0_luma_bias_-1",
+            "frame0_luma_bias_-2",
+            "frame0_luma_bias_-4",
+            "frame0_rgb_bias_m2_p1_p1",
+            "frame0_rgb_bias_m4_p2_p2",
+            "frame0_rgb_bias_p0_m1_p1",
+            "frame0_rgb_bias_p0_m2_p2",
+            "frame0_rgb_bias_p0_p1_m1",
+            "frame0_rgb_bias_p0_p2_m2",
+            "frame0_rgb_bias_p2_m1_m1",
+            "frame0_rgb_bias_p4_m2_m2",
+            "frame0_roll_dx+0_dy+1"
+          ],
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "repair_waterfill_hints": [
+            "frame0_palette_modes_are_first_class_repair_operators",
+            "empirical_non_identity_palette_is_all_frame0",
+            "do_not_assume_frame1_direct_repair_mode_exists",
+            "prioritize_global_chroma_luma_rgb_bias_repair_before_pixel_leaf_search",
+            "keep_frame0_roll_as_geometry_interaction_term"
+          ],
+          "schema": "frontier_rate_attack_repair_dynamics_palette_prior.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "source": "frontier_rate_attack_feedback_refresh_repair_palette_modes",
+          "source_prior_count": 1,
+          "source_prior_refs": [
+            "frontier_rate_attack_feedback_refresh_repair_palette_modes"
+          ],
+          "zero_frame1_modes": true
+        },
+        "repair_dynamics_prior_active": true,
+        "schema": "frontier_rate_attack_repair_budget_waterfill_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_artifact_paths": [
+          ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/autonomous_chain_optimization.json",
+          ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/targeted_component_correction_response_harvest.json",
+          ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/receiver_closed_correction_budget.json"
+        ]
+      },
+      "priority": 1,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_repair_budget_waterfill_work_order.py",
+            "--autonomous-chain-optimization",
+            ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/autonomous_chain_optimization.json",
+            "--chain-id",
+            "global_many_op_rate_distortion_receiver_campaign",
+            "--targeted-component-correction-response-harvest",
+            ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/targeted_component_correction_response_harvest.json",
+            "--receiver-closed-correction-budget",
+            ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/receiver_closed_correction_budget.json",
+            "--work-order-out",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_waterfill_work_order.json",
+            "--overwrite"
+          ],
+          "id": "emit_repair_budget_waterfill_work_order",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_repair_budget_waterfill_work_order.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_waterfill_work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_waterfill_work_order.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_waterfill_work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_allowed",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_waterfill_work_order.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_waterfill_work_order.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/autonomous_chain_optimization.json",
+              ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/targeted_component_correction_response_harvest.json",
+              ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/receiver_closed_correction_budget.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_repair_budget_materialization_plan.py",
+            "--work-order",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_waterfill_work_order.json",
+            "--materialization-plan-out",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_plan.json",
+            "--overwrite"
+          ],
+          "id": "emit_repair_budget_materialization_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_repair_budget_materialization_plan.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_plan.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "candidate_archive_materialized",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_allowed",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_plan.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_plan.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_waterfill_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_repair_budget_materializer_binding_report.py",
+            "--materialization-plan",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_plan.json",
+            "--binding-report-out",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materializer_binding_report.json",
+            "--materializer-work-queue",
+            ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/operation_materializer_work_queue.json",
+            "--repair-palette-mode",
+            "none",
+            "--repair-palette-mode",
+            "frame0_blue_chroma_amp_1",
+            "--repair-palette-mode",
+            "frame0_blue_chroma_amp_3",
+            "--repair-palette-mode",
+            "frame0_luma_bias_+1",
+            "--repair-palette-mode",
+            "frame0_luma_bias_-1",
+            "--repair-palette-mode",
+            "frame0_luma_bias_-2",
+            "--repair-palette-mode",
+            "frame0_luma_bias_-4",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_m2_p1_p1",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_m4_p2_p2",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_p0_m1_p1",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_p0_m2_p2",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_p0_p1_m1",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_p0_p2_m2",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_p2_m1_m1",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_p4_m2_m2",
+            "--repair-palette-mode",
+            "frame0_roll_dx+0_dy+1",
+            "--overwrite"
+          ],
+          "id": "bind_repair_budget_materializer_execution",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_repair_budget_materializer_binding_report.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materializer_binding_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materializer_binding_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materializer_binding_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_allowed",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materializer_binding_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_repair_budget_materialization_plan"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materializer_binding_report.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_plan.json",
+              ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/operation_materializer_work_queue.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_repair_budget_materialization_execution_report.py",
+            "--materialization-plan",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_plan.json",
+            "--materializer-binding-report",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materializer_binding_report.json",
+            "--execution-report-out",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_execution_report.json",
+            "--overwrite"
+          ],
+          "id": "audit_repair_budget_materialization_execution",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_repair_budget_materialization_execution_report.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_execution_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_execution_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "candidate_archive_materialized",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_execution_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_execution_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_allowed",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_execution_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "bind_repair_budget_materializer_execution"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_execution_report.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materialization_plan.json",
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/global_many_op_rate_distortion_receiver_campaign/repair_budget_materializer_binding_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "frontier-rate-attack",
+        "encoder-repair-allocator",
+        "segnet-posenet-waterfill",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "repair_waterfill_portfolio_materializer_context_closure_campaign",
+      "lane_id": null,
+      "metadata": {
+        "accepted_response_count": 0,
+        "allowed_use": "local_encoder_repair_waterfill_work_order_queue_only",
+        "budget_spend_allowed": false,
+        "candidate_archive_materialized": false,
+        "candidate_chain_execution_report_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_execution_report.json",
+        "candidate_chain_materialization_plan_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_plan.json",
+        "candidate_chain_materializer_binding_report_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materializer_binding_report.json",
+        "chain_family": "portfolio_to_materializer_context_closure_campaign",
+        "chain_id": "portfolio_materializer_context_closure_campaign",
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "cumulative_rate_attack": {
+          "charged_bits_changed": false,
+          "composition_policy": "sum_receiver_consumed_rate_deltas_across_all_packet_archive_tensor_frame_pair_runtime_ops_then_measure_synergy_or_antagonism_before_promotion",
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "emit_cumulative_rate_only_before_any_distortion_spend": true,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "operator_action_ids": [
+            "operator_action_term_rate_budget_preserve_materializer_packet_member_a63655e5405434eb"
+          ],
+          "operator_action_ledger_schema": "frontier_rate_attack_operator_action_ledger.v1",
+          "operator_action_term_count": 1,
+          "operator_action_term_schema": "frontier_rate_attack_operator_action_term.v1",
+          "operator_count": 1,
+          "preserve_cumulative_rate_only_archive": true,
+          "preserve_per_op_provenance": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "rate_credit_score_units_total": 0.0001717916099055202,
+          "ready_for_exact_eval_dispatch": false,
+          "saved_bytes_total": 258,
+          "schema": "frontier_rate_attack_cumulative_rate_attack_ledger.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targets_by_saved_bytes": [
+            {
+              "saved_bytes": 258,
+              "target_kind": "packet_member_merge_v1"
+            }
+          ]
+        },
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        "gpu_launched": false,
+        "materializer_execution_queue_path": null,
+        "materializer_execution_queue_schema": null,
+        "materializer_work_queue_path": ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/operation_materializer_work_queue.json",
+        "materializer_work_queue_schema": "byte_shaving_materializer_work_queue.v1",
+        "operator_action_ledger_schema": "frontier_rate_attack_operator_action_ledger.v1",
+        "operator_action_term_count": 1,
+        "pipeline_side": "encoder_repair_allocator",
+        "preserve_rate_only_archive_before_budget_spend": true,
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_actuation_ready": true,
+        "rank_or_kill_eligible": false,
+        "rate_only_candidate_count": 1,
+        "rate_only_saved_bytes_total": 258,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_closed_saved_bytes_total": 258,
+        "repair_allocation_action_term_schema": "frontier_rate_attack_repair_budget_waterfill_allocation_action_term.v1",
+        "repair_dynamics_palette_prior": {
+          "action_functional_implications": [
+            "treat_frame0_palette_repairs_as_global_interaction_terms",
+            "remeasure_parent_child_synergy_before_budget_spend",
+            "do_not_rank_frame1_repairs_without_empirical_component_response"
+          ],
+          "allowed_use": "repair_dynamics_prior_for_local_waterfill_planning_only",
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "dominant_dynamics_interpretation": "frame0_global_color_geometry_calibration_prior",
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+          "frame0_mode_count": 15,
+          "frame0_mode_fraction": 0.9375,
+          "frame0_non_identity_fraction": 1.0,
+          "frame1_mode_count": 0,
+          "frame_mode_counts": {
+            "frame0": 15,
+            "no_frame": 1
+          },
+          "gpu_launched": false,
+          "identity_mode_count": 1,
+          "mode_count": 16,
+          "mode_family_counts": {
+            "blue_chroma": 2,
+            "geometry_roll": 1,
+            "identity": 1,
+            "luma_bias": 4,
+            "rgb_bias": 8
+          },
+          "non_identity_mode_count": 15,
+          "palette_modes": [
+            "none",
+            "frame0_blue_chroma_amp_1",
+            "frame0_blue_chroma_amp_3",
+            "frame0_luma_bias_+1",
+            "frame0_luma_bias_-1",
+            "frame0_luma_bias_-2",
+            "frame0_luma_bias_-4",
+            "frame0_rgb_bias_m2_p1_p1",
+            "frame0_rgb_bias_m4_p2_p2",
+            "frame0_rgb_bias_p0_m1_p1",
+            "frame0_rgb_bias_p0_m2_p2",
+            "frame0_rgb_bias_p0_p1_m1",
+            "frame0_rgb_bias_p0_p2_m2",
+            "frame0_rgb_bias_p2_m1_m1",
+            "frame0_rgb_bias_p4_m2_m2",
+            "frame0_roll_dx+0_dy+1"
+          ],
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "repair_waterfill_hints": [
+            "frame0_palette_modes_are_first_class_repair_operators",
+            "empirical_non_identity_palette_is_all_frame0",
+            "do_not_assume_frame1_direct_repair_mode_exists",
+            "prioritize_global_chroma_luma_rgb_bias_repair_before_pixel_leaf_search",
+            "keep_frame0_roll_as_geometry_interaction_term"
+          ],
+          "schema": "frontier_rate_attack_repair_dynamics_palette_prior.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "source": "frontier_rate_attack_feedback_refresh_repair_palette_modes",
+          "source_prior_count": 1,
+          "source_prior_refs": [
+            "frontier_rate_attack_feedback_refresh_repair_palette_modes"
+          ],
+          "zero_frame1_modes": true
+        },
+        "repair_dynamics_prior_active": true,
+        "schema": "frontier_rate_attack_repair_budget_waterfill_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_artifact_paths": [
+          ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/autonomous_chain_optimization.json",
+          ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/targeted_component_correction_response_harvest.json",
+          ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/receiver_closed_correction_budget.json"
+        ]
+      },
+      "priority": 2,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_repair_budget_waterfill_work_order.py",
+            "--autonomous-chain-optimization",
+            ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/autonomous_chain_optimization.json",
+            "--chain-id",
+            "portfolio_materializer_context_closure_campaign",
+            "--targeted-component-correction-response-harvest",
+            ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/targeted_component_correction_response_harvest.json",
+            "--receiver-closed-correction-budget",
+            ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/receiver_closed_correction_budget.json",
+            "--work-order-out",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_waterfill_work_order.json",
+            "--overwrite"
+          ],
+          "id": "emit_repair_budget_waterfill_work_order",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_repair_budget_waterfill_work_order.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_waterfill_work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_waterfill_work_order.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_waterfill_work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_allowed",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_waterfill_work_order.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_waterfill_work_order.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/autonomous_chain_optimization.json",
+              ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/targeted_component_correction_response_harvest.json",
+              ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/receiver_closed_correction_budget.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_repair_budget_materialization_plan.py",
+            "--work-order",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_waterfill_work_order.json",
+            "--materialization-plan-out",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_plan.json",
+            "--overwrite"
+          ],
+          "id": "emit_repair_budget_materialization_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_repair_budget_materialization_plan.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_plan.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "candidate_archive_materialized",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_allowed",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_plan.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_plan.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_waterfill_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_repair_budget_materializer_binding_report.py",
+            "--materialization-plan",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_plan.json",
+            "--binding-report-out",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materializer_binding_report.json",
+            "--materializer-work-queue",
+            ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/operation_materializer_work_queue.json",
+            "--repair-palette-mode",
+            "none",
+            "--repair-palette-mode",
+            "frame0_blue_chroma_amp_1",
+            "--repair-palette-mode",
+            "frame0_blue_chroma_amp_3",
+            "--repair-palette-mode",
+            "frame0_luma_bias_+1",
+            "--repair-palette-mode",
+            "frame0_luma_bias_-1",
+            "--repair-palette-mode",
+            "frame0_luma_bias_-2",
+            "--repair-palette-mode",
+            "frame0_luma_bias_-4",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_m2_p1_p1",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_m4_p2_p2",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_p0_m1_p1",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_p0_m2_p2",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_p0_p1_m1",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_p0_p2_m2",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_p2_m1_m1",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_p4_m2_m2",
+            "--repair-palette-mode",
+            "frame0_roll_dx+0_dy+1",
+            "--overwrite"
+          ],
+          "id": "bind_repair_budget_materializer_execution",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_repair_budget_materializer_binding_report.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materializer_binding_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materializer_binding_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materializer_binding_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_allowed",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materializer_binding_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_repair_budget_materialization_plan"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materializer_binding_report.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_plan.json",
+              ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/operation_materializer_work_queue.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_repair_budget_materialization_execution_report.py",
+            "--materialization-plan",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_plan.json",
+            "--materializer-binding-report",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materializer_binding_report.json",
+            "--execution-report-out",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_execution_report.json",
+            "--overwrite"
+          ],
+          "id": "audit_repair_budget_materialization_execution",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_repair_budget_materialization_execution_report.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_execution_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_execution_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "candidate_archive_materialized",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_execution_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_execution_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_allowed",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_execution_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "bind_repair_budget_materializer_execution"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_execution_report.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materialization_plan.json",
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/portfolio_materializer_context_closure_campaign/repair_budget_materializer_binding_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "frontier-rate-attack",
+        "encoder-repair-allocator",
+        "segnet-posenet-waterfill",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "repair_waterfill_segnet_posenet_geometry_drop_many_campaign",
+      "lane_id": null,
+      "metadata": {
+        "accepted_response_count": 0,
+        "allowed_use": "local_encoder_repair_waterfill_work_order_queue_only",
+        "budget_spend_allowed": false,
+        "candidate_archive_materialized": false,
+        "candidate_chain_execution_report_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_execution_report.json",
+        "candidate_chain_materialization_plan_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_plan.json",
+        "candidate_chain_materializer_binding_report_path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materializer_binding_report.json",
+        "chain_family": "component_response_geometry_pair_batch_campaign",
+        "chain_id": "segnet_posenet_geometry_drop_many_campaign",
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "cumulative_rate_attack": {
+          "charged_bits_changed": false,
+          "composition_policy": "sum_receiver_consumed_rate_deltas_across_all_packet_archive_tensor_frame_pair_runtime_ops_then_measure_synergy_or_antagonism_before_promotion",
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "emit_cumulative_rate_only_before_any_distortion_spend": true,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "operator_action_ids": [
+            "operator_action_term_rate_budget_preserve_materializer_packet_member_a63655e5405434eb"
+          ],
+          "operator_action_ledger_schema": "frontier_rate_attack_operator_action_ledger.v1",
+          "operator_action_term_count": 1,
+          "operator_action_term_schema": "frontier_rate_attack_operator_action_term.v1",
+          "operator_count": 1,
+          "preserve_cumulative_rate_only_archive": true,
+          "preserve_per_op_provenance": true,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "rate_credit_score_units_total": 0.0001717916099055202,
+          "ready_for_exact_eval_dispatch": false,
+          "saved_bytes_total": 258,
+          "schema": "frontier_rate_attack_cumulative_rate_attack_ledger.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "targets_by_saved_bytes": [
+            {
+              "saved_bytes": 258,
+              "target_kind": "packet_member_merge_v1"
+            }
+          ]
+        },
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        "gpu_launched": false,
+        "materializer_execution_queue_path": null,
+        "materializer_execution_queue_schema": null,
+        "materializer_work_queue_path": ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/operation_materializer_work_queue.json",
+        "materializer_work_queue_schema": "byte_shaving_materializer_work_queue.v1",
+        "operator_action_ledger_schema": "frontier_rate_attack_operator_action_ledger.v1",
+        "operator_action_term_count": 1,
+        "pipeline_side": "encoder_repair_allocator",
+        "preserve_rate_only_archive_before_budget_spend": true,
+        "promotable": false,
+        "promotion_eligible": false,
+        "queue_actuation_ready": true,
+        "rank_or_kill_eligible": false,
+        "rate_only_candidate_count": 1,
+        "rate_only_saved_bytes_total": 258,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_closed_saved_bytes_total": 258,
+        "repair_allocation_action_term_schema": "frontier_rate_attack_repair_budget_waterfill_allocation_action_term.v1",
+        "repair_dynamics_palette_prior": {
+          "action_functional_implications": [
+            "treat_frame0_palette_repairs_as_global_interaction_terms",
+            "remeasure_parent_child_synergy_before_budget_spend",
+            "do_not_rank_frame1_repairs_without_empirical_component_response"
+          ],
+          "allowed_use": "repair_dynamics_prior_for_local_waterfill_planning_only",
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "dominant_dynamics_interpretation": "frame0_global_color_geometry_calibration_prior",
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+          "frame0_mode_count": 15,
+          "frame0_mode_fraction": 0.9375,
+          "frame0_non_identity_fraction": 1.0,
+          "frame1_mode_count": 0,
+          "frame_mode_counts": {
+            "frame0": 15,
+            "no_frame": 1
+          },
+          "gpu_launched": false,
+          "identity_mode_count": 1,
+          "mode_count": 16,
+          "mode_family_counts": {
+            "blue_chroma": 2,
+            "geometry_roll": 1,
+            "identity": 1,
+            "luma_bias": 4,
+            "rgb_bias": 8
+          },
+          "non_identity_mode_count": 15,
+          "palette_modes": [
+            "none",
+            "frame0_blue_chroma_amp_1",
+            "frame0_blue_chroma_amp_3",
+            "frame0_luma_bias_+1",
+            "frame0_luma_bias_-1",
+            "frame0_luma_bias_-2",
+            "frame0_luma_bias_-4",
+            "frame0_rgb_bias_m2_p1_p1",
+            "frame0_rgb_bias_m4_p2_p2",
+            "frame0_rgb_bias_p0_m1_p1",
+            "frame0_rgb_bias_p0_m2_p2",
+            "frame0_rgb_bias_p0_p1_m1",
+            "frame0_rgb_bias_p0_p2_m2",
+            "frame0_rgb_bias_p2_m1_m1",
+            "frame0_rgb_bias_p4_m2_m2",
+            "frame0_roll_dx+0_dy+1"
+          ],
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "repair_waterfill_hints": [
+            "frame0_palette_modes_are_first_class_repair_operators",
+            "empirical_non_identity_palette_is_all_frame0",
+            "do_not_assume_frame1_direct_repair_mode_exists",
+            "prioritize_global_chroma_luma_rgb_bias_repair_before_pixel_leaf_search",
+            "keep_frame0_roll_as_geometry_interaction_term"
+          ],
+          "schema": "frontier_rate_attack_repair_dynamics_palette_prior.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "source": "frontier_rate_attack_feedback_refresh_repair_palette_modes",
+          "source_prior_count": 1,
+          "source_prior_refs": [
+            "frontier_rate_attack_feedback_refresh_repair_palette_modes"
+          ],
+          "zero_frame1_modes": true
+        },
+        "repair_dynamics_prior_active": true,
+        "schema": "frontier_rate_attack_repair_budget_waterfill_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_artifact_paths": [
+          ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/autonomous_chain_optimization.json",
+          ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/targeted_component_correction_response_harvest.json",
+          ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/receiver_closed_correction_budget.json"
+        ]
+      },
+      "priority": 3,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_repair_budget_waterfill_work_order.py",
+            "--autonomous-chain-optimization",
+            ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/autonomous_chain_optimization.json",
+            "--chain-id",
+            "segnet_posenet_geometry_drop_many_campaign",
+            "--targeted-component-correction-response-harvest",
+            ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/targeted_component_correction_response_harvest.json",
+            "--receiver-closed-correction-budget",
+            ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/receiver_closed_correction_budget.json",
+            "--work-order-out",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_waterfill_work_order.json",
+            "--overwrite"
+          ],
+          "id": "emit_repair_budget_waterfill_work_order",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_repair_budget_waterfill_work_order.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_waterfill_work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_waterfill_work_order.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_waterfill_work_order.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_allowed",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_waterfill_work_order.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_waterfill_work_order.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/autonomous_chain_optimization.json",
+              ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/targeted_component_correction_response_harvest.json",
+              ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/receiver_closed_correction_budget.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_repair_budget_materialization_plan.py",
+            "--work-order",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_waterfill_work_order.json",
+            "--materialization-plan-out",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_plan.json",
+            "--overwrite"
+          ],
+          "id": "emit_repair_budget_materialization_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_repair_budget_materialization_plan.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_plan.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "candidate_archive_materialized",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_allowed",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_plan.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_plan.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_waterfill_work_order.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_repair_budget_materializer_binding_report.py",
+            "--materialization-plan",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_plan.json",
+            "--binding-report-out",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materializer_binding_report.json",
+            "--materializer-work-queue",
+            ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/operation_materializer_work_queue.json",
+            "--repair-palette-mode",
+            "none",
+            "--repair-palette-mode",
+            "frame0_blue_chroma_amp_1",
+            "--repair-palette-mode",
+            "frame0_blue_chroma_amp_3",
+            "--repair-palette-mode",
+            "frame0_luma_bias_+1",
+            "--repair-palette-mode",
+            "frame0_luma_bias_-1",
+            "--repair-palette-mode",
+            "frame0_luma_bias_-2",
+            "--repair-palette-mode",
+            "frame0_luma_bias_-4",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_m2_p1_p1",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_m4_p2_p2",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_p0_m1_p1",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_p0_m2_p2",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_p0_p1_m1",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_p0_p2_m2",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_p2_m1_m1",
+            "--repair-palette-mode",
+            "frame0_rgb_bias_p4_m2_m2",
+            "--repair-palette-mode",
+            "frame0_roll_dx+0_dy+1",
+            "--overwrite"
+          ],
+          "id": "bind_repair_budget_materializer_execution",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_repair_budget_materializer_binding_report.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materializer_binding_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materializer_binding_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materializer_binding_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_allowed",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materializer_binding_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_repair_budget_materialization_plan"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materializer_binding_report.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_plan.json",
+              ".omx/research/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/operation_materializer_work_queue.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_repair_budget_materialization_execution_report.py",
+            "--materialization-plan",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_plan.json",
+            "--materializer-binding-report",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materializer_binding_report.json",
+            "--execution-report-out",
+            "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_execution_report.json",
+            "--overwrite"
+          ],
+          "id": "audit_repair_budget_materialization_execution",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_repair_budget_materialization_execution_report.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_execution_report.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_execution_report.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "candidate_archive_materialized",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_execution_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_execution_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "budget_spend_allowed",
+              "path": "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_execution_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "bind_repair_budget_materializer_execution"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_execution_report.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materialization_plan.json",
+              "experiments/results/frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z/frontier_repair_budget_waterfill/frontier_mlx_repair_dynamics_paired_reference_20260526t155611z_repair_budget_waterfill/segnet_posenet_geometry_drop_many_campaign/repair_budget_materializer_binding_report.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "frontier-rate-attack",
+        "encoder-repair-allocator",
+        "segnet-posenet-waterfill",
+        "no-score-authority"
+      ]
+    }
+  ],
+  "queue_id": "frontier_mlx_repair_dynamics_paired_reference_20260526T155611Z_repair_budget_waterfill",
+  "schema": "experiment_queue.v1"
+}
