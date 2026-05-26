@@ -12,6 +12,7 @@ import pytest
 import torch
 
 import tac.packet_compiler.pr106_runtime_consumption as runtime_consumption_mod
+import tac.substrates._shared.inflate_runtime as repo_inflate_runtime
 from tac.packet_compiler import (
     PR106_PACKET_IR_SECTION_HASH_DOMAIN,
     PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
@@ -44,7 +45,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 PR106_R2_ARCHIVE = REPO_ROOT / "submissions/pr106_latent_sidecar_r2/archive.zip"
 PR106_R2_RUNTIME = REPO_ROOT / "submissions/pr106_latent_sidecar_r2"
 PR106_R2_SHA = "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f"
-PR106_R2_RUNTIME_TREE_SHA = "966e3446c7ad646306ef854fe4e88dea165802caf97de3743e763799fe305511"
+PR106_R2_RUNTIME_TREE_SHA = "5cb9cc16fa2fae0f3887a6890edd71acf0f89e9cf809cadf22e02d60154e93dc"
 PR106_R2_PR101_ARCHIVE = (
     REPO_ROOT / "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip"
 )
@@ -349,6 +350,37 @@ def test_pr106_runtime_source_manifest_is_deterministic_and_runtime_bound() -> N
     assert "src/pr101_grammar.py" in paths
     inflate_sh = next(item for item in files if item["path"] == "inflate.sh")
     assert inflate_sh["mode"] == "0755"
+
+
+def test_pr106_runtime_source_manifest_covers_vendored_tac_helpers() -> None:
+    manifest = pr106_runtime_source_manifest(PR106_R2_RUNTIME)
+
+    assert manifest["runtime_source_tree_sha256"] == PR106_R2_RUNTIME_TREE_SHA
+    files = manifest["files"]
+    assert isinstance(files, list)
+    paths = [item["path"] for item in files]
+    assert "src/tac/__init__.py" in paths
+    assert "src/tac/substrates/__init__.py" in paths
+    assert "src/tac/substrates/_shared/__init__.py" in paths
+    assert "src/tac/substrates/_shared/inflate_runtime.py" in paths
+
+
+def test_pr106_runtime_import_context_prefers_vendored_tac_helper(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _raise_if_repo_helper_used(*_args: object, **_kwargs: object) -> str:
+        raise AssertionError("runtime proof imported repository tac helper")
+
+    monkeypatch.setenv("PACT_INFLATE_DEVICE", "cpu")
+    monkeypatch.setattr(
+        repo_inflate_runtime,
+        "select_inflate_device",
+        _raise_if_repo_helper_used,
+    )
+
+    runtime = load_pr106_sidecar_runtime(PR106_R2_RUNTIME)
+
+    assert str(runtime.select_inflate_device()) == "cpu"
 
 
 def test_pr106_runtime_source_manifest_requires_inflate_sh(tmp_path: Path) -> None:

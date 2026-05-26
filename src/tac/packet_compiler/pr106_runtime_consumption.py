@@ -46,6 +46,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (
 )
 
 _RUNTIME_TRANSIENT_MODULES = ("codec", "model", "pr101_grammar")
+_RUNTIME_TRANSIENT_PACKAGE_PREFIXES = ("tac",)
 _RUNTIME_SOURCE_CANDIDATES = (
     "inflate.sh",
     "inflate.py",
@@ -53,6 +54,7 @@ _RUNTIME_SOURCE_CANDIDATES = (
     "src/model.py",
     "src/pr101_grammar.py",
 )
+_RUNTIME_SOURCE_EXTRA_GLOBS = ("src/tac/**/*.py",)
 _RUNTIME_SOURCE_REQUIRED = (
     "inflate.sh",
     "inflate.py",
@@ -61,15 +63,27 @@ _RUNTIME_SOURCE_REQUIRED = (
 )
 
 
+def _runtime_shadowed_module_names() -> set[str]:
+    names = set(_RUNTIME_TRANSIENT_MODULES)
+    for name in list(sys.modules):
+        if any(
+            name == prefix or name.startswith(f"{prefix}.")
+            for prefix in _RUNTIME_TRANSIENT_PACKAGE_PREFIXES
+        ):
+            names.add(name)
+    return names
+
+
 @contextmanager
 def _runtime_import_context(runtime_dir: Path) -> Iterator[None]:
     saved_path = list(sys.path)
     saved_dont_write_bytecode = sys.dont_write_bytecode
     sentinel = object()
+    shadowed_names = _runtime_shadowed_module_names()
     saved_modules: dict[str, ModuleType | object] = {
-        name: sys.modules.get(name, sentinel) for name in _RUNTIME_TRANSIENT_MODULES
+        name: sys.modules.get(name, sentinel) for name in shadowed_names
     }
-    for name in _RUNTIME_TRANSIENT_MODULES:
+    for name in shadowed_names:
         sys.modules.pop(name, None)
     sys.dont_write_bytecode = True
     sys.path.insert(0, str(runtime_dir / "src"))
@@ -79,6 +93,12 @@ def _runtime_import_context(runtime_dir: Path) -> Iterator[None]:
     finally:
         sys.dont_write_bytecode = saved_dont_write_bytecode
         sys.path[:] = saved_path
+        for name in list(sys.modules):
+            if name in shadowed_names or any(
+                name == prefix or name.startswith(f"{prefix}.")
+                for prefix in _RUNTIME_TRANSIENT_PACKAGE_PREFIXES
+            ):
+                sys.modules.pop(name, None)
         for name, module in saved_modules.items():
             if module is sentinel:
                 sys.modules.pop(name, None)
@@ -130,11 +150,27 @@ def pr106_runtime_source_manifest(runtime_dir: Path) -> dict[str, object]:
         raise ValueError(
             "runtime dir missing required source files: " + ", ".join(missing_required)
         )
-    files: list[dict[str, object]] = []
+    rel_paths: list[str] = []
+    seen: set[str] = set()
     for rel in _RUNTIME_SOURCE_CANDIDATES:
         path = runtime_dir / rel
         if not path.exists():
             continue
+        rel_paths.append(rel)
+        seen.add(rel)
+    for pattern in _RUNTIME_SOURCE_EXTRA_GLOBS:
+        for path in sorted(runtime_dir.glob(pattern)):
+            if not path.is_file():
+                continue
+            rel = path.relative_to(runtime_dir).as_posix()
+            if rel in seen:
+                continue
+            rel_paths.append(rel)
+            seen.add(rel)
+
+    files: list[dict[str, object]] = []
+    for rel in rel_paths:
+        path = runtime_dir / rel
         if not path.is_file():
             raise ValueError(f"runtime source candidate is not a file: {path}")
         payload = path.read_bytes()
@@ -165,6 +201,7 @@ def pr106_runtime_source_manifest(runtime_dir: Path) -> dict[str, object]:
         "schema": "pr106_runtime_source_manifest_v1",
         "runtime_dir": runtime_dir.as_posix(),
         "required_files": list(_RUNTIME_SOURCE_REQUIRED),
+        "extra_globs": list(_RUNTIME_SOURCE_EXTRA_GLOBS),
         "files": files,
         "runtime_source_tree_sha256": sha256_hex(tree_payload),
         "runtime_content_tree_sha256": sha256_hex(content_payload),

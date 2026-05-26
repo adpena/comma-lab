@@ -49,6 +49,13 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
+_TOOL_FILE = Path(__file__).resolve()
+_REPO_ROOT_CANDIDATE = _TOOL_FILE.parents[1]
+if str(_REPO_ROOT_CANDIDATE) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT_CANDIDATE))
+if str(_TOOL_FILE.parent) not in sys.path:
+    sys.path.insert(0, str(_TOOL_FILE.parent))
+
 try:
     from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
 except ModuleNotFoundError:

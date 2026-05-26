@@ -23,8 +23,9 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 try:
     from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
@@ -455,6 +456,9 @@ def _verify_bias_params_execute_in_inflate_logic(
         for name in ("codec", "model", module_name)
     }
     real_import, guarded_import = _guarded_import_factory(blocked_imports)
+    interpolate_owner: Any | None = None
+    interpolate_was_present = False
+    original_interpolate: Any | None = None
 
     try:
         builtins.__import__ = guarded_import
@@ -516,6 +520,9 @@ def _verify_bias_params_execute_in_inflate_logic(
         module.HNeRVDecoder = FakeDecoder
         if not hasattr(module, "F"):
             module.F = type("_FakeFunctional", (), {})()
+        interpolate_owner = module.F
+        interpolate_was_present = hasattr(interpolate_owner, "interpolate")
+        original_interpolate = getattr(interpolate_owner, "interpolate", None)
         module.F.interpolate = fake_interpolate
         module.CAMERA_H, module.CAMERA_W = BIAS_RUNTIME_PROBE_CAMERA_SHAPE
 
@@ -602,6 +609,11 @@ def _verify_bias_params_execute_in_inflate_logic(
             "gpu_required": False,
         }
     finally:
+        if interpolate_owner is not None:
+            if interpolate_was_present:
+                interpolate_owner.interpolate = original_interpolate
+            elif hasattr(interpolate_owner, "interpolate"):
+                delattr(interpolate_owner, "interpolate")
         builtins.__import__ = real_import
         sys.path[:] = original_sys_path
         sys.modules.pop(module_name, None)
@@ -709,10 +721,7 @@ def build_runtime_consumption_proof(
         inflate_proof,
     )
 
-    if proof_path is None:
-        proof_path = packet_dir / PROOF_NAME
-    else:
-        proof_path = _repo_path(proof_path)
+    proof_path = packet_dir / PROOF_NAME if proof_path is None else _repo_path(proof_path)
 
     proof: dict[str, Any] = {
         "schema": PROOF_SCHEMA,

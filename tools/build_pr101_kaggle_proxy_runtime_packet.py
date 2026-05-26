@@ -18,9 +18,18 @@ import math
 import os
 import shutil
 import stat
+import sys
 import zipfile
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
+
+_TOOL_FILE = Path(__file__).resolve()
+_REPO_ROOT_CANDIDATE = _TOOL_FILE.parents[1]
+if str(_REPO_ROOT_CANDIDATE) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT_CANDIDATE))
+if str(_TOOL_FILE.parent) not in sys.path:
+    sys.path.insert(0, str(_TOOL_FILE.parent))
 
 try:
     from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool

@@ -396,10 +396,9 @@ if [ "$ALLOW_SCORE_DOMAIN_TRAINING" = "1" ]; then
     log "Stage 5: score-domain training (epochs=${EPOCHS:-3000})"
     TRAIN_CMD+=(
         --enable-scorer-domain-loss
-        # Default aligned with trainer argparse default (soft_cosine, line 1610).
-        # The previous hardcoded `sinkhorn` default silently nullified the
-        # trainer-side switch to O(N) soft_cosine landed in commit 3aecb9b8.
-        --segmentation-surrogate "${SEGMENTATION_SURROGATE:-soft_cosine}"
+        # Default aligned with trainer argparse and PR95/T1 parity.
+        # Set SEGMENTATION_SURROGATE=soft_cosine explicitly for speed probes.
+        --segmentation-surrogate "${SEGMENTATION_SURROGATE:-sinkhorn}"
         --sinkhorn-max-positions-per-chunk "${SINKHORN_MAX_POSITIONS_PER_CHUNK:-2048}"
         --pixel-l1-anchor-weight "${PIXEL_L1_ANCHOR_WEIGHT:-0.0}"
     )

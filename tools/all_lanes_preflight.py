@@ -134,6 +134,13 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+_TOOL_FILE = Path(__file__).resolve()
+_REPO_ROOT_CANDIDATE = _TOOL_FILE.parents[1]
+if str(_REPO_ROOT_CANDIDATE) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT_CANDIDATE))
+if str(_TOOL_FILE.parent) not in sys.path:
+    sys.path.insert(0, str(_TOOL_FILE.parent))
+
 try:
     from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
 except ModuleNotFoundError:  # pragma: no cover
@@ -240,7 +247,7 @@ LIGHTNING_A1_SCORE_GRADIENT_DISPATCHER = TOOLS / "dispatch_phase_a1_score_gradie
 PR106_R2_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2/archive.zip"
 PR106_R2_RUNTIME = REPO / "submissions/pr106_latent_sidecar_r2"
 PR106_R2_ARCHIVE_SHA256 = "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f"
-PR106_R2_RUNTIME_SOURCE_TREE_SHA256 = "966e3446c7ad646306ef854fe4e88dea165802caf97de3743e763799fe305511"
+PR106_R2_RUNTIME_SOURCE_TREE_SHA256 = "5cb9cc16fa2fae0f3887a6890edd71acf0f89e9cf809cadf22e02d60154e93dc"
 PR106_R2_PR101_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip"
 PR106_R2_PR101_RUNTIME = REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar"
 PR106_R2_PR101_ARCHIVE_SHA256 = "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383"

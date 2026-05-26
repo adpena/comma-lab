@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
-
 
 REPO = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO / "tools" / "dispatch_t1_balle_endtoend.py"
@@ -302,9 +302,18 @@ def test_remote_score_domain_refuses_env_only_claim_summary_without_remote_state
 def test_remote_train_pipeline_disables_pipefail_around_rc_capture() -> None:
     text = REMOTE_SCRIPT.read_text()
 
-    assert "set +e\n\"${TRAIN_CMD[@]}\" 2>&1 | tee \"$LOG_DIR/train.log\"\nTRAIN_RC=${PIPESTATUS[0]}\nset -e" in text
-    assert "set +e\n        \"${PACKET_CMD[@]}\" 2>&1 | tee \"$LOG_DIR/packet_compiler.log\"\n        PACKET_RC=${PIPESTATUS[0]}\n        set -e" in text
-    assert "set +e\n        \"${AUTH_EVAL_CMD[@]}\" 2>&1 | tee \"$LOG_DIR/contest_auth_eval.log\"\n        AUTH_EVAL_RC=${PIPESTATUS[0]}\n        set -e" in text
+    for command_var, log_name, rc_var in (
+        ("TRAIN_CMD", "train.log", "TRAIN_RC"),
+        ("PACKET_CMD", "packet_compiler.log", "PACKET_RC"),
+        ("AUTH_EVAL_CMD", "contest_auth_eval.log", "AUTH_EVAL_RC"),
+    ):
+        assert re.search(
+            rf"set \+e\s+"
+            rf'"\${{{command_var}\[@\]}}" 2>&1 \| tee "\$LOG_DIR/{log_name}"\s+'
+            rf"{rc_var}=\${{PIPESTATUS\[0\]}}\s+"
+            rf"set -e",
+            text,
+        )
 
 
 def test_remote_t1_script_wires_packet_compile_and_contest_cuda_auth_eval() -> None:

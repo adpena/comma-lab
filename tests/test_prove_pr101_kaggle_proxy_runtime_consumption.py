@@ -10,7 +10,7 @@ from hashlib import sha256
 from pathlib import Path
 
 import pytest
-
+import torch.nn.functional as F
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOL_PATH = REPO_ROOT / "tools" / "prove_pr101_kaggle_proxy_runtime_consumption.py"
@@ -300,6 +300,21 @@ def test_proves_only_supported_bias_params_are_runtime_consumed(
     assert all(row["max_abs_error"] == 0.0 for row in slot_proofs.values())
 
 
+def test_runtime_bias_probe_restores_global_interpolate(
+    tmp_path: Path,
+    packet_builder,
+    proof_tool,
+) -> None:
+    original_interpolate = F.interpolate
+    packet_dir = _build_packet(tmp_path, packet_builder)
+
+    proof_tool.build_runtime_consumption_proof(
+        manifest_path=packet_dir / "runtime_packet_manifest.json",
+    )
+
+    assert F.interpolate is original_interpolate
+
+
 def test_fails_closed_when_noop_inflate_sh_does_not_route_to_packet_inflate_py(
     tmp_path: Path,
     packet_builder,
@@ -311,7 +326,10 @@ def test_fails_closed_when_noop_inflate_sh_does_not_route_to_packet_inflate_py(
     os.chmod(inflate_sh, 0o755)
     _refresh_manifest_runtime_file(packet_dir / "runtime_packet_manifest.json", "inflate.sh")
 
-    with pytest.raises(proof_tool.RuntimeConsumptionProofError, match="did not invoke packet inflate.py"):
+    with pytest.raises(
+        proof_tool.RuntimeConsumptionProofError,
+        match=r"did not invoke packet inflate\.py",
+    ):
         proof_tool.build_runtime_consumption_proof(
             manifest_path=packet_dir / "runtime_packet_manifest.json",
         )
@@ -369,7 +387,10 @@ if __name__ == "__main__":
         packet_dir=packet_dir,
     )
 
-    with pytest.raises(proof_tool.RuntimeConsumptionProofError, match="did not exercise F.interpolate"):
+    with pytest.raises(
+        proof_tool.RuntimeConsumptionProofError,
+        match=r"did not exercise F\.interpolate",
+    ):
         proof_tool.build_runtime_consumption_proof(
             manifest_path=packet_dir / "runtime_packet_manifest.json",
         )
@@ -391,7 +412,7 @@ def test_fails_closed_when_inflate_is_tampered(
         encoding="utf-8",
     )
 
-    with pytest.raises(proof_tool.RuntimeConsumptionProofError, match="inflate.py SHA"):
+    with pytest.raises(proof_tool.RuntimeConsumptionProofError, match=r"inflate\.py SHA"):
         proof_tool.build_runtime_consumption_proof(
             manifest_path=packet_dir / "runtime_packet_manifest.json",
         )

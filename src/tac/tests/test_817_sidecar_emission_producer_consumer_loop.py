@@ -349,8 +349,9 @@ class TestProducerConsumerLoopClosure:
             f"Phase 1 (no sidecars) expected 1.0× passthrough = {delta}; got {adj_before}"
         )
 
-        # Phase 2: Emit BOTH sidecars (aggregate_fallback bit_alloc → 1.0×;
-        # fisher_l1 > 0 → 0.97×). Combined factor = 0.97×.
+        # Phase 2: Emit BOTH sidecars (aggregate_fallback bit_alloc -> 1.0x;
+        # fisher_l1 > 0 -> 1.03x reward). Negative deltas are improvements, so
+        # factor > 1.0 makes the candidate more negative and better-ranked.
         rng = np.random.default_rng(seed=13)
         grad = rng.standard_normal((20, 5, 3)).astype(np.float32)
         allocate_per_pair_bits(
@@ -369,10 +370,11 @@ class TestProducerConsumerLoopClosure:
         adj_after = autopilot.adjust_predicted_delta_for_per_pair_sister_817_sidecars(
             delta, isolated_sidecar_sha
         )
-        expected_after = delta * 1.0 * 0.97  # aggregate_fallback × fisher_present
+        expected_after = delta * 1.0 * 1.03  # aggregate_fallback x fisher_present
         assert abs(adj_after - expected_after) < 1e-9, (
             f"Phase 2 expected {expected_after}; got {adj_after}"
         )
+        assert adj_after < adj_before
 
         # CRITICAL: factor changed — loop is CLOSED.
         assert abs(adj_after - adj_before) > 1e-9, (

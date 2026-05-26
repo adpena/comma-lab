@@ -222,12 +222,18 @@ def test_active_dispatch_claims_gate_passes_clean_summary(monkeypatch) -> None:
 
     def fake_run(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess:
         assert cmd[:2] == [sys.executable, str(module.CLAIM_LANE_DISPATCH)]
+        assert cmd[2:5] == ["summary", "--format", "json"]
         return subprocess.CompletedProcess(
             cmd,
             0,
-            stdout=(
-                "active=0 stale_nonterminal=0 terminal_latest=7 "
-                "unparsable_timestamp=0\n"
+            stdout=json.dumps(
+                {
+                    "active_count": 0,
+                    "stale_nonterminal_count": 0,
+                    "terminal_latest_count": 7,
+                    "unparsable_timestamp_count": 0,
+                    "invalid_lane_id_count": 0,
+                }
             ),
             stderr="",
         )
@@ -244,12 +250,24 @@ def test_active_dispatch_claims_gate_fails_on_active_or_stale_claims(monkeypatch
     module = _load_all_lanes_module()
 
     def fake_run(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess:
+        assert cmd[:5] == [
+            sys.executable,
+            str(module.CLAIM_LANE_DISPATCH),
+            "summary",
+            "--format",
+            "json",
+        ]
         return subprocess.CompletedProcess(
             cmd,
             0,
-            stdout=(
-                "active=1 stale_nonterminal=2 terminal_latest=7 "
-                "unparsable_timestamp=0\n"
+            stdout=json.dumps(
+                {
+                    "active_count": 1,
+                    "stale_nonterminal_count": 2,
+                    "terminal_latest_count": 7,
+                    "unparsable_timestamp_count": 0,
+                    "invalid_lane_id_count": 0,
+                }
             ),
             stderr="",
         )
@@ -375,9 +393,7 @@ class _SemanticResult:
 def test_scoped_fast_gates_run_in_process_without_subprocess(monkeypatch) -> None:
     module = _load_all_lanes_module()
 
-    from tools import audit_semantic_label_contract
-    from tools import audit_tooling_consolidation
-    from tools import check_dispatch_cli_shell_hazards
+    from tools import audit_semantic_label_contract, audit_tooling_consolidation, check_dispatch_cli_shell_hazards
 
     def forbidden_subprocess(*_args: object, **_kwargs: object) -> None:
         raise AssertionError("scoped fast gates must not shell out")
