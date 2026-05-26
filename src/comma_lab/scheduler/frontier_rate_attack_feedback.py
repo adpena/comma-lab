@@ -3915,6 +3915,34 @@ def _materializer_rate_preservation_rows(
                 "parent_compact_selector_codec": budget_row.get(
                     "parent_compact_selector_codec"
                 ),
+                "selector_policy_mode": budget_row.get("selector_policy_mode"),
+                "archive_byte_delta_vs_parent": budget_row.get(
+                    "archive_byte_delta_vs_parent"
+                ),
+                "selector_payload_wire_bytes": budget_row.get(
+                    "selector_payload_wire_bytes"
+                ),
+                "parent_selector_payload_wire_bytes": budget_row.get(
+                    "parent_selector_payload_wire_bytes"
+                ),
+                "selector_payload_wire_delta_bytes": budget_row.get(
+                    "selector_payload_wire_delta_bytes"
+                ),
+                "selector_code_bits_total": budget_row.get("selector_code_bits_total"),
+                "parent_selector_code_bits_total": budget_row.get(
+                    "parent_selector_code_bits_total"
+                ),
+                "selector_avg_bits_per_pair": budget_row.get(
+                    "selector_avg_bits_per_pair"
+                ),
+                "parent_selector_avg_bits_per_pair": budget_row.get(
+                    "parent_selector_avg_bits_per_pair"
+                ),
+                "palette_size": budget_row.get("palette_size"),
+                "n_pairs": budget_row.get("n_pairs"),
+                "compact_palette_mode_ids": budget_row.get(
+                    "compact_palette_mode_ids"
+                ),
                 "entropy_position": budget_row.get("entropy_position"),
                 "rate_only_archive_preservation_required": True,
                 "preserve_as_rate_only_candidate": True,
@@ -3964,6 +3992,7 @@ def _rate_budget_operator_action_term(
             rank,
         ),
     )
+    rate_packet_context = _targeted_rate_packet_context(row)
     return {
         "schema": OPERATOR_ACTION_TERM_SCHEMA,
         "rank": rank,
@@ -3983,11 +4012,14 @@ def _rate_budget_operator_action_term(
             "lambda_delta_bytes_score_units": rate_delta,
             "objective_delta_score_units": objective_delta,
             "distortion_debt_score_units": distortion_debt,
+            **_targeted_rate_packet_context_fields(row),
+            "receiver_closed_rate_packet_context": dict(rate_packet_context),
             **FALSE_AUTHORITY,
         },
         "R_i": {
             "receiver_proof_kind": "receiver_consumed_materialized_runtime_output",
             "receiver_closed_saved_bytes": row.get("receiver_closed_saved_bytes"),
+            "receiver_closed_rate_packet_context": dict(rate_packet_context),
             "parser_only_proof_rejected": True,
             "deterministic_adapter_only": True,
             "receiver_optimizes_or_inspects_scorer": False,
@@ -7081,6 +7113,10 @@ def _receiver_closed_rate_credit_rows(
                 "submission_dir": row.get("submission_dir"),
                 "source_archive_path": row.get("source_archive_path"),
                 "source_archive_sha256": row.get("source_archive_sha256"),
+                **_targeted_rate_packet_context_fields(row),
+                "receiver_closed_rate_packet_context": _targeted_rate_packet_context(
+                    row
+                ),
                 "allowed_use": "rate_only_parent_materialization_evidence",
                 "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
                 **FALSE_AUTHORITY,

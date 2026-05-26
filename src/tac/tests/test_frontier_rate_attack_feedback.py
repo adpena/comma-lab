@@ -2020,6 +2020,12 @@ def test_receiver_closed_rate_packet_manifest_feeds_waterfill_budget(
     action_term = rate_plan["operator_action_ledger"]["terms"][0]
     assert action_term["schema"] == OPERATOR_ACTION_TERM_SCHEMA
     assert action_term["T_i"]["archive_byte_delta_vs_baseline"] == -10
+    assert action_term["T_i"]["receiver_closed_rate_packet_context"][
+        "selector_payload_wire_delta_bytes"
+    ] == -10
+    assert action_term["R_i"]["receiver_closed_rate_packet_context"][
+        "candidate_compact_selector_codec"
+    ] == "fec8_static_second_order_markov_k16"
     assert action_term["rate_only_floor_hard_constraint"] is True
     targeted = report["targeted_component_correction_acquisition"]
     assert targeted["schema"] == TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA
