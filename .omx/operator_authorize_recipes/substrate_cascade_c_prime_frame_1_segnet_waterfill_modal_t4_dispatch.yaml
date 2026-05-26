@@ -34,23 +34,22 @@ target_modes:
   - research_substrate
 canary_status: independent_substrate
 
-# SCAFFOLD STATE per Catalog #240: research_only=true + dispatch_enabled=false
-# Pre-symposium PAID dispatch BLOCKED. Trainer (_full_main) does NOT YET exist;
-# 7th-order subagent operator-routable.
-dispatch_enabled: false
-research_only: true
+# DISPATCH STATE per Catalog #240 (UPDATED 2026-05-26 by Cascade C' subagent C):
+# trainer wrapper landed at experiments/train_substrate_cascade_c_prime_frame_1_segnet_waterfill.py
+# (this lane). Local MLX-first smoke passed (76-byte archive, frame_1_pct=0 on 8-pair smoke;
+# 600-pair full run will surface routing variation). Per-substrate symposium PROCEED_WITH_REVISIONS
+# verdict landed commit aaf0b1eb6. Recipe FLIPPED to dispatch_enabled=true for paired-CUDA T4 smoke.
+dispatch_enabled: true
+research_only: false
 
+# Note: dispatch_blockers preserved as HISTORICAL_PROVENANCE per Catalog #110/#113;
+# updated to reflect post-trainer-wrapper-landing status. The 5 prior blockers are
+# now SATISFIED (trainer wrapper landed + lane script landed + symposium PROCEED).
+# Remaining blocker: canonical equation #344 anchor lands AFTER this paired-CUDA dispatch.
 dispatch_blockers:
-  - mlx_first_trainer_pending_7th_order_operator_routable
-  - inflate_sh_3arg_signature_pending_7th_order_operator_routable
-  - per_substrate_symposium_per_catalog_325_pending
-  - canonical_equation_344_anchor_proposal_pending_paired_cuda_validation
-  - smoke_before_full_per_catalog_167_pending_trainer_landing
+  - canonical_equation_344_anchor_promotion_pending_paired_cuda_modal_smoke_results
 
 reactivation_criteria:
-  - per_substrate_symposium_per_catalog_325_lands_PROCEED_verdict_within_window_2026_05_26_to_2026_06_09
-  - mlx_first_trainer_lands_at_experiments_train_substrate_cascade_c_prime_frame_1_segnet_waterfill_py
-  - inflate_sh_lands_at_scripts_inflate_cascade_c_prime_frame_1_segnet_waterfill_sh_3arg_signature
   - canonical_equation_344_anchor_lands_at_canonical_equations_registry_jsonl_after_paired_cuda_validation
   - tier_c_density_post_training_validation_per_catalog_324_confirms_within_class_or_across_class_classification
 
