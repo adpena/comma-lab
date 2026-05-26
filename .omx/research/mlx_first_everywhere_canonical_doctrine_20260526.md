@@ -328,3 +328,159 @@ the canonical equation as single source of truth.
 * Sister `mlx_pytorch_full_decoder_downstream_scorer_drift_propagation_v1` (downstream scorer-drift at decoder output)
 * CLAUDE.md "Apples-to-apples evidence discipline" + "MPS auth eval is NOISE" + "MLX portable-local-substrate authority"
 * Catalog #344 (canonical-equation-reference enforcement) + #287 (placeholder-rationale rejection) + #341 (canonical-routing markers)
+
+---
+
+## Per-substrate-class depth-aware paid CUDA bridge calibration forecast (T3 grand council `7d04474cb` op-routable #8)
+
+**APPEND-ONLY** per Catalog #110/#113 HISTORICAL_PROVENANCE. This section
+appends the canonical per-substrate-class depth-aware paid CUDA bridge
+calibration forecast per T3 grand council deliberation `7d04474cb`
+(PROCEED_WITH_REVISIONS verdict; Decision 5 MLX-first doctrine baseline
+amendment). The original doctrine body above (including R1''-K canonical
+floor section) remains unchanged; this section refines the
+"Total forecast" paragraph above (which retains its structural
+`~$5-30 paid GPU spend for entire 11-substrate Path 3 wave` baseline)
+with per-substrate-class breakdown reflecting the drift-aware bridge
+calibration cost structure.
+
+### Canonical empirical anchor (per CLAUDE.md "Apples-to-apples evidence discipline")
+
+The T3 grand council reasoned with stale n=2 empirical (300ep + 1000ep
+extrapolated; α~1.5 super-linear assumed). The canonical empirical anchor
+is now the **DRIFT-VS-DEPTH-CHAR-D-Z6 n=5 fit**
+(commit `60a9de751` landed 2026-05-26; canonical equation
+`mlx_pytorch_drift_vs_training_depth_z6_v1` per Catalog #344):
+
+* `drift = 1.8105e-5 * epochs^0.4713`
+* R²=0.971
+* **sub-linear** with **saturation observed at 2000→3000ep** (+0.5% drift
+  growth for 50% more training; consistent with EMA equilibrium + per-pair
+  gradient noise floor combining to bound drift asymptotically)
+* Extrapolated threshold-crossing point ~4973 epochs (NOT ~1000ep as the
+  council's pre-DRIFT n=2 stale extrapolation predicted)
+* Empirical artifact paths per anchor:
+  `[empirical:experiments/results/z6_drift_vs_depth_{300,500,1000,2000,3000}ep_20260526T*/gate_1265_verdict.json]`
+
+The DRIFT-VS-DEPTH-CHAR fit FALSIFIED the council's assumed super-linear
+α~1.5 extrapolation; the canonical empirical anchor is sub-linear with
+saturation. This amendment reflects the EMPIRICAL anchor (n=5), not the
+council's stale assumed extrapolation.
+
+### Canonical per-substrate-class bridge calibration forecast (3-class taxonomy)
+
+Per cascade doctrine §"L6 gate 3-verdict map (T3 grand council
+`7d04474cb` op-routable #7)" + R1''-K canonical floor 3-verdict taxonomy +
+DRIFT-VS-DEPTH-CHAR n=5 sub-linear sat empirical, the canonical
+per-substrate-class bridge calibration cost forecast is:
+
+| Substrate class | L6 verdict | Bridge calibration paid CUDA spend per class (one-time) | Rationale |
+|---|---|---:|---|
+| **Drift-free structural-decoder class** | BIT_EXACT_LIKE_SINUSOIDAL | **~$2 per class** | Substrate's decoder is byte-identical to PyTorch reference at all dims (no matmul accumulation in critical path; structural primitives like Faiss IVF-PQ codebook gather + sinusoidal positional encoding + elementwise multiply/add + softmax-with-epsilon all have hardware-floor ~1e-7). Bridge calibration is a $2 confirmation that the structural property holds across the substrate-class's canonical-archive grammar; once landed, ALL future same-class substrates skip re-calibration. Canonical exemplar: **I=Faiss IVF-PQ residual** (commit `1f929127a` FIX-WAVE-R1''-I; empirically measured max_abs=0.0 at canonical-config dims via `mlx_pq_codebook_gather` + `mlx_pq_reconstruct_tile_vectors` + sister numpy reference). |
+| **Matmul-bound HNeRV-class** | WITHIN_CANONICAL_FLOOR | **~$5 per class** | Substrate's decoder composes matmul ops (HNeRV-class CNN+transformer + Mamba SSM + cooperative-receiver matmul + RSSM transformer); per-matmul drift sits within R1''-K canonical floor (abs ≤ 6e-2 + rms ≤ 1.5e-2 per FP32 hardware floor); per-pair forward drift bounded by sub-linear training-depth accumulation per DRIFT empirical (saturates ~2000ep at 0.000725 abs; ~1.39× safety factor over sister #1265 threshold 0.001). Bridge calibration is a $5 paired-CUDA measurement at canonical L3-sweep operating point (500-1500ep) that codifies the per-class MLX→PyTorch decoder parity bound; after landing, ALL future same-class substrates trust MLX-local routing without re-calibration. Canonical exemplar: **D=Z6 predictive coding world model** (commit `60a9de751`; canonical equation `mlx_pytorch_drift_vs_training_depth_z6_v1` per Catalog #344; n=5 sub-linear sat fit). |
+| **INR-class with Kahan mitigation pending** | ABOVE_CANONICAL_FLOOR_NEEDS_MITIGATION | **~$8 per class** (pending T3 Class 1-SCOPED Kahan-EMA mitigation landing) | Substrate's decoder composes deep matmul cascade (implicit neural representation INR-class composes 30-50+ matmul ops per forward); per-matmul drift at substrate-typical dims exceeds R1''-K canonical floor at deeper composition (e.g. K=COIN++ (64,256)@(256,64) drift = 4.60e-2 abs / 1.24e-2 rms; per-pair forward composing 30+ such ops can exceed sister #1265 threshold even at moderate training depth). Bridge calibration requires per-class FIRST landing of T3 Class 1-SCOPED Kahan-EMA mitigation on `tac.substrates._shared.trainer_skeleton.long_training_canonical.PolyakEMAShadow.update()` (~30 LOC; in-flight `a075fe299ca54fe3a`) THEN one-time per-class $8 paired-CUDA measurement with mitigation applied. After landing both, ALL future same-class substrates trust MLX-local routing. Canonical exemplar: **K=COIN++ implicit neural representation** (commit `2d59283d4` FIX-WAVE-R1''-K; per-matmul drift exceeds floor at K-typical dims; mitigation pending T3 Class 1-SCOPED landing). |
+
+### Cascade economics revised total
+
+Per the canonical 3-class taxonomy applied across the 11-substrate Path 3
+wave, the **revised total paid CUDA spend** is:
+
+* **Class A (drift-free structural-decoder)**: 1 substrate (I=Faiss IVF-PQ)
+  × $2 = **$2**
+* **Class B (matmul-bound HNeRV-class)**: 8 substrates
+  (D=Z6 + A=DreamerV3 + E=BoostNeRV + G=NIRVANA + F=Z8 + C'=NSCS06 v8 +
+  B'=Z7-Mamba-2-v2 + H=ATW V2 + J=MDL-IBPS) × ~$5 average = **$40**
+* **Class C (INR-class with Kahan mitigation pending)**: 1 substrate
+  (K=COIN++) × $8 = **$8**
+* **Submission auth eval** (paid CUDA; both contest-CPU + contest-CUDA per
+  CLAUDE.md non-negotiable): ~$0.50-1 per submission × 1-3 submissions = **~$2**
+
+**Revised total paid CUDA spend across Path 3 11-candidate cascade ≈ $50**
+
+This is **HIGHER than the original doctrine's structural baseline of $5-30**
+(which assumed all substrates were Class A drift-free at $0.50-2 per class)
+but is **MUCH LOWER than the originally-feared per-substrate per-iteration
+spend of $5-15 × 11 = $55-165** (which the original doctrine explicitly
+rejected per the structural reduction insight). The drift-aware per-class
+breakdown reflects:
+
+1. **Substrate-class diversity bound BY 3 verdicts** (not 11 per-substrate
+   bridge calibrations) — per-class one-time calibration amortizes
+   across same-class substrates
+2. **Class B HNeRV-class dominance** (8 of 11 substrates) — drives
+   majority of bridge calibration spend; per-class $5 reflects paired-CUDA
+   measurement at canonical L3 operating point with drift-vs-depth
+   empirical-anchor-grade fit (sister wave per substrate per cascade
+   doctrine cross-substrate-impact section)
+3. **Class C K=COIN++ Kahan mitigation prerequisite** — paid CUDA spend
+   gated on T3 Class 1-SCOPED Kahan-EMA landing; pending mitigation, K
+   remains Tier A PROXY-grade non-promotable per Catalog #341 (the $8
+   bridge calibration line item is RESERVED but not yet spendable)
+4. **Submission auth eval BOTH CPU+CUDA** per CLAUDE.md non-negotiable —
+   $2 total covers ~1-3 PR submissions across Path 3 wave
+
+### Per-substrate-class consumer wiring (Catalog #335 paradigm)
+
+Per the canonical cascade economics revision, the canonical cathedral
+consumer `tac.cathedral_consumers.canonical_equation_lookup_consumer`
+auto-discovers (per Catalog #335) per-substrate-class drift-vs-depth
+canonical equation predictions; future per-substrate-class bridge
+calibration data lands as new canonical equations:
+
+* `mlx_pytorch_drift_vs_training_depth_pr95_v1` (HNeRV-class anchor;
+  pending L2 long-training sister landing per CASCADE-PROMOTION wave)
+* `mlx_pytorch_drift_vs_training_depth_dreamer_v3_v1` (RSSM-class anchor;
+  pending A=DreamerV3 L2 landing)
+* `mlx_pytorch_drift_vs_training_depth_coin_pp_v1` (INR-class anchor;
+  pending K=COIN++ L2 landing with Kahan-EMA mitigation)
+* `mlx_pytorch_drift_vs_training_depth_atw_v2_v1` (cooperative-receiver-class
+  anchor; pending H=ATW V2 L2 landing)
+* `mlx_pytorch_drift_vs_training_depth_faiss_pq_v1` (Faiss-PQ-class anchor;
+  trivially BIT_EXACT_LIKE_SINUSOIDAL per FIX-WAVE-R1''-I; sister registers
+  the structural property without paid-CUDA measurement)
+* ... (one per substrate class; auto-discovered by canonical consumer
+  per Catalog #335 protocol)
+
+After ≥3 substrate-class anchors land, lift to substrate-agnostic
+`mlx_pytorch_drift_vs_training_depth_v2` per the canonical META pattern
+(would parameterize A + B as functions of architecture-class features per
+`mps_drift_architecture_class_dependent_v1` precedent).
+
+### Cross-references (this amendment)
+
+* T3 grand council deliberation `7d04474cb`
+  (`.omx/research/t3_grand_council_mlx_pytorch_drift_accumulation_source_and_engineer_away_20260526.md`;
+  PROCEED_WITH_REVISIONS verdict; 24-of-26 attendees; 3 binding revisions
+  + Decision 5 MLX-first doctrine baseline amendment)
+* Cascade doctrine §"L6 gate 3-verdict map" (sister amendment;
+  `.omx/research/path_3_canonical_substrate_development_cascade_doctrine_20260526.md`;
+  3-verdict map applied at L6 → bridge calibration boundary)
+* DRIFT-VS-DEPTH-CHAR-D-Z6 landing `60a9de751`
+  (`.omx/research/path_3_d_z6_drift_vs_training_depth_characterization_landed_20260526T125130Z.md`;
+  n=5 empirical fit α=0.47 sub-linear sat ~2000ep; canonical empirical
+  anchor for this amendment's Class B HNeRV-class baseline)
+* R1''-K canonical floor `2d59283d4` (THIS doctrine memo §"M-series MPS fp32
+  hardware floor canonical anchor"; canonical equation
+  `mlx_matmul_drift_m_series_canonical_floor_v1` per Catalog #344;
+  3-verdict taxonomy that this amendment's per-class forecast inherits)
+* FIX-WAVE-R1''-I byte-identical anchor `1f929127a`
+  (canonical exemplar for Class A drift-free structural-decoder;
+  max_abs=0.0 empirical at canonical-config dims)
+* T3 Class 1-SCOPED Kahan-EMA mitigation in-flight `a075fe299ca54fe3a`
+  (canonical mitigation prerequisite for Class C INR-class bridge
+  calibration eligibility; ~30 LOC change to
+  `tac.substrates._shared.trainer_skeleton.long_training_canonical.PolyakEMAShadow.update()`)
+* Catalog #335 cathedral consumer canonical contract (per-substrate-class
+  canonical equation auto-discovery surface)
+* Catalog #341 Tier A non-promotable markers (Class C INR-class pending
+  mitigation routes to Tier A PROXY-grade)
+* Catalog #344 canonical equation registry (sister equations across
+  per-substrate-class drift-vs-depth predictions)
+* CLAUDE.md "Apples-to-apples evidence discipline" (n=5 empirical anchor
+  supersedes n=2 stale council assumed extrapolation)
+* CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA" (paid CUDA
+  submission boundary preserved)
+* CLAUDE.md "Forbidden premature KILL without research exhaustion"
+  (Class C INR-class PROXY-grade is DEFER not KILL; routes to mitigation)
+
+EOF

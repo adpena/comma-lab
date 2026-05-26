@@ -210,3 +210,141 @@ Catalog #229 PV + #117/#157/#174 canonical serializer with POST-EDIT `--expected
 - Catalog #357 dual-tier consumer architecture (Tier A observability-only at L1+; Tier B score-contributing at L6+)
 
 EOF
+
+---
+
+## L6 gate 3-verdict map (T3 grand council `7d04474cb` op-routable #7)
+
+**APPEND-ONLY** per Catalog #110/#113 HISTORICAL_PROVENANCE. This section
+appends the canonical 3-verdict map for the L6 cascade gate per T3 grand
+council deliberation `7d04474cb` (PROCEED_WITH_REVISIONS verdict; 24-of-26
+council attendees + 3 binding revisions captured). The original doctrine
+body above remains unchanged; this section adds the L6 gate verdict
+taxonomy that ALL future Path 3 (and Path N) substrate cascades MUST
+honor at the L6 → bridge calibration boundary.
+
+### Canonical empirical anchor (per CLAUDE.md "Apples-to-apples evidence discipline")
+
+The T3 grand council reasoned with PRE-DRIFT-CHAR n=2 empirical (300ep +
+1000ep extrapolated; α~1.5 super-linear assumed). The canonical empirical
+anchor is now the **DRIFT-VS-DEPTH-CHAR-D-Z6 n=5 fit** (commit `60a9de751`
+landed 2026-05-26):
+
+| epochs | drift | margin to 0.001 | safety factor |
+|-------:|------:|----------------:|--------------:|
+| 300 | 0.000253 | 0.000747 | 3.95× |
+| 500 | 0.000358 | 0.000642 | 2.79× |
+| 1000 | 0.000458 | 0.000542 | 2.18× |
+| 2000 | 0.000721 | 0.000279 | 1.39× |
+| 3000 | 0.000725 | 0.000275 | 1.38× |
+| ~4973 (predicted crossing) | 0.001000 | 0.000000 | 1.00× |
+
+**Fit**: `drift = 1.8105e-5 * epochs^0.4713`; R²=0.971; **sub-linear** with
+saturation observed at 2000→3000ep (+0.5% drift growth for 50% more
+training; consistent with EMA equilibrium + per-pair gradient noise floor
+combining to bound drift asymptotically). The council's stale n=2
+extrapolation (~1000ep threshold-crossing) is FALSIFIED at n=5; actual
+extrapolated threshold-crossing is ~4973ep — ~5× headroom over the L3
+sweep operating point (500-1500ep).
+
+Canonical equation registered per Catalog #344:
+`mlx_pytorch_drift_vs_training_depth_z6_v1`
+(`.omx/state/canonical_equations_registry.jsonl`).
+Empirical artifact paths per anchor:
+`[empirical:experiments/results/z6_drift_vs_depth_{300,500,1000,2000,3000}ep_20260526T*/gate_1265_verdict.json]`.
+
+### Canonical 3-verdict taxonomy (extends cascade doctrine §L6)
+
+Per T3 council Decision 4 + sister R1''-K canonical equation
+`mlx_matmul_drift_m_series_canonical_floor_v1` (Catalog #344;
+commit `2d59283d4`) 3-verdict taxonomy + Catalog #341 Tier A
+non-promotable markers, the canonical L6 gate verdict map is:
+
+| Verdict | Trigger condition | Cascade-progression rule | Per-class example |
+|---|---|---|---|
+| **BIT_EXACT_LIKE_SINUSOIDAL** | substrate decoder is structurally byte-identical to PyTorch reference (max_abs ~1e-7 floor of FP32 ULP); typical of structural-decoder primitives (no matmul accumulation in critical path) | **PROCEED to L6 paid CUDA WITHOUT bridge calibration**; substrate-class is trivially-CUDA-faithful by construction; bridge calibration would be a $0 measurement that confirms what the structural property already guarantees | I=Faiss IVF-PQ residual decoder (commit `1f929127a`; FIX-WAVE-R1''-I empirically measured max_abs=0.0 at canonical-config dims via `mlx_pq_codebook_gather` + `mlx_pq_reconstruct_tile_vectors` + sister numpy reference; no accumulation in decoder critical path) |
+| **WITHIN_CANONICAL_FLOOR** | substrate decoder drift sits within R1''-K canonical floor (abs_max ≤ 6e-2 + rms ≤ 1.5e-2; sister #1265 gate's 0.001 threshold provides ≥1× safety factor at training-depth operating point per drift-vs-depth empirical) | **PROCEED to L6 paid CUDA WITH bridge calibration**; one-time per substrate-class ~$2-8 (see MLX-first doctrine amendment per OP #8 below); after calibration lands, ALL future same-class substrates trust MLX-local routing without re-calibration | D=Z6 predictive coding world model (commit `60a9de751`; n=5 drift fit sub-linear sat ~2000ep; current 1000ep operating point has 2.18× safety factor over 0.001 threshold; bridge calibration codifies the per-class MLX→PyTorch decoder parity bound) |
+| **ABOVE_CANONICAL_FLOOR_NEEDS_MITIGATION** | substrate decoder drift exceeds R1''-K canonical floor (abs_max > 6e-2 OR rms > 1.5e-2) OR exceeds sister #1265 threshold even with maximum training-depth budget AND Class 1-SCOPED Kahan-EMA mitigation already applied | **DEFER substrate to Tier A PROXY-grade** per Catalog #341 non-promotable markers UNTIL canonical primitive hardening lands per T3 Class 1-SCOPED Kahan-EMA on `PolyakEMAShadow.update()` per L2-INFRA-BUILD canonical helper (in-flight `a075fe299ca54fe3a`); rerun L2 at extended depth budget post-mitigation; re-evaluate L6 verdict | K=COIN++ implicit neural representation (commit `2d59283d4` FIX-WAVE-R1''-K; per-matmul drift at K-typical (64,256)@(256,64) dims is 4.60e-2 abs / 1.24e-2 rms; if K's per-pair forward composes >50 matmul ops the accumulated drift can exceed sister #1265 threshold; Kahan-EMA mitigation pending T3 Class 1-SCOPED landing) |
+
+### Sister #1265 gate parameterization implication
+
+Per T3 council Decision 3 + DRIFT-VS-DEPTH-CHAR empirical refutation of
+the n=2 extrapolation:
+
+- **Current 0.001 threshold is APPROPRIATE for current Path 3 ceiling
+  ~1000ep operating point** per the DRIFT empirical (2.18× safety factor
+  at 1000ep; ~5× headroom over predicted crossing at 4973ep)
+- **No immediate parameterization change needed**; canonical L3 sweep
+  operating point (500-1500ep) safely under threshold
+- **Deferred `--gate-threshold-epoch-aware` flag** per T3 Tier 2
+  op-routable #5 priority: lower-priority canonical flag wiring for the
+  Z6 sister gate (`tools/gate_mlx_candidate_contest_equivalence_z6.py`)
+  consuming `mlx_pytorch_drift_vs_training_depth_z6_v1` equation predictor
+  for epoch-aware threshold; defaults FALSE; activates depth-aware
+  threshold for L3 sweep arms that explicitly opt in; sister cathedral
+  consumer auto-discovers per Catalog #335
+- **PR95 canonical gate (`tools/gate_mlx_candidate_contest_equivalence.py`)
+  remains at hard-coded 0.001** per PR95Author dissent: PR95 anchor
+  0.000011 is static-decoder reference (untrained state_dict-equivalent),
+  not trained-weight drift; the 0.001 threshold defines the SAFETY margin
+  for the static bridge calibration; trained-weight drift is a DIFFERENT
+  axis with per-substrate-class empirical anchors per the DRIFT subagent's
+  cross-substrate impact section
+
+### Per-substrate cascade L6 verdict assignment (current 2026-05-26)
+
+Each Path 3 substrate's L6 verdict (predicted; subject to per-substrate
+empirical confirmation at L6 advance):
+
+| Substrate | Predicted L6 verdict | Rationale |
+|---|---|---|
+| D=Z6 predictive coding | WITHIN_CANONICAL_FLOOR | n=5 empirical at sub-linear sat fit; 2.18× safety factor @ 1000ep |
+| I=V1 Faiss IVF-PQ residual | BIT_EXACT_LIKE_SINUSOIDAL | structural-decoder no accumulation; FIX-WAVE-R1''-I max_abs=0.0 anchor |
+| K=COIN++ implicit neural representation | ABOVE_CANONICAL_FLOOR_NEEDS_MITIGATION | per-matmul drift exceeds floor at K-typical dims; pending Kahan-EMA Class 1-SCOPED + per-class characterization |
+| A=DreamerV3 RSSM | WITHIN_CANONICAL_FLOOR (predicted) | matmul-bound RSSM transformer-class; HNeRV-sister-class drift expected |
+| E=BoostNeRV against PR110 | WITHIN_CANONICAL_FLOOR (predicted) | residual-against-PR110 stacking; HNeRV-sister-class |
+| G=NIRVANA cascading NeRV | WITHIN_CANONICAL_FLOOR (predicted) | cascading NeRV variant; HNeRV-sister-class |
+| F=Z8 canonical-quadruple | WITHIN_CANONICAL_FLOOR (predicted) | quadruple-hierarchy; predictive-coding-sister-class |
+| C'=NSCS06 v8 chroma_lut | WITHIN_CANONICAL_FLOOR (predicted) | chroma-LUT replacement; structural primitive class |
+| B'=Z7-Mamba-2-v2 | WITHIN_CANONICAL_FLOOR (predicted) | Mamba-2 SSM; HNeRV-sister-class matmul-bound |
+| H=ATW V2 cooperative-receiver v2 | WITHIN_CANONICAL_FLOOR (predicted) | cooperative-receiver; matmul-bound |
+| J=MDL-IBPS DISCRETE-CATEGORICAL | WITHIN_CANONICAL_FLOOR (predicted) | DISCRETE-CATEGORICAL-MINE-HYBRID; predictive-coding-sister-class |
+
+**Per-substrate empirical L6 verdict TBD at L6 advance** — each substrate
+runs its own drift-vs-depth characterization sister landing per the D=Z6
+canonical reference pattern (commit `60a9de751`) before L6 verdict
+assignment. The table above is the CURRENT PREDICTED VERDICT per substrate-class
+analogy; empirical verification at L6 advance is non-skippable.
+
+### Cross-references (this amendment)
+
+- T3 grand council deliberation `7d04474cb`
+  (`.omx/research/t3_grand_council_mlx_pytorch_drift_accumulation_source_and_engineer_away_20260526.md`;
+  PROCEED_WITH_REVISIONS verdict; 24-of-26 attendees; 3 binding revisions)
+- DRIFT-VS-DEPTH-CHAR-D-Z6 landing `60a9de751`
+  (`.omx/research/path_3_d_z6_drift_vs_training_depth_characterization_landed_20260526T125130Z.md`;
+  n=5 empirical fit α=0.47 sub-linear sat ~2000ep; canonical empirical
+  anchor for this amendment)
+- R1''-K canonical floor `2d59283d4`
+  (`.omx/research/mlx_first_everywhere_canonical_doctrine_20260526.md` §M-series
+  MPS fp32 hardware floor canonical anchor; canonical equation
+  `mlx_matmul_drift_m_series_canonical_floor_v1` per Catalog #344;
+  3-verdict taxonomy that THIS amendment's L6 verdict map inherits)
+- FIX-WAVE-R1''-I byte-identical anchor `1f929127a`
+  (drift-free structural-decoder class exemplar for BIT_EXACT_LIKE_SINUSOIDAL
+  verdict; max_abs=0.0 empirical at canonical-config dims)
+- Catalog #341 Tier A non-promotable markers (`tac.cathedral_consumers.*`
+  canonical-routing markers; ABOVE_CANONICAL_FLOOR_NEEDS_MITIGATION
+  verdict routes here)
+- Catalog #344 canonical equation registry (sister equations
+  `mlx_pytorch_drift_vs_training_depth_z6_v1` + `mlx_matmul_drift_m_series_canonical_floor_v1`)
+- Catalog #1265 sister gate (`tools/gate_mlx_candidate_contest_equivalence.py`
+  PR95 canonical + `tools/gate_mlx_candidate_contest_equivalence_z6.py`
+  Z6 sister; threshold parameterization deferred per Tier 2 priority)
+- CLAUDE.md "Apples-to-apples evidence discipline" (n=5 empirical anchor
+  supersedes n=2 stale extrapolation in council's pre-DRIFT reasoning)
+- CLAUDE.md "Forbidden premature KILL without research exhaustion"
+  (ABOVE_CANONICAL_FLOOR verdict is DEFER not KILL; routes to Class 1-SCOPED
+  Kahan-EMA mitigation per T3 op-routables #2+#3)
+
+EOF
