@@ -1,0 +1,426 @@
+{
+  "backlog_key_by_experiment": {},
+  "by_backlog_key": {},
+  "by_experiment": {
+    "packet_member_merge_cbe7d79124ba": {
+      "artifact_record_bytes_mean": 566266959.4,
+      "artifact_record_bytes_sum": 5662669594,
+      "artifact_record_count": 17,
+      "artifact_record_raw_bytes_mean": 566267940.8,
+      "artifact_record_raw_bytes_sum": 5662679408,
+      "candidate_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "dominant_resource_kind": "local_io_heavy",
+      "elapsed_seconds_max": 38.52169008401688,
+      "elapsed_seconds_mean": 7.845904300210532,
+      "elapsed_seconds_min": 0.25956829194910824,
+      "elapsed_seconds_sum": 78.45904300210532,
+      "experiment_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 927.0,
+      "log_bytes_sum": 9270,
+      "resource_kind_counts": {
+        "local_io_heavy": 8,
+        "local_mlx": 2
+      },
+      "run_count": 10,
+      "step_ids": [
+        "emit_repair_dynamics_palette_probe_matrix_01",
+        "emit_targeted_component_correction_work_order",
+        "emit_targeted_component_correction_work_order_01",
+        "harvest_targeted_component_correction_response_01",
+        "import_local_cpu_component_advisory_cache",
+        "import_local_cpu_reference_advisory_cache",
+        "local_mlx_component_response",
+        "reference_local_mlx_component_response",
+        "reuse_mlx_component_cache",
+        "reuse_reference_mlx_component_cache"
+      ],
+      "success_count": 10
+    }
+  },
+  "by_resource_kind": {
+    "local_io_heavy": {
+      "artifact_record_bytes_mean": 707829342.5,
+      "artifact_record_bytes_sum": 5662634740,
+      "artifact_record_count": 13,
+      "artifact_record_raw_bytes_mean": 707830569.25,
+      "artifact_record_raw_bytes_sum": 5662644554,
+      "candidate_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "dominant_resource_kind": "local_io_heavy",
+      "elapsed_seconds_max": 0.7703305840259418,
+      "elapsed_seconds_mean": 0.3594193647586508,
+      "elapsed_seconds_min": 0.25956829194910824,
+      "elapsed_seconds_sum": 2.875354918069206,
+      "experiment_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 1049.0,
+      "log_bytes_sum": 8392,
+      "resource_kind_counts": {
+        "local_io_heavy": 8
+      },
+      "run_count": 8,
+      "step_ids": [
+        "emit_repair_dynamics_palette_probe_matrix_01",
+        "emit_targeted_component_correction_work_order",
+        "emit_targeted_component_correction_work_order_01",
+        "harvest_targeted_component_correction_response_01",
+        "import_local_cpu_component_advisory_cache",
+        "import_local_cpu_reference_advisory_cache",
+        "reuse_mlx_component_cache",
+        "reuse_reference_mlx_component_cache"
+      ],
+      "success_count": 8
+    },
+    "local_mlx": {
+      "artifact_record_bytes_mean": 17427.0,
+      "artifact_record_bytes_sum": 34854,
+      "artifact_record_count": 4,
+      "artifact_record_raw_bytes_mean": 17427.0,
+      "artifact_record_raw_bytes_sum": 34854,
+      "candidate_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "dominant_resource_kind": "local_mlx",
+      "elapsed_seconds_max": 38.52169008401688,
+      "elapsed_seconds_mean": 37.791844042018056,
+      "elapsed_seconds_min": 37.06199800001923,
+      "elapsed_seconds_sum": 75.58368808403611,
+      "experiment_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 439.0,
+      "log_bytes_sum": 878,
+      "resource_kind_counts": {
+        "local_mlx": 2
+      },
+      "run_count": 2,
+      "step_ids": [
+        "local_mlx_component_response",
+        "reference_local_mlx_component_response"
+      ],
+      "success_count": 2
+    }
+  },
+  "by_source_selection_id": {},
+  "by_source_unit_id": {},
+  "by_step": {
+    "packet_member_merge_cbe7d79124ba.emit_repair_dynamics_palette_probe_matrix_01": {
+      "artifact_record_bytes_mean": 15466.0,
+      "artifact_record_bytes_sum": 15466,
+      "artifact_record_count": 1,
+      "artifact_record_raw_bytes_mean": 15466.0,
+      "artifact_record_raw_bytes_sum": 15466,
+      "candidate_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "dominant_resource_kind": "local_io_heavy",
+      "elapsed_seconds_max": 0.2605586249846965,
+      "elapsed_seconds_mean": 0.2605586249846965,
+      "elapsed_seconds_min": 0.2605586249846965,
+      "elapsed_seconds_sum": 0.2605586249846965,
+      "experiment_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 682.0,
+      "log_bytes_sum": 682,
+      "resource_kind_counts": {
+        "local_io_heavy": 1
+      },
+      "run_count": 1,
+      "step_ids": [
+        "emit_repair_dynamics_palette_probe_matrix_01"
+      ],
+      "success_count": 1
+    },
+    "packet_member_merge_cbe7d79124ba.emit_targeted_component_correction_work_order": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "candidate_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "dominant_resource_kind": "local_io_heavy",
+      "elapsed_seconds_max": 0.2622031670762226,
+      "elapsed_seconds_mean": 0.2622031670762226,
+      "elapsed_seconds_min": 0.2622031670762226,
+      "elapsed_seconds_sum": 0.2622031670762226,
+      "experiment_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 230.0,
+      "log_bytes_sum": 230,
+      "resource_kind_counts": {
+        "local_io_heavy": 1
+      },
+      "run_count": 1,
+      "step_ids": [
+        "emit_targeted_component_correction_work_order"
+      ],
+      "success_count": 1
+    },
+    "packet_member_merge_cbe7d79124ba.emit_targeted_component_correction_work_order_01": {
+      "artifact_record_bytes_mean": 33587.0,
+      "artifact_record_bytes_sum": 33587,
+      "artifact_record_count": 1,
+      "artifact_record_raw_bytes_mean": 33587.0,
+      "artifact_record_raw_bytes_sum": 33587,
+      "candidate_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "dominant_resource_kind": "local_io_heavy",
+      "elapsed_seconds_max": 0.5181657919893041,
+      "elapsed_seconds_mean": 0.5181657919893041,
+      "elapsed_seconds_min": 0.5181657919893041,
+      "elapsed_seconds_sum": 0.5181657919893041,
+      "experiment_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 824.0,
+      "log_bytes_sum": 824,
+      "resource_kind_counts": {
+        "local_io_heavy": 1
+      },
+      "run_count": 1,
+      "step_ids": [
+        "emit_targeted_component_correction_work_order_01"
+      ],
+      "success_count": 1
+    },
+    "packet_member_merge_cbe7d79124ba.harvest_targeted_component_correction_response_01": {
+      "artifact_record_bytes_mean": 42892.0,
+      "artifact_record_bytes_sum": 42892,
+      "artifact_record_count": 1,
+      "artifact_record_raw_bytes_mean": 42892.0,
+      "artifact_record_raw_bytes_sum": 42892,
+      "candidate_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "dominant_resource_kind": "local_io_heavy",
+      "elapsed_seconds_max": 0.7703305840259418,
+      "elapsed_seconds_mean": 0.7703305840259418,
+      "elapsed_seconds_min": 0.7703305840259418,
+      "elapsed_seconds_sum": 0.7703305840259418,
+      "experiment_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 1254.0,
+      "log_bytes_sum": 1254,
+      "resource_kind_counts": {
+        "local_io_heavy": 1
+      },
+      "run_count": 1,
+      "step_ids": [
+        "harvest_targeted_component_correction_response_01"
+      ],
+      "success_count": 1
+    },
+    "packet_member_merge_cbe7d79124ba.import_local_cpu_component_advisory_cache": {
+      "artifact_record_bytes_mean": 98263.0,
+      "artifact_record_bytes_sum": 98263,
+      "artifact_record_count": 2,
+      "artifact_record_raw_bytes_mean": 98263.0,
+      "artifact_record_raw_bytes_sum": 98263,
+      "candidate_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "dominant_resource_kind": "local_io_heavy",
+      "elapsed_seconds_max": 0.2679581670090556,
+      "elapsed_seconds_mean": 0.2679581670090556,
+      "elapsed_seconds_min": 0.2679581670090556,
+      "elapsed_seconds_sum": 0.2679581670090556,
+      "experiment_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 2472.0,
+      "log_bytes_sum": 2472,
+      "resource_kind_counts": {
+        "local_io_heavy": 1
+      },
+      "run_count": 1,
+      "step_ids": [
+        "import_local_cpu_component_advisory_cache"
+      ],
+      "success_count": 1
+    },
+    "packet_member_merge_cbe7d79124ba.import_local_cpu_reference_advisory_cache": {
+      "artifact_record_bytes_mean": 99624.0,
+      "artifact_record_bytes_sum": 99624,
+      "artifact_record_count": 2,
+      "artifact_record_raw_bytes_mean": 99624.0,
+      "artifact_record_raw_bytes_sum": 99624,
+      "candidate_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "dominant_resource_kind": "local_io_heavy",
+      "elapsed_seconds_max": 0.26823599997442216,
+      "elapsed_seconds_mean": 0.26823599997442216,
+      "elapsed_seconds_min": 0.26823599997442216,
+      "elapsed_seconds_sum": 0.26823599997442216,
+      "experiment_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 2512.0,
+      "log_bytes_sum": 2512,
+      "resource_kind_counts": {
+        "local_io_heavy": 1
+      },
+      "run_count": 1,
+      "step_ids": [
+        "import_local_cpu_reference_advisory_cache"
+      ],
+      "success_count": 1
+    },
+    "packet_member_merge_cbe7d79124ba.local_mlx_component_response": {
+      "artifact_record_bytes_mean": 17395.0,
+      "artifact_record_bytes_sum": 17395,
+      "artifact_record_count": 2,
+      "artifact_record_raw_bytes_mean": 17395.0,
+      "artifact_record_raw_bytes_sum": 17395,
+      "candidate_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "dominant_resource_kind": "local_mlx",
+      "elapsed_seconds_max": 38.52169008401688,
+      "elapsed_seconds_mean": 38.52169008401688,
+      "elapsed_seconds_min": 38.52169008401688,
+      "elapsed_seconds_sum": 38.52169008401688,
+      "experiment_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 434.0,
+      "log_bytes_sum": 434,
+      "resource_kind_counts": {
+        "local_mlx": 1
+      },
+      "run_count": 1,
+      "step_ids": [
+        "local_mlx_component_response"
+      ],
+      "success_count": 1
+    },
+    "packet_member_merge_cbe7d79124ba.reference_local_mlx_component_response": {
+      "artifact_record_bytes_mean": 17459.0,
+      "artifact_record_bytes_sum": 17459,
+      "artifact_record_count": 2,
+      "artifact_record_raw_bytes_mean": 17459.0,
+      "artifact_record_raw_bytes_sum": 17459,
+      "candidate_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "dominant_resource_kind": "local_mlx",
+      "elapsed_seconds_max": 37.06199800001923,
+      "elapsed_seconds_mean": 37.06199800001923,
+      "elapsed_seconds_min": 37.06199800001923,
+      "elapsed_seconds_sum": 37.06199800001923,
+      "experiment_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 444.0,
+      "log_bytes_sum": 444,
+      "resource_kind_counts": {
+        "local_mlx": 1
+      },
+      "run_count": 1,
+      "step_ids": [
+        "reference_local_mlx_component_response"
+      ],
+      "success_count": 1
+    },
+    "packet_member_merge_cbe7d79124ba.reuse_mlx_component_cache": {
+      "artifact_record_bytes_mean": 2831172429.0,
+      "artifact_record_bytes_sum": 2831172429,
+      "artifact_record_count": 3,
+      "artifact_record_raw_bytes_mean": 2831177311.0,
+      "artifact_record_raw_bytes_sum": 2831177311,
+      "candidate_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "dominant_resource_kind": "local_io_heavy",
+      "elapsed_seconds_max": 0.26833429106045514,
+      "elapsed_seconds_mean": 0.26833429106045514,
+      "elapsed_seconds_min": 0.26833429106045514,
+      "elapsed_seconds_sum": 0.26833429106045514,
+      "experiment_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 209.0,
+      "log_bytes_sum": 209,
+      "resource_kind_counts": {
+        "local_io_heavy": 1
+      },
+      "run_count": 1,
+      "step_ids": [
+        "reuse_mlx_component_cache"
+      ],
+      "success_count": 1
+    },
+    "packet_member_merge_cbe7d79124ba.reuse_reference_mlx_component_cache": {
+      "artifact_record_bytes_mean": 2831172479.0,
+      "artifact_record_bytes_sum": 2831172479,
+      "artifact_record_count": 3,
+      "artifact_record_raw_bytes_mean": 2831177411.0,
+      "artifact_record_raw_bytes_sum": 2831177411,
+      "candidate_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "dominant_resource_kind": "local_io_heavy",
+      "elapsed_seconds_max": 0.25956829194910824,
+      "elapsed_seconds_mean": 0.25956829194910824,
+      "elapsed_seconds_min": 0.25956829194910824,
+      "elapsed_seconds_sum": 0.25956829194910824,
+      "experiment_ids": [
+        "packet_member_merge_cbe7d79124ba"
+      ],
+      "failure_count": 0,
+      "log_bytes_mean": 209.0,
+      "log_bytes_sum": 209,
+      "resource_kind_counts": {
+        "local_io_heavy": 1
+      },
+      "run_count": 1,
+      "step_ids": [
+        "reuse_reference_mlx_component_cache"
+      ],
+      "success_count": 1
+    }
+  },
+  "by_work_id": {},
+  "candidate_id_by_experiment": {
+    "packet_member_merge_cbe7d79124ba": [
+      "packet_member_merge_cbe7d79124ba"
+    ]
+  },
+  "event_count": 10,
+  "promotion_eligible": false,
+  "queue_id": "frontier_mlx_paired_reference_cache_reuse_20260526T154742Z_component_correction",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "experiment_queue_performance_summary.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "source_selection_ids_by_experiment": {},
+  "source_unit_ids_by_experiment": {},
+  "state": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_frontier_mlx_paired_reference_cache_reuse_20260526T154742Z_component_correction.sqlite",
+  "telemetry_only": true,
+  "work_id_by_experiment": {}
+}

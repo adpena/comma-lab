@@ -1,0 +1,159 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 1,
+      "local_io_heavy": 1,
+      "local_mlx": 0,
+      "modal_cpu": 0,
+      "modal_gpu": 0
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "targeted_component_materialization_packet_member_merge_cbe7d79124ba_001",
+      "lane_id": "lane_frontier_targeted_component_materialization_20260526",
+      "metadata": {
+        "accepted_correction_families": [
+          "repair_dynamics_frame0_palette_interaction_waterfill"
+        ],
+        "allowed_use": "targeted_component_correction_materialization_queue_metadata_only",
+        "budget_spend_allowed": false,
+        "candidate_id": "packet_member_merge_cbe7d79124ba",
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "forbidden_use": "score_claim_or_dispatch_authority",
+        "gpu_launched": false,
+        "materialization_request_id": "targeted_component_materialization_packet_member_merge_cbe7d79124ba_001",
+        "materialization_request_path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_materialize/frontier_mlx_paired_reference_cache_reuse_20260526t154742z_chain_materializer/packet_member_merge_cbe7d79124ba/targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/materialization_request.json",
+        "operation_levels": [
+          "pixel",
+          "region",
+          "boundary",
+          "frame",
+          "pair",
+          "batch",
+          "scorer_axis"
+        ],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_budget_spend": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_materializer_execution": false,
+        "response_harvest_path": ".omx/research/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/targeted_component_correction_response_harvest.json",
+        "schema": "frontier_rate_attack_targeted_component_correction_materialization_queue_metadata.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "targeted_dimensions": [
+          "pixel",
+          "region",
+          "boundary",
+          "frame",
+          "pair",
+          "batch"
+        ]
+      },
+      "priority": 1,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_targeted_component_correction_materialization_request.py",
+            "--targeted-component-correction-response-harvest",
+            ".omx/research/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/targeted_component_correction_response_harvest.json",
+            "--materialization-request-id",
+            "targeted_component_materialization_packet_member_merge_cbe7d79124ba_001",
+            "--request-out",
+            "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_materialize/frontier_mlx_paired_reference_cache_reuse_20260526t154742z_chain_materializer/packet_member_merge_cbe7d79124ba/targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/materialization_request.json",
+            "--candidate-limit",
+            "1",
+            "--family-limit-per-candidate",
+            "8",
+            "--overwrite"
+          ],
+          "id": "emit_targeted_component_correction_materialization_request",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_targeted_component_correction_materialization_request_row.v1",
+              "key": "schema",
+              "path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_materialize/frontier_mlx_paired_reference_cache_reuse_20260526t154742z_chain_materializer/packet_member_merge_cbe7d79124ba/targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/materialization_request.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_materialize/frontier_mlx_paired_reference_cache_reuse_20260526t154742z_chain_materializer/packet_member_merge_cbe7d79124ba/targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/materialization_request.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_budget_spend",
+              "path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_materialize/frontier_mlx_paired_reference_cache_reuse_20260526t154742z_chain_materializer/packet_member_merge_cbe7d79124ba/targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/materialization_request.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_materializer_execution",
+              "path": "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_materialize/frontier_mlx_paired_reference_cache_reuse_20260526t154742z_chain_materializer/packet_member_merge_cbe7d79124ba/targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/materialization_request.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/frontier_targeted_component_correction_materialize/frontier_mlx_paired_reference_cache_reuse_20260526t154742z_chain_materializer/packet_member_merge_cbe7d79124ba/targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/materialization_request.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              ".omx/research/frontier_mlx_paired_reference_cache_reuse_20260526T154742Z/targeted_component_correction_response_harvest.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "targeted_component_correction",
+        "materialization_request",
+        "receiver_consumed_budget",
+        "repair_dynamics_frame0_palette_interaction_waterfill"
+      ]
+    }
+  ],
+  "materialization_request_summary": {
+    "accepted_response_count": 1,
+    "allowed_use": "targeted_component_correction_materialization_queue_summary_only",
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "forbidden_use": "score_claim_or_dispatch_authority",
+    "gpu_launched": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_budget_spend_count": 0,
+    "ready_for_exact_eval_dispatch": false,
+    "row_count": 1,
+    "schema": "frontier_rate_attack_targeted_component_correction_materialization_requests.v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false
+  },
+  "queue_id": "frontier_mlx_paired_reference_cache_reuse_20260526t154742z_chain_materializer",
+  "schema": "experiment_queue.v1"
+}

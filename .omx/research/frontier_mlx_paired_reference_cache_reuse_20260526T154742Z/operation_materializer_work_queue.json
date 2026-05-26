@@ -1,0 +1,111 @@
+{
+  "blocked_row_count": 1,
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "materializer_work_queue_has_no_executable_rows"
+  ],
+  "exact_cuda_auth_eval": false,
+  "executable_row_count": 0,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "2026-05-26T15:47:43Z",
+  "gpu_launched": false,
+  "grouped_archive_state_executable_request_count": 0,
+  "grouped_archive_state_materializer_requests": [],
+  "grouped_archive_state_request_count": 0,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "row_count": 1,
+  "rows": [
+    {
+      "backlog_key": "frontier_operation_portfolio:materializer_packet_member_merge_v1:packet_member_merge_v1",
+      "backlog_rank": 1,
+      "candidate_saved_bytes_sum": 258,
+      "charged_bits_changed": false,
+      "command": [],
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "materializer_context_missing:merge_contract",
+        "materializer_context_missing:packet_member_merge_source_runtime_dir"
+      ],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_score_gain_sum": 46.125,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "materialization_blockers": [
+        "materializer_context_missing:merge_contract",
+        "materializer_context_missing:packet_member_merge_source_runtime_dir"
+      ],
+      "materializer_context_closure_plan": null,
+      "materializer_id": "packet_member_merge_adapter",
+      "operation_family": "member_merge",
+      "packet_ir_blocker_counts": {
+        "exact_readiness_and_auth_axis_eval_still_required": 1
+      },
+      "packet_ir_lowered_row_count": null,
+      "postconditions": [],
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_contract_id": "packet_member_merge_v1.receiver.v1",
+      "receiver_contract_kind": "family_agnostic_packet_member_merge",
+      "receiver_runtime_binding_context": null,
+      "renderer_payload_dfl1_parity_context": null,
+      "repo_root": ".",
+      "resource_kind": "local_cpu",
+      "schema": "byte_shaving_materializer_work_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "source_backlog_key": null,
+      "source_packet_ir_operation_indices": [],
+      "source_packet_ir_operation_indices_by_unit": {},
+      "source_packet_ir_operation_set_ids": [],
+      "source_packet_ir_source_operation_set_ids": [],
+      "source_plan_path": null,
+      "source_selection_ids": [
+        "materializer_packet_member_merge_v1"
+      ],
+      "source_unit_ids": [
+        "materializer_packet_member_merge_v1"
+      ],
+      "target_kind": "packet_member_merge_v1",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "telemetry": {},
+      "tool": null,
+      "unit_kind": "packet_member",
+      "work_id": "materializer_work_frontier_operation_portfolio_materializer_packet_member_merge_v1_packet_member_merge_v1",
+      "work_rank": 1
+    }
+  ],
+  "schema": "byte_shaving_materializer_work_queue.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "source_backlog_schema": "byte_shaving_materializer_backlog.v1",
+  "source_plan_path": null,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "tool": "comma_lab.scheduler.byte_shaving_campaign_queue"
+}

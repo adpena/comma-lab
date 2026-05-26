@@ -9233,6 +9233,7 @@ def build_frontier_targeted_component_correction_work_order(
     *,
     targeted_component_correction_acquisition: Mapping[str, Any],
     acquisition_id: str,
+    repo_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Build a single receiver-budget component-correction work order."""
 
@@ -9255,6 +9256,30 @@ def build_frontier_targeted_component_correction_work_order(
         if isinstance(sibling, Mapping)
         and str(sibling.get("candidate_id") or "") == candidate_id
     ]
+    reference_context = (
+        _targeted_component_reference_eval_context_for_queue(
+            row,
+            repo_root=Path(repo_root),
+        )
+        if repo_root is not None
+        else dict(
+            row.get("reference_component_eval_context")
+            if isinstance(row.get("reference_component_eval_context"), Mapping)
+            else {}
+        )
+    )
+    source_submission_dir = (
+        row.get("source_submission_dir") or reference_context.get("source_submission_dir")
+    )
+    source_inflate_sh_path = (
+        row.get("source_inflate_sh_path")
+        or reference_context.get("source_inflate_sh_path")
+        or (
+            f"{source_submission_dir}/inflate.sh"
+            if source_submission_dir
+            else None
+        )
+    )
     work_order = {
         "schema": TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA,
         "generated_at_utc": str(
@@ -9277,16 +9302,20 @@ def build_frontier_targeted_component_correction_work_order(
         "submission_dir": row.get("submission_dir"),
         "archive_path": row.get("archive_path"),
         "inflate_sh_path": row.get("inflate_sh_path"),
-        "source_archive_path": row.get("source_archive_path"),
-        "source_archive_sha256": row.get("source_archive_sha256"),
-        "source_archive_bytes": row.get("source_archive_bytes"),
-        "source_submission_dir": row.get("source_submission_dir"),
-        "source_inflate_sh_path": row.get("source_inflate_sh_path"),
-        "reference_component_eval_context": dict(
-            row.get("reference_component_eval_context")
-            if isinstance(row.get("reference_component_eval_context"), Mapping)
-            else {}
+        "source_archive_path": (
+            row.get("source_archive_path") or reference_context.get("source_archive_path")
         ),
+        "source_archive_sha256": (
+            row.get("source_archive_sha256")
+            or reference_context.get("source_archive_sha256")
+        ),
+        "source_archive_bytes": (
+            row.get("source_archive_bytes")
+            or reference_context.get("source_archive_bytes")
+        ),
+        "source_submission_dir": source_submission_dir,
+        "source_inflate_sh_path": source_inflate_sh_path,
+        "reference_component_eval_context": dict(reference_context),
         "closure_report_path": row.get("closure_report_path"),
         "paired_exact_readiness_bridge_report_path": row.get(
             "paired_exact_readiness_bridge_report_path"
@@ -9700,6 +9729,59 @@ def _targeted_component_response_paired_mlx_cpu_delta_drift_terms(
     return out
 
 
+def _targeted_component_response_score_delta_summary(
+    *,
+    terms: Mapping[str, Any] | None,
+    paired_reference_terms: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Make candidate-vs-reference score deltas explicit for queue consumers."""
+
+    if terms is None and paired_reference_terms is None:
+        return None
+    term_payload = terms if isinstance(terms, Mapping) else {}
+    paired_payload = (
+        paired_reference_terms if isinstance(paired_reference_terms, Mapping) else {}
+    )
+    segnet_delta = _finite_float_or_none(term_payload.get("segnet_delta_score_units"))
+    posenet_delta = _finite_float_or_none(term_payload.get("posenet_delta_score_units"))
+    correction_rate_delta = _finite_float_or_none(
+        term_payload.get("correction_rate_delta_score_units")
+    )
+    receiver_closed_rate_delta = _finite_float_or_none(
+        paired_payload.get("receiver_closed_rate_delta_score_units")
+    )
+    component_delta = (
+        None
+        if segnet_delta is None or posenet_delta is None
+        else float(segnet_delta) + float(posenet_delta)
+    )
+    correction_spend_total = (
+        None
+        if component_delta is None or correction_rate_delta is None
+        else float(component_delta) + float(correction_rate_delta)
+    )
+    receiver_closed_total = (
+        None
+        if component_delta is None or receiver_closed_rate_delta is None
+        else float(component_delta) + float(receiver_closed_rate_delta)
+    )
+    return {
+        "schema": "targeted_component_score_delta_summary.v1",
+        "component_delta_score_units": component_delta,
+        "segnet_delta_score_units": segnet_delta,
+        "posenet_delta_score_units": posenet_delta,
+        "correction_rate_delta_score_units": correction_rate_delta,
+        "correction_spend_total_delta_score_units": correction_spend_total,
+        "receiver_closed_rate_delta_score_units": receiver_closed_rate_delta,
+        "receiver_closed_total_delta_score_units": receiver_closed_total,
+        "receiver_closed_archive_byte_delta_vs_reference": _finite_int_or_none(
+            paired_payload.get("receiver_closed_archive_byte_delta_vs_reference")
+        ),
+        "paired_reference_role": paired_payload.get("paired_reference_role")
+        or term_payload.get("paired_reference_role"),
+    }
+
+
 def build_frontier_targeted_component_correction_response_harvest_from_artifacts(
     *,
     work_order: Mapping[str, Any],
@@ -9921,6 +10003,14 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
             local_cpu_paired=local_paired_reference_terms,
         )
     )
+    local_cpu_score_delta_summary = _targeted_component_response_score_delta_summary(
+        terms=local_terms,
+        paired_reference_terms=local_paired_reference_terms,
+    )
+    local_mlx_score_delta_summary = _targeted_component_response_score_delta_summary(
+        terms=mlx_terms,
+        paired_reference_terms=mlx_paired_reference_terms,
+    )
 
     measured_component_delta = None
     measured_lagrangian_delta = None
@@ -10004,8 +10094,10 @@ def build_frontier_targeted_component_correction_response_harvest_from_artifacts
         ),
         "local_cpu_component_terms": local_terms,
         "local_cpu_paired_reference_terms": local_paired_reference_terms,
+        "local_cpu_score_delta_summary": local_cpu_score_delta_summary,
         "local_mlx_component_terms": mlx_terms,
         "local_mlx_paired_reference_terms": mlx_paired_reference_terms,
+        "local_mlx_score_delta_summary": local_mlx_score_delta_summary,
         "local_mlx_vs_local_cpu_drift_terms": mlx_cpu_drift_terms,
         "reference_local_mlx_vs_local_cpu_drift_terms": (
             reference_mlx_cpu_drift_terms
@@ -10512,6 +10604,16 @@ def _targeted_component_materializer_basis_entry(
         "budget_credit_remaining_score_units": row.get(
             "budget_credit_remaining_score_units"
         ),
+        "local_cpu_score_delta_summary": dict(
+            row.get("local_cpu_score_delta_summary")
+            if isinstance(row.get("local_cpu_score_delta_summary"), Mapping)
+            else {}
+        ),
+        "local_mlx_score_delta_summary": dict(
+            row.get("local_mlx_score_delta_summary")
+            if isinstance(row.get("local_mlx_score_delta_summary"), Mapping)
+            else {}
+        ),
         "saved_bytes_budget": row.get("saved_bytes_budget"),
         "work_order_path": row.get("work_order_path"),
         "local_cpu_advisory_path": row.get("local_cpu_advisory_path"),
@@ -10718,6 +10820,16 @@ def _build_targeted_component_materialization_request_row(
         "measured_lagrangian_delta_score_units_sum": lagrangian_sum,
         "best_measured_lagrangian_delta_score_units": best_row.get(
             "measured_lagrangian_delta_score_units"
+        ),
+        "best_local_cpu_score_delta_summary": dict(
+            best_row.get("local_cpu_score_delta_summary")
+            if isinstance(best_row.get("local_cpu_score_delta_summary"), Mapping)
+            else {}
+        ),
+        "best_local_mlx_score_delta_summary": dict(
+            best_row.get("local_mlx_score_delta_summary")
+            if isinstance(best_row.get("local_mlx_score_delta_summary"), Mapping)
+            else {}
         ),
         "budget_credit_remaining_score_units_min": min(
             float(row.get("budget_credit_remaining_score_units") or 0.0)
@@ -13665,6 +13777,71 @@ def _component_response_cache_source(
     return None
 
 
+def _targeted_component_reference_eval_context_for_queue(
+    row: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    """Recover receiver-closed source-reference context for component deltas."""
+
+    raw_context = row.get("reference_component_eval_context")
+    context: dict[str, Any] = (
+        dict(raw_context) if isinstance(raw_context, Mapping) else {}
+    )
+    require_no_truthy_authority_fields(
+        context,
+        context="targeted_component_reference_eval_context_for_queue",
+    )
+
+    closure_report_text = _path_text_from_value(row.get("closure_report_path"))
+    if not closure_report_text:
+        return context
+    missing_reference_context = not (
+        _path_text_from_value(row.get("source_archive_path"))
+        or _path_text_from_value(context.get("source_archive_path"))
+    ) or not (
+        _path_text_from_value(row.get("source_inflate_sh_path"))
+        or _path_text_from_value(context.get("source_inflate_sh_path"))
+        or _path_text_from_value(row.get("source_submission_dir"))
+        or _path_text_from_value(context.get("source_submission_dir"))
+    )
+    if not missing_reference_context:
+        return context
+
+    closure_report_path = _resolve_path(closure_report_text, repo_root=repo_root)
+    if not closure_report_path.is_file():
+        return context
+    try:
+        closure = _load_json(closure_report_path)
+        require_no_truthy_authority_fields(
+            closure,
+            context=f"{closure_report_path} targeted component reference recovery",
+        )
+    except (FrontierRateAttackFeedbackError, ValueError):
+        return context
+    if closure.get("schema") != MATERIALIZER_SUBMISSION_CLOSURE_REPORT_SCHEMA:
+        return context
+    recovered = _submission_closure_reference_eval_context(
+        closure,
+        closure_report_path,
+        repo_root=repo_root,
+        candidate_id=str(row.get("candidate_id") or closure.get("candidate_id") or ""),
+    )
+    require_no_truthy_authority_fields(
+        recovered,
+        context="targeted_component_recovered_reference_eval_context",
+    )
+    merged = {
+        **recovered,
+        **{key: value for key, value in context.items() if value not in (None, "")},
+        "reference_context_recovery_mode": (
+            "receiver_closure_source_reference_context"
+        ),
+        "reference_context_recovery_source": _repo_rel(closure_report_path, repo_root),
+    }
+    return merged
+
+
 def build_frontier_targeted_component_correction_queue(
     *,
     repo_root: str | Path,
@@ -13770,12 +13947,26 @@ def build_frontier_targeted_component_correction_queue(
             if component_cache_source is not None
             else "local_cpu_component_advisory"
         )
-        reference_archive_path = str(primary_row.get("source_archive_path") or "")
+        reference_context = _targeted_component_reference_eval_context_for_queue(
+            primary_row,
+            repo_root=repo,
+        )
+        reference_archive_path = str(
+            primary_row.get("source_archive_path")
+            or reference_context.get("source_archive_path")
+            or ""
+        )
+        reference_source_submission_dir = str(
+            primary_row.get("source_submission_dir")
+            or reference_context.get("source_submission_dir")
+            or ""
+        )
         reference_inflate_sh_path = str(
             primary_row.get("source_inflate_sh_path")
+            or reference_context.get("source_inflate_sh_path")
             or (
-                f"{primary_row.get('source_submission_dir')}/inflate.sh"
-                if primary_row.get("source_submission_dir")
+                f"{reference_source_submission_dir}/inflate.sh"
+                if reference_source_submission_dir
                 else ""
             )
         )
@@ -13785,7 +13976,8 @@ def build_frontier_targeted_component_correction_queue(
         reference_cache_key = _bounded_content_key(
             "reference_component_response",
             (
-                primary_row.get("source_archive_sha256"),
+                primary_row.get("source_archive_sha256")
+                or reference_context.get("source_archive_sha256"),
                 reference_archive_path,
                 reference_inflate_sh_path,
             ),
@@ -13844,7 +14036,12 @@ def build_frontier_targeted_component_correction_queue(
                 f"emit_repair_dynamics_palette_probe_matrix_{row_index:02d}"
             )
             request_ready_step_ids.append(work_order_step_id)
+            row_correction_family = str(row.get("correction_family") or "")
             repair_dynamics_prior_active = row.get("repair_dynamics_prior_active") is True
+            repair_dynamics_probe_required = (
+                repair_dynamics_prior_active
+                and row_correction_family.startswith("repair_dynamics_")
+            )
             request_metadata.append(
                 {
                     "schema": (
@@ -13864,9 +14061,10 @@ def build_frontier_targeted_component_correction_queue(
                     "work_dir": _repo_rel(request_dir, repo),
                     "work_order_path": _repo_rel(work_order_path, repo),
                     "repair_dynamics_prior_active": repair_dynamics_prior_active,
+                    "repair_dynamics_probe_required": repair_dynamics_probe_required,
                     "repair_dynamics_palette_probe_matrix_path": (
                         _repo_rel(repair_dynamics_probe_matrix_path, repo)
-                        if repair_dynamics_prior_active
+                        if repair_dynamics_probe_required
                         else None
                     ),
                     "component_correction_response_harvest_path": _repo_rel(
@@ -13908,9 +14106,10 @@ def build_frontier_targeted_component_correction_queue(
                     "reference_archive_path": reference_archive_path or None,
                     "reference_inflate_sh_path": reference_inflate_sh_path or None,
                     "reference_component_eval_context": dict(
-                        row.get("reference_component_eval_context")
-                        if isinstance(row.get("reference_component_eval_context"), Mapping)
-                        else {}
+                        _targeted_component_reference_eval_context_for_queue(
+                            row,
+                            repo_root=repo,
+                        )
                     ),
                     "reference_cache_key": reference_cache_key,
                     "reference_shared_component_response_dir": (
@@ -13993,7 +14192,7 @@ def build_frontier_targeted_component_correction_queue(
                     },
                 }
             )
-            if repair_dynamics_prior_active:
+            if repair_dynamics_probe_required:
                 request_ready_step_ids.append(repair_dynamics_probe_step_id)
                 steps.append(
                     {

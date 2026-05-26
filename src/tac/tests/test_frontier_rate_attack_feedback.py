@@ -2003,6 +2003,15 @@ def test_targeted_component_response_harvest_derives_paired_local_cpu_deltas(
     assert row["local_cpu_paired_reference_terms"][
         "receiver_closed_archive_byte_delta_vs_reference"
     ] == -258
+    assert row["local_cpu_score_delta_summary"][
+        "component_delta_score_units"
+    ] == pytest.approx(-0.02)
+    assert row["local_cpu_score_delta_summary"][
+        "receiver_closed_rate_delta_score_units"
+    ] == pytest.approx(-0.0001717916099055202)
+    assert row["local_cpu_score_delta_summary"][
+        "receiver_closed_total_delta_score_units"
+    ] == pytest.approx(-0.020171791609905523)
     assert row["negative_measured_lagrangian_delta"] is True
     assert row["local_acquisition_recommended"] is True
     assert row["reference_local_cpu_advisory_path"] == "reference_local_cpu_advisory.json"
@@ -2101,6 +2110,15 @@ def test_targeted_component_response_harvest_derives_paired_local_mlx_deltas(
     assert row["local_mlx_paired_reference_terms"][
         "receiver_closed_archive_byte_delta_vs_reference"
     ] == -258
+    assert row["local_mlx_score_delta_summary"][
+        "component_delta_score_units"
+    ] == pytest.approx(-0.03)
+    assert row["local_mlx_score_delta_summary"][
+        "receiver_closed_rate_delta_score_units"
+    ] == pytest.approx(-0.0001717916099055202)
+    assert row["local_mlx_score_delta_summary"][
+        "receiver_closed_total_delta_score_units"
+    ] == pytest.approx(-0.03017179160990552)
     assert row["local_mlx_vs_local_cpu_drift_terms"][
         "mlx_minus_local_cpu_segnet_score_units"
     ] == pytest.approx(-0.01)
@@ -2122,6 +2140,18 @@ def test_targeted_component_response_harvest_derives_paired_local_mlx_deltas(
     assert harvest["mlx_cpu_drift_summary"][
         "paired_lagrangian_delta_drift_max_abs"
     ] == pytest.approx(0.01)
+    requests = build_frontier_targeted_component_correction_materialization_requests(
+        targeted_component_correction_response_harvest=harvest,
+        candidate_limit=1,
+        family_limit_per_candidate=1,
+    )
+    request = requests["rows"][0]
+    assert request["best_local_mlx_score_delta_summary"][
+        "receiver_closed_total_delta_score_units"
+    ] == pytest.approx(-0.03017179160990552)
+    assert request["materializer_chain_basis"][0]["local_mlx_score_delta_summary"][
+        "receiver_closed_rate_delta_score_units"
+    ] == pytest.approx(-0.0001717916099055202)
 
 
 def test_targeted_component_response_harvest_cli_accepts_reference_advisory(
@@ -3799,6 +3829,128 @@ def test_targeted_component_queue_carries_receiver_closed_reference_eval(
     )
 
 
+def test_targeted_component_queue_recovers_reference_eval_from_closure_report(
+    tmp_path: Path,
+) -> None:
+    results_root = tmp_path / "results"
+    source_dir = tmp_path / "source_submission"
+    source_dir.mkdir()
+    source_archive = _write_json(source_dir / "archive_correct.zip", {"fixture": True})
+    (source_dir / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    candidate_id = "packet_member_merge_reference_recovery_unit"
+    closure_dir = (
+        results_root
+        / "frontier_final_rate_attack"
+        / "reference_recovery_unit"
+        / "submission_closure"
+    )
+    source_queue = closure_dir / "closed_source_queue.json"
+    closure_report = closure_dir / "submission_closure_report.json"
+    _write_json(
+        source_queue,
+        {
+            "schema": "optimizer_candidate_queue.v1",
+            **_false_authority(),
+            "top_k_forensic": [
+                {
+                    **_false_authority(),
+                    "candidate_id": candidate_id,
+                    "candidate_archive_sha256": "8" * 64,
+                    "source_archive_path": source_archive.relative_to(tmp_path).as_posix(),
+                    "source_archive_sha256": "7" * 64,
+                    "source_archive_bytes": 345_802,
+                    "packet_member_merge_source_runtime_dir": (
+                        source_dir.relative_to(tmp_path).as_posix()
+                    ),
+                }
+            ],
+        },
+    )
+    _write_json(
+        closure_report,
+        {
+            "schema": "materializer_submission_runtime_closure_report.v1",
+            **_false_authority(),
+            "candidate_id": candidate_id,
+            "target_kind": "packet_member_merge_v1",
+            "archive_sha256": "8" * 64,
+            "archive_bytes": 345_544,
+            "closed_source_queue_path": source_queue.relative_to(tmp_path).as_posix(),
+            "submission_dir": (closure_dir / "submission").relative_to(tmp_path).as_posix(),
+            "saved_bytes_at_risk": 258,
+            "allowed_use": "exact_readiness_static_submission_closure_only",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+        },
+    )
+    acquisition = {
+        "schema": TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
+        "active": True,
+        "row_count": 1,
+        "queue_actionable_acquisition_count": 1,
+        "rows": [
+            {
+                "acquisition_id": "component_reference_recovery_row",
+                "candidate_id": candidate_id,
+                "correction_family": "repair_dynamics_frame0_palette_interaction_waterfill",
+                "target_kind": "packet_member_merge_v1",
+                "operation_levels": ["frame", "pair"],
+                "targeted_dimensions": ["frame", "pair"],
+                "saved_bytes_budget": 258,
+                "estimated_rate_credit_score_units": 0.0001717916099055202,
+                "submission_dir": "submissions/candidate_reference_recovery",
+                "archive_path": "submissions/candidate_reference_recovery/archive.zip",
+                "archive_sha256": "8" * 64,
+                "inflate_sh_path": "submissions/candidate_reference_recovery/inflate.sh",
+                "closure_report_path": closure_report.relative_to(tmp_path).as_posix(),
+                "reference_component_eval_context": {},
+                "queue_actionable": True,
+                "priority_score": 1.0,
+                **_false_authority(),
+            }
+        ],
+        **_false_authority(),
+    }
+    acquisition_path = _write_json(tmp_path / "targeted_acquisition.json", acquisition)
+
+    queue = build_frontier_targeted_component_correction_queue(
+        repo_root=tmp_path,
+        targeted_component_correction_acquisition=acquisition,
+        targeted_component_correction_acquisition_path=acquisition_path,
+        results_root=tmp_path / "queue_results",
+        queue_id="component_reference_recovery_unit",
+        candidate_limit=1,
+    )
+    assert queue is not None
+    experiment = queue["experiments"][0]
+    assert experiment["metadata"]["reference_component_eval_available"] is True
+    assert experiment["metadata"]["reference_archive_path"] == (
+        "source_submission/archive_correct.zip"
+    )
+    assert experiment["metadata"]["reference_inflate_sh_path"] == (
+        "source_submission/inflate.sh"
+    )
+    request = experiment["metadata"]["correction_requests"][0]
+    assert request["reference_component_eval_context"][
+        "reference_context_recovery_mode"
+    ] == "receiver_closure_source_reference_context"
+    step_ids = [step["id"] for step in experiment["steps"]]
+    assert "local_cpu_reference_advisory" in step_ids
+    assert "reference_local_mlx_component_response" in step_ids
+
+    work_order = build_frontier_targeted_component_correction_work_order(
+        targeted_component_correction_acquisition=acquisition,
+        acquisition_id="component_reference_recovery_row",
+        repo_root=tmp_path,
+    )
+    assert work_order["source_archive_path"] == "source_submission/archive_correct.zip"
+    assert work_order["source_inflate_sh_path"] == "source_submission/inflate.sh"
+    assert work_order["reference_component_eval_context"][
+        "reference_context_recovery_source"
+    ].endswith("submission_closure_report.json")
+
+
 def test_targeted_component_queue_imports_false_authority_component_response_cache(
     tmp_path: Path,
 ) -> None:
@@ -3945,6 +4097,89 @@ def test_targeted_component_queue_imports_false_authority_component_response_cac
     assert request["reference_local_mlx_cache_reuse_mode"] == (
         "reuse_false_authority_mlx_scorer_input_cache"
     )
+
+
+def test_targeted_component_queue_limits_repair_dynamics_probe_to_repair_families(
+    tmp_path: Path,
+) -> None:
+    candidate_id = "candidate_repair_probe_gate"
+    base_row = {
+        "candidate_id": candidate_id,
+        "target_kind": "packet_member_merge_v1",
+        "operation_levels": ["frame", "pair"],
+        "targeted_dimensions": ["segnet", "posenet"],
+        "saved_bytes_budget": 258,
+        "estimated_rate_credit_score_units": 0.0001717916099055202,
+        "submission_dir": "submissions/candidate_repair_probe_gate",
+        "archive_path": "submissions/candidate_repair_probe_gate/archive.zip",
+        "archive_sha256": "e" * 64,
+        "inflate_sh_path": "submissions/candidate_repair_probe_gate/inflate.sh",
+        "source_archive_path": "submissions/source/archive_correct.zip",
+        "source_archive_sha256": "f" * 64,
+        "source_inflate_sh_path": "submissions/source/inflate.sh",
+        "repair_dynamics_prior_active": True,
+        "queue_actionable": True,
+        "priority_score": 1.0,
+        **_false_authority(),
+    }
+    acquisition = {
+        "schema": TARGETED_COMPONENT_CORRECTION_ACQUISITION_SCHEMA,
+        "active": True,
+        "row_count": 2,
+        "queue_actionable_acquisition_count": 2,
+        "rows": [
+            {
+                **base_row,
+                "acquisition_id": "repair_probe_required_row",
+                "correction_family": (
+                    "repair_dynamics_frame0_palette_interaction_waterfill"
+                ),
+            },
+            {
+                **base_row,
+                "acquisition_id": "waterfill_without_palette_probe_row",
+                "correction_family": "segnet_posenet_waterfill_region_repair",
+            },
+        ],
+        **_false_authority(),
+    }
+    acquisition_path = _write_json(
+        tmp_path / "targeted_acquisition.json",
+        acquisition,
+    )
+
+    queue = build_frontier_targeted_component_correction_queue(
+        repo_root=tmp_path,
+        targeted_component_correction_acquisition=acquisition,
+        targeted_component_correction_acquisition_path=acquisition_path,
+        results_root=tmp_path / "queue_results",
+        queue_id="repair_probe_gate_unit",
+        candidate_limit=2,
+        include_mlx_response=False,
+    )
+
+    assert queue is not None
+    experiment = queue["experiments"][0]
+    probe_steps = [
+        step
+        for step in experiment["steps"]
+        if step["id"].startswith("emit_repair_dynamics_palette_probe_matrix")
+    ]
+    assert [step["id"] for step in probe_steps] == [
+        "emit_repair_dynamics_palette_probe_matrix_01"
+    ]
+    requests = {
+        request["acquisition_id"]: request
+        for request in experiment["metadata"]["correction_requests"]
+    }
+    repair_request = requests["repair_probe_required_row"]
+    waterfill_request = requests["waterfill_without_palette_probe_row"]
+    assert repair_request["repair_dynamics_prior_active"] is True
+    assert repair_request["repair_dynamics_probe_required"] is True
+    assert repair_request["repair_dynamics_palette_probe_matrix_path"] is not None
+    assert waterfill_request["repair_dynamics_prior_active"] is True
+    assert waterfill_request["repair_dynamics_probe_required"] is False
+    assert waterfill_request["repair_dynamics_palette_probe_matrix_path"] is None
 
 
 def test_targeted_component_acquisition_uses_explicit_repair_dynamics_palette_prior() -> None:
