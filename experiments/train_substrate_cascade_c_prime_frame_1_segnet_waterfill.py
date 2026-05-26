@@ -436,7 +436,7 @@ def main(argv: list[str] | None = None) -> int:
         'HERE = Path(__file__).resolve().parent\n'
         '# SUBMISSION_PYTHONPATH_SHIM_OK:vendored_substrate_package_at_src_tac_substrates_cascade_c_prime_frame_1_segnet_waterfill_with_canonical_init_py_stubs_per_catalog_295_self_containment\n'
         'sys.path.insert(0, str(HERE / "src"))\n'
-        'from tac.substrates.cascade_c_prime_frame_1_segnet_waterfill.inflate import main\n'
+        'from tac.substrates.cascade_c_prime_frame_1_segnet_waterfill.inflate import main_cli as main\n'
         'if __name__ == "__main__":\n'
         '    sys.exit(main(sys.argv[1:]))\n'
     )
