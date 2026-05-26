@@ -38,9 +38,13 @@ from .byte_shaving_materializer_registry import (
     INVERSE_SCORER_CELL_TARGET_KIND,
     PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+    PACKET_MEMBER_REORDER_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     RENDERER_PAYLOAD_DFL1_TARGET_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
+    TENSOR_PRUNE_TARGET_KIND,
+    TENSOR_QUANTIZE_TARGET_KIND,
+    TENSOR_SHARED_CODEBOOK_TARGET_KIND,
 )
 from .experiment_queue import ExperimentQueueError
 
@@ -323,6 +327,14 @@ def _copy_common_materializer_controls(
     for key in ("allow_size_regression", "allow_rate_regression", "allow_overwrite"):
         if hints.get(key) is True:
             context[key] = True
+    for key in (
+        "receiver_runtime_binding_context",
+        "targeted_chain_context_closure_plan",
+        "targeted_chain_receiver_proof_request",
+    ):
+        value = hints.get(key)
+        if isinstance(value, Mapping):
+            context[key] = dict(value)
 
 
 def _byte_range_entropy_recode_context_row(
@@ -601,6 +613,10 @@ def _packet_member_context_row(
         row.get("operation_family") == "native_renderer_payload"
         and row.get("target_kind") == RENDERER_PAYLOAD_DFL1_TARGET_KIND
     )
+    is_member_reorder = (
+        row.get("operation_family") == "member_reorder"
+        and row.get("target_kind") == PACKET_MEMBER_REORDER_TARGET_KIND
+    )
     source_runtime = _first_text(
         hints,
         (
@@ -756,6 +772,24 @@ def _packet_member_context_row(
     )
     if payload_member_name is not None:
         context["payload_member_name"] = payload_member_name
+    member_order_contract = _first_text(
+        hints,
+        (
+            "member_order_contract",
+            "packet_member_reorder_contract",
+            "member_reorder_contract",
+        ),
+    )
+    if member_order_contract is not None:
+        context["member_order_contract"] = member_order_contract
+    if is_member_reorder and member_order_contract is None:
+        blockers.append("materializer_context_missing:member_order_contract")
+    if is_member_reorder:
+        runtime_proof = _proof_path_text(hints.get("runtime_consumption_proof"))
+        if runtime_proof is None or not _path_exists(runtime_proof, repo_root=repo_root):
+            blockers.append("materializer_context_missing:runtime_consumption_proof")
+        else:
+            context["runtime_consumption_proof"] = runtime_proof
     if output_archive is not None:
         context["output_archive"] = output_archive
     if json_out is not None:
@@ -764,6 +798,83 @@ def _packet_member_context_row(
         values = _string_list(hints.get(key))
         if values:
             context[key] = values
+    _copy_common_materializer_controls(context, hints, repo_root=repo_root)
+    return _context_row_payload(row, context=context, blockers=blockers)
+
+
+def _tensor_contract_context_row(
+    row: Mapping[str, Any],
+    *,
+    hints: Mapping[str, Any],
+    repo_root: Path,
+    default_output_root: Path | None,
+) -> dict[str, Any]:
+    context: dict[str, Any] = {}
+    blockers: list[str] = []
+    archive_path = _first_text(hints, ("archive_path", "source_archive"))
+    tensor_manifest = _first_text(hints, ("tensor_manifest",))
+    contract_key_by_target = {
+        TENSOR_QUANTIZE_TARGET_KIND: "quantization_contract",
+        TENSOR_PRUNE_TARGET_KIND: "pruning_contract",
+        TENSOR_SHARED_CODEBOOK_TARGET_KIND: "codebook_contract",
+    }
+    target_kind = str(row.get("target_kind") or "")
+    contract_key = contract_key_by_target.get(target_kind, "tensor_contract")
+    contract_value = _first_text(
+        hints,
+        (
+            contract_key,
+            "tensor_contract",
+            "receiver_tensor_contract",
+        ),
+    )
+    source_runtime = _first_text(
+        hints,
+        (
+            "tensor_source_runtime_dir",
+            "source_runtime_dir",
+            "inflate_runtime_dir",
+        ),
+    )
+    output_archive, json_out = _output_paths(
+        row=row,
+        hints=hints,
+        repo_root=repo_root,
+        default_output_root=default_output_root,
+    )
+    runtime_proof = _proof_path_text(hints.get("runtime_consumption_proof"))
+    if archive_path is None:
+        blockers.append("materializer_context_missing:archive_path")
+    if tensor_manifest is None:
+        blockers.append("materializer_context_missing:tensor_manifest")
+    if contract_value is None:
+        blockers.append(f"materializer_context_missing:{contract_key}")
+    if runtime_proof is None or not _path_exists(runtime_proof, repo_root=repo_root):
+        blockers.append("materializer_context_missing:runtime_consumption_proof")
+    if output_archive is None:
+        blockers.append("materializer_context_missing:output_archive")
+    context.update(
+        {
+            "context_blockers": blockers,
+            **_packetir_operation_set_contract_context(),
+            **FALSE_AUTHORITY,
+        }
+    )
+    if archive_path is not None:
+        context["archive_path"] = archive_path
+    if tensor_manifest is not None:
+        context["tensor_manifest"] = tensor_manifest
+    if contract_value is not None:
+        context[contract_key] = contract_value
+    if runtime_proof is not None and _path_exists(runtime_proof, repo_root=repo_root):
+        context["runtime_consumption_proof"] = runtime_proof
+    if source_runtime is not None:
+        context["source_runtime_dir"] = source_runtime
+        context["tensor_source_runtime_dir"] = source_runtime
+    if output_archive is not None:
+        context["output_archive"] = output_archive
+    if json_out is not None:
+        context["output_manifest"] = json_out
     _copy_common_materializer_controls(context, hints, repo_root=repo_root)
     return _context_row_payload(row, context=context, blockers=blockers)
 
@@ -1141,6 +1252,10 @@ def _known_materializer_context_row(
                 and row.get("target_kind") == PACKET_MEMBER_MERGE_TARGET_KIND
             )
             or (
+                row.get("operation_family") == "member_reorder"
+                and row.get("target_kind") == PACKET_MEMBER_REORDER_TARGET_KIND
+            )
+            or (
                 row.get("operation_family") == "zip_header_elide"
                 and row.get("target_kind") == PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND
             )
@@ -1151,6 +1266,29 @@ def _known_materializer_context_row(
         )
     ):
         return _packet_member_context_row(
+            row,
+            hints=hints,
+            repo_root=repo_root,
+            default_output_root=default_output_root,
+        )
+    if (
+        row.get("unit_kind") == "tensor"
+        and (
+            (
+                row.get("operation_family") == "quantize_tensor"
+                and row.get("target_kind") == TENSOR_QUANTIZE_TARGET_KIND
+            )
+            or (
+                row.get("operation_family") == "prune_tensor"
+                and row.get("target_kind") == TENSOR_PRUNE_TARGET_KIND
+            )
+            or (
+                row.get("operation_family") == "shared_codebook_tensor"
+                and row.get("target_kind") == TENSOR_SHARED_CODEBOOK_TARGET_KIND
+            )
+        )
+    ):
+        return _tensor_contract_context_row(
             row,
             hints=hints,
             repo_root=repo_root,

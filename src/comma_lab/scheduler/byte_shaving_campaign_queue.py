@@ -73,10 +73,14 @@ from .byte_shaving_materializer_registry import (
     INVERSE_SCORER_CELL_TARGET_KIND,
     PACKET_MEMBER_MERGE_TARGET_KIND,
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+    PACKET_MEMBER_REORDER_TARGET_KIND,
     PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
     REGISTRY_SCHEMA,
     RENDERER_PAYLOAD_DFL1_TARGET_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
+    TENSOR_PRUNE_TARGET_KIND,
+    TENSOR_QUANTIZE_TARGET_KIND,
+    TENSOR_SHARED_CODEBOOK_TARGET_KIND,
     known_materializer_target_kinds,
     registry_manifest,
     resolve_materializer,
@@ -3036,6 +3040,114 @@ def _archive_section_contract_handoff(
     return ordered_unique(blockers), telemetry
 
 
+def _packet_member_contract_handoff(
+    context: Mapping[str, Any],
+    *,
+    target_kind: str,
+) -> tuple[list[str], dict[str, Any]]:
+    if target_kind == PACKET_MEMBER_REORDER_TARGET_KIND:
+        contract_key = "member_order_contract"
+        receiver_contract_kind = "family_agnostic_packet_member_reorder"
+        blocker_prefix = "packet_member_reorder"
+    else:
+        return [f"packet_member_contract_handoff_unknown_target:{target_kind}"], {}
+
+    blockers: list[str] = _string_list_context_value(context, "context_blockers")
+    if _path_context_value(context, "archive_path") is None:
+        blockers.append("materializer_context_missing:archive_path")
+    if _path_context_value(context, contract_key) is None:
+        blockers.append(f"materializer_context_missing:{contract_key}")
+    if _path_context_value(context, "runtime_consumption_proof") is None:
+        blockers.append("materializer_context_missing:runtime_consumption_proof")
+    blockers.append(f"{blocker_prefix}_materializer_requires_byte_closed_adapter")
+    blockers.append(f"{blocker_prefix}_receiver_contract_handoff_is_planning_only")
+    telemetry = {
+        "receiver_contract_work_order": {
+            "schema": "packet_member_receiver_contract_work_order.v1",
+            "target_kind": target_kind,
+            "receiver_contract_kind": receiver_contract_kind,
+            "required_context_fields": [
+                "archive_path",
+                contract_key,
+                "runtime_consumption_proof",
+            ],
+            "archive_path": _path_context_value(context, "archive_path"),
+            contract_key: _path_context_value(context, contract_key),
+            "runtime_consumption_proof": _path_context_value(
+                context,
+                "runtime_consumption_proof",
+            ),
+            "next_required_adapter": f"{target_kind}_byte_closed_receiver_adapter",
+            **FALSE_AUTHORITY,
+        }
+    }
+    return ordered_unique(blockers), telemetry
+
+
+def _tensor_contract_handoff(
+    context: Mapping[str, Any],
+    *,
+    target_kind: str,
+) -> tuple[list[str], dict[str, Any]]:
+    contract_by_target = {
+        TENSOR_QUANTIZE_TARGET_KIND: (
+            "quantization_contract",
+            "family_agnostic_tensor_quantize",
+            "tensor_quantize",
+        ),
+        TENSOR_PRUNE_TARGET_KIND: (
+            "pruning_contract",
+            "family_agnostic_tensor_prune",
+            "tensor_prune",
+        ),
+        TENSOR_SHARED_CODEBOOK_TARGET_KIND: (
+            "codebook_contract",
+            "family_agnostic_tensor_shared_codebook",
+            "tensor_shared_codebook",
+        ),
+    }
+    if target_kind not in contract_by_target:
+        return [f"tensor_contract_handoff_unknown_target:{target_kind}"], {}
+    contract_key, receiver_contract_kind, blocker_prefix = contract_by_target[
+        target_kind
+    ]
+
+    blockers: list[str] = _string_list_context_value(context, "context_blockers")
+    if _path_context_value(context, "archive_path") is None:
+        blockers.append("materializer_context_missing:archive_path")
+    if _path_context_value(context, "tensor_manifest") is None:
+        blockers.append("materializer_context_missing:tensor_manifest")
+    if _path_context_value(context, contract_key) is None:
+        blockers.append(f"materializer_context_missing:{contract_key}")
+    if _path_context_value(context, "runtime_consumption_proof") is None:
+        blockers.append("materializer_context_missing:runtime_consumption_proof")
+    blockers.append(f"{blocker_prefix}_materializer_requires_byte_closed_adapter")
+    blockers.append(f"{blocker_prefix}_receiver_contract_handoff_is_planning_only")
+    telemetry = {
+        "receiver_contract_work_order": {
+            "schema": "tensor_receiver_contract_work_order.v1",
+            "target_kind": target_kind,
+            "receiver_contract_kind": receiver_contract_kind,
+            "required_context_fields": [
+                "archive_path",
+                "tensor_manifest",
+                contract_key,
+                "runtime_consumption_proof",
+            ],
+            "archive_path": _path_context_value(context, "archive_path"),
+            "tensor_manifest": _path_context_value(context, "tensor_manifest"),
+            contract_key: _path_context_value(context, contract_key),
+            "runtime_consumption_proof": _path_context_value(
+                context,
+                "runtime_consumption_proof",
+            ),
+            "next_required_adapter": f"{target_kind}_byte_closed_receiver_adapter",
+            **FALSE_AUTHORITY,
+        }
+    }
+    return ordered_unique(blockers), telemetry
+
+
 def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
     blockers = ["materializer_work_queue_local_proof_chain_only"]
     if target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND:
@@ -3081,6 +3193,13 @@ def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
                 "packet_member_merge_requires_runtime_consumption_proof",
             ]
         )
+    if target_kind == PACKET_MEMBER_REORDER_TARGET_KIND:
+        blockers.extend(
+            [
+                "packet_member_reorder_requires_order_independence_contract",
+                "packet_member_reorder_requires_runtime_consumption_proof",
+            ]
+        )
     if target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND:
         blockers.extend(
             [
@@ -3101,6 +3220,27 @@ def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
             [
                 "tensor_factorize_requires_cooperative_receiver",
                 "tensor_factorize_requires_runtime_consumption_proof",
+            ]
+        )
+    if target_kind == TENSOR_QUANTIZE_TARGET_KIND:
+        blockers.extend(
+            [
+                "tensor_quantize_requires_score_aware_contract",
+                "tensor_quantize_requires_runtime_consumption_proof",
+            ]
+        )
+    if target_kind == TENSOR_PRUNE_TARGET_KIND:
+        blockers.extend(
+            [
+                "tensor_prune_requires_score_aware_contract",
+                "tensor_prune_requires_runtime_consumption_proof",
+            ]
+        )
+    if target_kind == TENSOR_SHARED_CODEBOOK_TARGET_KIND:
+        blockers.extend(
+            [
+                "tensor_shared_codebook_requires_dictionary_contract",
+                "tensor_shared_codebook_requires_runtime_consumption_proof",
             ]
         )
     if target_kind == INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND:
@@ -3590,6 +3730,16 @@ def build_materializer_work_queue(
             blockers.extend(command_blockers)
         elif (
             unit_kind == "packet_member"
+            and operation_family == "member_reorder"
+            and target_kind == PACKET_MEMBER_REORDER_TARGET_KIND
+        ):
+            command_blockers, telemetry = _packet_member_contract_handoff(
+                context,
+                target_kind=PACKET_MEMBER_REORDER_TARGET_KIND,
+            )
+            blockers.extend(command_blockers)
+        elif (
+            unit_kind == "packet_member"
             and operation_family == "native_renderer_payload"
             and target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND
         ):
@@ -3625,6 +3775,36 @@ def build_materializer_work_queue(
                 target_kind=TENSOR_FACTORIZE_TARGET_KIND,
                 schema=TENSOR_FACTORIZE_SCHEMA,
                 )
+            )
+            blockers.extend(command_blockers)
+        elif (
+            unit_kind == "tensor"
+            and operation_family == "quantize_tensor"
+            and target_kind == TENSOR_QUANTIZE_TARGET_KIND
+        ):
+            command_blockers, telemetry = _tensor_contract_handoff(
+                context,
+                target_kind=TENSOR_QUANTIZE_TARGET_KIND,
+            )
+            blockers.extend(command_blockers)
+        elif (
+            unit_kind == "tensor"
+            and operation_family == "prune_tensor"
+            and target_kind == TENSOR_PRUNE_TARGET_KIND
+        ):
+            command_blockers, telemetry = _tensor_contract_handoff(
+                context,
+                target_kind=TENSOR_PRUNE_TARGET_KIND,
+            )
+            blockers.extend(command_blockers)
+        elif (
+            unit_kind == "tensor"
+            and operation_family == "shared_codebook_tensor"
+            and target_kind == TENSOR_SHARED_CODEBOOK_TARGET_KIND
+        ):
+            command_blockers, telemetry = _tensor_contract_handoff(
+                context,
+                target_kind=TENSOR_SHARED_CODEBOOK_TARGET_KIND,
             )
             blockers.extend(command_blockers)
         elif (
@@ -3724,6 +3904,20 @@ def build_materializer_work_queue(
                     "command": command,
                     "postconditions": postconditions,
                     "telemetry": telemetry,
+                    "materializer_context_closure_plan": (
+                        _context_mapping_value(
+                            context,
+                            "targeted_chain_context_closure_plan",
+                        )
+                        or None
+                    ),
+                    "receiver_runtime_binding_context": (
+                        _context_mapping_value(
+                            context,
+                            "receiver_runtime_binding_context",
+                        )
+                        or None
+                    ),
                     "renderer_payload_dfl1_parity_context": (
                         dfl1_parity_context or None
                     ),

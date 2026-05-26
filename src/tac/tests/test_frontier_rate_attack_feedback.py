@@ -2525,24 +2525,79 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert "packet_member_zip_header_elide_v1" in handoff[
         "registered_chain_targets"
     ]
-    assert "tensor_quantize_v1" not in handoff["registered_chain_targets"]
+    assert {
+        "archive_section_header_elide_v1",
+        "packet_member_reorder_v1",
+        "tensor_quantize_v1",
+        "tensor_prune_v1",
+        "tensor_shared_codebook_v1",
+        "inverse_steganalysis_high_level_operation_set_v1",
+    }.issubset(set(handoff["registered_chain_targets"]))
     assert "segnet_component_response" in handoff["unregistered_chain_targets"]
     assert handoff["work_queue_row_count"] == handoff[
+        "registered_chain_target_count"
+    ]
+    assert handoff["context_closure_plan_count"] == handoff[
         "registered_chain_target_count"
     ]
     assert handoff["materializer_work_queue"]["schema"] == (
         "byte_shaving_materializer_work_queue.v1"
     )
     assert handoff["materializer_work_queue"]["blocked_row_count"] >= 1
+    context_closure_by_target = {
+        plan["target_kind"]: plan for plan in handoff["context_closure_plans"]
+    }
+    packet_merge_plan = context_closure_by_target["packet_member_merge_v1"]
+    _assert_false_authority(packet_merge_plan)
+    assert packet_merge_plan["schema"] == (
+        "frontier_rate_attack_targeted_component_chain_materializer_context_closure_plan.v1"
+    )
+    assert "merge_contract" in packet_merge_plan["missing_context_fields"]
+    assert "packet_member_merge_source_runtime_dir" in packet_merge_plan[
+        "provided_context_fields"
+    ]
+    assert packet_merge_plan["receiver_proof_request"][
+        "parser_only_proof_rejected"
+    ] is True
+    tensor_quantize_plan = context_closure_by_target["tensor_quantize_v1"]
+    assert "quantization_contract" in tensor_quantize_plan[
+        "missing_context_fields"
+    ]
+    assert "runtime_consumption_proof" in tensor_quantize_plan[
+        "missing_context_fields"
+    ]
+    reorder_plan = context_closure_by_target["packet_member_reorder_v1"]
+    assert "member_order_contract" in reorder_plan["missing_context_fields"]
     packet_merge_rows = [
         row
         for row in handoff["materializer_work_queue"]["rows"]
         if row["target_kind"] == "packet_member_merge_v1"
     ]
     assert packet_merge_rows
+    assert packet_merge_rows[0]["materializer_context_closure_plan"][
+        "target_kind"
+    ] == "packet_member_merge_v1"
     assert "materializer_context_missing:merge_contract" in packet_merge_rows[0][
         "materialization_blockers"
     ]
+    packet_reorder_rows = [
+        row
+        for row in handoff["materializer_work_queue"]["rows"]
+        if row["target_kind"] == "packet_member_reorder_v1"
+    ]
+    assert packet_reorder_rows
+    assert packet_reorder_rows[0]["telemetry"]["receiver_contract_work_order"][
+        "schema"
+    ] == "packet_member_receiver_contract_work_order.v1"
+    tensor_quantize_rows = [
+        row
+        for row in handoff["materializer_work_queue"]["rows"]
+        if row["target_kind"] == "tensor_quantize_v1"
+    ]
+    assert tensor_quantize_rows
+    assert tensor_quantize_rows[0]["telemetry"]["receiver_contract_work_order"][
+        "schema"
+    ] == "tensor_receiver_contract_work_order.v1"
 
 
 def test_post_auxiliary_targeted_component_refresh_reharvests_into_chain(

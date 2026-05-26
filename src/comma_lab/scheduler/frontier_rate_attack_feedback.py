@@ -48,7 +48,23 @@ from .byte_shaving_campaign_queue import (
     build_materializer_work_queue,
     materializer_contexts_from_payload,
 )
-from .byte_shaving_materializer_registry import registry_manifest
+from .byte_shaving_materializer_registry import (
+    ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+    ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND,
+    ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND,
+    ARCHIVE_SECTION_REORDER_TARGET_KIND,
+    BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
+    INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
+    PACKET_MEMBER_MERGE_TARGET_KIND,
+    PACKET_MEMBER_REORDER_TARGET_KIND,
+    PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+    RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+    TENSOR_FACTORIZE_TARGET_KIND,
+    TENSOR_PRUNE_TARGET_KIND,
+    TENSOR_QUANTIZE_TARGET_KIND,
+    TENSOR_SHARED_CODEBOOK_TARGET_KIND,
+    registry_manifest,
+)
 from .dqs1_local_first_queue import (
     DEFAULT_MLX_REFERENCE_CACHE_DIR,
     DEFAULT_QUEUE_ID,
@@ -175,6 +191,9 @@ TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_QUEUE_METADATA_SCHEMA = (
 )
 TARGETED_COMPONENT_CORRECTION_CHAIN_MATERIALIZER_HANDOFF_SCHEMA = (
     "frontier_rate_attack_targeted_component_correction_chain_materializer_handoff.v1"
+)
+TARGETED_COMPONENT_CHAIN_MATERIALIZER_CONTEXT_CLOSURE_PLAN_SCHEMA = (
+    "frontier_rate_attack_targeted_component_chain_materializer_context_closure_plan.v1"
 )
 QUEUE_FALSE_AUTHORITY_FALSE_OR_MISSING_FIELDS = tuple(
     field
@@ -6361,23 +6380,39 @@ def build_frontier_targeted_component_correction_materialization_queue(
 
 def _targeted_component_chain_rate_targets(row: Mapping[str, Any]) -> list[str]:
     dimensions = set(_string_list(row.get("targeted_dimensions")))
+    levels = set(_string_list(row.get("operation_levels")))
+    surfaces = dimensions | levels
     targets: list[str] = []
-    if {"bit", "byte"} & dimensions or int(row.get("saved_bytes_budget") or 0) > 0:
+    if {"bit", "byte", "packet_member"} & surfaces or int(row.get("saved_bytes_budget") or 0) > 0:
         targets.extend(
             [
-                "packet_member_merge_v1",
-                "packet_member_zip_header_elide_v1",
-                "byte_range_entropy_recode_v1",
+                RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+                PACKET_MEMBER_MERGE_TARGET_KIND,
+                PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+                BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
+                PACKET_MEMBER_REORDER_TARGET_KIND,
             ]
         )
-    if "tensor_channel" in dimensions:
+    if {"archive_section", "bit", "byte"} & surfaces or int(row.get("saved_bytes_budget") or 0) > 0:
         targets.extend(
             [
-                "tensor_quantize_v1",
-                "tensor_prune_v1",
-                "tensor_shared_codebook_v1",
+                ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+                ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND,
+                ARCHIVE_SECTION_REORDER_TARGET_KIND,
+                ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND,
             ]
         )
+    if {"tensor_channel", "training_substrate", "full_video"} & surfaces:
+        targets.extend(
+            [
+                TENSOR_FACTORIZE_TARGET_KIND,
+                TENSOR_QUANTIZE_TARGET_KIND,
+                TENSOR_PRUNE_TARGET_KIND,
+                TENSOR_SHARED_CODEBOOK_TARGET_KIND,
+            ]
+        )
+    if {"pixel", "region", "boundary", "frame", "pair", "batch", "scorer_axis"} & surfaces:
+        targets.append(INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND)
     return _unique_strings(targets)
 
 
@@ -6618,10 +6653,200 @@ def build_frontier_targeted_component_correction_chain_work_orders(
     return payload
 
 
+def _targeted_chain_required_context_fields(
+    *,
+    adapter: Mapping[str, Any],
+    target_kind: str,
+) -> list[str]:
+    fields = list(adapter.get("required_context_fields") or [])
+    if target_kind == BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND:
+        fields.extend(
+            [
+                "archive_path",
+                "schema_manifest",
+                "beam_probe_reports",
+                "source_runtime_dir",
+                "output_dir",
+                "runtime_consumption_proof",
+            ]
+        )
+    elif target_kind == PACKET_MEMBER_REORDER_TARGET_KIND:
+        fields.extend(
+            [
+                "archive_path",
+                "member_order_contract",
+                "runtime_consumption_proof",
+            ]
+        )
+    elif target_kind == RENDERER_PAYLOAD_DFL1_TARGET_KIND:
+        fields.extend(
+            [
+                "renderer_payload_dfl1_source_runtime_dir",
+                "renderer_payload_dfl1_candidate_runtime_dir",
+                "renderer_payload_dfl1_full_frame_file_list_or_entries",
+                "renderer_payload_dfl1_expected_full_frame_file_list_sha256",
+                "renderer_payload_dfl1_expected_full_frame_entry_count",
+                "renderer_payload_dfl1_full_frame_file_list_source",
+            ]
+        )
+    elif target_kind == TENSOR_FACTORIZE_TARGET_KIND:
+        fields.extend(["tensor_manifest", "factorization_contract_or_rank"])
+    elif target_kind == TENSOR_QUANTIZE_TARGET_KIND:
+        fields.extend(["tensor_manifest", "quantization_contract"])
+    elif target_kind == TENSOR_PRUNE_TARGET_KIND:
+        fields.extend(["tensor_manifest", "pruning_contract"])
+    elif target_kind == TENSOR_SHARED_CODEBOOK_TARGET_KIND:
+        fields.extend(["tensor_manifest", "codebook_contract"])
+    elif target_kind == ARCHIVE_SECTION_HEADER_ELIDE_TARGET_KIND:
+        fields.extend(["section_manifest", "header_elision_contract"])
+    elif target_kind == ARCHIVE_SECTION_REORDER_TARGET_KIND:
+        fields.extend(["section_manifest", "section_order_contract"])
+    elif target_kind == ARCHIVE_SECTION_PROCEDURALIZE_TARGET_KIND:
+        fields.extend(["section_manifest", "procedural_receiver_spec"])
+    elif target_kind == ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND:
+        fields.extend(["section_manifest"])
+    elif target_kind == INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND:
+        fields.extend(
+            [
+                "candidate_family",
+                "archive_grammar",
+                "receiver_contract_kind",
+                "operation_set_compiler",
+                "runtime_consumption_proof",
+            ]
+        )
+    return _unique_strings(fields)
+
+
+def _targeted_chain_context_field_present(
+    hints: Mapping[str, Any],
+    field: str,
+) -> bool:
+    aliases = {
+        "archive_member_name": ("archive_member_name", "member_name"),
+        "archive_byte_range": ("archive_byte_range", "byte_range"),
+        "factorization_contract_or_rank": ("factorization_contract", "rank"),
+        "output_manifest": ("output_manifest", "manifest_out", "json_out"),
+        "packet_member_merge_source_runtime_dir": (
+            "packet_member_merge_source_runtime_dir",
+            "source_runtime_dir",
+            "inflate_runtime_dir",
+        ),
+        "renderer_payload_dfl1_full_frame_file_list_or_entries": (
+            "renderer_payload_dfl1_full_frame_file_list",
+            "full_frame_file_list",
+            "renderer_payload_dfl1_full_frame_file_list_entries",
+            "full_frame_file_list_entries",
+        ),
+    }
+    keys = aliases.get(field, (field,))
+    for key in keys:
+        value = hints.get(key)
+        if value in (None, ""):
+            continue
+        if (
+            isinstance(value, Sequence)
+            and not isinstance(
+                value,
+                (str, bytes, bytearray),
+            )
+            and len(value) == 0
+        ):
+            continue
+        return True
+    return False
+
+
+def _targeted_chain_receiver_proof_request(
+    *,
+    target_kind: str,
+    adapter: Mapping[str, Any],
+    output_hint: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "schema": "targeted_component_chain_receiver_proof_request.v1",
+        "target_kind": target_kind,
+        "receiver_contract_id": adapter.get("receiver_contract_id"),
+        "receiver_contract_kind": adapter.get("receiver_contract_kind"),
+        "runtime_consumption_proof": output_hint.get("runtime_consumption_proof"),
+        "runtime_consumption_proof_out": output_hint.get(
+            "runtime_consumption_proof_out"
+        ),
+        "source_runtime_dir": output_hint.get("source_runtime_dir"),
+        "candidate_runtime_dir": output_hint.get("candidate_runtime_dir"),
+        "parser_only_proof_rejected": True,
+        "full_frame_inflate_parity_required": True,
+        "component_replay_required_before_budget_spend": True,
+        "exact_auth_eval_required_before_score_claim": True,
+        "allowed_use": "targeted_chain_receiver_proof_request_only",
+        "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _targeted_chain_context_closure_plan(
+    *,
+    work_order: Mapping[str, Any],
+    target_kind: str,
+    adapter: Mapping[str, Any],
+    output_hint: Mapping[str, Any],
+) -> dict[str, Any]:
+    required = _targeted_chain_required_context_fields(
+        adapter=adapter,
+        target_kind=target_kind,
+    )
+    missing = [
+        field
+        for field in required
+        if not _targeted_chain_context_field_present(output_hint, field)
+    ]
+    runtime_binding = {}
+    budget = work_order.get("targeted_correction_budget")
+    if isinstance(budget, Mapping) and isinstance(
+        budget.get("receiver_runtime_binding_context"),
+        Mapping,
+    ):
+        runtime_binding = dict(budget["receiver_runtime_binding_context"])
+    return {
+        "schema": TARGETED_COMPONENT_CHAIN_MATERIALIZER_CONTEXT_CLOSURE_PLAN_SCHEMA,
+        "source_operation_id": work_order.get("source_operation_id"),
+        "source_materialization_request_id": work_order.get(
+            "source_materialization_request_id"
+        ),
+        "target_kind": target_kind,
+        "materializer_id": adapter.get("materializer_id"),
+        "receiver_contract_id": adapter.get("receiver_contract_id"),
+        "receiver_contract_kind": adapter.get("receiver_contract_kind"),
+        "required_context_fields": required,
+        "provided_context_fields": [
+            field
+            for field in required
+            if _targeted_chain_context_field_present(output_hint, field)
+        ],
+        "missing_context_fields": missing,
+        "receiver_runtime_binding_context": runtime_binding,
+        "receiver_proof_request": _targeted_chain_receiver_proof_request(
+            target_kind=target_kind,
+            adapter=adapter,
+            output_hint=output_hint,
+        ),
+        "next_required_action": (
+            "fill_missing_context_fields_then_run_receiver_consumed_materializer"
+        ),
+        "ready_for_materializer_execution": False,
+        "ready_for_budget_spend": False,
+        "budget_spend_allowed": False,
+        "allowed_use": "targeted_chain_materializer_context_closure_only",
+        "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
 def _targeted_chain_materializer_portfolio_row(
     *,
     work_order: Mapping[str, Any],
     target_kind: str,
+    adapter: Mapping[str, Any],
     rank: int,
     default_output_root: str | Path | None,
 ) -> dict[str, Any]:
@@ -6637,12 +6862,19 @@ def _targeted_chain_materializer_portfolio_row(
     )
     priority = abs(float(lagrangian or 0.0)) + float(max(saved_bytes, 0)) * 1e-6
     output_hint: dict[str, Any] = {}
+    target_output_root: Path | None = None
     if default_output_root is not None:
-        output_hint["output_dir"] = str(
+        target_output_root = (
             Path(default_output_root)
             / "targeted_component_chain_materializers"
             / _slug_token(source_operation_id)
             / _slug_token(target_kind)
+        )
+        output_hint["output_dir"] = str(target_output_root)
+        output_hint["output_archive"] = str(target_output_root / "candidate.zip")
+        output_hint["output_manifest"] = str(target_output_root / "manifest.json")
+        output_hint["runtime_consumption_proof_out"] = str(
+            target_output_root / "runtime_consumption_proof.json"
         )
     runtime_binding = (
         budget.get("receiver_runtime_binding_context")
@@ -6664,9 +6896,42 @@ def _targeted_chain_materializer_portfolio_row(
     if archive_path:
         output_hint["archive_path"] = archive_path
         output_hint["source_archive"] = archive_path
+    output_hint["target_kind"] = target_kind
+    output_hint["materializer_id"] = adapter.get("materializer_id")
+    output_hint["receiver_contract_id"] = adapter.get("receiver_contract_id")
+    output_hint["receiver_contract_kind"] = adapter.get("receiver_contract_kind")
+    output_hint["candidate_family"] = (
+        "targeted_component_correction_chain"
+    )
+    output_hint["accepted_correction_families"] = list(
+        budget.get("accepted_correction_families") or []
+    )
     if runtime_dir:
         output_hint["source_runtime_dir"] = runtime_dir
         output_hint["inflate_runtime_dir"] = runtime_dir
+        output_hint["packet_member_merge_source_runtime_dir"] = runtime_dir
+        output_hint["tensor_source_runtime_dir"] = runtime_dir
+        output_hint["renderer_payload_dfl1_source_runtime_dir"] = runtime_dir
+    candidate_runtime = (
+        budget.get("candidate_submission_dir")
+        or runtime_binding.get("candidate_submission_dir")
+    )
+    if candidate_runtime:
+        output_hint["candidate_runtime_dir"] = candidate_runtime
+        output_hint["renderer_payload_dfl1_candidate_runtime_dir"] = (
+            candidate_runtime
+        )
+    closure_plan = _targeted_chain_context_closure_plan(
+        work_order=work_order,
+        target_kind=target_kind,
+        adapter=adapter,
+        output_hint=output_hint,
+    )
+    output_hint["receiver_runtime_binding_context"] = dict(runtime_binding)
+    output_hint["targeted_chain_context_closure_plan"] = closure_plan
+    output_hint["targeted_chain_receiver_proof_request"] = dict(
+        closure_plan["receiver_proof_request"]
+    )
     return {
         "operation_id": (
             f"{source_operation_id}:{_slug_token(target_kind)}:{rank:03d}"
@@ -6691,6 +6956,7 @@ def _targeted_chain_materializer_portfolio_row(
             "targeted_correction_budget": dict(budget),
             "chain_targets": list(work_order.get("chain_targets") or []),
             "best_context_hint": output_hint,
+            "context_closure_plan": closure_plan,
             "candidate_saved_bytes": saved_bytes,
             **FALSE_AUTHORITY,
         },
@@ -6757,6 +7023,7 @@ def build_frontier_targeted_component_correction_chain_materializer_handoff(
             portfolio_row = _targeted_chain_materializer_portfolio_row(
                 work_order=work_order,
                 target_kind=target,
+                adapter=adapter,
                 rank=rank,
                 default_output_root=default_output_root,
             )
@@ -6805,6 +7072,13 @@ def build_frontier_targeted_component_correction_chain_materializer_handoff(
         source_plan_path=None,
         limit=target_limit,
     )
+    context_closure_plans = [
+        dict(params["targeted_chain_context_closure_plan"])
+        for row in backlog_rows
+        for params in (row.get("operation_params"),)
+        if isinstance(params, Mapping)
+        and isinstance(params.get("targeted_chain_context_closure_plan"), Mapping)
+    ]
     payload = {
         "schema": TARGETED_COMPONENT_CORRECTION_CHAIN_MATERIALIZER_HANDOFF_SCHEMA,
         "generated_at_utc": _utc_now(),
@@ -6826,6 +7100,8 @@ def build_frontier_targeted_component_correction_chain_materializer_handoff(
             "executable_row_count"
         ),
         "blocked_work_row_count": materializer_work_queue.get("blocked_row_count"),
+        "context_closure_plan_count": len(context_closure_plans),
+        "context_closure_plans": context_closure_plans,
         "materializer_backlog": materializer_backlog,
         "materializer_contexts": materializer_contexts,
         "materializer_work_queue": materializer_work_queue,
