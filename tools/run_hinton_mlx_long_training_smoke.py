@@ -561,16 +561,52 @@ def main(argv: list[str] | None = None) -> int:
     if telemetry_path is not None and not telemetry_path.is_absolute():
         telemetry_path = REPO_ROOT / telemetry_path
 
+    # Per HINTON-MLX-FIRST-LOCAL-PIVOT 2026-05-26 + Catalog #229 PV:
+    # the canonical Slot 1 ``effective_epochs_for_stage`` clamps
+    # ``smoke_epochs_per_stage`` to ``min(smoke_epochs, stage.epochs)``.
+    # The default SMOKE_CURRICULUM_DEFAULT has stage.epochs=100, so any
+    # ``--smoke-epochs > 100`` value is silently clamped. To honor the
+    # operator's stated convergence-extension semantics (extend the smoke
+    # past 100 epochs to test saturation hypothesis per HINTON-MLX-BUNDLE
+    # 2026-05-25 Path B reactivation criterion), dynamically scale the
+    # curriculum's ``stage.epochs`` to match the requested
+    # ``--smoke-epochs``. This is non-mutation engineering per Catalog
+    # #110/#113: the module-level SMOKE_CURRICULUM_DEFAULT remains
+    # canonical; we rebuild a sister curriculum at runtime only when the
+    # operator explicitly asks for a longer training horizon.
+    requested_smoke_epochs = max(1, args.smoke_epochs)
+    if requested_smoke_epochs > SMOKE_CURRICULUM_DEFAULT[0].epochs:
+        # Build a sister curriculum whose stage.epochs >= requested
+        # smoke_epochs so the canonical clamp at
+        # ``effective_epochs_for_stage`` becomes a no-op.
+        runtime_curriculum = (
+            dataclasses.replace(
+                SMOKE_CURRICULUM_DEFAULT[0],
+                epochs=requested_smoke_epochs,
+                notes=(
+                    f"HINTON-MLX-FIRST-LOCAL-PIVOT 2026-05-26 extended "
+                    f"single-stage curriculum: stage.epochs scaled from "
+                    f"{SMOKE_CURRICULUM_DEFAULT[0].epochs} to "
+                    f"{requested_smoke_epochs} to honor --smoke-epochs "
+                    f"per HINTON-MLX-BUNDLE 2026-05-25 Path B "
+                    f"reactivation criterion (extend training to test "
+                    f"saturation hypothesis at 1000ep/3000ep). Canonical "
+                    f"Slot 1 LR + batch_size preserved."
+                ),
+            ),
+        )
+    else:
+        runtime_curriculum = SMOKE_CURRICULUM_DEFAULT
     config = LongTrainingConfig(
         source_video_path=source_video_path,
         latent_dim=args.latent_dim,
         base_channels=args.base_channels,
         eval_size=args.eval_size,
-        curriculum=SMOKE_CURRICULUM_DEFAULT,
+        curriculum=runtime_curriculum,
         checkpoint_root=checkpoint_root,
         telemetry_path=telemetry_path,
         smoke_mode=True,
-        smoke_epochs_per_stage=args.smoke_epochs,
+        smoke_epochs_per_stage=requested_smoke_epochs,
         checkpoint_every_epochs=args.checkpoint_every_epochs,
         max_frames=args.max_frames,
         random_seed=args.random_seed,
