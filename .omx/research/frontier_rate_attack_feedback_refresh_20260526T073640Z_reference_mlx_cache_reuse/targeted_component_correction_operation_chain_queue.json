@@ -211,7 +211,44 @@
             "bit",
             "byte"
           ]
-        }
+        },
+        "targeted_drop_many_local_plan_queueable": true,
+        "targeted_drop_many_pairset_acquisition_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_operation_chain/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/targeted_drop_many_pairset/targeted_drop_many_pairset_acquisition.json",
+        "targeted_drop_many_rate_budget_policy": {
+          "allowed_use": "drop_many_stage_rate_budget_planning_only",
+          "budget_spend_allowed": false,
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "correction_budget_role": "use receiver-closed byte savings to explore multi-pair/geometry-safe correction candidates before exact spend",
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
+          "freed_bytes_destination": "targeted_component_correction_acquisition",
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "frontier_rate_attack_targeted_drop_many_budget_policy.v1",
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "spend_requires": [
+            "receiver_contract_satisfied",
+            "paired_candidate_reference_component_response",
+            "total_lagrangian_improvement",
+            "exact_axis_auth_eval_before_score_claim"
+          ]
+        },
+        "targeted_drop_many_selected_family_targets": [
+          "drop_within_selected_set_masked_boundary",
+          "inverse_scorer_cell_basis_expansion",
+          "pose_stable_pair_frame_motion_correction",
+          "full_video_batch_residual_budget_reallocation"
+        ],
+        "targeted_drop_many_stage_inputs_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_operation_chain/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/targeted_drop_many_stage_inputs.json"
       },
       "priority": 1,
       "status": "queued",
@@ -317,6 +354,113 @@
             "recursive": false
           },
           "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_frontier_targeted_drop_many_stage_inputs.py",
+            "--operation-chain-stage-plan",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_operation_chain/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/stage_plan.json",
+            "--stage-inputs-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_operation_chain/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/targeted_drop_many_stage_inputs.json",
+            "--output-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_operation_chain/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/targeted_drop_many_pairset",
+            "--overwrite"
+          ],
+          "id": "emit_targeted_drop_many_stage_inputs",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "frontier_rate_attack_targeted_drop_many_stage_inputs.v1",
+              "key": "schema",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_operation_chain/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/targeted_drop_many_stage_inputs.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_operation_chain/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/targeted_drop_many_stage_inputs.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "exact_execution_ready",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_operation_chain/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/targeted_drop_many_stage_inputs.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_operation_chain_stage_plan"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_operation_chain/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/targeted_drop_many_stage_inputs.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_operation_chain/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/stage_plan.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/plan_decoder_q_pairset_acquisition.py",
+            "--selector-pareto",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/dqs1_gap_uleb_selector_pareto.json",
+            "--drop-many-counts",
+            "3,4,6,8,12,16",
+            "--max-drop-many",
+            "96",
+            "--pair-frame-geometry-lattice-json",
+            ".omx/research/codex_pair_frame_geometry_lattice_20260525T151102Z/pair_frame_scorer_geometry_lattice.json",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_operation_chain/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/targeted_drop_many_pairset/targeted_drop_many_pairset_acquisition.json"
+          ],
+          "id": "run_targeted_drop_many_pairset_acquisition",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "decoder_q_pairset_acquisition.v1",
+              "key": "schema",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_operation_chain/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/targeted_drop_many_pairset/targeted_drop_many_pairset_acquisition.json",
+              "type": "json_equals"
+            },
+            {
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_operation_chain/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/targeted_drop_many_pairset/targeted_drop_many_pairset_acquisition.json",
+              "type": "json_false_authority"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_operation_chain/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/targeted_drop_many_pairset/targeted_drop_many_pairset_acquisition.json",
+              "type": "json_equals"
+            }
+          ],
+          "requires": [
+            "emit_targeted_drop_many_stage_inputs"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_operation_chain/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/targeted_drop_many_pairset/targeted_drop_many_pairset_acquisition.json"
+            ],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [
+              "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/frontier_operation_chain_compiler/frontier_rate_attack_reference_mlx_cache_reuse_20260526t073640z_component_operation_chain/targeted_component_chain_targeted_component_materialization_packet_member_merge_cbe7d79124ba_001/targeted_drop_many_stage_inputs.json"
+            ],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 180
         }
       ],
       "tags": [

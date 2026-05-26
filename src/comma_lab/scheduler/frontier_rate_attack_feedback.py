@@ -12,6 +12,10 @@ from pathlib import Path
 from typing import Any
 
 from comma_lab.storage_tiers import DEFAULT_RESERVE_FREE_GB
+from tac.hnerv_lowlevel_packer import (
+    HnervLowlevelPackError,
+    read_strict_single_member_zip,
+)
 from tac.optimization.dqs1_materializer_feedback_bridge import (
     DQS1_OBSERVATION_SOURCE_SCHEMA,
     DQS1_OBSERVATION_SWEEP_CONFIG_ID,
@@ -105,6 +109,9 @@ OPERATION_CHAIN_COMPILER_QUEUE_METADATA_SCHEMA = (
     "frontier_rate_attack_operation_chain_compiler_queue_metadata.v1"
 )
 BYTE_RANGE_STAGE_INPUTS_SCHEMA = "frontier_rate_attack_byte_range_stage_inputs.v1"
+TARGETED_DROP_MANY_STAGE_INPUTS_SCHEMA = (
+    "frontier_rate_attack_targeted_drop_many_stage_inputs.v1"
+)
 MATERIALIZER_EXACT_READINESS_BRIDGE_SCHEMA = (
     "materializer_chain_exact_readiness_bridge_report.v1"
 )
@@ -124,6 +131,9 @@ MATERIALIZER_SUBMISSION_CLOSURE_TOOL = (
     "tools/build_materializer_submission_closure.py"
 )
 BYTE_RANGE_STAGE_INPUTS_TOOL = "tools/build_frontier_byte_range_stage_inputs.py"
+TARGETED_DROP_MANY_STAGE_INPUTS_TOOL = (
+    "tools/build_frontier_targeted_drop_many_stage_inputs.py"
+)
 BYTE_RANGE_CHAIN_TOOL = "tools/run_byte_range_entropy_recode_chain.py"
 MATERIALIZER_CHAIN_HARVEST_REPORT_SCHEMA = "materializer_chain_harvest_report.v1"
 MATERIALIZER_SUBMISSION_CLOSURE_REPORT_SCHEMA = (
@@ -191,6 +201,14 @@ _DEFAULT_BYTE_RANGE_SOURCE_RUNTIME_DIR_PATHS = (
     "submissions/hnerv_lc_ac",
     "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/source/submissions/hnerv_lc_ac",
     "experiments/results/public_pr_archive_release_view/public_pr103_intake_20260505_auto/source/submissions/hnerv_lc_ac",
+)
+_DEFAULT_SELECTOR_PARETO_PATHS = (
+    "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/dqs1_gap_uleb_selector_pareto.json",
+    "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_gap_uleb_selector_pareto_20260522.json",
+)
+_DEFAULT_PAIR_FRAME_GEOMETRY_LATTICE_PATHS = (
+    ".omx/research/codex_pair_frame_geometry_lattice_20260525T151102Z/pair_frame_scorer_geometry_lattice.json",
+    ".omx/research/codex_pair_frame_geometry_lattice_20260525T151102Z/dqs1_pairset_acquisition_geometry_lattice.json",
 )
 
 _OPERATION_LEVELS = (
@@ -7056,6 +7074,47 @@ def _byte_range_source_from_schema_manifest(
     return resolved, str(source.get("member_name") or "")
 
 
+def _byte_range_member_name_from_single_member_archive(
+    source_archive: Path | None,
+    *,
+    repo_root: Path,
+) -> tuple[str, dict[str, Any]]:
+    if source_archive is None:
+        return "", {
+            "status": "not_attempted",
+            "reason": "source_archive_missing",
+            **FALSE_AUTHORITY,
+        }
+    record: dict[str, Any] = {
+        "source_archive": _repo_rel(source_archive, repo_root),
+        **FALSE_AUTHORITY,
+    }
+    if not source_archive.is_file():
+        return "", {
+            **record,
+            "status": "failed",
+            "reason": "source_archive_not_file",
+        }
+    try:
+        archive = read_strict_single_member_zip(source_archive)
+    except HnervLowlevelPackError as exc:
+        return "", {
+            **record,
+            "status": "failed",
+            "reason": "not_strict_single_member_zip",
+            "error": str(exc),
+        }
+    return archive.member_name, {
+        **record,
+        "status": "inferred",
+        "inference_rule": "strict_single_member_zip",
+        "member_name": archive.member_name,
+        "archive_bytes": archive.archive_bytes,
+        "archive_sha256": archive.archive_sha256,
+        "member_bytes": archive.member_bytes,
+    }
+
+
 def _byte_range_path_records(
     paths: Sequence[Path],
     *,
@@ -7277,9 +7336,16 @@ def build_frontier_byte_range_stage_inputs(
             repo_root=repo,
         )
     )
+    inferred_member_name, member_name_inference = (
+        _byte_range_member_name_from_single_member_archive(
+            source_archive_path,
+            repo_root=repo,
+        )
+    )
     selected_member_name = str(
         member_name
         or ("" if disable_default_byte_range_context else default_member_name)
+        or inferred_member_name
         or ""
     )
 
@@ -7340,6 +7406,7 @@ def build_frontier_byte_range_stage_inputs(
         ),
         "global_combo_report": _repo_rel(combo_path, repo) if combo_path else "",
         "member_name": selected_member_name,
+        "member_name_inference": member_name_inference,
         "output_dir": _repo_rel(output_dir, repo),
         "chain_output_dir": _repo_rel(output_dir, repo),
         "fail_if_receiver_blocked": False,
@@ -7445,6 +7512,259 @@ def build_frontier_byte_range_stage_inputs(
     return payload
 
 
+def _targeted_drop_many_stage_command(
+    *,
+    selector_pareto: Path,
+    pair_frame_geometry_lattice: Path,
+    output_path: Path,
+    drop_many_counts: str,
+    max_drop_many: int,
+    repo_root: Path,
+) -> list[str]:
+    return [
+        ".venv/bin/python",
+        "tools/plan_decoder_q_pairset_acquisition.py",
+        "--selector-pareto",
+        _repo_rel(selector_pareto, repo_root),
+        "--drop-many-counts",
+        drop_many_counts,
+        "--max-drop-many",
+        str(max_drop_many),
+        "--pair-frame-geometry-lattice-json",
+        _repo_rel(pair_frame_geometry_lattice, repo_root),
+        "--json-out",
+        _repo_rel(output_path, repo_root),
+    ]
+
+
+def _stage_targets_any(
+    operation_chain_stage_plan: Mapping[str, Any],
+    *,
+    stage_id: str,
+) -> list[str]:
+    stage_row = _stage_row_by_id(operation_chain_stage_plan, stage_id)
+    return _string_list(stage_row.get("targets")) if stage_row else []
+
+
+def build_frontier_targeted_drop_many_stage_inputs(
+    *,
+    repo_root: str | Path,
+    operation_chain_stage_plan: Mapping[str, Any],
+    stage_id: str = "scorer_sensitive_operation_selection",
+    selector_pareto: str | Path | None = None,
+    pair_frame_geometry_lattice: str | Path | None = None,
+    output_dir: str | Path | None = None,
+    drop_many_counts: str = "3,4,6,8,12,16",
+    max_drop_many: int = 96,
+) -> dict[str, Any]:
+    """Bind high-level targeted correction families into a drop-many plan step."""
+
+    repo = Path(repo_root)
+    require_no_truthy_authority_fields(
+        operation_chain_stage_plan,
+        context="targeted_drop_many_stage_plan",
+    )
+    if operation_chain_stage_plan.get("schema") != OPERATION_CHAIN_COMPILER_STAGE_PLAN_SCHEMA:
+        raise FrontierRateAttackFeedbackError(
+            "operation chain stage plan schema mismatch"
+        )
+    if max_drop_many < 0:
+        raise FrontierRateAttackFeedbackError("max_drop_many must be >= 0")
+    if not drop_many_counts.strip():
+        raise FrontierRateAttackFeedbackError("drop_many_counts must be non-empty")
+
+    stage_row = _stage_row_by_id(operation_chain_stage_plan, stage_id)
+    stage_targets = _stage_targets_any(
+        operation_chain_stage_plan,
+        stage_id=stage_id,
+    )
+    drop_many_family_targets = [
+        "drop_within_selected_set_masked_boundary",
+        "inverse_scorer_cell_basis_expansion",
+        "pose_stable_pair_frame_motion_correction",
+        "full_video_batch_residual_budget_reallocation",
+    ]
+    selected_family_targets = [
+        target for target in drop_many_family_targets if target in stage_targets
+    ]
+    target_present = bool(selected_family_targets)
+    selector_path = (
+        _resolve_path(selector_pareto, repo_root=repo)
+        if selector_pareto is not None
+        else _first_existing_repo_file(repo, _DEFAULT_SELECTOR_PARETO_PATHS)
+    )
+    lattice_path = (
+        _resolve_path(pair_frame_geometry_lattice, repo_root=repo)
+        if pair_frame_geometry_lattice is not None
+        else _first_existing_repo_file(repo, _DEFAULT_PAIR_FRAME_GEOMETRY_LATTICE_PATHS)
+    )
+    plan_output_dir = (
+        _resolve_path(output_dir, repo_root=repo)
+        if output_dir is not None
+        else _resolve_path(
+            "experiments/results/frontier_operation_chain_compiler/"
+            f"{_slug_token(stage_id)}_targeted_drop_many",
+            repo_root=repo,
+        )
+    )
+    plan_output_path = plan_output_dir / "targeted_drop_many_pairset_acquisition.json"
+
+    context_blockers: list[str] = []
+    selector_summary: dict[str, Any] = {}
+    lattice_summary: dict[str, Any] = {}
+    if stage_row is None:
+        context_blockers.append(f"operation_chain_stage_missing:{stage_id}")
+    if not target_present:
+        context_blockers.append("targeted_drop_many_family_missing_from_stage")
+    if selector_path is None or not selector_path.is_file():
+        context_blockers.append("targeted_drop_many_stage_missing:selector_pareto")
+    else:
+        selector_payload = _load_json(selector_path)
+        require_no_truthy_authority_fields(
+            selector_payload,
+            context=f"targeted_drop_many_selector_pareto:{selector_path}",
+        )
+        if selector_payload.get("schema") != "decoder_q_selective_selector_pareto.v1":
+            context_blockers.append("targeted_drop_many_stage_bad_selector_schema")
+        selector_summary = {
+            "schema": selector_payload.get("schema"),
+            "candidate_count": (
+                selector_payload.get("summary", {}).get("candidate_count")
+                if isinstance(selector_payload.get("summary"), Mapping)
+                else None
+            ),
+            "recommended_selector_id": (
+                selector_payload.get("summary", {}).get("recommended_selector_id")
+                if isinstance(selector_payload.get("summary"), Mapping)
+                else None
+            ),
+            **FALSE_AUTHORITY,
+        }
+    if lattice_path is None or not lattice_path.is_file():
+        context_blockers.append(
+            "targeted_drop_many_stage_missing:pair_frame_geometry_lattice"
+        )
+    else:
+        lattice_payload = _load_json(lattice_path)
+        require_no_truthy_authority_fields(
+            lattice_payload,
+            context=f"targeted_drop_many_pair_frame_geometry_lattice:{lattice_path}",
+        )
+        if lattice_payload.get("schema") != PAIR_FRAME_GEOMETRY_LATTICE_SCHEMA:
+            context_blockers.append(
+                "targeted_drop_many_stage_bad_pair_frame_geometry_lattice_schema"
+            )
+        lattice_summary = {
+            "schema": lattice_payload.get("schema"),
+            "row_count": (
+                lattice_payload.get("summary", {}).get("row_count")
+                if isinstance(lattice_payload.get("summary"), Mapping)
+                else None
+            ),
+            "queue_executable_request_count": (
+                lattice_payload.get("summary", {}).get(
+                    "queue_executable_request_count"
+                )
+                if isinstance(lattice_payload.get("summary"), Mapping)
+                else None
+            ),
+            "drop_counts": (
+                lattice_payload.get("summary", {}).get("drop_counts")
+                if isinstance(lattice_payload.get("summary"), Mapping)
+                else []
+            ),
+            "geometry_coverage": (
+                lattice_payload.get("coverage", {}).get("geometry_coverage")
+                if isinstance(lattice_payload.get("coverage"), Mapping)
+                else None
+            ),
+            **FALSE_AUTHORITY,
+        }
+
+    local_plan_queueable = not context_blockers
+    plan_command: list[str] = []
+    if local_plan_queueable and selector_path is not None and lattice_path is not None:
+        plan_command = _targeted_drop_many_stage_command(
+            selector_pareto=selector_path,
+            pair_frame_geometry_lattice=lattice_path,
+            output_path=plan_output_path,
+            drop_many_counts=drop_many_counts,
+            max_drop_many=max_drop_many,
+            repo_root=repo,
+        )
+
+    payload = {
+        "schema": TARGETED_DROP_MANY_STAGE_INPUTS_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "source_operation_id": operation_chain_stage_plan.get("source_operation_id"),
+        "stage_id": stage_id,
+        "stage_targets": stage_targets,
+        "selected_family_targets": selected_family_targets,
+        "target_present": target_present,
+        "required_before_execution": (
+            _string_list(stage_row.get("required_before_execution"))
+            if stage_row
+            else []
+        ),
+        "selector_pareto_path": _repo_rel(selector_path, repo) if selector_path else "",
+        "pair_frame_geometry_lattice_path": (
+            _repo_rel(lattice_path, repo) if lattice_path else ""
+        ),
+        "selector_pareto_summary": selector_summary,
+        "pair_frame_geometry_lattice_summary": lattice_summary,
+        "drop_many_counts": drop_many_counts,
+        "max_drop_many": max_drop_many,
+        "local_plan_queueable": local_plan_queueable,
+        "local_plan_command": plan_command,
+        "pairset_acquisition_path": _repo_rel(plan_output_path, repo),
+        "rate_budget_policy": {
+            "schema": "frontier_rate_attack_targeted_drop_many_budget_policy.v1",
+            "freed_bytes_destination": "targeted_component_correction_acquisition",
+            "correction_budget_role": (
+                "use receiver-closed byte savings to explore multi-pair/"
+                "geometry-safe correction candidates before exact spend"
+            ),
+            "spend_requires": [
+                "receiver_contract_satisfied",
+                "paired_candidate_reference_component_response",
+                "total_lagrangian_improvement",
+                "exact_axis_auth_eval_before_score_claim",
+            ],
+            "budget_spend_allowed": False,
+            "allowed_use": "drop_many_stage_rate_budget_planning_only",
+            "forbidden_use": "score_claim_or_dispatch_or_budget_spend_authority",
+            **FALSE_AUTHORITY,
+        },
+        "targeted_correction_budget": dict(
+            operation_chain_stage_plan.get("targeted_correction_budget")
+            if isinstance(
+                operation_chain_stage_plan.get("targeted_correction_budget"),
+                Mapping,
+            )
+            else {}
+        ),
+        "blockers": _unique_strings(
+            [
+                *context_blockers,
+                "targeted_drop_many_requires_component_replay_before_budget_spend",
+                "targeted_drop_many_requires_exact_readiness_before_dispatch",
+            ]
+        ),
+        "exact_execution_ready": False,
+        "budget_spend_allowed": False,
+        "allowed_use": "queue_owned_targeted_drop_many_stage_input_binding_only",
+        "forbidden_use": (
+            "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+        ),
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        payload,
+        context=f"targeted_drop_many_stage_inputs:{stage_id}",
+    )
+    return payload
+
+
 def build_frontier_operation_chain_compiler_queue(
     *,
     repo_root: str | Path,
@@ -7484,6 +7804,13 @@ def build_frontier_operation_chain_compiler_queue(
         work_dir = queue_root / _slug_token(source_operation_id)
         stage_plan_path = work_dir / "stage_plan.json"
         byte_range_stage_inputs_path = work_dir / "byte_range_stage_inputs.json"
+        targeted_drop_many_stage_inputs_path = (
+            work_dir / "targeted_drop_many_stage_inputs.json"
+        )
+        targeted_drop_many_output_dir = work_dir / "targeted_drop_many_pairset"
+        targeted_drop_many_pairset_path = (
+            targeted_drop_many_output_dir / "targeted_drop_many_pairset_acquisition.json"
+        )
         byte_range_chain_output_dir = work_dir / "byte_range_entropy_recode_chain"
         byte_range_handoff_dir = byte_range_chain_output_dir / "exact_eval_handoff"
         byte_range_harvest_source_queue_path = byte_range_handoff_dir / "source_queue.json"
@@ -7513,6 +7840,13 @@ def build_frontier_operation_chain_compiler_queue(
             repo_root=repo,
             operation_chain_stage_plan=stage_plan_preview,
             chain_output_dir=byte_range_chain_output_dir,
+        )
+        targeted_drop_many_inputs_preview = (
+            build_frontier_targeted_drop_many_stage_inputs(
+                repo_root=repo,
+                operation_chain_stage_plan=stage_plan_preview,
+                output_dir=targeted_drop_many_output_dir,
+            )
         )
         steps: list[dict[str, Any]] = [
             {
@@ -7597,6 +7931,101 @@ def build_frontier_operation_chain_compiler_queue(
                 },
             },
         ]
+        if targeted_drop_many_inputs_preview.get("target_present") is True:
+            steps.append(
+                {
+                    "id": "emit_targeted_drop_many_stage_inputs",
+                    "kind": "command",
+                    "requires": ["emit_operation_chain_stage_plan"],
+                    "command": [
+                        ".venv/bin/python",
+                        TARGETED_DROP_MANY_STAGE_INPUTS_TOOL,
+                        "--operation-chain-stage-plan",
+                        _repo_rel(stage_plan_path, repo),
+                        "--stage-inputs-out",
+                        _repo_rel(targeted_drop_many_stage_inputs_path, repo),
+                        "--output-dir",
+                        _repo_rel(targeted_drop_many_output_dir, repo),
+                        "--overwrite",
+                    ],
+                    "resources": {"kind": "local_io_heavy"},
+                    "timeout_seconds": 120,
+                    "postconditions": [
+                        {
+                            "type": "json_equals",
+                            "path": _repo_rel(
+                                targeted_drop_many_stage_inputs_path,
+                                repo,
+                            ),
+                            "key": "schema",
+                            "equals": TARGETED_DROP_MANY_STAGE_INPUTS_SCHEMA,
+                        },
+                        {
+                            "type": "json_false_authority",
+                            "path": _repo_rel(
+                                targeted_drop_many_stage_inputs_path,
+                                repo,
+                            ),
+                        },
+                        {
+                            "type": "json_equals",
+                            "path": _repo_rel(
+                                targeted_drop_many_stage_inputs_path,
+                                repo,
+                            ),
+                            "key": "exact_execution_ready",
+                            "equals": False,
+                        },
+                    ],
+                    "telemetry": {
+                        "artifact_paths": [
+                            _repo_rel(targeted_drop_many_stage_inputs_path, repo)
+                        ],
+                        "input_artifact_paths": [_repo_rel(stage_plan_path, repo)],
+                        "include_postcondition_paths": True,
+                    },
+                }
+            )
+        if targeted_drop_many_inputs_preview.get("local_plan_queueable") is True:
+            steps.append(
+                {
+                    "id": "run_targeted_drop_many_pairset_acquisition",
+                    "kind": "command",
+                    "command": list(
+                        targeted_drop_many_inputs_preview["local_plan_command"]
+                    ),
+                    "requires": ["emit_targeted_drop_many_stage_inputs"],
+                    "resources": {"kind": "local_io_heavy"},
+                    "timeout_seconds": 180,
+                    "postconditions": [
+                        {
+                            "type": "json_equals",
+                            "path": _repo_rel(targeted_drop_many_pairset_path, repo),
+                            "key": "schema",
+                            "equals": "decoder_q_pairset_acquisition.v1",
+                        },
+                        {
+                            "type": "json_false_authority",
+                            "path": _repo_rel(targeted_drop_many_pairset_path, repo),
+                        },
+                        {
+                            "type": "json_equals",
+                            "path": _repo_rel(targeted_drop_many_pairset_path, repo),
+                            "key": "ready_for_exact_eval_dispatch",
+                            "equals": False,
+                        },
+                    ],
+                    "telemetry": {
+                        "artifact_paths": [
+                            _repo_rel(targeted_drop_many_pairset_path, repo)
+                        ],
+                        "input_artifact_paths": [
+                            _repo_rel(targeted_drop_many_stage_inputs_path, repo),
+                        ],
+                        "include_postcondition_paths": True,
+                    },
+                }
+            )
         if byte_range_inputs_preview.get("local_chain_queueable") is True:
             chain_manifest_path = str(byte_range_inputs_preview["chain_manifest_path"])
             steps.extend(
@@ -7871,6 +8300,34 @@ def build_frontier_operation_chain_compiler_queue(
                         byte_range_inputs_preview.get("rate_budget_policy")
                         if isinstance(
                             byte_range_inputs_preview.get("rate_budget_policy"),
+                            Mapping,
+                        )
+                        else {}
+                    ),
+                    "targeted_drop_many_stage_inputs_path": _repo_rel(
+                        targeted_drop_many_stage_inputs_path,
+                        repo,
+                    ),
+                    "targeted_drop_many_pairset_acquisition_path": _repo_rel(
+                        targeted_drop_many_pairset_path,
+                        repo,
+                    ),
+                    "targeted_drop_many_local_plan_queueable": (
+                        targeted_drop_many_inputs_preview.get("local_plan_queueable")
+                        is True
+                    ),
+                    "targeted_drop_many_selected_family_targets": list(
+                        targeted_drop_many_inputs_preview.get(
+                            "selected_family_targets"
+                        )
+                        or []
+                    ),
+                    "targeted_drop_many_rate_budget_policy": dict(
+                        targeted_drop_many_inputs_preview.get("rate_budget_policy")
+                        if isinstance(
+                            targeted_drop_many_inputs_preview.get(
+                                "rate_budget_policy"
+                            ),
                             Mapping,
                         )
                         else {}
@@ -10435,6 +10892,7 @@ __all__ = [
     "TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_RESPONSE_ROW_SCHEMA",
     "TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA",
+    "TARGETED_DROP_MANY_STAGE_INPUTS_SCHEMA",
     "FrontierRateAttackFeedbackError",
     "build_frontier_byte_range_stage_inputs",
     "build_frontier_operation_materializer_bridge",
@@ -10453,6 +10911,7 @@ __all__ = [
     "build_frontier_targeted_component_correction_response_harvest",
     "build_frontier_targeted_component_correction_response_harvest_from_artifacts",
     "build_frontier_targeted_component_correction_work_order",
+    "build_frontier_targeted_drop_many_stage_inputs",
     "build_receiver_closed_correction_budget",
     "discover_dqs1_observation_jsonl_paths",
     "discover_local_cpu_eureka_planning_signals",

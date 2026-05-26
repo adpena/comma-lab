@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -28,6 +29,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     TARGETED_COMPONENT_CORRECTION_MATERIALIZATION_REQUESTS_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_RESPONSE_HARVEST_SCHEMA,
     TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA,
+    TARGETED_DROP_MANY_STAGE_INPUTS_SCHEMA,
     FrontierRateAttackFeedbackError,
     build_frontier_byte_range_stage_inputs,
     build_frontier_operation_chain_compiler_queue,
@@ -44,6 +46,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     build_frontier_targeted_component_correction_response_harvest,
     build_frontier_targeted_component_correction_response_harvest_from_artifacts,
     build_frontier_targeted_component_correction_work_order,
+    build_frontier_targeted_drop_many_stage_inputs,
     build_receiver_closed_correction_budget,
     discover_local_cpu_eureka_planning_signals,
     discover_materializer_feedback_payloads,
@@ -644,6 +647,61 @@ def _operation_chain_stage_plan_payload() -> dict[str, object]:
     }
 
 
+def _targeted_drop_many_stage_plan_payload() -> dict[str, object]:
+    return {
+        "schema": OPERATION_CHAIN_COMPILER_STAGE_PLAN_SCHEMA,
+        **_false_authority(),
+        "source_operation_id": "targeted_component_chain_unit",
+        "source_operation_family": (
+            "targeted_component_correction_receiver_consumed_multi_op_chain"
+        ),
+        "chain_targets": [
+            "drop_within_selected_set_masked_boundary",
+            "inverse_scorer_cell_basis_expansion",
+            "pose_stable_pair_frame_motion_correction",
+            "full_video_batch_residual_budget_reallocation",
+        ],
+        "targeted_correction_budget": {
+            "schema": "frontier_rate_attack_targeted_chain_budget.v1",
+            **_false_authority(),
+            "saved_bytes_budget": 258,
+            "estimated_receiver_closed_rate_credit_score_units": 0.00017,
+            "budget_spend_allowed": False,
+        },
+        "stage_rows": [
+            {
+                "schema": "frontier_rate_attack_operation_chain_stage_row.v1",
+                **_false_authority(),
+                "stage_index": 1,
+                "stage_id": "scorer_sensitive_operation_selection",
+                "targets": [
+                    "drop_within_selected_set_masked_boundary",
+                    "inverse_scorer_cell_basis_expansion",
+                    "pose_stable_pair_frame_motion_correction",
+                    "full_video_batch_residual_budget_reallocation",
+                ],
+                "required_before_execution": [
+                    "paired_cpu_mlx_delta_model",
+                    "master_gradient_or_component_marginal_model",
+                    "chain_synergy_antagonism_model",
+                ],
+                "stage_ready_for_execution": False,
+                "blockers": [
+                    (
+                        "scorer_sensitive_operation_selection_requires:"
+                        "paired_cpu_mlx_delta_model"
+                    )
+                ],
+            }
+        ],
+        "blockers": [
+            "operation_chain_stage_plan_requires_materializer_context_binding",
+            "operation_chain_stage_plan_requires_single_runtime_consumption_proof",
+        ],
+        "execution_ready": False,
+    }
+
+
 def test_byte_range_stage_inputs_bind_existing_receiver_chain_context(
     tmp_path: Path,
 ) -> None:
@@ -741,6 +799,117 @@ def test_byte_range_stage_inputs_bind_existing_receiver_chain_context(
     written = json.loads(cli_out.read_text(encoding="utf-8"))
     assert written["schema"] == BYTE_RANGE_STAGE_INPUTS_SCHEMA
     assert written["ready_for_exact_eval_dispatch"] is False
+
+
+def test_targeted_drop_many_stage_inputs_bind_existing_eureka_geometry(
+    tmp_path: Path,
+) -> None:
+    stage_plan = _targeted_drop_many_stage_plan_payload()
+
+    payload = build_frontier_targeted_drop_many_stage_inputs(
+        repo_root=REPO_ROOT,
+        operation_chain_stage_plan=stage_plan,
+        output_dir=tmp_path / "targeted_drop_many",
+    )
+
+    assert payload["schema"] == TARGETED_DROP_MANY_STAGE_INPUTS_SCHEMA
+    _assert_false_authority(payload)
+    assert payload["target_present"] is True
+    assert payload["local_plan_queueable"] is True
+    assert payload["exact_execution_ready"] is False
+    assert payload["budget_spend_allowed"] is False
+    assert "drop_within_selected_set_masked_boundary" in payload[
+        "selected_family_targets"
+    ]
+    assert payload["selector_pareto_summary"]["candidate_count"] >= 1
+    assert payload["pair_frame_geometry_lattice_summary"][
+        "queue_executable_request_count"
+    ] >= 1
+    assert payload["local_plan_command"][:2] == [
+        ".venv/bin/python",
+        "tools/plan_decoder_q_pairset_acquisition.py",
+    ]
+    assert "--drop-many-counts" in payload["local_plan_command"]
+    assert payload["rate_budget_policy"]["budget_spend_allowed"] is False
+
+    stage_plan_path = _write_json(tmp_path / "stage_plan.json", stage_plan)
+    cli_out = tmp_path / "targeted_drop_many_stage_inputs.json"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "tools/build_frontier_targeted_drop_many_stage_inputs.py",
+            "--operation-chain-stage-plan",
+            str(stage_plan_path),
+            "--stage-inputs-out",
+            str(cli_out),
+            "--output-dir",
+            str(tmp_path / "targeted_drop_many_cli"),
+            "--overwrite",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    cli_payload = json.loads(result.stdout)
+    assert cli_payload["local_plan_queueable"] is True
+    written = json.loads(cli_out.read_text(encoding="utf-8"))
+    assert written["schema"] == TARGETED_DROP_MANY_STAGE_INPUTS_SCHEMA
+    assert written["ready_for_exact_eval_dispatch"] is False
+
+
+def test_byte_range_stage_inputs_infer_target_bound_single_member_name(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate_archive.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("__packet_member_merge_v1.bin", b"payload")
+    runtime_dir = tmp_path / "submission"
+    runtime_dir.mkdir()
+    (runtime_dir / "inflate.sh").write_text("#!/bin/sh\n", encoding="utf-8")
+    stage_plan = _operation_chain_stage_plan_payload()
+    stage_plan["source_operation_family"] = (
+        "targeted_component_correction_receiver_consumed_multi_op_chain"
+    )
+    stage_plan["targeted_correction_budget"] = {
+        "schema": "frontier_rate_attack_targeted_chain_budget.v1",
+        **_false_authority(),
+        "receiver_runtime_binding_context": {
+            "schema": (
+                "frontier_rate_attack_targeted_component_receiver_runtime_binding.v1"
+            ),
+            **_false_authority(),
+            "candidate_archive_path": archive.as_posix(),
+            "candidate_submission_dir": runtime_dir.as_posix(),
+            "binding_complete_for_component_eval": False,
+            "binding_complete_for_reference_eval": False,
+        },
+    }
+
+    payload = build_frontier_byte_range_stage_inputs(
+        repo_root=tmp_path,
+        operation_chain_stage_plan=stage_plan,
+        chain_output_dir=tmp_path / "targeted_byte_range_chain",
+    )
+
+    context = payload["materializer_context"]
+    assert payload["local_chain_queueable"] is False
+    assert context["default_pr103_context_disabled"] is True
+    assert context["source_archive"] == "candidate_archive.zip"
+    assert context["member_name"] == "__packet_member_merge_v1.bin"
+    assert context["member_name_inference"]["status"] == "inferred"
+    assert context["member_name_inference"]["inference_rule"] == (
+        "strict_single_member_zip"
+    )
+    assert "byte_range_stage_missing:member_name" not in context["context_blockers"]
+    assert "byte_range_stage_missing:schema_manifest" in context["context_blockers"]
+    assert "byte_range_stage_missing:beam_probe_reports" in context[
+        "context_blockers"
+    ]
+    assert "byte_range_stage_missing:source_runtime_dir" not in context[
+        "context_blockers"
+    ]
 
 
 def _write_default_byte_range_chain_context(repo: Path) -> None:
@@ -2247,13 +2416,35 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert "public_pr103_intake" not in byte_range_inputs["materializer_context"][
         "source_archive"
     ]
-    assert len(chain_queue["experiments"][0]["steps"]) == 2
+    assert len(chain_queue["experiments"][0]["steps"]) == 4
     assert {
         step["id"] for step in chain_queue["experiments"][0]["steps"]
     } == {
         "emit_operation_chain_stage_plan",
         "emit_byte_range_stage_inputs",
+        "emit_targeted_drop_many_stage_inputs",
+        "run_targeted_drop_many_pairset_acquisition",
     }
+    targeted_drop_many_step = next(
+        step
+        for step in chain_queue["experiments"][0]["steps"]
+        if step["id"] == "emit_targeted_drop_many_stage_inputs"
+    )
+    assert targeted_drop_many_step["requires"] == ["emit_operation_chain_stage_plan"]
+    targeted_drop_many_run = next(
+        step
+        for step in chain_queue["experiments"][0]["steps"]
+        if step["id"] == "run_targeted_drop_many_pairset_acquisition"
+    )
+    assert targeted_drop_many_run["requires"] == [
+        "emit_targeted_drop_many_stage_inputs"
+    ]
+    assert chain_queue["experiments"][0]["metadata"][
+        "targeted_drop_many_local_plan_queueable"
+    ] is True
+    assert "drop_within_selected_set_masked_boundary" in chain_queue["experiments"][0][
+        "metadata"
+    ]["targeted_drop_many_selected_family_targets"]
     handoff = build_frontier_targeted_component_correction_chain_materializer_handoff(
         repo_root=REPO_ROOT,
         targeted_component_correction_chain_work_orders=chain_work_orders,
