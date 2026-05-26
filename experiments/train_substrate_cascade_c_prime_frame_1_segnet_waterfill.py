@@ -428,7 +428,7 @@ def main(argv: list[str] | None = None) -> int:
     # edits": the shim re-exports the canonical inflate.py main.
     top_inflate_py = submission_dir / "inflate.py"
     top_inflate_py.write_text(
-        '#!/usr/bin/env python\n'
+        '#!/usr/bin/env python3\n'
         '# SPDX-License-Identifier: MIT\n'
         '"""Top-level inflate.py per contest 3-arg contract (archive_dir output_dir file_list)."""\n'
         'import sys\n'
@@ -438,7 +438,7 @@ def main(argv: list[str] | None = None) -> int:
         'sys.path.insert(0, str(HERE / "src"))\n'
         'from tac.substrates.cascade_c_prime_frame_1_segnet_waterfill.inflate import main_cli as main\n'
         'if __name__ == "__main__":\n'
-        '    sys.exit(main(sys.argv[1:]))\n'
+        '    sys.exit(main())\n'
     )
 
     # Top-level inflate.sh per Catalog #146 3-arg contest contract.
@@ -451,7 +451,7 @@ def main(argv: list[str] | None = None) -> int:
         'ARCHIVE_DIR="$1"\n'
         'OUTPUT_DIR="$2"\n'
         'FILE_LIST="$3"\n'
-        'PYBIN="${PYBIN:-python}"\n'
+        'PYBIN="${PYBIN:-${PYTHON:-${PYTHON_BIN:-${PACT_PYTHON_BIN:-${UV_PYTHON:-python3}}}}}"\n'
         'exec "$PYBIN" "$HERE/inflate.py" "$ARCHIVE_DIR" "$OUTPUT_DIR" "$FILE_LIST"\n'
     )
     os.chmod(top_inflate_sh, 0o755)
@@ -565,11 +565,17 @@ def main(argv: list[str] | None = None) -> int:
     stats_path.write_text(json.dumps(stats, indent=2, sort_keys=True, default=str))
     _log(f"stage_8_stats_persist_done path={stats_path}")
 
-    axis_label = "CUDA" if args.device in ("cuda", "gpu") else "CPU"
+    completion_axis_tag = str(stats.get("axis_tag") or "[advisory only]")
+    if not stats.get("auth_eval_skipped_reason"):
+        completion_axis_tag = str(
+            stats.get("auth_eval_lane_tag")
+            or stats.get("auth_eval_score_axis")
+            or completion_axis_tag
+        )
     _log(
         f"DONE lane={lane_id} archive_sha={archive_zip_sha[:16]}... "
         f"bytes={archive_zip_bytes} score={stats.get('auth_eval_score')} "
-        f"axis=[contest-{axis_label}] elapsed={elapsed_total:.1f}s"
+        f"axis={completion_axis_tag} elapsed={elapsed_total:.1f}s"
     )
     return 0
 

@@ -1,0 +1,21 @@
+{
+  "archive_dir": ".omx/research/cascade_c_prime_current_head_mlx_smoke_20260526T234734Z_codex/output/submission",
+  "command": "PYTHON=.venv/bin/python .omx/research/cascade_c_prime_current_head_mlx_smoke_20260526T234734Z_codex/output/submission/inflate.sh .omx/research/cascade_c_prime_current_head_mlx_smoke_20260526T234734Z_codex/output/submission /tmp/cascade_c_prime_inflate_check.9kHtMM/out /tmp/cascade_c_prime_inflate_check.9kHtMM/file_list.txt",
+  "file_list_lines": [
+    "0.mkv"
+  ],
+  "generated_at_utc": "2026-05-26T23:47:48Z",
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_runtime_consumed_archive": true,
+  "returncode": 0,
+  "runtime_axis_tag": "[macOS-MLX research-signal]",
+  "score_claim": false,
+  "stderr_excerpt": [
+    "[cascade_c_prime_frame_1_segnet_waterfill] inflate device=cpu",
+    "[cascade_c_prime_frame_1_segnet_waterfill] wrote /tmp/cascade_c_prime_inflate_check.9kHtMM/out/0.raw"
+  ],
+  "output_raw_bytes": 9437184,
+  "output_raw_sha256": "d2ee4703cd9698945ca7b9fe1689ea3095597eac1a0afd8dba00cac7894fdc43",
+  "schema": "cascade_c_prime_current_head_mlx_smoke_inflate_report.v1"
+}
