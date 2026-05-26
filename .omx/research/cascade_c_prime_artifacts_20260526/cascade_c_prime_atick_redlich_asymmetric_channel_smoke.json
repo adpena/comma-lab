@@ -1,0 +1,101 @@
+{
+  "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+  "atick_redlich_asymmetric_channel_economics": {
+    "frame_0_menu_size": 16,
+    "frame_1_menu_size": 8,
+    "frame_1_mode_ids": [
+      "frame1_widened_segnet_low_margin_class_0_amp_1",
+      "frame1_widened_segnet_low_margin_class_0_amp_2",
+      "frame1_widened_segnet_low_margin_class_1_amp_1",
+      "frame1_widened_segnet_low_margin_class_1_amp_2",
+      "frame1_widened_segnet_low_margin_class_2_amp_1",
+      "frame1_widened_segnet_low_margin_class_2_amp_2",
+      "frame1_widened_segnet_low_margin_class_3_amp_1",
+      "frame1_widened_segnet_low_margin_class_3_amp_2"
+    ],
+    "n_pairs": 600,
+    "structural_invariant": "frame_0_seg_delta_is_zero_per_segnet_x_minus_1_slice_atick_redlich_asymmetric_channel"
+  },
+  "axis_tag": "[macOS-MLX research-signal]",
+  "cargo_cult_audit_per_catalog_303": {
+    "assumption_2_frame_1_extracts_more_savings": "PARTIALLY_VERIFIED_VIA_SYNTHESIS",
+    "assumption_4_k_expansion_not_strictly_worse": "VERIFIED_VIA_SYNTHESIS",
+    "assumption_5_per_pair_lagrangian_dual_converges_O_N_pairs_x_N_modes": "VERIFIED_VIA_SYNTHESIS_SINGLE_PASS_ARGMIN_NO_ITERATION_REQUIRED"
+  },
+  "drift_surface_declaration_per_mlx_cuda_bidirectional": {
+    "cuda_drift_sources_applicable_at_paired_validation": [
+      "softmax_lse_epsilon_segnet_argmax_tie_breaking_boundary_pixels_medium_risk",
+      "bfloat16_fp16_low_risk_due_to_integer_routing_decision_discretization",
+      "bilinear_interpolate_mode_low_risk_per_segnet_preprocess_input"
+    ],
+    "mlx_only_smoke": true
+  },
+  "evidence_grade": "macOS-MLX-research-signal",
+  "horizon_class_per_catalog_309": "pending_paired_cuda_validation",
+  "lagrangian_dual_solve": {
+    "convention": "lagrangian_improvement_positive_is_better_score_delta_negative_is_better",
+    "convergence_status": "single_pass_argmin_no_iteration_required",
+    "operating_point_reference": "pr106_frontier_per_claude_md_segnet_vs_posenet_importance",
+    "per_pair_improvement_max": 0.0028651873756487143,
+    "per_pair_improvement_min": 0.0,
+    "pose_avg_baseline": 3.4e-05,
+    "total_per_pair_improvement_aggregated": 0.05887298667761302,
+    "total_score_delta_aggregated_negative_is_better": -0.05887298667761302
+  },
+  "net_score_impact_per_option": {
+    "option_a_k24_huffman_expansion": {
+      "codebook_overhead_estimate_bytes": 50,
+      "codebook_score_cost": 3.3292947656108566e-05,
+      "description": "K=16 \u2192 K=24 menu expansion; updated Huffman codebook absorbs frame-1 modes",
+      "net_score_delta": -0.05883969372995691,
+      "score_delta_from_lagrangian": -0.05887298667761302
+    },
+    "option_b_1bit_sidecar": {
+      "description": "\u22641-bit-per-pair routing flag sidecar; PR110 K=16 menu unchanged",
+      "net_score_delta": -0.058820383820316374,
+      "score_delta_from_lagrangian": -0.05887298667761302,
+      "sidecar_bytes_brotli_compressed": 79,
+      "sidecar_score_cost": 5.260285729665154e-05
+    }
+  },
+  "next_steps_per_catalog_308_alternative_probes": [
+    "PAIRED-CUDA validation: actual frame-1 perturbation sweep on contest SegNet+PoseNet to replace synthesis",
+    "Markov 2nd-order extension: sister #1336 FEC8 + per-pair pose-null-flag conditional",
+    "Atick-Redlich-Tishby IB sister substrate: compress per-pair routing decision into I(routing; score) information bottleneck"
+  ],
+  "per_pair_routing_distribution": {
+    "frame_0_selected_count": 449,
+    "frame_0_selected_pct": 74.83,
+    "frame_1_selected_count": 151,
+    "frame_1_selected_pct": 25.17
+  },
+  "promotable": false,
+  "promotion_blockers": [
+    "synthetic_frame_1_modes_no_actual_paired_modal_sweep",
+    "macos_mlx_advisory_per_catalog_192",
+    "no_contest_cuda_paired_dispatch",
+    "research_only_compress_time_economics_only",
+    "atick_redlich_asymmetric_channel_implementation_not_paradigm"
+  ],
+  "provenance": {
+    "canonical_provenance": {
+      "axis_tag": "[predicted]",
+      "captured_at_utc": "2026-05-26T20:02:07Z",
+      "evidence_grade": "macOS-MLX-research-signal",
+      "kind": "predicted_from_model",
+      "promotable": false,
+      "score_claim_valid": false
+    },
+    "compress_time_only": true,
+    "method": "atick_redlich_asymmetric_channel_lagrangian_dual_per_pair_routing_mlx_local_synthesis",
+    "mlx_available": true,
+    "subagent_id": "cascade-c-prime-frame-1-segnet-class-waterfill-atick-redlich-asymmetric-channel-pure-full-scorer-attack-mlx-first-numpy-portable-20260526",
+    "synthesis_basis": "sister_pr110_opt12_posenet_null_artifact_frame_0_distribution_plus_atick_redlich_frame_1_synthesis"
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": "cascade_c_prime_atick_redlich_v1_20260526",
+  "score_claim": false,
+  "subagent_id": "cascade-c-prime-frame-1-segnet-class-waterfill-atick-redlich-asymmetric-channel-pure-full-scorer-attack-mlx-first-numpy-portable-20260526",
+  "timestamp_utc": "2026-05-26T20:02:07Z",
+  "verdict_per_catalog_307": "PARADIGM_VALIDATED_SYNTHESIS_PREDICTS_NEGATIVE_SCORE_DELTA"
+}
