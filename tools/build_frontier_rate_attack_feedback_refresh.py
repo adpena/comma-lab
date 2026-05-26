@@ -35,6 +35,8 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
     OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA,
     FrontierRateAttackFeedbackError,
     attach_frontier_autonomous_chain_optimization,
+    build_frontier_autonomous_chain_optimization_queue,
+    build_frontier_materializer_execution_queue_if_available,
     build_frontier_operation_chain_compiler_queue,
     build_frontier_rate_attack_feedback_refresh,
     build_frontier_receiver_repair_queue,
@@ -454,6 +456,33 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
                 artifact_path = output_dir / f"{artifact_name}.json"
                 write_json_artifact(artifact_path, payload)
                 artifacts[artifact_name] = _display_path(artifact_path)
+        operation_work_queue = operation_materializer_bridge.get("materializer_work_queue")
+        if isinstance(operation_work_queue, dict):
+            operation_work_queue_path = output_dir / "operation_materializer_work_queue.json"
+            operation_execution_queue = (
+                build_frontier_materializer_execution_queue_if_available(
+                    repo_root=REPO_ROOT,
+                    materializer_work_queue=operation_work_queue,
+                    materializer_work_queue_path=operation_work_queue_path,
+                    results_root=str(report.get("results_root") or DEFAULT_RESULTS_ROOT),
+                    queue_id=(
+                        f"{report.get('queue_id') or 'frontier_feedback'}_"
+                        "operation_materializer_execution"
+                    ),
+                    candidate_limit=int(report.get("candidate_limit") or 4),
+                )
+            )
+            if isinstance(operation_execution_queue, dict):
+                operation_execution_queue_path = (
+                    output_dir / "operation_materializer_execution_queue.json"
+                )
+                write_json_artifact(
+                    operation_execution_queue_path,
+                    operation_execution_queue,
+                )
+                artifacts["operation_materializer_execution_queue"] = _display_path(
+                    operation_execution_queue_path
+                )
     receiver_repair_backlog = report.get("receiver_repair_backlog")
     if isinstance(receiver_repair_backlog, dict):
         path = output_dir / "receiver_repair_backlog.json"
@@ -630,6 +659,51 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             artifacts[
                 "targeted_component_correction_chain_materializer_handoff"
             ] = _display_path(targeted_chain_materializer_handoff_path)
+            targeted_chain_work_queue = targeted_chain_materializer_handoff.get(
+                "materializer_work_queue"
+            )
+            if isinstance(targeted_chain_work_queue, dict):
+                targeted_chain_work_queue_path = (
+                    output_dir
+                    / "targeted_component_correction_chain_materializer_work_queue.json"
+                )
+                write_json_artifact(
+                    targeted_chain_work_queue_path,
+                    targeted_chain_work_queue,
+                )
+                artifacts[
+                    "targeted_component_correction_chain_materializer_work_queue"
+                ] = _display_path(targeted_chain_work_queue_path)
+                targeted_execution_queue = (
+                    build_frontier_materializer_execution_queue_if_available(
+                        repo_root=REPO_ROOT,
+                        materializer_work_queue=targeted_chain_work_queue,
+                        materializer_work_queue_path=targeted_chain_work_queue_path,
+                        results_root=str(
+                            report.get("results_root") or DEFAULT_RESULTS_ROOT
+                        ),
+                        queue_id=(
+                            f"{report.get('queue_id') or 'frontier_feedback'}_"
+                            "targeted_chain_materializer_execution"
+                        ),
+                        candidate_limit=int(report.get("candidate_limit") or 4),
+                    )
+                )
+                if isinstance(targeted_execution_queue, dict):
+                    targeted_execution_queue_path = (
+                        output_dir
+                        / (
+                            "targeted_component_correction_chain_materializer_"
+                            "execution_queue.json"
+                        )
+                    )
+                    write_json_artifact(
+                        targeted_execution_queue_path,
+                        targeted_execution_queue,
+                    )
+                    artifacts[
+                        "targeted_component_correction_chain_materializer_execution_queue"
+                    ] = _display_path(targeted_execution_queue_path)
             attach_frontier_autonomous_chain_optimization(
                 report,
                 targeted_component_correction_chain_materializer_handoff=(
@@ -641,6 +715,24 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
         path = output_dir / "autonomous_chain_optimization.json"
         write_json_artifact(path, autonomous_chain_optimization)
         artifacts["autonomous_chain_optimization"] = _display_path(path)
+        autonomous_queue = build_frontier_autonomous_chain_optimization_queue(
+            repo_root=REPO_ROOT,
+            autonomous_chain_optimization=autonomous_chain_optimization,
+            autonomous_chain_optimization_path=path,
+            artifact_paths_by_key=artifacts,
+            results_root=str(report.get("results_root") or DEFAULT_RESULTS_ROOT),
+            queue_id=(
+                f"{report.get('queue_id') or 'frontier_feedback'}_"
+                "autonomous_chain_optimization"
+            ),
+            chain_limit=int(report.get("candidate_limit") or 4),
+        )
+        if isinstance(autonomous_queue, dict):
+            queue_path = output_dir / "autonomous_chain_optimization_queue.json"
+            write_json_artifact(queue_path, autonomous_queue)
+            artifacts["autonomous_chain_optimization_queue"] = _display_path(
+                queue_path
+            )
     bridge = report.get("materializer_feedback_bridge")
     if isinstance(bridge, dict):
         path = output_dir / "materializer_feedback_bridge.json"
@@ -756,6 +848,28 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             "2",
             "--max-parallel",
             "2",
+        ]
+    if "operation_materializer_execution_queue" in artifacts:
+        operator_commands["validate_operation_materializer_execution_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["operation_materializer_execution_queue"],
+            "validate",
+        ]
+        operator_commands["run_operation_materializer_execution_queue_bounded_local"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["operation_materializer_execution_queue"],
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "8",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "1",
         ]
     if "targeted_component_correction_queue" in artifacts:
         operator_commands["validate_targeted_component_correction_queue"] = [
@@ -936,12 +1050,71 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             "json.tool",
             artifacts["targeted_component_correction_chain_materializer_handoff"],
         ]
+    if "targeted_component_correction_chain_materializer_execution_queue" in artifacts:
+        operator_commands[
+            "validate_targeted_component_correction_chain_materializer_execution_queue"
+        ] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts[
+                "targeted_component_correction_chain_materializer_execution_queue"
+            ],
+            "validate",
+        ]
+        operator_commands[
+            "run_targeted_component_correction_chain_materializer_execution_queue_bounded_local"
+        ] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts[
+                "targeted_component_correction_chain_materializer_execution_queue"
+            ],
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "8",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "1",
+        ]
     if "autonomous_chain_optimization" in artifacts:
         operator_commands["inspect_autonomous_chain_optimization"] = [
             ".venv/bin/python",
             "-m",
             "json.tool",
             artifacts["autonomous_chain_optimization"],
+        ]
+    if "autonomous_chain_optimization_queue" in artifacts:
+        operator_commands["validate_autonomous_chain_optimization_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["autonomous_chain_optimization_queue"],
+            "validate",
+        ]
+        operator_commands["init_autonomous_chain_optimization_queue"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["autonomous_chain_optimization_queue"],
+            "init",
+        ]
+        operator_commands["run_autonomous_chain_optimization_queue_bounded_local"] = [
+            ".venv/bin/python",
+            "tools/experiment_queue.py",
+            "--queue",
+            artifacts["autonomous_chain_optimization_queue"],
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "16",
+            "--max-experiments",
+            "2",
+            "--max-parallel",
+            "1",
         ]
     if operator_commands:
         report_to_write["operator_commands"] = operator_commands

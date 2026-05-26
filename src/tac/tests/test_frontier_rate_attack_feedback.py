@@ -12,6 +12,7 @@ import pytest
 from comma_lab.scheduler.frontier_rate_attack_feedback import (
     AUTONOMOUS_CHAIN_OPTIMIZATION_ROW_SCHEMA,
     AUTONOMOUS_CHAIN_OPTIMIZATION_SCHEMA,
+    AUTONOMOUS_CHAIN_WORK_ORDER_SCHEMA,
     BYTE_RANGE_STAGE_INPUTS_SCHEMA,
     FEEDBACK_REFRESH_SCHEMA,
     LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA,
@@ -34,6 +35,8 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     TARGETED_DROP_MANY_STAGE_INPUTS_SCHEMA,
     FrontierRateAttackFeedbackError,
     build_frontier_autonomous_chain_optimization,
+    build_frontier_autonomous_chain_optimization_queue,
+    build_frontier_autonomous_chain_work_order,
     build_frontier_byte_range_stage_inputs,
     build_frontier_operation_chain_compiler_queue,
     build_frontier_operation_chain_compiler_stage_plan,
@@ -2659,17 +2662,174 @@ def test_targeted_component_correction_materialization_requests_group_responses(
         for action in bind_actions
     )
     emitted_artifact_keys = {
-        "operation_materializer_work_queue",
+        "operation_materializer_execution_queue",
         "receiver_repair_queue",
-        "targeted_component_correction_chain_materializer_handoff",
+        "targeted_component_correction_chain_materializer_execution_queue",
         "targeted_component_correction_operation_chain_queue",
+    }
+    emitted_source_keys = {
+        "operation_materializer_work_queue",
+        "targeted_component_correction_chain_materializer_work_queue",
+        "targeted_component_correction_response_harvest",
+        "materializer_chain_exact_readiness_bridge",
     }
     for row in autonomous["rows"]:
         for action in row["scheduler_actions"]:
             if action.get("advisory_only"):
                 assert "queue_artifact_key" not in action
+                assert action["source_artifact_key"] in emitted_source_keys
             else:
                 assert action["queue_artifact_key"] in emitted_artifact_keys
+    work_order = build_frontier_autonomous_chain_work_order(
+        autonomous_chain_optimization=autonomous,
+        chain_id=first_chain["chain_id"],
+    )
+    assert work_order["schema"] == AUTONOMOUS_CHAIN_WORK_ORDER_SCHEMA
+    _assert_false_authority(work_order)
+    assert work_order["pipeline_placement"]["rate_attack_owner"] == (
+        "encoder_materializer_and_archive_builder"
+    )
+    assert work_order["pipeline_placement"]["receiver_owner"] == (
+        "deterministic_inflate_runtime_adapter_only"
+    )
+    assert {"encoder_materializer", "encoder_repair_allocator"}.issubset(
+        {stage["pipeline_side"] for stage in work_order["pipeline_stages"]}
+    )
+    assert "receiver_decode_only" in {
+        stage["pipeline_side"] for stage in work_order["pipeline_stages"]
+    }
+    assert work_order["local_queue_action_count"] >= 1
+    assert work_order["advisory_action_count"] >= 2
+    assert work_order["repair_budget_waterfill_plan"]["budget_spend_allowed"] is False
+
+    autonomous_path = _write_json(tmp_path / "autonomous_chain.json", autonomous)
+    chain_queue_path = _write_json(
+        tmp_path / "targeted_component_correction_operation_chain_queue.json",
+        chain_queue,
+    )
+    autonomous_queue = build_frontier_autonomous_chain_optimization_queue(
+        repo_root=REPO_ROOT,
+        autonomous_chain_optimization=autonomous,
+        autonomous_chain_optimization_path=autonomous_path,
+        artifact_paths_by_key={
+            "operation_materializer_execution_queue": chain_queue_path,
+            "receiver_repair_queue": chain_queue_path,
+            "targeted_component_correction_operation_chain_queue": chain_queue_path,
+            "targeted_component_correction_chain_materializer_execution_queue": (
+                chain_queue_path
+            ),
+        },
+        results_root=tmp_path / "results",
+        queue_id="frontier_autonomous_chain_unit",
+        chain_limit=2,
+    )
+    assert autonomous_queue is not None
+    assert autonomous_queue["schema"] == "experiment_queue.v1"
+    assert len(autonomous_queue["experiments"]) >= 1
+    autonomous_experiment = autonomous_queue["experiments"][0]
+    assert autonomous_experiment["status"] == "queued"
+    _assert_false_authority(autonomous_experiment["metadata"])
+    assert autonomous_experiment["metadata"]["queue_actuation_ready"] is True
+    assert autonomous_experiment["metadata"]["missing_queue_artifact_keys"] == []
+    assert autonomous_experiment["metadata"]["child_queue_artifact_paths"]
+    assert isinstance(
+        autonomous_experiment["metadata"]["post_repair_refresh_planned"], bool
+    )
+    assert autonomous_experiment["steps"][0]["command"][1] == (
+        "tools/build_frontier_autonomous_chain_work_order.py"
+    )
+    assert "--child-queue-artifact-path" in autonomous_experiment["steps"][0]["command"]
+    assert "encoder_materializer" in {
+        stage["pipeline_side"]
+        for stage in autonomous_experiment["metadata"]["pipeline_stages"]
+    }
+    assert any(
+        step["id"].startswith("validate_") for step in autonomous_experiment["steps"]
+    )
+    assert any(
+        step["id"].startswith("run_") and step["command"][4] == "run-worker"
+        for step in autonomous_experiment["steps"]
+    )
+    repair_refresh_autonomous = json.loads(json.dumps(autonomous))
+    repair_refresh_row = repair_refresh_autonomous["rows"][0]
+    repair_refresh_actions = repair_refresh_row["scheduler_actions"]
+    if not any(
+        action["id"] == "fill_receiver_runtime_proof_requests"
+        for action in repair_refresh_actions
+    ):
+        repair_refresh_actions.append(
+            {
+                **_false_authority(),
+                "id": "fill_receiver_runtime_proof_requests",
+                "queue_artifact_key": "receiver_repair_queue",
+                "purpose": (
+                    "unit_test_receiver_repair_before_targeted_materializer_refresh"
+                ),
+                "bounded_local_execution": True,
+                "advisory_only": False,
+                "requires_exact_auth_before_score_claim": True,
+            }
+        )
+    bind_action = next(
+        (
+            action
+            for action in repair_refresh_actions
+            if action["id"] == "bind_targeted_chain_materializer_contexts"
+        ),
+        None,
+    )
+    if bind_action is None:
+        bind_action = {
+            **_false_authority(),
+            "id": "bind_targeted_chain_materializer_contexts",
+            "purpose": "unit_test_blocked_targeted_chain_materializer_refresh",
+            "bounded_local_execution": True,
+            "requires_exact_auth_before_score_claim": True,
+        }
+        repair_refresh_actions.append(bind_action)
+    bind_action.pop("queue_artifact_key", None)
+    bind_action["source_artifact_key"] = (
+        "targeted_component_correction_chain_materializer_work_queue"
+    )
+    bind_action["advisory_only"] = True
+    bind_action["advisory_reason"] = "unit test blocked receiver context"
+    repair_refresh_queue = build_frontier_autonomous_chain_optimization_queue(
+        repo_root=REPO_ROOT,
+        autonomous_chain_optimization=repair_refresh_autonomous,
+        autonomous_chain_optimization_path=autonomous_path,
+        artifact_paths_by_key={
+            "receiver_repair_queue": chain_queue_path,
+            "targeted_component_correction_operation_chain_queue": chain_queue_path,
+        },
+        results_root=tmp_path / "results",
+        queue_id="frontier_autonomous_chain_repair_refresh_unit",
+        chain_limit=1,
+    )
+    assert repair_refresh_queue is not None
+    repair_refresh_experiment = repair_refresh_queue["experiments"][0]
+    assert repair_refresh_experiment["metadata"]["post_repair_refresh_planned"] is True
+    assert any(
+        step["id"] == "refresh_after_receiver_repair_for_targeted_materializers"
+        for step in repair_refresh_experiment["steps"]
+    )
+    missing_child_queue = build_frontier_autonomous_chain_optimization_queue(
+        repo_root=REPO_ROOT,
+        autonomous_chain_optimization=autonomous,
+        autonomous_chain_optimization_path=autonomous_path,
+        artifact_paths_by_key={"receiver_repair_queue": chain_queue_path},
+        results_root=tmp_path / "results",
+        queue_id="frontier_autonomous_chain_missing_child_unit",
+        chain_limit=1,
+    )
+    assert missing_child_queue is not None
+    missing_experiment = missing_child_queue["experiments"][0]
+    assert missing_experiment["status"] == "frozen"
+    assert missing_experiment["metadata"]["queue_actuation_ready"] is False
+    assert missing_experiment["metadata"]["missing_queue_artifact_keys"]
+    assert (
+        "--missing-queue-artifact-key"
+        in missing_experiment["steps"][0]["command"]
+    )
     assert first_chain["repair_budget_waterfill_plan"][
         "budget_spend_allowed"
     ] is False
@@ -3772,7 +3932,13 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     targeted_component_chain_materializer_handoff_path = (
         output_dir / "targeted_component_correction_chain_materializer_handoff.json"
     )
+    targeted_component_chain_materializer_work_queue_path = (
+        output_dir / "targeted_component_correction_chain_materializer_work_queue.json"
+    )
     autonomous_chain_optimization_path = output_dir / "autonomous_chain_optimization.json"
+    autonomous_chain_optimization_queue_path = (
+        output_dir / "autonomous_chain_optimization_queue.json"
+    )
     report_path = output_dir / "feedback_refresh_report.json"
     assert queue_path.exists()
     assert bridge_path.exists()
@@ -3785,7 +3951,9 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert targeted_component_materialization_requests_path.exists()
     assert targeted_component_operation_chain_work_orders_path.exists()
     assert targeted_component_chain_materializer_handoff_path.exists()
+    assert targeted_component_chain_materializer_work_queue_path.exists()
     assert autonomous_chain_optimization_path.exists()
+    assert autonomous_chain_optimization_queue_path.exists()
     assert report_path.exists()
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["artifacts"]["dqs1_followup_queue"].endswith("dqs1_followup_queue.json")
@@ -3816,8 +3984,14 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert report["artifacts"][
         "targeted_component_correction_chain_materializer_handoff"
     ].endswith("targeted_component_correction_chain_materializer_handoff.json")
+    assert report["artifacts"][
+        "targeted_component_correction_chain_materializer_work_queue"
+    ].endswith("targeted_component_correction_chain_materializer_work_queue.json")
     assert report["artifacts"]["autonomous_chain_optimization"].endswith(
         "autonomous_chain_optimization.json"
+    )
+    assert report["artifacts"]["autonomous_chain_optimization_queue"].endswith(
+        "autonomous_chain_optimization_queue.json"
     )
     assert report["artifacts"]["operation_materializer_bridge"].endswith(
         "operation_materializer_bridge.json"
@@ -3904,11 +4078,53 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         "json.tool",
         report["artifacts"]["autonomous_chain_optimization"],
     ]
+    assert report["operator_commands"]["validate_autonomous_chain_optimization_queue"] == [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        report["artifacts"]["autonomous_chain_optimization_queue"],
+        "validate",
+    ]
+    autonomous_run = report["operator_commands"][
+        "run_autonomous_chain_optimization_queue_bounded_local"
+    ]
+    assert autonomous_run[:4] == [
+        ".venv/bin/python",
+        "tools/experiment_queue.py",
+        "--queue",
+        report["artifacts"]["autonomous_chain_optimization_queue"],
+    ]
     autonomous_artifact = json.loads(
         autonomous_chain_optimization_path.read_text(encoding="utf-8")
     )
     assert autonomous_artifact["schema"] == AUTONOMOUS_CHAIN_OPTIMIZATION_SCHEMA
     _assert_false_authority(autonomous_artifact)
+    autonomous_queue_artifact = json.loads(
+        autonomous_chain_optimization_queue_path.read_text(encoding="utf-8")
+    )
+    assert autonomous_queue_artifact["schema"] == "experiment_queue.v1"
+    autonomous_queue_metadata = autonomous_queue_artifact["experiments"][0]["metadata"]
+    _assert_false_authority(autonomous_queue_metadata)
+    if autonomous_queue_artifact["experiments"][0]["status"] == "queued":
+        assert autonomous_queue_metadata["queue_actuation_ready"] is True
+        assert autonomous_queue_metadata["missing_queue_artifact_keys"] == []
+        assert autonomous_queue_metadata["child_queue_artifact_paths"]
+    else:
+        assert autonomous_queue_artifact["experiments"][0]["status"] == "frozen"
+        assert autonomous_queue_metadata["queue_actuation_ready"] is False
+        assert autonomous_queue_metadata["queue_actuation_blockers"]
+    assert autonomous_queue_artifact["experiments"][0]["steps"][0]["command"][1] == (
+        "tools/build_frontier_autonomous_chain_work_order.py"
+    )
+    if autonomous_queue_metadata["child_queue_artifact_paths"]:
+        assert any(
+            step["id"].startswith("validate_")
+            for step in autonomous_queue_artifact["experiments"][0]["steps"]
+        )
+        assert any(
+            step["id"].startswith("run_") and step["command"][4] == "run-worker"
+            for step in autonomous_queue_artifact["experiments"][0]["steps"]
+        )
     followup_queue = json.loads(queue_path.read_text(encoding="utf-8"))
     autonomous_metadata = followup_queue["experiments"][0]["metadata"][
         "frontier_autonomous_chain_optimization"
@@ -4017,6 +4233,20 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         check=False,
     )
     assert correction_validate.returncode == 0, correction_validate.stderr
+    autonomous_queue_validate = subprocess.run(
+        [
+            sys.executable,
+            "tools/experiment_queue.py",
+            "--queue",
+            str(autonomous_chain_optimization_queue_path),
+            "validate",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert autonomous_queue_validate.returncode == 0, autonomous_queue_validate.stderr
     targeted_component_queue = json.loads(
         targeted_component_queue_path.read_text(encoding="utf-8")
     )
@@ -4576,6 +4806,12 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     assert initial_artifacts["operation_chain_compiler_queue"].endswith(
         "operation_chain_compiler_queue.json"
     )
+    assert initial_artifacts[
+        "targeted_component_correction_chain_materializer_work_queue"
+    ].endswith("targeted_component_correction_chain_materializer_work_queue.json")
+    assert initial_artifacts["autonomous_chain_optimization_queue"].endswith(
+        "autonomous_chain_optimization_queue.json"
+    )
     operation_chain_orders = json.loads(
         (
             REPO_ROOT / initial_artifacts["operation_chain_compiler_work_orders"]
@@ -4691,6 +4927,31 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
         for row in initial_autonomous_chain["rows"]
         for action in row["scheduler_actions"]
     }
+    initial_autonomous_queue = json.loads(
+        (
+            REPO_ROOT / initial_artifacts["autonomous_chain_optimization_queue"]
+        ).read_text(encoding="utf-8")
+    )
+    assert initial_autonomous_queue["schema"] == "experiment_queue.v1"
+    initial_autonomous_queue_experiment = initial_autonomous_queue["experiments"][0]
+    initial_autonomous_queue_metadata = initial_autonomous_queue_experiment["metadata"]
+    _assert_false_authority(initial_autonomous_queue_metadata)
+    if initial_autonomous_queue_experiment["status"] == "queued":
+        assert initial_autonomous_queue_metadata["queue_actuation_ready"] is True
+        assert initial_autonomous_queue_metadata["missing_queue_artifact_keys"] == []
+        assert initial_autonomous_queue_metadata["child_queue_artifact_paths"]
+        assert any(
+            step["id"].startswith("validate_")
+            for step in initial_autonomous_queue_experiment["steps"]
+        )
+        assert any(
+            step["id"].startswith("run_") and step["command"][4] == "run-worker"
+            for step in initial_autonomous_queue_experiment["steps"]
+        )
+    else:
+        assert initial_autonomous_queue_experiment["status"] == "frozen"
+        assert initial_autonomous_queue_metadata["queue_actuation_ready"] is False
+        assert initial_autonomous_queue_metadata["queue_actuation_blockers"]
     assert (
         initial_feedback_report["operator_commands"][
             "inspect_targeted_component_correction_chain_materializer_handoff"
@@ -4700,6 +4961,12 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     assert (
         initial_feedback_report["operator_commands"][
             "inspect_autonomous_chain_optimization"
+        ][0]
+        == ".venv/bin/python"
+    )
+    assert (
+        initial_feedback_report["operator_commands"][
+            "validate_autonomous_chain_optimization_queue"
         ][0]
         == ".venv/bin/python"
     )
@@ -4753,6 +5020,10 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     )
     assert (
         "autonomous_chain_optimization_to_queue_owned_many_op_plan"
+        in cycle_report["integration_edges"]
+    )
+    assert (
+        "autonomous_chain_optimization_to_local_child_queue_actuation"
         in cycle_report["integration_edges"]
     )
     assert (

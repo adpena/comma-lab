@@ -45,6 +45,7 @@ from tac.optimization.proxy_candidate_contract import require_no_truthy_authorit
 
 from .byte_shaving_campaign_queue import (
     MATERIALIZER_BACKLOG_SCHEMA,
+    build_materializer_execution_queue,
     build_materializer_work_queue,
     materializer_contexts_from_payload,
 )
@@ -117,6 +118,12 @@ AUTONOMOUS_CHAIN_OPTIMIZATION_SCHEMA = (
 )
 AUTONOMOUS_CHAIN_OPTIMIZATION_ROW_SCHEMA = (
     "frontier_rate_attack_autonomous_chain_optimization_row.v1"
+)
+AUTONOMOUS_CHAIN_WORK_ORDER_SCHEMA = (
+    "frontier_rate_attack_autonomous_chain_work_order.v1"
+)
+AUTONOMOUS_CHAIN_QUEUE_METADATA_SCHEMA = (
+    "frontier_rate_attack_autonomous_chain_optimization_queue_metadata.v1"
 )
 OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA = (
     "frontier_rate_attack_operation_chain_compiler_work_order.v1"
@@ -4324,9 +4331,24 @@ def _autonomous_chain_receiver_closure_summary(
         provided_fields.extend(_string_list(plan.get("provided_context_fields")))
         if isinstance(plan.get("receiver_proof_request"), Mapping):
             proof_targets.append(target_kind)
+    work_queue = targeted_component_correction_chain_materializer_handoff.get(
+        "materializer_work_queue"
+    )
+    work_queue_row_count = (
+        work_queue.get("row_count") if isinstance(work_queue, Mapping) else 0
+    )
+    executable_work_queue_row_count = (
+        work_queue.get("executable_row_count") if isinstance(work_queue, Mapping) else 0
+    )
+    blocked_work_queue_row_count = (
+        work_queue.get("blocked_row_count") if isinstance(work_queue, Mapping) else 0
+    )
     return {
         "schema": "frontier_rate_attack_autonomous_receiver_closure_summary.v1",
         "context_closure_plan_count": len(plans),
+        "targeted_chain_work_queue_row_count": work_queue_row_count,
+        "targeted_chain_executable_work_queue_row_count": executable_work_queue_row_count,
+        "targeted_chain_blocked_work_queue_row_count": blocked_work_queue_row_count,
         "missing_context_field_count": len(_unique_strings(missing_fields)),
         "missing_context_fields": _unique_strings(missing_fields),
         "provided_context_fields": _unique_strings(provided_fields),
@@ -4384,32 +4406,68 @@ def _autonomous_chain_scheduler_actions(
 ) -> list[dict[str, Any]]:
     actions: list[dict[str, Any]] = []
     if bridge_summary.get("work_queue_row_count"):
-        actions.append(
-            {
-                "id": "run_operation_materializer_context_closure_queue",
-                "queue_artifact_key": "operation_materializer_work_queue",
-                "purpose": "bind portfolio materializer contexts across packet_archive_tensor_targets",
-                "bounded_local_execution": True,
-                "advisory_only": False,
-                "requires_exact_auth_before_score_claim": True,
-                **FALSE_AUTHORITY,
-            }
-        )
+        executable_bridge_rows = int(bridge_summary.get("executable_work_row_count") or 0)
+        bridge_action: dict[str, Any] = {
+            "id": "run_operation_materializer_context_closure_queue",
+            "purpose": "bind portfolio materializer contexts across packet_archive_tensor_targets",
+            "bounded_local_execution": True,
+            "requires_exact_auth_before_score_claim": True,
+            **FALSE_AUTHORITY,
+        }
+        if executable_bridge_rows > 0:
+            bridge_action.update(
+                {
+                    "queue_artifact_key": "operation_materializer_execution_queue",
+                    "advisory_only": False,
+                }
+            )
+        else:
+            bridge_action.update(
+                {
+                    "source_artifact_key": "operation_materializer_work_queue",
+                    "advisory_only": True,
+                    "advisory_reason": (
+                        "portfolio materializer work queue has no executable rows "
+                        "until context closure artifacts are supplied"
+                    ),
+                }
+            )
+        actions.append(bridge_action)
     if registered_chain_targets:
-        actions.append(
-            {
-                "id": "bind_targeted_chain_materializer_contexts",
-                "queue_artifact_key": (
-                    "targeted_component_correction_chain_materializer_handoff"
-                ),
-                "purpose": "close receiver_consumed_context_for_many_registered_targets",
-                "target_count": len(registered_chain_targets),
-                "bounded_local_execution": True,
-                "advisory_only": False,
-                "requires_exact_auth_before_score_claim": True,
-                **FALSE_AUTHORITY,
-            }
+        executable_targeted_rows = int(
+            receiver_closure.get("targeted_chain_executable_work_queue_row_count") or 0
         )
+        targeted_action: dict[str, Any] = {
+            "id": "bind_targeted_chain_materializer_contexts",
+            "purpose": "close_receiver_consumed_context_for_many_registered_targets",
+            "target_count": len(registered_chain_targets),
+            "bounded_local_execution": True,
+            "requires_exact_auth_before_score_claim": True,
+            **FALSE_AUTHORITY,
+        }
+        if executable_targeted_rows > 0:
+            targeted_action.update(
+                {
+                    "queue_artifact_key": (
+                        "targeted_component_correction_chain_materializer_execution_queue"
+                    ),
+                    "advisory_only": False,
+                }
+            )
+        else:
+            targeted_action.update(
+                {
+                    "source_artifact_key": (
+                        "targeted_component_correction_chain_materializer_work_queue"
+                    ),
+                    "advisory_only": True,
+                    "advisory_reason": (
+                        "registered chain materializer rows remain blocked until "
+                        "receiver repair fills required runtime-consumption contexts"
+                    ),
+                }
+            )
+        actions.append(targeted_action)
     if receiver_closure.get("missing_context_field_count"):
         actions.append(
             {
@@ -4597,6 +4655,14 @@ def _autonomous_chain_build_row(
         f"missing_receiver_context:{field}"
         for field in _string_list(receiver_closure.get("missing_context_fields"))
     )
+    if int(receiver_closure.get("targeted_chain_blocked_work_queue_row_count") or 0) > 0:
+        blockers.append("targeted_chain_materializer_work_queue_has_blocked_rows")
+    if (
+        int(receiver_closure.get("targeted_chain_work_queue_row_count") or 0) > 0
+        and int(receiver_closure.get("targeted_chain_executable_work_queue_row_count") or 0)
+        == 0
+    ):
+        blockers.append("targeted_chain_materializer_execution_queue_not_yet_buildable")
     blockers.extend(
         f"unregistered_chain_target:{target}" for target in unregistered_targets
     )
@@ -4947,6 +5013,564 @@ def attach_frontier_autonomous_chain_optimization(
                         metadata_payload
                     )
     return autonomous_chain_optimization
+
+
+def build_frontier_materializer_execution_queue_if_available(
+    *,
+    repo_root: str | Path,
+    materializer_work_queue: Mapping[str, Any],
+    materializer_work_queue_path: str | Path,
+    queue_id: str,
+    results_root: str | Path = DEFAULT_RESULTS_ROOT,
+    candidate_limit: int = 4,
+) -> dict[str, Any] | None:
+    """Build a local execution queue only when materializer rows are runnable."""
+
+    require_no_truthy_authority_fields(
+        materializer_work_queue,
+        context=f"{queue_id}_materializer_work_queue",
+    )
+    executable_count = int(materializer_work_queue.get("executable_row_count") or 0)
+    if executable_count <= 0:
+        return None
+    limit = max(1, min(candidate_limit, executable_count))
+    queue = build_materializer_execution_queue(
+        materializer_work_queue,
+        queue_id=queue_id,
+        repo_root=repo_root,
+        source_work_queue_path=materializer_work_queue_path,
+        scheduler_results_root=str(results_root),
+        step_timeout_seconds=900,
+        limit=limit,
+    )
+    for experiment in queue.get("experiments") or []:
+        if not isinstance(experiment, dict):
+            continue
+        metadata = experiment.get("metadata")
+        if not isinstance(metadata, dict):
+            continue
+        metadata.update(
+            {
+                "storage_preflight_status": "not_wired_smoke_bounded",
+                "storage_preflight_blocker": (
+                    "autonomous_child_materializer_execution_queue_omits_"
+                    "scheduler_storage_preflight_parameters"
+                ),
+                "bounded_smoke_candidate_limit": limit,
+                "allowed_use": "bounded_local_materializer_smoke_only",
+                **FALSE_AUTHORITY,
+            }
+        )
+        require_no_truthy_authority_fields(
+            metadata,
+            context=f"{queue_id}_materializer_execution_metadata",
+        )
+    return queue
+
+
+def _autonomous_chain_row_for_id(
+    autonomous_chain_optimization: Mapping[str, Any],
+    chain_id: str,
+) -> dict[str, Any]:
+    require_no_truthy_authority_fields(
+        autonomous_chain_optimization,
+        context="autonomous_chain_work_order_source",
+    )
+    for row in autonomous_chain_optimization.get("rows") or []:
+        if not isinstance(row, Mapping):
+            continue
+        if str(row.get("chain_id") or "") == chain_id:
+            require_no_truthy_authority_fields(
+                row,
+                context=f"autonomous_chain_work_order_row:{chain_id}",
+            )
+            return dict(row)
+    raise FrontierRateAttackFeedbackError(f"unknown autonomous chain id: {chain_id}")
+
+
+def _autonomous_chain_pipeline_stages(row: Mapping[str, Any]) -> list[dict[str, Any]]:
+    chain_id = str(row.get("chain_id") or "unknown_chain")
+    return [
+        {
+            "id": "select_many_operator_chain",
+            "pipeline_side": "encoder_planner",
+            "owner": "queue_owned_autonomous_optimizer",
+            "purpose": "choose packet/archive/tensor/frame/pair/batch operators jointly",
+            "source_chain_id": chain_id,
+            "writes_submission_runtime": False,
+            **FALSE_AUTHORITY,
+        },
+        {
+            "id": "apply_rate_attack_materializers",
+            "pipeline_side": "encoder_materializer",
+            "owner": "local_child_queues",
+            "purpose": "execute receiver-closed byte-saving transforms before packaging",
+            "source_chain_id": chain_id,
+            "writes_submission_runtime": True,
+            **FALSE_AUTHORITY,
+        },
+        {
+            "id": "allocate_repair_budget",
+            "pipeline_side": "encoder_repair_allocator",
+            "owner": "component_marginal_waterfill_policy",
+            "purpose": "spend freed bytes only where SegNet/PoseNet marginal repair helps",
+            "source_chain_id": chain_id,
+            "writes_submission_runtime": True,
+            "budget_spend_allowed": False,
+            **FALSE_AUTHORITY,
+        },
+        {
+            "id": "emit_byte_closed_archive",
+            "pipeline_side": "encoder_archive_builder",
+            "owner": "archive_packaging_queue",
+            "purpose": "package transformed payload and deterministic receiver runtime",
+            "source_chain_id": chain_id,
+            "writes_submission_runtime": True,
+            **FALSE_AUTHORITY,
+        },
+        {
+            "id": "consume_transformed_packet",
+            "pipeline_side": "receiver_decode_only",
+            "owner": "inflate_runtime_adapter",
+            "purpose": "deterministically decode encoder-authored transforms without scorer access",
+            "source_chain_id": chain_id,
+            "writes_submission_runtime": False,
+            **FALSE_AUTHORITY,
+        },
+        {
+            "id": "measure_exact_axis_and_feedback",
+            "pipeline_side": "exact_eval_feedback",
+            "owner": "contest_axis_eval_harvest",
+            "purpose": "measure archive/runtime on contest CPU/CUDA axis before any score claim",
+            "source_chain_id": chain_id,
+            "writes_submission_runtime": False,
+            **FALSE_AUTHORITY,
+        },
+    ]
+
+
+def build_frontier_autonomous_chain_work_order(
+    *,
+    autonomous_chain_optimization: Mapping[str, Any],
+    chain_id: str,
+    child_queue_artifact_paths: Sequence[str | Path] = (),
+    missing_queue_artifact_keys: Sequence[str] = (),
+    queue_actuation_ready: bool | None = None,
+    post_repair_refresh_planned: bool = False,
+) -> dict[str, Any]:
+    """Turn a selected many-op chain into a typed encoder/receiver work order."""
+
+    row = _autonomous_chain_row_for_id(autonomous_chain_optimization, chain_id)
+    scheduler_actions = [
+        dict(action)
+        for action in row.get("scheduler_actions") or []
+        if isinstance(action, Mapping)
+    ]
+    local_queue_actions = [
+        action for action in scheduler_actions if not bool(action.get("advisory_only"))
+    ]
+    advisory_actions = [
+        action for action in scheduler_actions if bool(action.get("advisory_only"))
+    ]
+    pipeline_stages = _autonomous_chain_pipeline_stages(row)
+    child_queue_paths = _unique_strings(
+        [str(path) for path in child_queue_artifact_paths]
+    )
+    missing_queue_keys = _unique_strings(missing_queue_artifact_keys)
+    if queue_actuation_ready is None:
+        queue_actuation_ready = bool(local_queue_actions) and not missing_queue_keys
+    payload = {
+        "schema": AUTONOMOUS_CHAIN_WORK_ORDER_SCHEMA,
+        "generated_at_utc": autonomous_chain_optimization.get("generated_at_utc"),
+        "source_autonomous_chain_optimization_schema": (
+            autonomous_chain_optimization.get("schema")
+        ),
+        "chain_id": chain_id,
+        "chain_family": row.get("chain_family"),
+        "optimization_objective": row.get("optimization_objective"),
+        "pipeline_placement": {
+            "rate_attack_owner": "encoder_materializer_and_archive_builder",
+            "repair_owner": "encoder_repair_allocator_before_archive_packaging",
+            "receiver_owner": "deterministic_inflate_runtime_adapter_only",
+            "exact_eval_owner": "contest_axis_measurement_and_feedback",
+            "answer_to_pipeline_question": (
+                "repair and final rate attack are optimized/applied in the "
+                "encoder-side queue before archive emission; receiver code only "
+                "consumes the transformed representation deterministically"
+            ),
+            **FALSE_AUTHORITY,
+        },
+        "pipeline_stages": pipeline_stages,
+        "local_queue_actions": local_queue_actions,
+        "local_queue_action_count": len(local_queue_actions),
+        "advisory_actions": advisory_actions,
+        "advisory_action_count": len(advisory_actions),
+        "child_queue_artifact_paths": child_queue_paths,
+        "child_queue_artifact_count": len(child_queue_paths),
+        "missing_queue_artifact_keys": missing_queue_keys,
+        "queue_actuation_ready": bool(queue_actuation_ready),
+        "post_repair_refresh_planned": bool(post_repair_refresh_planned),
+        "repair_budget_waterfill_plan": dict(
+            row.get("repair_budget_waterfill_plan")
+            if isinstance(row.get("repair_budget_waterfill_plan"), Mapping)
+            else {}
+        ),
+        "receiver_closure": dict(
+            row.get("receiver_closure")
+            if isinstance(row.get("receiver_closure"), Mapping)
+            else {}
+        ),
+        "target_kinds": _string_list(row.get("target_kinds")),
+        "operation_levels": _string_list(row.get("operation_levels")),
+        "blockers": _unique_strings(
+            [
+                *(_string_list(row.get("blockers"))),
+                "exact_auth_eval_required_before_score_or_promotion_claim",
+            ]
+        ),
+        "ready_for_materializer_execution": False,
+        "ready_for_budget_spend": False,
+        "ready_for_exact_eval_dispatch": False,
+        "allowed_use": "encoder_side_many_op_work_order_for_local_queue_actuation",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        payload,
+        context=f"frontier_autonomous_chain_work_order:{chain_id}",
+    )
+    return payload
+
+
+def _autonomous_action_artifact_key(action: Mapping[str, Any]) -> str:
+    return str(action.get("queue_artifact_key") or action.get("source_artifact_key") or "")
+
+
+def build_frontier_autonomous_chain_optimization_queue(
+    *,
+    repo_root: str | Path,
+    autonomous_chain_optimization: Mapping[str, Any],
+    autonomous_chain_optimization_path: str | Path,
+    artifact_paths_by_key: Mapping[str, str | Path],
+    results_root: str | Path = DEFAULT_RESULTS_ROOT,
+    queue_id: str = "frontier_autonomous_chain_optimization_queue",
+    chain_limit: int = 4,
+) -> dict[str, Any] | None:
+    """Build the parent queue that actuates selected many-op chains locally."""
+
+    if chain_limit < 1:
+        raise FrontierRateAttackFeedbackError("chain_limit must be >= 1")
+    require_no_truthy_authority_fields(
+        autonomous_chain_optimization,
+        context="autonomous_chain_optimization_queue_input",
+    )
+    rows = [
+        row
+        for row in autonomous_chain_optimization.get("rows") or []
+        if isinstance(row, Mapping)
+        and row.get("schema") == AUTONOMOUS_CHAIN_OPTIMIZATION_ROW_SCHEMA
+    ][:chain_limit]
+    if not rows:
+        return None
+
+    repo = Path(repo_root)
+    source_path = _resolve_path(autonomous_chain_optimization_path, repo_root=repo)
+    results_base = _resolve_path(str(results_root), repo_root=repo)
+    queue_root = (
+        results_base / "frontier_autonomous_chain_optimization" / _slug_token(queue_id)
+    )
+    experiments: list[dict[str, Any]] = []
+    used_resource_kinds = {"local_io_heavy"}
+    for priority, row in enumerate(rows, start=1):
+        chain_id = str(row.get("chain_id") or f"chain_{priority}")
+        experiment_id = f"autonomous_chain_{_slug_token(chain_id)}"
+        work_dir = queue_root / _slug_token(chain_id)
+        work_order_path = work_dir / "autonomous_chain_work_order.json"
+        local_actions = [
+            dict(action)
+            for action in row.get("scheduler_actions") or []
+            if isinstance(action, Mapping) and not bool(action.get("advisory_only"))
+        ]
+        advisory_actions = [
+            dict(action)
+            for action in row.get("scheduler_actions") or []
+            if isinstance(action, Mapping) and bool(action.get("advisory_only"))
+        ]
+        steps: list[dict[str, Any]] = [
+            {
+                "id": "emit_autonomous_chain_work_order",
+                "kind": "command",
+                "command": [
+                    ".venv/bin/python",
+                    "tools/build_frontier_autonomous_chain_work_order.py",
+                    "--autonomous-chain-optimization",
+                    _repo_rel(source_path, repo),
+                    "--chain-id",
+                    chain_id,
+                    "--work-order-out",
+                    _repo_rel(work_order_path, repo),
+                    "--overwrite",
+                ],
+                "resources": {"kind": "local_io_heavy"},
+                "timeout_seconds": 120,
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(work_order_path, repo),
+                        "key": "schema",
+                        "equals": AUTONOMOUS_CHAIN_WORK_ORDER_SCHEMA,
+                    },
+                    {
+                        "type": "json_false_authority",
+                        "path": _repo_rel(work_order_path, repo),
+                    },
+                    {
+                        "type": "json_equals",
+                        "path": _repo_rel(work_order_path, repo),
+                        "key": "ready_for_exact_eval_dispatch",
+                        "equals": False,
+                    },
+                ],
+                "telemetry": {
+                    "artifact_paths": [_repo_rel(work_order_path, repo)],
+                    "input_artifact_paths": [_repo_rel(source_path, repo)],
+                    "include_postcondition_paths": True,
+                },
+            }
+        ]
+        missing_queue_artifact_keys: list[str] = []
+        child_queue_paths: list[str] = []
+        child_queue_run_step_ids: list[str] = []
+        receiver_repair_run_step_ids: list[str] = []
+        for action_index, action in enumerate(local_actions, start=1):
+            queue_key = str(action.get("queue_artifact_key") or "")
+            if not queue_key:
+                missing_queue_artifact_keys.append(
+                    f"{action.get('id') or action_index}:missing_queue_artifact_key"
+                )
+                continue
+            raw_child_queue = artifact_paths_by_key.get(queue_key)
+            if raw_child_queue is None:
+                missing_queue_artifact_keys.append(queue_key)
+                continue
+            child_queue_path = _resolve_path(raw_child_queue, repo_root=repo)
+            child_queue_ref = _repo_rel(child_queue_path, repo)
+            child_queue_paths.append(child_queue_ref)
+            slug = _slug_token(f"{action.get('id') or action_index}_{queue_key}")
+            validate_step_id = f"validate_{slug}"
+            steps.append(
+                {
+                    "id": validate_step_id,
+                    "kind": "command",
+                    "command": [
+                        ".venv/bin/python",
+                        "tools/experiment_queue.py",
+                        "--queue",
+                        child_queue_ref,
+                        "validate",
+                    ],
+                    "requires": ["emit_autonomous_chain_work_order"],
+                    "resources": {"kind": "local_io_heavy"},
+                    "timeout_seconds": 120,
+                    "telemetry": {
+                        "input_artifact_paths": [
+                            child_queue_ref,
+                            _repo_rel(work_order_path, repo),
+                        ],
+                    },
+                }
+            )
+            run_step_id = f"run_{slug}_bounded_local"
+            child_worker_result_path = work_dir / f"{slug}_worker_result.json"
+            child_worker_result_ref = _repo_rel(child_worker_result_path, repo)
+            steps.append(
+                {
+                    "id": run_step_id,
+                    "kind": "command",
+                    "command": [
+                        ".venv/bin/python",
+                        "tools/experiment_queue.py",
+                        "--queue",
+                        child_queue_ref,
+                        "run-worker",
+                        "--execute",
+                        "--max-steps",
+                        "8",
+                        "--max-experiments",
+                        "2",
+                        "--max-parallel",
+                        "1",
+                        "--output",
+                        child_worker_result_ref,
+                    ],
+                    "requires": [validate_step_id],
+                    "resources": {"kind": "local_io_heavy"},
+                    "timeout_seconds": 900,
+                    "postconditions": [
+                        {
+                            "type": "json_equals",
+                            "path": child_worker_result_ref,
+                            "key": "schema",
+                            "equals": "experiment_queue_worker_result.v1",
+                        },
+                        {
+                            "type": "json_equals",
+                            "path": child_worker_result_ref,
+                            "key": "failure_count",
+                            "equals": 0,
+                        },
+                    ],
+                    "telemetry": {
+                        "artifact_paths": [child_worker_result_ref],
+                        "input_artifact_paths": [
+                            child_queue_ref,
+                            _repo_rel(work_order_path, repo),
+                        ],
+                        "include_postcondition_paths": True,
+                    },
+                }
+            )
+            child_queue_run_step_ids.append(run_step_id)
+            if queue_key == "receiver_repair_queue":
+                receiver_repair_run_step_ids.append(run_step_id)
+        post_repair_refresh_planned = False
+        post_repair_refresh_report_ref = ""
+        if receiver_repair_run_step_ids and any(
+            str(action.get("id") or "") == "bind_targeted_chain_materializer_contexts"
+            for action in advisory_actions
+        ):
+            post_repair_refresh_dir = work_dir / "post_receiver_repair_refresh"
+            post_repair_refresh_report = post_repair_refresh_dir / "feedback_refresh_report.json"
+            post_repair_refresh_report_ref = _repo_rel(post_repair_refresh_report, repo)
+            steps.append(
+                {
+                    "id": "refresh_after_receiver_repair_for_targeted_materializers",
+                    "kind": "command",
+                    "command": [
+                        ".venv/bin/python",
+                        "tools/build_frontier_rate_attack_feedback_refresh.py",
+                        "--output-dir",
+                        _repo_rel(post_repair_refresh_dir, repo),
+                        "--results-root",
+                        _repo_rel(results_base, repo),
+                        "--frontier-artifact-root",
+                        _repo_rel(results_base, repo),
+                        "--candidate-limit",
+                        str(chain_limit),
+                        "--action-summary",
+                        "latest",
+                    ],
+                    "requires": receiver_repair_run_step_ids,
+                    "resources": {"kind": "local_io_heavy"},
+                    "timeout_seconds": 600,
+                    "postconditions": [
+                        {
+                            "type": "json_equals",
+                            "path": post_repair_refresh_report_ref,
+                            "key": "schema",
+                            "equals": FEEDBACK_REFRESH_SCHEMA,
+                        },
+                        {
+                            "type": "json_false_authority",
+                            "path": post_repair_refresh_report_ref,
+                        },
+                    ],
+                    "telemetry": {
+                        "artifact_paths": [post_repair_refresh_report_ref],
+                        "input_artifact_paths": [
+                            _repo_rel(work_order_path, repo),
+                            *child_queue_paths,
+                        ],
+                        "recursive": True,
+                        "include_postcondition_paths": True,
+                    },
+                }
+            )
+            post_repair_refresh_planned = True
+        queue_actuation_blockers: list[str] = []
+        if not local_actions:
+            queue_actuation_blockers.append("no_non_advisory_child_queue_actions")
+        queue_actuation_blockers.extend(
+            f"missing_child_queue_artifact:{key}"
+            for key in _unique_strings(missing_queue_artifact_keys)
+        )
+        if len(child_queue_paths) < len(local_actions):
+            queue_actuation_blockers.append("not_all_local_actions_bound_to_child_queues")
+        queue_actuation_ready = bool(local_actions) and not queue_actuation_blockers
+        emit_command = steps[0]["command"]
+        for child_queue_path in _unique_strings(child_queue_paths):
+            emit_command.extend(["--child-queue-artifact-path", child_queue_path])
+        for missing_key in _unique_strings(missing_queue_artifact_keys):
+            emit_command.extend(["--missing-queue-artifact-key", missing_key])
+        if queue_actuation_ready:
+            emit_command.append("--queue-actuation-ready")
+        if post_repair_refresh_planned:
+            emit_command.append("--post-repair-refresh-planned")
+        metadata = {
+            "schema": AUTONOMOUS_CHAIN_QUEUE_METADATA_SCHEMA,
+            "chain_id": chain_id,
+            "chain_family": row.get("chain_family"),
+            "priority_score": row.get("priority_score"),
+            "pipeline_stages": _autonomous_chain_pipeline_stages(row),
+            "local_queue_actions": local_actions,
+            "local_queue_action_count": len(local_actions),
+            "advisory_actions": advisory_actions,
+            "advisory_action_count": len(advisory_actions),
+            "child_queue_artifact_paths": child_queue_paths,
+            "missing_queue_artifact_keys": _unique_strings(missing_queue_artifact_keys),
+            "queue_actuation_ready": queue_actuation_ready,
+            "queue_actuation_blockers": _unique_strings(queue_actuation_blockers),
+            "post_repair_refresh_planned": post_repair_refresh_planned,
+            "post_repair_refresh_report_path": post_repair_refresh_report_ref,
+            "source_artifact_paths": [
+                _repo_rel(source_path, repo),
+                *[
+                    _repo_rel(_resolve_path(path, repo_root=repo), repo)
+                    for path in artifact_paths_by_key.values()
+                ],
+            ],
+            "allowed_use": "local_many_op_chain_actuation_queue_only",
+            "forbidden_use": (
+                "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority"
+            ),
+            **FALSE_AUTHORITY,
+        }
+        require_no_truthy_authority_fields(
+            metadata,
+            context=f"frontier_autonomous_chain_queue_metadata:{chain_id}",
+        )
+        experiments.append(
+            {
+                "id": experiment_id,
+                "priority": priority,
+                "status": "queued" if queue_actuation_ready else "frozen",
+                "tags": [
+                    "frontier-rate-attack",
+                    "autonomous-many-op-chain",
+                    "encoder-side-actuation",
+                    "no-score-authority",
+                    *(
+                        []
+                        if queue_actuation_ready
+                        else ["blocked-child-queue-artifact-binding"]
+                    ),
+                ],
+                "metadata": metadata,
+                "steps": steps,
+            }
+        )
+    return normalize_queue_definition(
+        {
+            "schema": QUEUE_SCHEMA,
+            "queue_id": queue_id,
+            "controls": {
+                "mode": "running",
+                "local_first": True,
+                "max_concurrency": dict.fromkeys(sorted(used_resource_kinds), 1),
+            },
+            "experiments": experiments,
+        }
+    )
 
 
 def _targeted_component_prior_status(
@@ -12076,6 +12700,8 @@ def build_frontier_rate_attack_feedback_refresh(
 __all__ = [
     "AUTONOMOUS_CHAIN_OPTIMIZATION_ROW_SCHEMA",
     "AUTONOMOUS_CHAIN_OPTIMIZATION_SCHEMA",
+    "AUTONOMOUS_CHAIN_QUEUE_METADATA_SCHEMA",
+    "AUTONOMOUS_CHAIN_WORK_ORDER_SCHEMA",
     "DISCOVERED_MATERIALIZER_FEEDBACK_SCHEMA",
     "DQS1_OBSERVATION_DISCOVERY_SCHEMA",
     "FEEDBACK_REFRESH_SCHEMA",
@@ -12106,7 +12732,10 @@ __all__ = [
     "FrontierRateAttackFeedbackError",
     "attach_frontier_autonomous_chain_optimization",
     "build_frontier_autonomous_chain_optimization",
+    "build_frontier_autonomous_chain_optimization_queue",
+    "build_frontier_autonomous_chain_work_order",
     "build_frontier_byte_range_stage_inputs",
+    "build_frontier_materializer_execution_queue_if_available",
     "build_frontier_operation_materializer_bridge",
     "build_frontier_operation_portfolio",
     "build_frontier_rate_attack_feedback_refresh",
