@@ -120,8 +120,9 @@ Cross-references
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
@@ -134,19 +135,19 @@ except ImportError:
 
 
 __all__ = [
+    "AXIS_NAMES",
+    "DYKSTRA_DEFAULT_EPSILON",
+    "DYKSTRA_DEFAULT_MAX_ITERATIONS",
+    "MLX_AVAILABLE",
+    "PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MAX",
+    "PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MIN",
+    "PHASE_2_DUAL_SOLVER_SCHEMA_VERSION",
     "PerAxisDualSolverResult",
     "Phase2SolverError",
     "compute_per_axis_dual_variables",
     "dykstra_alternating_projections_3_axis",
     "kkt_residuals_per_axis",
     "per_axis_adjustment_factors",
-    "PHASE_2_DUAL_SOLVER_SCHEMA_VERSION",
-    "PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MIN",
-    "PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MAX",
-    "DYKSTRA_DEFAULT_MAX_ITERATIONS",
-    "DYKSTRA_DEFAULT_EPSILON",
-    "AXIS_NAMES",
-    "MLX_AVAILABLE",
 ]
 
 
@@ -513,9 +514,43 @@ def dykstra_alternating_projections_3_axis(
         # Fail back to numpy if MLX requested but unavailable.
         use_mlx = False
 
-    # Numpy path (canonical; MLX path falls back to numpy for the
-    # outer iteration to avoid per-iteration MLX overhead at small array
-    # size; MLX would only win at much larger problem sizes).
+    if use_mlx:
+        # MLX path: keep the Dykstra state and correction rows as MLX arrays,
+        # then convert to numpy at the API boundary per the portable bridge.
+        x_mx = mx.array([float(v) for v in x0], dtype=mx.float32)
+        corrections_mx = mx.zeros((3, 3), dtype=mx.float32)
+
+        converged = False
+        iterations = 0
+        for k in range(max_iterations):
+            x_prev_mx = x_mx
+            for axis_index in range(3):
+                lo, hi = budgets[axis_index]
+                y = x_mx + corrections_mx[axis_index]
+                x_new_mx = _project_onto_axis_halfspace_mlx(
+                    y, axis_index, float(lo), float(hi)
+                )
+                correction_new = y - x_new_mx
+                correction_rows = [
+                    correction_new if row_index == axis_index else corrections_mx[row_index]
+                    for row_index in range(3)
+                ]
+                corrections_mx = mx.stack(correction_rows)
+                x_mx = x_new_mx
+            iterations = k + 1
+            diff = float(mx.max(mx.abs(x_mx - x_prev_mx)).item())
+            if diff < epsilon:
+                converged = True
+                break
+
+        return (
+            np.asarray(x_mx.tolist(), dtype=np.float64),
+            iterations,
+            converged,
+            np.asarray(corrections_mx.tolist(), dtype=np.float64),
+        )
+
+    # Numpy path: canonical fallback for non-MLX environments.
     x = np.asarray(x0, dtype=np.float64)
     # Dykstra corrections: one per half-space (n_halfspaces == 3).
     corrections = np.zeros((3, 3), dtype=np.float64)
@@ -758,7 +793,7 @@ def compute_per_axis_dual_variables(
 
     # Per-axis posterior sigma (default 1.0 if unset).
     if per_axis_posterior_sigma is None:
-        sigma_per_axis = {axis: 1.0 for axis in AXIS_NAMES}
+        sigma_per_axis = dict.fromkeys(AXIS_NAMES, 1.0)
     else:
         sigma_per_axis = {
             axis: float(per_axis_posterior_sigma.get(axis, 1.0))

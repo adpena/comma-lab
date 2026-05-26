@@ -54,7 +54,6 @@ from pathlib import Path
 
 import pytest
 
-
 # Make tools/ importable for the helper tests.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _TOOLS_DIR = _REPO_ROOT / "tools"
@@ -62,23 +61,22 @@ if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
 
-from tac.preflight import (  # noqa: E402
-    PreflightError,
-    check_cathedral_autopilot_main_invokes_meta_lagrangian,
-)
-
-
 # Import the helper + dataclass from the cathedral autopilot module.
 # The module-level import succeeds because we've already added tools/ to
 # sys.path above.
 from cathedral_autopilot_autonomous_loop import (  # noqa: E402
-    CandidateRow,
     META_LAGRANGIAN_INVOCATION_SCHEMA,
-    invoke_meta_lagrangian_on_candidates,
+    PHASE_2_DUAL_SOLVER_INVOCATION_SCHEMA,
+    CandidateRow,
     _candidate_residuals_for_lagrangian,
     _lagrangian_derived_adjustment_factor,
+    invoke_meta_lagrangian_on_candidates,
 )
 
+from tac.preflight import (  # noqa: E402
+    PreflightError,
+    check_cathedral_autopilot_main_invokes_meta_lagrangian,
+)
 
 # ---------------------------------------------------------------------------
 # Helper: build a synthetic CandidateRow
@@ -92,6 +90,7 @@ def _make_candidate(
     predicted_score_delta: float = -0.005,
     expected_information_gain: float = 0.5,
     estimated_dispatch_cost_usd: float = 1.0,
+    consumer_payload: dict | None = None,
 ) -> CandidateRow:
     """Build a minimal synthetic CandidateRow for testing."""
     return CandidateRow(
@@ -100,6 +99,7 @@ def _make_candidate(
         predicted_score_delta=predicted_score_delta,
         expected_information_gain=expected_information_gain,
         estimated_dispatch_cost_usd=estimated_dispatch_cost_usd,
+        consumer_payload=consumer_payload or {},
     )
 
 
@@ -294,6 +294,55 @@ def test_helper_observability_decompose_includes_4_lagrangian_terms() -> None:
     assert "scalar" in decompose
 
 
+def test_helper_phase_2_dual_solver_consumes_axis_decomposition() -> None:
+    candidate = _make_candidate(
+        consumer_payload={
+            "predicted_axis_decomposition": {
+                "predicted_d_seg_delta": 0.001,
+                "predicted_d_pose_delta": 0.0001,
+                "predicted_archive_bytes_delta": 200,
+                "axis_tag": "[predicted]",
+                "canonical_provenance": {"fixture": "phase_2_dual_solver"},
+            }
+        }
+    )
+    result = invoke_meta_lagrangian_on_candidates(
+        [candidate],
+        use_phase_2_dual_solver=True,
+        phase_2_use_mlx=True,
+    )
+    assert result["phase"] == "phase_2_dual_solver_enabled_with_phase_1_fallback"
+    assert result["phase_2_dual_solver_enabled"] is True
+    assert result["phase_2_dual_solver_invoked_count"] == 1
+    row = result["invocations"][0]
+    assert "phase_1_adjustment_factor" in row
+    phase_2 = row["phase_2_dual_solver"]
+    assert phase_2["schema"] == PHASE_2_DUAL_SOLVER_INVOCATION_SCHEMA
+    assert phase_2["status"] == "invoked"
+    assert phase_2["score_claim"] is False
+    assert phase_2["promotion_eligible"] is False
+    assert phase_2["ready_for_exact_eval_dispatch"] is False
+    assert row["adjustment_factor"] == phase_2["adjustment_factor"]
+    assert phase_2["dual_variables_per_axis"]["seg"] > 0
+    assert phase_2["dual_variables_per_axis"]["pose"] > 0
+    assert phase_2["dual_variables_per_axis"]["rate"] > 0
+
+
+def test_helper_phase_2_dual_solver_refuses_scalar_axis_inference() -> None:
+    candidate = _make_candidate()
+    result = invoke_meta_lagrangian_on_candidates(
+        [candidate],
+        use_phase_2_dual_solver=True,
+    )
+    assert result["phase_2_dual_solver_invoked_count"] == 0
+    row = result["invocations"][0]
+    phase_2 = row["phase_2_dual_solver"]
+    assert phase_2["status"] == "skipped"
+    assert phase_2["invoked"] is False
+    assert "refuses scalar-to-axis inference" in phase_2["rationale"]
+    assert "phase_1_adjustment_factor" not in row
+
+
 # ---------------------------------------------------------------------------
 # Catalog #355 STRICT preflight gate tests
 # ---------------------------------------------------------------------------
@@ -303,7 +352,7 @@ def test_live_repo_355_passes_clean() -> None:
     """Live repo Catalog #355: meta-Lagrangian invoker callsite present."""
     violations = check_cathedral_autopilot_main_invokes_meta_lagrangian()
     assert violations == [], (
-        f"Live repo Catalog #355 violations:\n  - "
+        "Live repo Catalog #355 violations:\n  - "
         + "\n  - ".join(v[:200] for v in violations[:3])
     )
 
@@ -544,8 +593,10 @@ def test_catalog_185_sister_callable_via_globals() -> None:
 def test_helper_importable_from_cathedral_autopilot_module() -> None:
     """The Phase 1 helper must be importable from the canonical module."""
     from cathedral_autopilot_autonomous_loop import (
-        invoke_meta_lagrangian_on_candidates as _helper,
         META_LAGRANGIAN_INVOCATION_SCHEMA as _schema,
+    )
+    from cathedral_autopilot_autonomous_loop import (
+        invoke_meta_lagrangian_on_candidates as _helper,
     )
 
     assert callable(_helper)

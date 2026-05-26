@@ -6796,6 +6796,177 @@ Versioned per the canonical helper pattern (Catalog #245 ledger /
 when the output shape changes meaningfully.
 """
 
+PHASE_2_DUAL_SOLVER_INVOCATION_SCHEMA = (
+    "meta_lagrangian_phase_2_dual_solver_invocation_v1_20260526"
+)
+"""Schema id for the opt-in Phase 2 per-axis dual-solver annotation."""
+
+
+def _default_phase_2_dual_solver_budgets() -> dict[str, tuple[float, float]]:
+    """Return conservative signed-delta budgets for the Phase 2 solver.
+
+    Candidate ``AxisDecomposition`` rows use the score-composition sign
+    convention: negative deltas improve the score and positive deltas worsen
+    it. The default feasible polytope therefore allows improvements and
+    treats any positive SegNet/PoseNet/rate degradation as binding.
+    """
+    try:
+        from tac.score_composition import CANONICAL_RATE_DENOM_BYTES
+        rate_lower = -float(CANONICAL_RATE_DENOM_BYTES)
+    except Exception:
+        rate_lower = -37_545_489.0
+    return {
+        "seg": (-1.0, 0.0),
+        "pose": (-1.0, 0.0),
+        "rate": (rate_lower, 0.0),
+    }
+
+
+def _candidate_phase_2_axis_targets(
+    candidate: CandidateRow,
+) -> tuple[dict[str, float] | None, str]:
+    """Extract canonical per-axis targets from a candidate row.
+
+    Phase 2 refuses to infer SegNet/PoseNet/rate decomposition from the scalar
+    score delta. It only consumes an explicit ``AxisDecomposition`` carried in
+    ``candidate.consumer_payload`` so the solver cannot fabricate axis signal.
+    """
+    raw: Any = None
+    if isinstance(candidate.consumer_payload, Mapping):
+        raw = candidate.consumer_payload.get("predicted_axis_decomposition")
+        if raw is None:
+            raw = candidate.consumer_payload.get("axis_decomposition")
+        if raw is None and all(
+            key in candidate.consumer_payload
+            for key in (
+                "predicted_d_seg_delta",
+                "predicted_d_pose_delta",
+                "predicted_archive_bytes_delta",
+            )
+        ):
+            raw = {
+                "predicted_d_seg_delta": candidate.consumer_payload[
+                    "predicted_d_seg_delta"
+                ],
+                "predicted_d_pose_delta": candidate.consumer_payload[
+                    "predicted_d_pose_delta"
+                ],
+                "predicted_archive_bytes_delta": candidate.consumer_payload[
+                    "predicted_archive_bytes_delta"
+                ],
+                "axis_tag": candidate.consumer_payload.get("axis_tag", "[predicted]"),
+                "canonical_provenance": candidate.consumer_payload.get(
+                    "canonical_provenance", {}
+                ),
+            }
+    if raw is None:
+        return None, (
+            "missing predicted_axis_decomposition in candidate.consumer_payload; "
+            "Phase 2 refuses scalar-to-axis inference"
+        )
+    if not isinstance(raw, Mapping):
+        return None, (
+            "predicted_axis_decomposition must be a Mapping, got "
+            f"{type(raw).__name__}"
+        )
+    try:
+        from tac.cathedral.consumer_contract import AxisDecomposition
+
+        decomp = AxisDecomposition.from_dict(raw)
+    except Exception as exc:
+        return None, (
+            "AxisDecomposition.from_dict refused Phase 2 targets: "
+            f"{type(exc).__name__}: {exc}"
+        )
+    return {
+        "seg": float(decomp.predicted_d_seg_delta),
+        "pose": float(decomp.predicted_d_pose_delta),
+        "rate": float(decomp.predicted_archive_bytes_delta),
+    }, ""
+
+
+def _phase_2_dual_solver_payload_for_candidate(
+    candidate: CandidateRow,
+    *,
+    solver_fn: Callable[..., Any] | None,
+    per_axis_budgets: Mapping[str, tuple[float, float]] | None,
+    use_mlx: bool | None,
+    import_error: str | None = None,
+) -> dict[str, Any]:
+    """Build a false-authority Phase 2 dual-solver annotation row."""
+    base_payload: dict[str, Any] = {
+        "schema": PHASE_2_DUAL_SOLVER_INVOCATION_SCHEMA,
+        "candidate_id": candidate.candidate_id,
+        "axis_tag": "[predicted]",
+        "score_claim": False,
+        "promotable": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if solver_fn is None:
+        return {
+            **base_payload,
+            "status": "unavailable",
+            "invoked": False,
+            "error": import_error or "phase_2_dual_solver_import_unavailable",
+        }
+    targets, target_error = _candidate_phase_2_axis_targets(candidate)
+    if targets is None:
+        return {
+            **base_payload,
+            "status": "skipped",
+            "invoked": False,
+            "rationale": target_error,
+        }
+    budgets = dict(per_axis_budgets or _default_phase_2_dual_solver_budgets())
+    try:
+        result = solver_fn(
+            candidate.candidate_id,
+            predicted_axis_targets=targets,
+            per_axis_budgets=budgets,
+            canonical_provenance={
+                "source": "tools.cathedral_autopilot_autonomous_loop",
+                "candidate_id": candidate.candidate_id,
+                "phase": "meta_lagrangian_phase_2_dual_solver",
+                "axis_tag": "[predicted]",
+                "score_claim": False,
+                "promotable": False,
+            },
+            use_mlx=use_mlx,
+        )
+    except Exception as exc:
+        return {
+            **base_payload,
+            "status": "error",
+            "invoked": False,
+            "error": f"{type(exc).__name__}: {exc}",
+            "predicted_axis_targets": targets,
+            "per_axis_budgets": {
+                key: [float(value[0]), float(value[1])]
+                for key, value in budgets.items()
+            },
+        }
+    result_dict = result.as_dict()
+    return {
+        **base_payload,
+        "status": "invoked",
+        "invoked": True,
+        "predicted_axis_targets": targets,
+        "per_axis_budgets": {
+            key: [float(value[0]), float(value[1])]
+            for key, value in budgets.items()
+        },
+        "result": result_dict,
+        "dual_variables_per_axis": result_dict["dual_variables_per_axis"],
+        "kkt_residual_per_axis": result_dict["kkt_residual_per_axis"],
+        "adjustment_factor_per_axis": result_dict["adjustment_factor_per_axis"],
+        "adjustment_factor": result_dict["adjustment_factor"],
+        "dykstra_iterations_to_convergence": result_dict[
+            "dykstra_iterations_to_convergence"
+        ],
+        "converged": result_dict["converged"],
+    }
+
 
 def _candidate_residuals_for_lagrangian(
     candidate: CandidateRow,
@@ -7169,6 +7340,9 @@ def invoke_meta_lagrangian_on_candidates(
     repo_root: Path | str | None = None,
     panel_axis: str = "contest_cpu",
     sigma_obs: float = 1.0,
+    use_phase_2_dual_solver: bool = False,
+    phase_2_per_axis_budgets: Mapping[str, tuple[float, float]] | None = None,
+    phase_2_use_mlx: bool | None = None,
 ) -> dict[str, Any]:
     """Phase 1 canonical invocation of the meta-Lagrangian on candidates.
 
@@ -7240,6 +7414,8 @@ def invoke_meta_lagrangian_on_candidates(
           - ``per_candidate_errors``: count of trapped exceptions (each
             recorded inline in ``invocations``)
           - ``next_phase_roadmap``: pointer to the design memo
+          - ``phase_2_dual_solver_enabled``: opt-in per-axis solver flag
+          - ``phase_2_dual_solver_invoked_count``: rows with actual duals
     """
     # Bound the candidate set.
     target_candidates = list(candidates)
@@ -7262,6 +7438,20 @@ def invoke_meta_lagrangian_on_candidates(
 
     invocations: list[dict[str, Any]] = []
     per_candidate_errors = 0
+    phase_2_dual_solver_invoked_count = 0
+    phase_2_dual_solver_error_count = 0
+
+    phase_2_solver_fn: Callable[..., Any] | None = None
+    phase_2_solver_import_error: str | None = None
+    if use_phase_2_dual_solver:
+        try:
+            from tac.findings_lagrangian.dual_solver_phase_2 import (
+                compute_per_axis_dual_variables as _compute_phase_2_dual,
+            )
+
+            phase_2_solver_fn = _compute_phase_2_dual
+        except Exception as exc:
+            phase_2_solver_import_error = f"{type(exc).__name__}: {exc}"
 
     if not _LAGRANGIAN_OK:
         # Surface the import failure as a single observability row + return.
@@ -7288,6 +7478,9 @@ def invoke_meta_lagrangian_on_candidates(
             "top_n": top_n,
             "candidates_invoked": 0,
             "phase": "phase_1_canonical_invocation_with_bounded_proxy_adjuster",
+            "phase_2_dual_solver_enabled": bool(use_phase_2_dual_solver),
+            "phase_2_dual_solver_invoked_count": 0,
+            "phase_2_dual_solver_error_count": 1 if use_phase_2_dual_solver else 0,
             "invocations": invocations,
             "per_candidate_errors": per_candidate_errors + 1,
             "next_phase_roadmap": (
@@ -7324,7 +7517,7 @@ def invoke_meta_lagrangian_on_candidates(
         residuals = _candidate_residuals_for_lagrangian(candidate)
 
         if partition is None or not residuals:
-            invocations.append({
+            row = {
                 "candidate_id": candidate.candidate_id,
                 "family": candidate.family,
                 "lagrangian_scalar": None,
@@ -7335,7 +7528,25 @@ def invoke_meta_lagrangian_on_candidates(
                 "rationale": (
                     "Phase 1 skip: missing partition OR empty residuals"
                 ),
-            })
+            }
+            if use_phase_2_dual_solver:
+                phase_2_payload = _phase_2_dual_solver_payload_for_candidate(
+                    candidate,
+                    solver_fn=phase_2_solver_fn,
+                    per_axis_budgets=phase_2_per_axis_budgets,
+                    use_mlx=phase_2_use_mlx,
+                    import_error=phase_2_solver_import_error,
+                )
+                row["phase_2_dual_solver"] = phase_2_payload
+                if phase_2_payload.get("invoked") is True:
+                    phase_2_dual_solver_invoked_count += 1
+                    row["phase_1_adjustment_factor"] = row["adjustment_factor"]
+                    row["adjustment_factor"] = float(
+                        phase_2_payload["adjustment_factor"]
+                    )
+                elif phase_2_payload.get("status") in {"error", "unavailable"}:
+                    phase_2_dual_solver_error_count += 1
+            invocations.append(row)
             continue
 
         try:
@@ -7356,7 +7567,7 @@ def invoke_meta_lagrangian_on_candidates(
             scalar = float(lag_result.scalar)
             sigma = float(lag_result.posterior_sigma_per_term[0])
             adjustment = _lagrangian_derived_adjustment_factor(scalar, sigma)
-            invocations.append({
+            row = {
                 "candidate_id": candidate.candidate_id,
                 "family": candidate.family,
                 "equation_id_used": equation_id,
@@ -7371,10 +7582,33 @@ def invoke_meta_lagrangian_on_candidates(
                     "Phase 1 bounded-proxy adjustment (5% band); "
                     "Phase 2 will replace with actual dual variables"
                 )[:512],
-            })
+            }
+            if use_phase_2_dual_solver:
+                phase_2_payload = _phase_2_dual_solver_payload_for_candidate(
+                    candidate,
+                    solver_fn=phase_2_solver_fn,
+                    per_axis_budgets=phase_2_per_axis_budgets,
+                    use_mlx=phase_2_use_mlx,
+                    import_error=phase_2_solver_import_error,
+                )
+                row["phase_2_dual_solver"] = phase_2_payload
+                if phase_2_payload.get("invoked") is True:
+                    phase_2_dual_solver_invoked_count += 1
+                    row["phase_1_adjustment_factor"] = adjustment
+                    row["adjustment_factor"] = float(
+                        phase_2_payload["adjustment_factor"]
+                    )
+                    row["rationale"] = (
+                        "Phase 2 per-axis dual-solver adjustment enabled; "
+                        "false-authority, bounded scalar, AxisDecomposition "
+                        "required"
+                    )
+                elif phase_2_payload.get("status") in {"error", "unavailable"}:
+                    phase_2_dual_solver_error_count += 1
+            invocations.append(row)
         except Exception as exc:
             per_candidate_errors += 1
-            invocations.append({
+            row = {
                 "candidate_id": candidate.candidate_id,
                 "family": candidate.family,
                 "error": f"{type(exc).__name__}: {exc}",
@@ -7382,7 +7616,25 @@ def invoke_meta_lagrangian_on_candidates(
                 "axis_tag": "[predicted]",
                 "score_claim": False,
                 "promotable": False,
-            })
+            }
+            if use_phase_2_dual_solver:
+                phase_2_payload = _phase_2_dual_solver_payload_for_candidate(
+                    candidate,
+                    solver_fn=phase_2_solver_fn,
+                    per_axis_budgets=phase_2_per_axis_budgets,
+                    use_mlx=phase_2_use_mlx,
+                    import_error=phase_2_solver_import_error,
+                )
+                row["phase_2_dual_solver"] = phase_2_payload
+                if phase_2_payload.get("invoked") is True:
+                    phase_2_dual_solver_invoked_count += 1
+                    row["phase_1_adjustment_factor"] = 1.0
+                    row["adjustment_factor"] = float(
+                        phase_2_payload["adjustment_factor"]
+                    )
+                elif phase_2_payload.get("status") in {"error", "unavailable"}:
+                    phase_2_dual_solver_error_count += 1
+            invocations.append(row)
 
     return {
         "schema": META_LAGRANGIAN_INVOCATION_SCHEMA,
@@ -7393,7 +7645,14 @@ def invoke_meta_lagrangian_on_candidates(
         "panel_axis": panel_axis,
         "top_n": top_n,
         "candidates_invoked": len(target_candidates),
-        "phase": "phase_1_canonical_invocation_with_bounded_proxy_adjuster",
+        "phase": (
+            "phase_2_dual_solver_enabled_with_phase_1_fallback"
+            if use_phase_2_dual_solver
+            else "phase_1_canonical_invocation_with_bounded_proxy_adjuster"
+        ),
+        "phase_2_dual_solver_enabled": bool(use_phase_2_dual_solver),
+        "phase_2_dual_solver_invoked_count": phase_2_dual_solver_invoked_count,
+        "phase_2_dual_solver_error_count": phase_2_dual_solver_error_count,
         "invocations": invocations,
         "per_candidate_errors": per_candidate_errors,
         "next_phase_roadmap": (
@@ -7669,6 +7928,17 @@ def main(argv: list[str] | None = None) -> int:
             "carry score_claim=False + promotable=False + axis_tag=[predicted]."
         ),
     )
+    parser.add_argument(
+        "--use-phase-2-dual-solver",
+        action="store_true",
+        help=(
+            "OPT-IN: invoke the META-LAGRANGIAN Phase 2 per-axis dual solver "
+            "on candidates carrying canonical AxisDecomposition payloads. "
+            "Uses MLX locally when available, falls back to NumPy portability, "
+            "and remains false-authority: no score claim, promotion, kill, or "
+            "exact-eval dispatch readiness is created."
+        ),
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -7936,6 +8206,7 @@ def main(argv: list[str] | None = None) -> int:
             ranked,
             top_n=top_n,
             panel_axis=args.score_panel_axis,
+            use_phase_2_dual_solver=args.use_phase_2_dual_solver,
         )
 
         # WAVE-3-DIM-1-PHASE-2 (2026-05-20): per-adjuster ablation invocation
@@ -8005,9 +8276,13 @@ def main(argv: list[str] | None = None) -> int:
                 "cathedral_consumer_invocation_active_catalog_336_337",
                 "meta_lagrangian_invocation_active_catalog_355",
                 "phase_2_ablation_invocation_active_wave_3_dim_1",
+                "meta_lagrangian_phase_2_dual_solver_false_authority"
+                if args.use_phase_2_dual_solver
+                else "meta_lagrangian_phase_2_dual_solver_not_requested",
             ],
             "cathedral_consumer_invocations": consumer_invocations,
             "meta_lagrangian_invocations": meta_lagrangian_invocations,
+            "phase_2_dual_solver_enabled": args.use_phase_2_dual_solver,
             "phase_2_ablation_invocations": phase_2_ablation_invocations,
             "phase_2_ablation_mode": args.phase_2_ablation_mode,
             "rank_axis": args.rank_axis,
@@ -8096,6 +8371,7 @@ def main(argv: list[str] | None = None) -> int:
             ranked_post_loop,
             top_n=min(args.max_dispatch_recommendations or 10, 10),
             panel_axis=args.score_panel_axis,
+            use_phase_2_dual_solver=args.use_phase_2_dual_solver,
         )
 
         # WAVE-3-DIM-1-PHASE-2 (2026-05-20): same post-loop wire-in as
@@ -8127,6 +8403,11 @@ def main(argv: list[str] | None = None) -> int:
             "ready_for_exact_eval_dispatch": False,
             "candidates_invoked": 0,
             "phase": "phase_1_canonical_invocation_with_bounded_proxy_adjuster",
+            "phase_2_dual_solver_enabled": bool(args.use_phase_2_dual_solver),
+            "phase_2_dual_solver_invoked_count": 0,
+            "phase_2_dual_solver_error_count": 1
+            if args.use_phase_2_dual_solver
+            else 0,
             "invocations": [],
             "per_candidate_errors": 0,
             "error": f"{type(exc).__name__}: {exc}",
@@ -8205,9 +8486,13 @@ def main(argv: list[str] | None = None) -> int:
             "cathedral_consumer_invocation_active_catalog_336_337",
             "meta_lagrangian_invocation_active_catalog_355",
             "phase_2_ablation_invocation_active_wave_3_dim_1",
+            "meta_lagrangian_phase_2_dual_solver_false_authority"
+            if args.use_phase_2_dual_solver
+            else "meta_lagrangian_phase_2_dual_solver_not_requested",
         ],
         "cathedral_consumer_invocations": consumer_invocations_post_loop,
         "meta_lagrangian_invocations": meta_lagrangian_invocations_post_loop,
+        "phase_2_dual_solver_enabled": args.use_phase_2_dual_solver,
         "phase_2_ablation_invocations": phase_2_ablation_invocations_post_loop,
         "phase_2_ablation_mode": args.phase_2_ablation_mode,
         "iterations_run": len(reports),

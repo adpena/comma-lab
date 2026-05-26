@@ -14,14 +14,11 @@ Test classes:
 """
 from __future__ import annotations
 
-import math
-
 import numpy as np
 import pytest
 
 from tac.findings_lagrangian.dual_solver_phase_2 import (
     AXIS_NAMES,
-    DYKSTRA_DEFAULT_EPSILON,
     DYKSTRA_DEFAULT_MAX_ITERATIONS,
     MLX_AVAILABLE,
     PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MAX,
@@ -29,14 +26,12 @@ from tac.findings_lagrangian.dual_solver_phase_2 import (
     PHASE_2_DUAL_SOLVER_SCHEMA_VERSION,
     PerAxisDualSolverResult,
     Phase2SolverError,
-    _dual_variable_from_correction,
     _exposed_scalar_adjustment_factor,
     compute_per_axis_dual_variables,
     dykstra_alternating_projections_3_axis,
     kkt_residuals_per_axis,
     per_axis_adjustment_factors,
 )
-
 
 # ─────────────────────────────────────────────────────────────────
 # Dykstra alternating projections convergence
@@ -109,7 +104,7 @@ class TestDykstraConvergence:
             )
 
     def test_lower_above_upper_rejected(self) -> None:
-        with pytest.raises(Phase2SolverError, match="lower=.* > upper="):
+        with pytest.raises(Phase2SolverError, match=r"lower=.* > upper="):
             dykstra_alternating_projections_3_axis(
                 [1.0, 2.0, 3.0],
                 budgets=[(5.0, 1.0), (0, 1), (0, 1)],
@@ -126,6 +121,22 @@ class TestDykstraConvergence:
             dykstra_alternating_projections_3_axis(
                 [1, 2, 3], budgets=[(0, 1), (0, 1), (0, 1)], epsilon=0.0
             )
+
+    def test_forced_mlx_path_matches_numpy_path_when_available(self) -> None:
+        if not MLX_AVAILABLE:
+            pytest.skip("MLX not installed on this substrate")
+        x0 = [2.0, 0.05, 500_000]
+        budgets = [(0.0, 1.0), (0.0, 0.01), (0, 350_000)]
+        np_x, np_iters, np_conv, np_corr = dykstra_alternating_projections_3_axis(
+            x0, budgets=budgets, use_mlx=False
+        )
+        mlx_x, mlx_iters, mlx_conv, mlx_corr = dykstra_alternating_projections_3_axis(
+            x0, budgets=budgets, use_mlx=True
+        )
+        assert mlx_conv is np_conv
+        assert mlx_iters == np_iters
+        np.testing.assert_allclose(mlx_x, np_x, rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(mlx_corr, np_corr, rtol=1e-5, atol=1e-5)
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -177,8 +188,8 @@ class TestKKTResiduals:
 
 class TestPerAxisAdjustmentFactors:
     def test_zero_dual_gives_unity_factor(self) -> None:
-        dual = {a: 0.0 for a in AXIS_NAMES}
-        sigma = {a: 1.0 for a in AXIS_NAMES}
+        dual = dict.fromkeys(AXIS_NAMES, 0.0)
+        sigma = dict.fromkeys(AXIS_NAMES, 1.0)
         factors = per_axis_adjustment_factors(dual, sigma)
         for a in AXIS_NAMES:
             assert factors[a] == pytest.approx(1.0)
@@ -186,7 +197,7 @@ class TestPerAxisAdjustmentFactors:
     def test_positive_dual_downweights(self) -> None:
         # Positive dual = binding = should downweight (< 1.0).
         dual = {"seg": 5.0, "pose": 0.0, "rate": 0.0}
-        sigma = {a: 0.5 for a in AXIS_NAMES}
+        sigma = dict.fromkeys(AXIS_NAMES, 0.5)
         factors = per_axis_adjustment_factors(dual, sigma)
         assert factors["seg"] < 1.0
         assert factors["seg"] >= PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MIN
@@ -196,15 +207,15 @@ class TestPerAxisAdjustmentFactors:
     def test_all_factors_inside_bounded_envelope(self) -> None:
         # Adversarial: very large dual variables; factor must still be in [0.95, 1.05].
         dual = {"seg": 1e6, "pose": 1e6, "rate": 1e6}
-        sigma = {a: 1e-9 for a in AXIS_NAMES}
+        sigma = dict.fromkeys(AXIS_NAMES, 1e-09)
         factors = per_axis_adjustment_factors(dual, sigma)
         for a in AXIS_NAMES:
             assert PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MIN <= factors[a] <= PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MAX
 
     def test_higher_sigma_decreases_magnitude(self) -> None:
-        dual = {a: 5.0 for a in AXIS_NAMES}
-        sigma_low = {a: 0.1 for a in AXIS_NAMES}
-        sigma_high = {a: 10.0 for a in AXIS_NAMES}
+        dual = dict.fromkeys(AXIS_NAMES, 5.0)
+        sigma_low = dict.fromkeys(AXIS_NAMES, 0.1)
+        sigma_high = dict.fromkeys(AXIS_NAMES, 10.0)
         factors_low = per_axis_adjustment_factors(dual, sigma_low)
         factors_high = per_axis_adjustment_factors(dual, sigma_high)
         # Higher sigma = more uncertainty = adjustment closer to 1.0.
@@ -213,8 +224,8 @@ class TestPerAxisAdjustmentFactors:
 
     def test_negative_sigma_treated_as_zero(self) -> None:
         # Should NOT crash on negative sigma; just floor to 0.
-        dual = {a: 5.0 for a in AXIS_NAMES}
-        sigma = {a: -1.0 for a in AXIS_NAMES}
+        dual = dict.fromkeys(AXIS_NAMES, 5.0)
+        sigma = dict.fromkeys(AXIS_NAMES, -1.0)
         factors = per_axis_adjustment_factors(dual, sigma)
         for a in AXIS_NAMES:
             assert PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MIN <= factors[a] <= PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MAX
@@ -227,7 +238,7 @@ class TestPerAxisAdjustmentFactors:
 
 class TestScalarAdjustmentAggregation:
     def test_all_unity_gives_unity(self) -> None:
-        per_axis = {a: 1.0 for a in AXIS_NAMES}
+        per_axis = dict.fromkeys(AXIS_NAMES, 1.0)
         assert _exposed_scalar_adjustment_factor(per_axis) == pytest.approx(1.0)
 
     def test_geometric_mean_inside_bounds(self) -> None:
@@ -239,13 +250,13 @@ class TestScalarAdjustmentAggregation:
         assert result == pytest.approx(expected, rel=1e-9)
 
     def test_all_min_yields_min(self) -> None:
-        per_axis = {a: PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MIN for a in AXIS_NAMES}
+        per_axis = dict.fromkeys(AXIS_NAMES, PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MIN)
         assert _exposed_scalar_adjustment_factor(per_axis) == pytest.approx(
             PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MIN
         )
 
     def test_all_max_yields_max(self) -> None:
-        per_axis = {a: PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MAX for a in AXIS_NAMES}
+        per_axis = dict.fromkeys(AXIS_NAMES, PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MAX)
         assert _exposed_scalar_adjustment_factor(per_axis) == pytest.approx(
             PHASE_2_BOUNDED_ADJUSTMENT_FACTOR_MAX
         )
@@ -354,6 +365,34 @@ class TestComputePerAxisDualVariables:
                 },
             )
 
+    def test_compute_forced_mlx_path_matches_numpy_path_when_available(self) -> None:
+        if not MLX_AVAILABLE:
+            pytest.skip("MLX not installed on this substrate")
+        kwargs = {
+            "candidate_id": "cand_mlx",
+            "predicted_axis_targets": {"seg": 2.0, "pose": 0.05, "rate": 500_000},
+            "per_axis_budgets": {
+                "seg": (0.0, 1.0),
+                "pose": (0.0, 0.01),
+                "rate": (0, 350_000),
+            },
+            "per_axis_posterior_sigma": {"seg": 0.1, "pose": 0.1, "rate": 0.1},
+        }
+        np_result = compute_per_axis_dual_variables(**kwargs, use_mlx=False)
+        mlx_result = compute_per_axis_dual_variables(**kwargs, use_mlx=True)
+        assert mlx_result.converged is np_result.converged
+        assert (
+            mlx_result.dykstra_iterations_to_convergence
+            == np_result.dykstra_iterations_to_convergence
+        )
+        assert mlx_result.adjustment_factor == pytest.approx(
+            np_result.adjustment_factor, rel=1e-6, abs=1e-6
+        )
+        for axis in AXIS_NAMES:
+            assert mlx_result.dual_variables_per_axis[axis] == pytest.approx(
+                np_result.dual_variables_per_axis[axis], rel=1e-5, abs=1e-5
+            )
+
 
 # ─────────────────────────────────────────────────────────────────
 # PerAxisDualSolverResult invariants
@@ -362,16 +401,16 @@ class TestComputePerAxisDualVariables:
 
 class TestPerAxisDualSolverResult:
     def _valid_kwargs(self) -> dict:
-        return dict(
-            candidate_id="test",
-            dual_variables_per_axis={a: 0.0 for a in AXIS_NAMES},
-            kkt_residual_per_axis={a: 0.0 for a in AXIS_NAMES},
-            adjustment_factor_per_axis={a: 1.0 for a in AXIS_NAMES},
-            adjustment_factor=1.0,
-            dykstra_iterations_to_convergence=1,
-            converged=True,
-            posterior_sigma_per_axis={a: 1.0 for a in AXIS_NAMES},
-        )
+        return {
+            "candidate_id": "test",
+            "dual_variables_per_axis": dict.fromkeys(AXIS_NAMES, 0.0),
+            "kkt_residual_per_axis": dict.fromkeys(AXIS_NAMES, 0.0),
+            "adjustment_factor_per_axis": dict.fromkeys(AXIS_NAMES, 1.0),
+            "adjustment_factor": 1.0,
+            "dykstra_iterations_to_convergence": 1,
+            "converged": True,
+            "posterior_sigma_per_axis": dict.fromkeys(AXIS_NAMES, 1.0),
+        }
 
     def test_default_axis_tag(self) -> None:
         result = PerAxisDualSolverResult(**self._valid_kwargs())
@@ -400,19 +439,19 @@ class TestPerAxisDualSolverResult:
             )
 
     def test_adjustment_factor_below_min_rejected(self) -> None:
-        with pytest.raises(Phase2SolverError, match="adjustment_factor=.* <"):
+        with pytest.raises(Phase2SolverError, match=r"adjustment_factor=.* <"):
             PerAxisDualSolverResult(
                 **{**self._valid_kwargs(), "adjustment_factor": 0.8}
             )
 
     def test_adjustment_factor_above_max_rejected(self) -> None:
-        with pytest.raises(Phase2SolverError, match="adjustment_factor=.* >"):
+        with pytest.raises(Phase2SolverError, match=r"adjustment_factor=.* >"):
             PerAxisDualSolverResult(
                 **{**self._valid_kwargs(), "adjustment_factor": 1.2}
             )
 
     def test_per_axis_factor_below_min_rejected(self) -> None:
-        bad = {a: 1.0 for a in AXIS_NAMES}
+        bad = dict.fromkeys(AXIS_NAMES, 1.0)
         bad["seg"] = 0.8
         with pytest.raises(Phase2SolverError):
             PerAxisDualSolverResult(
@@ -420,7 +459,7 @@ class TestPerAxisDualSolverResult:
             )
 
     def test_per_axis_factor_above_max_rejected(self) -> None:
-        bad = {a: 1.0 for a in AXIS_NAMES}
+        bad = dict.fromkeys(AXIS_NAMES, 1.0)
         bad["pose"] = 1.2
         with pytest.raises(Phase2SolverError):
             PerAxisDualSolverResult(
@@ -435,7 +474,7 @@ class TestPerAxisDualSolverResult:
             )
 
     def test_negative_posterior_sigma_rejected(self) -> None:
-        bad = {a: 1.0 for a in AXIS_NAMES}
+        bad = dict.fromkeys(AXIS_NAMES, 1.0)
         bad["pose"] = -0.5
         with pytest.raises(Phase2SolverError, match="must be >= 0"):
             PerAxisDualSolverResult(
@@ -540,16 +579,16 @@ class TestCathedralAutopilotIntegration:
 
 class TestDeterminism:
     def test_repeated_invocation_yields_identical_result(self) -> None:
-        kwargs = dict(
-            candidate_id="cand_repro",
-            predicted_axis_targets={"seg": 0.7, "pose": 0.02, "rate": 400_000},
-            per_axis_budgets={
+        kwargs = {
+            "candidate_id": "cand_repro",
+            "predicted_axis_targets": {"seg": 0.7, "pose": 0.02, "rate": 400_000},
+            "per_axis_budgets": {
                 "seg": (0.0, 1.0),
                 "pose": (0.0, 0.01),
                 "rate": (0, 350_000),
             },
-            per_axis_posterior_sigma={"seg": 0.5, "pose": 0.5, "rate": 0.5},
-        )
+            "per_axis_posterior_sigma": {"seg": 0.5, "pose": 0.5, "rate": 0.5},
+        }
         r1 = compute_per_axis_dual_variables(**kwargs)
         r2 = compute_per_axis_dual_variables(**kwargs)
         for axis in AXIS_NAMES:
