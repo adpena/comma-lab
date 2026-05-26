@@ -59,6 +59,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (
     select_pairset_acquisition_for_harvests,
     write_frontier_refresh_artifacts,
     write_pairset_component_marginal_feedback_bundle,
+    write_targeted_component_correction_post_auxiliary_artifacts,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -2544,6 +2545,116 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     ]
 
 
+def test_post_auxiliary_targeted_component_refresh_reharvests_into_chain(
+    tmp_path: Path,
+) -> None:
+    action_summary = _write_action_summary(tmp_path)
+    artifact_root = tmp_path / "frontier_artifacts"
+    _write_materializer_feedback(artifact_root)
+    results_root = tmp_path / "results"
+    _write_receiver_closed_budget_signal(tmp_path, results_root=results_root)
+
+    report = build_frontier_rate_attack_feedback_refresh(
+        repo_root=tmp_path,
+        frontier_artifact_roots=(artifact_root,),
+        action_summary_path=action_summary,
+        results_root=str(results_root),
+        queue_id="frontier_feedback_post_auxiliary_refresh_unit",
+        candidate_limit=1,
+    )
+    targeted_component = report["targeted_component_correction_acquisition"]
+    work_order = build_frontier_targeted_component_correction_work_order(
+        targeted_component_correction_acquisition=targeted_component,
+        acquisition_id=targeted_component["top_acquisition_ids"][0],
+    )
+    work_order_path = _write_json(tmp_path / "work_order.json", work_order)
+    candidate_advisory_path = _write_json(
+        tmp_path / "candidate_local_cpu_advisory.json",
+        {
+            "schema_version": "contest_auth_eval_result.v1",
+            **_false_authority(),
+            "score_axis": "cpu_advisory",
+            "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+            "archive_size_bytes": 345_544,
+            "avg_posenet_dist": 0.001,
+            "avg_segnet_dist": 0.0008,
+        },
+    )
+    reference_advisory_path = _write_json(
+        tmp_path / "reference_local_cpu_advisory.json",
+        {
+            "schema_version": "contest_auth_eval_result.v1",
+            **_false_authority(),
+            "score_axis": "cpu_advisory",
+            "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+            "archive_size_bytes": 345_802,
+            "avg_posenet_dist": 0.001,
+            "avg_segnet_dist": 0.001,
+        },
+    )
+    response_path = tmp_path / "component_correction_response_harvest.json"
+    queue = {
+        "schema": "experiment_queue.v1",
+        **_false_authority(),
+        "queue_id": "post_auxiliary_targeted_component_queue_unit",
+        "controls": {"max_concurrency": {"local_io_heavy": 1}},
+        "experiments": [
+            {
+                "id": "targeted_component_response_unit",
+                "metadata": {
+                    **_false_authority(),
+                    "correction_requests": [
+                        {
+                            "acquisition_id": work_order["acquisition_id"],
+                            "candidate_id": work_order["candidate_id"],
+                            "correction_family": work_order["correction_family"],
+                            "operation_levels": work_order["operation_levels"],
+                            "targeted_dimensions": work_order["targeted_dimensions"],
+                            "saved_bytes_budget": work_order["saved_bytes_budget"],
+                            "estimated_rate_credit_score_units": (
+                                work_order[
+                                    "estimated_rate_credit_score_units"
+                                ]
+                            ),
+                            "work_order_path": work_order_path.as_posix(),
+                            "local_cpu_advisory_path": (
+                                candidate_advisory_path.as_posix()
+                            ),
+                            "reference_local_cpu_advisory_path": (
+                                reference_advisory_path.as_posix()
+                            ),
+                            "component_correction_response_harvest_path": (
+                                response_path.as_posix()
+                            ),
+                        }
+                    ],
+                },
+                "steps": [],
+            }
+        ],
+    }
+    queue_path = _write_json(tmp_path / "targeted_component_queue.json", queue)
+
+    summary = write_targeted_component_correction_post_auxiliary_artifacts(
+        output_dir=tmp_path / "post_auxiliary_refresh",
+        targeted_component_correction_queue=queue,
+        targeted_component_correction_queue_path=queue_path,
+        repo_root=tmp_path,
+        results_root=results_root,
+        queue_id="post_auxiliary_refresh_unit",
+        candidate_limit=1,
+    )
+
+    _assert_false_authority(summary)
+    assert summary["response_harvest_row_count"] == 1
+    assert summary["response_harvest_local_acquisition_recommended_count"] == 1
+    assert summary["materialization_request_row_count"] == 1
+    assert summary["operation_chain_work_order_count"] == 1
+    assert summary["chain_materializer_handoff_work_queue_row_count"] >= 1
+    for artifact_path in summary["artifacts"].values():
+        assert (tmp_path / artifact_path).is_file()
+
+
 def test_frontier_feedback_discovers_dqs1_observation_jsonls_from_artifact_roots(
     tmp_path: Path,
 ) -> None:
@@ -4151,6 +4262,12 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
         "failed_queue_count"
     ] == 0
     assert payload[
+        "initial_post_auxiliary_targeted_component_refresh_summary"
+    ]["response_harvest_row_count"] >= 1
+    assert payload[
+        "initial_post_auxiliary_targeted_component_refresh_summary"
+    ]["materialization_request_row_count"] == 0
+    assert payload[
         "initial_targeted_component_correction_chain_materializer_handoff_summary"
     ]["work_queue_row_count"] == 0
     assert payload["initial_targeted_drop_many_dqs1_child_queue_paths"] == []
@@ -4212,6 +4329,18 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     assert cycle_report["initial_refresh"]["auxiliary_queue_execution"][
         "failed_queue_count"
     ] == 0
+    post_auxiliary_refresh = cycle_report["initial_refresh"][
+        "post_auxiliary_targeted_component_refresh"
+    ]
+    assert post_auxiliary_refresh["schema"] == (
+        "frontier_rate_attack_post_auxiliary_targeted_component_refresh.v1"
+    )
+    _assert_false_authority(post_auxiliary_refresh)
+    assert post_auxiliary_refresh["response_harvest_row_count"] >= 1
+    assert post_auxiliary_refresh["materialization_request_row_count"] == 0
+    assert post_auxiliary_refresh["artifacts"][
+        "targeted_component_correction_response_harvest"
+    ].endswith("post_auxiliary_targeted_component_correction_response_harvest.json")
     assert {
         row["artifact_key"]
         for row in cycle_report["initial_refresh"]["auxiliary_queue_execution"][
@@ -4422,6 +4551,10 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     )
     assert (
         "bounded_auxiliary_queue_artifacts_to_local_execution_trace"
+        in cycle_report["integration_edges"]
+    )
+    assert (
+        "bounded_auxiliary_targeted_response_reharvest_to_materialization_chain"
         in cycle_report["integration_edges"]
     )
     assert (

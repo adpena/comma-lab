@@ -45,6 +45,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (  # noqa: E
     harvest_paths_from_autopilot_payload,
     harvest_paths_from_autopilot_result_files,
     json_text,
+    load_json_object,
     repo_rel,
     resolve_repo_path,
     select_pairset_acquisition_for_harvests,
@@ -53,6 +54,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback_cycle import (  # noqa: E
     write_dqs1_harvest_observation_bundle,
     write_frontier_refresh_artifacts,
     write_pairset_component_marginal_feedback_bundle,
+    write_targeted_component_correction_post_auxiliary_artifacts,
 )
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY  # noqa: E402
 from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
@@ -313,6 +315,34 @@ def _run_auxiliary_queue_execution(
         "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
         **FALSE_AUTHORITY,
     }
+
+
+def _write_post_auxiliary_targeted_component_refresh(
+    *,
+    args: argparse.Namespace,
+    artifacts: dict[str, str],
+    report: dict[str, Any],
+    output_dir: Path,
+    stage_label: str,
+) -> dict[str, Any] | None:
+    queue_path_text = artifacts.get("targeted_component_correction_queue")
+    if not args.execute_auxiliary_queues or not queue_path_text:
+        return None
+    queue_path = resolve_repo_path(queue_path_text, repo_root=REPO_ROOT)
+    targeted_queue = load_json_object(queue_path)
+    return write_targeted_component_correction_post_auxiliary_artifacts(
+        output_dir=output_dir,
+        targeted_component_correction_queue=targeted_queue,
+        targeted_component_correction_queue_path=queue_path,
+        repo_root=REPO_ROOT,
+        results_root=args.results_root,
+        queue_id=f"{report.get('queue_id') or stage_label}_{stage_label}_post_auxiliary",
+        candidate_limit=int(report.get("candidate_limit") or args.candidate_limit),
+        dqs1_observation_source_paths=tuple(
+            report.get("dqs1_observation_source_paths") or ()
+        ),
+        artifact_prefix=f"{stage_label}_post_auxiliary",
+    )
 
 
 def _build_refresh(
@@ -752,6 +782,15 @@ def main(argv: list[str] | None = None) -> int:
             artifacts=initial_artifacts,
             stage_label="initial_refresh",
         )
+        initial_post_auxiliary_targeted_refresh = (
+            _write_post_auxiliary_targeted_component_refresh(
+                args=args,
+                artifacts=initial_artifacts,
+                report=initial_report,
+                output_dir=initial_dir / "post_auxiliary_targeted_component_refresh",
+                stage_label="initial_refresh",
+            )
+        )
 
         followup: dict[str, Any] = {
             "execute_followup": bool(args.execute_followup),
@@ -809,6 +848,7 @@ def main(argv: list[str] | None = None) -> int:
         post_artifacts: dict[str, str] = {}
         post_validate = None
         post_auxiliary_execution: dict[str, Any] | None = None
+        post_auxiliary_targeted_refresh: dict[str, Any] | None = None
         campaign_waves: list[dict[str, Any]] = []
         campaign_stop_reason = "single_wave_only"
         post_observations: tuple[str | Path, ...] = initial_observation_context
@@ -866,6 +906,17 @@ def main(argv: list[str] | None = None) -> int:
                 args=args,
                 artifacts=post_artifacts,
                 stage_label="post_harvest_refresh",
+            )
+            post_auxiliary_targeted_refresh = (
+                _write_post_auxiliary_targeted_component_refresh(
+                    args=args,
+                    artifacts=post_artifacts,
+                    report=post_report,
+                    output_dir=(
+                        post_dir / "post_auxiliary_targeted_component_refresh"
+                    ),
+                    stage_label="post_harvest_refresh",
+                )
             )
             campaign_stop_reason = "wave_limit_reached"
 
@@ -1025,6 +1076,9 @@ def main(argv: list[str] | None = None) -> int:
                 "pairset_component_marginal": initial_component_marginal,
                 "queue_validate": initial_validate,
                 "auxiliary_queue_execution": initial_auxiliary_execution,
+                "post_auxiliary_targeted_component_refresh": (
+                    initial_post_auxiliary_targeted_refresh
+                ),
                 **FALSE_AUTHORITY,
             },
             "followup_execution": followup,
@@ -1057,6 +1111,9 @@ def main(argv: list[str] | None = None) -> int:
                 "pairset_component_marginal": post_component_marginal,
                 "queue_validate": post_validate,
                 "auxiliary_queue_execution": post_auxiliary_execution,
+                "post_auxiliary_targeted_component_refresh": (
+                    post_auxiliary_targeted_refresh
+                ),
                 **FALSE_AUTHORITY,
             },
             "campaign_execution": {
@@ -1087,6 +1144,7 @@ def main(argv: list[str] | None = None) -> int:
                 "targeted_component_operation_chain_to_materializer_handoff",
                 "targeted_operation_chain_queue_to_targeted_drop_many_child_queue",
                 "bounded_auxiliary_queue_artifacts_to_local_execution_trace",
+                "bounded_auxiliary_targeted_response_reharvest_to_materialization_chain",
             ],
             "allowed_use": "local_queue_owned_frontier_feedback_iteration_only",
             "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
@@ -1185,6 +1243,33 @@ def main(argv: list[str] | None = None) -> int:
                     ),
                     **FALSE_AUTHORITY,
                 },
+                "initial_post_auxiliary_targeted_component_refresh_summary": (
+                    None
+                    if initial_post_auxiliary_targeted_refresh is None
+                    else {
+                        "response_harvest_row_count": (
+                            initial_post_auxiliary_targeted_refresh.get(
+                                "response_harvest_row_count"
+                            )
+                        ),
+                        "materialization_request_row_count": (
+                            initial_post_auxiliary_targeted_refresh.get(
+                                "materialization_request_row_count"
+                            )
+                        ),
+                        "operation_chain_work_order_count": (
+                            initial_post_auxiliary_targeted_refresh.get(
+                                "operation_chain_work_order_count"
+                            )
+                        ),
+                        "chain_materializer_handoff_work_queue_row_count": (
+                            initial_post_auxiliary_targeted_refresh.get(
+                                "chain_materializer_handoff_work_queue_row_count"
+                            )
+                        ),
+                        **FALSE_AUTHORITY,
+                    }
+                ),
                 "post_harvest_auxiliary_queue_execution_summary": None
                 if post_report is None
                 else {
@@ -1197,6 +1282,33 @@ def main(argv: list[str] | None = None) -> int:
                     ),
                     **FALSE_AUTHORITY,
                 },
+                "post_harvest_post_auxiliary_targeted_component_refresh_summary": (
+                    None
+                    if post_auxiliary_targeted_refresh is None
+                    else {
+                        "response_harvest_row_count": (
+                            post_auxiliary_targeted_refresh.get(
+                                "response_harvest_row_count"
+                            )
+                        ),
+                        "materialization_request_row_count": (
+                            post_auxiliary_targeted_refresh.get(
+                                "materialization_request_row_count"
+                            )
+                        ),
+                        "operation_chain_work_order_count": (
+                            post_auxiliary_targeted_refresh.get(
+                                "operation_chain_work_order_count"
+                            )
+                        ),
+                        "chain_materializer_handoff_work_queue_row_count": (
+                            post_auxiliary_targeted_refresh.get(
+                                "chain_materializer_handoff_work_queue_row_count"
+                            )
+                        ),
+                        **FALSE_AUTHORITY,
+                    }
+                ),
                 **FALSE_AUTHORITY,
             }
         ),

@@ -1010,6 +1010,180 @@ def write_frontier_refresh_artifacts(
     return artifacts
 
 
+def write_targeted_component_correction_post_auxiliary_artifacts(
+    *,
+    output_dir: str | Path,
+    targeted_component_correction_queue: Mapping[str, Any],
+    targeted_component_correction_queue_path: str | Path,
+    repo_root: str | Path,
+    results_root: str | Path,
+    queue_id: str,
+    candidate_limit: int,
+    dqs1_observation_source_paths: Sequence[str | Path] = (),
+    artifact_prefix: str = "post_auxiliary",
+) -> dict[str, Any]:
+    """Re-harvest targeted correction responses after bounded local queue work."""
+
+    if candidate_limit < 1:
+        raise FrontierRateAttackFeedbackCycleError("candidate_limit must be >= 1")
+    if not artifact_prefix:
+        raise FrontierRateAttackFeedbackCycleError("artifact_prefix must be non-empty")
+    require_no_truthy_authority_fields(
+        targeted_component_correction_queue,
+        context="post_auxiliary_targeted_component_correction_queue",
+    )
+    repo = Path(repo_root)
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    artifacts: dict[str, str] = {
+        "targeted_component_correction_queue": repo_rel(
+            targeted_component_correction_queue_path,
+            repo,
+        )
+    }
+    response_harvest = build_frontier_targeted_component_correction_response_harvest(
+        repo_root=repo,
+        targeted_component_correction_queue=targeted_component_correction_queue,
+        results_root=results_root,
+    )
+    response_harvest_path = (
+        out / f"{artifact_prefix}_targeted_component_correction_response_harvest.json"
+    )
+    write_json_artifact(response_harvest_path, dict(response_harvest))
+    artifacts["targeted_component_correction_response_harvest"] = repo_rel(
+        response_harvest_path,
+        repo,
+    )
+
+    materialization_requests = (
+        build_frontier_targeted_component_correction_materialization_requests(
+            targeted_component_correction_response_harvest=response_harvest,
+            candidate_limit=candidate_limit,
+        )
+    )
+    materialization_requests_path = (
+        out
+        / f"{artifact_prefix}_targeted_component_correction_materialization_requests.json"
+    )
+    write_json_artifact(materialization_requests_path, dict(materialization_requests))
+    artifacts["targeted_component_correction_materialization_requests"] = repo_rel(
+        materialization_requests_path,
+        repo,
+    )
+
+    materialization_queue = (
+        build_frontier_targeted_component_correction_materialization_queue(
+            repo_root=repo,
+            targeted_component_correction_response_harvest=response_harvest,
+            targeted_component_correction_response_harvest_path=response_harvest_path,
+            results_root=results_root,
+            queue_id=f"{queue_id}_component_materialization",
+            candidate_limit=candidate_limit,
+        )
+    )
+    if isinstance(materialization_queue, Mapping):
+        materialization_queue_path = (
+            out
+            / f"{artifact_prefix}_targeted_component_correction_materialization_queue.json"
+        )
+        write_json_artifact(materialization_queue_path, dict(materialization_queue))
+        artifacts["targeted_component_correction_materialization_queue"] = repo_rel(
+            materialization_queue_path,
+            repo,
+        )
+
+    chain_work_orders = build_frontier_targeted_component_correction_chain_work_orders(
+        targeted_component_correction_materialization_requests=materialization_requests,
+        request_limit=candidate_limit,
+    )
+    chain_work_orders_path = (
+        out
+        / f"{artifact_prefix}_targeted_component_correction_operation_chain_work_orders.json"
+    )
+    write_json_artifact(chain_work_orders_path, dict(chain_work_orders))
+    artifacts["targeted_component_correction_operation_chain_work_orders"] = repo_rel(
+        chain_work_orders_path,
+        repo,
+    )
+
+    chain_queue = build_frontier_operation_chain_compiler_queue(
+        repo_root=repo,
+        operation_chain_compiler_work_orders=chain_work_orders,
+        operation_chain_compiler_work_orders_path=chain_work_orders_path,
+        results_root=results_root,
+        queue_id=f"{queue_id}_component_operation_chain",
+        candidate_limit=candidate_limit,
+        dqs1_observation_source_paths=dqs1_observation_source_paths,
+    )
+    targeted_child_queue_paths: list[str] = []
+    if isinstance(chain_queue, Mapping):
+        chain_queue_path = (
+            out
+            / f"{artifact_prefix}_targeted_component_correction_operation_chain_queue.json"
+        )
+        write_json_artifact(chain_queue_path, dict(chain_queue))
+        artifacts["targeted_component_correction_operation_chain_queue"] = repo_rel(
+            chain_queue_path,
+            repo,
+        )
+        targeted_child_queue_paths = _targeted_dqs1_child_queue_paths(chain_queue)
+
+    chain_materializer_handoff = (
+        build_frontier_targeted_component_correction_chain_materializer_handoff(
+            repo_root=repo,
+            targeted_component_correction_chain_work_orders=chain_work_orders,
+            default_output_root=(
+                Path(str(results_root))
+                / "frontier_targeted_component_correction_chain_materializers"
+            ),
+        )
+    )
+    chain_materializer_handoff_path = (
+        out
+        / f"{artifact_prefix}_targeted_component_correction_chain_materializer_handoff.json"
+    )
+    write_json_artifact(
+        chain_materializer_handoff_path,
+        dict(chain_materializer_handoff),
+    )
+    artifacts["targeted_component_correction_chain_materializer_handoff"] = repo_rel(
+        chain_materializer_handoff_path,
+        repo,
+    )
+
+    summary_path = out / f"{artifact_prefix}_targeted_component_correction_refresh.json"
+    artifacts["summary"] = repo_rel(summary_path, repo)
+    summary = {
+        "schema": "frontier_rate_attack_post_auxiliary_targeted_component_refresh.v1",
+        "generated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "artifact_prefix": artifact_prefix,
+        "targeted_component_correction_queue_path": repo_rel(
+            targeted_component_correction_queue_path,
+            repo,
+        ),
+        "response_harvest_row_count": response_harvest.get("row_count"),
+        "response_harvest_local_acquisition_recommended_count": (
+            response_harvest.get("local_acquisition_recommended_count")
+        ),
+        "materialization_request_row_count": materialization_requests.get("row_count"),
+        "operation_chain_work_order_count": chain_work_orders.get("work_order_count"),
+        "chain_materializer_handoff_work_queue_row_count": (
+            chain_materializer_handoff.get("work_queue_row_count")
+        ),
+        "targeted_drop_many_dqs1_child_queue_paths": targeted_child_queue_paths,
+        "artifacts": artifacts,
+        "allowed_use": "post_auxiliary_targeted_correction_reharvest_planning_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        summary,
+        context="post_auxiliary_targeted_component_refresh",
+    )
+    write_json_artifact(summary_path, summary)
+    return summary
+
+
 def write_dqs1_harvest_observation_bundle(
     *,
     harvest_paths: Sequence[str | Path],
