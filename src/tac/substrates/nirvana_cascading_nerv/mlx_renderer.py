@@ -1,5 +1,14 @@
 # SPDX-License-Identifier: MIT
-"""nirvana_cascading_nerv.mlx_renderer — MLX hierarchical residual decoder cascade.
+"""nirvana_cascading_nerv.mlx_renderer — MLX hierarchical residual decoder cascade SCAFFOLD (config + helpers; actual renderer class lands Phase 2).
+
+FIX-WAVE-R1' G-OP3 (2026-05-26): module docstring corrected to reflect the
+actual L0 SCAFFOLD posture. Per R1' Path 3 G review: this module contains
+ONLY the Config dataclass + factory helpers + estimators; the actual MLX
+renderer CLASS (the hierarchical residual decoder cascade implementation)
+is deferred to Phase 2 per Catalog #325 per-substrate symposium. ZERO
+MLX primitives shipped at L0; the design memo's 7 anticipated L1+ MLX
+primitives + 3 KNOWN-DRIFT-RISK characterizations are L1+ implementation
+guidance, not L0 empirical claims.
 
 L0 SCAFFOLD module: declares the MLX renderer config + factory; defers
 heavy MLX-dependent class construction until called. MLX is OPTIONAL at

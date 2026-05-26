@@ -604,3 +604,79 @@ def test_z8_decoder_param_count_increases_with_levels() -> None:
     )
     params_large = z8_decoder_param_count(cfg_large)
     assert params_large > params_small
+
+
+# -----------------------------------------------------------------------------
+# FIX-WAVE-R1' F-OP3 (2026-05-26): MLX↔PyTorch parity tests for the 2 primitives
+# fixed by F-OP1 + F-OP2. Mirrors A=DreamerV3 post-FIX-WAVE-R1 verification
+# pattern at `src/tac/substrates/dreamer_v3_rssm/tests/test_basic.py`.
+# Pre-fix empirical drift (R1' anchor 2026-05-26T08:03Z): PixelShuffle=3.77,
+# bilinear=1.51 absolute drift vs PyTorch reference. Post-fix expectation:
+# both primitives at fp32-noise floor (< 1e-5).
+# -----------------------------------------------------------------------------
+
+
+def test_z8_pixel_shuffle_matches_pytorch() -> None:
+    """Z8 _pixel_shuffle_2x_nhwc must be byte-stable vs PyTorch nn.PixelShuffle(2).
+
+    Per FIX-WAVE-R1' F-OP1: channel-FIRST convention `(B, H, W, out_C, 2, 2)`
+    + transpose `(0, 1, 4, 2, 5, 3)` matching sister D=Z6 + canonical PR95
+    helper. The prior channel-LAST convention produced 3.77 absolute drift
+    vs PyTorch; the canonical convention is byte-stable (0.0 drift).
+    """
+    try:
+        import mlx.core as mx
+        import torch
+        import torch.nn.functional as F
+        from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
+            _pixel_shuffle_2x_nhwc,
+        )
+    except ImportError:
+        pytest.skip("MLX or torch not available")
+
+    np.random.seed(0)
+    x_np = np.random.randn(1, 4, 4, 16).astype(np.float32)
+    x_torch = torch.from_numpy(x_np).permute(0, 3, 1, 2)  # NHWC → NCHW
+    y_torch = F.pixel_shuffle(x_torch, 2)
+    y_torch_nhwc = y_torch.permute(0, 2, 3, 1).numpy()
+    y_mlx = np.array(_pixel_shuffle_2x_nhwc(mx.array(x_np)))
+    max_abs = float(np.abs(y_mlx - y_torch_nhwc).max())
+    assert max_abs < 1e-5, (
+        f"Z8 _pixel_shuffle_2x_nhwc drift {max_abs} > 1e-5 vs PyTorch "
+        f"nn.PixelShuffle(2); F-OP1 fix regressed"
+    )
+
+
+def test_z8_bilinear_resize_matches_pytorch() -> None:
+    """Z8 _bilinear_resize_2x_nhwc must be byte-stable vs PyTorch F.interpolate.
+
+    Per FIX-WAVE-R1' F-OP2: delegates to canonical
+    `tac.local_acceleration.pr95_hnerv_mlx::bilinear_resize2x_align_corners_false_nhwc`
+    which is empirically PyTorch-byte-stable. The prior `mx.repeat` 2x
+    approximation produced 1.51 absolute drift vs PyTorch F.interpolate
+    align_corners=False; the canonical helper is at fp32-noise floor.
+    """
+    try:
+        import mlx.core as mx
+        import torch
+        import torch.nn.functional as F
+        from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
+            _bilinear_resize_2x_nhwc,
+        )
+    except ImportError:
+        pytest.skip("MLX or torch not available")
+
+    np.random.seed(0)
+    x_np = np.random.randn(1, 8, 8, 4).astype(np.float32)
+    x_torch = torch.from_numpy(x_np).permute(0, 3, 1, 2)  # NHWC → NCHW
+    y_torch = F.interpolate(
+        x_torch, scale_factor=2, mode="bilinear", align_corners=False
+    )
+    y_torch_nhwc = y_torch.permute(0, 2, 3, 1).numpy()
+    y_mlx = np.array(_bilinear_resize_2x_nhwc(mx.array(x_np)))
+    max_abs = float(np.abs(y_mlx - y_torch_nhwc).max())
+    assert max_abs < 1e-5, (
+        f"Z8 _bilinear_resize_2x_nhwc drift {max_abs} > 1e-5 vs PyTorch "
+        f"F.interpolate(scale_factor=2, mode='bilinear', align_corners=False); "
+        f"F-OP2 fix regressed"
+    )

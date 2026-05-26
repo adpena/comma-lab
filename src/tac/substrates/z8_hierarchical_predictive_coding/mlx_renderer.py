@@ -262,8 +262,26 @@ def _mallat_sum_pool_2x_nhwc(x: Any) -> Any:
 
 
 def _pixel_shuffle_2x_nhwc(x: Any) -> Any:
-    """PixelShuffle 2x for NHWC tensors (canonical sister A=DreamerV3 helper)."""
+    """PixelShuffle 2x for NHWC tensors (canonical channel-FIRST convention).
+
+    FIX-WAVE-R1' F-OP1 (2026-05-26): channel-FIRST convention matching sister
+    D=Z6 ``src/tac/substrates/time_traveler_l5_z6/mlx_renderer.py::
+    _pixel_shuffle_2x_nhwc`` AND canonical PR95 helper
+    ``tac.local_acceleration.pr95_hnerv_mlx::pixel_shuffle_2x_nhwc`` AND
+    sister A=DreamerV3 post-FIX-WAVE-R1 fix (commit `a23779a732e7bb056`).
+    The prior channel-LAST convention ``(B, H, W, 2, 2, out_C)`` + transpose
+    ``(0, 1, 3, 2, 4, 5)`` produced 3.77 absolute drift vs PyTorch
+    ``nn.PixelShuffle(2)`` (per R1' Path 3 F review empirical measurement
+    2026-05-26T08:03Z); the canonical channel-FIRST convention
+    ``(B, H, W, out_C, 2, 2)`` + transpose ``(0, 1, 4, 2, 5, 3)`` is
+    empirically PyTorch-byte-stable (0.0 drift per sister D=Z6 anchor).
+    Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" L9
+    runtime closure: MLX-trained-PyTorch-inflated model MUST be the same
+    runtime as the MLX trainer observes at convergence.
+    """
     _require_mlx()
+    if len(x.shape) != 4:
+        raise ValueError(f"expected NHWC; got shape {x.shape}")
     batch, height, width, channels = (int(dim) for dim in x.shape)
     block = 4  # 2*2
     if channels % block != 0:
@@ -271,17 +289,38 @@ def _pixel_shuffle_2x_nhwc(x: Any) -> Any:
             f"channels {channels} must be divisible by {block} for 2x pixel shuffle"
         )
     out_channels = channels // block
-    y = mx.reshape(x, (batch, height, width, 2, 2, out_channels))  # type: ignore[union-attr]
-    y = mx.transpose(y, (0, 1, 3, 2, 4, 5))  # type: ignore[union-attr]
+    y = mx.reshape(x, (batch, height, width, out_channels, 2, 2))  # type: ignore[union-attr]
+    y = mx.transpose(y, (0, 1, 4, 2, 5, 3))  # type: ignore[union-attr]
     return mx.reshape(y, (batch, height * 2, width * 2, out_channels))  # type: ignore[union-attr]
 
 
 def _bilinear_resize_2x_nhwc(x: Any) -> Any:
-    """Bilinear upsample 2x for NHWC tensors (sister A=DreamerV3 helper pattern)."""
+    """Bilinear upsample 2x for NHWC tensors via canonical PR95 helper.
+
+    FIX-WAVE-R1' F-OP2 (2026-05-26): delegates to canonical
+    ``tac.local_acceleration.pr95_hnerv_mlx::bilinear_resize2x_align_corners_false_nhwc``
+    which is empirically PyTorch-byte-stable (0.0 drift) vs the prior
+    ``mx.repeat`` 2x approximation that produced 1.51 absolute drift vs
+    PyTorch ``F.interpolate(scale_factor=2, mode='bilinear',
+    align_corners=False)`` (per R1' Path 3 F review empirical measurement
+    2026-05-26T08:03Z). Sister A=DreamerV3 FIX-WAVE-R1 (commit
+    `a23779a732e7bb056`) lands the identical canonical helper substitution.
+
+    Catalog #295 self-containment is preserved because the canonical helper
+    is imported only at MLX training time in ``mlx_renderer.py``; the
+    substrate's inflate runtime at ``inflate.py`` is PyTorch-only and does
+    NOT import MLX (PyTorch uses ``F.interpolate(mode='bilinear',
+    align_corners=False)`` natively). The Catalog #295 contract scopes
+    ``submissions/*/inflate.py`` PYTHONPATH self-containment; this substrate's
+    MLX module is at ``src/tac/substrates/z8_hierarchical_predictive_coding/``
+    which is in-tree by definition.
+    """
     _require_mlx()
-    y = mx.repeat(x, 2, axis=1)  # type: ignore[union-attr]
-    y = mx.repeat(y, 2, axis=2)  # type: ignore[union-attr]
-    return y
+    from tac.local_acceleration.pr95_hnerv_mlx import (
+        bilinear_resize2x_align_corners_false_nhwc,
+    )
+
+    return bilinear_resize2x_align_corners_false_nhwc(x)
 
 
 class _Z8UpsampleBlock(nn.Module if nn is not None else object):  # type: ignore[misc]

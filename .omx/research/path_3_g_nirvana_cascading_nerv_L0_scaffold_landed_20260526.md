@@ -232,3 +232,77 @@ NO collision detected with concurrent in-flight subagents:
 | `experiments/train_substrate_nirvana_cascading_nerv_mlx.py` | 113 | MLX smoke trainer stub per Catalog #240 |
 
 **Total substrate scope**: 1334 LOC across 7 substrate files + 113 LOC trainer stub + 167 LOC design memo. Substrate-engineering scope per HNeRV parity L7 (exceeds ≤350 LOC bolt-on cap, justified by FRESH substrate design).
+
+---
+
+## (12) APPEND-ONLY HISTORICAL_PROVENANCE FOOTER — FIX-WAVE-R1' (2026-05-26)
+
+**Per Catalog #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE discipline**: this section is appended (NOT a mutation of the historical record above) to document FIX-WAVE-R1' corrections of documentation overstatements identified by R1' Path 3 G review (`.omx/research/path_3_g_recursive_adversarial_review_r1_prime_3_axis_20260526.md`).
+
+### Provenance context
+
+- **R1' review verdict**: PROCEED_WITH_REVISIONS (3 documentation-overstatement findings; NOT training-invalidating; substrate paradigm INTACT per Catalog #307 paradigm-vs-implementation classification)
+- **R1' Assumption-Adversary**: classified original landing memo's `axis 2 evidence: MLX↔PyTorch parity ≤ 1e-5` claim as **CARGO-CULTED** because the cited test (`test_numpy_reference_bilinear_upsample_matches_pytorch`) actually compares numpy_reference vs PyTorch — NOT MLX vs PyTorch (MLX is not imported in that test). mlx_renderer.py at L0 contains ZERO MLX primitives — it is the MLX renderer CONFIG + FACTORY scaffold; the actual MLX renderer class is Phase 2 per Catalog #325.
+- **G-OP1 + G-OP2 + G-OP3 fixes landed in same commit batch as FIX-WAVE-R1' subagent `fix_wave_r1_prime_close_findings_20260526`** alongside sister F=Z8 MLX primitive bug fixes.
+
+### G-OP1 axis-label corrections (this footer SUPERSEDES the original claim wherever cited)
+
+The following axis labels appearing in §(2) verdict table (lines 70-81) of THIS memo are corrected per R1' Path 3 G review §Axis 1 documentation-overstatement findings:
+
+| Memo line | Original claim | Corrected claim | Rationale |
+|---|---|---|---|
+| Line 70 (`test_numpy_reference_bilinear_upsample_matches_pytorch`) | `**axis 2 evidence**: MLX↔PyTorch parity ≤ 1e-5` | `**axis 3 evidence**: numpy↔PyTorch parity ≤ 1e-5` | Test compares `bilinear_upsample_2x_nhwc` (numpy) vs PyTorch F.interpolate; MLX is NOT imported. This is axis 3 (numpy portability + PyTorch reference parity), NOT axis 2 (MLX drift). |
+| Line 74 (`test_numpy_reference_kahan_mean_stability`) | `**axis 2 evidence**: Kahan summation stability` | `**axis 3 evidence**: Kahan summation numerical stability (numpy-only reference)` | Same correction; numpy reference numerical-stability evidence is axis 3 (portability), not axis 2 (MLX drift). |
+| Line 81 (`test_cascade_pytorch_vs_numpy_reference_parity`) | `**axis 2+3 evidence**: PyTorch↔numpy cascade parity ≤ 1e-3` | `**axis 3 evidence**: PyTorch↔numpy cascade parity ≤ 1e-3` | Test compares PyTorch inflate cascade vs numpy reference cascade; NO MLX measurement. This is axis 3 only (numpy portability + PyTorch correctness). Axis 2 (MLX drift) deferred to Phase 2 when actual MLX renderer lands. |
+
+### G-OP3 axis-2 section correction (this footer SUPERSEDES the original §"Axis 2: MLX drift minimization" claims)
+
+§"Axis 2: MLX drift minimization" §(3) above (lines 100-108) claimed `**7 MLX primitives** characterized with expected drift bounds` and `Empirical evidence: ... max_abs < 1e-5 vs PyTorch F.interpolate` as **L0 evidence**. Per R1' review: these are **L1+ design-memo content** (anticipated primitives + characterizations for future implementation guidance), NOT L0 empirical measurements.
+
+**Canonical corrected statement** (supersedes lines 100-108):
+
+> **Axis 2: MLX drift minimization (CORRECTED PER FIX-WAVE-R1')**
+>
+> **ZERO MLX primitives implemented at L0**; the 7 anticipated MLX primitives + 3 KNOWN-DRIFT-RISK characterized in design memo are L1+ implementation guidance, NOT L0 empirical measurements. The `mlx_renderer.py` at L0 contains only Config dataclass + factory helpers + estimators; no MLX renderer class exists yet.
+>
+> **At L1, MUST adopt canonical META-CONSOLIDATE-OP helpers** per R1 aggregate META finding #1 — sister F=Z8 R1' empirically demonstrates 3.77 + 1.51 max_abs drift bugs from NOT adopting canonical helpers:
+> - `tac.local_acceleration.pr95_hnerv_mlx::pixel_shuffle_2x_nhwc` (canonical channel-FIRST convention; 0.0 drift vs PyTorch)
+> - `tac.local_acceleration.pr95_hnerv_mlx::bilinear_resize2x_align_corners_false_nhwc` (canonical; 0.0 drift vs PyTorch)
+>
+> **L0 portability evidence** (correctly labeled here as axis 3, not axis 2): all 7 of 7 anticipated MLX primitives have sister numpy reference implementations in `numpy_reference.py`; 27 tests PASS without MLX dependency; this is the canonical sister-reference pattern operator directive #3 axis 3 recommends.
+
+### G-OP2 §(5) "MLX-first per #1265 anchor" correction (this footer SUPERSEDES the council_decisions_recorded entry + §(5) characterization)
+
+The council_decisions_recorded entry at frontmatter line 26 originally read: `"MLX-first per #1265 anchor; numpy reference per axis 3 portability"`.
+
+**Canonical corrected statement** (supersedes the council_decisions_recorded entry):
+
+> **"MLX-config-scaffold-first per #1265 anchor; actual MLX renderer implementation deferred to Phase 2 council symposium per Catalog #325; numpy reference per axis 3 portability"**
+
+This correction reflects the actual L0 posture: the scaffold ships MLX CONFIG (Config dataclass + factory + estimators + numpy reference), NOT the MLX renderer class itself. Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" non-negotiable: the substrate is `research_only=true` at L0 because the actual MLX renderer class is Phase 2 work; the L0 scope IS the design-memo + numpy reference + PyTorch inflate + tests + smoke trainer stub.
+
+### G-OP2 source code correction (in-place edit per source-file policy)
+
+`src/tac/substrates/nirvana_cascading_nerv/mlx_renderer.py` module docstring (line 2) was corrected in-place:
+
+| Pre-fix | Post-fix |
+|---|---|
+| `"""nirvana_cascading_nerv.mlx_renderer — MLX hierarchical residual decoder cascade.` | `"""nirvana_cascading_nerv.mlx_renderer — MLX hierarchical residual decoder cascade SCAFFOLD (config + helpers; actual renderer class lands Phase 2).` |
+
+The corrected docstring includes a FIX-WAVE-R1' G-OP3 explanatory block citing the R1' review + Catalog #325 Phase 2 substrate symposium deferral.
+
+### Post-correction verification
+
+- `PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest src/tac/substrates/nirvana_cascading_nerv/tests/ -q` → **27 passed** (NO regression; doc-only fixes)
+- Original §(2) verdict table preserved verbatim above per APPEND-ONLY HISTORICAL_PROVENANCE; this footer is the canonical correction surface per Catalog #110/#113 sister discipline (NEW evidence appended, OLD evidence preserved)
+
+### R2' readiness signal
+
+Per FIX-WAVE-R1' close-findings discipline: G=NIRVANA findings G-OP1 + G-OP2 + G-OP3 CLOSED via this footer (memo-side) + the in-place mlx_renderer.py docstring edit (source-side). R2' CAN FIRE on B'+C'+F+G alongside sister F=Z8 fixes landed in same commit batch.
+
+### Cross-references
+
+- R1' Path 3 G review memo: `.omx/research/path_3_g_recursive_adversarial_review_r1_prime_3_axis_20260526.md`
+- Sister F=Z8 FIX-WAVE-R1' landing: `.omx/research/path_3_fix_wave_r1_prime_close_findings_landed_20260526.md` (paired same-commit-batch landing)
+- Sister A=DreamerV3 FIX-WAVE-R1 landing: `.omx/research/path_3_fix_wave_r1_close_findings_landed_20260526.md` (canonical patch pattern)
+- META-CONSOLIDATE-OP-1: queued as separate subagent per task #1286; depends on sister L1-PROMOTION-D-Z6 landing
