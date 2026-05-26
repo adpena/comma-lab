@@ -10,6 +10,8 @@ from pathlib import Path
 import pytest
 
 from comma_lab.scheduler.frontier_rate_attack_feedback import (
+    AUTONOMOUS_CHAIN_OPTIMIZATION_ROW_SCHEMA,
+    AUTONOMOUS_CHAIN_OPTIMIZATION_SCHEMA,
     BYTE_RANGE_STAGE_INPUTS_SCHEMA,
     FEEDBACK_REFRESH_SCHEMA,
     LOCAL_CPU_EUREKA_DISCOVERY_SCHEMA,
@@ -31,6 +33,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (
     TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA,
     TARGETED_DROP_MANY_STAGE_INPUTS_SCHEMA,
     FrontierRateAttackFeedbackError,
+    build_frontier_autonomous_chain_optimization,
     build_frontier_byte_range_stage_inputs,
     build_frontier_operation_chain_compiler_queue,
     build_frontier_operation_chain_compiler_stage_plan,
@@ -2598,6 +2601,46 @@ def test_targeted_component_correction_materialization_requests_group_responses(
     assert tensor_quantize_rows[0]["telemetry"]["receiver_contract_work_order"][
         "schema"
     ] == "tensor_receiver_contract_work_order.v1"
+    autonomous = build_frontier_autonomous_chain_optimization(
+        operation_portfolio=report["operation_portfolio"],
+        operation_materializer_bridge=report["operation_materializer_bridge"],
+        targeted_component_correction_chain_materializer_handoff=handoff,
+        chain_limit=3,
+    )
+    assert autonomous["schema"] == AUTONOMOUS_CHAIN_OPTIMIZATION_SCHEMA
+    _assert_false_authority(autonomous)
+    assert autonomous["chain_count"] >= 2
+    assert "global_many_op_rate_distortion_receiver_campaign" in autonomous[
+        "top_chain_ids"
+    ]
+    assert {"packet_member", "archive_section", "tensor"}.issubset(
+        set(autonomous["target_classes"])
+    )
+    first_chain = autonomous["rows"][0]
+    assert first_chain["schema"] == AUTONOMOUS_CHAIN_OPTIMIZATION_ROW_SCHEMA
+    _assert_false_authority(first_chain)
+    assert {"pixel", "region", "boundary", "frame", "pair", "batch"}.issubset(
+        set(first_chain["operation_levels"])
+    )
+    assert first_chain["materializer_target_count"] >= 6
+    assert first_chain["repair_budget_waterfill_plan"]["allocator"] == (
+        "measured_component_marginal_waterfill_over_segnet_posenet_rate_budget"
+    )
+    assert first_chain["repair_budget_waterfill_plan"]["component_axes"] == [
+        "segnet",
+        "posenet",
+    ]
+    assert "fit_segnet_posenet_repair_waterfill_policy" in {
+        action["id"] for action in first_chain["scheduler_actions"]
+    }
+    assert first_chain["repair_budget_waterfill_plan"][
+        "budget_spend_allowed"
+    ] is False
+    assert first_chain["ready_for_exact_eval_dispatch"] is False
+    assert (
+        "many_op_plan_to_component_replay_and_exact_readiness_bridge"
+        in first_chain["next_queue_edges"]
+    )
 
 
 def test_post_auxiliary_targeted_component_refresh_reharvests_into_chain(
@@ -3665,6 +3708,10 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert payload[
         "targeted_component_correction_chain_materializer_handoff_summary"
     ]["work_queue_row_count"] == 0
+    assert payload["autonomous_chain_optimization_summary"]["chain_count"] >= 1
+    assert "global_many_op_rate_distortion_receiver_campaign" in payload[
+        "autonomous_chain_optimization_summary"
+    ]["top_chain_ids"]
     queue_path = output_dir / "dqs1_followup_queue.json"
     bridge_path = output_dir / "materializer_feedback_bridge.json"
     receiver_repair_backlog_path = output_dir / "receiver_repair_backlog.json"
@@ -3688,6 +3735,7 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     targeted_component_chain_materializer_handoff_path = (
         output_dir / "targeted_component_correction_chain_materializer_handoff.json"
     )
+    autonomous_chain_optimization_path = output_dir / "autonomous_chain_optimization.json"
     report_path = output_dir / "feedback_refresh_report.json"
     assert queue_path.exists()
     assert bridge_path.exists()
@@ -3700,6 +3748,7 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert targeted_component_materialization_requests_path.exists()
     assert targeted_component_operation_chain_work_orders_path.exists()
     assert targeted_component_chain_materializer_handoff_path.exists()
+    assert autonomous_chain_optimization_path.exists()
     assert report_path.exists()
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["artifacts"]["dqs1_followup_queue"].endswith("dqs1_followup_queue.json")
@@ -3730,6 +3779,9 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
     assert report["artifacts"][
         "targeted_component_correction_chain_materializer_handoff"
     ].endswith("targeted_component_correction_chain_materializer_handoff.json")
+    assert report["artifacts"]["autonomous_chain_optimization"].endswith(
+        "autonomous_chain_optimization.json"
+    )
     assert report["artifacts"]["operation_materializer_bridge"].endswith(
         "operation_materializer_bridge.json"
     )
@@ -3809,6 +3861,20 @@ def test_frontier_feedback_cli_writes_valid_followup_queue(tmp_path: Path) -> No
         ][0]
         == ".venv/bin/python"
     )
+    assert report["operator_commands"]["inspect_autonomous_chain_optimization"] == [
+        ".venv/bin/python",
+        "-m",
+        "json.tool",
+        report["artifacts"]["autonomous_chain_optimization"],
+    ]
+    autonomous_artifact = json.loads(
+        autonomous_chain_optimization_path.read_text(encoding="utf-8")
+    )
+    assert autonomous_artifact["schema"] == AUTONOMOUS_CHAIN_OPTIMIZATION_SCHEMA
+    _assert_false_authority(autonomous_artifact)
+    assert autonomous_artifact["rows"][0]["repair_budget_waterfill_plan"][
+        "exact_auth_eval_required_before_score_claim"
+    ] is True
     assert report["operator_commands"]["init_targeted_component_correction_queue"] == [
         ".venv/bin/python",
         "tools/experiment_queue.py",
@@ -4325,6 +4391,12 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     assert payload[
         "initial_targeted_component_correction_chain_materializer_handoff_summary"
     ]["work_queue_row_count"] == 0
+    assert payload["initial_autonomous_chain_optimization_summary"][
+        "chain_count"
+    ] >= 1
+    assert "global_many_op_rate_distortion_receiver_campaign" in payload[
+        "initial_autonomous_chain_optimization_summary"
+    ]["top_chain_ids"]
     assert payload["initial_targeted_drop_many_dqs1_child_queue_paths"] == []
     observation_jsonl = Path(payload["observation_jsonl"])
     if not observation_jsonl.is_absolute():
@@ -4361,6 +4433,9 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     assert initial_artifacts[
         "targeted_component_correction_chain_materializer_handoff"
     ].endswith("targeted_component_correction_chain_materializer_handoff.json")
+    assert initial_artifacts["autonomous_chain_optimization"].endswith(
+        "autonomous_chain_optimization.json"
+    )
     initial_feedback_report = json.loads(
         (REPO_ROOT / initial_artifacts["feedback_refresh_report"]).read_text(
             encoding="utf-8"
@@ -4550,9 +4625,27 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     )
     _assert_false_authority(targeted_chain_handoff)
     assert targeted_chain_handoff["work_queue_row_count"] == 0
+    initial_autonomous_chain = json.loads(
+        (
+            REPO_ROOT / initial_artifacts["autonomous_chain_optimization"]
+        ).read_text(encoding="utf-8")
+    )
+    assert initial_autonomous_chain["schema"] == AUTONOMOUS_CHAIN_OPTIMIZATION_SCHEMA
+    _assert_false_authority(initial_autonomous_chain)
+    assert "fit_segnet_posenet_repair_waterfill_policy" in {
+        action["id"]
+        for row in initial_autonomous_chain["rows"]
+        for action in row["scheduler_actions"]
+    }
     assert (
         initial_feedback_report["operator_commands"][
             "inspect_targeted_component_correction_chain_materializer_handoff"
+        ][0]
+        == ".venv/bin/python"
+    )
+    assert (
+        initial_feedback_report["operator_commands"][
+            "inspect_autonomous_chain_optimization"
         ][0]
         == ".venv/bin/python"
     )
@@ -4602,6 +4695,14 @@ def test_frontier_feedback_cycle_harvests_batch_and_refreshes_queue(tmp_path: Pa
     )
     assert (
         "targeted_operation_chain_queue_to_targeted_drop_many_child_queue"
+        in cycle_report["integration_edges"]
+    )
+    assert (
+        "autonomous_chain_optimization_to_queue_owned_many_op_plan"
+        in cycle_report["integration_edges"]
+    )
+    assert (
+        "many_op_plan_to_component_replay_and_exact_readiness_bridge"
         in cycle_report["integration_edges"]
     )
     assert (

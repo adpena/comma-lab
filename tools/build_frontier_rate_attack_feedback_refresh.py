@@ -34,6 +34,7 @@ from comma_lab.scheduler.frontier_rate_attack_feedback import (  # noqa: E402
     OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA,
     OPERATION_CHAIN_COMPILER_WORK_ORDERS_SCHEMA,
     FrontierRateAttackFeedbackError,
+    build_frontier_autonomous_chain_optimization,
     build_frontier_operation_chain_compiler_queue,
     build_frontier_rate_attack_feedback_refresh,
     build_frontier_receiver_repair_queue,
@@ -629,6 +630,27 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             artifacts[
                 "targeted_component_correction_chain_materializer_handoff"
             ] = _display_path(targeted_chain_materializer_handoff_path)
+            operation_portfolio = report.get("operation_portfolio")
+            operation_materializer_bridge = report.get("operation_materializer_bridge")
+            if isinstance(operation_portfolio, dict) and isinstance(
+                operation_materializer_bridge,
+                dict,
+            ):
+                report["autonomous_chain_optimization"] = (
+                    build_frontier_autonomous_chain_optimization(
+                        operation_portfolio=operation_portfolio,
+                        operation_materializer_bridge=operation_materializer_bridge,
+                        targeted_component_correction_chain_materializer_handoff=(
+                            targeted_chain_materializer_handoff
+                        ),
+                        chain_limit=int(report.get("candidate_limit") or 4),
+                    )
+                )
+    autonomous_chain_optimization = report.get("autonomous_chain_optimization")
+    if isinstance(autonomous_chain_optimization, dict):
+        path = output_dir / "autonomous_chain_optimization.json"
+        write_json_artifact(path, autonomous_chain_optimization)
+        artifacts["autonomous_chain_optimization"] = _display_path(path)
     bridge = report.get("materializer_feedback_bridge")
     if isinstance(bridge, dict):
         path = output_dir / "materializer_feedback_bridge.json"
@@ -923,6 +945,13 @@ def _write_outputs(output_dir: Path, report: dict[str, Any]) -> dict[str, str]:
             "-m",
             "json.tool",
             artifacts["targeted_component_correction_chain_materializer_handoff"],
+        ]
+    if "autonomous_chain_optimization" in artifacts:
+        operator_commands["inspect_autonomous_chain_optimization"] = [
+            ".venv/bin/python",
+            "-m",
+            "json.tool",
+            artifacts["autonomous_chain_optimization"],
         ]
     if operator_commands:
         report_to_write["operator_commands"] = operator_commands
@@ -1336,6 +1365,48 @@ def main(argv: list[str] | None = None) -> int:
                             report.get(
                                 "targeted_component_correction_chain_materializer_handoff"
                             ),
+                            dict,
+                        )
+                        else None
+                    ),
+                },
+                "autonomous_chain_optimization_summary": {
+                    "chain_count": (
+                        report.get("autonomous_chain_optimization", {}).get(
+                            "chain_count"
+                        )
+                        if isinstance(
+                            report.get("autonomous_chain_optimization"),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "top_chain_ids": (
+                        report.get("autonomous_chain_optimization", {}).get(
+                            "top_chain_ids"
+                        )
+                        if isinstance(
+                            report.get("autonomous_chain_optimization"),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "target_classes": (
+                        report.get("autonomous_chain_optimization", {}).get(
+                            "target_classes"
+                        )
+                        if isinstance(
+                            report.get("autonomous_chain_optimization"),
+                            dict,
+                        )
+                        else None
+                    ),
+                    "registered_target_count": (
+                        report.get("autonomous_chain_optimization", {}).get(
+                            "registered_target_count"
+                        )
+                        if isinstance(
+                            report.get("autonomous_chain_optimization"),
                             dict,
                         )
                         else None

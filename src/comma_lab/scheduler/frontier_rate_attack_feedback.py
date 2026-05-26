@@ -112,6 +112,12 @@ OPERATION_MATERIALIZER_BRIDGE_SCHEMA = (
 OPERATION_MATERIALIZER_BRIDGE_ROW_SCHEMA = (
     "frontier_rate_attack_operation_materializer_bridge_row.v1"
 )
+AUTONOMOUS_CHAIN_OPTIMIZATION_SCHEMA = (
+    "frontier_rate_attack_autonomous_chain_optimization.v1"
+)
+AUTONOMOUS_CHAIN_OPTIMIZATION_ROW_SCHEMA = (
+    "frontier_rate_attack_autonomous_chain_optimization_row.v1"
+)
 OPERATION_CHAIN_COMPILER_WORK_ORDER_SCHEMA = (
     "frontier_rate_attack_operation_chain_compiler_work_order.v1"
 )
@@ -4196,6 +4202,675 @@ def build_frontier_operation_materializer_bridge(
         context="operation_materializer_bridge",
     )
     return bridge
+
+
+def _autonomous_chain_target_class(target_kind: str) -> str:
+    if target_kind.startswith("packet_member_"):
+        return "packet_member"
+    if target_kind.startswith("archive_section_"):
+        return "archive_section"
+    if target_kind.startswith("tensor_"):
+        return "tensor"
+    if target_kind.startswith("byte_range_"):
+        return "byte_range"
+    if target_kind.startswith("renderer_payload_"):
+        return "receiver_runtime_payload"
+    if target_kind.startswith("inverse_steganalysis_"):
+        return "inverse_scorer"
+    if target_kind.endswith("_component_response"):
+        return "component_response"
+    return target_kind or "unknown_target"
+
+
+def _autonomous_chain_targets_from_bridge(
+    operation_materializer_bridge: Mapping[str, Any],
+) -> list[str]:
+    targets: list[str] = []
+    targets.extend(_string_list(operation_materializer_bridge.get("top_materializer_targets")))
+    targets.extend(
+        _string_list(operation_materializer_bridge.get("selected_materializer_targets"))
+    )
+    for row in operation_materializer_bridge.get("rows") or []:
+        if not isinstance(row, Mapping):
+            continue
+        targets.extend(_string_list(row.get("target_kind")))
+        targets.extend(_string_list(row.get("chain_targets")))
+    return _unique_strings(target for target in targets if target)
+
+
+def _autonomous_chain_targets_from_handoff(
+    targeted_component_correction_chain_materializer_handoff: Mapping[str, Any],
+) -> tuple[list[str], list[str]]:
+    registered = _string_list(
+        targeted_component_correction_chain_materializer_handoff.get(
+            "registered_chain_targets"
+        )
+    )
+    unregistered = _string_list(
+        targeted_component_correction_chain_materializer_handoff.get(
+            "unregistered_chain_targets"
+        )
+    )
+    return _unique_strings(registered), _unique_strings(unregistered)
+
+
+def _autonomous_chain_levels_from_payloads(
+    *,
+    operation_portfolio: Mapping[str, Any],
+    operation_materializer_bridge: Mapping[str, Any],
+    targeted_component_correction_chain_materializer_handoff: Mapping[str, Any],
+) -> list[str]:
+    levels: list[str] = []
+    for row in operation_portfolio.get("rows") or []:
+        if isinstance(row, Mapping):
+            levels.extend(_string_list(row.get("operation_levels")))
+    for row in operation_materializer_bridge.get("rows") or []:
+        if isinstance(row, Mapping):
+            levels.extend(_string_list(row.get("operation_levels")))
+    backlog = targeted_component_correction_chain_materializer_handoff.get(
+        "materializer_backlog"
+    )
+    if isinstance(backlog, Mapping):
+        for row in backlog.get("rows") or []:
+            if not isinstance(row, Mapping):
+                continue
+            portfolio_row = row.get("frontier_operation_portfolio_row")
+            if isinstance(portfolio_row, Mapping):
+                levels.extend(_string_list(portfolio_row.get("operation_levels")))
+    return _unique_strings(level for level in levels if level in _OPERATION_LEVELS)
+
+
+def _autonomous_chain_correction_families(
+    targeted_component_correction_chain_materializer_handoff: Mapping[str, Any],
+) -> list[str]:
+    families: list[str] = []
+    backlog = targeted_component_correction_chain_materializer_handoff.get(
+        "materializer_backlog"
+    )
+    if not isinstance(backlog, Mapping):
+        return families
+    for row in backlog.get("rows") or []:
+        if not isinstance(row, Mapping):
+            continue
+        params = row.get("operation_params")
+        if isinstance(params, Mapping):
+            families.extend(_string_list(params.get("accepted_correction_families")))
+            context = params.get("receiver_runtime_binding_context")
+            if isinstance(context, Mapping):
+                families.extend(_string_list(context.get("accepted_correction_families")))
+        portfolio_row = row.get("frontier_operation_portfolio_row")
+        if isinstance(portfolio_row, Mapping):
+            families.extend(_string_list(portfolio_row.get("operation_family")))
+    return _unique_strings(families)
+
+
+def _autonomous_chain_receiver_closure_summary(
+    targeted_component_correction_chain_materializer_handoff: Mapping[str, Any],
+) -> dict[str, Any]:
+    missing_fields: list[str] = []
+    provided_fields: list[str] = []
+    proof_targets: list[str] = []
+    plans = [
+        plan
+        for plan in targeted_component_correction_chain_materializer_handoff.get(
+            "context_closure_plans"
+        )
+        or []
+        if isinstance(plan, Mapping)
+    ]
+    for plan in plans:
+        target_kind = str(plan.get("target_kind") or "")
+        missing_fields.extend(_string_list(plan.get("missing_context_fields")))
+        provided_fields.extend(_string_list(plan.get("provided_context_fields")))
+        if isinstance(plan.get("receiver_proof_request"), Mapping):
+            proof_targets.append(target_kind)
+    return {
+        "schema": "frontier_rate_attack_autonomous_receiver_closure_summary.v1",
+        "context_closure_plan_count": len(plans),
+        "missing_context_field_count": len(_unique_strings(missing_fields)),
+        "missing_context_fields": _unique_strings(missing_fields),
+        "provided_context_fields": _unique_strings(provided_fields),
+        "receiver_proof_request_targets": _unique_strings(proof_targets),
+        "parser_only_proofs_rejected": True,
+        "single_composed_runtime_consumption_proof_required": bool(plans),
+        "component_replay_required_before_budget_spend": bool(plans),
+        "exact_auth_eval_required_before_score_claim": True,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _autonomous_chain_bridge_summary(
+    operation_materializer_bridge: Mapping[str, Any],
+) -> dict[str, Any]:
+    work_queue = operation_materializer_bridge.get("materializer_work_queue")
+    contexts = operation_materializer_bridge.get("materializer_contexts")
+    return {
+        "schema": "frontier_rate_attack_autonomous_bridge_summary.v1",
+        "bridge_row_count": operation_materializer_bridge.get("bridge_row_count", 0),
+        "materializer_backlog_row_count": operation_materializer_bridge.get(
+            "materializer_backlog_row_count",
+            0,
+        ),
+        "context_row_count": (
+            contexts.get("row_count") if isinstance(contexts, Mapping) else 0
+        ),
+        "blocked_context_count": (
+            contexts.get("blocked_context_count")
+            if isinstance(contexts, Mapping)
+            else 0
+        ),
+        "work_queue_row_count": (
+            work_queue.get("row_count") if isinstance(work_queue, Mapping) else 0
+        ),
+        "executable_work_row_count": (
+            work_queue.get("executable_row_count")
+            if isinstance(work_queue, Mapping)
+            else 0
+        ),
+        "blocked_work_row_count": (
+            work_queue.get("blocked_row_count") if isinstance(work_queue, Mapping) else 0
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _autonomous_chain_scheduler_actions(
+    *,
+    target_classes: Sequence[str],
+    registered_targets: Sequence[str],
+    unregistered_targets: Sequence[str],
+    receiver_closure: Mapping[str, Any],
+    bridge_summary: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    actions: list[dict[str, Any]] = []
+    if bridge_summary.get("work_queue_row_count"):
+        actions.append(
+            {
+                "id": "run_operation_materializer_context_closure_queue",
+                "queue_artifact_key": "operation_materializer_work_queue",
+                "purpose": "bind portfolio materializer contexts across packet_archive_tensor_targets",
+                "bounded_local_execution": True,
+                "requires_exact_auth_before_score_claim": True,
+                **FALSE_AUTHORITY,
+            }
+        )
+    if registered_targets:
+        actions.append(
+            {
+                "id": "bind_targeted_chain_materializer_contexts",
+                "queue_artifact_key": (
+                    "targeted_component_correction_chain_materializer_handoff"
+                ),
+                "purpose": "close receiver_consumed_context_for_many_registered_targets",
+                "target_count": len(registered_targets),
+                "bounded_local_execution": True,
+                "requires_exact_auth_before_score_claim": True,
+                **FALSE_AUTHORITY,
+            }
+        )
+    if receiver_closure.get("missing_context_field_count"):
+        actions.append(
+            {
+                "id": "fill_receiver_runtime_proof_requests",
+                "queue_artifact_key": "receiver_repair_queue",
+                "purpose": "turn parser_or_planner_signal_into_runtime_consumed_proof",
+                "missing_context_field_count": (
+                    receiver_closure.get("missing_context_field_count")
+                ),
+                "bounded_local_execution": True,
+                "requires_exact_auth_before_score_claim": True,
+                **FALSE_AUTHORITY,
+            }
+        )
+    if "component_response" in target_classes or any(
+        target.endswith("_component_response") for target in unregistered_targets
+    ):
+        actions.append(
+            {
+                "id": "run_component_guarded_targeted_drop_many_queue",
+                "queue_artifact_key": (
+                    "targeted_component_correction_operation_chain_queue"
+                ),
+                "purpose": "search_pair_frame_batch_drop_many_under_segnet_posenet_guard",
+                "bounded_local_execution": True,
+                "requires_exact_auth_before_score_claim": True,
+                **FALSE_AUTHORITY,
+            }
+        )
+    actions.append(
+        {
+            "id": "fit_segnet_posenet_repair_waterfill_policy",
+            "queue_artifact_key": "targeted_component_correction_response_harvest",
+            "purpose": (
+                "estimate_where_drop_many_distortion_debt_should_be_repaired_"
+                "from_receiver_closed_rate_budget"
+            ),
+            "bounded_local_execution": True,
+            "requires_exact_auth_before_score_claim": True,
+            **FALSE_AUTHORITY,
+        }
+    )
+    actions.append(
+        {
+            "id": "replay_component_response_and_exact_readiness_bridge",
+            "queue_artifact_key": "materializer_chain_exact_readiness_bridge",
+            "purpose": "convert_local_many_op_candidate_into_exact_axis_request_only",
+            "bounded_local_execution": False,
+            "requires_exact_auth_before_score_claim": True,
+            **FALSE_AUTHORITY,
+        }
+    )
+    return actions
+
+
+def _autonomous_chain_repair_waterfill_plan(
+    *,
+    operation_levels: Sequence[str],
+    target_kinds: Sequence[str],
+    correction_families: Sequence[str],
+    receiver_closure: Mapping[str, Any],
+    bridge_summary: Mapping[str, Any],
+) -> dict[str, Any]:
+    repair_dimensions = [
+        level
+        for level in _OPERATION_LEVELS
+        if level
+        in {
+            "pixel",
+            "region",
+            "boundary",
+            "frame",
+            "pair",
+            "batch",
+            "full_video",
+            "tensor_channel",
+            "scorer_axis",
+        }
+        and level in set(operation_levels)
+    ]
+    rate_credit_targets = [
+        target
+        for target in target_kinds
+        if _autonomous_chain_target_class(target)
+        in {
+            "packet_member",
+            "archive_section",
+            "byte_range",
+            "tensor",
+            "receiver_runtime_payload",
+        }
+    ]
+    distortion_debt_sources = _unique_strings(
+        [
+            family
+            for family in correction_families
+            if "drop" in family
+            or "geometry" in family
+            or "inverse_scorer" in family
+        ]
+    )
+    if not distortion_debt_sources and {
+        "frame",
+        "pair",
+        "batch",
+    }.intersection(operation_levels):
+        distortion_debt_sources.append("drop_many_or_pair_frame_batch_candidate")
+    return {
+        "schema": "frontier_rate_attack_repair_budget_waterfill_plan.v1",
+        "allocator": (
+            "measured_component_marginal_waterfill_over_segnet_posenet_rate_budget"
+        ),
+        "component_axes": ["segnet", "posenet"],
+        "repair_dimensions": repair_dimensions,
+        "rate_credit_targets": _unique_strings(rate_credit_targets),
+        "distortion_debt_sources": distortion_debt_sources,
+        "allocation_variables": [
+            "bytes_freed_by_receiver_closed_materializers",
+            "segnet_delta_from_drop_many_or_geometry_edit",
+            "posenet_delta_from_drop_many_or_geometry_edit",
+            "marginal_repair_score_per_byte_by_dimension",
+            "interaction_synergy_or_antagonism_by_chain_stage",
+        ],
+        "required_measurements": [
+            "component_response_replay_for_drop_many_candidate",
+            "segnet_posenet_repair_probe_by_region_boundary_frame_pair_batch",
+            "receiver_consumed_candidate_archive_byte_delta",
+            "exact_axis_component_response_before_budget_spend",
+        ],
+        "priority_hint": (
+            "prefer_chains_that_bank_rate_credit_then_spend_only_where_"
+            "component_marginal_repair_score_per_byte_is_highest"
+        ),
+        "bridge_executable_work_row_count": bridge_summary.get(
+            "executable_work_row_count"
+        ),
+        "missing_receiver_context_field_count": receiver_closure.get(
+            "missing_context_field_count"
+        ),
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "exact_auth_eval_required_before_score_claim": True,
+        "allowed_use": "repair_budget_allocator_planning_only",
+        "forbidden_use": "score_claim_or_budget_spend_or_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _autonomous_chain_build_row(
+    *,
+    chain_id: str,
+    chain_family: str,
+    objective: str,
+    operation_levels: Sequence[str],
+    target_kinds: Sequence[str],
+    unregistered_targets: Sequence[str],
+    correction_families: Sequence[str],
+    receiver_closure: Mapping[str, Any],
+    bridge_summary: Mapping[str, Any],
+    priority_base: float,
+    source_artifact_keys: Sequence[str],
+    next_queue_edges: Sequence[str],
+) -> dict[str, Any]:
+    target_classes = _unique_strings(
+        _autonomous_chain_target_class(target) for target in target_kinds
+    )
+    blockers = [
+        "exact_auth_eval_required_before_score_or_promotion_claim",
+        "component_replay_required_before_budget_spend",
+    ]
+    blockers.extend(
+        f"missing_receiver_context:{field}"
+        for field in _string_list(receiver_closure.get("missing_context_fields"))
+    )
+    blockers.extend(
+        f"unregistered_chain_target:{target}" for target in unregistered_targets
+    )
+    if not target_kinds:
+        blockers.append("no_materializer_targets_bound")
+    if not correction_families and {
+        "pixel",
+        "region",
+        "boundary",
+        "frame",
+        "pair",
+        "batch",
+    }.intersection(operation_levels):
+        blockers.append("component_correction_family_not_yet_bound")
+    scheduler_actions = _autonomous_chain_scheduler_actions(
+        target_classes=target_classes,
+        registered_targets=target_kinds,
+        unregistered_targets=unregistered_targets,
+        receiver_closure=receiver_closure,
+        bridge_summary=bridge_summary,
+    )
+    repair_waterfill_plan = _autonomous_chain_repair_waterfill_plan(
+        operation_levels=operation_levels,
+        target_kinds=target_kinds,
+        correction_families=correction_families,
+        receiver_closure=receiver_closure,
+        bridge_summary=bridge_summary,
+    )
+    coverage_score = (
+        float(len(_unique_strings(operation_levels))) * 4.0
+        + float(len(target_classes)) * 8.0
+        + float(len(_unique_strings(target_kinds))) * 2.0
+        + float(len(_unique_strings(correction_families))) * 3.0
+    )
+    return {
+        "schema": AUTONOMOUS_CHAIN_OPTIMIZATION_ROW_SCHEMA,
+        "chain_id": chain_id,
+        "chain_family": chain_family,
+        "optimization_objective": objective,
+        "priority_score": priority_base + coverage_score,
+        "operation_levels": _unique_strings(operation_levels),
+        "covered_operation_level_count": len(_unique_strings(operation_levels)),
+        "target_kinds": _unique_strings(target_kinds),
+        "target_classes": target_classes,
+        "target_class_count": len(target_classes),
+        "materializer_target_count": len(_unique_strings(target_kinds)),
+        "unregistered_targets": _unique_strings(unregistered_targets),
+        "correction_families": _unique_strings(correction_families),
+        "correction_family_count": len(_unique_strings(correction_families)),
+        "receiver_closure": dict(receiver_closure),
+        "bridge_summary": dict(bridge_summary),
+        "repair_budget_waterfill_plan": repair_waterfill_plan,
+        "scheduler_actions": scheduler_actions,
+        "scheduler_action_count": len(scheduler_actions),
+        "source_artifact_keys": _unique_strings(source_artifact_keys),
+        "next_queue_edges": _unique_strings(next_queue_edges),
+        "local_queue_execution_plan_present": bool(scheduler_actions),
+        "budget_spend_allowed": False,
+        "ready_for_budget_spend": False,
+        "ready_for_materializer_execution": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": _unique_strings(blockers),
+        "allowed_use": "autonomous_many_operator_queue_planning_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_frontier_autonomous_chain_optimization(
+    *,
+    operation_portfolio: Mapping[str, Any],
+    operation_materializer_bridge: Mapping[str, Any] | None = None,
+    targeted_component_correction_chain_materializer_handoff: Mapping[str, Any] | None = None,
+    chain_limit: int = 4,
+) -> dict[str, Any]:
+    """Lift portfolio/bridge/handoff signal into broad queue-owned campaigns."""
+
+    if chain_limit < 1:
+        raise FrontierRateAttackFeedbackError("chain_limit must be >= 1")
+    require_no_truthy_authority_fields(
+        operation_portfolio,
+        context="autonomous_chain_optimization_operation_portfolio",
+    )
+    bridge = dict(operation_materializer_bridge or {})
+    handoff = dict(targeted_component_correction_chain_materializer_handoff or {})
+    if bridge:
+        require_no_truthy_authority_fields(
+            bridge,
+            context="autonomous_chain_optimization_operation_materializer_bridge",
+        )
+    if handoff:
+        require_no_truthy_authority_fields(
+            handoff,
+            context="autonomous_chain_optimization_targeted_chain_handoff",
+        )
+    bridge_targets = _autonomous_chain_targets_from_bridge(bridge)
+    registered_targets, unregistered_targets = _autonomous_chain_targets_from_handoff(
+        handoff
+    )
+    target_kinds = _unique_strings([*bridge_targets, *registered_targets])
+    all_unregistered_targets = _unique_strings(unregistered_targets)
+    operation_levels = _autonomous_chain_levels_from_payloads(
+        operation_portfolio=operation_portfolio,
+        operation_materializer_bridge=bridge,
+        targeted_component_correction_chain_materializer_handoff=handoff,
+    )
+    correction_families = _autonomous_chain_correction_families(handoff)
+    receiver_closure = _autonomous_chain_receiver_closure_summary(handoff)
+    bridge_summary = _autonomous_chain_bridge_summary(bridge)
+    source_artifact_keys = [
+        "operation_portfolio",
+        "operation_materializer_bridge",
+    ]
+    if handoff:
+        source_artifact_keys.append(
+            "targeted_component_correction_chain_materializer_handoff"
+        )
+    edges = [
+        "operation_portfolio_to_materializer_backlog_context_work_queue",
+        "targeted_component_operation_chain_to_materializer_handoff",
+        "targeted_operation_chain_queue_to_targeted_drop_many_child_queue",
+        "autonomous_chain_optimization_to_queue_owned_many_op_plan",
+        "many_op_plan_to_component_replay_and_exact_readiness_bridge",
+    ]
+    rows = [
+        _autonomous_chain_build_row(
+            chain_id="global_many_op_rate_distortion_receiver_campaign",
+            chain_family="rate_distortion_receiver_closed_many_op_campaign",
+            objective=(
+                "minimize_rate_plus_segnet_plus_posenet_by_composing_packet_archive_"
+                "tensor_frame_pair_batch_and_receiver_operations"
+            ),
+            operation_levels=operation_levels,
+            target_kinds=target_kinds,
+            unregistered_targets=all_unregistered_targets,
+            correction_families=correction_families,
+            receiver_closure=receiver_closure,
+            bridge_summary=bridge_summary,
+            priority_base=120.0,
+            source_artifact_keys=source_artifact_keys,
+            next_queue_edges=edges,
+        )
+    ]
+    if registered_targets or correction_families:
+        rows.append(
+            _autonomous_chain_build_row(
+                chain_id="receiver_closed_budget_reinvestment_campaign",
+                chain_family="rate_win_to_targeted_correction_budget_campaign",
+                objective=(
+                    "turn_receiver_closed_byte_savings_into_component_guarded_"
+                    "segnet_posenet_repair_budget"
+                ),
+                operation_levels=operation_levels,
+                target_kinds=registered_targets,
+                unregistered_targets=all_unregistered_targets,
+                correction_families=correction_families,
+                receiver_closure=receiver_closure,
+                bridge_summary=bridge_summary,
+                priority_base=96.0,
+                source_artifact_keys=source_artifact_keys,
+                next_queue_edges=edges,
+            )
+        )
+    if bridge_targets:
+        rows.append(
+            _autonomous_chain_build_row(
+                chain_id="portfolio_materializer_context_closure_campaign",
+                chain_family="portfolio_to_materializer_context_closure_campaign",
+                objective=(
+                    "close_many_registered_materializer_contexts_before_leaf_execution"
+                ),
+                operation_levels=operation_levels,
+                target_kinds=bridge_targets,
+                unregistered_targets=(),
+                correction_families=correction_families,
+                receiver_closure=receiver_closure,
+                bridge_summary=bridge_summary,
+                priority_base=84.0,
+                source_artifact_keys=source_artifact_keys,
+                next_queue_edges=edges,
+            )
+        )
+    scorer_levels = {
+        "pixel",
+        "region",
+        "boundary",
+        "frame",
+        "pair",
+        "batch",
+        "full_video",
+        "scorer_axis",
+    }
+    if scorer_levels.intersection(operation_levels):
+        rows.append(
+            _autonomous_chain_build_row(
+                chain_id="segnet_posenet_geometry_drop_many_campaign",
+                chain_family="component_response_geometry_pair_batch_campaign",
+                objective=(
+                    "search_drop_many_and_geometry_edits_at_pair_frame_batch_scale_"
+                    "under_segnet_posenet_component_marginals"
+                ),
+                operation_levels=[
+                    level for level in operation_levels if level in scorer_levels
+                ],
+                target_kinds=[
+                    target
+                    for target in target_kinds
+                    if _autonomous_chain_target_class(target)
+                    in {"component_response", "inverse_scorer", "tensor"}
+                ],
+                unregistered_targets=[
+                    target
+                    for target in all_unregistered_targets
+                    if target.endswith("_component_response")
+                ],
+                correction_families=correction_families,
+                receiver_closure=receiver_closure,
+                bridge_summary=bridge_summary,
+                priority_base=80.0,
+                source_artifact_keys=source_artifact_keys,
+                next_queue_edges=edges,
+            )
+        )
+    rows = sorted(
+        rows,
+        key=lambda row: (
+            -float(row.get("priority_score") or 0.0),
+            str(row.get("chain_id") or ""),
+        ),
+    )[:chain_limit]
+    target_class_counts: dict[str, int] = {}
+    for row in rows:
+        for target_class in _string_list(row.get("target_classes")):
+            target_class_counts[target_class] = target_class_counts.get(target_class, 0) + 1
+    level_counts: dict[str, int] = {}
+    for row in rows:
+        for level in _string_list(row.get("operation_levels")):
+            level_counts[level] = level_counts.get(level, 0) + 1
+    payload = {
+        "schema": AUTONOMOUS_CHAIN_OPTIMIZATION_SCHEMA,
+        "generated_at_utc": _utc_now(),
+        "source_operation_portfolio_schema": operation_portfolio.get("schema"),
+        "source_operation_materializer_bridge_schema": bridge.get("schema"),
+        "source_targeted_chain_materializer_handoff_schema": handoff.get("schema"),
+        "chain_count": len(rows),
+        "top_chain_ids": [str(row.get("chain_id") or "") for row in rows[:8]],
+        "target_kinds": target_kinds,
+        "target_classes": sorted(target_class_counts),
+        "target_class_counts": dict(sorted(target_class_counts.items())),
+        "operation_level_counts": dict(sorted(level_counts.items())),
+        "registered_target_count": len(_unique_strings(registered_targets)),
+        "unregistered_target_count": len(all_unregistered_targets),
+        "correction_families": correction_families,
+        "receiver_closure_summary": receiver_closure,
+        "bridge_summary": bridge_summary,
+        "rows": rows,
+        "allowed_use": "autonomous_many_operator_queue_planning_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
+    require_no_truthy_authority_fields(
+        payload,
+        context="frontier_autonomous_chain_optimization",
+    )
+    return payload
+
+
+def _autonomous_chain_optimization_queue_metadata(
+    autonomous_chain_optimization: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "schema": "frontier_rate_attack_autonomous_chain_optimization_queue_metadata.v1",
+        "chain_count": autonomous_chain_optimization.get("chain_count"),
+        "top_chain_ids": list(
+            autonomous_chain_optimization.get("top_chain_ids") or []
+        ),
+        "target_classes": list(
+            autonomous_chain_optimization.get("target_classes") or []
+        ),
+        "registered_target_count": autonomous_chain_optimization.get(
+            "registered_target_count"
+        ),
+        "unregistered_target_count": autonomous_chain_optimization.get(
+            "unregistered_target_count"
+        ),
+        "allowed_use": "queue_metadata_for_many_op_autonomous_planning_only",
+        "forbidden_use": "score_claim_or_promotion_or_rank_kill_or_paid_dispatch_authority",
+        **FALSE_AUTHORITY,
+    }
 
 
 def _targeted_component_prior_status(
@@ -11173,6 +11848,11 @@ def build_frontier_rate_attack_feedback_refresh(
         ),
         candidate_limit=candidate_limit,
     )
+    autonomous_chain_optimization = build_frontier_autonomous_chain_optimization(
+        operation_portfolio=operation_portfolio,
+        operation_materializer_bridge=operation_materializer_bridge,
+        chain_limit=candidate_limit,
+    )
     targeted_component_correction_acquisition = (
         build_frontier_targeted_component_correction_acquisition(
             operation_portfolio=operation_portfolio,
@@ -11233,6 +11913,11 @@ def build_frontier_rate_attack_feedback_refresh(
                     targeted_component_correction_acquisition
                 )
             )
+            autonomous_chain_metadata = (
+                _autonomous_chain_optimization_queue_metadata(
+                    autonomous_chain_optimization
+                )
+            )
             for experiment in queue_payload.get("experiments", []):
                 if not isinstance(experiment, dict):
                     continue
@@ -11247,6 +11932,9 @@ def build_frontier_rate_attack_feedback_refresh(
                     )
                     metadata["frontier_targeted_component_correction_acquisition"] = (
                         targeted_component_metadata
+                    )
+                    metadata["frontier_autonomous_chain_optimization"] = (
+                        autonomous_chain_metadata
                     )
         bridge = result.materializer_feedback_bridge
         selected_pairset_acquisition = result.selected_pairset_acquisition
@@ -11279,6 +11967,7 @@ def build_frontier_rate_attack_feedback_refresh(
         "dqs1_observation_discovery": dqs1_observation_discovery,
         "operation_portfolio": operation_portfolio,
         "operation_materializer_bridge": operation_materializer_bridge,
+        "autonomous_chain_optimization": autonomous_chain_optimization,
         "receiver_repair_backlog": receiver_repair_backlog,
         "receiver_closed_correction_budget": receiver_closed_correction_budget,
         "targeted_component_correction_acquisition": (
@@ -11321,6 +12010,8 @@ def build_frontier_rate_attack_feedback_refresh(
 
 
 __all__ = [
+    "AUTONOMOUS_CHAIN_OPTIMIZATION_ROW_SCHEMA",
+    "AUTONOMOUS_CHAIN_OPTIMIZATION_SCHEMA",
     "DISCOVERED_MATERIALIZER_FEEDBACK_SCHEMA",
     "DQS1_OBSERVATION_DISCOVERY_SCHEMA",
     "FEEDBACK_REFRESH_SCHEMA",
@@ -11349,6 +12040,7 @@ __all__ = [
     "TARGETED_COMPONENT_CORRECTION_WORK_ORDER_SCHEMA",
     "TARGETED_DROP_MANY_STAGE_INPUTS_SCHEMA",
     "FrontierRateAttackFeedbackError",
+    "build_frontier_autonomous_chain_optimization",
     "build_frontier_byte_range_stage_inputs",
     "build_frontier_operation_materializer_bridge",
     "build_frontier_operation_portfolio",

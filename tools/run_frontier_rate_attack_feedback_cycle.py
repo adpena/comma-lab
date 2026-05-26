@@ -1067,6 +1067,9 @@ def main(argv: list[str] | None = None) -> int:
                     "local_cpu_eureka_planning"
                 ),
                 "operation_portfolio": initial_report.get("operation_portfolio"),
+                "autonomous_chain_optimization": initial_report.get(
+                    "autonomous_chain_optimization"
+                ),
                 "receiver_repair_backlog": initial_report.get(
                     "receiver_repair_backlog"
                 ),
@@ -1104,6 +1107,9 @@ def main(argv: list[str] | None = None) -> int:
                     "local_cpu_eureka_planning"
                 ),
                 "operation_portfolio": post_report.get("operation_portfolio"),
+                "autonomous_chain_optimization": post_report.get(
+                    "autonomous_chain_optimization"
+                ),
                 "receiver_repair_backlog": post_report.get("receiver_repair_backlog"),
                 "receiver_closed_correction_budget": post_report.get(
                     "receiver_closed_correction_budget"
@@ -1143,6 +1149,8 @@ def main(argv: list[str] | None = None) -> int:
                 "targeted_component_materialization_requests_to_operation_chain_queue",
                 "targeted_component_operation_chain_to_materializer_handoff",
                 "targeted_operation_chain_queue_to_targeted_drop_many_child_queue",
+                "autonomous_chain_optimization_to_queue_owned_many_op_plan",
+                "many_op_plan_to_component_replay_and_exact_readiness_bridge",
                 "bounded_auxiliary_queue_artifacts_to_local_execution_trace",
                 "bounded_auxiliary_targeted_response_reharvest_to_materialization_chain",
             ],
@@ -1201,6 +1209,29 @@ def main(argv: list[str] | None = None) -> int:
                         "unregistered_chain_target_count": initial_report[
                             "targeted_component_correction_chain_materializer_handoff"
                         ].get("unregistered_chain_target_count"),
+                        **FALSE_AUTHORITY,
+                    }
+                ),
+                "initial_autonomous_chain_optimization_summary": (
+                    None
+                    if not isinstance(
+                        initial_report.get("autonomous_chain_optimization"),
+                        dict,
+                    )
+                    else {
+                        "chain_count": initial_report[
+                            "autonomous_chain_optimization"
+                        ].get("chain_count"),
+                        "top_chain_ids": initial_report[
+                            "autonomous_chain_optimization"
+                        ].get("top_chain_ids"),
+                        "target_classes": initial_report[
+                            "autonomous_chain_optimization"
+                        ].get("target_classes"),
+                        "registered_target_count": initial_report[
+                            "autonomous_chain_optimization"
+                        ].get("registered_target_count"),
+                        **FALSE_AUTHORITY,
                     }
                 ),
                 "post_harvest_targeted_component_correction_chain_materializer_handoff_summary": (
@@ -1222,6 +1253,30 @@ def main(argv: list[str] | None = None) -> int:
                         "unregistered_chain_target_count": post_report[
                             "targeted_component_correction_chain_materializer_handoff"
                         ].get("unregistered_chain_target_count"),
+                        **FALSE_AUTHORITY,
+                    }
+                ),
+                "post_harvest_autonomous_chain_optimization_summary": (
+                    None
+                    if post_report is None
+                    or not isinstance(
+                        post_report.get("autonomous_chain_optimization"),
+                        dict,
+                    )
+                    else {
+                        "chain_count": post_report[
+                            "autonomous_chain_optimization"
+                        ].get("chain_count"),
+                        "top_chain_ids": post_report[
+                            "autonomous_chain_optimization"
+                        ].get("top_chain_ids"),
+                        "target_classes": post_report[
+                            "autonomous_chain_optimization"
+                        ].get("target_classes"),
+                        "registered_target_count": post_report[
+                            "autonomous_chain_optimization"
+                        ].get("registered_target_count"),
+                        **FALSE_AUTHORITY,
                     }
                 ),
                 "initial_targeted_drop_many_dqs1_child_queue_paths": list(
