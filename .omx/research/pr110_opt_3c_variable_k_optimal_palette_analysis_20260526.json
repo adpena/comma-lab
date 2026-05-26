@@ -1,0 +1,853 @@
+{
+  "schema_version": "fec9_variable_k_escape_sweep_v1",
+  "lane": "lane_pr110_opt3_variant_c_variable_k_escape_mechanism_20260526",
+  "source_archive": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip",
+  "n_pairs": 600,
+  "fec6_baseline_bytes": 249,
+  "fec7_arith_anchor_bytes": 254,
+  "fec8_static_markov_anchor_bytes": 245,
+  "fec8_adaptive_markov_anchor_bytes": 270,
+  "shannon_floor_marginal_bytes": 241,
+  "shannon_floor_markov_bytes": 221,
+  "mode_histogram": {
+    "0": 134,
+    "1": 35,
+    "2": 129,
+    "3": 9,
+    "4": 25,
+    "5": 13,
+    "6": 11,
+    "7": 71,
+    "8": 10,
+    "9": 24,
+    "10": 7,
+    "11": 16,
+    "12": 6,
+    "13": 92,
+    "14": 17,
+    "15": 1
+  },
+  "sorted_modes_by_frequency": [
+    {
+      "mode": 0,
+      "count": 134,
+      "freq": 0.22333333333333333
+    },
+    {
+      "mode": 2,
+      "count": 129,
+      "freq": 0.215
+    },
+    {
+      "mode": 13,
+      "count": 92,
+      "freq": 0.15333333333333332
+    },
+    {
+      "mode": 7,
+      "count": 71,
+      "freq": 0.11833333333333333
+    },
+    {
+      "mode": 1,
+      "count": 35,
+      "freq": 0.058333333333333334
+    },
+    {
+      "mode": 4,
+      "count": 25,
+      "freq": 0.041666666666666664
+    },
+    {
+      "mode": 9,
+      "count": 24,
+      "freq": 0.04
+    },
+    {
+      "mode": 14,
+      "count": 17,
+      "freq": 0.028333333333333332
+    },
+    {
+      "mode": 11,
+      "count": 16,
+      "freq": 0.02666666666666667
+    },
+    {
+      "mode": 5,
+      "count": 13,
+      "freq": 0.021666666666666667
+    },
+    {
+      "mode": 6,
+      "count": 11,
+      "freq": 0.018333333333333333
+    },
+    {
+      "mode": 8,
+      "count": 10,
+      "freq": 0.016666666666666666
+    },
+    {
+      "mode": 3,
+      "count": 9,
+      "freq": 0.015
+    },
+    {
+      "mode": 10,
+      "count": 7,
+      "freq": 0.011666666666666667
+    },
+    {
+      "mode": 12,
+      "count": 6,
+      "freq": 0.01
+    },
+    {
+      "mode": 15,
+      "count": 1,
+      "freq": 0.0016666666666666668
+    }
+  ],
+  "designs": {
+    "A": "fixed-width K_small+1 with ESC signal + 4-bit raw on escape",
+    "B": "1-bit escape flag + (log2(K_small) OR 4-bit raw)",
+    "C": "prefix code (== Design B mathematically)",
+    "D": "skip: degenerates to FEC6 Huffman with re-fit codebook"
+  },
+  "header_static_bytes": 8,
+  "sweep": [
+    {
+      "k_small": 2,
+      "palette_modes_top_k": [
+        0,
+        2
+      ],
+      "in_palette_count": 263,
+      "in_palette_freq": 0.43833333333333335,
+      "escape_count": 337,
+      "escape_freq": 0.5616666666666666,
+      "design_a_width_inpalette_bits": 2,
+      "design_a_bits_total": 2548,
+      "design_a_bytes_with_header": 327,
+      "design_a_delta_vs_fec6": 78,
+      "design_b_width_inpalette_bits": 1,
+      "design_b_bits_total": 2211,
+      "design_b_bytes_with_header": 285,
+      "design_b_delta_vs_fec6": 36
+    },
+    {
+      "k_small": 3,
+      "palette_modes_top_k": [
+        0,
+        2,
+        13
+      ],
+      "in_palette_count": 355,
+      "in_palette_freq": 0.5916666666666667,
+      "escape_count": 245,
+      "escape_freq": 0.4083333333333333,
+      "design_a_width_inpalette_bits": 2,
+      "design_a_bits_total": 2180,
+      "design_a_bytes_with_header": 281,
+      "design_a_delta_vs_fec6": 32,
+      "design_b_width_inpalette_bits": 2,
+      "design_b_bits_total": 2290,
+      "design_b_bytes_with_header": 295,
+      "design_b_delta_vs_fec6": 46
+    },
+    {
+      "k_small": 4,
+      "palette_modes_top_k": [
+        0,
+        2,
+        13,
+        7
+      ],
+      "in_palette_count": 426,
+      "in_palette_freq": 0.71,
+      "escape_count": 174,
+      "escape_freq": 0.29,
+      "design_a_width_inpalette_bits": 3,
+      "design_a_bits_total": 2496,
+      "design_a_bytes_with_header": 320,
+      "design_a_delta_vs_fec6": 71,
+      "design_b_width_inpalette_bits": 2,
+      "design_b_bits_total": 2148,
+      "design_b_bytes_with_header": 277,
+      "design_b_delta_vs_fec6": 28
+    },
+    {
+      "k_small": 5,
+      "palette_modes_top_k": [
+        0,
+        2,
+        13,
+        7,
+        1
+      ],
+      "in_palette_count": 461,
+      "in_palette_freq": 0.7683333333333333,
+      "escape_count": 139,
+      "escape_freq": 0.23166666666666666,
+      "design_a_width_inpalette_bits": 3,
+      "design_a_bits_total": 2356,
+      "design_a_bytes_with_header": 303,
+      "design_a_delta_vs_fec6": 54,
+      "design_b_width_inpalette_bits": 3,
+      "design_b_bits_total": 2539,
+      "design_b_bytes_with_header": 326,
+      "design_b_delta_vs_fec6": 77
+    },
+    {
+      "k_small": 6,
+      "palette_modes_top_k": [
+        0,
+        2,
+        13,
+        7,
+        1,
+        4
+      ],
+      "in_palette_count": 486,
+      "in_palette_freq": 0.81,
+      "escape_count": 114,
+      "escape_freq": 0.19,
+      "design_a_width_inpalette_bits": 3,
+      "design_a_bits_total": 2256,
+      "design_a_bytes_with_header": 290,
+      "design_a_delta_vs_fec6": 41,
+      "design_b_width_inpalette_bits": 3,
+      "design_b_bits_total": 2514,
+      "design_b_bytes_with_header": 323,
+      "design_b_delta_vs_fec6": 74
+    },
+    {
+      "k_small": 7,
+      "palette_modes_top_k": [
+        0,
+        2,
+        13,
+        7,
+        1,
+        4,
+        9
+      ],
+      "in_palette_count": 510,
+      "in_palette_freq": 0.85,
+      "escape_count": 90,
+      "escape_freq": 0.15,
+      "design_a_width_inpalette_bits": 3,
+      "design_a_bits_total": 2160,
+      "design_a_bytes_with_header": 278,
+      "design_a_delta_vs_fec6": 29,
+      "design_b_width_inpalette_bits": 3,
+      "design_b_bits_total": 2490,
+      "design_b_bytes_with_header": 320,
+      "design_b_delta_vs_fec6": 71
+    },
+    {
+      "k_small": 8,
+      "palette_modes_top_k": [
+        0,
+        2,
+        13,
+        7,
+        1,
+        4,
+        9,
+        14
+      ],
+      "in_palette_count": 527,
+      "in_palette_freq": 0.8783333333333333,
+      "escape_count": 73,
+      "escape_freq": 0.12166666666666667,
+      "design_a_width_inpalette_bits": 4,
+      "design_a_bits_total": 2692,
+      "design_a_bytes_with_header": 345,
+      "design_a_delta_vs_fec6": 96,
+      "design_b_width_inpalette_bits": 3,
+      "design_b_bits_total": 2473,
+      "design_b_bytes_with_header": 318,
+      "design_b_delta_vs_fec6": 69
+    },
+    {
+      "k_small": 10,
+      "palette_modes_top_k": [
+        0,
+        2,
+        13,
+        7,
+        1,
+        4,
+        9,
+        14,
+        11,
+        5
+      ],
+      "in_palette_count": 556,
+      "in_palette_freq": 0.9266666666666666,
+      "escape_count": 44,
+      "escape_freq": 0.07333333333333333,
+      "design_a_width_inpalette_bits": 4,
+      "design_a_bits_total": 2576,
+      "design_a_bytes_with_header": 330,
+      "design_a_delta_vs_fec6": 81,
+      "design_b_width_inpalette_bits": 4,
+      "design_b_bits_total": 3000,
+      "design_b_bytes_with_header": 383,
+      "design_b_delta_vs_fec6": 134
+    },
+    {
+      "k_small": 12,
+      "palette_modes_top_k": [
+        0,
+        2,
+        13,
+        7,
+        1,
+        4,
+        9,
+        14,
+        11,
+        5,
+        6,
+        8
+      ],
+      "in_palette_count": 577,
+      "in_palette_freq": 0.9616666666666667,
+      "escape_count": 23,
+      "escape_freq": 0.03833333333333333,
+      "design_a_width_inpalette_bits": 4,
+      "design_a_bits_total": 2492,
+      "design_a_bytes_with_header": 320,
+      "design_a_delta_vs_fec6": 71,
+      "design_b_width_inpalette_bits": 4,
+      "design_b_bits_total": 3000,
+      "design_b_bytes_with_header": 383,
+      "design_b_delta_vs_fec6": 134
+    },
+    {
+      "k_small": 14,
+      "palette_modes_top_k": [
+        0,
+        2,
+        13,
+        7,
+        1,
+        4,
+        9,
+        14,
+        11,
+        5,
+        6,
+        8,
+        3,
+        10
+      ],
+      "in_palette_count": 593,
+      "in_palette_freq": 0.9883333333333333,
+      "escape_count": 7,
+      "escape_freq": 0.011666666666666667,
+      "design_a_width_inpalette_bits": 4,
+      "design_a_bits_total": 2428,
+      "design_a_bytes_with_header": 312,
+      "design_a_delta_vs_fec6": 63,
+      "design_b_width_inpalette_bits": 4,
+      "design_b_bits_total": 3000,
+      "design_b_bytes_with_header": 383,
+      "design_b_delta_vs_fec6": 134
+    }
+  ],
+  "best_design_a": {
+    "k_small": 7,
+    "bytes_with_header": 278,
+    "delta_vs_fec6": 29
+  },
+  "best_design_b": {
+    "k_small": 4,
+    "bytes_with_header": 277,
+    "delta_vs_fec6": 28
+  },
+  "recommendation": {
+    "design": "B",
+    "k_small": 4,
+    "bytes_with_header": 277,
+    "delta_vs_fec6": 28,
+    "vs_threshold_10_bytes": "FAILS",
+    "vs_predicted_band_25_46_bytes": "OUTSIDE"
+  },
+  "fec10_sketch": {
+    "concept": "FEC10 = FEC8-static Markov + variable-K escape per-context",
+    "intuition": "Each of the 16 contexts already has H < 2.94 bits/pair; within each context, a K_small=2-4 escape mechanism could further exploit per-context concentration (e.g. context 1 has 12+12 = 24/35 = 69% concentrated on modes 0 and 2)",
+    "predicted_savings_band": "-15 to -30 bytes wire beyond FEC8-static",
+    "predicted_fec10_total": "215-230 bytes (vs FEC6 249B = -19 to -34 bytes wire)",
+    "status": "design-memo-only; implementation deferred per TaskCreate operator approval"
+  },
+  "variant_c_huffman_sweep": [
+    {
+      "k_small": 2,
+      "palette_modes": [
+        0,
+        2
+      ],
+      "escape_modes": [
+        13,
+        7,
+        1,
+        4,
+        9,
+        14,
+        11,
+        5,
+        6,
+        8,
+        3,
+        10,
+        12,
+        15
+      ],
+      "escape_count": 337,
+      "escape_freq": 0.5616666666666666,
+      "huffman_codebook": {
+        "2": "00",
+        "0": "01",
+        "ESC": "1"
+      },
+      "avg_huff_bits_in_palette": 2.0,
+      "esc_huff_codeword_len_bits": 1,
+      "raw_bits_per_escape": 4,
+      "total_bits": 2211,
+      "bytes_with_header": 285,
+      "delta_vs_fec6": 36
+    },
+    {
+      "k_small": 3,
+      "palette_modes": [
+        0,
+        2,
+        13
+      ],
+      "escape_modes": [
+        7,
+        1,
+        4,
+        9,
+        14,
+        11,
+        5,
+        6,
+        8,
+        3,
+        10,
+        12,
+        15
+      ],
+      "escape_count": 245,
+      "escape_freq": 0.4083333333333333,
+      "huffman_codebook": {
+        "ESC": "0",
+        "0": "10",
+        "13": "110",
+        "2": "111"
+      },
+      "avg_huff_bits_in_palette": 2.6666666666666665,
+      "esc_huff_codeword_len_bits": 1,
+      "raw_bits_per_escape": 4,
+      "total_bits": 2156,
+      "bytes_with_header": 278,
+      "delta_vs_fec6": 29
+    },
+    {
+      "k_small": 4,
+      "palette_modes": [
+        0,
+        2,
+        13,
+        7
+      ],
+      "escape_modes": [
+        1,
+        4,
+        9,
+        14,
+        11,
+        5,
+        6,
+        8,
+        3,
+        10,
+        12,
+        15
+      ],
+      "escape_count": 174,
+      "escape_freq": 0.29,
+      "huffman_codebook": {
+        "2": "00",
+        "0": "01",
+        "7": "100",
+        "13": "101",
+        "ESC": "11"
+      },
+      "avg_huff_bits_in_palette": 2.5,
+      "esc_huff_codeword_len_bits": 2,
+      "raw_bits_per_escape": 4,
+      "total_bits": 2059,
+      "bytes_with_header": 266,
+      "delta_vs_fec6": 17
+    },
+    {
+      "k_small": 5,
+      "palette_modes": [
+        0,
+        2,
+        13,
+        7,
+        1
+      ],
+      "escape_modes": [
+        4,
+        9,
+        14,
+        11,
+        5,
+        6,
+        8,
+        3,
+        10,
+        12,
+        15
+      ],
+      "escape_count": 139,
+      "escape_freq": 0.23166666666666666,
+      "huffman_codebook": {
+        "2": "00",
+        "0": "01",
+        "ESC": "10",
+        "13": "110",
+        "1": "1110",
+        "7": "1111"
+      },
+      "avg_huff_bits_in_palette": 3.0,
+      "esc_huff_codeword_len_bits": 2,
+      "raw_bits_per_escape": 4,
+      "total_bits": 2060,
+      "bytes_with_header": 266,
+      "delta_vs_fec6": 17
+    },
+    {
+      "k_small": 6,
+      "palette_modes": [
+        0,
+        2,
+        13,
+        7,
+        1,
+        4
+      ],
+      "escape_modes": [
+        9,
+        14,
+        11,
+        5,
+        6,
+        8,
+        3,
+        10,
+        12,
+        15
+      ],
+      "escape_count": 114,
+      "escape_freq": 0.19,
+      "huffman_codebook": {
+        "2": "00",
+        "4": "0100",
+        "1": "0101",
+        "7": "011",
+        "0": "10",
+        "13": "110",
+        "ESC": "111"
+      },
+      "avg_huff_bits_in_palette": 3.0,
+      "esc_huff_codeword_len_bits": 3,
+      "raw_bits_per_escape": 4,
+      "total_bits": 2053,
+      "bytes_with_header": 265,
+      "delta_vs_fec6": 16
+    },
+    {
+      "k_small": 7,
+      "palette_modes": [
+        0,
+        2,
+        13,
+        7,
+        1,
+        4,
+        9
+      ],
+      "escape_modes": [
+        14,
+        11,
+        5,
+        6,
+        8,
+        3,
+        10,
+        12,
+        15
+      ],
+      "escape_count": 90,
+      "escape_freq": 0.15,
+      "huffman_codebook": {
+        "2": "00",
+        "0": "01",
+        "7": "100",
+        "1": "1010",
+        "9": "10110",
+        "4": "10111",
+        "ESC": "110",
+        "13": "111"
+      },
+      "avg_huff_bits_in_palette": 3.4285714285714284,
+      "esc_huff_codeword_len_bits": 3,
+      "raw_bits_per_escape": 4,
+      "total_bits": 2030,
+      "bytes_with_header": 262,
+      "delta_vs_fec6": 13
+    },
+    {
+      "k_small": 8,
+      "palette_modes": [
+        0,
+        2,
+        13,
+        7,
+        1,
+        4,
+        9,
+        14
+      ],
+      "escape_modes": [
+        11,
+        5,
+        6,
+        8,
+        3,
+        10,
+        12,
+        15
+      ],
+      "escape_count": 73,
+      "escape_freq": 0.12166666666666667,
+      "huffman_codebook": {
+        "2": "00",
+        "0": "01",
+        "7": "100",
+        "ESC": "101",
+        "13": "110",
+        "14": "11100",
+        "9": "11101",
+        "4": "11110",
+        "1": "11111"
+      },
+      "avg_huff_bits_in_palette": 3.75,
+      "esc_huff_codeword_len_bits": 3,
+      "raw_bits_per_escape": 3,
+      "total_bits": 1958,
+      "bytes_with_header": 253,
+      "delta_vs_fec6": 4
+    },
+    {
+      "k_small": 10,
+      "palette_modes": [
+        0,
+        2,
+        13,
+        7,
+        1,
+        4,
+        9,
+        14,
+        11,
+        5
+      ],
+      "escape_modes": [
+        6,
+        8,
+        3,
+        10,
+        12,
+        15
+      ],
+      "escape_count": 44,
+      "escape_freq": 0.07333333333333333,
+      "huffman_codebook": {
+        "2": "00",
+        "0": "01",
+        "7": "100",
+        "1": "1010",
+        "14": "10110",
+        "9": "10111",
+        "13": "110",
+        "ESC": "1110",
+        "4": "11110",
+        "5": "111110",
+        "11": "111111"
+      },
+      "avg_huff_bits_in_palette": 4.1,
+      "esc_huff_codeword_len_bits": 4,
+      "raw_bits_per_escape": 3,
+      "total_bits": 1967,
+      "bytes_with_header": 254,
+      "delta_vs_fec6": 5
+    },
+    {
+      "k_small": 12,
+      "palette_modes": [
+        0,
+        2,
+        13,
+        7,
+        1,
+        4,
+        9,
+        14,
+        11,
+        5,
+        6,
+        8
+      ],
+      "escape_modes": [
+        3,
+        10,
+        12,
+        15
+      ],
+      "escape_count": 23,
+      "escape_freq": 0.03833333333333333,
+      "huffman_codebook": {
+        "2": "00",
+        "0": "01",
+        "7": "100",
+        "1": "1010",
+        "14": "10110",
+        "8": "101110",
+        "6": "101111",
+        "13": "110",
+        "ESC": "11100",
+        "9": "11101",
+        "4": "11110",
+        "5": "111110",
+        "11": "111111"
+      },
+      "avg_huff_bits_in_palette": 4.416666666666667,
+      "esc_huff_codeword_len_bits": 5,
+      "raw_bits_per_escape": 2,
+      "total_bits": 1946,
+      "bytes_with_header": 252,
+      "delta_vs_fec6": 3
+    },
+    {
+      "k_small": 14,
+      "palette_modes": [
+        0,
+        2,
+        13,
+        7,
+        1,
+        4,
+        9,
+        14,
+        11,
+        5,
+        6,
+        8,
+        3,
+        10
+      ],
+      "escape_modes": [
+        12,
+        15
+      ],
+      "escape_count": 7,
+      "escape_freq": 0.011666666666666667,
+      "huffman_codebook": {
+        "2": "00",
+        "0": "01",
+        "7": "100",
+        "1": "1010",
+        "14": "10110",
+        "3": "101110",
+        "8": "101111",
+        "13": "110",
+        "9": "11100",
+        "6": "111010",
+        "5": "111011",
+        "4": "11110",
+        "10": "1111100",
+        "ESC": "1111101",
+        "11": "111111"
+      },
+      "avg_huff_bits_in_palette": 4.714285714285714,
+      "esc_huff_codeword_len_bits": 7,
+      "raw_bits_per_escape": 1,
+      "total_bits": 1944,
+      "bytes_with_header": 251,
+      "delta_vs_fec6": 2
+    }
+  ],
+  "variant_c_huffman_best": {
+    "k_small": 14,
+    "bytes_with_header": 251,
+    "delta_vs_fec6": 2,
+    "palette_modes": [
+      0,
+      2,
+      13,
+      7,
+      1,
+      4,
+      9,
+      14,
+      11,
+      5,
+      6,
+      8,
+      3,
+      10
+    ]
+  },
+  "refit_huffman_full16": {
+    "bits_total": 1944,
+    "bytes_with_header": 251,
+    "delta_vs_fec6": 2,
+    "codebook": {
+      "2": "00",
+      "0": "01",
+      "7": "100",
+      "1": "1010",
+      "14": "10110",
+      "3": "101110",
+      "8": "101111",
+      "13": "110",
+      "9": "11100",
+      "6": "111010",
+      "5": "111011",
+      "4": "11110",
+      "10": "1111100",
+      "15": "11111010",
+      "12": "11111011",
+      "11": "111111"
+    },
+    "bits_per_pair": 3.24,
+    "fec6_handfit_bits_per_pair": 3.24
+  },
+  "empirical_falsification_verdict": {
+    "fixed_width_design_a_falsified_at": "+29B WORSE (best K_small=7)",
+    "fixed_width_design_b_falsified_at": "+28B WORSE (best K_small=4)",
+    "variant_c_huffman_best_delta_vs_fec6": 2,
+    "refit_huffman_full16_delta_vs_fec6": 2,
+    "analytical_prediction_was_optimistic": "The analytical estimate of -25 to -46 bytes assumed Shannon-floor bit cost (0.8 * 2 + 0.2 * 5 = 2.6 bits/pair). In reality fixed-width codes cannot achieve fractional bits per pair, and Huffman codes on K_small+1 symbols still round up to integer codeword lengths. FEC6 hand-fit codebook is within 0.028 bits/pair of Shannon-floor on this stream \u2014 the 0-order direction is genuinely saturated."
+  }
+}
