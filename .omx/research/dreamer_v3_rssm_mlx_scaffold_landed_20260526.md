@@ -304,3 +304,56 @@ Per the 2026-05-19 T3 symposium 6-tier dispatch cost ladder + the corrected #125
     --candidate-label dreamer_v3_rssm_l0_scaffold \
     --output-json <smoke_dir>/equivalence_gate_attempt.json --n-pairs 2
 ```
+
+---
+
+<!-- ===== APPEND-ONLY FOOTER: FIX-WAVE-R1 closure 2026-05-26 ===== -->
+<!-- Catalog #110 / #113 APPEND-ONLY HISTORICAL_PROVENANCE — this footer is the
+     CORRECTION + CLOSURE record for the R1 review's A-OP1 + A-OP2 + A-OP3 +
+     A-OP4 findings against this landing memo. Body above is preserved
+     UNMUTATED per APPEND-ONLY discipline; corrections are recorded here. -->
+
+## APPEND-ONLY footer: FIX-WAVE-R1 closure 2026-05-26
+
+**Reference**: R1 review memo `.omx/research/path_3_a_recursive_adversarial_review_r1_3_axis_20260526.md` + aggregate `.omx/research/path_3_recursive_adversarial_review_r1_aggregate_3_axis_landings_a_d_e_20260526.md` (commit `80acd6da3`).
+
+### Correction #1: Assumption-Adversary verdict #1 RE-CLASSIFIED CARGO-CULTED → CORRECTED (A-OP1 + A-OP2 closed)
+
+The original `council_assumption_adversary_verdict[2]` row at frontmatter line 28-30 classified PyTorch inflate runtime parity at decoder boundary as `CARGO-CULTED-PENDING-CANONICAL-BILINEAR` and attributed the 24.34 max_abs drift entirely to the bilinear `mx.repeat` gap. R1 review surfaced that there were **TWO INDEPENDENT MLX↔PyTorch drift sources**, not just one:
+
+- **A-OP1 (NEW; R1 review surfaced; landing memo missed)**: `_pixel_shuffle_2x_nhwc` used channel-LAST reshape convention `(B, H, W, 2, 2, out_C)` + transpose `(0, 1, 3, 2, 4, 5)` producing 2.40 absolute drift vs PyTorch `nn.PixelShuffle(2)`.
+- **A-OP2 (landing memo correctly named)**: `_bilinear_resize_2x_nhwc` used `mx.repeat` 2x producing 0.99 absolute drift vs PyTorch `F.interpolate(mode='bilinear', align_corners=False)`.
+
+Both bugs compounded through the 6-PixelShuffle-block decoder + sin saturation + sigmoid clipping, producing 24.34 max_abs at the output boundary.
+
+### Correction #2: Cargo-cult audit row #5 amendment (A-OP4 closed)
+
+The original cargo-cult audit row at line 120 ("NHWC↔NCHW conv layout transpose at MLX→PyTorch load is correctness-preserving") was classified HARD-EARNED based on the `test_end_to_end_mlx_train_archive_pytorch_inflate` SHAPE round-trip test. R1 review surfaced that the empirical verification cited held for **SHAPE correctness only**; FULL decoder forward equivalence required ALSO fixing the PixelShuffle convention bug + the bilinear bug. The conv-layout transpose itself IS correctness-preserving (verified independently); but the row's framing implicitly suggested full decoder forward equivalence which was NOT yet empirically verified at the time of landing.
+
+### FIX-WAVE-R1 actions landed (this commit batch)
+
+1. **A-OP1 CLOSED**: `src/tac/substrates/dreamer_v3_rssm/module.py::_pixel_shuffle_2x_nhwc` rewritten to use channel-FIRST reshape convention `(B, H, W, out_C, 2, 2)` + transpose `(0, 1, 4, 2, 5, 3)` matching sister D=Z6 `src/tac/substrates/time_traveler_l5_z6/mlx_renderer.py::_pixel_shuffle_2x_nhwc` AND canonical PR95 helper `tac.local_acceleration.pr95_hnerv_mlx::pixel_shuffle_2x_nhwc`.
+2. **A-OP2 CLOSED**: `src/tac/substrates/dreamer_v3_rssm/module.py::_bilinear_resize_2x_nhwc` rewritten to delegate to canonical `tac.local_acceleration.pr95_hnerv_mlx::bilinear_resize2x_align_corners_false_nhwc`. Catalog #295 self-containment is preserved because the canonical helper is imported only at MLX training time in `module.py`; the substrate's inflate runtime at `inflate.py` is PyTorch-only and does NOT import MLX. The Catalog #295 contract scopes `submissions/*/inflate.py` PYTHONPATH self-containment; this substrate's MLX module is at `src/tac/substrates/dreamer_v3_rssm/` which is in-tree by definition.
+3. **A-OP3 CLOSED**: `test_mlx_pytorch_decoder_parity_at_archive_boundary` threshold tightened from `< 50.0` to `< 0.05` per the post-fix empirical anchor. Empirical measurement post-fix: **max_abs=0.0054, mean_abs=0.0007** (~4500x improvement vs pre-fix 24.34; well below R1 review's stated < 5.0 promotion criterion).
+4. **A-OP4 CLOSED via this APPEND-ONLY footer**: cargo-cult audit row #5 framing amended per the correction above. The row's HARD-EARNED classification holds for the conv-layout transpose itself (independent verification); the FULL decoder forward equivalence claim required A-OP1 + A-OP2 fixes which now land in the same commit batch.
+
+### Post-fix verification (2026-05-26)
+
+- `.venv/bin/python -m pytest src/tac/substrates/dreamer_v3_rssm/tests/test_basic.py -v` → **11/11 pass** (no regressions; same test surface).
+- `test_mlx_pytorch_decoder_parity_at_archive_boundary` printed `MLX↔PyTorch decoder parity: max_abs=0.0054, mean_abs=0.0007`.
+- The remaining sub-0.01 drift is fp32 compound-op precision noise across 6 PixelShuffle blocks + sin/sigmoid nonlinearities + final RGB heads; acceptable per CLAUDE.md "Apples-to-apples evidence discipline" because after camera-resolution uint8 quantization the drift is structurally below the per-pixel quantization step (1.0 / 255 ≈ 0.004 in [0, 1] space or 1.0 in [0, 255] space).
+
+### R2 readiness signal
+
+- R1 counter status post-FIX-WAVE-R1: **CLEAN** for A=DreamerV3 (all P0 + P1 + P2 findings closed); R2 can fire on this substrate when the aggregate R1 cycle re-runs.
+- Catalog #1265 contest-equivalence gate threshold |S_MLX - S_PT| ≤ 0.001 contest-units is now structurally achievable for A=DreamerV3 archives because the decoder forward semantics match (the L1 sister gate `tools/gate_mlx_candidate_contest_equivalence_rssm.py` per op-routable #2 can now operate against byte-stable MLX↔PyTorch decoder parity).
+
+### Outstanding L1+ work (NOT in FIX-WAVE-R1 scope; queued for future subagents)
+
+- **CONSOLIDATE-OP / META** (R1 op-routable #9): extract `_pixel_shuffle_2x_nhwc` + general `_bilinear_resize_nhwc` to canonical `tac.local_acceleration.pr95_hnerv_mlx` so future MLX substrates inherit ONE source of truth per CLAUDE.md "consolidate into META layer" standing directive. Refactor A=DreamerV3 + D=Z6 + future Path 3 candidates to import from canonical. Sister of Catalog #299 quota brake. **Status**: queued as TaskCreate op-routable; NOT executed in FIX-WAVE-R1.
+
+### Cross-references
+
+- FIX-WAVE-R1 landing memo: `.omx/research/path_3_fix_wave_r1_close_findings_landed_20260526.md`
+- Source-code diff for A-OP1 + A-OP2: `src/tac/substrates/dreamer_v3_rssm/module.py` lines 184-243
+- Test threshold tightening: `src/tac/substrates/dreamer_v3_rssm/tests/test_basic.py` lines 320-350

@@ -5,7 +5,7 @@ Per design memo §"Canonical-vs-unique decision per layer" → archive grammar
 FORK because the substrate must STRUCTURALLY BIND the sidecar to a specific
 PR110 base archive via SHA256 prefix. Composed archive format:
 
-    [BPR1 header 28 bytes]
+    [BPR1 header 29 bytes]
       magic[5]   = b"BPR1\\x00"
       version[1] = 1
       num_rounds[1]
@@ -18,9 +18,9 @@ PR110 base archive via SHA256 prefix. Composed archive format:
     [PR110_BASE_ARCHIVE_BYTES inline]
 
 The composed archive is contest-loadable as a single ZIP file containing
-one member `x` of size (28 + residual_blob_len + len(pr110_base_bytes)).
+one member `x` of size (29 + residual_blob_len + len(pr110_base_bytes)).
 The inflate runtime knows to:
-    1. Read the first 28 bytes; verify BPR1 magic + version.
+    1. Read the first 29 bytes; verify BPR1 magic + version.
     2. Read residual_blob_len bytes; brotli-decompress; load residual state_dict.
     3. Slice the rest as PR110_BASE_ARCHIVE_BYTES; write to temp file; invoke
        PR110's inflate.sh subprocess.

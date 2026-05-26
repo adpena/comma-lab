@@ -318,31 +318,39 @@ def test_mlx_pytorch_decoder_parity_at_archive_boundary() -> None:
     max_abs = float(abs_diff.max())
     mean_abs = float(abs_diff.mean())
     print(f"MLX↔PyTorch decoder parity: max_abs={max_abs:.4f}, mean_abs={mean_abs:.4f}")
-    # L0 SCAFFOLD documented drift bound — see scaffold landing memo.
-    # MLX side uses a simple ``mx.repeat`` 2x upsample (not align_corners=False
-    # bilinear); PyTorch side uses ``F.interpolate(mode='bilinear',
-    # align_corners=False)``. This implementation gap is intentional for L0
-    # self-containment (Catalog #295 inflate works with empty PYTHONPATH;
-    # no import of tac.local_acceleration.pr95_hnerv_mlx::bilinear_resize2x_*).
+    # FIX-WAVE-R1 A-OP3 threshold tightening (2026-05-26):
     #
-    # The canonical bilinear MLX helper is at
-    # tac.local_acceleration.pr95_hnerv_mlx::bilinear_resize2x_align_corners_false_nhwc
-    # and produces decoder-output parity ~3e-5 max_abs per the PR95 #1251 +
-    # #1257 + #1258-corrected cascade. Wiring it into this substrate is the
-    # canonical L0→L1 promotion step before any paid CUDA dispatch.
+    # Pre-FIX-WAVE-R1 baseline (R1 review measurement): max_abs ≈ 24.34 in
+    # [0, 255] space (compounded drift from two independent bugs:
+    # `_pixel_shuffle_2x_nhwc` channel-LAST convention + `_bilinear_resize_2x_nhwc`
+    # mx.repeat instead of align_corners=False bilinear). Test ceiling was 50.0.
     #
-    # Per CLAUDE.md "Apples-to-apples evidence discipline": this drift IS at
-    # decoder output (range [0, 255]); after camera-resolution uint8
-    # quantization (the contest scorer surface) the drift typically washes
-    # out per the corrected #1258 empirical anchor methodology.
+    # Post-FIX-WAVE-R1 empirical (this run on 2026-05-26):
+    # max_abs=0.0054, mean_abs=0.0007 — ~4500x improvement. Both bugs fixed:
+    #   - A-OP1: `_pixel_shuffle_2x_nhwc` now uses canonical channel-FIRST
+    #     reshape `(B, H, W, out_C, 2, 2)` + transpose `(0, 1, 4, 2, 5, 3)`
+    #     matching sister D=Z6 + canonical PR95 MLX helper.
+    #   - A-OP2: `_bilinear_resize_2x_nhwc` now delegates to canonical
+    #     `tac.local_acceleration.pr95_hnerv_mlx::bilinear_resize2x_align_corners_false_nhwc`
+    #     which is empirically PyTorch-byte-stable.
     #
-    # L0 scaffold-acceptance ceiling: max_abs < 50.0 in [0, 255] space
-    # (~20% relative; documents the bilinear implementation gap honestly
-    # rather than masking it; Catalog #287 evidence-tag discipline).
-    assert max_abs < 50.0, (
+    # Threshold tightened from < 50.0 to < 0.05 (~10x headroom above the
+    # post-fix empirical max_abs ≈ 0.0054; well below the R1 review's stated
+    # L0→L1 promotion criterion of < 5.0 and approaching the best-case < 1.0).
+    # The remaining sub-0.01 drift is fp32 compound-op precision noise across
+    # 6 PixelShuffle blocks + sin/sigmoid nonlinearities + final RGB heads;
+    # acceptable per CLAUDE.md "Apples-to-apples evidence discipline" because
+    # after camera-resolution uint8 quantization the drift is structurally
+    # below the per-pixel quantization step (1.0 / 255 ≈ 0.004 in [0, 1] space
+    # or equivalently 1.0 in [0, 255] space).
+    #
+    # Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" L9
+    # runtime closure: MLX-trained-PyTorch-inflated model now IS the same
+    # runtime the MLX trainer observes at convergence.
+    assert max_abs < 0.05, (
         f"MLX↔PyTorch decoder parity drift too large: max_abs={max_abs}; "
-        "L0 expected gap from simple repeat-2x vs canonical bilinear "
-        "(see tac.local_acceleration.pr95_hnerv_mlx for canonical helper)"
+        "post-FIX-WAVE-R1 expectation is <0.05 in [0,255] space (~1500x "
+        "below pre-fix 24.34 ceiling; ~10x headroom above empirical 0.0054)"
     )
 
 

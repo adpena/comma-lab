@@ -232,3 +232,62 @@ Per the binding 2026-05-26 reframing: design the curriculum FOR BoostNeRV (not b
 - **Sister Path 3 candidates** (concurrent 2026-05-26 fanout): A=DreamerV3 RSSM (`src/tac/substrates/dreamer_v3_rssm/`); B=Z7-Mamba-2; C=NSCS06 v8 chroma_lut (`src/tac/substrates/nscs06_v8_chroma_lut/`); D=Z6 predictive coding (`src/tac/substrates/c1_world_model_foveation/` or sister).
 - **Literature anchor**: Friedman 2001 "Greedy Function Approximation: A Gradient Boosting Machine" (canonical gradient-boosting foundation) + Liu et al. ECCV 2024 "BoostNeRV: Iterative Refinement for Implicit Neural Video Representations" (NeRV-family specialization). Atick-Redlich 1990 cooperative-receiver framing for residual coding (canonical Z4 sister).
 - **Canonical equation registry** (Catalog #344): residual_hybrid_boosting_savings_v1 is FORMALIZATION_PENDING per the frontmatter; canonical equation #26 procedural_codebook_savings is EXCLUDED per Catalog #359 (residual-hybrid context).
+
+---
+
+<!-- ===== APPEND-ONLY FOOTER: FIX-WAVE-R1 closure 2026-05-26 ===== -->
+<!-- Catalog #110 / #113 APPEND-ONLY HISTORICAL_PROVENANCE — this footer is the
+     CORRECTION + CLOSURE record for the R1 review's E-OP1 + E-OP3 + E-OP4
+     findings against this design memo. Body above is preserved UNMUTATED per
+     APPEND-ONLY discipline; corrections are recorded here. -->
+
+## APPEND-ONLY footer: FIX-WAVE-R1 closure 2026-05-26
+
+**Reference**: R1 review memo `.omx/research/path_3_e_recursive_adversarial_review_r1_3_axis_20260526.md` + aggregate `.omx/research/path_3_recursive_adversarial_review_r1_aggregate_3_axis_landings_a_d_e_20260526.md` (commit `80acd6da3`).
+
+### Correction #1: BPR1 header byte count INCONSISTENCY (E-OP1 / E-OP3 closed)
+
+The original body of this design memo references the BPR1 header byte count in 3 places that were INCONSISTENT with the SOURCE-OF-TRUTH constant:
+
+| Surface | Original text | Corrected interpretation |
+|---|---|---|
+| §"Canonical-vs-unique decision per layer" row 3 (line 67) | "distinctive 24-byte header carrying NUM_BOOSTING_ROUNDS u8 + PR110_BASE_ARCHIVE_SHA256_PREFIX[16] u128..." | The actual header is **29 bytes** per `struct.calcsize('<5sBBB16sIB') = 29` + `BPR1_HEADER_LEN = 29` source constant. |
+| §"9-dim success checklist evidence" item 3 DISTINCTNESS (line 84) | "...BPR1 magic + PR110_BASE_SHA256_PREFIX binding in the 24-byte header structurally prevents..." | 29-byte header per the same source constant. |
+| §"Residual extraction from PR110 — byte / score math" §"Byte accounting (predicted)" (line 197) | "BPR1 header overhead: 24 bytes." | 29 bytes per the same source constant. |
+
+**Source-of-truth verification**: `.venv/bin/python -c "import struct; print(struct.calcsize('<5sBBB16sIB'))"` → `29`; `src/tac/substrates/boost_nerv_pr110_residual/__init__.py:88` declares `BPR1_HEADER_LEN = 29`.
+
+**Mechanism of the inconsistency**: the original design memo enumerated the header field-by-field as `magic[5] + version[1] + num_rounds[1] + sha_prefix[16] + residual_blob_len[4] + reserved_tail[1] = 28 bytes`, but the actual implementation includes a 1-byte `align[1]` padding (4-byte alignment of the sha_prefix offset) per `struct.calcsize('<5sBBB16sIB')`. The 24-byte and 28-byte figures in the design memo were both incorrect; 29 bytes is the canonical truth.
+
+**Byte accounting correction (§"Byte accounting" line 198-199)**:
+- Original: "Composed archive bytes: 178417 + 24 + ~8800 = ~187241 bytes"; "Δrate = 25 × 8824 / 37545489 = +0.00587 contest-units"
+- Corrected: Composed archive bytes: 178417 + **29** + ~8800 = **~187246 bytes**. The Δrate calculation in the original used the residual_blob_len = 8824 bytes (which INCLUDES the 24-byte header in the original mental model) and produces ≈ +0.00587 contest-units; with the 29-byte header, residual_blob_len + header total bytes is 5 bytes higher, so corrected Δrate = `25 × 8829 / 37545489 ≈ +0.00588 contest-units` — a difference of `+0.0000033` contest-units (~6 orders of magnitude below the predicted ΔS band's [-0.010, +0.0045] uncertainty). The error does NOT change the substrate's qualitative outcome.
+
+### Correction #2: Canonical equation name (E-OP4 closed)
+
+The original line 234 cited canonical equation as `residual_hybrid_boosting_savings_v1 FORMALIZATION_PENDING`. R1 review verified via `tac.canonical_equations.query_equations()` that the registered equation is named `procedural_predictor_plus_residual_correction_savings_v1` — the same conceptual entity per Catalog #359 sister discipline (residual-hybrid context). The FORMALIZATION_PENDING marker was a placeholder name; the registered equation exists and is the canonical reference.
+
+**Corrected canonical equation citation**: `procedural_predictor_plus_residual_correction_savings_v1` (REGISTERED in `tac.canonical_equations` registry as of 2026-05-26).
+
+### FIX-WAVE-R1 actions landed (this commit batch)
+
+1. **E-OP1 CLOSED via this APPEND-ONLY footer**: design memo BPR1 header byte count corrections recorded above (3 surfaces: §"Canonical-vs-unique" line 67 + §"9-dim" line 84 + §"Byte accounting" line 197). Body is preserved UNMUTATED per APPEND-ONLY discipline; the canonical truth is `BPR1_HEADER_LEN = 29`.
+2. **E-OP2 CLOSED via in-place source-code edit**: `src/tac/substrates/boost_nerv_pr110_residual/archive.py` module docstring line 8 corrected from "BPR1 header 28 bytes" to "BPR1 header 29 bytes". Source-code docstrings are in-place editable per source-code evolution discipline; APPEND-ONLY applies to research memo BODY only.
+3. **E-OP3 CLOSED via in-place source-code edit**: `src/tac/substrates/boost_nerv_pr110_residual/__init__.py` line 41 archive grammar comment corrected from "24-byte header" to "29-byte header" + expanded to include the `align[1]` field that the original mental model omitted. Source-code docstrings are in-place editable.
+4. **E-OP4 CLOSED via this APPEND-ONLY footer**: canonical equation name correction recorded above. The registered name `procedural_predictor_plus_residual_correction_savings_v1` is the canonical reference; the placeholder `residual_hybrid_boosting_savings_v1` in the original body is superseded by this footer per CLAUDE.md "Forbidden empirical-claim-without-evidence-tag" + Catalog #344 canonical-equation-registry discipline.
+
+### Post-fix verification (2026-05-26)
+
+- `.venv/bin/python -m pytest src/tac/substrates/boost_nerv_pr110_residual/tests/ -v` → **25/25 pass** (no test changes expected since the fixes are documentation-only / docstring-only; code was always correct).
+- Source-code docstrings now consistent with `BPR1_HEADER_LEN = 29` constant: `grep -n "29-byte\|29 bytes" src/tac/substrates/boost_nerv_pr110_residual/{archive.py,__init__.py}` shows the corrected text.
+
+### R2 readiness signal
+
+- R1 counter status post-FIX-WAVE-R1: **CLEAN** for E=BoostNeRV (all P0 + P2 findings closed; no code correctness gaps); R2 can fire on this substrate when the aggregate R1 cycle re-runs.
+- No code semantics changed; only documentation surfaces (memo body via APPEND-ONLY footer + 2 source-code docstrings) corrected.
+
+### Cross-references
+
+- FIX-WAVE-R1 landing memo: `.omx/research/path_3_fix_wave_r1_close_findings_landed_20260526.md`
+- Source-code diffs: `src/tac/substrates/boost_nerv_pr110_residual/archive.py` line 8 + `src/tac/substrates/boost_nerv_pr110_residual/__init__.py` lines 40-47
+- Canonical equation registry: `tac.canonical_equations.query_equations()` (REGISTERED `procedural_predictor_plus_residual_correction_savings_v1` as of 2026-05-26)

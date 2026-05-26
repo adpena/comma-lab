@@ -38,9 +38,13 @@ Architecture (council-approved L0 SCAFFOLD 2026-05-26):
     [optional L1+] Stage 5: round-2 residual on top of round-1
 
 Archive grammar (BPR1):
-    24-byte header: magic b"BPR1\\x00" (5) + version u8 (1) + NUM_ROUNDS u8 (1) +
-        PR110_BASE_SHA256_PREFIX[16] u128 (16) + RESIDUAL_BLOB_LEN u32 (4) +
-        reserved u8 (1, set to 0)
+    29-byte header: magic b"BPR1\\x00" (5) + version u8 (1) + NUM_ROUNDS u8 (1) +
+        align u8 (1, 4-byte alignment padding) + PR110_BASE_SHA256_PREFIX[16]
+        u128 (16) + RESIDUAL_BLOB_LEN u32 (4) + reserved u8 (1, set to 0).
+        FIX-WAVE-R1 E-OP2 (2026-05-26): corrected from "24-byte" to "29-byte"
+        per `struct.calcsize('<5sBBB16sIB')` = 29 + `BPR1_HEADER_LEN = 29`
+        source-of-truth constant. Code was always correct; only this
+        documentation comment was wrong.
     RESIDUAL_BLOB_LEN bytes: brotli-quality9 compressed int8 residual learner
         state_dict + per-pair latent z_pr110 reference
     Then PR110_BASE_ARCHIVE_BYTES inline (preserves PR110 fec6+Huffman-k=16 bytes

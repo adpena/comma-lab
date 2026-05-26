@@ -182,8 +182,24 @@ def gumbel_softmax_sample(
 
 
 def _pixel_shuffle_2x_nhwc(x: Any) -> Any:
-    """PixelShuffle 2x for NHWC tensors (canonical PR95 MLX helper pattern)."""
+    """PixelShuffle 2x for NHWC tensors (canonical PR95 MLX helper convention).
+
+    FIX-WAVE-R1 A-OP1 (2026-05-26): channel-FIRST reshape convention matching
+    sister D=Z6 ``src/tac/substrates/time_traveler_l5_z6/mlx_renderer.py::
+    _pixel_shuffle_2x_nhwc`` AND canonical PR95 helper
+    ``tac.local_acceleration.pr95_hnerv_mlx::pixel_shuffle_2x_nhwc``. The
+    prior channel-LAST convention ``(B, H, W, 2, 2, out_C)`` + transpose
+    ``(0, 1, 3, 2, 4, 5)`` produced 2.40 absolute drift vs PyTorch
+    ``nn.PixelShuffle(2)``; the canonical channel-FIRST convention
+    ``(B, H, W, out_C, 2, 2)`` + transpose ``(0, 1, 4, 2, 5, 3)`` is
+    empirically PyTorch-byte-stable (0.0 drift per R1 review measurement).
+    Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" L9
+    runtime closure: MLX-trained-PyTorch-inflated model MUST be the same
+    runtime as the MLX trainer observes at convergence.
+    """
     _require_mlx()
+    if len(x.shape) != 4:
+        raise ValueError(f"expected NHWC; got shape {x.shape}")
     batch, height, width, channels = (int(dim) for dim in x.shape)
     block = 4  # 2*2
     if channels % block != 0:
@@ -191,25 +207,36 @@ def _pixel_shuffle_2x_nhwc(x: Any) -> Any:
             f"channels {channels} must be divisible by {block} for 2x pixel shuffle"
         )
     out_channels = channels // block
-    y = mx.reshape(x, (batch, height, width, 2, 2, out_channels))  # type: ignore[union-attr]
-    y = mx.transpose(y, (0, 1, 3, 2, 4, 5))  # type: ignore[union-attr]
+    y = mx.reshape(x, (batch, height, width, out_channels, 2, 2))  # type: ignore[union-attr]
+    y = mx.transpose(y, (0, 1, 4, 2, 5, 3))  # type: ignore[union-attr]
     return mx.reshape(y, (batch, height * 2, width * 2, out_channels))  # type: ignore[union-attr]
 
 
 def _bilinear_resize_2x_nhwc(x: Any) -> Any:
-    """Bilinear upsample 2x for NHWC tensors (canonical PR95 helper pattern)."""
+    """Bilinear upsample 2x for NHWC tensors via canonical PR95 helper.
+
+    FIX-WAVE-R1 A-OP2 (2026-05-26): delegates to canonical
+    ``tac.local_acceleration.pr95_hnerv_mlx::bilinear_resize2x_align_corners_false_nhwc``
+    which is empirically PyTorch-byte-stable (0.0 drift per R1 review
+    measurement) vs the prior ``mx.repeat`` 2x approximation that produced
+    0.99 absolute drift vs PyTorch
+    ``F.interpolate(scale_factor=2, mode='bilinear', align_corners=False)``.
+
+    Catalog #295 self-containment is preserved because the canonical helper
+    is imported only at MLX training time in ``module.py``; the substrate's
+    inflate runtime at ``inflate.py`` is PyTorch-only and does NOT import
+    MLX (PyTorch uses ``F.interpolate(mode='bilinear', align_corners=False)``
+    natively). The Catalog #295 contract scopes
+    ``submissions/*/inflate.py`` PYTHONPATH self-containment; this
+    substrate's MLX module is at ``src/tac/substrates/dreamer_v3_rssm/``
+    which is in-tree by definition.
+    """
     _require_mlx()
-    batch, height, width, channels = (int(dim) for dim in x.shape)
-    # Simple 2x nearest-then-average bilinear approximation matching PR95
-    # canonical bilinear_resize2x_align_corners_false_nhwc behavior.
-    # For L0 scaffold we use a simple 2x replication; the canonical helper
-    # at tac.local_acceleration.pr95_hnerv_mlx implements full bilinear with
-    # align_corners=False; that helper IS available but kept out of L0
-    # imports to keep this scaffold self-contained per Catalog #295 (inflate
-    # works with empty PYTHONPATH).
-    y = mx.repeat(x, 2, axis=1)  # type: ignore[union-attr]
-    y = mx.repeat(y, 2, axis=2)  # type: ignore[union-attr]
-    return y
+    from tac.local_acceleration.pr95_hnerv_mlx import (
+        bilinear_resize2x_align_corners_false_nhwc,
+    )
+
+    return bilinear_resize2x_align_corners_false_nhwc(x)
 
 
 class _RSSMUpsampleBlock(nn.Module if nn is not None else object):  # type: ignore[misc]
