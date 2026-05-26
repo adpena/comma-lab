@@ -57782,6 +57782,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_path_3_fix_wave_r1_prime_prime_i_faiss_ivf_pq_residual_20260526",
+      "name": "FIX-WAVE-R1''-I \u2014 actual MLX primitives in faiss_ivf_pq_residual substrate",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "5 MLX primitives landed in src/tac/substrates/faiss_ivf_pq_residual/mlx_renderer.py mirroring numpy_reference sister; 27/27 tests pass (20 baseline + 7 NEW substrate-package MLX parity); empirical max_abs=0.0 vs numpy + PyTorch baseline"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/path_3_fix_wave_r1_prime_prime_i_faiss_ivf_pq_landed_20260526T124740Z.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -57791,5 +57832,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-26T12:39:26Z"
+  "updated_at": "2026-05-26T12:50:36Z"
 }

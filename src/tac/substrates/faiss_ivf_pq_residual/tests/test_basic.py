@@ -12,6 +12,8 @@ Covers:
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -328,6 +330,248 @@ def test_mlx_numpy_parity_pq_codebook_gather_skip_if_mlx_missing() -> None:
 
     # Byte-identical parity (integer gather + float copy)
     np.testing.assert_array_equal(gathered_np, gathered_mx_np)
+
+
+# ---------------------------------------------------------------------------
+# Substrate-package MLX primitive parity (FIX-WAVE-R1''-I, 2026-05-26)
+#
+# R1'' CRITICAL finding I-R1''-1 caught that the prior tests above used
+# `mx.take` DIRECTLY in the test file — bypassing the substrate package's
+# `mlx_renderer.py` (which contained NO actual MLX primitives). FIX-WAVE-R1''-I
+# added 5 canonical MLX primitives to `mlx_renderer.py` mirroring the
+# numpy_reference sister. These tests route through the substrate-package
+# MLX primitives (NOT direct `mx.take`) and empirically verify parity vs
+# numpy reference + PyTorch baseline (`inflate._decode_per_pair_residual`)
+# per Catalog #1265 MLX-first contest-equivalence threshold 0.001 abs.
+# Empirical anchor: ALL 5 primitives produce max_abs=0.0 vs numpy reference
+# AND vs PyTorch baseline because PQ decode is structural gather + reshape
+# + scalar multiply (no fp32 matmul accumulation, so R1'' M-series MPS
+# matmul drift O(1e-2) abs canonical floor does NOT apply).
+# ---------------------------------------------------------------------------
+
+
+def _skip_if_mlx_missing() -> Any:
+    try:
+        import mlx.core as mx  # noqa: F401
+
+        return mx
+    except ImportError:
+        pytest.skip("MLX not installed; skip per axis 3 portability discipline")
+
+
+def test_substrate_mlx_primitive_pq_codebook_gather_parity_vs_numpy() -> None:
+    """SUBSTRATE-PACKAGE MLX primitive (`mlx_pq_codebook_gather`) routes through
+    `tac.substrates.faiss_ivf_pq_residual.mlx_renderer`; not through `mx.take`
+    directly in test file. R1''-I CRITICAL finding fix anchor."""
+    mx = _skip_if_mlx_missing()
+    from tac.substrates.faiss_ivf_pq_residual.mlx_renderer import (
+        mlx_pq_codebook_gather,
+    )
+
+    rng = np.random.default_rng(20260526)
+    M, ksub, sub_dim = 4, 16, 9216  # substrate-typical canonical-config dims
+    codebook_np = rng.standard_normal((M, ksub, sub_dim)).astype(np.float32)
+    indices_np = rng.integers(0, ksub, size=(16, M), dtype=np.uint16)
+
+    # numpy reference
+    gathered_np = pq_codebook_gather(codebook_np, indices_np)
+    assert gathered_np.shape == (16, M, sub_dim)
+
+    # SUBSTRATE-PACKAGE MLX primitive (routes through mlx_renderer.py)
+    codebook_mx = mx.array(codebook_np)
+    indices_mx = mx.array(indices_np.astype(np.int32))
+    gathered_mx_obj = mlx_pq_codebook_gather(codebook_mx, indices_mx)
+    gathered_mx_np = np.asarray(gathered_mx_obj).astype(np.float32)
+    assert gathered_mx_np.shape == (16, M, sub_dim)
+
+    # Byte-identical parity (integer index + exact float copy; no matmul)
+    np.testing.assert_array_equal(gathered_np, gathered_mx_np)
+
+
+def test_substrate_mlx_primitive_pq_reconstruct_tile_vectors_parity_vs_numpy() -> None:
+    """SUBSTRATE-PACKAGE MLX primitive (`mlx_pq_reconstruct_tile_vectors`)
+    composition (gather + reshape) parity vs numpy reference. R1''-I fix anchor."""
+    mx = _skip_if_mlx_missing()
+    from tac.substrates.faiss_ivf_pq_residual.mlx_renderer import (
+        mlx_pq_reconstruct_tile_vectors,
+    )
+
+    rng = np.random.default_rng(20260526 + 1)
+    M, ksub, sub_dim = 4, 16, 9216
+    codebook_np = rng.standard_normal((M, ksub, sub_dim)).astype(np.float32)
+    indices_np = rng.integers(0, ksub, size=(16, M), dtype=np.uint16)
+
+    recon_np = pq_reconstruct_tile_vectors(codebook_np, indices_np)
+    assert recon_np.shape == (16, M * sub_dim)
+
+    codebook_mx = mx.array(codebook_np)
+    indices_mx = mx.array(indices_np.astype(np.int32))
+    recon_mx_obj = mlx_pq_reconstruct_tile_vectors(codebook_mx, indices_mx)
+    recon_mx_np = np.asarray(recon_mx_obj).astype(np.float32)
+    assert recon_mx_np.shape == (16, M * sub_dim)
+
+    np.testing.assert_array_equal(recon_np, recon_mx_np)
+
+
+def test_substrate_mlx_primitive_tiles_to_frame_nhwc_parity_vs_numpy() -> None:
+    """SUBSTRATE-PACKAGE MLX primitive (`mlx_tiles_to_frame_nhwc`) tile
+    reassemble parity vs numpy reference (reshape + transpose; structural).
+    R1''-I fix anchor."""
+    mx = _skip_if_mlx_missing()
+    from tac.substrates.faiss_ivf_pq_residual.mlx_renderer import (
+        EVAL_HW,
+        mlx_tiles_to_frame_nhwc,
+    )
+
+    TILE_H, TILE_W = 96, 128  # canonical config
+    tiles_per_pair = (EVAL_HW[0] // TILE_H) * (EVAL_HW[1] // TILE_W)
+    tile_dim = TILE_H * TILE_W * 3
+
+    rng = np.random.default_rng(20260526 + 2)
+    tiles_np = rng.standard_normal((tiles_per_pair, tile_dim)).astype(np.float32)
+
+    frame_np = tiles_to_frame_nhwc(
+        tiles_np, frame_h=EVAL_HW[0], frame_w=EVAL_HW[1], tile_h=TILE_H, tile_w=TILE_W
+    )
+    assert frame_np.shape == (EVAL_HW[0], EVAL_HW[1], 3)
+
+    tiles_mx = mx.array(tiles_np)
+    frame_mx_obj = mlx_tiles_to_frame_nhwc(
+        tiles_mx,
+        frame_h=EVAL_HW[0],
+        frame_w=EVAL_HW[1],
+        tile_h=TILE_H,
+        tile_w=TILE_W,
+    )
+    frame_mx_np = np.asarray(frame_mx_obj).astype(np.float32)
+    assert frame_mx_np.shape == (EVAL_HW[0], EVAL_HW[1], 3)
+
+    # Tile reassemble is structural (reshape + transpose); byte-identical.
+    np.testing.assert_array_equal(frame_np, frame_mx_np)
+
+
+def test_substrate_mlx_primitive_to_uint8_parity_vs_numpy() -> None:
+    """SUBSTRATE-PACKAGE MLX primitive (`mlx_to_uint8`) canonical Catalog #205
+    sister rounding (banker's round + clip [0, 255]) parity vs numpy reference.
+    R1''-I fix anchor."""
+    mx = _skip_if_mlx_missing()
+    from tac.substrates.faiss_ivf_pq_residual.mlx_renderer import mlx_to_uint8
+
+    x_np = np.array(
+        [0.4, 0.6, 254.5, 255.5, -1.0, 256.0, 127.5, 128.5, 0.0, 255.0],
+        dtype=np.float32,
+    )
+    u8_np = to_uint8(x_np)
+
+    x_mx = mx.array(x_np)
+    u8_mx_obj = mlx_to_uint8(x_mx)
+    u8_mx_np = np.asarray(u8_mx_obj).astype(np.uint8)
+
+    # Byte-identical: MLX mx.round uses banker's rounding matching numpy
+    np.testing.assert_array_equal(u8_np, u8_mx_np)
+
+
+def test_substrate_mlx_primitive_decode_per_pair_residual_parity_vs_pytorch_baseline() -> None:
+    """SUBSTRATE-PACKAGE MLX primitive (`mlx_decode_per_pair_residual`) full
+    per-pair PQ decode composition parity vs PyTorch baseline at
+    `tac.substrates.faiss_ivf_pq_residual.inflate._decode_per_pair_residual`
+    (the canonical algorithm source-of-truth).
+
+    Empirical verification per Catalog #1265 MLX-first contest-equivalence
+    threshold 0.001 abs. Expected max_abs = 0.0 because PQ decode is
+    structural (gather + reshape + transpose + scalar multiply) with NO
+    fp32 matmul accumulation; the R1'' M-series MPS matmul drift O(1e-2)
+    abs canonical floor does NOT apply to this substrate's primitives.
+
+    R1''-I CRITICAL finding fix anchor: this test routes through the
+    substrate-package MLX primitive (NOT through `mx.take` in test file).
+    """
+    mx = _skip_if_mlx_missing()
+    from tac.substrates.faiss_ivf_pq_residual.inflate import (
+        _decode_per_pair_residual,
+    )
+    from tac.substrates.faiss_ivf_pq_residual.mlx_renderer import (
+        EVAL_HW,
+        mlx_decode_per_pair_residual,
+    )
+
+    TILE_H, TILE_W = 96, 128
+    M, ksub = 4, 16
+    sub_dim = (TILE_H * TILE_W * 3) // M
+    tiles_per_pair = (EVAL_HW[0] // TILE_H) * (EVAL_HW[1] // TILE_W)
+    residual_scale = 0.5
+
+    rng = np.random.default_rng(20260526 + 3)
+    codebook_np = rng.standard_normal((M, ksub, sub_dim)).astype(np.float32)
+    codewords_np = rng.integers(0, ksub, size=(tiles_per_pair, M), dtype=np.uint16)
+
+    # PyTorch baseline (canonical algorithm source-of-truth per inflate.py)
+    pytorch_baseline = _decode_per_pair_residual(
+        codebook_np,
+        codewords_np,
+        tile_h=TILE_H,
+        tile_w=TILE_W,
+        residual_scale=residual_scale,
+    )
+    assert pytorch_baseline.shape == (EVAL_HW[0], EVAL_HW[1], 3)
+
+    # SUBSTRATE-PACKAGE MLX primitive
+    codebook_mx = mx.array(codebook_np)
+    codewords_mx = mx.array(codewords_np.astype(np.int32))
+    mlx_decode_obj = mlx_decode_per_pair_residual(
+        codebook_mx,
+        codewords_mx,
+        tile_h=TILE_H,
+        tile_w=TILE_W,
+        residual_scale=residual_scale,
+    )
+    mlx_decode_np = np.asarray(mlx_decode_obj).astype(np.float32)
+    assert mlx_decode_np.shape == (EVAL_HW[0], EVAL_HW[1], 3)
+
+    # Empirical drift bound: structural composition is exact (no matmul).
+    max_abs_diff = float(np.abs(pytorch_baseline - mlx_decode_np).max())
+    # Catalog #1265 MLX-first contest-equivalence threshold: 0.001 abs
+    # Expected here: ~0.0 (structural composition; no fp32 accumulation)
+    assert max_abs_diff < 0.001, (
+        f"MLX vs PyTorch baseline max_abs={max_abs_diff} exceeds Catalog "
+        f"#1265 threshold 0.001"
+    )
+    # Strict: byte-identical because primitives are gather/reshape/transpose/mul
+    np.testing.assert_array_equal(pytorch_baseline, mlx_decode_np)
+
+
+def test_substrate_mlx_renderer_non_promotable_canonical_markers() -> None:
+    """Per CLAUDE.md 'MLX portable-local-substrate authority' non-negotiable +
+    Catalog #341 canonical routing-markers: the substrate's MLX module MUST
+    expose canonical non-promotable markers (SCHEMA_VERSION + LANE_ID +
+    EVIDENCE_GRADE + EVIDENCE_TAG)."""
+    from tac.substrates.faiss_ivf_pq_residual import mlx_renderer
+
+    assert mlx_renderer.SCHEMA_VERSION == "faiss_ivf_pq_residual_mlx_renderer_v1"
+    assert mlx_renderer.LANE_ID.startswith("lane_")
+    assert mlx_renderer.EVIDENCE_GRADE == "macOS-MLX research-signal"
+    assert mlx_renderer.EVIDENCE_TAG == "[macOS-MLX research-signal]"
+
+
+def test_substrate_mlx_renderer_public_api_exports_canonical_primitives() -> None:
+    """Per R1''-I fix: substrate-package MLX primitives MUST be in public API
+    (__all__) so future consumers + the Catalog #1265 MLX-first gate have
+    a stable interface to consume."""
+    from tac.substrates.faiss_ivf_pq_residual import mlx_renderer
+
+    required_primitives = (
+        "mlx_pq_codebook_gather",
+        "mlx_pq_reconstruct_tile_vectors",
+        "mlx_tiles_to_frame_nhwc",
+        "mlx_to_uint8",
+        "mlx_decode_per_pair_residual",
+    )
+    for name in required_primitives:
+        assert name in mlx_renderer.__all__, (
+            f"{name} missing from mlx_renderer.__all__"
+        )
+        assert hasattr(mlx_renderer, name), f"{name} not defined in mlx_renderer"
+        assert callable(getattr(mlx_renderer, name)), f"{name} not callable"
 
 
 # ---------------------------------------------------------------------------
